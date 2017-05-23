@@ -498,7 +498,9 @@ class PandasIndexAdapter(utils.NDArrayMixin):
     def __init__(self, array, dtype=None):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
-            if isinstance(array, pd.PeriodIndex):
+            if array is None:
+                self._dtype = None
+            elif isinstance(array, pd.PeriodIndex):
                 dtype = np.dtype('O')
             elif hasattr(array, 'categories'):
                 # category isn't a real numpy dtype
@@ -560,3 +562,75 @@ class PandasIndexAdapter(utils.NDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
+
+
+class PandasMultiIndexAdapter(PandasIndexAdapter):
+    """
+    An extension for MultiIndex, which keeps self._scalars indicating the
+    level names which should be treated as a scalar.
+    """
+    def __init__(self, array, dtype=None, scalars=[]):
+        # If array is 0-dimensional, scalars argument necessary because
+        # tuple does not have level names
+        if array.ndim == 0 and len(scalars) == 0:
+            raise ValueError('Name of levels is necessary for 0d-array input.')
+        super(PandasMultiIndexAdapter, self).__init__(array, dtype)
+
+        print(self.array.names)
+        if array.ndim == 1:
+            if (self.array.names == [None] and
+                    len(scalars) == len(self.array.names)):
+                self.array.set_names(scalars)
+            if any([s not in self.all_levels for s in scalars]):
+                raise ValueError('scalar %s is not a valid level name.')
+        self._scalars = scalars
+
+    @property
+    def all_levels(self):
+        """ All level names including scalars"""
+        if self.array == 0:  # scalar case
+            return []
+        return self.array.names
+
+    @property
+    def levels(self):
+        """ Level names except for scalars"""
+        if self.array.dtype == 'object':  # scalar case
+            return []
+        level_names = self.all_levels
+        for s in self.scalars:
+            level_names.remove(s)
+        return level_names
+
+    @property
+    def scalars(self):
+        return self._scalars
+
+    def set_scalar(self, scalars):
+        level_names = self._data.index.get_names
+        if any([s not in level_names for s in scalars]):
+            raise ValueError('scalar %s is not a valid level name.')
+        #scalars = self._scalars + scalars
+
+    def reset_scalar(self, scalars):
+        if len(scalars) == 0:
+            return self
+
+        level_names = self.levels
+        if len(level_names) == 0:
+            # in 0d-case, make MultiIndex from a tuple
+            if any([s not in self.scalars for s in scalars]):
+                raise ValueError('scalar %s is not a valid level name.')
+            array = pd.MultiIndex.from_tuples([self.array.item()],
+                                              names=self.scalars)
+        elif any([s not in level_names for s in scalars]):
+            raise ValueError('scalar %s is not a valid level name.')
+
+        new_scalars = self.scalars
+        for s in scalars:
+            new_scalars.remove(s)
+        return type(self)(array, self.dtype, new_scalars)
+
+    def __repr__(self):
+        return ('%s(array=%r, dtype=%r, scalars=%r)'
+                % (type(self).__name__, self.array, self.dtype, self.scalars))

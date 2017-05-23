@@ -6,6 +6,7 @@ import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
+from xarray.core import variable
 from . import TestCase, ReturnItem
 
 
@@ -244,3 +245,28 @@ class TestMemoryCachedArray(TestCase):
         wrapped = indexing.MemoryCachedArray(original)
         wrapped[:] = 0
         self.assertArrayEqual(original, np.zeros(10))
+
+
+class TestPandasMultiIndexAdapter(TestCase):
+    def test_multi(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])    
+        index = indexing.PandasMultiIndexAdapter(idx)
+        self.assertTrue(index.scalars == [])
+
+    def test_0d(self):
+        array = variable.as_compatible_data(('a', 0))
+        with self.assertRaises(ValueError):
+            index = indexing.PandasMultiIndexAdapter(array)
+
+        index = indexing.PandasMultiIndexAdapter(array,
+                                                 scalars=['l1', 'l2'])
+        self.assertTrue(index.scalars == ['l1', 'l2'])
+        # levels
+        self.assertTrue(index.levels == [])
+
+        actual = index.reset_scalar(['l1'])
+        idx = pd.MultiIndex.from_tuples([('a', 0)])
+        idx = idx.set_names(['l1', 'l2'])
+        expected = indexing.PandasMultiIndexAdapter(idx, scalars=['l2'])
+        self.assertArrayEqual(actual, expected)

@@ -18,7 +18,8 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, orthogonally_indexable)
+from .indexing import (PandasIndexAdapter, PandasMultiIndexAdapter,
+                       orthogonally_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -320,8 +321,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
-        return IndexVariable(self.dims, self._data, self._attrs,
-                             encoding=self._encoding, fastpath=True)
+        return get_IndexVariable(self.dims, self._data, self._attrs,
+                                 encoding=self._encoding, fastpath=True)
 
     to_coord = utils.alias(to_index_variable, 'to_coord')
 
@@ -1173,17 +1174,20 @@ class IndexVariable(Variable):
     They also have a name property, which is the name of their sole dimension
     unless another name is given.
     """
-
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super(IndexVariable, self).__init__(dims, data, attrs, encoding,
                                             fastpath)
+        self._initialize()
+
+    def _initialize(self):
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
-
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
             self._data = PandasIndexAdapter(self._data)
+        if isinstance(self._data.array, pd.MultiIndex):
+            raise ValueError('Use MultiIndexVariable for MultiIndex.')
 
     def load(self):
         # data is already loaded into memory for IndexVariable
@@ -1288,33 +1292,12 @@ class IndexVariable(Variable):
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
         index = self._data.array
-        if isinstance(index, pd.MultiIndex):
-            # set default names for multi-index unnamed levels so that
-            # we can safely rename dimension / coordinate later
-            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
-                                 for i, name in enumerate(index.names)]
-            index = index.set_names(valid_level_names)
-        else:
-            index = index.set_names(self.name)
+        index = index.set_names(self.name)
         return index
 
     @property
     def level_names(self):
-        """Return MultiIndex level names or None if this IndexVariable has no
-        MultiIndex.
-        """
-        index = self.to_index()
-        if isinstance(index, pd.MultiIndex):
-            return index.names
-        else:
-            return None
-
-    def get_level_variable(self, level):
-        """Return a new IndexVariable from a given MultiIndex level."""
-        if self.level_names is None:
-            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
-        index = self.to_index()
-        return type(self)(self.dims, index.get_level_values(level))
+        return []
 
     @property
     def name(self):
@@ -1323,6 +1306,69 @@ class IndexVariable(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of IndexVariable in-place')
+
+
+class MultiIndexVariable(IndexVariable):
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False,
+                 scalars=[]):
+        super(MultiIndexVariable, self).__init__(dims, data, attrs, encoding,
+                                                 fastpath)
+        # Unlike in Variable, always eagerly load values into memory
+        if not isinstance(self._data, PandasMultiIndexAdapter):
+            self._data = PandasMultiIndexAdapter(self._data, scalars)
+
+    def _initialize(self):
+        if self.ndim != 0 and self.ndim != 1:
+            raise ValueError('%s objects must be 0- or 1-dimensional' %
+                             type(self).__name__)
+
+    def to_index(self):
+        """Convert this variable to a pandas.Index"""
+        # n.b. creating a new pandas.Index from an old pandas.Index is
+        # basically free as pandas.Index objects are immutable
+        assert self.ndim == 1 or self.ndim == 0
+        index = self._data.array
+        # set default names for multi-index unnamed levels so that
+        # we can safely rename dimension / coordinate later
+        valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
+                             for i, name in enumerate(index.names)]
+        index = index.set_names(valid_level_names)
+        return index
+
+    @property
+    def level_names(self):
+        """Return MultiIndex level names or None if this IndexVariable has no
+        MultiIndex.
+        """
+        print(self._data.array.names)
+        index = self.to_index()
+        if isinstance(index, pd.MultiIndex):
+            return index.names
+        else:
+            return None
+
+    def get_level_variable(self, level):
+        """Return a new IndexVariable from a given MultiIndex level."""
+        index = self.to_index()
+        return IndexVariable(self.dims, index.get_level_values(level))
+
+
+def get_IndexVariable(dims, index, attrs=None, encoding=None,
+                      fastpath=False):
+    """
+    Return one of IndexVariable or MultiIndexVariable based on index type.
+    (If a pd.MultiIndex is included, MultiIndexVariable is returned.)
+    """
+    index = as_compatible_data(index)
+    if not isinstance(index, PandasIndexAdapter):
+        index = PandasIndexAdapter(index)
+    if isinstance(index.array, pd.MultiIndex):
+        return MultiIndexVariable(dims, index, attrs,
+                                  encoding=encoding, fastpath=True)
+    else:
+        return IndexVariable(dims, index, attrs,
+                             encoding=encoding, fastpath=True)
+
 
 # for backwards compatibility
 Coordinate = utils.alias(IndexVariable, 'Coordinate')
