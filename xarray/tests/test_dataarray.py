@@ -2321,7 +2321,7 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         expected = Dataset({'bar': ('x', [1, 2])})
-        with self.assertWarns('order of the arguments'):
+        with pytest.deprecated_call():
             actual = named.to_dataset('bar')
         self.assertDatasetIdentical(expected, actual)
 
