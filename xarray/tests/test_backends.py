@@ -1334,7 +1334,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                                     for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
                 self.assertIn(var_name, dask_name)
-                self.assertIn(tmp, dask_name)
+                self.assertEqual(dask_name[:13], 'open_dataset-')
             self.assertEqual(original_names, repeat_names)
 
     def test_dataarray_compute(self):

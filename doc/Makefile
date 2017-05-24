@@ -48,6 +48,7 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf generated/*
+	rm -rf auto_gallery/
 
 .PHONY: html
 html:
@@ -66,6 +67,12 @@ singlehtml:
 	$(SPHINXBUILD) -b singlehtml $(ALLSPHINXOPTS) $(BUILDDIR)/singlehtml
 	@echo
 	@echo "Build finished. The HTML page is in $(BUILDDIR)/singlehtml."
+
+.PHONY: html-noplot
+html-noplot:
+	$(SPHINXBUILD) -D plot_gallery=0 -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	@echo
+	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 .PHONY: pickle
 pickle:

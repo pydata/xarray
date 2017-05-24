@@ -30,6 +30,14 @@ Enhancements
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
      `Kyle Heuton <https://github.com/kheuton>`_.
 
+- Rename the dask arrays created by `open_dataset` to match new dask conventions
+  (:issue:`1343`). By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
+
 - New backend to open raster files with the
   `rasterio <https://mapbox.github.io/rasterio/>`_ library.
   By `Joe Hamman <https://github.com/jhamman>`_,
@@ -45,6 +53,18 @@ By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
 ``data_vars``.
 By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+  
 
 .. _whats-new.0.9.5:
 
