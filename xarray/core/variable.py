@@ -35,13 +35,19 @@ def as_variable(obj, name=None):
     ----------
     obj : object
         Object to convert into a Variable.
-        If the object is already a Variable, return a shallow copy.
-        Otherwise, if the object has 'dims' and 'data' attributes, convert
-        it into a new Variable.
-        If all else fails, attempt to convert the object into a Variable by
-        unpacking it into the arguments for creating a new Variable.
+
+        - If the object is already a Variable, return a shallow copy.
+        - Otherwise, if the object has 'dims' and 'data' attributes, convert
+          it into a new Variable.
+        - If all else fails, attempt to convert the object into a Variable by
+          unpacking it into the arguments for creating a new Variable.
     name : str, optional
-        Dimension name (only if data in `obj` is 1-dimensional).
+        If provided
+
+        - `obj` can be a 1D array, which is assumed to label coordinate values
+          along a dimension of this given name.
+        - Variables with name matching one of their dimensions are converted
+          into `IndexVariable` objects.
 
     Returns
     -------
