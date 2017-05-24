@@ -27,7 +27,7 @@ from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
-from .variable import (Variable, as_variable, IndexVariable,
+from .variable import (Variable, as_variable, get_IndexVariable,
                        broadcast_variables)
 from .pycompat import (iteritems, basestring, OrderedDict,
                        integer_types, dask_array_type, range)
@@ -53,7 +53,7 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
 
     if key in dim_sizes:
         data = pd.Index(range(dim_sizes[key]), name=key)
-        variable = IndexVariable((key,), data)
+        variable = get_IndexVariable((key,), data)
         return key, key, variable
 
     if not isinstance(key, basestring):
@@ -159,7 +159,7 @@ def merge_indexes(
                 levels.append(cat.categories)
 
         idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
-        vars_to_replace[dim] = IndexVariable(dim, idx)
+        vars_to_replace[dim] = get_IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
 
     new_variables = OrderedDict([(k, v) for k, v in iteritems(variables)
@@ -213,7 +213,7 @@ def split_indexes(
         if len(levs) == index.nlevels:
             vars_to_remove.append(d)
         else:
-            vars_to_replace[d] = IndexVariable(d, index.droplevel(levs))
+            vars_to_replace[d] = get_IndexVariable(d, index.droplevel(levs))
 
         if not drop:
             for lev in levs:
@@ -580,7 +580,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             return self
         variables = self._variables.copy()
         for name, idx in indexes.items():
-            variables[name] = IndexVariable(name, idx)
+            variables[name] = get_IndexVariable(name, idx)
         obj = self._replace_vars_and_dims(variables)
 
         # switch from dimension to level names, if necessary
@@ -1771,7 +1771,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
                 raise ValueError("coordinate %r has no MultiIndex" % dim)
-            replace_variables[dim] = IndexVariable(coord.dims,
+            replace_variables[dim] = get_IndexVariable(coord.dims,
                                                    index.reorder_levels(order))
         variables = self._variables.copy()
         variables.update(replace_variables)
@@ -1801,7 +1801,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                       else level
                       for level in levels]
         idx = utils.multiindex_from_product_levels(levels, names=dims)
-        variables[new_dim] = IndexVariable(new_dim, idx)
+        variables[new_dim] = get_IndexVariable(new_dim, idx)
 
         coord_names = set(self._coord_names) - set(dims) | set([new_dim])
 
@@ -1879,7 +1879,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     variables[name] = var
 
         for name, lev in zip(new_dim_names, index.levels):
-            variables[name] = IndexVariable(name, lev)
+            variables[name] = get_IndexVariable(name, lev)
 
         coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
 

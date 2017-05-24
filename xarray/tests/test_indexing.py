@@ -250,7 +250,7 @@ class TestMemoryCachedArray(TestCase):
 class TestPandasMultiIndexAdapter(TestCase):
     def test_multi(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
-        idx = idx.set_names(['level_1', 'level_2'])    
+        idx = idx.set_names(['level_1', 'level_2'])
         index = indexing.PandasMultiIndexAdapter(idx)
         self.assertTrue(index.scalars == [])
 
@@ -270,3 +270,30 @@ class TestPandasMultiIndexAdapter(TestCase):
         idx = idx.set_names(['l1', 'l2'])
         expected = indexing.PandasMultiIndexAdapter(idx, scalars=['l2'])
         self.assertArrayEqual(actual, expected)
+
+    def test_get_level_values(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        index = indexing.PandasMultiIndexAdapter(idx)
+        self.assertTrue(all(index.get_level_values('level_1') ==
+                            idx.get_level_values('level_1')))
+        # set scalar
+        index = index.set_scalar(['level_2'])
+        self.assertTrue(index.get_level_values('level_2') ==
+                        idx.get_level_values('level_2')[0])
+        self.assertTrue(all(index.get_level_values('level_1') ==
+                            idx.get_level_values('level_1')))
+        # reset scalar
+        index = index.reset_scalar(['level_2'])
+        self.assertTrue(all(index.get_level_values('level_2') ==
+                            idx.get_level_values('level_2')))
+        self.assertTrue(all(index.get_level_values('level_1') ==
+                            idx.get_level_values('level_1')))
+        # set scalar and reduce to 1 element
+        index = index.set_scalar(['level_1', 'level_2'])
+        self.assertTrue(index.get_level_values('level_2') ==
+                        idx.get_level_values('level_2')[0])
+        # restore the size 1 MultiIndex
+        index = index.reset_scalar(['level_1', 'level_2'])
+        self.assertTrue(index.get_level_values('level_2')[0] ==
+                        idx.get_level_values('level_2')[0])

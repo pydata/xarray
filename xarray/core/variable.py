@@ -96,7 +96,9 @@ def _maybe_wrap_data(data):
     NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
     all pass through unmodified.
     """
-    if isinstance(data, pd.Index):
+    if isinstance(data, pd.MultiIndex):
+        return PandasMultiIndexAdapter(data)
+    elif isinstance(data, pd.Index):
         return PandasIndexAdapter(data)
     return data
 
@@ -1340,7 +1342,6 @@ class MultiIndexVariable(IndexVariable):
         """Return MultiIndex level names or None if this IndexVariable has no
         MultiIndex.
         """
-        print(self._data.array.names)
         index = self.to_index()
         if isinstance(index, pd.MultiIndex):
             return index.names
@@ -1349,8 +1350,7 @@ class MultiIndexVariable(IndexVariable):
 
     def get_level_variable(self, level):
         """Return a new IndexVariable from a given MultiIndex level."""
-        index = self.to_index()
-        return IndexVariable(self.dims, index.get_level_values(level))
+        return IndexVariable(self.dims, self._data.get_level_values(level))
 
 
 def get_IndexVariable(dims, index, attrs=None, encoding=None,
@@ -1360,9 +1360,9 @@ def get_IndexVariable(dims, index, attrs=None, encoding=None,
     (If a pd.MultiIndex is included, MultiIndexVariable is returned.)
     """
     index = as_compatible_data(index)
-    if not isinstance(index, PandasIndexAdapter):
-        index = PandasIndexAdapter(index)
-    if isinstance(index.array, pd.MultiIndex):
+    if isinstance(index, PandasIndexAdapter):
+        index = index.array
+    if isinstance(index, pd.MultiIndex):
         return MultiIndexVariable(dims, index, attrs,
                                   encoding=encoding, fastpath=True)
     else:

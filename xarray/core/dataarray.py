@@ -23,7 +23,7 @@ from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
-                       IndexVariable,
+                       get_IndexVariable, IndexVariable,
                        assert_unique_multiindex_level_names)
 from .formatting import format_item
 from .utils import decode_numpy_dict_values, ensure_us_time_resolution
@@ -261,7 +261,7 @@ class DataArray(AbstractArray, BaseDataObject):
             return self
         coords = self._coords.copy()
         for name, idx in indexes.items():
-            coords[name] = IndexVariable(name, idx)
+            coords[name] = get_IndexVariable(name, idx)
         obj = self._replace(coords=coords)
 
         # switch from dimension to level names, if necessary
@@ -968,7 +968,7 @@ class DataArray(AbstractArray, BaseDataObject):
             index = coord.to_index()
             if not isinstance(index, pd.MultiIndex):
                 raise ValueError("coordinate %r has no MultiIndex" % dim)
-            replace_coords[dim] = IndexVariable(coord.dims,
+            replace_coords[dim] = get_IndexVariable(coord.dims,
                                                 index.reorder_levels(order))
         coords = self._coords.copy()
         coords.update(replace_coords)
