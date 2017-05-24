@@ -14,7 +14,7 @@ from .core.merge import merge, MergeError
 from .core.options import set_options
 
 from .backends.api import (open_dataset, open_dataarray, open_mfdataset,
-                           save_mfdataset, open_rasterio)
+                           open_rasterio, save_mfdataset)
 from .conventions import decode_cf
 
 try:
