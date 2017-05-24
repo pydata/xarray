@@ -52,6 +52,14 @@ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
   successful download (:issue:`1392`). By `Matthew Gidden
   <https://github.com/gidden>`_.
 
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+  
+
 .. _whats-new.0.9.5:
 
 v0.9.5 (17 April, 2017)
