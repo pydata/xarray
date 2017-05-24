@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 
@@ -118,7 +119,8 @@ class TestCase(unittest.TestCase):
 
     @contextmanager
     def assertWarns(self, message):
-        with pytest.warns(Warning) as w:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings('always', message)
             yield
         assert len(w) > 0
         assert any(message in str(wi.message) for wi in w)
