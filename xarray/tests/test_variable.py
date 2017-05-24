@@ -12,7 +12,7 @@ import numpy as np
 import pytz
 import pandas as pd
 
-from xarray import Variable, IndexVariable, Coordinate, Dataset
+from xarray import (Variable, IndexVariable, Coordinate, Dataset)
 from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
@@ -410,15 +410,21 @@ class VariableSubclassTestCases(object):
                                   source_ndarray(w.values))
         self.assertVariableIdentical(v, copy(v))
 
+    def test_to_index_variable(self):
+        v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
+        index = v.to_index_variable()
+        self.assertTrue(isinstance(index, self.cls))
+
     def test_copy_index(self):
         midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
                                           names=('one', 'two', 'three'))
-        v = self.cls('x', midx)
-        for deep in [True, False]:
-            w = v.copy(deep=deep)
-            self.assertIsInstance(w._data, PandasIndexAdapter)
-            self.assertIsInstance(w.to_index(), pd.MultiIndex)
-            self.assertArrayEqual(v._data.array, w._data.array)
+        if self.cls is not IndexVariable:
+            v = self.cls('x', midx)
+            for deep in [True, False]:
+                w = v.copy(deep=deep)
+                self.assertIsInstance(w._data, PandasIndexAdapter)
+                self.assertIsInstance(w.to_index(), pd.MultiIndex)
+                self.assertArrayEqual(v._data.array, w._data.array)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -452,12 +458,6 @@ class VariableSubclassTestCases(object):
         if 'America/New_York' in str(data.dtype):
             # pandas is new enough that it has datetime64 with timezone dtype
             assert v.dtype == 'object'
-
-    def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
-        v = self.cls('x', idx)
-        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
-        self.assertVariableIdentical(v, v[:])
 
     def test_load(self):
         array = self.cls('x', np.arange(5))
@@ -636,6 +636,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = as_variable(0)
         expected = Variable([], 0)
         self.assertVariableIdentical(expected, actual)
+
+
+    def test_to_index_variable(self):
+        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
+        v = Variable(['x'], midx, {'foo': 'bar'})
+        self.assertTrue(isinstance(v.to_index_variable(), IndexVariable))
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
@@ -1064,6 +1070,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, actual)
 
 
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        v = self.cls('x', idx)
+        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        self.assertVariableIdentical(v, v[:])
+
+
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
 
@@ -1075,11 +1088,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         data = 0.5 * np.arange(10)
         v = IndexVariable(['time'], data, {'foo': 'bar'})
         self.assertTrue(pd.Index(data, name='time').identical(v.to_index()))
-
-    def test_multiindex_default_level_names(self):
-        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
-        v = IndexVariable(['x'], midx, {'foo': 'bar'})
-        self.assertEqual(v.to_index().names, ('x_level_0', 'x_level_1'))
 
     def test_data(self):
         x = IndexVariable('x', np.arange(3.0))
@@ -1098,24 +1106,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaises(AttributeError):
             coord.name = 'y'
 
-    def test_level_names(self):
-        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
-                                          names=['level_1', 'level_2'])
-        x = IndexVariable('x', midx)
-        self.assertEqual(x.level_names, midx.names)
-
-        self.assertIsNone(IndexVariable('y', [10.0]).level_names)
-
-    def test_get_level_variable(self):
-        midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
-                                          names=['level_1', 'level_2'])
-        x = IndexVariable('x', midx)
-        level_1 = IndexVariable('x', midx.get_level_values('level_1'))
-        self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
-
-        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
-            IndexVariable('y', [10.0]).get_level_variable('level')
-
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)
         coords = [IndexVariable('t', periods[:5]), IndexVariable('t', periods[5:])]
@@ -1129,19 +1119,10 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         assert actual.identical(expected)
         assert isinstance(actual.to_index(), pd.PeriodIndex)
 
-    def test_concat_multiindex(self):
-        idx = pd.MultiIndex.from_product([[0, 1, 2], ['a', 'b']])
-        coords = [IndexVariable('x', idx[:2]), IndexVariable('x', idx[2:])]
-        expected = IndexVariable('x', idx)
-        actual = IndexVariable.concat(coords, dim='x')
-        assert actual.identical(expected)
-        assert isinstance(actual.to_index(), pd.MultiIndex)
-
     def test_coordinate_alias(self):
         with self.assertWarns('deprecated'):
             x = Coordinate('x', [1, 2, 3])
         self.assertIsInstance(x, IndexVariable)
-
 
 
 class TestAsCompatibleData(TestCase):

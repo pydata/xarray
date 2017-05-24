@@ -575,7 +575,6 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         # tuple does not have level names
         if array.ndim == 0 and len(scalars) == 0:
             raise ValueError('Name of levels is necessary for 0d-array input.')
-
         if isinstance(self.array, pd.MultiIndex):
             if self.array.names[0] is None:
                 self.array.set_names(scalars)
