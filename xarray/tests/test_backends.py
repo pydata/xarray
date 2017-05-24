@@ -897,6 +897,14 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         for var in expected.values():
             self.assertTrue(var.dtype.isnative)
 
+    @requires_netCDF4
+    def test_nc4_scipy(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w', format='NETCDF4') as rootgrp:
+                rootgrp.createGroup('foo')
+
+            with self.assertRaisesRegexp(TypeError, 'pip install netcdf4'):
+                open_dataset(tmp_file, engine='scipy')
 
 class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
