@@ -18,11 +18,47 @@ What's New
 v0.9.6 (unreleased)
 -------------------
 
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+By `Daniel Rothenberg <https://github.com/darothen>`_.
+
 Enhancements
 ~~~~~~~~~~~~
+- New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
+  that enable sorting along dimensions (:issue:`967`).
+  (see :ref:`reshape.sort`).
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
+     `Kyle Heuton <https://github.com/kheuton>`_.
+
+- Rename the dask arrays created by `open_dataset` to match new dask conventions
+  (:issue:`1343`). By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
+By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
+``data_vars``.
+By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+  
 
 .. _whats-new.0.9.5:
 

@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 from collections import Mapping, defaultdict
+from distutils.version import LooseVersion
 from numbers import Number
 
 import sys
@@ -21,7 +22,7 @@ from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
-from .common import ImplementsDatasetReduce, BaseDataObject
+from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
@@ -31,6 +32,8 @@ from .variable import (Variable, as_variable, IndexVariable,
 from .pycompat import (iteritems, basestring, OrderedDict,
                        integer_types, dask_array_type, range)
 from .options import OPTIONS
+
+import xarray as xr
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -74,20 +77,11 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
         virtual_var = ref_var
         var_name = key
     else:
-        if ref_var.ndim == 1:
-            date = ref_var.to_index()
-        elif ref_var.ndim == 0:
-            date = pd.Timestamp(ref_var.values)
+        if is_datetime_like(ref_var.dtype):
+            ref_var = xr.DataArray(ref_var)
+            data = getattr(ref_var.dt, var_name).data
         else:
-            raise KeyError(key)
-
-        if var_name == 'season':
-            # TODO: move 'season' into pandas itself
-            seasons = np.array(['DJF', 'MAM', 'JJA', 'SON'])
-            month = date.month
-            data = seasons[(month // 3) % 4]
-        else:
-            data = getattr(date, var_name)
+            data = getattr(ref_var, var_name).data
         virtual_var = Variable(ref_var.dims, data)
 
     return ref_name, var_name, virtual_var
@@ -1274,6 +1268,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
+        non_indexed_coords = set(self.coords) - set(coords)
 
         # All the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
@@ -1335,7 +1330,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # If not indexed just add it back to variables or coordinates
                 variables[name] = var
 
-        coord_names = set(coords) & set(variables)
+        coord_names = (set(coords) & set(variables)) | non_indexed_coords
 
         dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
         # Add the dim coord to the new dset. Must be done after creation
@@ -2748,6 +2743,67 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables[name] = var.roll(**var_shifts)
 
         return self._replace_vars_and_dims(variables)
+
+    def sortby(self, variables, ascending=True):
+        """
+        Sort object by labels or values (along an axis).
+
+        Sorts the dataset, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+        NaNs are sorted to the end, following Numpy convention.
+
+        If multiple sorts along the same dimension is
+        given, numpy's lexsort is performed along that dimension:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        and the FIRST key in the sequence is used as the primary sort key,
+        followed by the 2nd key, etc.
+
+        Parameters
+        ----------
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords/data_vars whose values are used to sort the dataset.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
+
+        Returns
+        -------
+        sorted: Dataset
+            A new dataset where all the specified dims are sorted by dim
+            labels.
+        """
+        from .dataarray import DataArray
+
+        if not isinstance(variables, list):
+            variables = [variables]
+        else:
+            variables = variables
+        variables = [v if isinstance(v, DataArray) else self[v]
+                     for v in variables]
+        aligned_vars = align(self, *variables, join='left')
+        aligned_self = aligned_vars[0]
+        aligned_other_vars = aligned_vars[1:]
+        vars_by_dim = defaultdict(list)
+        for data_array in aligned_other_vars:
+            if data_array.ndim != 1:
+                raise ValueError("Input DataArray is not 1-D.")
+            if (data_array.dtype == object and
+                    LooseVersion(np.__version__) < LooseVersion('1.11.0')):
+                raise NotImplementedError(
+                    'sortby uses np.lexsort under the hood, which requires '
+                    'numpy 1.11.0 or later to support object data-type.')
+            (key,) = data_array.dims
+            vars_by_dim[key].append(data_array)
+
+        indices = {}
+        for key, arrays in vars_by_dim.items():
+            order = np.lexsort(tuple(reversed(arrays)))
+            indices[key] = order if ascending else order[::-1]
+        return aligned_self.isel(**indices)
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):

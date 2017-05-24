@@ -181,6 +181,7 @@ Reshaping and reorganizing
    Dataset.unstack
    Dataset.shift
    Dataset.roll
+   Dataset.sortby
 
 DataArray
 =========
@@ -334,6 +335,7 @@ Reshaping and reorganizing
    DataArray.unstack
    DataArray.shift
    DataArray.roll
+   DataArray.sortby
 
 .. _api.ufuncs:
 
