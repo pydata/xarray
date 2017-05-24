@@ -609,11 +609,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_as_variable(self):
         data = np.arange(10)
         expected = Variable('x', data)
+        expected_extra = Variable('x', data, attrs={'myattr': 'val'},
+                                  encoding={'scale_factor': 1})
 
         self.assertVariableIdentical(expected, as_variable(expected))
 
         ds = Dataset({'x': expected})
-        self.assertVariableIdentical(expected, as_variable(ds['x']).to_base_variable())
+        var = as_variable(ds['x']).to_base_variable()
+        self.assertVariableIdentical(expected, var)
         self.assertNotIsInstance(ds['x'], Variable)
         self.assertIsInstance(as_variable(ds['x']), Variable)
 
@@ -621,8 +624,20 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         fake_xarray = FakeVariable(expected.values, expected.dims)
         self.assertVariableIdentical(expected, as_variable(fake_xarray))
 
-        xarray_tuple = (expected.dims, expected.values)
-        self.assertVariableIdentical(expected, as_variable(xarray_tuple))
+        FakeVariable = namedtuple('FakeVariable', 'data dims')
+        fake_xarray = FakeVariable(expected.data, expected.dims)
+        self.assertVariableIdentical(expected, as_variable(fake_xarray))
+
+        FakeVariable = namedtuple('FakeVariable',
+                                  'data values dims attrs encoding')
+        fake_xarray = FakeVariable(expected_extra.data, expected_extra.values,
+                                   expected_extra.dims, expected_extra.attrs,
+                                   expected_extra.encoding)
+        self.assertVariableIdentical(expected_extra, as_variable(fake_xarray))
+
+        xarray_tuple = (expected_extra.dims, expected_extra.values,
+                        expected_extra.attrs, expected_extra.encoding)
+        self.assertVariableIdentical(expected_extra, as_variable(xarray_tuple))
 
         with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
             as_variable(tuple(data))
@@ -636,6 +651,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = as_variable(0)
         expected = Variable([], 0)
         self.assertVariableIdentical(expected, actual)
+
+        data = np.arange(9).reshape((3, 3))
+        expected = Variable(('x', 'y'), data)
+        with self.assertRaisesRegex(
+                ValueError, 'without explicit dimension names'):
+            as_variable(data, name='x')
+        with self.assertRaisesRegex(
+                ValueError, 'has more than 1-dimension'):
+            as_variable(expected, name='x')
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
