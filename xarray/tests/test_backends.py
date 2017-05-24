@@ -906,6 +906,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             with self.assertRaisesRegexp(TypeError, 'pip install netcdf4'):
                 open_dataset(tmp_file, engine='scipy')
 
+
 class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
 

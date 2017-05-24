@@ -85,9 +85,9 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
         errmsg = e.args[0]
         if 'is not a valid NetCDF 3 file' in errmsg:
             msg = """
-            If this is a NetCDF4 file, you may need to install the 
+            If this is a NetCDF4 file, you may need to install the
             netcdf4 library, e.g.,
-            
+
             $ pip install netcdf4
             """
             errmsg += msg
