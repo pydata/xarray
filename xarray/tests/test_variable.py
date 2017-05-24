@@ -654,10 +654,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         data = np.arange(9).reshape((3, 3))
         expected = Variable(('x', 'y'), data)
-        with self.assertRaisesRegex(
+        with self.assertRaisesRegexp(
                 ValueError, 'without explicit dimension names'):
             as_variable(data, name='x')
-        with self.assertRaisesRegex(
+        with self.assertRaisesRegexp(
                 ValueError, 'has more than 1-dimension'):
             as_variable(expected, name='x')
 
