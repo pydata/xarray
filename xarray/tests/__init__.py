@@ -128,8 +128,8 @@ class TestCase(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
-            assert len(w) > 0
-            assert any(message in str(wi.message) for wi in w)
+        assert len(w) > 0
+        assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert_equal(v1, v2)
