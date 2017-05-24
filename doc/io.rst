@@ -396,26 +396,25 @@ rasterio is installed. Here is an example of how to use
 .. ipython::
     :verbatim:
 
-    In [7]: rio = xr.open_rasterio('RGB.byte.tif', add_latlon=True)
+    In [7]: rio = xr.open_rasterio('RGB.byte.tif')
 
     In [8]: rio
     Out[8]:
-    <xarray.Dataset>
-    Dimensions:  (band: 3, x: 791, y: 718)
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
     Coordinates:
+      * band     (band) int64 1 2 3
       * y        (y) float64 2.827e+06 2.827e+06 2.826e+06 2.826e+06 2.826e+06 ...
       * x        (x) float64 1.02e+05 1.023e+05 1.026e+05 1.029e+05 1.032e+05 ...
-      * band     (band) int64 1 2 3
-        lon      (y, x) float64 -78.96 -78.96 -78.95 -78.95 -78.95 -78.94 -78.94 ...
-        lat      (y, x) float64 25.51 25.51 25.51 25.51 25.51 25.51 25.51 25.51 ...
-    Data variables:
-        raster   (band, y, x) uint8 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ...
     Attributes:
-        crs:      CRS({'init': 'epsg:32618'})
+        crs:      +init=epsg:32618
 
-    In [6]: ds.raster.sel(band=1).plot()
-
-.. image:: _static/rasterio_example.png
+The ``x`` and ``y`` coordinates are generated out of the file's metadata
+(``bounds``, ``width``, ``height``), and they can be understood as cartesian
+coordinates defined in the file's projection provided by the ``crs`` attribute.
+``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
+See :ref:`recipes.rasterio` for an example of how to convert these to
+longitudes and latitudes.
 
 .. warning::
 
@@ -425,6 +424,7 @@ rasterio is installed. Here is an example of how to use
 
 .. _rasterio: https://mapbox.github.io/rasterio/
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
+.. _pyproj: https://github.com/jswhit/pyproj
 
 .. _io.pynio:
 

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import numpy as np
 
 try:
@@ -8,6 +9,7 @@ except ImportError:
 from .. import DataArray
 from ..core.utils import NDArrayMixin, is_scalar
 from ..core import indexing
+
 
 _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'valid on rasterio files. Try to load your data with ds.load()'
@@ -86,18 +88,20 @@ def rasterio_to_dataarray(filename):
 
     riods = rasterio.open(filename, mode='r')
 
+    coords = OrderedDict()
+
+    # Get bands
+    if riods.count < 1:
+        raise ValueError('Unknown dims')
+    coords['band'] = np.asarray(riods.indexes)
+
     # Get geo coords
     nx, ny = riods.width, riods.height
     dx, dy = riods.res[0], -riods.res[1]
     x0 = riods.bounds.right if dx < 0 else riods.bounds.left
     y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    x = np.linspace(start=x0, num=nx, stop=(x0 + (nx - 1) * dx))
-    y = np.linspace(start=y0, num=ny, stop=(y0 + (ny - 1) * dy))
-
-    # Get bands
-    if riods.count < 1:
-        raise ValueError('Unknown dims')
-    bands = np.asarray(riods.indexes)
+    coords['y'] = np.linspace(start=y0, num=ny, stop=(y0 + (ny - 1) * dy))
+    coords['x'] = np.linspace(start=x0, num=nx, stop=(x0 + (nx - 1) * dx))
 
     # Attributes
     attrs = {}
@@ -109,5 +113,4 @@ def rasterio_to_dataarray(filename):
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
     return DataArray(data=data, dims=('band', 'y', 'x'),
-                     coords={'band': bands, 'y': y, 'x': x},
-                     attrs=attrs)
+                     coords=coords, attrs=attrs)
