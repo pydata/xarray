@@ -42,7 +42,7 @@ def as_variable(obj, name=None):
         - If all else fails, attempt to convert the object into a Variable by
           unpacking it into the arguments for creating a new Variable.
     name : str, optional
-        If provided
+        If provided:
 
         - `obj` can be a 1D array, which is assumed to label coordinate values
           along a dimension of this given name.
