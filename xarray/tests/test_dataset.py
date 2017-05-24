@@ -274,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with pytest.deprecated_call():
+        with pytest.warns(FutureWarning):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
