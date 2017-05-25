@@ -286,13 +286,6 @@ def get_dim_indexers(data_obj, indexers):
     return dim_indexers
 
 
-def remap_level_indexers(data_obj, indexers):
-    """Given an xarray data object and position based level-indexers,
-    return a mapping of equivalent location based dim-indexers.
-    """
-    dim_indexers = indexers.copy()
-
-
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
     """Given an xarray data object and label based indexers, return a mapping
     of equivalent location based indexers. Also return a mapping of updated
