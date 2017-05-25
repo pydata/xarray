@@ -149,6 +149,21 @@ class TestDataset(TestCase):
         print(actual)
         self.assertEqual(expected, actual)
 
+        # with scalar multiindex
+        data = data.sel(level_1='a')
+        expected = dedent("""\
+        <xarray.Dataset>
+        Dimensions:  (x: 2)
+        Coordinates:
+          * x        (x) MultiIndex
+          - level_1  <U1 'a'
+          - level_2  (x) int64 1 2
+        Data variables:
+            *empty*""")
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
+        self.assertEqual(expected, actual)
+
         # verify that long level names are not truncated
         mindex = pd.MultiIndex.from_product(
             [['a', 'b'], [1, 2]],
@@ -1059,22 +1074,22 @@ class TestDataset(TestCase):
                         coords={'x': mindex})
 
         def test_sel(lab_indexer, pos_indexer, replaced_idx=False,
-                     renamed_dim=None):
+                     scalared_dim=None):
             ds = mdata.sel(x=lab_indexer)
             expected_ds = mdata.isel(x=pos_indexer)
             if not replaced_idx:
                 self.assertDatasetIdentical(ds, expected_ds)
             else:
-                if renamed_dim:
-                    self.assertEqual(ds['var'].dims[0], renamed_dim)
-                    ds = ds.rename({renamed_dim: 'x'})
+                if scalared_dim:
+                    self.assertTrue(scalared_dim in
+                                    ds['x'].variable.index_level_names)
                 self.assertVariableIdentical(ds['var'].variable,
                                              expected_ds['var'].variable)
                 self.assertVariableNotEqual(ds['x'], expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
         test_sel(('b', 2, -2), -1)
-        test_sel(('a', 1), [0, 1], replaced_idx=True, renamed_dim='three')
+        test_sel(('a', 1), [0, 1], replaced_idx=True, scalared_dim='three')
         test_sel(('a',), range(4), replaced_idx=True)
         test_sel('a', range(4), replaced_idx=True)
         test_sel([('a', 1, -1), ('b', 2, -2)], [0, 7])
@@ -1082,7 +1097,7 @@ class TestDataset(TestCase):
         test_sel(slice(('a', 1), ('b', 1)), range(6))
         test_sel({'one': 'a', 'two': 1, 'three': -1}, 0)
         test_sel({'one': 'a', 'two': 1}, [0, 1], replaced_idx=True,
-                 renamed_dim='three')
+                 scalared_dim='three')
         test_sel({'one': 'a'}, range(4), replaced_idx=True)
 
         self.assertDatasetIdentical(mdata.loc[{'x': {'one': 'a'}}],

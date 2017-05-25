@@ -271,6 +271,18 @@ class TestPandasMultiIndexAdapter(TestCase):
         expected = indexing.PandasMultiIndexAdapter(idx, scalars=['l2'])
         self.assertArrayEqual(actual, expected)
 
+    def test_getitem(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        index = indexing.PandasMultiIndexAdapter(idx)
+        self.assertTrue(all(index.get_level_values('level_1') ==
+                            idx.get_level_values('level_1')))
+
+        index = index.set_scalar(['level_2'])
+        # indexing should keep scalars
+        self.assertTrue(index[0].scalars == ['level_2'])
+        self.assertTrue(index[np.array([0, 1])].scalars == ['level_2'])
+
     def test_get_level_values(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         idx = idx.set_names(['level_1', 'level_2'])
@@ -297,3 +309,10 @@ class TestPandasMultiIndexAdapter(TestCase):
         index = index.reset_scalar(['level_1', 'level_2'])
         self.assertTrue(index.get_level_values('level_2')[0] ==
                         idx.get_level_values('level_2')[0])
+
+    def test_eq(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        index = indexing.PandasMultiIndexAdapter(idx)
+        self.assertTrue(index == index)
+        self.assertTrue(index != index.set_scalar(['level_1']))

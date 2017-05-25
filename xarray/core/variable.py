@@ -324,7 +324,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
         return IndexVariable(self.dims, self._data, self._attrs,
-                              encoding=self._encoding, fastpath=True)
+                             encoding=self._encoding, fastpath=True)
 
     to_coord = utils.alias(to_index_variable, 'to_coord')
 
@@ -1163,6 +1163,41 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return self
         return func
 
+    @property
+    def level_names(self):
+        """Return MultiIndex level names or None if this IndexVariable has no
+        MultiIndex.
+        """
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            return self._data.all_levels
+        else:
+            return None
+
+    @property
+    def scalar_level_names(self):
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            return self._data.scalars
+        else:
+            return None
+
+    @property
+    def index_level_names(self):
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            return self._data.levels
+        else:
+            return None
+
+    def get_level_variable(self, level):
+        """Return a new IndexVariable from a given MultiIndex level."""
+        if self.level_names is None:
+            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
+
+        level = self._data.get_level_values(level)
+        if isinstance(level, pd.Index):
+            return type(self)(self.dims, level)
+        else:  # scalar case
+            return Variable((), level)
+
 ops.inject_all_ops_and_reduce_methods(Variable)
 
 
@@ -1179,8 +1214,8 @@ class IndexVariable(Variable):
     def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
         super(IndexVariable, self).__init__(dims, data, attrs, encoding,
                                             fastpath)
-        if self.ndim != 1 and self.ndim != 0:
-            raise ValueError('%s objects must be 0- 1-dimensional' %
+        if self.ndim != 1:
+            raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
@@ -1188,6 +1223,10 @@ class IndexVariable(Variable):
                 self._data = PandasMultiIndexAdapter(self._data)
             else:
                 self._data = PandasIndexAdapter(self._data)
+
+    @property
+    def is_multiindex(self):
+        return isinstance(self._data, PandasMultiIndexAdapter)
 
     def load(self):
         # data is already loaded into memory for IndexVariable
@@ -1278,7 +1317,7 @@ class IndexVariable(Variable):
             return False
 
     def _data_equals(self, other):
-        return self.to_index().equals(other.to_index())
+        return self._data == other._data
 
     def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
@@ -1303,29 +1342,23 @@ class IndexVariable(Variable):
         return index
 
     @property
-    def level_names(self):
-        """Return MultiIndex level names or None if this IndexVariable has no
-        MultiIndex.
-        """
-        if isinstance(self._data, PandasMultiIndexAdapter):
-            return self._data.levels
-        else:
-            return None
-
-    def get_level_variable(self, level):
-        """Return a new IndexVariable from a given MultiIndex level."""
-        if self.level_names is None:
-            raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
-        index = self.to_index()
-        return type(self)(self.dims, index.get_level_values(level))
-
-    @property
     def name(self):
         return self.dims[0]
 
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of IndexVariable in-place')
+
+    def reset_levels(self, level_names):
+        """
+        level_names: a list of names to be kept as index_level
+        """
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            scalars = [name for name in self.index_level_names
+                       if name not in level_names]
+            return type(self)(self.dims, self._data.set_scalar(scalars),
+                              self._attrs, self._encoding, fastpath=True)
+        raise ValueError('Indexes conflict.')
 
 # for backwards compatibility
 Coordinate = utils.alias(IndexVariable, 'Coordinate')

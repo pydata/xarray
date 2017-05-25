@@ -15,7 +15,8 @@ import pandas as pd
 from xarray import (Variable, IndexVariable, Coordinate, Dataset)
 from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
-from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
+from xarray.core.indexing import (PandasIndexAdapter, PandasMultiIndexAdapter,
+                                  LazilyIndexedArray)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 
@@ -1069,11 +1070,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
 
-
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         v = self.cls('x', idx)
-        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
+        idx_new = PandasMultiIndexAdapter(np.array(('a', 0)))
+        self.assertVariableIdentical(Variable((), idx_new), v[0])
         self.assertVariableIdentical(v, v[:])
 
 
@@ -1081,8 +1082,9 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
 
     def test_init(self):
-        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
-            IndexVariable((), 0)
+        with self.assertRaisesRegexp(ValueError,
+                                     'must be 1-dimensional'):
+            IndexVariable(('a', 'b'), [[0, 1], [1, 2]])
 
     def test_to_index(self):
         data = 0.5 * np.arange(10)
@@ -1123,6 +1125,13 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         with self.assertWarns('deprecated'):
             x = Coordinate('x', [1, 2, 3])
         self.assertIsInstance(x, IndexVariable)
+
+    def test_equiv_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx.set_names(['level_1', 'level_2'])
+        v = IndexVariable('x', idx)
+        v2 = v.reset_levels(['level_1'])
+        self.assertFalse(v.equals(v2))
 
 
 class TestAsCompatibleData(TestCase):

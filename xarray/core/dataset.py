@@ -575,11 +575,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def _replace_indexes(self, indexes):
+        """
+        Make some index_level to scalar_level.
+        indexes: mapping from dimension name to new index.
+        """
         if not len(indexes):
             return self
         variables = self._variables.copy()
         for name, idx in indexes.items():
-            variables[name] = variables[name].reset_levels(idx)
+                variables[name] = variables[name].reset_levels(idx.names)
         return self._replace_vars_and_dims(variables)
 
     def copy(self, deep=False):

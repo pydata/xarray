@@ -559,6 +559,9 @@ class PandasIndexAdapter(utils.NDArrayMixin):
 
         return result
 
+    def __eq__(self, other):
+        return self.array.equals(other.array)
+
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
@@ -575,17 +578,27 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         # tuple does not have level names
         if array.ndim == 0 and len(scalars) == 0:
             raise ValueError('Name of levels is necessary for 0d-array input.')
-        if isinstance(self.array, pd.MultiIndex):
-            if self.array.names[0] is None:
-                self.array.set_names(scalars)
 
+        if isinstance(self.array, pd.MultiIndex):
             if any([s not in self.all_levels for s in scalars]):
                 raise ValueError('scalar %s is not a valid level name.')
         self._scalars = scalars
 
     @property
+    def ndim(self):
+        return 1 if isinstance(self.array, pd.MultiIndex) else 0
+
+    @property
+    def shape(self):
+        if isinstance(self.array, pd.MultiIndex):
+            return (len(self.array),)
+        else:
+            return ()
+
+    @property
     def all_levels(self):
         """ All level names including scalars"""
+        #  scalar case
         if not isinstance(self.array, pd.MultiIndex):
             return self.scalars
         return self.array.names
@@ -602,6 +615,17 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
     def scalars(self):
         return self._scalars
 
+    def __getitem__(self, key):
+        if isinstance(key, tuple) and len(key) == 1:
+            # unpack key so it can index a pandas.Index object (pandas.Index
+            # objects don't like tuples)
+            key, = key
+
+        result = self.array[key]
+        if isinstance(result, tuple):  # if a single item is chosen
+            result = np.array(result)
+        return PandasMultiIndexAdapter(result, scalars=self.scalars)
+
     def get_level_values(self, level):
         """
         Return an index for level-index. In scalar case, return the first item.
@@ -616,7 +640,13 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
     def set_scalar(self, scalars):
         if any([s not in self.levels for s in scalars]):
             raise ValueError('scalar %s is not a valid level name.')
-        new_scalars = self._scalars + scalars
+        # keep scalars in order
+        new_scalars = []
+        for l in self.levels:
+            if l in self._scalars:
+                new_scalars.append(l)
+            elif l in scalars:
+                new_scalars.append(l)
         # if all the lebels become scalar, reduce to size 1
         if set(new_scalars) == set(self.all_levels):
             type(self)(np.array(self.array[0]), self.dtype, new_scalars)
@@ -642,6 +672,9 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         for s in scalars:
             new_scalars.remove(s)
         return type(self)(array, self.dtype, new_scalars)
+
+    def __eq__(self, other):
+        return self.array.equals(other.array) and self.scalars == other.scalars
 
     def __repr__(self):
         return ('%s(array=%r, dtype=%r, scalars=%r)'
