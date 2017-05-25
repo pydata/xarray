@@ -13,7 +13,7 @@ import pytz
 import pandas as pd
 
 from xarray import (Variable, IndexVariable, Coordinate, Dataset)
-from xarray.core import indexing
+from xarray.core import indexing, utils
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import (PandasIndexAdapter, PandasMultiIndexAdapter,
                                   LazilyIndexedArray)
@@ -1072,8 +1072,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
         v = self.cls('x', idx)
-        idx_new = PandasMultiIndexAdapter(np.array(('a', 0)))
+        idx_new = PandasMultiIndexAdapter(utils.to_0d_object_array(('a', 0)),
+                                          scalars=['level_1', 'level_2'])
         self.assertVariableIdentical(Variable((), idx_new), v[0])
         self.assertVariableIdentical(v, v[:])
 
@@ -1132,18 +1134,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         v = IndexVariable('x', idx)
         v2 = v.reset_levels(['level_1'])
         self.assertFalse(v.equals(v2))
-
-    def test_multiindex_isel(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
-        idx = idx.set_names(['level_1', 'level_2'])
-        v = IndexVariable('x', idx)
-        with self.assertRaises(ValueError):
-            v.isel(level_1=[0,1])
-        v2 = v.reset_levels(['level_2'])  # level_1 becomes scalar
-        # unable indexing for the scalar level
-        with self.assertRaises(ValueError):
-            v2.isel(level_1=[0, 1])
-        self.assertTrue(v2.isel(x=[0, 1]).equals(v2.isel(level_2=[0, 1])))
 
 
 class TestAsCompatibleData(TestCase):

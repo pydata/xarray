@@ -229,6 +229,30 @@ def convert_label_indexer(index, label, index_name='', method=None,
     return indexer, new_index
 
 
+def get_dim_pos_indexers(data_obj, indexers):
+    """
+    Given a xarray data object and position based indexers, return a mapping
+    of position-indexers with only dimension names as keys.
+    It also checks if the multiIndex has only a single levels.
+    """
+    invalid = [k for k in indexers
+               if k not in data_obj.dims and k not in data_obj._level_coords]
+    if invalid:
+        raise ValueError("dimensions or multi-index levels %r do not exist"
+                         % invalid)
+
+    dim_indexers = {}
+    for key, label in iteritems(indexers):
+        dim, = data_obj[key].dims
+        if key != dim:
+            # assume here multi-index level indexer
+            if len(data_obj.variables[dim].level_names) == 1:
+                # valid only for 1 level case.
+                dim_indexers[dim] = label
+        else:
+            dim_indexers[key] = label
+    return dim_indexers
+
 def get_dim_indexers(data_obj, indexers):
     """Given a xarray data object and label based indexers, return a mapping
     of label indexers with only dimension names as keys.
@@ -260,6 +284,13 @@ def get_dim_indexers(data_obj, indexers):
         dim_indexers[dim] = level_labels
 
     return dim_indexers
+
+
+def remap_level_indexers(data_obj, indexers):
+    """Given an xarray data object and position based level-indexers,
+    return a mapping of equivalent location based dim-indexers.
+    """
+    dim_indexers = indexers.copy()
 
 
 def remap_label_indexers(data_obj, indexers, method=None, tolerance=None):
@@ -622,8 +653,11 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
 
         result = self.array[key]
         if isinstance(result, tuple):  # if a single item is chosen
-            result = np.array(result)
-        return PandasMultiIndexAdapter(result, scalars=self.scalars)
+            result = utils.to_0d_object_array(result)
+            return PandasMultiIndexAdapter(result, dtype=self.dtype,
+                                           scalars=self.all_levels)
+        return PandasMultiIndexAdapter(result, dtype=self.dtype,
+                                       scalars=self.scalars)
 
     def get_level_values(self, level):
         """

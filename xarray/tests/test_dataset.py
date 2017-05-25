@@ -1082,7 +1082,7 @@ class TestDataset(TestCase):
             else:
                 if scalared_dim:
                     self.assertTrue(scalared_dim in
-                                    ds['x'].variable.index_level_names)
+                                    ds['x'].variable.level_names)
                 self.assertVariableIdentical(ds['var'].variable,
                                              expected_ds['var'].variable)
                 self.assertVariableNotEqual(ds['x'], expected_ds['x'])
@@ -1120,6 +1120,13 @@ class TestDataset(TestCase):
 
         mdata2 = mdata.isel(x=[0, 1]).sel(one='a', two=1)
         mdata3 = mdata.sel(one='a', two=1).isel(three=[0, 1])
+        self.assertDatasetIdentical(mdata2, mdata3)
+
+        mdata = xr.Dataset({'foo': (('x', 'y'), np.random.randn(3, 4))},
+                           {'x': ['a', 'b', 'c'], 'y': [1, 2, 3, 4]})
+        mdata = mdata.stack(space=['x', 'y'])
+        mdata2 = mdata.isel(space=[0, 1]).sel(x='a')
+        mdata3 = mdata.sel(x='a').isel(y=[0, 1])
         self.assertDatasetIdentical(mdata2, mdata3)
 
     def test_reindex_like(self):

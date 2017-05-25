@@ -280,7 +280,7 @@ class TestPandasMultiIndexAdapter(TestCase):
 
         index = index.set_scalar(['level_2'])
         # indexing should keep scalars
-        self.assertTrue(index[0].scalars == ['level_2'])
+        self.assertTrue(index[0].scalars == ['level_1', 'level_2'])
         self.assertTrue(index[np.array([0, 1])].scalars == ['level_2'])
 
     def test_get_level_values(self):

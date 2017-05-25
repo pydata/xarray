@@ -225,7 +225,7 @@ def _summarize_coord_levels(coord, col_width, marker=u'-'):
         [_summarize_var_or_coord(lname,
                                  relevant_coord.get_level_variable(lname),
                                  col_width, marker=marker)
-         for lname in coord.level_names])
+         for lname in coord.all_level_names])
 
 
 def _not_remote(var):

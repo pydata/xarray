@@ -542,22 +542,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
-        if self.index_level_names:  # multiindex
-            invalid = [k for k in indexers if k
-                       not in list(self.dims) + list(self.index_level_names)]
-        else:
-            invalid = [k for k in indexers if k not in self.dims]
+        invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
-
-        if isinstance(self._data, PandasMultiIndexAdapter):
-            dims = list(indexers.keys())
-            if (len(dims) > 1 or
-                    (dims[0] in self.index_level_names and
-                     len(self.index_level_names) != 1)):
-                raise ValueError('Multiple-level indexing is not supported.')
-
-            return self[indexers[dims[0]]]
 
         key = [slice(None)] * self.ndim
         for i, dim in enumerate(self.dims):
@@ -1178,7 +1165,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return func
 
     @property
-    def level_names(self):
+    def all_level_names(self):
         """Return MultiIndex level names including scalar levels.
         Return None if this IndexVariable has no MultiIndex.
         """
@@ -1195,7 +1182,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return None
 
     @property
-    def index_level_names(self):
+    def level_names(self):
         if isinstance(self._data, PandasMultiIndexAdapter):
             return self._data.levels
         else:
@@ -1203,7 +1190,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def get_level_variable(self, level):
         """Return a new IndexVariable from a given MultiIndex level."""
-        if self.level_names is None:
+        if self.all_level_names is None:
             raise ValueError("IndexVariable %r has no MultiIndex" % self.name)
 
         level = self._data.get_level_values(level)
@@ -1237,6 +1224,14 @@ class IndexVariable(Variable):
                 self._data = PandasMultiIndexAdapter(self._data)
             else:
                 self._data = PandasIndexAdapter(self._data)
+        # automatic naming
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
+                                 for i, name
+                                 in enumerate(self.all_level_names)]
+            self._data.array = self._data.array.set_names(valid_level_names)
+        else:
+            self._data.array = self._data.array.set_names(self.name)
 
     @property
     def is_multiindex(self):
@@ -1345,16 +1340,7 @@ class IndexVariable(Variable):
         # n.b. creating a new pandas.Index from an old pandas.Index is
         # basically free as pandas.Index objects are immutable
         assert self.ndim == 1
-        index = self._data.array
-        if isinstance(index, pd.MultiIndex):
-            # set default names for multi-index unnamed levels so that
-            # we can safely rename dimension / coordinate later
-            valid_level_names = [name or '{}_level_{}'.format(self.dims[0], i)
-                                 for i, name in enumerate(index.names)]
-            index = index.set_names(valid_level_names)
-        else:
-            index = index.set_names(self.name)
-        return index
+        return self._data.array
 
     @property
     def name(self):
@@ -1369,7 +1355,7 @@ class IndexVariable(Variable):
         level_names: a list of names to be kept as index_level
         """
         if isinstance(self._data, PandasMultiIndexAdapter):
-            scalars = [name for name in self.level_names
+            scalars = [name for name in self.all_level_names
                        if name not in level_names]
             return type(self)(self.dims, self._data.set_scalar(scalars),
                               self._attrs, self._encoding, fastpath=True)
@@ -1482,9 +1468,9 @@ def assert_unique_multiindex_level_names(variables):
     level_names = defaultdict(list)
     for var_name, var in variables.items():
         if isinstance(var._data, PandasMultiIndexAdapter):
-            for n in var.level_names:
+            for n in var.to_index_variable().to_index().names:
                 level_names[n].append('%r (%s)' % (n, var_name))
-    print(level_names)
+
     for k, v in level_names.items():
         if k in variables:
             v.append('(%s)' % k)

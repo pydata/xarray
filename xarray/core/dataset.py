@@ -613,15 +613,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._construct_direct(variables, coord_names, dims, attrs)
 
     @property
-    def _level_names(self):
-        """ Return a name list for level-indexes. """
-        level_names = []
-        for cname in self._coord_names:
-            if self.variables[cname].level_names:
-                level_names += self.variables[cname].level_names
-        return level_names
-
-    @property
     def _level_coords(self):
         """Return a mapping of all MultiIndex levels and their corresponding
         coordinate name.
@@ -630,7 +621,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for cname in self._coord_names:
             var = self.variables[cname]
             if var.ndim == 1:
-                level_names = var.to_index_variable().level_names
+                level_names = var.level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
@@ -1130,11 +1121,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.isel
         """
-        invalid = [k for k in indexers if k
-                   not in list(self.dims) + self._level_names]
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
-
+        indexers = indexing.get_dim_pos_indexers(self, indexers)
         # all indexers should be int, slice or np.ndarrays
         indexers = [(k, (np.asarray(v)
                          if not isinstance(v, integer_types + (slice,))
@@ -1143,13 +1130,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
-            if var.level_names:  # multiindex
-                var_indexers = dict((k, v) for k, v in indexers
-                                    if k in list(var.dims) +
-                                    list(var.index_level_names))
-            else:
-                var_indexers = dict((k, v) for k, v in indexers
-                                    if k in var.dims)
+            var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
