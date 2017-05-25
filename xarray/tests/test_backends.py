@@ -1581,6 +1581,10 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
             assert_allclose(ac, ex)
 
             # Mixed
+            ex = actual.isel(x=slice(2), y=slice(2))
+            ac = actual.isel(x=[0, 1], y=[0, 1])
+            assert_allclose(ac, ex)
+
             ex = expected.isel(band=0, x=1, y=slice(5, 7))
             ac = actual.isel(band=0, x=1, y=slice(5, 7))
             assert_allclose(ac, ex)

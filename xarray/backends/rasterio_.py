@@ -1,13 +1,8 @@
 from collections import OrderedDict
 import numpy as np
 
-try:
-    import rasterio
-except ImportError:
-    rasterio = False
-
 from .. import DataArray
-from ..core.utils import NDArrayMixin, is_scalar
+from ..core.utils import DunderArrayMixin, NdimSizeLenMixin, is_scalar
 from ..core import indexing
 
 
@@ -16,23 +11,24 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'first.')
 
 
-class RasterioArrayWrapper(NDArrayMixin):
+class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
     """A wrapper around rasterio dataset objects"""
-    def __init__(self, riods):
-        self.riods = riods
-        self._shape = self.riods.count, self.riods.height, self.riods.width
+    def __init__(self, rasterio_ds):
+        self.rasterio_ds = rasterio_ds
+        self._shape = (rasterio_ds.count, rasterio_ds.height,
+                       rasterio_ds.width)
         self._ndims = len(self.shape)
 
     @property
     def dtype(self):
-        return np.dtype(self.riods.dtypes[0])
+        dtypes = self.rasterio_ds.dtypes
+        if not np.all(np.asarray(dtypes) == dtypes[0]):
+            raise ValueError('All bands should have the same dtype')
+        return np.dtype(dtypes[0])
 
     @property
     def shape(self):
         return self._shape
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        self.riods.close()
 
     def __getitem__(self, key):
 
@@ -58,34 +54,46 @@ class RasterioArrayWrapper(NDArrayMixin):
                 start, stop, step = k.indices(n)
                 if step is not None and step != 1:
                     raise IndexError(_ERROR_MSG)
-            else:
-                if is_scalar(k):
+            elif is_scalar(k):
                     # windowed operations will always return an array
                     # we will have to squeeze it later
                     squeeze_axis.append(i+1)
                     start = k
                     stop = k+1
-                else:
-                    start = k[0]
-                    stop = k[-1] + 1
-                    if not np.all(k == np.arange(start, stop)):
-                        raise IndexError(_ERROR_MSG)
+            else:
+                k = np.asarray(k)
+                start = k[0]
+                stop = k[-1] + 1
+                ids = np.arange(start, stop)
+                if not ((k.shape == ids.shape) and np.all(k == ids)):
+                    raise IndexError(_ERROR_MSG)
             window.append((start, stop))
 
-        out = self.riods.read(band_key, window=window)
+        out = self.rasterio_ds.read(band_key, window=window)
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
         return out
 
 
-def rasterio_to_dataarray(filename):
-    """Open a file with rasterio.
+def open_rasterio(filename):
+    """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often: 
     geoTIFF). The x and y coordinates are generated automatically from the 
     file's geoinformation.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the file to open.
+
+    Returns
+    -------
+    data : DataArray
+        The newly created DataArray.
     """
 
+    import rasterio
     riods = rasterio.open(filename, mode='r')
 
     coords = OrderedDict()
@@ -112,5 +120,7 @@ def rasterio_to_dataarray(filename):
     # Maybe we'd like to parse other attributes here (for later)
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
-    return DataArray(data=data, dims=('band', 'y', 'x'),
-                     coords=coords, attrs=attrs)
+    result = DataArray(data=data, dims=('band', 'y', 'x'),
+                       coords=coords, attrs=attrs)
+    result._file_obj = riods
+    return result

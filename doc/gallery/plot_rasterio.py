@@ -14,6 +14,7 @@ likely be irregular in lon/lat. It is often recommended to work in the data's
 original map projection.
 """
 
+import os
 import numpy as np
 import xarray as xr
 import cartopy.crs as ccrs
@@ -40,9 +41,8 @@ lat = np.asarray(lat).reshape((ny, nx))
 
 # Convert the DataArray to a dataset and set them as non-dimension coordinates
 riods = rioda.to_dataset(name='img')
-riods['lon'] = (('y', 'x'), lon)
-riods['lat'] = (('y', 'x'), lat)
-riods = riods.set_coords(['lon', 'lat'])
+riods.coords['lon'] = (('y', 'x'), lon)
+riods.coords['lat'] = (('y', 'x'), lat)
 
 # Compute a greyscale out of the rgb image
 riods['greyscale'] = riods.img.mean(dim='band')
@@ -53,3 +53,6 @@ riods.greyscale.plot(ax=ax, x='lon', y='lat', transform=ccrs.PlateCarree(),
                      cmap='Greys_r', add_colorbar=False)
 ax.coastlines('10m', color='r');
 plt.show()
+
+# Delete the file
+os.remove('RGB.byte.tif')

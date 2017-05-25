@@ -320,27 +320,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_rasterio(filename):
-    """Open a file with rasterio (experimental).
-
-    This should work with any file that rasterio can open (most often: 
-    geoTIFF). The x and y coordinates are generated automatically from the 
-    file's geoinformation.
-
-    Parameters
-    ----------
-    filename : str
-        Path to the file to open.
-
-    Returns
-    -------
-    data : DataArray
-        The newly created DataArray.
-    """
-    from .rasterio_ import rasterio_to_dataarray
-    return rasterio_to_dataarray(filename)
-
-
 def open_dataarray(*args, **kwargs):
     """Open an DataArray from a netCDF file containing a single data variable.
 
