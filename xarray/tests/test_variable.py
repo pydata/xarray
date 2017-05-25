@@ -1133,6 +1133,18 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         v2 = v.reset_levels(['level_1'])
         self.assertFalse(v.equals(v2))
 
+    def test_multiindex_isel(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        v = IndexVariable('x', idx)
+        with self.assertRaises(ValueError):
+            v.isel(level_1=[0,1])
+        v2 = v.reset_levels(['level_2'])  # level_1 becomes scalar
+        # unable indexing for the scalar level
+        with self.assertRaises(ValueError):
+            v2.isel(level_1=[0, 1])
+        self.assertTrue(v2.isel(x=[0, 1]).equals(v2.isel(level_2=[0, 1])))
+
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):

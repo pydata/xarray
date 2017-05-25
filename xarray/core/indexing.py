@@ -212,7 +212,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 label, level=list(range(len(label)))
             )
-
     else:
         label = _asarray_tuplesafe(label)
         if label.ndim == 0:

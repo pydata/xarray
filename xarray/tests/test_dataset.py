@@ -1112,6 +1112,16 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
                                     mdata.sel(one='a', two=1))
 
+    def test_isel_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
+
+        mdata2 = mdata.isel(x=[0, 1]).sel(one='a', two=1)
+        mdata3 = mdata.sel(one='a', two=1).isel(three=[0, 1])
+        self.assertDatasetIdentical(mdata2, mdata3)
+
     def test_reindex_like(self):
         data = create_test_data()
         data['letters'] = ('dim3', 10 * ['a'])

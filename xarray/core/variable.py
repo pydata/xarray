@@ -526,6 +526,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def isel(self, **indexers):
         """Return a new array indexed along the specified dimension(s).
+        This also supports indexing along index-levels in case with MultiIndex.
 
         Parameters
         ----------
@@ -541,9 +542,22 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
-        invalid = [k for k in indexers if k not in self.dims]
+        if self.index_level_names:  # multiindex
+            invalid = [k for k in indexers if k
+                       not in list(self.dims) + list(self.index_level_names)]
+        else:
+            invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
+
+        if isinstance(self._data, PandasMultiIndexAdapter):
+            dims = list(indexers.keys())
+            if (len(dims) > 1 or
+                    (dims[0] in self.index_level_names and
+                     len(self.index_level_names) != 1)):
+                raise ValueError('Multiple-level indexing is not supported.')
+
+            return self[indexers[dims[0]]]
 
         key = [slice(None)] * self.ndim
         for i, dim in enumerate(self.dims):
@@ -1165,8 +1179,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def level_names(self):
-        """Return MultiIndex level names or None if this IndexVariable has no
-        MultiIndex.
+        """Return MultiIndex level names including scalar levels.
+        Return None if this IndexVariable has no MultiIndex.
         """
         if isinstance(self._data, PandasMultiIndexAdapter):
             return self._data.all_levels
@@ -1317,7 +1331,8 @@ class IndexVariable(Variable):
             return False
 
     def _data_equals(self, other):
-        return self._data == other._data
+        # note: other can be a Variable.
+        return self._data == other.to_index_variable()._data
 
     def to_index_variable(self):
         """Return this variable as an xarray.IndexVariable"""
@@ -1354,7 +1369,7 @@ class IndexVariable(Variable):
         level_names: a list of names to be kept as index_level
         """
         if isinstance(self._data, PandasMultiIndexAdapter):
-            scalars = [name for name in self.index_level_names
+            scalars = [name for name in self.level_names
                        if name not in level_names]
             return type(self)(self.dims, self._data.set_scalar(scalars),
                               self._attrs, self._encoding, fastpath=True)
@@ -1466,12 +1481,10 @@ def assert_unique_multiindex_level_names(variables):
     """
     level_names = defaultdict(list)
     for var_name, var in variables.items():
-        if isinstance(var._data, PandasIndexAdapter):
-            idx_level_names = var.to_index_variable().level_names
-            if idx_level_names is not None:
-                for n in idx_level_names:
-                    level_names[n].append('%r (%s)' % (n, var_name))
-
+        if isinstance(var._data, PandasMultiIndexAdapter):
+            for n in var.level_names:
+                level_names[n].append('%r (%s)' % (n, var_name))
+    print(level_names)
     for k, v in level_names.items():
         if k in variables:
             v.append('(%s)' % k)
