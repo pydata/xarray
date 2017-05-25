@@ -621,7 +621,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for cname in self._coord_names:
             var = self.variables[cname]
             if var.ndim == 1:
-                level_names = var.level_names
+                level_names = var.all_level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
