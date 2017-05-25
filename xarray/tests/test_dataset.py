@@ -55,7 +55,7 @@ def create_test_data(seed=None):
 
 
 def create_test_multiindex():
-    mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+    mindex = pd.MultiIndex.from_product([[u'a', u'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
     return Dataset({}, {'x': mindex})
 
