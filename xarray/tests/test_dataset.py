@@ -55,7 +55,7 @@ def create_test_data(seed=None):
 
 
 def create_test_multiindex():
-    mindex = pd.MultiIndex.from_product([[u'a', u'b'], [1, 2]],
+    mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                         names=('level_1', 'level_2'))
     return Dataset({}, {'x': mindex})
 
@@ -156,10 +156,10 @@ class TestDataset(TestCase):
         Dimensions:  (x: 2)
         Coordinates:
           * x        (x) MultiIndex
-          - level_1  <U1 'a'
+          - level_1  %s 'a'
           - level_2  (x) int64 1 2
         Data variables:
-            *empty*""")
+            *empty*""" % np.asarray('a').dtype)
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
