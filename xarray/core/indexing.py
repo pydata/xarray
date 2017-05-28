@@ -582,6 +582,14 @@ class PandasIndexAdapter(utils.NDArrayMixin):
 
         return result
 
+    def take(self, indices):
+        return type(self)(array.take(indices), dtype=self.dtype)
+
+    @classmethod
+    def concatenate(self, arrays):
+        """ Concatenate indexes.  """
+        return arrays[0].array.append([idx.array for idx in arrays[1:]])
+
     def __eq__(self, other):
         return self.array.equals(other.array)
 
@@ -657,7 +665,10 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         Return an index for level-index. In scalar case, return the first item.
         """
         if level in self.scalars:
-            return self.array.get_level_values(level)[0]
+            if not isinstance(self.array, pd.MultiIndex):
+                return self.array.item()[self.scalars.index(level)]
+            else:
+                return self.array.get_level_values(level)[0]
         elif level in self.levels:
             return self.array.get_level_values(level)
         else:
@@ -683,7 +694,7 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
             return self
 
         level_names = self.all_levels
-        if len(level_names) == 0:
+        if not isinstance(self.array, pd.MultiIndex):
             # in 0d-case, make MultiIndex from a tuple
             if any([s not in self.scalars for s in scalars]):
                 raise ValueError('scalar %s is not a valid level name.')
@@ -694,10 +705,19 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         else:
             array = self.array
 
-        new_scalars = self.scalars
+        new_scalars = list(self.scalars)
         for s in scalars:
             new_scalars.remove(s)
         return type(self)(array, self.dtype, new_scalars)
+
+    def to_1dIndex(self):
+        """ Convert to size-1 index if self.array is a scalar (0d-array). """
+        if not isinstance(self.array, pd.MultiIndex):
+            return type(self)(pd.MultiIndex.from_tuples([self.array.item()],
+                                                        names=self.scalars),
+                              scalars = self.scalars)
+        else:
+            return self
 
     def __eq__(self, other):
         return self.array.equals(other.array) and self.scalars == other.scalars
@@ -705,3 +725,28 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
     def __repr__(self):
         return ('%s(array=%r, dtype=%r, scalars=%r)'
                 % (type(self).__name__, self.array, self.dtype, self.scalars))
+
+    def take(self, indices):
+        idx = type(self)(array.take(indices), dtype=self.dtype,
+                         scalars=self.scalars)
+
+    @classmethod
+    def concatenate(cls, arrays):
+        """
+        Concatenate multiple PandasMultiIndexAdapters.
+        arrays: a list of PandasMultiIndexAdapter
+        """
+        # make sure all the levels are the same.
+        first_arr = arrays[0]
+        if any([first_arr.all_levels != arr.all_levels for arr in arrays]):
+            raise ValueError('Levels are not identical.')
+
+        idx = first_arr.to_1dIndex().array
+        for arr in arrays[1:]:
+            idx = pd.MultiIndex.append(idx, arr.to_1dIndex().array)
+        idx = idx.set_names(first_arr.all_levels)
+        # automatically reset scalars
+        scalars = [s for s in first_arr.scalars if
+                   all([first_arr.get_level_values(s) == arr.get_level_values(s)
+                        for arr in arrays])]
+        return cls(idx, scalars=scalars)

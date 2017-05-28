@@ -182,6 +182,26 @@ class TestDataset(TestCase):
         print(actual)
         self.assertEqual(expected, actual)
 
+    def test_repr_scalar_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
+                                            names=('level_1', 'level_2'))
+        data = Dataset({'x': (('y'), np.ones(4))},
+                       {'y': np.arange(4), 'z': mindex})
+        data = data.isel(z=0)  # scalar multiindex
+        expected = dedent("""\
+        <xarray.Dataset>
+        Dimensions:  (y: 4)
+        Coordinates:
+          * y        (y) int64 0 1 2 3
+            z        MultiIndex
+          - level_1  %s 'a'
+          - level_2  int64 1
+        Data variables:
+            x        (y) float64 1.0 1.0 1.0 1.0""" % np.asarray('a').dtype)
+        actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
+        print(actual)
+        self.assertEqual(expected, actual)
+
     def test_repr_period_index(self):
         data = create_test_data(seed=456)
         data.coords['time'] = pd.period_range('2000-01-01', periods=20, freq='B')
@@ -1128,6 +1148,21 @@ class TestDataset(TestCase):
         mdata2 = mdata.isel(space=[0, 1]).sel(x='a')
         mdata3 = mdata.sel(x='a').isel(y=[0, 1])
         self.assertDatasetIdentical(mdata2, mdata3)
+        # 1 single element is chosen.
+        self.assertTrue('space' in mdata.isel(space=0).coords)
+
+    def test_concat_multiindex(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
+
+        actual = xr.concat([mdata.sel(one='a'), mdata.sel(one='b')], dim='x')
+        self.assertDatasetIdentical(actual, mdata)
+        # scalar multiindex.
+        actual = xr.concat([mdata.isel(x=i) for i in range(len(mdata['x']))],
+                           dim='x')
+        self.assertDatasetIdentical(actual, mdata)
 
     def test_reindex_like(self):
         data = create_test_data()

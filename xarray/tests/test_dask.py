@@ -9,6 +9,7 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
+from xarray.core.indexing import PandasMultiIndexAdapter
 from . import TestCase, requires_dask
 
 from xarray.tests import unittest
@@ -32,7 +33,8 @@ class DaskTestCase(TestCase):
             self.assertIsInstance(actual.data, da.Array)
             for k, v in actual.coords.items():
                 if k in actual.dims:
-                    self.assertIsInstance(v.data, np.ndarray)
+                    self.assertIsInstance(v.data, (np.ndarray,
+                                                   PandasMultiIndexAdapter))
                 else:
                     self.assertIsInstance(v.data, da.Array)
         elif isinstance(actual, Variable):

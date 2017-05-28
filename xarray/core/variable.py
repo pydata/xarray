@@ -266,6 +266,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def data(self):
         if isinstance(self._data, dask_array_type):
             return self._data
+        elif isinstance(self._data, PandasMultiIndexAdapter):
+            return self._data
         else:
             return self.values
 
@@ -755,6 +757,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
+        elif isinstance(self._data, PandasMultiIndexAdapter):
+            # scalar multi index
+            expanded_data = self.data.to_1dIndex()
         elif shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
@@ -978,7 +983,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            data = duck_array_ops.concatenate(arrays, axis=axis)
+            # TODO Need to remove duplicates at below and IndexVariable.concat
+            if isinstance(first_var._data, PandasMultiIndexAdapter):
+                data = PandasMultiIndexAdapter.concatenate(arrays)
+            else:
+                data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
                 # TODO: deprecate this option -- we don't need it for groupby
                 # any more.
@@ -988,7 +997,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             axis = 0
             dims = (dim,) + first_var.dims
-            data = duck_array_ops.stack(arrays, axis=axis)
+            # We need this to reconstruct the MultiIndex.
+            if isinstance(first_var._data, PandasMultiIndexAdapter):
+                data = PandasMultiIndexAdapter.concatenate(arrays)
+            else:
+                data = duck_array_ops.stack(arrays, axis=axis)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
@@ -1281,12 +1294,12 @@ class IndexVariable(Variable):
             raise TypeError('IndexVariable.concat requires that all input '
                             'variables be IndexVariable objects')
 
-        indexes = [v._data.array for v in variables]
+        indexes = [v._data for v in variables]
 
         if not indexes:
             data = []
         else:
-            data = indexes[0].append(indexes[1:])
+            data = indexes[0].concatenate(indexes)
 
             if positions is not None:
                 indices = nputils.inverse_permutation(

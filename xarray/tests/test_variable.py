@@ -469,6 +469,36 @@ class VariableSubclassTestCases(object):
         assert type(copied._data) is type(orig_data)
         self.assertVariableIdentical(array, copied)
 
+    def test_multiindex(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        v = self.cls('x', idx)
+        idx_new = PandasMultiIndexAdapter(utils.to_0d_object_array(('a', 0)),
+                                          scalars=['level_1', 'level_2'])
+        self.assertVariableIdentical(Variable((), idx_new), v[0])
+        # 1 element MultiIndex should have `scalar_level_names`
+        self.assertTrue(v[0].scalar_level_names == ['level_1', 'level_2'])
+        self.assertVariableIdentical(v, v[:])
+
+    def test_multiindex_concat(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        v = self.cls('x', idx)
+        concat = self.cls.concat([v[:3], v[3:]], dim='x')
+        self.assertTrue(isinstance(concat._data, PandasMultiIndexAdapter))
+        self.assertVariableIdentical(v, concat)
+        # even works with 1 item
+        self.assertVariableIdentical(v, self.cls.concat([v], dim='x'))
+
+        # test only for Variable since IndexVariable cannot store 0d-index.
+        if self.cls != IndexVariable:
+            # with scalar MultiIndex.
+            concat = v[0].concat([v[i] for i in range(len(v))], dim='x')
+            self.assertVariableIdentical(v, concat)
+            # make sure automatically reset scalars
+            concat = v[0].concat([v[i] for i in range(2)], dim='x')
+            self.assertTrue(concat.scalar_level_names == ['level_1'])
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -1069,16 +1099,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x'], [2, 3])
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
-
-    def test_multiindex(self):
-        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
-        idx = idx.set_names(['level_1', 'level_2'])
-        v = self.cls('x', idx)
-        idx_new = PandasMultiIndexAdapter(utils.to_0d_object_array(('a', 0)),
-                                          scalars=['level_1', 'level_2'])
-        self.assertVariableIdentical(Variable((), idx_new), v[0])
-        self.assertVariableIdentical(v, v[:])
-
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)

@@ -309,6 +309,11 @@ class TestPandasMultiIndexAdapter(TestCase):
         index = index.reset_scalar(['level_1', 'level_2'])
         self.assertTrue(index.get_level_values('level_2')[0] ==
                         idx.get_level_values('level_2')[0])
+        # works even if 1-item case.
+        index = indexing.PandasMultiIndexAdapter(idx)
+        index1 = index[0]
+        self.assertTrue(index1.get_level_values('level_2') ==
+                        index.get_level_values('level_2')[0])
 
     def test_eq(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
