@@ -192,12 +192,13 @@ class TestDataset(TestCase):
         <xarray.Dataset>
         Dimensions:  (y: 4)
         Coordinates:
-          * y        (y) int64 0 1 2 3
+          * y        (y) {0} 0 1 2 3
             z        MultiIndex
-          - level_1  %s 'a'
+          - level_1  {1} 'a'
           - level_2  int64 1
         Data variables:
-            x        (y) float64 1.0 1.0 1.0 1.0""" % np.asarray('a').dtype)
+            x        (y) float64 1.0 1.0 1.0 1.0""".format(
+            np.asarray(1).dtype, np.asarray('a').dtype))
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
