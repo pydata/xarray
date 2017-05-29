@@ -1137,7 +1137,8 @@ class TestDataset(TestCase):
                                             names=('one', 'two', 'three'))
         mdata = Dataset(data_vars={'var': ('x', range(8))},
                         coords={'x': mindex})
-
+        with self.assertRaises(ValueError):
+            mdata.isel(one=0)
         mdata2 = mdata.isel(x=[0, 1]).sel(one='a', two=1)
         mdata3 = mdata.sel(one='a', two=1).isel(three=[0, 1])
         self.assertDatasetIdentical(mdata2, mdata3)
@@ -1163,6 +1164,30 @@ class TestDataset(TestCase):
         actual = xr.concat([mdata.isel(x=i) for i in range(len(mdata['x']))],
                            dim='x')
         self.assertDatasetIdentical(actual, mdata)
+
+    def test_multiindex_expand_dims(self):
+        mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
+                                            names=('one', 'two', 'three'))
+        mdata = Dataset(data_vars={'var': ('x', range(8))},
+                        coords={'x': mindex})
+        actual = mdata.isel(x=0).expand_dims('x')
+        expected = mdata.isel(x=[0])
+        self.assertDatasetIdentical(actual, expected)
+        self.assertTrue(actual.variables['x'].level_names ==
+                        expected.variables['x'].level_names)
+
+        # expand scalar-level
+        actual = mdata.sel(one='a').expand_dims('one')
+        expected = mdata.isel(x=[0, 1, 2, 3 ])
+        self.assertDatasetIdentical(actual, expected)
+        self.assertTrue(actual.variables['x'].level_names ==
+                        expected.variables['x'].level_names)
+
+        actual = mdata.sel(one='a', two=2).expand_dims(['one', 'two'])
+        expected = mdata.isel(x=[2, 3])
+        self.assertDatasetIdentical(actual, expected)
+        self.assertTrue(actual.variables['x'].level_names ==
+                        expected.variables['x'].level_names)
 
     def test_reindex_like(self):
         data = create_test_data()

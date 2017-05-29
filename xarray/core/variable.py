@@ -727,6 +727,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         When possible, this operation does not copy this variable's data.
 
+        In MultiIndex-case, it can be used also for changing the scalar-level
+        to index-level.
+        In this case, dims should contains the dimension name (self.dims) as
+        well as the scalar-level-names to be changed.
+
         Parameters
         ----------
         dims : str or sequence of str or dict
@@ -757,9 +762,22 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             # don't use broadcast_to unless necessary so the result remains
             # writeable if possible
             expanded_data = self.data
+
         elif isinstance(self._data, PandasMultiIndexAdapter):
-            # scalar multi index
-            expanded_data = self.data.to_1dIndex()
+            # if a scalar MultiIndex case, it is expanded to size-1 1d-index.
+            # In this case, all the scalars are set to levels
+            # TODO API decision needed
+            if len(self.level_names) == 0:
+                expanded_data = self.data.to_1dIndex().reset_scalar(
+                                                    self.scalar_level_names)
+            # Otherwise, scalars in dims are changed to levels
+            else:
+                expanded_dims = self.name
+                expanded_data = self.data.reset_scalar(
+                            [d for d in dims if d in self.data.scalars])
+                return Variable(self.dims[0], expanded_data, self._attrs,
+                                self._encoding, fastpath=True)
+
         elif shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
@@ -1211,6 +1229,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return type(self)(self.dims, level)
         else:  # scalar case
             return Variable((), level)
+
+    def reorder_levels(self, dim, order):
+        if not isinstance(self._data, PandasMultiIndexAdapter):
+            raise ValueError("coordinate %r has no MultiIndex" % dim)
+        return Variable(self.dims, self._data.reorder_levels(order))
+
 
 ops.inject_all_ops_and_reduce_methods(Variable)
 

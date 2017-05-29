@@ -249,6 +249,9 @@ def get_dim_pos_indexers(data_obj, indexers):
             if len(data_obj.variables[dim].level_names) == 1:
                 # valid only for 1 level case.
                 dim_indexers[dim] = label
+            else:
+                raise ValueError('positional indexer for multi-level'
+                                 ' MultiIndex is not supported.')
         else:
             dim_indexers[key] = label
     return dim_indexers
@@ -612,7 +615,7 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
 
         if isinstance(self.array, pd.MultiIndex):
             if any([s not in self.all_levels for s in scalars]):
-                raise ValueError('scalar %s is not a valid level name.')
+                raise ValueError('scalar %s is not a valid level name.' % s)
         self._scalars = scalars
 
     @property
@@ -675,8 +678,9 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
             raise ValueError('level %r does not exist.' % level)
 
     def set_scalar(self, scalars):
-        if any([s not in self.levels for s in scalars]):
-            raise ValueError('scalar %s is not a valid level name.')
+        invalid = [s for s in scalars if s not in self.levels]
+        if invalid:
+            raise ValueError('scalars %s is not a valid level name.' % invalid)
         # keep scalars in order
         new_scalars = []
         for l in self.levels:
@@ -696,14 +700,19 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         level_names = self.all_levels
         if not isinstance(self.array, pd.MultiIndex):
             # in 0d-case, make MultiIndex from a tuple
-            if any([s not in self.scalars for s in scalars]):
-                raise ValueError('scalar %s is not a valid level name.')
+            invalid = [s for s in scalars if s not in self.scalars]
+            if invalid:
+                raise ValueError('scalar %s is not a valid level name.'
+                                 % invalid)
             array = pd.MultiIndex.from_tuples([self.array.item()],
                                               names=self.scalars)
-        elif any([s not in level_names for s in scalars]):
-            raise ValueError('scalar %s is not a valid level name.')
         else:
-            array = self.array
+            invalid = [s for s in scalars if s not in level_names]
+            if invalid:
+                raise ValueError('scalar %s is not a valid level name.'
+                                 % invalid)
+            else:
+                array = self.array
 
         new_scalars = list(self.scalars)
         for s in scalars:
@@ -750,3 +759,18 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
                    all([first_arr.get_level_values(s) == arr.get_level_values(s)
                         for arr in arrays])]
         return cls(idx, scalars=scalars)
+
+    def reorder_levels(self, order):
+        """ Rearrange index levels using input order. Order should be a list
+        of valid level names.  """
+        # TODO support renaming?
+        if set(order) != set(self.all_levels):
+            raise ValueError('Order should be an exisiting level names.')
+
+        if not isinstance(self.array, pd.MultiIndex):  # scalar case
+            item = tuple([self.array.item()[o.index(scalar)] for o in order])
+            return type(self)(item, dtype=self.dtype, scalars=order)
+        else:
+            scalars = [o for o in order if o in self.scalars]
+            return type(self)(self.array.reorder_levels(order),
+                              dtype=self.dtype, scalars=scalars)

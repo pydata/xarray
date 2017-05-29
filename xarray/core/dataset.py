@@ -1598,6 +1598,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
 
+        If dim is a scalar-level of MultiIndex, this level is changed to
+        index-level.
+
         Parameters
         ----------
         dim : str or sequence of str.
@@ -1620,6 +1623,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         if isinstance(dim, basestring):
             dim = [dim]
+        else:
+            dim = list(dim)
+        # scalars to converted to index-level
+        scalars = [d for d in dim if d in self._level_coords]
+        dim = [d for d in dim if d not in scalars]
+
         if axis is not None and not isinstance(axis, (list, tuple)):
             axis = [axis]
 
@@ -1644,7 +1653,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         variables = OrderedDict()
         for k, v in iteritems(self._variables):
             if k not in dim:
-                if k in self._coord_names:  # Do not change coordinates
+                if k in self._coord_names:
+                    # Do not change coordinates
                     variables[k] = v
                 else:
                     result_ndim = len(v.dims) + len(axis)
@@ -1672,6 +1682,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # If dims includes a label of a non-dimension coordinate,
                 # it will be promoted to a 1D coordinate with a single value.
                 variables[k] = v.set_dims(k)
+
+        # Convert scalar-level of MultiIndex to index-level
+        for k, v in iteritems(self._variables):
+            if v.scalar_level_names is not None and len(scalars) > 0:
+                level_dims = [s for s in scalars if s in
+                              v.scalar_level_names] + list(v.dims)
+                variables[k] = v.set_dims(level_dims)
 
         return self._replace_vars_and_dims(variables, self._coord_names)
 
@@ -1759,11 +1776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         replace_variables = {}
         for dim, order in dim_order.items():
             coord = self._variables[dim]
-            index = coord.to_index()
-            if not isinstance(index, pd.MultiIndex):
-                raise ValueError("coordinate %r has no MultiIndex" % dim)
-            replace_variables[dim] = IndexVariable(
-                        coord.dims, index.reorder_levels(order))
+            replace_variables[dim] = coord.reorder_levels(dim, order)
         variables = self._variables.copy()
         variables.update(replace_variables)
         return self._replace_vars_and_dims(variables, inplace=inplace)
