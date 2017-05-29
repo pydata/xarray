@@ -185,8 +185,10 @@ class TestDataset(TestCase):
     def test_repr_scalar_multiindex(self):
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                             names=('level_1', 'level_2'))
-        data = Dataset({'x': (('y'), np.ones(4))},
-                       {'y': np.arange(4), 'z': mindex})
+        coords = OrderedDict()
+        coords['y'] = np.arange(4)
+        coords['z'] = mindex
+        data = Dataset({'x': (('y'), np.ones(4))}, coords=coords)
         data = data.isel(z=0)  # scalar multiindex
         expected = dedent("""\
         <xarray.Dataset>
@@ -195,10 +197,10 @@ class TestDataset(TestCase):
           * y        (y) {0} 0 1 2 3
             z        MultiIndex
           - level_1  {1} 'a'
-          - level_2  int64 1
+          - level_2  {2} 1
         Data variables:
             x        (y) float64 1.0 1.0 1.0 1.0""".format(
-            np.asarray(1).dtype, np.asarray('a').dtype))
+            np.asarray(1).dtype, np.asarray('a').dtype, np.asarray(1).dtype))
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
