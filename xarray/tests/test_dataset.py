@@ -197,7 +197,7 @@ class TestDataset(TestCase):
           * y        (y) {0} 0 1 2 3
             z        MultiIndex
           - level_1  {1} 'a'
-          - level_2  {2} 1
+          - level_2  int64 1
         Data variables:
             x        (y) float64 1.0 1.0 1.0 1.0""".format(
             np.asarray(1).dtype, np.asarray('a').dtype, np.asarray(1).dtype))
