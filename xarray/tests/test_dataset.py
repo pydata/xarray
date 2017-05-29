@@ -204,8 +204,8 @@ class TestDataset(TestCase):
 
     def test_repr_period_index(self):
         data = create_test_data(seed=456)
-        data.coords['time'] = pd.period_range('2000-01-01', periods=20, freq='B')
-
+        data.coords['time'] = pd.period_range('2000-01-01', periods=20,
+                                              freq='B')
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
 
@@ -1178,7 +1178,7 @@ class TestDataset(TestCase):
 
         # expand scalar-level
         actual = mdata.sel(one='a').expand_dims('one')
-        expected = mdata.isel(x=[0, 1, 2, 3 ])
+        expected = mdata.isel(x=[0, 1, 2, 3])
         self.assertDatasetIdentical(actual, expected)
         self.assertTrue(actual.variables['x'].level_names ==
                         expected.variables['x'].level_names)

@@ -499,6 +499,22 @@ class VariableSubclassTestCases(object):
             concat = v[0].concat([v[i] for i in range(2)], dim='x')
             self.assertTrue(concat.scalar_level_names == ['level_1'])
 
+    def test_reorder_levels(self):
+        idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
+        idx = idx.set_names(['level_1', 'level_2'])
+        v = self.cls('x', idx)
+        v2 = v.reorder_levels('x', ['level_1', 'level_2'])
+        self.assertVariableIdentical(v.to_index_variable(),
+                                     v2.to_index_variable())
+        v2 = v.reorder_levels('x', ['level_2', 'level_1'])
+        self.assertTrue(v2.all_level_names == ['level_2', 'level_1'])
+        v = v.to_index_variable()
+        v2 = v2.to_index_variable()
+        self.assertVariableIdentical(v.get_level_variable('level_2'),
+                                     v2.get_level_variable('level_2'))
+        self.assertVariableIdentical(v.get_level_variable('level_1'),
+                                     v2.get_level_variable('level_1'))
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -667,7 +683,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = as_variable(0)
         expected = Variable([], 0)
         self.assertVariableIdentical(expected, actual)
-
 
     def test_to_index_variable(self):
         midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2]])
@@ -1100,6 +1115,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
 
+
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
 
@@ -1132,7 +1148,8 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)
-        coords = [IndexVariable('t', periods[:5]), IndexVariable('t', periods[5:])]
+        coords = [IndexVariable('t', periods[:5]),
+                  IndexVariable('t', periods[5:])]
         expected = IndexVariable('t', periods)
         actual = IndexVariable.concat(coords, dim='t')
         assert actual.identical(expected)

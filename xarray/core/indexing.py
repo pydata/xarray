@@ -256,6 +256,7 @@ def get_dim_pos_indexers(data_obj, indexers):
             dim_indexers[key] = label
     return dim_indexers
 
+
 def get_dim_indexers(data_obj, indexers):
     """Given a xarray data object and label based indexers, return a mapping
     of label indexers with only dimension names as keys.
@@ -586,7 +587,7 @@ class PandasIndexAdapter(utils.NDArrayMixin):
         return result
 
     def take(self, indices):
-        return type(self)(array.take(indices), dtype=self.dtype)
+        return type(self)(self.array.take(indices), dtype=self.dtype)
 
     @classmethod
     def concatenate(self, arrays):
@@ -614,8 +615,10 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
             raise ValueError('Name of levels is necessary for 0d-array input.')
 
         if isinstance(self.array, pd.MultiIndex):
-            if any([s not in self.all_levels for s in scalars]):
-                raise ValueError('scalar %s is not a valid level name.' % s)
+            for s in scalars:
+                if s not in self.all_levels:
+                    raise ValueError('scalar %s is not a valid level name.'
+                                     % s)
         self._scalars = scalars
 
     @property
@@ -724,7 +727,7 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         if not isinstance(self.array, pd.MultiIndex):
             return type(self)(pd.MultiIndex.from_tuples([self.array.item()],
                                                         names=self.scalars),
-                              scalars = self.scalars)
+                              scalars=self.scalars)
         else:
             return self
 
@@ -736,8 +739,8 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
                 % (type(self).__name__, self.array, self.dtype, self.scalars))
 
     def take(self, indices):
-        idx = type(self)(array.take(indices), dtype=self.dtype,
-                         scalars=self.scalars)
+        return type(self)(self.array.take(indices), dtype=self.dtype,
+                          scalars=self.scalars)
 
     @classmethod
     def concatenate(cls, arrays):
@@ -756,8 +759,8 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
         idx = idx.set_names(first_arr.all_levels)
         # automatically reset scalars
         scalars = [s for s in first_arr.scalars if
-                   all([first_arr.get_level_values(s) == arr.get_level_values(s)
-                        for arr in arrays])]
+                   all([first_arr.get_level_values(s) ==
+                        arr.get_level_values(s) for arr in arrays])]
         return cls(idx, scalars=scalars)
 
     def reorder_levels(self, order):
@@ -768,7 +771,8 @@ class PandasMultiIndexAdapter(PandasIndexAdapter):
             raise ValueError('Order should be an exisiting level names.')
 
         if not isinstance(self.array, pd.MultiIndex):  # scalar case
-            item = tuple([self.array.item()[o.index(scalar)] for o in order])
+            item = tuple([self.array.item()[self.scalars.index(o)]
+                          for o in order])
             return type(self)(item, dtype=self.dtype, scalars=order)
         else:
             scalars = [o for o in order if o in self.scalars]
