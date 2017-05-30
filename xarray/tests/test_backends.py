@@ -22,7 +22,7 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack, basestring
+from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -1570,11 +1570,11 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
             # but on x and y only windowed operations are allowed, more
             # exotic slicing should raise an error
             with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                _ = actual.isel(x=[2, 4], y=[1, 3]).values
+                actual.isel(x=[2, 4], y=[1, 3]).values
             with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                _ = actual.isel(x=[4, 2]).values
+                actual.isel(x=[4, 2]).values
             with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                _ = actual.isel(x=slice(5, 2, -1)).values
+                actual.isel(x=slice(5, 2, -1)).values
 
             # Integer indexing
             ex = expected.isel(band=1)
@@ -1638,7 +1638,7 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
             # Without cache an error is raised
             with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                _ = actual.isel(x=[2, 4]).values
+                actual.isel(x=[2, 4]).values
 
             # This should cache everything
             assert_allclose(actual, expected)
@@ -1648,6 +1648,7 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
             ex = expected.isel(x=[2, 4])
             assert_allclose(ac, ex)
 
+    @requires_dask
     def test_chunks(self):
 
         import rasterio
@@ -1670,6 +1671,10 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
             # Chunk at open time
             actual = xr.open_rasterio(tmp_file, chunks=(1, 2, 2))
+
+            import dask.array as da
+            self.assertIsInstance(actual.data, da.Array)
+            assert 'open_rasterio' in actual.data.name
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),

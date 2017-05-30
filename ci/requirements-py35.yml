@@ -15,7 +15,6 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio
   - pip:
     - coveralls
     - pytest-cov

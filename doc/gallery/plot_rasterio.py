@@ -15,11 +15,12 @@ original map projection.
 """
 
 import os
+import urllib.request
 import numpy as np
 import xarray as xr
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
-import urllib.request
+from rasterio.warp import transform
 
 # Download the file from rasterio's repository
 url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'
@@ -33,7 +34,6 @@ ny, nx = len(rioda['y']), len(rioda['x'])
 x, y = np.meshgrid(rioda['x'], rioda['y'])
 
 # Rasterio works with 1D arrays
-from rasterio.warp import transform
 lon, lat = transform(rioda.crs, {'init': 'EPSG:4326'},
                      x.flatten(), y.flatten())
 lon = np.asarray(lon).reshape((ny, nx))
@@ -51,7 +51,7 @@ riods['greyscale'] = riods.img.mean(dim='band')
 ax = plt.subplot(projection=ccrs.PlateCarree())
 riods.greyscale.plot(ax=ax, x='lon', y='lat', transform=ccrs.PlateCarree(),
                      cmap='Greys_r', add_colorbar=False)
-ax.coastlines('10m', color='r');
+ax.coastlines('10m', color='r')
 plt.show()
 
 # Delete the file

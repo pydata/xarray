@@ -80,8 +80,8 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
 def open_rasterio(filename, chunks=None, cache=None, lock=False):
     """Open a file with rasterio (experimental).
 
-    This should work with any file that rasterio can open (most often: 
-    geoTIFF). The x and y coordinates are generated automatically from the 
+    This should work with any file that rasterio can open (most often:
+    geoTIFF). The x and y coordinates are generated automatically from the
     file's geoinformation.
 
     Parameters
@@ -94,9 +94,9 @@ def open_rasterio(filename, chunks=None, cache=None, lock=False):
     data : DataArray
         The newly created DataArray.
     chunks : int, tuple or dict, optional
-        Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or 
-        ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new 
-        DataArray into a dask array. This is an experimental feature; see the 
+        Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
+        ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new
+        DataArray into a dask array. This is an experimental feature; see the
         documentation for more details.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
@@ -153,12 +153,12 @@ def open_rasterio(filename, chunks=None, cache=None, lock=False):
                        coords=coords, attrs=attrs)
 
     if chunks is not None:
+        # Logic borrowed from open_dataset
         try:
             from dask.base import tokenize
         except ImportError:
             # raise the usual error if dask is entirely missing
             import dask
-
             if LooseVersion(dask.__version__) < LooseVersion('0.6'):
                 raise ImportError(
                     'xarray requires dask version 0.6 or newer')
@@ -169,9 +169,8 @@ def open_rasterio(filename, chunks=None, cache=None, lock=False):
         mtime = os.path.getmtime(filename)
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
-        # result = result.chunk(chunks, name_prefix=name_prefix, token=token,
-        #                       lock=lock)
-        result = result.chunk(chunks)
+        result = result.chunk(chunks, name_prefix=name_prefix, token=token,
+                              lock=lock)
 
     # Make the file closeable
     result._file_obj = riods
