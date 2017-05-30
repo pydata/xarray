@@ -1529,7 +1529,7 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_rasterio(tmp_file)
+            actual = xr.open_rasterio(tmp_file, cache=False)
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
@@ -1596,6 +1596,85 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
             # One-element lists
             ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
             ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
+            assert_allclose(ac, ex)
+
+    def test_caching(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Cache is the default
+            actual = xr.open_rasterio(tmp_file)
+
+            # ref
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={'x': np.arange(nx)*0.5 + 1,
+                                         'y': -np.arange(ny)*2 + 2,
+                                         'band': [1, 2, 3]})
+
+            # Without cache an error is raised
+            with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
+                _ = actual.isel(x=[2, 4]).values
+
+            # This should cache everything
+            assert_allclose(actual, expected)
+
+            # once cached, non-windowed indexing should become possible
+            ac = actual.isel(x=[2, 4])
+            ex = expected.isel(x=[2, 4])
+            assert_allclose(ac, ex)
+
+    def test_chunks(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Chunk at open time
+            actual = xr.open_rasterio(tmp_file, chunks=(1, 2, 2))
+
+            # ref
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={'x': np.arange(nx)*0.5 + 1,
+                                         'y': -np.arange(ny)*2 + 2,
+                                         'band': [1, 2, 3]})
+
+            # do some arithmetic
+            ac = actual.mean()
+            ex = expected.mean()
+            assert_allclose(ac, ex)
+
+            ac = actual.sel(band=1).mean(dim='x')
+            ex = expected.sel(band=1).mean(dim='x')
             assert_allclose(ac, ex)
 
 

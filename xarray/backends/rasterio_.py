@@ -1,4 +1,6 @@
+import os
 from collections import OrderedDict
+from distutils.version import LooseVersion
 import numpy as np
 
 from .. import DataArray
@@ -75,7 +77,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return out
 
 
-def open_rasterio(filename):
+def open_rasterio(filename, chunks=None, cache=None, lock=False):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often: 
@@ -91,10 +93,31 @@ def open_rasterio(filename):
     -------
     data : DataArray
         The newly created DataArray.
+    chunks : int, tuple or dict, optional
+        Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or 
+        ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new 
+        DataArray into a dask array. This is an experimental feature; see the 
+        documentation for more details.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
+    lock : False, True or threading.Lock, optional
+        If chunks is provided, this argument is passed on to
+        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        used when reading data from netCDF files with the netcdf4 and h5netcdf
+        engines to avoid issues with concurrent access when using dask's
+        multithreaded backend.
     """
 
     import rasterio
     riods = rasterio.open(filename, mode='r')
+
+    if cache is None:
+        cache = chunks is None
 
     coords = OrderedDict()
 
@@ -120,7 +143,37 @@ def open_rasterio(filename):
     # Maybe we'd like to parse other attributes here (for later)
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
+
+    # this lets you write arrays loaded with rasterio
+    data = indexing.CopyOnWriteArray(data)
+    if cache and (chunks is None):
+        data = indexing.MemoryCachedArray(data)
+
     result = DataArray(data=data, dims=('band', 'y', 'x'),
                        coords=coords, attrs=attrs)
+
+    if chunks is not None:
+        try:
+            from dask.base import tokenize
+        except ImportError:
+            # raise the usual error if dask is entirely missing
+            import dask
+
+            if LooseVersion(dask.__version__) < LooseVersion('0.6'):
+                raise ImportError(
+                    'xarray requires dask version 0.6 or newer')
+            else:
+                raise
+
+        # augment the token with the file modification time
+        mtime = os.path.getmtime(filename)
+        token = tokenize(filename, mtime, chunks)
+        name_prefix = 'open_rasterio-%s' % token
+        # result = result.chunk(chunks, name_prefix=name_prefix, token=token,
+        #                       lock=lock)
+        result = result.chunk(chunks)
+
+    # Make the file closeable
     result._file_obj = riods
+
     return result
