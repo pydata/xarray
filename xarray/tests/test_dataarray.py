@@ -492,6 +492,12 @@ class TestDataArray(TestCase):
 
         self.assertIsNone(blocked.load().chunks)
 
+        # Check that kwargs are passed
+        import dask.array as da
+        blocked = unblocked.chunk(name_prefix='testname_')
+        self.assertIsInstance(blocked.data, da.Array)
+        assert 'testname_' in blocked.data.name
+
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
         self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
