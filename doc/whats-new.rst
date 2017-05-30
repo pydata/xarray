@@ -52,6 +52,9 @@ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
   successful download (:issue:`1392`). By `Matthew Gidden
   <https://github.com/gidden>`_.
 
+- ``DataArray.chunk()`` now accepts dask specific kwargs like
+  ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
