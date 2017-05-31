@@ -181,11 +181,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. This is an experimental feature; see the
-        documentation for more details.
+        chunk for all arrays.
     lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        :py:func:`dask.array.from_array`. By default, a global lock is
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
@@ -228,17 +227,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         _protect_dataset_variables_inplace(ds, cache)
 
         if chunks is not None:
-            try:
-                from dask.base import tokenize
-            except ImportError:
-                # raise the usual error if dask is entirely missing
-                import dask
-                if LooseVersion(dask.__version__) < LooseVersion('0.6'):
-                    raise ImportError(
-                        'xarray requires dask version 0.6 or newer')
-                else:
-                    raise
-
+            from dask.base import tokenize
             # if passed an actual file path, augment the token with
             # the file modification time
             if (isinstance(filename_or_obj, basestring) and
@@ -369,11 +358,10 @@ def open_dataarray(*args, **kwargs):
         'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
-        arrays. This is an experimental feature; see the documentation for more
-        details.
+        arrays.
     lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        :py:func:`dask.array.from_array`. By default, a global lock is
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
