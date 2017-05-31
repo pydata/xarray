@@ -1944,13 +1944,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-        join : {'outer', 'inner', 'left', 'right'}, optional
+        join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
             - 'inner': use the intersection of the indexes
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
+            - 'exact': error instead of aligning non-equal indexes
 
         Returns
         -------

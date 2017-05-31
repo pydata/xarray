@@ -63,6 +63,12 @@ class TestMergeFunction(TestCase):
         with self.assertRaises(xr.MergeError):
             xr.merge([ds, ds + 1])
 
+    def test_merge_alignment_error(self):
+        ds = xr.Dataset(coords={'x': [1, 2]})
+        other = xr.Dataset(coords={'x': [2, 3]})
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+            xr.merge([ds, other], join='exact')
+
     def test_merge_no_conflicts_single_var(self):
         ds1 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
         ds2 = xr.Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})

@@ -457,7 +457,7 @@ def merge(objects, compat='no_conflicts', join='outer'):
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         How to combine objects with different indexes.
 
     Returns
