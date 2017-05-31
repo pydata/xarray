@@ -37,6 +37,10 @@ Enhancements
   controlled via ``--run-network-tests`` command line argument
   to ``py.test`` (:issue:`1393`).
   By `Matthew Gidden <https://github.com/gidden>`_.
+ 
+- :py:func:`~xarray.align` now supports ``join='exact'``, which raises
+  an error instead of aligning when indexes to be aligned are not equal.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - New backend to open raster files with the
   `rasterio <https://mapbox.github.io/rasterio/>`_ library.
