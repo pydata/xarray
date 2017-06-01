@@ -24,6 +24,10 @@ def _get_joiner(join):
         return operator.itemgetter(0)
     elif join == 'right':
         return operator.itemgetter(-1)
+    elif join == 'exact':
+        # We cannot return a function to "align" in this case, because it needs
+        # access to the dimension name to give a good error message.
+        return None
     else:
         raise ValueError('invalid value for join: %s' % join)
 
@@ -47,13 +51,15 @@ def align(*objects, **kwargs):
     ----------
     *objects : Dataset or DataArray
         Objects to align.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
         - 'outer': use the union of object indexes
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
+        - 'exact': instead of aligning, raise `ValueError` when indexes to be
+          aligned are not equal
     copy : bool, optional
         If ``copy=True``, data in the return values is always copied. If
         ``copy=False`` and reindexing is unnecessary, or can be performed with
@@ -120,6 +126,10 @@ def align(*objects, **kwargs):
             if (any(not matching_indexes[0].equals(other)
                     for other in matching_indexes[1:]) or
                     dim in unlabeled_dim_sizes):
+                if join == 'exact':
+                    raise ValueError(
+                        'indexes along dimension {!r} are not equal'
+                        .format(dim))
                 index = joiner(matching_indexes)
                 joined_indexes[dim] = index
             else:
