@@ -1223,16 +1223,18 @@ class IndexVariable(Variable):
         """
         variable_type_set = set(map(lambda v: type(v.data), variables))
 
-
         if len(variable_type_set) > 1:
-            raise TypeError('Trying to concatenate variables of different types')
+            raise TypeError('Trying to concatenate variables of '
+                            'different types')
 
         variable_type = list(variable_type_set)[0]
         if not variable_type == np.ndarray:
-            raise TypeError('Can only concatenate variables whose _data member is ndarray')
+            raise TypeError('Can only concatenate variables whose '
+                            '_data member is ndarray')
 
         if variables[0].dtype == np.object:
-            raise TypeError('We use concat_numpy for objects whose dtypes are different than numpy.object ')
+            raise TypeError('We use concat_numpy for objects whose '
+                            'dtypes are different than numpy.object ')
 
         indexes = [v._data for v in variables]
 
@@ -1249,10 +1251,10 @@ class IndexVariable(Variable):
         return data
 
     @classmethod
-    def concat_pandas(cls,variables,positions=None):
+    def concat_pandas(cls, variables, positions=None):
         """
-        Concatenates variables. This is generic function that handles all cases
-        for whicn concat_numpy does not work
+        Concatenates variables. This is generic function that
+        handles all cases for which concat_numpy does not work
         :param variables: list of variables to concatenate
         :return: Concatenated variables
         """
@@ -1271,12 +1273,11 @@ class IndexVariable(Variable):
 
         return data
 
-
     @classmethod
     def concat(cls, variables, dim='concat_dim', positions=None,
                shortcut=False):
-        """Specialized version of Variable.concat for IndexVariable objects.
-
+        """Specialized version of Variable.concat for
+        IndexVariable objects.
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
@@ -1292,11 +1293,12 @@ class IndexVariable(Variable):
                             'variables be IndexVariable objects')
 
         # GH1434
-        # Fixes bug "xr.concat loses coordinate dtype information with recarrays in 0.9"
+        # Fixes bug: "xr.concat loses coordinate dtype
+        # information with recarrays in 0.9"
         try:
-            data = cls.concat_numpy(variables,positions)
+            data = cls.concat_numpy(variables, positions)
         except TypeError:
-            data = cls.concat_pandas(variables,positions)
+            data = cls.concat_pandas(variables, positions)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:

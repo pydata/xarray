@@ -624,6 +624,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed losing of dimansions dtype during concat operation. By
+ `Maciek Swat <https://github.com/maciekswat>`_.
+
 - Attributes were being retained by default for some resampling
   operations when they should not. With the ``keep_attrs=False`` option, they
   will no longer be retained by default. This may be backwards-incompatible

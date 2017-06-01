@@ -82,8 +82,10 @@ class TestConcatDataset(TestCase):
         preserves dtype of the numpy structured array
         """
 
-        p1 = np.array([('A', 180), ('B', 150), ('C', 200)], dtype=[('name', '|S256'), ('height', int)])
-        p2 = np.array([('D', 170), ('E', 250), ('F', 150)], dtype=[('name', '|S256'), ('height', int)])
+        p1 = np.array([('A', 180), ('B', 150), ('C', 200)],
+                      dtype=[('name', '|S256'), ('height', int)])
+        p2 = np.array([('D', 170), ('E', 250), ('F', 150)],
+                      dtype=[('name', '|S256'), ('height', int)])
 
         data = np.arange(50, 80, 1, dtype=np.float)
 
@@ -117,9 +119,6 @@ class TestConcatDataset(TestCase):
         print (combined_2.participant.dtype)
         assert combined_2.participant.dtype == da1.participant.dtype
         assert combined_2.measurement.dtype == da1.measurement.dtype
-
-
-
 
     def test_concat_data_vars(self):
         data = Dataset({'foo': ('x', np.random.randn(10))})
