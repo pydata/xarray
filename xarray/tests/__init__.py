@@ -101,7 +101,7 @@ requires_bottleneck = pytest.mark.skipif(
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
     _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except ValueError:
+except (ValueError, AttributeError) as e:
     # Can't get config from pytest, e.g., because xarray is installed instead
     # of being run from a development version (and hence conftests.py is not
     # available). Don't run flaky tests.

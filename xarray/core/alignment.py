@@ -103,6 +103,9 @@ def align(*objects, **kwargs):
         for dim in obj.dims:
             if dim not in exclude:
                 try:
+                    # GH1434
+                    # dtype is lost after obj.indexes[dim]
+                    # problem originates in  Indexes.__getitem__ in coordinates.py
                     index = obj.indexes[dim]
                 except KeyError:
                     unlabeled_dim_sizes[dim].add(obj.sizes[dim])

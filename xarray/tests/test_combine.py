@@ -75,6 +75,52 @@ class TestConcatDataset(TestCase):
         expected['dim1'] = dim
         self.assertDatasetIdentical(expected, concat(datasets, dim))
 
+    def test_concat_dtype_preservation(self):
+        """
+        This test checks whether concatennation of two DataArrays
+        along the axis whose dimension is numpy structured array
+        preserves dtype of the numpy structured array
+        """
+
+        p1 = np.array([('A', 180), ('B', 150), ('C', 200)], dtype=[('name', '|S256'), ('height', int)])
+        p2 = np.array([('D', 170), ('E', 250), ('F', 150)], dtype=[('name', '|S256'), ('height', int)])
+
+        data = np.arange(50, 80, 1, dtype=np.float)
+
+        dims = ['measurement', 'participant']
+
+        da1 = DataArray(
+            data.reshape(10, 3),
+            coords={
+                'measurement': np.arange(10),
+                'participant': p1,
+            },
+            dims=dims
+        )
+
+        da2 = DataArray(
+            data.reshape(10, 3),
+            coords={
+                'measurement': np.arange(10),
+                'participant': p2,
+            },
+            dims=dims
+        )
+
+        combined_1 = concat([da1, da2], dim='participant')
+
+        assert combined_1.participant.dtype == da1.participant.dtype
+        assert combined_1.measurement.dtype == da1.measurement.dtype
+
+        combined_2 = concat([da1, da2], dim='measurement')
+
+        print (combined_2.participant.dtype)
+        assert combined_2.participant.dtype == da1.participant.dtype
+        assert combined_2.measurement.dtype == da1.measurement.dtype
+
+
+
+
     def test_concat_data_vars(self):
         data = Dataset({'foo': ('x', np.random.randn(10))})
         objs = [data.isel(x=slice(5)), data.isel(x=slice(5, None))]

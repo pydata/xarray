@@ -1212,6 +1212,67 @@ class IndexVariable(Variable):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
     @classmethod
+    def concat_numpy(cls, variables, positions=None):
+        """
+        Concatenates variables. Works for variables whose dtype is
+        different from numpy.object. If variables' dtype is numpy.object
+        it throws TypeError and "concat" function will use
+        concat_pandas function
+        :param variables: list of variables to concatenate
+        :return: Concatenated variables
+        """
+        variable_type_set = set(map(lambda v: type(v.data), variables))
+
+
+        if len(variable_type_set) > 1:
+            raise TypeError('Trying to concatenate variables of different types')
+
+        variable_type = list(variable_type_set)[0]
+        if not variable_type == np.ndarray:
+            raise TypeError('Can only concatenate variables whose _data member is ndarray')
+
+        if variables[0].dtype == np.object:
+            raise TypeError('We use concat_numpy for objects whose dtypes are different than numpy.object ')
+
+        indexes = [v._data for v in variables]
+
+        if not indexes:
+            data = []
+        else:
+            data = np.concatenate((indexes))
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
+                data = data.take(indices)
+
+        return data
+
+    @classmethod
+    def concat_pandas(cls,variables,positions=None):
+        """
+        Concatenates variables. This is generic function that handles all cases
+        for whicn concat_numpy does not work
+        :param variables: list of variables to concatenate
+        :return: Concatenated variables
+        """
+        indexes = [v._data.array for v in variables]
+
+        if not indexes:
+            data = []
+        else:
+
+            data = indexes[0].append(indexes[1:])
+
+            if positions is not None:
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
+                data = data.take(indices)
+
+        return data
+
+
+    @classmethod
     def concat(cls, variables, dim='concat_dim', positions=None,
                shortcut=False):
         """Specialized version of Variable.concat for IndexVariable objects.
@@ -1223,23 +1284,19 @@ class IndexVariable(Variable):
             dim, = dim.dims
 
         variables = list(variables)
+
         first_var = variables[0]
 
         if any(not isinstance(v, cls) for v in variables):
             raise TypeError('IndexVariable.concat requires that all input '
                             'variables be IndexVariable objects')
 
-        indexes = [v._data.array for v in variables]
-
-        if not indexes:
-            data = []
-        else:
-            data = indexes[0].append(indexes[1:])
-
-            if positions is not None:
-                indices = nputils.inverse_permutation(
-                    np.concatenate(positions))
-                data = data.take(indices)
+        # GH1434
+        # Fixes bug "xr.concat loses coordinate dtype information with recarrays in 0.9"
+        try:
+            data = cls.concat_numpy(variables,positions)
+        except TypeError:
+            data = cls.concat_pandas(variables,positions)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
