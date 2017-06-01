@@ -17,7 +17,11 @@ Top-level functions
    align
    broadcast
    concat
+   merge
    set_options
+   full_like
+   zeros_like
+   ones_like
 
 Dataset
 =======
@@ -38,9 +42,13 @@ Attributes
    :toctree: generated/
 
    Dataset.dims
+   Dataset.sizes
    Dataset.data_vars
    Dataset.coords
    Dataset.attrs
+   Dataset.encoding
+   Dataset.indexes
+   Dataset.get_index
 
 Dictionary interface
 --------------------
@@ -55,8 +63,8 @@ and values given by ``DataArray`` objects.
    Dataset.__setitem__
    Dataset.__delitem__
    Dataset.update
-   Dataset.iteritems
-   Dataset.itervalues
+   Dataset.items
+   Dataset.values
 
 Dataset contents
 ----------------
@@ -67,10 +75,12 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.assign_attrs
    Dataset.pipe
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -99,6 +109,9 @@ Indexing
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
+   Dataset.set_index
+   Dataset.reset_index
+   Dataset.reorder_levels
 
 Computation
 -----------
@@ -109,8 +122,11 @@ Computation
    Dataset.apply
    Dataset.reduce
    Dataset.groupby
+   Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
+   Dataset.quantile
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -143,6 +159,8 @@ Computation
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.T`
+:py:attr:`~Dataset.cumsum`
+:py:attr:`~Dataset.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -163,6 +181,7 @@ Reshaping and reorganizing
    Dataset.unstack
    Dataset.shift
    Dataset.roll
+   Dataset.sortby
 
 DataArray
 =========
@@ -182,9 +201,12 @@ Attributes
    DataArray.data
    DataArray.coords
    DataArray.dims
+   DataArray.sizes
    DataArray.name
    DataArray.attrs
    DataArray.encoding
+   DataArray.indexes
+   DataArray.get_index
 
 **ndarray attributes**:
 :py:attr:`~DataArray.ndim`
@@ -199,8 +221,11 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.assign_attrs
+   DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
@@ -226,6 +251,9 @@ Indexing
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
+   DataArray.set_index
+   DataArray.reset_index
+   DataArray.reorder_levels
 
 Comparisons
 -----------
@@ -245,11 +273,13 @@ Computation
 
    DataArray.reduce
    DataArray.groupby
+   DataArray.groupby_bins
    DataArray.rolling
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
+   DataArray.quantile
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -283,6 +313,8 @@ Computation
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
 :py:attr:`~DataArray.T`
+:py:attr:`~DataArray.cumsum`
+:py:attr:`~DataArray.cumprod`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
@@ -303,6 +335,7 @@ Reshaping and reorganizing
    DataArray.unstack
    DataArray.shift
    DataArray.roll
+   DataArray.sortby
 
 .. _api.ufuncs:
 
@@ -388,10 +421,16 @@ Dataset methods
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dict
    Dataset.from_dataframe
+   Dataset.from_dict
    Dataset.close
+   Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
+   Dataset.filter_by_attrs
+   Dataset.info
 
 DataArray methods
 -----------------
@@ -399,15 +438,21 @@ DataArray methods
 .. autosummary::
    :toctree: generated/
 
+   open_dataarray
    DataArray.to_dataset
+   DataArray.to_netcdf
    DataArray.to_pandas
    DataArray.to_series
    DataArray.to_dataframe
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
+   DataArray.from_dict
+   DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 
@@ -426,6 +471,24 @@ Plotting
    plot.pcolormesh
    plot.FacetGrid
 
+Testing
+=======
+
+.. autosummary::
+   :toctree: generated/
+
+   testing.assert_equal
+   testing.assert_identical
+   testing.assert_allclose
+
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+
 Advanced API
 ============
 
@@ -433,7 +496,7 @@ Advanced API
    :toctree: generated/
 
    Variable
-   Coordinate
+   IndexVariable
    register_dataset_accessor
    register_dataarray_accessor
 

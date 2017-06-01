@@ -1,17 +1,23 @@
 name: test_env
 channels:
-  - ajdawson  # cdat
-  - dbrown  # pynio
+  - conda-forge
 dependencies:
   - python=2.7
   - cdat-lite
+  - cyordereddict
   - dask
-  - pytest
+  - distributed
+  - h5py
+  - h5netcdf
+  - matplotlib
+  - netcdf4
   - numpy
-  - pandas>=0.15.0
+  - pandas
   - pynio
+  - pytest
   - scipy
+  - seaborn
+  - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - cyordereddict

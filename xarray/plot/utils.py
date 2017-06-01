@@ -1,9 +1,13 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pkg_resources
 
 import numpy as np
 import pandas as pd
 
 from ..core.pycompat import basestring
+from ..core.utils import is_scalar
 
 
 def _load_default_cmap(fname='default_colormap.csv'):
@@ -41,7 +45,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
 
     if not filled:
         # non-filled contour plots
-        extend = 'neither'
+        extend = 'max'
 
     if extend == 'both':
         ext_n = 2
@@ -99,14 +103,15 @@ def _color_palette(cmap, n_colors):
     return pal
 
 
+# _determine_cmap_params is adapted from Seaborn:
+# https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
+# Used under the terms of Seaborn's license, see licenses/SEABORN_LICENSE.
+
 def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                            center=None, robust=False, extend=None,
-                           levels=None, filled=True, cnorm=None):
+                           levels=None, filled=True, norm=None):
     """
     Use some heuristics to set good defaults for colorbar and range.
-
-    Adapted from Seaborn:
-    https://github.com/mwaskom/seaborn/blob/v0.6/seaborn/matrix.py#L158
 
     Parameters
     ==========
@@ -135,6 +140,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # Setting both vmin and vmax prevents a divergent cmap
     if (vmin is not None) and (vmax is not None):
         possibly_divergent = False
+
+    # Setting vmin or vmax implies linspaced levels
+    user_minmax = (vmin is not None) or (vmax is not None)
 
     # vlim might be computed below
     vlim = None
@@ -184,19 +192,23 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     # Handle discrete levels
     if levels is not None:
-        if isinstance(levels, int):
-            ticker = mpl.ticker.MaxNLocator(levels)
-            levels = ticker.tick_values(vmin, vmax)
+        if is_scalar(levels):
+            if user_minmax or levels == 1:
+                levels = np.linspace(vmin, vmax, levels)
+            else:
+                # N in MaxNLocator refers to bins, not ticks
+                ticker = mpl.ticker.MaxNLocator(levels-1)
+                levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
     if levels is not None:
-        cmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
-                levels=levels, norm=cnorm)
+                levels=levels, norm=norm)
 
 
 def _infer_xy_labels(darray, x, y):
@@ -210,8 +222,43 @@ def _infer_xy_labels(darray, x, y):
         if darray.ndim != 2:
             raise ValueError('DataArray must be 2d')
         y, x = darray.dims
-    elif x is None or y is None:
-        raise ValueError('cannot supply only one of x and y')
-    elif any(k not in darray.coords for k in (x, y)):
+    elif x is None:
+        if y not in darray.dims:
+            raise ValueError('y must be a dimension name if x is not supplied')
+        x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
+    elif y is None:
+        if x not in darray.dims:
+            raise ValueError('x must be a dimension name if y is not supplied')
+        y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
+    elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
         raise ValueError('x and y must be coordinate variables')
     return x, y
+
+
+def get_axis(figsize, size, aspect, ax):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    if figsize is not None:
+        if ax is not None:
+            raise ValueError('cannot provide both `figsize` and '
+                             '`ax` arguments')
+        if size is not None:
+            raise ValueError('cannot provide both `figsize` and '
+                             '`size` arguments')
+        _, ax = plt.subplots(figsize=figsize)
+    elif size is not None:
+        if ax is not None:
+            raise ValueError('cannot provide both `size` and `ax` arguments')
+        if aspect is None:
+            width, height = mpl.rcParams['figure.figsize']
+            aspect = width / height
+        figsize = (size * aspect, size)
+        _, ax = plt.subplots(figsize=figsize)
+    elif aspect is not None:
+        raise ValueError('cannot provide `aspect` argument without `size`')
+
+    if ax is None:
+        ax = plt.gca()
+
+    return ax

@@ -1,41 +1,40 @@
 """Internal utilties; not for external use
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import contextlib
-import datetime
 import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping
+from collections import Mapping, MutableMapping, Iterable
 
 import numpy as np
 import pandas as pd
 
-from . import ops
-from .pycompat import iteritems, OrderedDict
+from . import duck_array_ops
+from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
-def alias_warning(old_name, new_name, stacklevel=3):  # pragma: no cover
-    warnings.warn('%s has been deprecated and renamed to %s'
-                  % (old_name, new_name),
-                  FutureWarning, stacklevel=stacklevel)
+def alias_message(old_name, new_name):
+    return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
 
 
-def function_alias(obj, old_name):  # pragma: no cover
+def alias_warning(old_name, new_name, stacklevel=3):
+    warnings.warn(alias_message(old_name, new_name), FutureWarning,
+                  stacklevel=stacklevel)
+
+
+def alias(obj, old_name):
+    assert isinstance(old_name, basestring)
+
     @functools.wraps(obj)
     def wrapper(*args, **kwargs):
         alias_warning(old_name, obj.__name__)
         return obj(*args, **kwargs)
+    wrapper.__doc__ = alias_message(old_name, obj.__name__)
     return wrapper
-
-
-def class_alias(obj, old_name):  # pragma: no cover
-    class Wrapper(obj):
-        def __new__(cls, *args, **kwargs):
-            alias_warning(old_name, obj.__name__)
-            return super(Wrapper, cls).__new__(cls, *args, **kwargs)
-    Wrapper.__name__ = obj.__name__
-    return Wrapper
 
 
 def safe_cast_to_index(array):
@@ -59,6 +58,29 @@ def safe_cast_to_index(array):
     return index
 
 
+def multiindex_from_product_levels(levels, names=None):
+    """Creating a MultiIndex from a product without refactorizing levels.
+
+    Keeping levels the same is faster, and also gives back the original labels
+    when we unstack.
+
+    Parameters
+    ----------
+    levels : sequence of arrays
+        Unique labels for each level.
+    names : optional sequence of objects
+        Names for each level.
+
+    Returns
+    -------
+    pandas.MultiIndex
+    """
+    labels_mesh = np.meshgrid(*[np.arange(len(lev)) for lev in levels],
+                              indexing='ij')
+    labels = [x.ravel() for x in labels_mesh]
+    return pd.MultiIndex(levels, labels, sortorder=0, names=names)
+
+
 def maybe_wrap_array(original, new_array):
     """Wrap a transformed array with __array_wrap__ is it can be done safely.
 
@@ -77,9 +99,11 @@ def equivalent(first, second):
     array_equiv if either object is an ndarray
     """
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
-        return ops.array_equiv(first, second)
+        return duck_array_ops.array_equiv(first, second)
     else:
-        return first is second or first == second
+        return ((first is second) or
+                (first == second) or
+                (pd.isnull(first) and pd.isnull(second)))
 
 
 def peek_at(iterable):
@@ -135,7 +159,7 @@ def remove_incompatible_items(first_dict, second_dict, compat=equivalent):
 
 
 def is_dict_like(value):
-    return hasattr(value, '__getitem__') and hasattr(value, 'keys')
+    return hasattr(value, 'keys') and hasattr(value, '__getitem__')
 
 
 def is_full_slice(value):
@@ -155,18 +179,15 @@ def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
         return kw_kwargs
 
 
-_SCALAR_TYPES = (datetime.datetime, datetime.date, datetime.timedelta)
-
-
 def is_scalar(value):
-    """np.isscalar only works on primitive numeric types and (bizarrely)
-    excludes 0-d ndarrays; this version does more comprehensive checks
+    """Whether to treat a value as a scalar.
+
+    Any non-iterable, string, or 0-D array
     """
-    if hasattr(value, 'ndim'):
-        return value.ndim == 0
-    return (np.isscalar(value) or
-            isinstance(value, _SCALAR_TYPES) or
-            value is None)
+    return (
+        getattr(value, 'ndim', None) == 0 or
+        isinstance(value, (basestring, bytes_type)) or not
+        isinstance(value, Iterable))
 
 
 def is_valid_numpy_dtype(dtype):
@@ -178,11 +199,20 @@ def is_valid_numpy_dtype(dtype):
         return True
 
 
-def tuple_to_0darray(value):
-    result = np.empty((1,), dtype=object)
-    result[:] = [value]
-    result.shape = ()
+def to_0d_object_array(value):
+    """Given a value, wrap it in a 0-D numpy.ndarray with dtype=object."""
+    result = np.empty((), dtype=object)
+    result[()] = value
     return result
+
+
+def to_0d_array(value):
+    """Given a value, wrap it in a 0-D numpy.ndarray."""
+    if np.isscalar(value) or (isinstance(value, np.ndarray) and
+                              value.ndim == 0):
+        return np.array(value)
+    else:
+        return to_0d_object_array(value)
 
 
 def dict_equiv(first, second, compat=equivalent):
@@ -368,7 +398,12 @@ class NdimSizeLenMixin(object):
             raise TypeError('len() of unsized object')
 
 
-class NDArrayMixin(NdimSizeLenMixin):
+class DunderArrayMixin(object):
+    def __array__(self, dtype=None):
+        return np.asarray(self[...], dtype=dtype)
+
+
+class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
@@ -382,9 +417,6 @@ class NDArrayMixin(NdimSizeLenMixin):
     @property
     def shape(self):
         return self.array.shape
-
-    def __array__(self, dtype=None):
-        return np.asarray(self[...], dtype=dtype)
 
     def __getitem__(self, key):
         return self.array[key]
@@ -435,3 +467,25 @@ def hashable(v):
 
 def not_implemented(*args, **kwargs):
     return NotImplemented
+
+
+def decode_numpy_dict_values(attrs):
+    """Convert attribute values from numpy objects to native Python objects,
+    for use in to_dict"""
+    attrs = dict(attrs)
+    for k, v in attrs.items():
+        if isinstance(v, np.ndarray):
+            attrs[k] = v.tolist()
+        elif isinstance(v, np.generic):
+            attrs[k] = np.asscalar(v)
+    return attrs
+
+
+def ensure_us_time_resolution(val):
+    """Convert val out of numpy time, for use in to_dict.
+    Needed because of numpy bug GH#7619"""
+    if np.issubdtype(val.dtype, np.datetime64):
+        val = val.astype('datetime64[us]')
+    elif np.issubdtype(val.dtype, np.timedelta64):
+        val = val.astype('timedelta64[us]')
+    return val

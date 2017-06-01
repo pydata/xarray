@@ -132,3 +132,49 @@ pandas) make it a faster and more flexible data analysis tool. That said, Iris
 and CDAT have some great domain specific functionality, and we would love to
 have support for converting their native objects to and from xarray (see
 :issue:`37` and :issue:`133`)
+
+How should I cite xarray?
+-------------------------
+
+If you are using xarray and would like to cite it in academic publication, we
+would certainly appreciate it. We recommend two citations.
+
+  1. At a minimum, we recommend citing the xarray overview journal article,
+     published in the Journal of Open Research Software.
+
+     - Hoyer, S. & Hamman, J., (2017). xarray: N-D labeled Arrays and
+       Datasets in Python. Journal of Open Research Software. 5(1), p.10.
+       DOI: http://doi.org/10.5334/jors.148
+
+       Here’s an example of a BibTeX entry::
+
+           @article{hoyer2017xarray,
+             title     = {xarray: {N-D} labeled arrays and datasets in {Python}},
+             author    = {Hoyer, S. and J. Hamman},
+             journal   = {Journal of Open Research Software},
+             volume    = {5},
+             number    = {1},
+             year      = {2017},
+             publisher = {Ubiquity Press},
+             doi       = {10.5334/jors.148},
+             url       = {http://doi.org/10.5334/jors.148}
+           }
+
+  2. You may also want to cite a specific version of the xarray package. We
+     provide a `Zenodo`__ citation and DOI for this purpose:
+
+        .. image:: https://zenodo.org/badge/13221727.svg
+           :target: https://zenodo.org/badge/latestdoi/13221727.
+
+       An example BibTeX entry::
+
+           @misc{xarray_v0_8_0,
+                 author = {Stephan Hoyer and Clark Fitzgerald and Joe Hamman and others},
+                 title  = {xarray: v0.8.0},
+                 month  = aug,
+                 year   = 2016,
+                 doi    = {10.5281/zenodo.59499},
+                 url    = {http://dx.doi.org/10.5281/zenodo.59499}
+                }
+
+__ https://zenodo.org/badge/latestdoi/7766/pydata/xarray

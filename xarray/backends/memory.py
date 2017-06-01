@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import copy
 
 import numpy as np
@@ -26,7 +29,7 @@ class InMemoryDataStore(AbstractWritableDataStore):
     def get_variables(self):
         return self._variables
 
-    def prepare_variable(self, k, v, check_encoding=False):
+    def prepare_variable(self, k, v, *args, **kwargs):
         new_var = Variable(v.dims, np.empty_like(v), v.attrs)
         # we copy the variable and stuff all encodings in the
         # attributes to imitate what happens when writing to disk.

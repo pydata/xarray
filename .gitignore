@@ -26,6 +26,7 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
+.cache
 
 # Translations
 *.mo
@@ -38,11 +39,11 @@ nosetests.xml
 # PyCharm and Vim
 .idea
 *.swp
+.DS_Store
 
 # xarray specific
 doc/_build
 doc/generated
-doc/_static/*.png
 xarray/version.py
 
 .ipynb_checkpoints

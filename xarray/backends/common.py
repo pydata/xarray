@@ -1,20 +1,33 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
-import itertools
 import logging
 import time
 import traceback
-import threading
+import contextlib
 from collections import Mapping
+from distutils.version import LooseVersion
 
 from ..conventions import cf_encoder
 from ..core.utils import FrozenOrderedDict
-from ..core.pycompat import iteritems, dask_array_type, OrderedDict
+from ..core.pycompat import iteritems, dask_array_type
+
+try:
+    from dask.utils import SerializableLock as Lock
+except ImportError:
+    from threading import Lock
+
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
+
+
+# dask.utils.SerializableLock if available, otherwise just a threading.Lock
+GLOBAL_LOCK = Lock()
 
 
 def _encode_variable_name(name):
@@ -29,23 +42,13 @@ def _decode_variable_name(name):
     return name
 
 
-def is_trivial_index(var):
+def find_root(ds):
     """
-    Determines if in index is 'trivial' meaning that it is
-    equivalent to np.arange().  This is determined by
-    checking if there are any attributes or encodings,
-    if ndims is one, dtype is int and finally by comparing
-    the actual values to np.arange()
+    Helper function to find the root of a netcdf or h5netcdf dataset.
     """
-    # if either attributes or encodings are defined
-    # the index is not trival.
-    if len(var.attrs) or len(var.encoding):
-        return False
-    # if the index is not a 1d integer array
-    if var.ndim > 1 or not var.dtype.kind == 'i':
-        return False
-    arange = np.arange(var.size, dtype=var.dtype)
-    return np.all(var.values == arange)
+    while ds.parent is not None:
+        ds = ds.parent
+    return ds
 
 
 def robust_getitem(array, key, catch=Exception, max_retries=6,
@@ -74,6 +77,7 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
 
 
 class AbstractDataStore(Mapping):
+    _autoclose = False
 
     def __iter__(self):
         return iter(self.variables)
@@ -89,6 +93,9 @@ class AbstractDataStore(Mapping):
 
     def get_variables(self):  # pragma: no cover
         raise NotImplementedError
+
+    def get_encoding(self):
+        return {}
 
     def load(self):
         """
@@ -112,7 +119,7 @@ class AbstractDataStore(Mapping):
         are requested, so care should be taken to make sure its fast.
         """
         variables = FrozenOrderedDict((_decode_variable_name(k), v)
-                                      for k, v in iteritems(self.get_variables()))
+                                      for k, v in self.get_variables().items())
         attributes = FrozenOrderedDict(self.get_attrs())
         return variables, attributes
 
@@ -158,14 +165,18 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            target[...] = source
+            try:
+                target[...] = source
+            except TypeError:
+                # workaround for GH: scipy/scipy#6880
+                target[:] = source
 
     def sync(self):
         if self.sources:
             import dask.array as da
             import dask
-            if dask.__version__ > '0.8.1':
-                da.store(self.sources, self.targets, lock=threading.Lock())
+            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
+                da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
             else:
                 da.store(self.sources, self.targets)
             self.sources = []
@@ -197,37 +208,82 @@ class AbstractWritableDataStore(AbstractDataStore):
         # dataset.variables
         self.store(dataset, dataset.attrs)
 
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, check_encoding_set=frozenset(),
+              unlimited_dims=None):
         self.set_attributes(attributes)
-        neccesary_dims = [v.dims for v in variables.values()]
-        neccesary_dims = set(itertools.chain(*neccesary_dims))
-        # set all non-indexes and any index which is not trivial.
-        variables = OrderedDict((k, v) for k, v in iteritems(variables)
-                                if not (k in neccesary_dims and
-                                        is_trivial_index(v)))
-        self.set_variables(variables, check_encoding_set)
+        self.set_variables(variables, check_encoding_set,
+                           unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set):
+    def set_variables(self, variables, check_encoding_set,
+                      unlimited_dims=None):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            target, source = self.prepare_variable(name, v, check)
+            target, source = self.prepare_variable(
+                name, v, check, unlimited_dims=unlimited_dims)
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable):
+    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+        if unlimited_dims is None:
+            unlimited_dims = set()
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
+                if d in unlimited_dims:
+                    l = None
                 self.set_dimension(d, l)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
-    def store(self, variables, attributes, check_encoding_set=frozenset()):
+    def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
-                                        check_encoding_set)
+                                        *args, **kwargs)
+
+
+class DataStorePickleMixin(object):
+    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
+
+    Do not subclass this class: it is not part of xarray's external API.
+    """
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['ds']
+        if self._mode == 'w':
+            # file has already been created, don't override when restoring
+            state['_mode'] = 'a'
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.ds = self._opener(mode=self._mode)
+
+    @contextlib.contextmanager
+    def ensure_open(self, autoclose):
+        """
+        Helper function to make sure datasets are closed and opened
+        at appropriate times to avoid too many open file errors.
+
+        Use requires `autoclose=True` argument to `open_mfdataset`.
+        """
+        if self._autoclose and not self._isopen:
+            try:
+                self.ds = self._opener()
+                self._isopen = True
+                yield
+            finally:
+                if autoclose:
+                    self.close()
+        else:
+            yield
+
+    def assert_open(self):
+        if not self._isopen:
+            raise AssertionError('internal failure: file must be open '
+                                 'if `autoclose=True` is used.')

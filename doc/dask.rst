@@ -27,7 +27,7 @@ Dask divides arrays into many small pieces, called *chunks*, each of which is
 presumed to be small enough to fit into memory.
 
 Unlike NumPy, which has eager evaluation, operations on dask arrays are lazy.
-Operations queue up a series of taks mapped over blocks, and no computation is
+Operations queue up a series of tasks mapped over blocks, and no computation is
 performed until you actually ask values to be computed (e.g., to print results
 to your screen or write to disk). At that point, data is loaded into memory
 and computation proceeds in a streaming fashion, block-by-block.
@@ -144,12 +144,23 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
             [  1.337e+00,  -1.531e+00, ...,   8.726e-01,  -1.538e+00],
             ...
 
-With the current version of dask, there is no automatic alignment of chunks when
-performing operations between dask arrays with different chunk sizes. If your
-computation involves multiple dask arrays with different chunks, you may need to
-explicitly rechunk each array to ensure compatibility. With xarray, both
-converting data to a dask arrays and converting the chunk sizes of dask arrays
-is done with the :py:meth:`~xarray.Dataset.chunk` method:
+Alternatively you can load the data into memory but keep the arrays as
+dask arrays using the `~xarray.Dataset.persist` method:
+
+.. ipython::
+
+   ds = ds.persist()
+
+This is particularly useful when using a distributed cluster because the data
+will be loaded into distributed memory across your machines and be much faster
+to use than reading repeatedly from disk.  Warning that on a single machine
+this operation will try to load all of your data into memory.  You should make
+sure that your dataset is not larger than available memory.
+
+For performance you may wish to consider chunk sizes.  The correct choice of
+chunk size depends both on your data and on the operations you want to perform.
+With xarray, both converting data to a dask arrays and converting the chunk
+sizes of dask arrays is done with the :py:meth:`~xarray.Dataset.chunk` method:
 
 .. ipython:: python
     :suppress:
@@ -225,3 +236,15 @@ larger chunksizes.
 
     import os
     os.remove('example-data.nc')
+
+
+Optimization Tips
+-----------------
+
+With analysis pipelines involving both spatial subsetting and temporal resampling, dask performance can become very slow in certain cases. Here are some optimization tips we have found through experience:
+
+1. Do your spatial and temporal indexing (e.g. ``.sel()`` or ``.isel()``) early in the pipeline, especially before calling ``resample()`` or ``groupby()``. Grouping and rasampling triggers some computation on all the blocks, which in theory should commute with indexing, but this optimization hasn't been implemented in dask yet. (See `dask issue #746 <https://github.com/dask/dask/issues/746>`_).
+
+2. Save intermediate results to disk as a netCDF files (using ``to_netcdf()``) and then load them again with ``open_dataset()`` for further computations. For example, if subtracting temporal mean from a dataset, save the temporal mean to disk before subtracting. Again, in theory, dask should be able to do the computation in a streaming fashion, but in practice this is a fail case for the dask scheduler, because it tries to keep every chunk of an array that it computes in memory. (See `dask issue #874 <https://github.com/dask/dask/issues/874>`_)
+
+3. Specify smaller chunks across space when using ``open_mfdataset()`` (e.g., ``chunks={'latitude': 10, 'longitude': 10}``). This makes spatial subsetting easier, because there's no risk you will load chunks of data referring to different chunks (probably not necessary if you follow suggestion 1).

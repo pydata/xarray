@@ -1,0 +1,4 @@
+ - [ ] Closes #xxxx
+ - [ ] Tests added / passed
+ - [ ] Passes ``git diff upstream/master | flake8 --diff``
+ - [ ] Fully documented, including `whats-new.rst` for all changes and `api.rst` for new API

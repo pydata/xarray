@@ -8,8 +8,8 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 7
-MICRO = 2
+MINOR = 9
+MICRO = 5
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -27,20 +27,16 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Programming Language :: Python',
     'Programming Language :: Python :: 2',
-    'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Topic :: Scientific/Engineering',
 ]
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-
-if sys.version_info[:2] < (2, 7):
-    TESTS_REQUIRE += ["unittest2 == 0.5.1"]
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
@@ -68,7 +64,8 @@ Important links
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """
 
-# code to extract and write the version copied from pandas
+# Code to extract and write the version copied from pandas.
+# Used under the terms of pandas's license, see licenses/PANDAS_LICENSE.
 FULLVERSION = VERSION
 write_version = True
 
@@ -145,5 +142,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      py_modules=['xray'],
-      package_data={'xarray': ['test/data/*', 'plot/default_colormap.csv']})
+      package_data={'xarray': ['tests/data/*', 'plot/default_colormap.csv']})

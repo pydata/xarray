@@ -1,5 +1,8 @@
 # CI on Windows via appveyor
 # This file was based on Olivier Grisel's python-appveyor-demo
+branches:
+  except:
+    - fix-docs
 
 environment:
 
@@ -7,10 +10,17 @@ environment:
     - PYTHON: "C:\\Python27-conda32"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
+      CONDA_ENV: "py27-windows"
 
-    - PYTHON: "C:\\Python34-conda64"
-      PYTHON_VERSION: "3.4"
+    - PYTHON: "C:\\Python27-conda64"
+      PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
+      CONDA_ENV: "py27-windows"
+
+    - PYTHON: "C:\\Python36-conda64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      CONDA_ENV: "py36-windows"
 
 install:
   # Install miniconda Python
@@ -25,11 +35,12 @@ install:
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
-  # install xarray and depenencies
-  - "conda install --yes --quiet pip pytest numpy pandas scipy netCDF4 matplotlib dask"
+  # install xarray and dependencies
+  - "conda env create --file ./ci/requirements-%CONDA_ENV%.yml"
+  - "activate test_env"
   - "python setup.py install"
 
 build: false
 
 test_script:
-  - "py.test xarray"
+  - "py.test xarray --verbose"

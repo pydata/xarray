@@ -1,58 +1,38 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from collections import Mapping
 from contextlib import contextmanager
 import pandas as pd
 
 from . import formatting
-from .merge import merge_dataarray_coords
-from .pycompat import iteritems, basestring, OrderedDict
+from .utils import Frozen
+from .merge import (
+    merge_coords, expand_and_merge_variables, merge_coords_for_inplace_math)
+from .pycompat import OrderedDict
 
 
-def _coord_merge_finalize(target, other, target_conflicts, other_conflicts,
-                          promote_dims=None):
-    if promote_dims is None:
-        promote_dims = {}
-    for k in target_conflicts:
-        del target[k]
-    for k, v in iteritems(other):
-        if k not in other_conflicts:
-            var = v.variable
-            if k in promote_dims:
-                var = var.expand_dims(promote_dims[k])
-            target[k] = var
-
-
-def _common_shape(*args):
-    dims = OrderedDict()
-    for arg in args:
-        for dim in arg.dims:
-            size = arg.shape[arg.get_axis_num(dim)]
-            if dim in dims and size != dims[dim]:
-                # sometimes we may not have checked the index first
-                raise ValueError('index %r not aligned' % dim)
-            dims[dim] = size
-    return dims
-
-
-def _dim_shape(var):
-    return [(dim, size) for dim, size in zip(var.dims, var.shape)]
-
-
-class AbstractCoordinates(Mapping):
+class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
-        if (key in self._names or
-            (isinstance(key, basestring) and
-             key.split('.')[0] in self._names)):
-            # allow indexing current coordinates or components
-            return self._data[key]
-        else:
-            raise KeyError(key)
+        raise NotImplementedError
 
     def __setitem__(self, key, value):
         self.update({key: value})
 
+    @property
+    def indexes(self):
+        return self._data.indexes
+
+    @property
+    def variables(self):
+        raise NotImplementedError
+
+    def _update_coords(self, coords):
+        raise NotImplementedError
+
     def __iter__(self):
         # needs to be in the same order as the dataset variables
-        for k in self._variables:
+        for k in self.variables:
             if k in self._names:
                 yield k
 
@@ -62,7 +42,7 @@ class AbstractCoordinates(Mapping):
     def __contains__(self, key):
         return key in self._names
 
-    def __repr__(self):
+    def __unicode__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -74,54 +54,48 @@ class AbstractCoordinates(Mapping):
         """
         if ordered_dims is None:
             ordered_dims = self.dims
-        indexes = [self._variables[k].to_index() for k in ordered_dims]
+        indexes = [self._data.get_index(k) for k in ordered_dims]
         return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
 
-    def _merge_validate(self, other):
-        """Determine conflicting variables to be dropped from either self or
-        other (or unresolvable conflicts that should just raise)
-        """
-        self_conflicts = set()
-        other_conflicts = set()
-        promote_dims = {}
-        for k in self:
-            if k in other:
-                self_var = self._variables[k]
-                other_var = other[k].variable
-                if not self_var.broadcast_equals(other_var):
-                    if k in self.dims and k in other.dims:
-                        raise ValueError('index %r not aligned' % k)
-                    if k not in self.dims:
-                        self_conflicts.add(k)
-                    if k not in other.dims:
-                        other_conflicts.add(k)
-                elif _dim_shape(self_var) != _dim_shape(other_var):
-                    promote_dims[k] = _common_shape(self_var, other_var)
-                    self_conflicts.add(k)
-        return self_conflicts, other_conflicts, promote_dims
+    def update(self, other):
+        other_vars = getattr(other, 'variables', other)
+        coords = merge_coords([self.variables, other_vars],
+                              priority_arg=1, indexes=self.indexes)
+        self._update_coords(coords)
+
+    def _merge_raw(self, other):
+        """For use with binary arithmetic."""
+        if other is None:
+            variables = OrderedDict(self.variables)
+        else:
+            # don't align because we already called xarray.align
+            variables = expand_and_merge_variables(
+                [self.variables, other.variables])
+        return variables
 
     @contextmanager
     def _merge_inplace(self, other):
+        """For use with in-place binary arithmetic."""
         if other is None:
             yield
         else:
-            # ignore conflicts in self because we don't want to remove
-            # existing coords in an in-place update
-            _, other_conflicts, promote_dims = self._merge_validate(other)
-            # treat promoted dimensions as a conflict, also because we don't
-            # want to modify existing coords
-            other_conflicts.update(promote_dims)
+            # don't include indexes in priority_vars, because we didn't align
+            # first
+            priority_vars = OrderedDict(
+                (k, v) for k, v in self.variables.items() if k not in self.dims)
+            variables = merge_coords_for_inplace_math(
+                [self.variables, other.variables], priority_vars=priority_vars)
             yield
-            _coord_merge_finalize(self, other, {}, other_conflicts)
+            self._update_coords(variables)
 
     def merge(self, other):
         """Merge two sets of coordinates to create a new Dataset
 
-        The method implments the logic used for joining coordinates in the
+        The method implements the logic used for joining coordinates in the
         result of a binary operation performed on xarray objects:
 
         - If two index coordinates conflict (are not equal), an exception is
-          raised.
+          raised. You must align your data before passing it to this method.
         - If an index coordinate and a non-index coordinate conflict, the non-
           index coordinate is dropped.
         - If two non-index coordinates conflict, both are dropped.
@@ -136,11 +110,14 @@ class AbstractCoordinates(Mapping):
         merged : Dataset
             A new Dataset with merged coordinates.
         """
-        ds = self.to_dataset()
-        if other is not None:
-            conflicts = self._merge_validate(other)
-            _coord_merge_finalize(ds.coords, other, *conflicts)
-        return ds
+        from .dataset import Dataset
+
+        if other is None:
+            return self.to_dataset()
+        else:
+            other_vars = getattr(other, 'variables', other)
+            coords = expand_and_merge_variables([self.variables, other_vars])
+            return Dataset._from_vars_and_coord_names(coords, set(coords))
 
 
 class DatasetCoordinates(AbstractCoordinates):
@@ -158,17 +135,37 @@ class DatasetCoordinates(AbstractCoordinates):
         return self._data._coord_names
 
     @property
-    def _variables(self):
-        return self._data._variables
+    def variables(self):
+        return Frozen(OrderedDict((k, v)
+                                  for k, v in self._data.variables.items()
+                                  if k in self._names))
+
+    def __getitem__(self, key):
+        if key in self._data.data_vars:
+            raise KeyError(key)
+        return self._data[key]
 
     def to_dataset(self):
         """Convert these coordinates into a new Dataset
         """
         return self._data._copy_listed(self._names)
 
-    def update(self, other):
-        self._data.update(other)
-        self._names.update(other.keys())
+    def _update_coords(self, coords):
+        from .dataset import calculate_dimensions
+
+        variables = self._data._variables.copy()
+        variables.update(coords)
+
+        # check for inconsistent state *before* modifying anything in-place
+        dims = calculate_dimensions(variables)
+        new_coord_names = set(coords)
+        for dim, size in dims.items():
+            if dim in variables:
+                new_coord_names.add(dim)
+
+        self._data._variables = variables
+        self._data._coord_names.update(new_coord_names)
+        self._data._dims = dict(dims)
 
     def __delitem__(self, key):
         if key in self:
@@ -181,8 +178,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
 
     Essentially an OrderedDict with keys given by the array's
-    dimensions and the values given by the corresponding xarray.Coordinate
-    objects.
+    dimensions and the values given by corresponding DataArray objects.
     """
     def __init__(self, dataarray):
         self._data = dataarray
@@ -191,52 +187,84 @@ class DataArrayCoordinates(AbstractCoordinates):
     def _names(self):
         return set(self._data._coords)
 
+    def __getitem__(self, key):
+        return self._data._getitem_coord(key)
+
+    def _update_coords(self, coords):
+        from .dataset import calculate_dimensions
+
+        dims = calculate_dimensions(coords)
+        if not set(dims) <= set(self.dims):
+            raise ValueError('cannot add coordinates with new dimensions to '
+                             'a DataArray')
+        self._data._coords = coords
+
     @property
-    def _variables(self):
-        return self._data._coords
+    def variables(self):
+        return Frozen(self._data._coords)
 
     def _to_dataset(self, shallow_copy=True):
         from .dataset import Dataset
         coords = OrderedDict((k, v.copy(deep=False) if shallow_copy else v)
                              for k, v in self._data._coords.items())
-        dims = dict(zip(self.dims, self._data.shape))
-        return Dataset._construct_direct(coords, coord_names=set(self._names),
-                                         dims=dims, attrs=None)
+        return Dataset._from_vars_and_coord_names(coords, set(coords))
 
     def to_dataset(self):
         return self._to_dataset()
 
-    def update(self, other):
-        new_vars = merge_dataarray_coords(
-            self._data.indexes, self._data._coords, other)
-
-        self._data._coords = new_vars
-
     def __delitem__(self, key):
-        if key in self.dims:
-            raise ValueError('cannot delete a coordinate corresponding to a '
-                             'DataArray dimension')
         del self._data._coords[key]
 
 
-class Indexes(Mapping):
-    def __init__(self, source):
-        self._source = source
+class LevelCoordinatesSource(object):
+    """Iterator for MultiIndex level coordinates.
 
-    def __iter__(self):
-        return iter(self._source.dims)
-
-    def __len__(self):
-        return len(self._source.dims)
-
-    def __contains__(self, key):
-        return key in self._source.dims
+    Used for attribute style lookup with AttrAccessMixin. Not returned directly
+    by any public methods.
+    """
+    def __init__(self, data_object):
+        self._data = data_object
 
     def __getitem__(self, key):
-        if key in self:
-            return self._source[key].to_index()
-        else:
-            raise KeyError(key)
+        # not necessary -- everything here can already be found in coords.
+        raise KeyError
 
-    def __repr__(self):
+    def __iter__(self):
+        return iter(self._data._level_coords)
+
+
+class Indexes(Mapping, formatting.ReprMixin):
+    """Ordered Mapping[str, pandas.Index] for xarray objects.
+    """
+    def __init__(self, variables, sizes):
+        """Not for public consumption.
+
+        Arguments
+        ---------
+        variables : OrderedDict[Any, Variable]
+            Reference to OrderedDict holding variable objects. Should be the
+            same dictionary used by the source object.
+        sizes : OrderedDict[Any, int]
+            Map from dimension names to sizes.
+        """
+        self._variables = variables
+        self._sizes = sizes
+
+    def __iter__(self):
+        for key in self._sizes:
+            if key in self._variables:
+                yield key
+
+    def __len__(self):
+        return sum(key in self._variables for key in self._sizes)
+
+    def __contains__(self, key):
+        return key in self._sizes and key in self._variables
+
+    def __getitem__(self, key):
+        if key not in self._sizes:
+            raise KeyError(key)
+        return self._variables[key].to_index()
+
+    def __unicode__(self):
         return formatting.indexes_repr(self)

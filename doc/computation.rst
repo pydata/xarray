@@ -196,7 +196,9 @@ This means, for example, that you always subtract an array from its transpose:
 You can explicitly broadcast xaray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
-    a2, b2 = xr.broadcast(a, b2)
+.. ipython:: python
+
+    a2, b2 = xr.broadcast(a, b)
     a2
     b2
 
@@ -210,20 +212,32 @@ coordinates with the same name as a dimension, marked by ``*``) on objects used
 in binary operations.
 
 Similarly to pandas, this alignment is automatic for arithmetic on binary
-operations. Note that unlike pandas, this the result of a binary operation is
-by the *intersection* (not the union) of coordinate labels:
+operations. The default result of a binary operation is by the *intersection*
+(not the union) of coordinate labels:
 
 .. ipython:: python
 
-    arr + arr[:1]
+    arr = xr.DataArray(np.arange(3), [('x', range(3))])
+    arr + arr[:-1]
 
-If the result would be empty, an error is raised instead:
+If coordinate values for a dimension are missing on either argument, all
+matching dimensions must have the same size:
 
-.. ipython::
+.. ipython:: python
 
     @verbatim
-    In [1]: arr[:2] + arr[2:]
-    ValueError: no overlapping labels for some dimensions: ['x']
+    In [1]: arr + xr.DataArray([1, 2], dims='x')
+    ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
+
+
+However, one can explicitly change this default automatic alignment type ("inner")
+via :py:func:`~xarray.set_options()` in context manager:
+
+.. ipython:: python
+
+    with xr.set_options(arithmetic_join="outer"):
+        arr + arr[:1]
+    arr + arr[:1]
 
 Before loops or performance critical code, it's a good idea to align arrays
 explicitly (e.g., by putting them in the same Dataset or using
@@ -307,7 +321,7 @@ Arithmetic between two datasets matches data variables of the same name:
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
-matching variables, and ``ValueError`` is raised if the result would be empty.
+matching data variables.
 
 .. [1] In some future version of NumPy, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

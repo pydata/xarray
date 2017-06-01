@@ -88,7 +88,22 @@ For more details, read the pandas documentation.
 Datetime components
 -------------------
 
-xarray supports a notion of "virtual" or "derived" coordinates for
+Similar `to pandas`_, the components of datetime objects contained in a
+given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
+
+.. _to pandas: http://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+
+.. ipython:: python
+
+    time = time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
+    ds = xr.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
+    ds.time.dt.hour
+    ds.time.dt.dayofweek
+
+The ``.dt`` accessor works on both coordinate dimensions as well as
+multi-dimensional data.
+
+xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
@@ -100,11 +115,13 @@ __ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
     ds['time.month']
     ds['time.dayofyear']
 
-xarray adds ``'season'`` to the list of datetime components supported by pandas:
+For use as a derived coordinate, xarray adds ``'season'`` to the list of
+datetime components supported by pandas:
 
 .. ipython:: python
 
     ds['time.season']
+    ds['time'].dt.season
 
 The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
 the first letters of the corresponding months.
@@ -124,7 +141,7 @@ calculate the mean by time of day:
 
 For upsampling or downsampling temporal resolutions, xarray offers a
 :py:meth:`~xarray.Dataset.resample` method building on the core functionality
-offered by the pandas method of the same name. Resample uses essentialy the
+offered by the pandas method of the same name. Resample uses essentially the
 same api as ``resample`` `in pandas`_.
 
 .. _in pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling

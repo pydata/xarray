@@ -11,6 +11,8 @@ xarray: N-D labeled arrays and datasets
    :target: https://pypi.python.org/pypi/xarray/
 .. image:: https://badges.gitter.im/Join%20Chat.svg
    :target: https://gitter.im/pydata/xarray
+.. image:: https://zenodo.org/badge/13221727.svg
+  :target: https://zenodo.org/badge/latestdoi/13221727
 
 **xarray** (formerly **xray**) is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
@@ -85,8 +87,15 @@ The official documentation is hosted on ReadTheDocs at http://xarray.pydata.org/
 Get in touch
 ------------
 
-- GitHub issue tracker: https://github.com/pydata/xarray/issues/
-- Mailing list: https://groups.google.com/forum/#!forum/xarray
+- Ask usage questions on `StackOverflow`_.
+- Report bugs, suggest features or view the source code `on GitHub`_.
+- For less well defined questions or ideas, use the `mailing list`_.
+- You can also try our chatroom `on Gitter`_.
+
+.. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
+.. _mailing list: https://groups.google.com/forum/#!forum/xarray
+.. _on Gitter: https://gitter.im/pydata/xarray
+.. _on GitHub: http://github.com/pydata/xarray
 
 History
 -------
@@ -101,7 +110,7 @@ __ http://climate.com/
 License
 -------
 
-Copyright 2014-2016, xarray Developers
+Copyright 2014-2017, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -115,5 +124,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-xarray includes portions of pandas, NumPy, Seaborn and Python itself. These
-licenses are included in the licenses directory.
+xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
+under a "3-clause BSD" license:
+- pandas: setup.py
+- NumPy: xarray/core/npcompat.py
+- Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
+
+xarray also bundles portions of CPython, which is available under the "Python
+Software Foundation License" in xarray/core/pycompat.py.
+
+The full text of these licenses are included in the licenses directory.

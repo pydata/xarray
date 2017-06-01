@@ -48,7 +48,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
 - ``coords``: a list or dictionary of coordinates
 - ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible
+  taken from ``coords`` if possible.
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
@@ -67,18 +67,37 @@ in with default values:
 
     xr.DataArray(data)
 
-As you can see, dimensions and coordinate arrays corresponding to each
-dimension are always present. This behavior is similar to pandas, which fills
-in index values in the same way.
+As you can see, dimension names are always present in the xarray data model: if
+you do not provide them, defaults of the form ``dim_N`` will be created.
+However, coordinates are always optional, and dimensions do not have automatic
+coordinate labels.
 
-Coordinates can take the following forms:
+.. note::
 
-- A list of ``(dim, ticks[, attrs])`` pairs with length equal to the number of dimensions
-- A dictionary of ``{coord_name: coord}`` where the values are each a scalar value,
-  a 1D array or a tuple. Tuples are be in the same form as the above, and
-  multiple dimensions can be supplied with the form  ``(dims, data[, attrs])``.
-  Supplying as a tuple allows other coordinates than those corresponding to
-  dimensions (more on these later).
+  This is different from pandas, where axes always have tick labels, which
+  default to the integers ``[0, ..., n-1]``.
+
+  Prior to xarray v0.9, xarray copied this behavior: default coordinates for
+  each dimension would be created if coordinates were not supplied explicitly.
+  This is no longer the case.
+
+Coordinates can be specified in the following ways:
+
+- A list of values with length equal to the number of dimensions, providing
+  coordinate labels for each dimension. Each value must be of one of the
+  following forms:
+
+  * A :py:class:`~xarray.DataArray` or :py:class:`~xarray.Variable`
+  * A tuple of the form ``(dims, data[, attrs])``, which is converted into
+    arguments for :py:class:`~xarray.Variable`
+  * A pandas object or scalar value, which is converted into a ``DataArray``
+  * A 1D array or list, which is interpreted as values for a one dimensional
+    coordinate variable along the same dimension as it's name
+
+- A dictionary of ``{coord_name: coord}`` where values are of the same form
+  as the list. Supplying coordinates as a dictionary allows other coordinates
+  than those corresponding to dimensions (more on these later). If you supply
+  ``coords`` as a dictionary, you must explicitly provide ``dims``.
 
 As a list of tuples:
 
@@ -115,12 +134,6 @@ If you create a ``DataArray`` by supplying a pandas
     df
     xr.DataArray(df)
 
-xarray does not (yet!) support labeling coordinate values with a
-:py:class:`pandas.MultiIndex` (see :issue:`164`).
-However, the alternate ``from_series`` constructor will automatically unpack
-any hierarchical indexes it encounters by expanding the series into a
-multi-dimensional array, as described in :doc:`pandas`.
-
 DataArray properties
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -134,7 +147,7 @@ Let's take a look at the important properties on our array:
     foo.attrs
     print(foo.name)
 
-You can even modify ``values`` inplace:
+You can modify ``values`` inplace:
 
 .. ipython:: python
 
@@ -186,6 +199,8 @@ Coordinates can also be set or removed by using the dictionary like syntax:
     del foo['ranking']
     foo.coords
 
+For more details, see :ref:`coordinates` below.
+
 Dataset
 -------
 
@@ -234,14 +249,19 @@ Creating a Dataset
 To make an :py:class:`~xarray.Dataset` from scratch, supply dictionaries for any
 variables (``data_vars``), coordinates (``coords``) and attributes (``attrs``).
 
-``data_vars`` are supplied as a dictionary with each key as the name of the variable and each
-value as one of:
-- A :py:class:`~xarray.DataArray`
-- A tuple of the form ``(dims, data[, attrs])``
-- A pandas object
+- ``data_vars`` should be a dictionary with each key as the name of the variable
+  and each value as one of:
 
-``coords`` are supplied as dictionary of ``{coord_name: coord}`` where the values are scalar values,
-arrays or tuples in the form of ``(dims, data[, attrs])``.
+  * A :py:class:`~xarray.DataArray` or :py:class:`~xarray.Variable`
+  * A tuple of the form ``(dims, data[, attrs])``, which is converted into
+    arguments for :py:class:`~xarray.Variable`
+  * A pandas object, which is converted into a ``DataArray``
+  * A 1D array or list, which is interpreted as values for a one dimensional
+    coordinate variable along the same dimension as it's name
+
+- ``coords`` should be a dictionary of the same form as ``data_vars``.
+
+- ``attrs`` should be a dictionary.
 
 Let's create some fake data for the example we show above:
 
@@ -262,10 +282,6 @@ Let's create some fake data for the example we show above:
                             'reference_time': pd.Timestamp('2014-09-05')})
     ds
 
-Notice that we did not explicitly include coordinates for the "x" or "y"
-dimensions, so they were filled in array of ascending integers of the proper
-length.
-
 Here we pass :py:class:`xarray.DataArray` objects or a pandas object as values
 in the dictionary:
 
@@ -282,8 +298,9 @@ Where a pandas object is supplied as a value, the names of its indexes are used 
 names, and its data is aligned to any existing dimensions.
 
 You can also create an dataset from:
+
 - A :py:class:`pandas.DataFrame` or :py:class:`pandas.Panel` along its columns and items
-  respectively, by passing it into the :py:class:`xarray.Dataset` directly
+  respectively, by passing it into the :py:class:`~xarray.Dataset` directly
 - A :py:class:`pandas.DataFrame` with :py:meth:`Dataset.from_dataframe <xarray.Dataset.from_dataframe>`,
   which will additionally handle MultiIndexes See :ref:`pandas`
 - A netCDF file on disk with :py:func:`~xarray.open_dataset`. See :ref:`io`.
@@ -375,7 +392,7 @@ In addition to dictionary-like methods (described above), xarray has additional
 methods (like pandas) for transforming datasets into new objects.
 
 For removing variables, you can select and drop an explicit list of
-variables by using the by indexing with a list of names or using the
+variables by indexing with a list of names or using the
 :py:meth:`~xarray.Dataset.drop` methods to return a new ``Dataset``. These
 operations keep around coordinates:
 
@@ -457,19 +474,35 @@ objects in the ``coords`` attribute:
     ds.coords
 
 Unlike attributes, xarray *does* interpret and persist coordinates in
-operations that transform xarray objects.
+operations that transform xarray objects. There are two types of coordinates
+in xarray:
 
-One dimensional coordinates with a name equal to their sole dimension (marked
-by ``*`` when printing a dataset or data array) take on a special meaning in
-xarray. They are used for label based indexing and alignment,
-like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
-:py:class:`pandas.Index` internally to store their values.
+- **dimension coordinates** are one dimensional coordinates with a name equal
+  to their sole dimension (marked by ``*`` when printing a dataset or data
+  array). They are used for label based indexing and alignment,
+  like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
+  :py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
+  :py:class:`pandas.Index` internally to store their values.
 
-Other than for indexing, xarray does not make any direct use of the values
-associated with coordinates. Coordinates with names not matching a dimension
-are not used for alignment or indexing, nor are they required to match when
-doing arithmetic (see :ref:`coordinates math`).
+- **non-dimension coordinates** are variables that contain coordinate
+  data, but are not a dimension coordinate. They can  be multidimensional
+  (see :ref:`examples.multidim`), and there is no relationship between the
+  name of a non-dimension coordinate and the name(s) of its dimension(s).
+  Non-dimension coordinates can be useful for indexing or plotting; otherwise,
+  xarray does not make any direct use of the values associated with them.
+  They are not used for alignment or automatic indexing, nor are they required
+  to match when doing arithmetic
+  (see :ref:`coordinates math`).
+
+.. note::
+
+  xarray's terminology differs from the `CF terminology`_, where the
+  "dimension coordinates" are called "coordinate variables", and the
+  "non-dimension coordinates" are called "auxiliary coordinate variables"
+  (see :issue:`1295` for more details).
+
+.. _CF terminology: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
+
 
 Modifying coordinates
 ~~~~~~~~~~~~~~~~~~~~~
@@ -534,6 +567,41 @@ dimension and whose the values are ``Index`` objects:
 .. ipython:: python
 
     ds.indexes
+
+MultiIndex coordinates
+~~~~~~~~~~~~~~~~~~~~~~
+
+Xarray supports labeling coordinate values with a :py:class:`pandas.MultiIndex`:
+
+.. ipython:: python
+
+    midx = pd.MultiIndex.from_arrays([['R', 'R', 'V', 'V'], [.1, .2, .7, .9]],
+                                     names=('band', 'wn'))
+    mda = xr.DataArray(np.random.rand(4), coords={'spec': midx}, dims='spec')
+    mda
+
+For convenience multi-index levels are directly accessible as "virtual" or
+"derived" coordinates (marked by ``-`` when printing a dataset or data array):
+
+.. ipython:: python
+
+     mda['band']
+     mda.wn
+
+Indexing with multi-index levels is also possible using the ``sel`` method
+(see :ref:`multi-level indexing`).
+
+Unlike other coordinates, "virtual" level coordinates are not stored in
+the ``coords`` attribute of ``DataArray`` and ``Dataset`` objects
+(although they are shown when printing the ``coords`` attribute).
+Consequently, most of the coordinates related methods don't apply for them.
+It also can't be used to replace one particular level.
+
+Because in a ``DataArray`` or ``Dataset`` object each multi-index level is
+accessible as a "virtual" coordinate, its name must not conflict with the names
+of the other levels, coordinates and data variables of the same object.
+Even though Xarray set default names for multi-indexes with unnamed levels,
+it is recommended that you explicitly set the names of the levels.
 
 .. [1] Latitude and longitude are 2D arrays because the dataset uses
    `projected coordinates`__. ``reference_time`` refers to the reference time
