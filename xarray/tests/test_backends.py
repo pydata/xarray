@@ -1476,16 +1476,16 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                                          'y': -np.arange(ny) * 2000 + 80000,
                                          'x': np.arange(nx) * 1000 + 5000,
                                          })
-            rioda = xr.open_rasterio(tmp_file)
-            assert_allclose(rioda, expected)
-            assert 'crs' in rioda.attrs
-            assert isinstance(rioda.attrs['crs'], basestring)
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert 'crs' in rioda.attrs
+                assert isinstance(rioda.attrs['crs'], basestring)
 
-            # Write it to a netcdf and read again (roundtrip)
-            with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                rioda.to_netcdf(tmp_nc_file)
-                ncds = xr.open_dataarray(tmp_nc_file)
-                assert_identical(rioda, ncds)
+                # Write it to a netcdf and read again (roundtrip)
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
 
         # Create a geotiff file in latlong proj
         with create_tmp_file(suffix='.tif') as tmp_file:
@@ -1508,16 +1508,16 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                                          'y': -np.arange(ny)*2 + 2,
                                          'x': np.arange(nx)*0.5 + 1,
                                          })
-            rioda = xr.open_rasterio(tmp_file)
-            assert_allclose(rioda, expected)
-            assert 'crs' in rioda.attrs
-            assert isinstance(rioda.attrs['crs'], basestring)
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert 'crs' in rioda.attrs
+                assert isinstance(rioda.attrs['crs'], basestring)
 
-            # Write it to a netcdf and read again (roundtrip)
-            with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                rioda.to_netcdf(tmp_nc_file)
-                ncds = xr.open_dataarray(tmp_nc_file)
-                assert_identical(rioda, ncds)
+                # Write it to a netcdf and read again (roundtrip)
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
 
     def test_indexing(self):
 
@@ -1538,7 +1538,6 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
-            actual = xr.open_rasterio(tmp_file, cache=False)
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
@@ -1546,66 +1545,71 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                                          'y': -np.arange(ny)*2 + 2,
                                          'band': [1, 2, 3]})
 
-            # tests
-            # assert_allclose checks all data + coordinates
-            assert_allclose(actual, expected)
+            with xr.open_rasterio(tmp_file, cache=False) as actual:
 
-            # Slicing
-            ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
-            ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
-            assert_allclose(ac, ex)
+                # tests
+                # assert_allclose checks all data + coordinates
+                assert_allclose(actual, expected)
 
-            ex = expected.isel(band=slice(1, 2), x=slice(2, 5), y=slice(5, 7))
-            ac = actual.isel(band=slice(1, 2), x=slice(2, 5), y=slice(5, 7))
-            assert_allclose(ac, ex)
+                # Slicing
+                ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
+                ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
+                assert_allclose(ac, ex)
 
-            # Selecting lists of bands is fine
-            ex = expected.isel(band=[1, 2])
-            ac = actual.isel(band=[1, 2])
-            assert_allclose(ac, ex)
-            ex = expected.isel(band=[0, 2])
-            ac = actual.isel(band=[0, 2])
-            assert_allclose(ac, ex)
+                ex = expected.isel(band=slice(1, 2), x=slice(2, 5),
+                                   y=slice(5, 7))
+                ac = actual.isel(band=slice(1, 2), x=slice(2, 5),
+                                 y=slice(5, 7))
+                assert_allclose(ac, ex)
 
-            # but on x and y only windowed operations are allowed, more
-            # exotic slicing should raise an error
-            with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                actual.isel(x=[2, 4], y=[1, 3]).values
-            with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                actual.isel(x=[4, 2]).values
-            with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                actual.isel(x=slice(5, 2, -1)).values
+                # Selecting lists of bands is fine
+                ex = expected.isel(band=[1, 2])
+                ac = actual.isel(band=[1, 2])
+                assert_allclose(ac, ex)
+                ex = expected.isel(band=[0, 2])
+                ac = actual.isel(band=[0, 2])
+                assert_allclose(ac, ex)
 
-            # Integer indexing
-            ex = expected.isel(band=1)
-            ac = actual.isel(band=1)
-            assert_allclose(ac, ex)
+                # but on x and y only windowed operations are allowed, more
+                # exotic slicing should raise an error
+                err_msg = 'not valid on rasterio'
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[2, 4], y=[1, 3]).values
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[4, 2]).values
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=slice(5, 2, -1)).values
 
-            ex = expected.isel(x=1, y=2)
-            ac = actual.isel(x=1, y=2)
-            assert_allclose(ac, ex)
+                # Integer indexing
+                ex = expected.isel(band=1)
+                ac = actual.isel(band=1)
+                assert_allclose(ac, ex)
 
-            ex = expected.isel(band=0, x=1, y=2)
-            ac = actual.isel(band=0, x=1, y=2)
-            assert_allclose(ac, ex)
+                ex = expected.isel(x=1, y=2)
+                ac = actual.isel(x=1, y=2)
+                assert_allclose(ac, ex)
 
-            # Mixed
-            ex = actual.isel(x=slice(2), y=slice(2))
-            ac = actual.isel(x=[0, 1], y=[0, 1])
-            assert_allclose(ac, ex)
+                ex = expected.isel(band=0, x=1, y=2)
+                ac = actual.isel(band=0, x=1, y=2)
+                assert_allclose(ac, ex)
 
-            ex = expected.isel(band=0, x=1, y=slice(5, 7))
-            ac = actual.isel(band=0, x=1, y=slice(5, 7))
-            assert_allclose(ac, ex)
+                # Mixed
+                ex = actual.isel(x=slice(2), y=slice(2))
+                ac = actual.isel(x=[0, 1], y=[0, 1])
+                assert_allclose(ac, ex)
 
-            ex = expected.isel(band=0, x=slice(2, 5), y=2)
-            ac = actual.isel(band=0, x=slice(2, 5), y=2)
-            assert_allclose(ac, ex)
+                ex = expected.isel(band=0, x=1, y=slice(5, 7))
+                ac = actual.isel(band=0, x=1, y=slice(5, 7))
+                assert_allclose(ac, ex)
 
-            # One-element lists
-            ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
-            ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
-            assert_allclose(ac, ex)
+                ex = expected.isel(band=0, x=slice(2, 5), y=2)
+                ac = actual.isel(band=0, x=slice(2, 5), y=2)
+                assert_allclose(ac, ex)
+
+                # One-element lists
+                ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
+                ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
+                assert_allclose(ac, ex)
 
     def test_caching(self):
 
@@ -1627,26 +1631,27 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                     dtype=rasterio.float32) as s:
                 s.write(data)
 
-            # Cache is the default
-            actual = xr.open_rasterio(tmp_file)
-
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
                                  coords={'x': np.arange(nx)*0.5 + 1,
                                          'y': -np.arange(ny)*2 + 2,
                                          'band': [1, 2, 3]})
 
-            # Without cache an error is raised
-            with self.assertRaisesRegexp(IndexError, 'not valid on rasterio'):
-                actual.isel(x=[2, 4]).values
+            # Cache is the default
+            with xr.open_rasterio(tmp_file) as actual:
 
-            # This should cache everything
-            assert_allclose(actual, expected)
+                # Without cache an error is raised
+                err_msg = 'not valid on rasterio'
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[2, 4]).values
 
-            # once cached, non-windowed indexing should become possible
-            ac = actual.isel(x=[2, 4])
-            ex = expected.isel(x=[2, 4])
-            assert_allclose(ac, ex)
+                # This should cache everything
+                assert_allclose(actual, expected)
+
+                # once cached, non-windowed indexing should become possible
+                ac = actual.isel(x=[2, 4])
+                ex = expected.isel(x=[2, 4])
+                assert_allclose(ac, ex)
 
     @requires_dask
     def test_chunks(self):
@@ -1670,26 +1675,26 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                 s.write(data)
 
             # Chunk at open time
-            actual = xr.open_rasterio(tmp_file, chunks=(1, 2, 2))
+            with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
 
-            import dask.array as da
-            self.assertIsInstance(actual.data, da.Array)
-            assert 'open_rasterio' in actual.data.name
+                import dask.array as da
+                self.assertIsInstance(actual.data, da.Array)
+                assert 'open_rasterio' in actual.data.name
 
-            # ref
-            expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': np.arange(nx)*0.5 + 1,
-                                         'y': -np.arange(ny)*2 + 2,
-                                         'band': [1, 2, 3]})
+                # ref
+                expected = DataArray(data, dims=('band', 'y', 'x'),
+                                     coords={'x': np.arange(nx)*0.5 + 1,
+                                             'y': -np.arange(ny)*2 + 2,
+                                             'band': [1, 2, 3]})
 
-            # do some arithmetic
-            ac = actual.mean()
-            ex = expected.mean()
-            assert_allclose(ac, ex)
+                # do some arithmetic
+                ac = actual.mean()
+                ex = expected.mean()
+                assert_allclose(ac, ex)
 
-            ac = actual.sel(band=1).mean(dim='x')
-            ex = expected.sel(band=1).mean(dim='x')
-            assert_allclose(ac, ex)
+                ac = actual.sel(band=1).mean(dim='x')
+                ex = expected.sel(band=1).mean(dim='x')
+                assert_allclose(ac, ex)
 
 
 class TestEncodingInvalid(TestCase):
