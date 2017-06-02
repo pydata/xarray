@@ -38,6 +38,10 @@ Enhancements
   to ``py.test`` (:issue:`1393`).
   By `Matthew Gidden <https://github.com/gidden>`_.
 
+- ``xarray.core.variable.as_variable`` is now part of the public API and
+  can be accessed using :py:meth:`~xarray.as_variable` (:issue:`1303`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
 - :py:func:`~xarray.align` now supports ``join='exact'``, which raises
   an error instead of aligning when indexes to be aligned are not equal.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
