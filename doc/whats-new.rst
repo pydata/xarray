@@ -42,6 +42,10 @@ Enhancements
   can be accessed using :py:meth:`~xarray.as_variable` (:issue:`1303`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
+- :py:func:`~xarray.align` now supports ``join='exact'``, which raises
+  an error instead of aligning when indexes to be aligned are not equal.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -55,6 +59,17 @@ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Tutorial datasets are now checked against a reference MD5 sum to confirm
   successful download (:issue:`1392`). By `Matthew Gidden
   <https://github.com/gidden>`_.
+
+- ``DataArray.chunk()`` now accepts dask specific kwargs like
+  ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+  
 
 .. _whats-new.0.9.5:
 

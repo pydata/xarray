@@ -481,6 +481,14 @@ Testing
    testing.assert_identical
    testing.assert_allclose
 
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+
 Advanced API
 ============
 

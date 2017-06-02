@@ -15,3 +15,5 @@ dependencies:
   - netCDF4=1.2.5
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.14.3
+  - pip:
+    - sphinx-gallery
