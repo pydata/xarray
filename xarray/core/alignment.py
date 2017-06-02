@@ -258,7 +258,6 @@ def reindex_like_indexers(target, other):
     return indexers
 
 
-
 def reindex_variables(variables, sizes, indexes, indexers, method=None,
                       tolerance=None, copy=True):
     """Conform a dictionary of aligned variables onto a new set of variables,
@@ -370,15 +369,12 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
         idx_var = IndexVariable((dim,), indexers[dim], *args)
 
-        # if len(args) and not var.dtype.isbuiltin and idx_var.dtype != var.dtype:
-        # if len(args) and var.dtype.fields is not None and idx_var.dtype != var.dtype:
-
         # GH1434
         # ensures that dtype of numpy structured arrays is preserved
-        if len(args) and is_composite_dtype(var.dtype) and idx_var.dtype != var.dtype:
+        if len(args) and is_composite_dtype(var.dtype) \
+                and idx_var.dtype != var.dtype:
             idx_var.data = idx_var.data.astype(var.dtype)
         reindexed[dim] = idx_var
-        # reindexed[dim] = IndexVariable((dim,), indexers[dim], *args)
 
     for name, var in iteritems(variables):
         if name not in indexers:
@@ -422,13 +418,10 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                 # we neither created a new ndarray nor used fancy indexing
                 new_var = var.copy(deep=copy)
 
-
-            # if not indexes._variables[name].dtype.isbuiltin and new_var.dtype != indexes._variables[name].dtype:
-            # if var.dtype.fields is not None and new_var.dtype != indexes._variables[name].dtype:
-
             # GH1434
             # ensures that dtype of numpy structured arrays is preserved
-            if is_composite_dtype(var.dtype) and new_var.dtype != indexes._variables[name].dtype:
+            if is_composite_dtype(var.dtype) \
+                    and new_var.dtype != indexes._variables[name].dtype:
                 new_var = new_var.astype(indexes._variables[name].dtype)
             reindexed[name] = new_var
 

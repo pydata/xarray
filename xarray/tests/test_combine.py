@@ -38,7 +38,6 @@ class TestConcatDataset(TestCase):
             datasets = [g for _, g in data.groupby(dim, squeeze=False)]
             self.assertDatasetIdentical(data, concat(datasets, dim))
 
-
         dim = 'dim2'
         self.assertDatasetIdentical(
             data, concat(datasets, data[dim]))

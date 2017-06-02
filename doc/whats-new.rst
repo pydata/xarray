@@ -624,7 +624,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed losing of dimansions dtype during concat operation. By
+- Fixed unnecessary conversion of dimensions' dtype to numpy.object
+  during concat operation. By
  `Maciek Swat <https://github.com/maciekswat>`_.
 
 - Attributes were being retained by default for some resampling
@@ -634,8 +635,6 @@ Bug fixes
   ``keep_attrs=True`` option. By
   `Jeremy McGibbon <https://github.com/mcgibbon>`_.
 
-- Fixed bug in arithmetic operations on DataArray objects whose dimensions
-  are numpy structured arrays or recarrays :issue:`861`, :issue:`837`.
 - Concatenating xarray objects along an axis with a MultiIndex or PeriodIndex
   preserves the nature of the index (:issue:`875`). By
   `Stephan Hoyer <https://github.com/shoyer>`_.

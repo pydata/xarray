@@ -211,7 +211,6 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 
-
     def insert_result_variable(k, v):
         assert isinstance(v, Variable)
         if k in datasets[0].coords:
