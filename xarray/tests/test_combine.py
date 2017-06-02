@@ -116,7 +116,6 @@ class TestConcatDataset(TestCase):
 
         combined_2 = concat([da1, da2], dim='measurement')
 
-        print (combined_2.participant.dtype)
         assert combined_2.participant.dtype == da1.participant.dtype
         assert combined_2.measurement.dtype == da1.measurement.dtype
 

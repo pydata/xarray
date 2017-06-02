@@ -1211,38 +1211,20 @@ class IndexVariable(Variable):
     def __setitem__(self, key, value):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
-    @classmethod
-    def _concat_numpy(cls, variables, positions=None):
-        """
-        Concatenates variables. Works for variables whose dtype is
-        different from numpy.object. If variables' dtype is numpy.object
-        it throws TypeError and "concat" function will use
-        concat_pandas function
-        :param variables: list of variables to concatenate
-        :return: Concatenated variables
-        """
-
-        indexes = [v._data for v in variables]
-
-        if not indexes:
-            data = []
-        else:
-            data = np.concatenate((indexes))
-
-            if positions is not None:
-                indices = nputils.inverse_permutation(
-                    np.concatenate(positions))
-                data = data.take(indices)
-
-        return data
 
     @classmethod
     def _concat_pandas(cls, variables, positions=None):
         """
         Concatenates variables. This is generic function that
-        handles all cases for which concat_numpy does not work
+        handles cases where numpy.concatenate will not work
+
+        Parameters
+        ----------
         :param variables: list of variables to concatenate
-        :return: Concatenated variables
+
+        Returns
+        -------
+        Concatenated variables
         """
         indexes = [v._data.array for v in variables]
 
@@ -1281,10 +1263,10 @@ class IndexVariable(Variable):
         # GH1434
         # Fixes bug: "xr.concat loses coordinate dtype
         # information with recarrays in 0.9"
-        if np.object in map(lambda var: var.dtype, variables):
+        if any(var.dtype == np.object for var in variables):
             data = cls._concat_pandas(variables, positions)
         else:
-            data = cls._concat_numpy(variables, positions)
+            data = np.concatenate([v.data for v in variables])
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
