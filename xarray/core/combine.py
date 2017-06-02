@@ -208,29 +208,9 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     dim, coord = _calc_concat_dim_coord(dim)
     datasets = [as_dataset(ds) for ds in datasets]
 
-    # GH1434
-    # constructing a dictionary that will be used to preserve dtype
-    # of the original dataset dimensions
-    dtype_dict = {}
-    for ds in datasets:
-        for dim_tuple in ds.dims.items():
-            dim_name = dim_tuple[0]
-            if dim_name != dim:
-                dtype_dict[dim_name] = ds[dim_name].dtype
-
-    # align loses original dtype of the datasets' dim variables
     datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
-
-    # GH1434
-    # restoring original dtype of the datasets' dimensions
-    for ds in datasets:
-        for dim_name, dim_dtype in dtype_dict.items():
-            try:
-                ds[dim_name] = ds[dim_name].astype(dtype_dict[dim_name])
-            except KeyError:
-                pass
-
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
+
 
     def insert_result_variable(k, v):
         assert isinstance(v, Variable)

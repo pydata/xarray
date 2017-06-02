@@ -1212,7 +1212,7 @@ class IndexVariable(Variable):
         raise TypeError('%s values cannot be modified' % type(self).__name__)
 
     @classmethod
-    def concat_numpy(cls, variables, positions=None):
+    def _concat_numpy(cls, variables, positions=None):
         """
         Concatenates variables. Works for variables whose dtype is
         different from numpy.object. If variables' dtype is numpy.object
@@ -1221,20 +1221,6 @@ class IndexVariable(Variable):
         :param variables: list of variables to concatenate
         :return: Concatenated variables
         """
-        variable_type_set = set(map(lambda v: type(v.data), variables))
-
-        if len(variable_type_set) > 1:
-            raise TypeError('Trying to concatenate variables of '
-                            'different types')
-
-        variable_type = list(variable_type_set)[0]
-        if not variable_type == np.ndarray:
-            raise TypeError('Can only concatenate variables whose '
-                            '_data member is ndarray')
-
-        if variables[0].dtype == np.object:
-            raise TypeError('We use concat_numpy for objects whose '
-                            'dtypes are different than numpy.object ')
 
         indexes = [v._data for v in variables]
 
@@ -1251,7 +1237,7 @@ class IndexVariable(Variable):
         return data
 
     @classmethod
-    def concat_pandas(cls, variables, positions=None):
+    def _concat_pandas(cls, variables, positions=None):
         """
         Concatenates variables. This is generic function that
         handles all cases for which concat_numpy does not work
@@ -1295,10 +1281,10 @@ class IndexVariable(Variable):
         # GH1434
         # Fixes bug: "xr.concat loses coordinate dtype
         # information with recarrays in 0.9"
-        try:
-            data = cls.concat_numpy(variables, positions)
-        except TypeError:
-            data = cls.concat_pandas(variables, positions)
+        if np.object in map(lambda var: var.dtype, variables):
+            data = cls._concat_pandas(variables, positions)
+        else:
+            data = cls._concat_numpy(variables, positions)
 
         attrs = OrderedDict(first_var.attrs)
         if not shortcut:
