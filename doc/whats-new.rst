@@ -63,13 +63,16 @@ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - ``DataArray.chunk()`` now accepts dask specific kwargs like
   ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- Support for ``engine='pydap'`` with recent releases of Pydap (3.2.2+),
+  including on Python 3 (:issue:`1174`).
+
 Documentation
 ~~~~~~~~~~~~~
 
 - A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
-  
+
 
 .. _whats-new.0.9.5:
 
