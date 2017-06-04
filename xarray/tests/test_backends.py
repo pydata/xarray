@@ -27,7 +27,7 @@ from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky)
+               flaky, network)
 from .test_dataset import create_test_data
 
 try:
@@ -1361,6 +1361,7 @@ class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
 
 
+@network
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):

@@ -18,3 +18,4 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
+    - pydap
