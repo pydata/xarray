@@ -1439,17 +1439,9 @@ class TestPyNioAutocloseTrue(TestPyNio):
 
 
 @requires_rasterio
-class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
+class TestRasterio(TestCase):
 
-    def test_write_store(self):
-        # rasterio is read-only for now
-        pass
-
-    def test_orthogonal_indexing(self):
-        # rasterio also does not support list-like indexing
-        pass
-
-    def test_serialization(self):
+    def test_serialization_utm(self):
 
         import rasterio
         from rasterio.transform import from_origin
@@ -1486,6 +1478,11 @@ class TestRasterio(CFEncodedDataTest, Only32BitTypes, TestCase):
                     rioda.to_netcdf(tmp_nc_file)
                     with xr.open_dataarray(tmp_nc_file) as ncds:
                         assert_identical(rioda, ncds)
+
+    def test_serialization_platecarree(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
 
         # Create a geotiff file in latlong proj
         with create_tmp_file(suffix='.tif') as tmp_file:

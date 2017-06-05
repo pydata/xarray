@@ -6,8 +6,12 @@ import numpy as np
 from .. import DataArray
 from ..core.utils import DunderArrayMixin, NdimSizeLenMixin, is_scalar
 from ..core import indexing
-from .common import GLOBAL_LOCK
+try:
+    from dask.utils import SerializableLock as Lock
+except ImportError:
+    from threading import Lock
 
+RASTERIO_LOCK = Lock()
 
 _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'valid on rasterio files. Try to load your data with ds.load()'
@@ -78,7 +82,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return out
 
 
-def open_rasterio(filename, chunks=None, cache=None, lock=False):
+def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -156,7 +160,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=False):
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
         if lock is None:
-            lock = GLOBAL_LOCK
+            lock = RASTERIO_LOCK
         result = result.chunk(chunks, name_prefix=name_prefix, token=token,
                               lock=lock)
 
