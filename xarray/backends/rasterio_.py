@@ -62,11 +62,11 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
                 if step is not None and step != 1:
                     raise IndexError(_ERROR_MSG)
             elif is_scalar(k):
-                    # windowed operations will always return an array
-                    # we will have to squeeze it later
-                    squeeze_axis.append(i+1)
-                    start = k
-                    stop = k+1
+                # windowed operations will always return an array
+                # we will have to squeeze it later
+                squeeze_axis.append(i+1)
+                start = k
+                stop = k+1
             else:
                 k = np.asarray(k)
                 start = k[0]
