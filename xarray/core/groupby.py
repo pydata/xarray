@@ -539,7 +539,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._restore_dim_order(combined)
         if coord is not None:
             if shortcut:
-                combined._coords[coord.name] = as_variable(coord, copy=True)
+                combined._coords[coord.name] = as_variable(coord)
             else:
                 combined.coords[coord.name] = coord
         combined = self._maybe_restore_empty_groups(combined)

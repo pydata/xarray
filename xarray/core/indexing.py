@@ -386,6 +386,14 @@ class LazilyIndexedArray(utils.NDArrayMixin):
                 (type(self).__name__, self.array, self.key))
 
 
+def _wrap_numpy_scalars(array):
+    """Wrap NumPy scalars in 0d arrays."""
+    if np.isscalar(array):
+        return np.array(array)
+    else:
+        return array
+
+
 class CopyOnWriteArray(utils.NDArrayMixin):
     def __init__(self, array):
         self.array = array
@@ -400,7 +408,7 @@ class CopyOnWriteArray(utils.NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
-        return type(self)(self.array[key])
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __setitem__(self, key, value):
         self._ensure_copied()
@@ -409,7 +417,7 @@ class CopyOnWriteArray(utils.NDArrayMixin):
 
 class MemoryCachedArray(utils.NDArrayMixin):
     def __init__(self, array):
-        self.array = array
+        self.array = _wrap_numpy_scalars(array)
 
     def _ensure_cached(self):
         if not isinstance(self.array, np.ndarray):
@@ -420,7 +428,7 @@ class MemoryCachedArray(utils.NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
-        return type(self)(self.array[key])
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __setitem__(self, key, value):
         self.array[key] = value
