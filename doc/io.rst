@@ -384,6 +384,48 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+.. _io.rasterio:
+
+Rasterio
+--------
+
+GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
+rasterio is installed. Here is an example of how to use
+:py:func:`~xarray.open_rasterio` to read one of rasterio's `test files`_:
+
+.. ipython::
+    :verbatim:
+
+    In [7]: rio = xr.open_rasterio('RGB.byte.tif')
+
+    In [8]: rio
+    Out[8]:
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
+    Coordinates:
+      * band     (band) int64 1 2 3
+      * y        (y) float64 2.827e+06 2.827e+06 2.826e+06 2.826e+06 2.826e+06 ...
+      * x        (x) float64 1.02e+05 1.023e+05 1.026e+05 1.029e+05 1.032e+05 ...
+    Attributes:
+        crs:      +init=epsg:32618
+
+The ``x`` and ``y`` coordinates are generated out of the file's metadata
+(``bounds``, ``width``, ``height``), and they can be understood as cartesian
+coordinates defined in the file's projection provided by the ``crs`` attribute.
+``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
+See :ref:`recipes.rasterio` for an example of how to convert these to
+longitudes and latitudes.
+
+.. warning::
+
+    This feature has been added in xarray v0.9.6 and should still be
+    considered as being experimental. Please report any bug you may find
+    on xarray's github repository.
+
+.. _rasterio: https://mapbox.github.io/rasterio/
+.. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
+.. _pyproj: https://github.com/jswhit/pyproj
+
 .. _io.pynio:
 
 Formats supported by PyNIO

@@ -631,7 +631,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return self.variable.chunks
 
-    def chunk(self, chunks=None):
+    def chunk(self, chunks=None, name_prefix='xarray-', token=None,
+              lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -647,6 +648,13 @@ class DataArray(AbstractArray, BaseDataObject):
         chunks : int, tuple or dict, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
+        name_prefix : str, optional
+            Prefix for the name of the new dask array.
+        token : str, optional
+            Token uniquely identifying this array.
+        lock : optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
 
         Returns
         -------
@@ -655,7 +663,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(chunks, (list, tuple)):
             chunks = dict(zip(self.dims, chunks))
 
-        ds = self._to_temp_dataset().chunk(chunks)
+        ds = self._to_temp_dataset().chunk(chunks, name_prefix=name_prefix,
+                                           token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
     def isel(self, drop=False, **indexers):

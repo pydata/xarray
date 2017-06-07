@@ -76,6 +76,12 @@ try:
 except ImportError:
     has_bottleneck = False
 
+try:
+    import rasterio
+    has_rasterio = True
+except ImportError:
+    has_rasterio = False
+
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(
@@ -96,6 +102,8 @@ requires_dask = pytest.mark.skipif(
     not has_dask, reason='requires dask')
 requires_bottleneck = pytest.mark.skipif(
     not has_bottleneck, reason='requires bottleneck')
+requires_rasterio = pytest.mark.skipif(
+    not has_rasterio, reason='requires rasterio')
 
 
 try:
@@ -128,8 +136,8 @@ class TestCase(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
-            assert len(w) > 0
-            assert any(message in str(wi.message) for wi in w)
+        assert len(w) > 0
+        assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert_equal(v1, v2)
