@@ -15,39 +15,39 @@ What's New
 
 .. _whats-new.0.9.6:
 
-v0.9.6 (unreleased)
--------------------
+v0.9.6 (8 June 2017)
+--------------------
 
-- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
-for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
-By `Daniel Rothenberg <https://github.com/darothen>`_.
+This release includes a number of backwards compatible enhancements and bug
+fixes.
 
 Enhancements
 ~~~~~~~~~~~~
+
 - New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
   that enable sorting along dimensions (:issue:`967`).
-  (see :ref:`reshape.sort`).
+  See :ref:`the docs <reshape.sort>` for examples.
   By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
-     `Kyle Heuton <https://github.com/kheuton>`_.
+  `Kyle Heuton <https://github.com/kheuton>`_.
 
-- Rename the dask arrays created by `open_dataset` to match new dask conventions
-  (:issue:`1343`). By `Ryan Abernathey <https://github.com/rabernat>`_.
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+  for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
 
-- Enhanced tests suite by use of ``@network`` decorator, which is
-  controlled via ``--run-network-tests`` command line argument
-  to ``py.test`` (:issue:`1393`).
-  By `Matthew Gidden <https://github.com/gidden>`_.
+- Renamed internal dask arrays created by ``open_dataset`` to match new dask
+  conventions (:issue:`1343`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 
-- ``xarray.core.variable.as_variable`` is now part of the public API and
-  can be accessed using :py:meth:`~xarray.as_variable` (:issue:`1303`).
+- :py:meth:`~xarray.as_variable` is now part of the public API (:issue:`1303`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
 
 - :py:func:`~xarray.align` now supports ``join='exact'``, which raises
   an error instead of aligning when indexes to be aligned are not equal.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- New backend to open raster files with the
-  `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+- New function :py:func:`~xarray.open_rasterio` for opening raster files with
+  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  See :ref:`the docs <io.rasterio>` for details.
   By `Joe Hamman <https://github.com/jhamman>`_,
   `Nic Wayand <https://github.com/NicWayand>`_ and
   `Fabien Maussion <https://github.com/fmaussion>`_
@@ -55,15 +55,12 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
-By `Ryan Abernathey <https://github.com/rabernat>`_.
-
 - Fix error from repeated indexing of datasets loaded from disk (:issue:`1374`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
-``data_vars``.
-By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  ``data_vars``.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Tutorial datasets are now checked against a reference MD5 sum to confirm
   successful download (:issue:`1392`). By `Matthew Gidden
@@ -82,6 +79,17 @@ Documentation
   allows to add interactive examples to the documentation.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+Testing
+~~~~~~~
+
+- Fix test suite failure caused by changes to ``pandas.cut`` function
+  (:issue:`1386`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
 
 .. _whats-new.0.9.5:
 
