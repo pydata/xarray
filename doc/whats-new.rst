@@ -72,6 +72,9 @@ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - ``DataArray.chunk()`` now accepts dask specific kwargs like
   ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- Support for ``engine='pydap'`` with recent releases of Pydap (3.2.2+),
+  including on Python 3 (:issue:`1174`).
+
 Documentation
 ~~~~~~~~~~~~~
 
