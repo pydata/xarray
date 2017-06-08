@@ -70,6 +70,11 @@ try:
     print("netCDF4: %s, %s" % (netCDF4.__version__, netCDF4.__file__))
 except ImportError:
     print("no netCDF4")
+try:
+    import rasterio
+    print("rasterio: %s, %s" % (rasterio.__version__, rasterio.__file__))
+except ImportError:
+    print("no rasterio")
 
 import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
