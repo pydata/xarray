@@ -102,7 +102,7 @@ def last_item(x):
     return np.ravel(x[indexer]).tolist()
 
 
-def format_timestamp(t):
+def format_timestamp(t, shorten=True):
     """Cast given object to a Timestamp and return a nicely formatted string"""
     # Timestamp is only valid for 1678 to 2262
     try:
@@ -116,7 +116,7 @@ def format_timestamp(t):
         # catch NaT and others that don't split nicely
         return datetime_str
     else:
-        if time_str == '00:00:00':
+        if shorten and time_str == '00:00:00':
             return date_str
         else:
             return '%sT%s' % (date_str, time_str)

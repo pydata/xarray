@@ -205,7 +205,9 @@ def infer_datetime_units(dates):
     unique_timedeltas = np.unique(np.diff(dates))
     units = _infer_time_units_from_diff(unique_timedeltas)
     reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
-    return '%s since %s' % (units, pd.Timestamp(reference_date))
+    # always format as 'YYYY-mmmm-ddTHH:MM:SS'
+    reference_date = format_timestamp(reference_date, shorten=False)
+    return '%s since %s' % (units, reference_date)
 
 
 def infer_timedelta_units(deltas):
@@ -228,16 +230,6 @@ def nctime_to_nptime(times):
         dt = datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
         new[i] = np.datetime64(dt)
     return new
-
-
-def _cleanup_netcdf_time_units(units):
-    delta, ref_date = _unpack_netcdf_time_units(units)
-    try:
-        units = '%s since %s' % (delta, format_timestamp(ref_date))
-    except OutOfBoundsDatetime:
-        # don't worry about reifying the units if they're out of bounds
-        pass
-    return units
 
 
 def _encode_datetime_with_netcdf4(dates, units, calendar):
@@ -279,8 +271,6 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
     if units is None:
         units = infer_datetime_units(dates)
-    else:
-        units = _cleanup_netcdf_time_units(units)
 
     if calendar is None:
         calendar = 'proleptic_gregorian'
