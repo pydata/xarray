@@ -26,7 +26,7 @@ _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
-                   dtype=float, is_unsigned=False):
+                   dtype=float, is_unsigned=None):
     """Scale and mask array values according to CF conventions for packed and
     missing values
 
@@ -62,8 +62,9 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
     # check for unsigned integers before casting to dtype (by default, float)
-    if is_unsigned and array.dtype.kind == 'i':
-        array = array.view('u%s' % array.dtype.itemsize)
+    if is_unsigned is not None and array.dtype.kind == 'i':
+        unsigned_dtype = 'u%s' % array.dtype.itemsize
+        array = np.array(array, dtype=unsigned_dtype, copy=True)
 
     # by default, cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=dtype, copy=True)
@@ -648,8 +649,9 @@ def maybe_encode_dtype(var, name=None):
                                   'any _FillValue to use for NaNs' % name,
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
-                if '_Unsigned' in var.encoding:
+                if '_Unsigned' in encoding:
                     data = data.astype('u%s' % dtype.itemsize)
+                    is_unsigned = pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
@@ -815,9 +817,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "xarray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
 
-        is_unsigned = False
-        if '_Unsigned' in attributes:
-            is_unsigned = attributes['_Unsigned']
+        is_unsigned = pop_to(attributes, encoding, '_Unsigned')
 
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
