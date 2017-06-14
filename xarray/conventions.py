@@ -777,7 +777,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
         (using _FillValue). If the _Unsigned attribute is present
-        treat integer arrays as unsigned. 
+        treat integer arrays as unsigned.
     decode_times : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
     decode_endianness : bool
@@ -833,7 +833,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             else:
                 dtype = float
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
-                                        add_offset, dtype, 
+                                        add_offset, dtype,
                                         is_unsigned=is_unsigned)
 
     if decode_times and 'units' in attributes:
