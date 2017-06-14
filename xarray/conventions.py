@@ -49,6 +49,8 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     add_offset : number, optional
         After applying scale_factor, add this number to entries in the
         original array.
+    is_unsigned : prior to applying fill, scale, or offset, treat
+        integer array as unsigned
 
     Returns
     -------
@@ -356,6 +358,8 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
         add_offset : number, optional
             After applying scale_factor, add this number to entries in the
             original array.
+         is_unsigned : prior to applying fill, scale, or offset, treat
+             integer array as unsigned
         """
         self.array = array
         self.fill_value = fill_value
@@ -770,7 +774,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
-        (using _FillValue).
+        (using _FillValue). If the _Unsigned attribute is present
+        treat integer arrays as unsigned. 
     decode_times : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
     decode_endianness : bool
