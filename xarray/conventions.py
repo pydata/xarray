@@ -345,7 +345,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
     def __init__(self, array, fill_value=None, scale_factor=None,
-                 add_offset=None, dtype=float, is_unsigned=False):
+                 add_offset=None, dtype=float, is_unsigned=None):
         """
         Parameters
         ----------
