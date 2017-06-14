@@ -26,7 +26,7 @@ _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
-                   dtype=float):
+                   dtype=float, is_unsigned=False):
     """Scale and mask array values according to CF conventions for packed and
     missing values
 
@@ -59,8 +59,13 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     ----------
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
+    # check for unsigned integers before casting to dtype (by default, float)
+    if is_unsigned and array.dtype.kind == 'i':
+        array = array.view('u%s' % array.dtype.itemsize)
+
     # by default, cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=dtype, copy=True)
+
     if fill_value is not None and not np.all(pd.isnull(fill_value)):
         if getattr(fill_value, 'size', 1) > 1:
             fill_values = fill_value  # multiple fill values
@@ -337,7 +342,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
     def __init__(self, array, fill_value=None, scale_factor=None,
-                 add_offset=None, dtype=float):
+                 add_offset=None, dtype=float, is_unsigned=False):
         """
         Parameters
         ----------
@@ -357,6 +362,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
         self.scale_factor = scale_factor
         self.add_offset = add_offset
         self._dtype = dtype
+        self.is_unsigned = is_unsigned
 
     @property
     def dtype(self):
@@ -364,7 +370,8 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         return mask_and_scale(self.array[key], self.fill_value,
-                              self.scale_factor, self.add_offset, self._dtype)
+                              self.scale_factor, self.add_offset, self._dtype,
+                              self.is_unsigned)
 
     def __repr__(self):
         return ("%s(%r, fill_value=%r, scale_factor=%r, add_offset=%r, "
@@ -637,6 +644,8 @@ def maybe_encode_dtype(var, name=None):
                                   'any _FillValue to use for NaNs' % name,
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
+                if '_Unsigned' in var.encoding:
+                    data = data.astype('u%s' % dtype.itemsize)
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
@@ -801,6 +810,10 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "xarray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
 
+        is_unsigned = False
+        if '_Unsigned' in attributes:
+            is_unsigned = attributes['_Unsigned']
+
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
             warnings.warn("variable has multiple fill values {0}, decoding "
@@ -815,7 +828,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             else:
                 dtype = float
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
-                                        add_offset, dtype)
+                                        add_offset, dtype, 
+                                        is_unsigned=is_unsigned)
 
     if decode_times and 'units' in attributes:
         if 'since' in attributes['units']:
