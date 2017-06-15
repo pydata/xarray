@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 from io import BytesIO
 from threading import Lock
-import collections
 import contextlib
 import itertools
 import os.path

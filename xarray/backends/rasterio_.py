@@ -148,7 +148,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
        (hasattr(riods, 'profile') and 'tiled' in riods.profile):
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
-        attrs['tiled'] = np.uint8(riods.tiled if hasattr(riods, 'tiled') \
+        attrs['tiled'] = np.uint8(riods.tiled if hasattr(riods, 'tiled')
                                   else riods.profile['tiled'])
     if hasattr(riods, 'transform'):
         # Affine transformation matrix (tuple of floats)
