@@ -1475,8 +1475,8 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['crs'], basestring)
                 assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'tiled' in rioda.attrs
-                assert isinstance(rioda.attrs['tiled'], np.uint8)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
@@ -1518,8 +1518,8 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['crs'], basestring)
                 assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'tiled' in rioda.attrs
-                assert isinstance(rioda.attrs['tiled'], np.uint8)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 

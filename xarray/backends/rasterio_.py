@@ -144,12 +144,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     if hasattr(riods, 'res'):
         # (width, height) tuple of pixels in units of CRS
         attrs['res'] = riods.res
-    if hasattr(riods, 'tiled') or \
-       (hasattr(riods, 'profile') and 'tiled' in riods.profile):
+    if hasattr(riods, 'is_tiled'):
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
-        attrs['tiled'] = np.uint8(riods.tiled if hasattr(riods, 'tiled')
-                                  else riods.profile['tiled'])
+        attrs['is_tiled'] = np.uint8(riods.is_tiled)
     if hasattr(riods, 'transform'):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
