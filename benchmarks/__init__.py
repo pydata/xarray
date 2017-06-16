@@ -1,16 +1,10 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import os
-import shutil
 import itertools
 import random
-import contextlib
-import tempfile
 
 import numpy as np
-
-from xarray.core.pycompat import ExitStack
 
 np.random.seed(10)
 _counter = itertools.count()
