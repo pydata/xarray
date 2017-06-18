@@ -1122,6 +1122,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def imag(self):
         return type(self)(self.dims, self.data.imag, self._attrs)
 
+    def argmin_indices(self, dim=None):
+        """ return index of the minimum along dim, as an dict.
+        dim should be None or 1-dimensional.
+        """
+        raise NotImplementedError
+        self.data._argmin(dim)
+
+    def argmax_indices(self, dim=None):
+        raise NotImplementedError
+        pass
+
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
 

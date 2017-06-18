@@ -167,7 +167,7 @@ def _ignore_warnings_if(condition):
 
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
-                           keep_dims=False):
+                           keep_dims=False, only_1dim=False):
     def f(values, axis=None, skipna=None, **kwargs):
         # ignore keyword args inserted by np.mean and other numpy aggregators
         # automatically:
@@ -175,6 +175,13 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         kwargs.pop('out', None)
 
         values = asarray(values)
+
+        if only_1dim:
+            if ((axis is None and values.ndim > 1) or
+                (hasattr(axis, 'len') and len(axis) > 1)):
+                raise ValueError('Method %s is only applicable to '
+                                 '1-dimensional data (or with a single dim '
+                                 'arguments).' % name)
 
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
@@ -214,13 +221,14 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            'or newer to use skipna=True or skipna=None' % name)
                 raise NotImplementedError(msg)
     f.numeric_only = numeric_only
+    f.only_1dim = only_1dim
     f.keep_dims = keep_dims
     f.__name__ = name
     return f
 
 
-argmax = _create_nan_agg_method('argmax', coerce_strings=True)
-argmin = _create_nan_agg_method('argmin', coerce_strings=True)
+argmax = _create_nan_agg_method('argmax', coerce_strings=True, only_1dim=True)
+argmin = _create_nan_agg_method('argmin', coerce_strings=True, only_1dim=True)
 max = _create_nan_agg_method('max', coerce_strings=True)
 min = _create_nan_agg_method('min', coerce_strings=True)
 sum = _create_nan_agg_method('sum', numeric_only=True)

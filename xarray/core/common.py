@@ -24,20 +24,28 @@ class ImplementsArrayReduce(object):
                                    allow_lazy=True, **kwargs)
         return wrapped_func
 
-    _reduce_extra_args_docstring = \
-        """dim : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis(es) over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes."""
+    _reduce_extra_args_docstring = """\
+dim : str or sequence of str, optional
+    Dimension(s) over which to apply `{name}`.
+axis : int or sequence of int, optional
+    Axis(es) over which to apply `{name}`. Only one of the 'dim'
+    and 'axis' arguments can be supplied. If neither are supplied, then
+    `{name}` is calculated over axes."""
 
-    _cum_extra_args_docstring = \
-        """dim : str or sequence of str, optional
-            Dimension over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+    _reduce1dim_extra_args_docstring = """\
+dim : str, optional
+    Dimension over which to apply `{name}`.
+axis : int, optional
+    Axis over which to apply `{name}`. Only one of the 'dim'
+    and 'axis' arguments can be supplied. If neither are supplied, then
+    `{name}` is calculated over axes."""
+
+    _cum_extra_args_docstring = """\
+dim : str or sequence of str, optional
+    Dimension over which to apply `{name}`.
+axis : int or sequence of int, optional
+    Axis over which to apply `{name}`. Only one of the 'dim'
+    and 'axis' arguments can be supplied."""
 
 
 class ImplementsDatasetReduce(object):
@@ -56,17 +64,22 @@ class ImplementsDatasetReduce(object):
                                    **kwargs)
         return wrapped_func
 
-    _reduce_extra_args_docstring = \
-        """dim : str or sequence of str, optional
-            Dimension(s) over which to apply `{name}`.  By default `{name}` is
-            applied over all dimensions."""
+    _reduce_extra_args_docstring = """\
+dim : str or sequence of str, optional
+    Dimension(s) over which to apply `{name}`.  By default `{name}` is
+    applied over all dimensions."""
 
-    _cum_extra_args_docstring = \
-        """dim : str or sequence of str, optional
-            Dimension over which to apply `{name}`.
-        axis : int or sequence of int, optional
-            Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+    _reduce1dim_extra_args_docstring = """\
+dim : str
+    Dimension over which to apply `{name}`.  By default `{name}` is
+    applied over all dimensions."""
+
+    _cum_extra_args_docstring = """\
+dim : str or sequence of str, optional
+    Dimension over which to apply `{name}`.
+axis : int or sequence of int, optional
+    Axis over which to apply `{name}`. Only one of the 'dim'
+    and 'axis' arguments can be supplied."""
 
 
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):

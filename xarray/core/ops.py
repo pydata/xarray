@@ -81,6 +81,7 @@ cumvalue : {cls}
 
 _REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this {cls}'s data by applying `{name}` along some dimension(s).
+{only_1dim}
 
 Parameters
 ----------
@@ -103,6 +104,11 @@ Returns
 reduced : {cls}
     New {cls} object with `{name}` applied to its data and the
     indicated dimension(s) removed.
+"""
+
+_REDUCE_ONLY1DIM_DOCSTRING = """\
+The data should be 1-dimensional or either of (a single) dim or axis should be
+passed.
 """
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
@@ -204,11 +210,18 @@ def inject_reduce_methods(cls):
                [('count', duck_array_ops.count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
+        only_1dim = getattr(f, 'only_1dim', False)
+        only_1dim_doc = _REDUCE_ONLY1DIM_DOCSTRING if only_1dim else ''
+        if only_1dim:
+            extra_args = cls._reduce_extra_args_docstring.format(name=name)
+        else:
+            extra_args = cls._reduce1dim_extra_args_docstring.format(name=name)
+
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring.format(name=name))
+            only_1dim=only_1dim_doc, extra_args=extra_args)
         setattr(cls, name, func)
 
 

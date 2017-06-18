@@ -2850,6 +2850,36 @@ class TestDataset(TestCase):
         for k, v in ds.data_vars.items():
             self.assertEqual(v.attrs, data[k].attrs)
 
+    def test_reduce_1dim(self):
+        """ test reduce methods that accepts only 1-dim data. """
+        data = create_test_data()
+        with self.assertRaisesRegexp(ValueError,
+                                     "Method argmax is only applicable to "):
+            data.argmax()
+
+        with self.assertRaisesRegexp(ValueError,
+                                     "Method argmin is only applicable to "):
+            data.argmin()
+
+        with self.assertRaisesRegexp(ValueError,
+                                     "Method argmin is only applicable to "):
+            data.argmin(dim=['dim1', 'dim2'])
+
+        with self.assertRaisesRegexp(ValueError,
+                                     "Method argmax is only applicable to "):
+            data.argmax(dim=['dim1', 'dim2'])
+
+        data['var1'][3, 2] = 1000.0
+        actual = data.argmax(dim='dim1')['var1']
+        self.assertTrue(actual[2].item() == 3)
+        data['var1'][3, 2] = -1000.0
+        actual = data.argmin(dim='dim1')['var1']
+        self.assertTrue(actual[2].item() == 3)
+
+        data = data.expand_dims('dim4', -1)
+        actual = data.argmin(dim='dim1')['var1']
+        self.assertTrue(actual[2].item() == 3)
+
     def test_reduce_argmin(self):
         # regression test for #205
         ds = Dataset({'a': ('x', [0, 1])})
