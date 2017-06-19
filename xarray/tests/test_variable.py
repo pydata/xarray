@@ -1063,6 +1063,51 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
 
+    def test_argmin_max(self):
+        d = self.d  # shape [10, 3]
+        d[2, 1] = -1000.0
+        v = Variable(['time', 'x'], d)
+        argdict = v.argmin_indexes()
+        self.assertTrue(argdict['time'] == 2)
+        self.assertTrue(argdict['x'] == 1)
+        # make sure the order of the arguments does not change the result
+        argdict = v.argmin_indexes(['x', 'time'])
+        self.assertTrue(argdict['time'] == 2)
+        self.assertTrue(argdict['x'] == 1)
+
+        d[2, 1] = 1000.0
+        v = Variable(['time', 'x'], d)
+        argdict = v.argmax_indexes()
+        self.assertTrue(argdict['time'] == 2)
+        self.assertTrue(argdict['x'] == 1)
+
+        d[2, 0] = -1000.0
+        d[2, 1] = -1000.0
+        d[3, 2] = -1000.0
+        v = Variable(['time', 'x'], d)
+        argdict = v.argmin_indexes('time')
+        self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
+        argdict = v.argmin_indexes(['time'])
+        self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
+
+        d[2, 0] = 1000.0
+        d[2, 1] = 1000.0
+        d[3, 2] = 1000.0
+        v = Variable(['time', 'x'], d)
+        argdict = v.argmax_indexes('time')
+        self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
+
+        with self.assertRaisesRegexp(ValueError, 'dimensions'):
+            v.argmax_indexes(['space'])
+
+        # numpy array with order 'F'
+        d = np.random.randn(30).reshape(10, 3, order='F')
+        d[2, 1] = -1000.0
+        v = Variable(['time', 'x'], d)
+        argdict = v.argmin_indexes()
+        self.assertTrue(argdict['time'] == 2)
+        self.assertTrue(argdict['x'] == 1)
+
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)

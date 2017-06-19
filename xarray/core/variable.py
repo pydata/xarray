@@ -1122,16 +1122,48 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def imag(self):
         return type(self)(self.dims, self.data.imag, self._attrs)
 
-    def argmin_indices(self, dim=None):
-        """ return index of the minimum along dim, as an dict.
-        dim should be None or 1-dimensional.
+    def _arg_indexes(self, funcname, dims=None):
+        """ return indexes of the minimum or maximum along dim, as an
+        OrderedDict of Variables.
+        dims should be None or str or sequence of strs.
+        funcname is one of ['argmin' or 'argmax']
         """
-        raise NotImplementedError
-        self.data._argmin(dim)
+        if dims is None:
+            dims = self.dims
+        if isinstance(dims, basestring):
+            dims = [dims]
 
-    def argmax_indices(self, dim=None):
-        raise NotImplementedError
-        pass
+        invalid = [k for k in dims if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        # sort dims to the same order to self.dims
+        dims = [d for d in self.dims if d in dims]
+
+        # shape of the dropped dims (which argmin/argmax to be applied along)
+        drop_shape = [self.shape[i] for i, d in enumerate(self.dims)
+                      if d in dims]
+        drop_size = np.prod(drop_shape)
+        # the rest of dimensions, self.dims - dims
+        kept_dims = [d for d in self.dims if d not in dims]
+        kept_shape = [self.shape[i] for i, d in enumerate(self.dims)
+                      if d not in dims]
+
+        transposed = self.transpose(*(kept_dims + dims))
+        flattened = transposed.data.reshape(kept_shape + [drop_size])
+        flattened_args = getattr(flattened, funcname)(axis=-1)
+        args = np.unravel_index(flattened_args, drop_shape)
+
+        arg_dict = OrderedDict()
+        for i, d in enumerate(dims):
+            arg_dict[d] = type(self)(kept_dims, args[i])
+        return arg_dict
+
+    def argmin_indexes(self, dims=None):
+        return self._arg_indexes('argmin', dims=dims)
+
+    def argmax_indexes(self, dims=None):
+        return self._arg_indexes('argmax', dims=dims)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)
