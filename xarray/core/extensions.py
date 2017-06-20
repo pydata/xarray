@@ -64,6 +64,22 @@ def register_dataarray_accessor(name):
         Name under which the accessor should be registered. A warning is issued
         if this name conflicts with a preexisting attribute.
 
+    See also
+    --------
+    register_dataset_accessor
+    """
+    return _register_accessor(name, DataArray)
+
+
+def register_dataset_accessor(name):
+    """Register a custom property on xarray.Dataset objects.
+
+    Parameters
+    ----------
+    name : str
+        Name under which the accessor should be registered. A warning is issued
+        if this name conflicts with a preexisting attribute.
+
     Examples
     --------
 
@@ -95,22 +111,6 @@ def register_dataarray_accessor(name):
         (5.0, 10.0)
         >>> ds.geo.plot()
         # plots data on a map
-
-    See also
-    --------
-    register_dataset_accessor
-    """
-    return _register_accessor(name, DataArray)
-
-
-def register_dataset_accessor(name):
-    """Register a custom property on xarray.Dataset objects.
-
-    Parameters
-    ----------
-    name : str
-        Name under which the accessor should be registered. A warning is issued
-        if this name conflicts with a preexisting attribute.
 
     See also
     --------

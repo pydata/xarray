@@ -9,7 +9,11 @@ import warnings
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from pandas.tslib import OutOfBoundsDatetime
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 from ..core import duck_array_ops, indexing, ops, utils
 from ..core.formatting import format_timestamp, first_n_items, last_item

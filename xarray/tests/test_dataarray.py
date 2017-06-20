@@ -492,6 +492,12 @@ class TestDataArray(TestCase):
 
         self.assertIsNone(blocked.load().chunks)
 
+        # Check that kwargs are passed
+        import dask.array as da
+        blocked = unblocked.chunk(name_prefix='testname_')
+        self.assertIsInstance(blocked.data, da.Array)
+        assert 'testname_' in blocked.data.name
+
     def test_isel(self):
         self.assertDataArrayIdentical(self.dv[0], self.dv.isel(x=0))
         self.assertDataArrayIdentical(self.dv, self.dv.isel(x=slice(None)))
@@ -2322,7 +2328,7 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         expected = Dataset({'bar': ('x', [1, 2])})
-        with self.assertWarns('order of the arguments'):
+        with pytest.warns(FutureWarning):
             actual = named.to_dataset('bar')
         self.assertDatasetIdentical(expected, actual)
 
@@ -2517,6 +2523,48 @@ class TestDataArray(TestCase):
         actual = ar0.combine_first(ar2)
         expected = DataArray([[0, 0], [0, 0], [2, 2]],
                              [('x', ['a', 'b', 'd']), ('y', [-1, 0])])
+        self.assertDataArrayEqual(actual, expected)
+
+    def test_sortby(self):
+        da = DataArray([[1, 2], [3, 4], [5, 6]],
+                       [('x', ['c', 'b', 'a']), ('y', [1, 0])])
+
+        sorted1d = DataArray([[5, 6], [3, 4], [1, 2]],
+                             [('x', ['a', 'b', 'c']), ('y', [1, 0])])
+
+        sorted2d = DataArray([[6, 5], [4, 3], [2, 1]],
+                             [('x', ['a', 'b', 'c']), ('y', [0, 1])])
+
+        expected = sorted1d
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
+        actual = da.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = da.sortby(dax, ascending=False)
+        self.assertDatasetEqual(actual, da)
+
+        # test alignment (fills in nan for 'c')
+        dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
+        actual = da.sortby(dax_short)
+        self.assertDatasetEqual(actual, expected)
+
+        # test multi-dim sort by 1D dataarray values
+        expected = sorted2d
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
+        day = DataArray([90, 80], [('y', [1, 0])])
+        actual = da.sortby([day, dax])
+        self.assertDataArrayEqual(actual, expected)
+
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            pytest.skip('numpy 1.11.0 or later to support object data-type.')
+
+        expected = sorted1d
+        actual = da.sortby('x')
+        self.assertDataArrayEqual(actual, expected)
+
+        expected = sorted2d
+        actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
 
 

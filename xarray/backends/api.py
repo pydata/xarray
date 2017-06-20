@@ -182,11 +182,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
-        chunk for all arrays. This is an experimental feature; see the
-        documentation for more details.
+        chunk for all arrays.
     lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        :py:func:`dask.array.from_array`. By default, a global lock is
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
@@ -229,26 +228,18 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         _protect_dataset_variables_inplace(ds, cache)
 
         if chunks is not None:
-            try:
-                from dask.base import tokenize
-            except ImportError:
-                # raise the usual error if dask is entirely missing
-                import dask
-                if LooseVersion(dask.__version__) < LooseVersion('0.6'):
-                    raise ImportError(
-                        'xarray requires dask version 0.6 or newer')
-                else:
-                    raise
-
+            from dask.base import tokenize
+            # if passed an actual file path, augment the token with
+            # the file modification time
             if (isinstance(filename_or_obj, basestring) and
                     not is_remote_uri(filename_or_obj)):
-                file_arg = os.path.getmtime(filename_or_obj)
+                mtime = os.path.getmtime(filename_or_obj)
             else:
-                file_arg = filename_or_obj
-            token = tokenize(file_arg, group, decode_cf, mask_and_scale,
-                             decode_times, concat_characters, decode_coords,
-                             engine, chunks, drop_variables)
-            name_prefix = '%s:%s/' % (filename_or_obj, group or '')
+                mtime = None
+            token = tokenize(filename_or_obj, mtime, group, decode_cf,
+                             mask_and_scale, decode_times, concat_characters,
+                             decode_coords, engine, chunks, drop_variables)
+            name_prefix = 'open_dataset-%s' % token
             ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
                            lock=lock)
             ds2._file_obj = ds._file_obj
@@ -368,11 +359,10 @@ def open_dataarray(*args, **kwargs):
         'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
-        arrays. This is an experimental feature; see the documentation for more
-        details.
+        arrays.
     lock : False, True or threading.Lock, optional
         If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a per-variable lock is
+        :py:func:`dask.array.from_array`. By default, a global lock is
         used when reading data from netCDF files with the netcdf4 and h5netcdf
         engines to avoid issues with concurrent access when using dask's
         multithreaded backend.
