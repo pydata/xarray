@@ -26,7 +26,7 @@ _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
-                   dtype=float, is_unsigned=None):
+                   dtype=float):
     """Scale and mask array values according to CF conventions for packed and
     missing values
 
@@ -49,8 +49,6 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     add_offset : number, optional
         After applying scale_factor, add this number to entries in the
         original array.
-    is_unsigned : prior to applying fill, scale, or offset, treat
-        integer array as unsigned
 
     Returns
     -------
@@ -61,11 +59,6 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     ----------
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
-    # check for unsigned integers before casting to dtype (by default, float)
-    if is_unsigned is not None and array.dtype.kind == 'i':
-        unsigned_dtype = 'u%s' % array.dtype.itemsize
-        array = np.array(array, dtype=unsigned_dtype, copy=True)
-
     # by default, cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=dtype, copy=True)
 
@@ -345,7 +338,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
     def __init__(self, array, fill_value=None, scale_factor=None,
-                 add_offset=None, dtype=float, is_unsigned=None):
+                 add_offset=None, dtype=float):
         """
         Parameters
         ----------
@@ -359,15 +352,12 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
         add_offset : number, optional
             After applying scale_factor, add this number to entries in the
             original array.
-         is_unsigned : prior to applying fill, scale, or offset, treat
-             integer array as unsigned
         """
         self.array = array
         self.fill_value = fill_value
         self.scale_factor = scale_factor
         self.add_offset = add_offset
         self._dtype = dtype
-        self.is_unsigned = is_unsigned
 
     @property
     def dtype(self):
@@ -375,8 +365,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         return mask_and_scale(self.array[key], self.fill_value,
-                              self.scale_factor, self.add_offset, self._dtype,
-                              self.is_unsigned)
+                              self.scale_factor, self.add_offset, self._dtype)
 
     def __repr__(self):
         return ("%s(%r, fill_value=%r, scale_factor=%r, add_offset=%r, "
@@ -546,6 +535,34 @@ class BoolTypeArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
+class UnsignedIntTypeArray(utils.NDArrayMixin):
+    """Decode arrays on the fly from signed integer to unsigned
+    integer. Typically used when _Unsigned is set at as a netCDF
+    attribute on a signed integer variable.
+
+    >>> sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+
+    >>> sb.dtype
+    dtype('int8')
+
+    >>> UnsignedIntTypeArray(sb).dtype
+    dtype('uint8')
+
+    >>> UnsignedIntTypeArray(sb)[:]
+    array([  0,   1, 127, 128, 255], dtype=uint8)
+    """
+    def __init__(self, array):
+        self.array = array
+        self.unsigned_dtype = np.dtype('u%s' % array.dtype.itemsize)
+
+    @property
+    def dtype(self):
+        return self.unsigned_dtype
+
+    def __getitem__(self, key):
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
@@ -650,8 +667,8 @@ def maybe_encode_dtype(var, name=None):
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if '_Unsigned' in encoding:
-                    data = data.astype('u%s' % dtype.itemsize)
-                    is_unsigned = pop_to(encoding, attrs, '_Unsigned')
+                    data = data.astype('i%s' % dtype.itemsize)
+                    pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
@@ -802,6 +819,15 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             dimensions = dimensions[:-1]
             data = CharToStringArray(data)
 
+    is_unsigned = pop_to(attributes, encoding, '_Unsigned')
+    if is_unsigned is not None:
+        if data.dtype.kind == 'i':
+            data = UnsignedIntTypeArray(data)
+        else:
+            warnings.warn("variable has _Unsigned attribute but is not "
+                          "of integer type. Ignoring attribute.",
+                          RuntimeWarning, stacklevel=3)
+
     if mask_and_scale:
         if 'missing_value' in attributes:
             # missing_value is deprecated, but we still want to support it as
@@ -817,8 +843,6 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "xarray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
 
-        is_unsigned = pop_to(attributes, encoding, '_Unsigned')
-
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
             warnings.warn("variable has multiple fill values {0}, decoding "
@@ -833,8 +857,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             else:
                 dtype = float
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
-                                        add_offset, dtype,
-                                        is_unsigned=is_unsigned)
+                                        add_offset, dtype)
 
     if decode_times and 'units' in attributes:
         if 'since' in attributes['units']:

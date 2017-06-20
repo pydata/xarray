@@ -61,6 +61,10 @@ Enhancements
   for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a 
+  signed integer data type should be interpreted as unsigned bytes.
+  By `Eric Bruning <https://github.com/deeplycloudy>`_.
+
 - Renamed internal dask arrays created by ``open_dataset`` to match new dask
   conventions (:issue:`1343`).
   By `Ryan Abernathey <https://github.com/rabernat>`_.
