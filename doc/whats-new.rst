@@ -42,7 +42,7 @@ Bug fixes
 
 .. _whats-new.0.9.6:
 
-v0.9.6 (8 June 2017)
+v0.9.6 (19 June 2017)
 --------------------
 
 This release includes a number of backwards compatible enhancements and bug
@@ -61,8 +61,9 @@ Enhancements
   for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
-- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a 
-  signed integer data type should be interpreted as unsigned bytes.
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
+  a signed integer data type should be interpreted as unsigned bytes
+  (:issue:`1444`).
   By `Eric Bruning <https://github.com/deeplycloudy>`_.
 
 - Renamed internal dask arrays created by ``open_dataset`` to match new dask
