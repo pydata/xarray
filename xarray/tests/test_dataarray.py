@@ -2036,7 +2036,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_y2, y2)
 
     def test_broadcast_arrays_nocopy(self):
-        # Test input data is not copied over in case no alteration is needed
+        # Test that input data is not copied over in case no alteration is needed
         x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
         y = DataArray(3, name='y')
         expected_x2 = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
