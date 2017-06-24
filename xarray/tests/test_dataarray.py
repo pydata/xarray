@@ -2036,7 +2036,8 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(expected_y2, y2)
 
     def test_broadcast_arrays_nocopy(self):
-        # Test that input data is not copied over in case no alteration is needed
+        # Test that input data is not copied over in case
+        # no alteration is needed
         x = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
         y = DataArray(3, name='y')
         expected_x2 = DataArray([1, 2], coords=[('a', [-1, -2])], name='x')
@@ -2633,7 +2634,7 @@ def test_rolling_properties(da):
 
 
 @pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',
-                                  'median', 'count'))
+                                  'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
@@ -2717,12 +2718,23 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-def test_rolling_count_correct(da):
+def test_rolling_count_correct():
 
-    result = da.rolling(time=7, min_periods=1).count()
-    expected_rolling_count = np.r_[np.arange(1, 8), np.full((14), 7)]
-    expected = xr.DataArray(
-        np.broadcast_to(expected_rolling_count, (4, 21)).T,
-        dims=['time', 'x'])
-    expected['time'] = result['time']
+    da = DataArray(
+        [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
+
+    result = da.rolling(time=11, min_periods=1).count()
+    expected = DataArray(
+        [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time')
+    assert_equal(result, expected)
+
+    result = da.rolling(time=11, min_periods=None).count()
+    expected = DataArray(
+        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+         np.nan, np.nan, np.nan, np.nan, 8], dims='time')
+    assert_equal(result, expected)
+
+    result = da.rolling(time=7, min_periods=2).count()
+    expected = DataArray(
+        [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')
     assert_equal(result, expected)
