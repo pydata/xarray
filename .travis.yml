@@ -23,9 +23,7 @@ matrix:
   - python: 3.6
     env:
     - CONDA_ENV=py36
-    - EXTRA_FLAGS="--run-flaky"
-  - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - python: 3.6
     env: CONDA_ENV=py36-netcdf4-dev
     addons:
@@ -45,9 +43,7 @@ matrix:
   - python: 3.6
     env:
     - CONDA_ENV=py36
-    - EXTRA_FLAGS="--run-flaky"
-  - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - python: 3.6
     env: CONDA_ENV=py36-netcdf4-dev
     addons:

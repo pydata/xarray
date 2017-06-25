@@ -76,6 +76,12 @@ try:
 except ImportError:
     has_bottleneck = False
 
+try:
+    import rasterio
+    has_rasterio = True
+except ImportError:
+    has_rasterio = False
+
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(
@@ -96,18 +102,26 @@ requires_dask = pytest.mark.skipif(
     not has_dask, reason='requires dask')
 requires_bottleneck = pytest.mark.skipif(
     not has_bottleneck, reason='requires bottleneck')
+requires_rasterio = pytest.mark.skipif(
+    not has_rasterio, reason='requires rasterio')
 
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
+    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
 except ValueError:
     # Can't get config from pytest, e.g., because xarray is installed instead
     # of being run from a development version (and hence conftests.py is not
     # available). Don't run flaky tests.
     _SKIP_FLAKY = True
+    _SKIP_NETWORK_TESTS = True
 
 flaky = pytest.mark.skipif(
     _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
+network = pytest.mark.skipif(
+    _SKIP_NETWORK_TESTS,
+    reason="set --run-network-tests option to run tests requiring an "
+    "internet connection")
 
 
 class TestCase(unittest.TestCase):
@@ -122,8 +136,8 @@ class TestCase(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
-            assert len(w) > 0
-            assert any(message in str(wi.message) for wi in w)
+        assert len(w) > 0
+        assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert_equal(v1, v2)
@@ -173,6 +187,7 @@ class UnexpectedDataAccess(Exception):
 
 
 class InaccessibleArray(utils.NDArrayMixin):
+
     def __init__(self, array):
         self.array = array
 
@@ -181,6 +196,7 @@ class InaccessibleArray(utils.NDArrayMixin):
 
 
 class ReturnItem(object):
+
     def __getitem__(self, key):
         return key
 

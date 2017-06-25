@@ -417,6 +417,7 @@ Dataset methods
 
    open_dataset
    open_mfdataset
+   open_rasterio
    Dataset.to_netcdf
    save_mfdataset
    Dataset.to_array
@@ -481,6 +482,14 @@ Testing
    testing.assert_identical
    testing.assert_allclose
 
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+
 Advanced API
 ============
 
@@ -489,6 +498,7 @@ Advanced API
 
    Variable
    IndexVariable
+   as_variable
    register_dataset_accessor
    register_dataarray_accessor
 

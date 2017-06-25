@@ -274,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with self.assertWarns('deprecated'):
+        with pytest.warns(FutureWarning):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -1244,6 +1244,17 @@ class TestDataset(TestCase):
             align(left, right, join='foobar')
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
+
+    def test_align_exact(self):
+        left = xr.Dataset(coords={'x': [0, 1]})
+        right = xr.Dataset(coords={'x': [1, 2]})
+
+        left1, left2 = xr.align(left, left, join='exact')
+        self.assertDatasetIdentical(left1, left)
+        self.assertDatasetIdentical(left2, left)
+
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+            xr.align(left, right, join='exact')
 
     def test_align_exclude(self):
         x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
