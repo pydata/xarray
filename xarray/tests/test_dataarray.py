@@ -2567,6 +2567,24 @@ class TestDataArray(TestCase):
         actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
 
+    def test_agminindices(self):
+        da = DataArray([[1, 2], [-1, 40], [5, 6]],
+                       [('x', ['c', 'b', 'a']), ('y', [1, 0])])
+
+        actual = da.argmin_indexes()
+        expected = {'x': DataArray(1), 'y': DataArray(0), }
+        self.assertDataArrayIdentical(actual['x'], expected['x'])
+        self.assertDataArrayIdentical(actual['y'], expected['y'])
+        actual = da.argmax_indexes()
+        expected = {'x': DataArray(1), 'y': DataArray(1), }
+
+        actual = da.argmin_indexes(dims='x')
+        expected = {'x': DataArray([1, 0], dims=['y'], coords={'y': da['y']})}
+        self.assertDataArrayIdentical(actual['x'], expected['x'])
+        actual = da.argmax_indexes(dims='x')
+        expected = {'x': DataArray([2, 1], dims=['y'], coords={'y': da['y']})}
+        self.assertDataArrayIdentical(actual['x'], expected['x'])
+
 
 @pytest.fixture(params=[1])
 def da(request):

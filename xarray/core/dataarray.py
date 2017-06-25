@@ -516,19 +516,19 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def indexes(self):
-        """ OrderedDict of pandas.Index objects used for label based indexing
+        """OrderedDict of pandas.Index objects used for label based indexing
         """
         return Indexes(self._coords, self.sizes)
 
     def argmin_indexes(self, dims=None):
-        """ Returns the indices of the minimum values along an axis(axes).
+        """ Returns indexes of the minimum values along an axis(axes).
         The result is an OrderedDict of DataArrays.
         """
         arg_dict = self.variable.argmin_indexes(dims)
         for key, item in arg_dict.items():
             arg_dict[key] = DataArray(item, dims=item.dims,
-                                      coords={self.coords[d] for d in
-                                              item.dims.keys()})
+                                      coords={d: self.coords[d] for d in
+                                              item.dims})
         return arg_dict
 
     def argmax_indexes(self, dims=None):
@@ -538,8 +538,8 @@ class DataArray(AbstractArray, BaseDataObject):
         arg_dict = self.variable.argmax_indexes(dims)
         for key, item in arg_dict.items():
             arg_dict[key] = DataArray(item, dims=item.dims,
-                                      coords={self.coords[d] for d in
-                                              item.dims.keys()})
+                                      coords={d: self.coords[d] for d in
+                                              item.dims})
         return arg_dict
 
     @property
