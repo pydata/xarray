@@ -178,7 +178,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
 
         if only_1dim:
             if ((axis is None and values.ndim > 1) or
-                (hasattr(axis, 'len') and len(axis) > 1)):
+                    (hasattr(axis, 'len') and len(axis) > 1)):
                 raise ValueError('Method %s is only applicable to '
                                  '1-dimensional data (or with a single dim '
                                  'arguments).' % name)

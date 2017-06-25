@@ -613,7 +613,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, as_variable(expected))
 
         ds = Dataset({'x': expected})
-        self.assertVariableIdentical(expected, as_variable(ds['x']).to_base_variable())
+        self.assertVariableIdentical(expected,
+                                     as_variable(ds['x']).to_base_variable())
         self.assertNotIsInstance(ds['x'], Variable)
         self.assertIsInstance(as_variable(ds['x']), Variable)
 
