@@ -74,24 +74,24 @@ def _parsed_string_to_bounds(date_type, resolution, parsed):
     if resolution == 'year':
         return (date_type(parsed.year, 1, 1),
                 date_type(parsed.year + 1, 1, 1) - timedelta(microseconds=1))
-    if resolution == 'month':
+    elif resolution == 'month':
         if parsed.month == 12:
             end = date_type(parsed.year + 1, 1, 1) - timedelta(microseconds=1)
         else:
             end = (date_type(parsed.year, parsed.month + 1, 1) -
                    timedelta(microseconds=1))
         return date_type(parsed.year, parsed.month, 1), end
-    if resolution == 'day':
+    elif resolution == 'day':
         start = date_type(parsed.year, parsed.month, parsed.day)
         return start, start + timedelta(days=1, microseconds=-1)
-    if resolution == 'hour':
+    elif resolution == 'hour':
         start = date_type(parsed.year, parsed.month, parsed.day, parsed.hour)
         return start, start + timedelta(hours=1, microseconds=-1)
-    if resolution == 'minute':
+    elif resolution == 'minute':
         start = date_type(parsed.year, parsed.month, parsed.day, parsed.hour,
                           parsed.minute)
         return start, start + timedelta(minutes=1, microseconds=-1)
-    if resolution == 'second':
+    elif resolution == 'second':
         start = date_type(parsed.year, parsed.month, parsed.day, parsed.hour,
                           parsed.minute, parsed.second)
         return start, start + timedelta(seconds=1, microseconds=-1)
@@ -158,7 +158,46 @@ class NetCDFTimeIndex(pd.Index):
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
-        pandas.tseries.index.DatetimeIndex._partial_date_slice"""
+        pandas.tseries.index.DatetimeIndex._partial_date_slice
+
+        Note that when using a NetCDFTimeIndex, if a partial-date selection
+        returns a single element, it will never be converted to a scalar
+        coordinate; this is in slight contrast to the behavior when using
+        a DatetimeIndex, which sometimes will return a DataArray with a scalar
+        coordinate depending on the resolution of the datetimes used in
+        defining the index.  For example:
+
+        >>> from netcdftime import DatetimeNoLeap
+        >>> import pandas as pd
+        >>> import xarray as xr
+        >>> da = xr.DataArray([1, 2],
+                              coords=[[DatetimeNoLeap(2001, 1, 1),
+                                       DatetimeNoLeap(2001, 2, 1)]],
+                              dims=['time'])
+        >>> da.sel(time='2001-01-01')
+        <xarray.DataArray (time: 1)>
+        array([1])
+        Coordinates:
+          * time     (time) object 2001-01-01 00:00:00
+        >>> da = xr.DataArray([1, 2],
+                              coords=[[pd.Timestamp(2001, 1, 1),
+                                       pd.Timestamp(2001, 2, 1)]],
+                              dims=['time'])
+        >>> da.sel(time='2001-01-01')
+        <xarray.DataArray ()>
+        array(1)
+        Coordinates:
+            time     datetime64[ns] 2001-01-01
+        >>> da = xr.DataArray([1, 2],
+                              coords=[[pd.Timestamp(2001, 1, 1, 1),
+                                       pd.Timestamp(2001, 2, 1)]],
+                              dims=['time'])
+        >>> da.sel(time='2001-01-01')
+        <xarray.DataArray (time: 1)>
+        array([1])
+        Coordinates:
+          * time     (time) datetime64[ns] 2001-01-01T01:00:00
+        """
         start, end = _parsed_string_to_bounds(self.date_type, resolution,
                                               parsed)
         lhs_mask = (self._data >= start)

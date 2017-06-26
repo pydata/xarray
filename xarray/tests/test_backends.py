@@ -304,7 +304,6 @@ class DatasetIOTestCases(object):
                 self.assertEquals(actual.t.encoding['calendar'],
                                   times[0].calendar)
 
-
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
         expected = Dataset({'td': ('td', time_deltas), 'td0': time_deltas[0]})

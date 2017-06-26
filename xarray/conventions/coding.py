@@ -107,16 +107,18 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
             warnings.warn(
                 'Unable to decode time axis into full '
                 'numpy.datetime64 objects, continuing using dummy '
-                'netCDF4.datetime objects instead, reason: dates out'
-                ' of range', RuntimeWarning, stacklevel=3)
+                'netCDF4.datetime objects instead, reason: dates out '
+                'of range', RuntimeWarning, stacklevel=3)
         else:
             dates = nctime_to_nptime(dates)
     else:
         warnings.warn('Unable to decode time axis into full numpy.datetime64 '
                       'objects, because dates are encoded using a '
                       'non-standard calendar ({}).  Using netCDF4.datetime '
-                      'objects instead'.format(calendar),
-                      RuntimeWarning, stacklevel=3)
+                      'objects instead.  Time indexing will be done using a '
+                      'NetCDFTimeIndex rather than '
+                      'a DatetimeIndex'.format(calendar),
+                      DeprecationWarning, stacklevel=3)
     return dates
 
 
@@ -213,10 +215,6 @@ def infer_datetime_units(dates):
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
-    # There is a test that uses a list of strings as input (not consistent with
-    # the docstring).  Should this be allowed or not?  We could potentially
-    # continue supporting this, but it would require knowledge of the calendar
-    # type to decode the strings into the appropriate datetimes.
     if np.asarray(dates).dtype == 'datetime64[ns]':
         dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
         dates = dates[pd.notnull(dates)]

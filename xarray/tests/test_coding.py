@@ -499,9 +499,6 @@ class TestDatetime(TestCase):
         self.assertArrayEqual(np.asarray(array), expected)
 
     def test_infer_datetime_units(self):
-        # Temporarily removed (['1900-01-01', '1900-01-02',
-        # '1900-01-02 00:00:01'],
-        # 'seconds since 1900-01-01 00:00:00') case
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),
                                  'days since 1900-01-01 00:00:00'),
                                 (pd.date_range('1900-01-01 12:00:00', freq='H',
@@ -522,9 +519,6 @@ class TestDatetime(TestCase):
     @requires_netCDF4
     def test_infer_netcdftime_datetime_units(self):
         date_types = _all_netcdftime_date_types()
-        # What is the expected behavior of these tests using netcdftime
-        # objects? Currently it is inconsistent with the tests using
-        # np.datetime64 objects; is this a problem?
         for date_type in date_types.values():
             for dates, expected in [([date_type(1900, 1, 1),
                                       date_type(1900, 1, 2)],
