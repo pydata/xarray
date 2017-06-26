@@ -204,6 +204,9 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
+  
 Bug fixes
 ~~~~~~~~~
 - Rolling operations now keep preserve original dimension order (:issue:`1125`).
@@ -441,6 +444,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~
