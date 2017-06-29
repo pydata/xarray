@@ -132,8 +132,12 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     dx, dy = riods.res[0], -riods.res[1]
     x0 = riods.bounds.right if dx < 0 else riods.bounds.left
     y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    coords['y'] = np.linspace(start=y0, num=ny, stop=(y0 + (ny - 1) * dy))
-    coords['x'] = np.linspace(start=x0, num=nx, stop=(x0 + (nx - 1) * dx))
+    coords['y'] = np.linspace(start=y0 + dy/2,
+                              num=ny,
+                              stop=(y0 + (ny - 1) * dy) + dy/2)
+    coords['x'] = np.linspace(start=x0+dx/2,
+                              num=nx,
+                              stop=(x0 + (nx - 1) * dx) + dx/2)
 
     # Attributes
     attrs = {}
