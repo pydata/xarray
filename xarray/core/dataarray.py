@@ -521,23 +521,25 @@ class DataArray(AbstractArray, BaseDataObject):
         return Indexes(self._coords, self.sizes)
 
     def argmin_indexes(self, dims=None):
-        """ Returns indexes of the minimum values along an axis(axes).
-        The result is an OrderedDict of DataArrays.
+        """Return indexes of the minimum values along a dim(dims).
+        Result will be stored as an OrderedDict, mappig dimension nemes to
+        DataArrays with minimum indexes.
         """
         arg_dict = self.variable.argmin_indexes(dims)
         for key, item in arg_dict.items():
-            arg_dict[key] = DataArray(item, dims=item.dims,
+            arg_dict[key] = DataArray(item, dims=item.dims, name=key,
                                       coords={d: self.coords[d] for d in
                                               item.dims})
         return arg_dict
 
     def argmax_indexes(self, dims=None):
-        """ Returns the indices of the maximum values along an axis(axes).
-        The result is an OrderedDict of DataArrays.
+        """Return the indices of the maximum values along a dim(s).
+        Result will be stored as an OrderedDict, mappig dimension nemes to
+        DataArrays with maximum indexes.
         """
         arg_dict = self.variable.argmax_indexes(dims)
         for key, item in arg_dict.items():
-            arg_dict[key] = DataArray(item, dims=item.dims,
+            arg_dict[key] = DataArray(item, dims=item.dims, name=key,
                                       coords={d: self.coords[d] for d in
                                               item.dims})
         return arg_dict

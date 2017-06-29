@@ -24,6 +24,13 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Now ``.argmin`` and `.argmax` only supports 1-dimensional array.
+  Instead, `~xarray.DataArray` now supports ``.argmin_indexes`` and
+  (and ``.argmax_indexes``), which returns an OrderedDict with minimum
+  (or maximum) indexes along the specified dimensions as DataArrays.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)

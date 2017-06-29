@@ -294,6 +294,8 @@ Computation
 :py:attr:`~DataArray.sum`
 :py:attr:`~DataArray.std`
 :py:attr:`~DataArray.var`
+:py:attr:`~DataArray.argmax_indexes`
+:py:attr:`~DataArray.argmax_indexes`
 
 **Missing values**:
 :py:attr:`~DataArray.isnull`
