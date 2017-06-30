@@ -138,7 +138,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     coords['y'] = np.linspace(start=y0 + dy/2,
                               num=ny,
                               stop=(y0 + (ny - 1) * dy) + dy/2)
-    coords['x'] = np.linspace(start=x0+dx/2,
+    coords['x'] = np.linspace(start=x0 + dx/2,
                               num=nx,
                               stop=(x0 + (nx - 1) * dx) + dx/2)
 
