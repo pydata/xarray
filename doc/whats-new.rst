@@ -21,6 +21,10 @@ v0.9.7 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
+
 Bug fixes
 ~~~~~~~~~
 

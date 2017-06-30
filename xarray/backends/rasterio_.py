@@ -87,7 +87,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
 
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
-    file's geoinformation.
+    file's geoinformation, shifted to the center of each pixel (see
+    `"PixelIsArea" Raster Space
+    <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
+    for more information).
 
     Parameters
     ----------
