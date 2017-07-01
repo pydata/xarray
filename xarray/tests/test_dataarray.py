@@ -2588,14 +2588,6 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(actual['x'], expected['x'])
         self.assertDataArrayIdentical(actual['x'], expected['x'])
 
-    def test_agmin_indexes_isel(self):
-        da = DataArray([[3, 4, 1], [2, 3, 2]], dims=['x', 'y'],
-                       coords={'x': ['a', 'b'], 'y': [1, 2, 3]})
-        print(da.argmax_indexes())
-        expected = da.isel_points(x=0, y=1)
-        actual = da.isel_points(**da.argmax_indexes())
-        self.assertDataArrayIdentical(actual, expected)
-
 
 @pytest.fixture(params=[1])
 def da(request):
