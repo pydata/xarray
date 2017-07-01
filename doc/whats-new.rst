@@ -21,6 +21,10 @@ v0.9.7 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
+
 Bug fixes
 ~~~~~~~~~
 

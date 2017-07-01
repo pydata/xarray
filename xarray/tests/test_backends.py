@@ -1473,6 +1473,12 @@ class TestRasterio(TestCase):
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -1510,6 +1516,12 @@ class TestRasterio(TestCase):
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:

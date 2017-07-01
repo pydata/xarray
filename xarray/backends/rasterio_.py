@@ -141,7 +141,17 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # CRS is a dict-like object specific to rasterio
         # We convert it back to a PROJ4 string using rasterio itself
         attrs['crs'] = riods.crs.to_string()
-    # Maybe we'd like to parse other attributes here (for later)
+    if hasattr(riods, 'res'):
+        # (width, height) tuple of pixels in units of CRS
+        attrs['res'] = riods.res
+    if hasattr(riods, 'is_tiled'):
+        # Is the TIF tiled? (bool)
+        # We cast it to an int for netCDF compatibility
+        attrs['is_tiled'] = np.uint8(riods.is_tiled)
+    if hasattr(riods, 'transform'):
+        # Affine transformation matrix (tuple of floats)
+        # Describes coefficients mapping pixel coordinates to CRS
+        attrs['transform'] = tuple(riods.transform)
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
