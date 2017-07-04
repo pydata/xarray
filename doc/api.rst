@@ -113,6 +113,7 @@ Indexing
    Dataset.reset_index
    Dataset.reorder_levels
 
+
 Computation
 -----------
 
@@ -127,6 +128,8 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.idxmin
+   Dataset.idxmax
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -280,6 +283,10 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.idxmin
+   DataArray.idxmax
+   DataArray.indexes_min
+   DataArray.indexes_max
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

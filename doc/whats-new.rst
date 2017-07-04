@@ -25,10 +25,12 @@ Bug fixes
 ~~~~~~~~~
 
 - Now ``.argmin`` and `.argmax` only supports 1-dimensional array.
-  Instead, `~xarray.DataArray` now supports ``.argmin_indexes`` and
-  (and ``.argmax_indexes``), which returns an OrderedDict with minimum
+  Instead, `~xarray.DataArray` now supports ``.indexes_min`` and
+  (and ``.indexes_max``), which returns a Dataset with minimum
   (or maximum) indexes along the specified dimensions as DataArrays.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  Also `.idxmin` and `.idxmax` are also added that works as similar to
+  pandas's `.idxmin` and `.idxmax`.
 
 
 .. _whats-new.0.9.6:
