@@ -1143,7 +1143,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def imag(self):
         return type(self)(self.dims, self.data.imag, self._attrs)
 
-    def _arg_indexes(self, funcname, dims=None):
+    def _indexes_min_max(self, funcname, dims=None, keep_dims=False):
         """ return indexes of the minimum or maximum along dim, as an
         OrderedDict of Variables.
         dims should be None or str or sequence of strs.
@@ -1178,13 +1178,16 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         arg_dict = OrderedDict()
         for i, d in enumerate(dims):
             arg_dict[d] = type(self)(kept_dims, args[i])
+            if keep_dims:
+                arg_dict[d] = arg_dict[d].set_dims(self.dims)
+
         return arg_dict
 
-    def argmin_indexes(self, dims=None):
-        return self._arg_indexes('argmin', dims=dims)
+    def indexes_min(self, dims=None, keep_dims=False):
+        return self._indexes_min_max('argmin', dims=dims, keep_dims=keep_dims)
 
-    def argmax_indexes(self, dims=None):
-        return self._arg_indexes('argmax', dims=dims)
+    def indexes_max(self, dims=None, keep_dims=False):
+        return self._indexes_min_max('argmax', dims=dims, keep_dims=keep_dims)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)

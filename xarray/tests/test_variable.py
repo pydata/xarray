@@ -1091,44 +1091,48 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         d = self.d  # shape [10, 3]
         d[2, 1] = -1000.0
         v = Variable(['time', 'x'], d)
-        argdict = v.argmin_indexes()
+        argdict = v.indexes_min()
         self.assertTrue(argdict['time'] == 2)
         self.assertTrue(argdict['x'] == 1)
         # make sure the order of the arguments does not change the result
-        argdict = v.argmin_indexes(['x', 'time'])
+        argdict = v.indexes_min(['x', 'time'])
         self.assertTrue(argdict['time'] == 2)
         self.assertTrue(argdict['x'] == 1)
 
         d[2, 1] = 1000.0
         v = Variable(['time', 'x'], d)
-        argdict = v.argmax_indexes()
+        argdict = v.indexes_max()
         self.assertTrue(argdict['time'] == 2)
         self.assertTrue(argdict['x'] == 1)
+        self.assertTrue('time' not in argdict['time'].dims)
+
+        argdict = v.indexes_max(keep_dims=True)
+        self.assertTrue('time' in argdict['time'].dims)
 
         d[2, 0] = -1000.0
         d[2, 1] = -1000.0
         d[3, 2] = -1000.0
         v = Variable(['time', 'x'], d)
-        argdict = v.argmin_indexes('time')
+        argdict = v.indexes_min('time')
         self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
-        argdict = v.argmin_indexes(['time'])
-        self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
+        argdict = v.indexes_min('time', keep_dims=True)
+        self.assertTrue('time' in argdict['time'].dims)
 
         d[2, 0] = 1000.0
         d[2, 1] = 1000.0
         d[3, 2] = 1000.0
         v = Variable(['time', 'x'], d)
-        argdict = v.argmax_indexes('time')
+        argdict = v.indexes_max('time')
         self.assertTrue(np.allclose(argdict['time'], [2, 2, 3]))
 
         with self.assertRaisesRegexp(ValueError, 'dimensions'):
-            v.argmax_indexes(['space'])
+            v.indexes_max(['space'])
 
         # numpy array with order 'F'
         d = np.random.randn(30).reshape(10, 3, order='F')
         d[2, 1] = -1000.0
         v = Variable(['time', 'x'], d)
-        argdict = v.argmin_indexes()
+        argdict = v.indexes_min()
         self.assertTrue(argdict['time'] == 2)
         self.assertTrue(argdict['x'] == 1)
 

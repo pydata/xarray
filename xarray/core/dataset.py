@@ -819,6 +819,75 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         return Indexes(self._variables, self._dims)
 
+    def _idx_min_max(self, func, dim, keep_dims):
+        """Methods both for idxmin and idxmin"""
+        if dim is not None and not isinstance(dim, basestring):
+                raise ValueError('dim should be a string (not array) ' + dim)
+
+        if dim is None and keep_dims: # The reduced dim should be identical.
+                dim_set = set([v.dims[0] for k, v in iteritems(self._variables)
+                               if len(v.dims)==1])
+                if len(dim_set) > 1:
+                    raise ValueError('with keep_dims option, the reduced index'
+                                     ' cannot be different in ' + func + '.')
+                if len(dim_set) == 1:
+                    dim = dim_set[0]
+
+        variables = OrderedDict()
+        coord_names = []
+        for k, v in iteritems(self._variables):
+            if dim is None and len(v.dims) > 1:
+                raise ValueError('dim should be specified for more than '
+                                 '1-dimensional array ' + k)
+
+            if k in self._coord_names:  # Do not change coordinates
+                if not keep_dims or k != dim:
+                    variables[k] = v
+                    coord_names.append(k)
+            elif len(v.dims) == 0:
+                variables[k] = v
+            elif dim is not None and dim not in v.dims:
+                variables[k] = v
+            else:
+                d = dim or v.dims[0]
+                if d in v.dims:
+                    variables[k] = getattr(v, func)(d, keep_dims)[d]
+        return self._replace_vars_and_dims(variables, set(coord_names))
+
+    def idxmax(self, dim=None, keep_dims=False):
+        """Return indexes of the maximum values along a given dimension.
+
+        Parameters
+        ----------
+        dim : string
+          Which dimension the maximum index is taken.
+        keep_dims: bool
+          If True, the given dimension is kept with size one.
+
+        Returns
+        -------
+        idx : DataArray
+          DataArray which stores the first occurence of the maximum index
+        """
+        return self._idx_min_max('indexes_max', dim, keep_dims)
+
+    def idxmin(self, dim=None, keep_dims=False):
+        """Return indexes of the maximum values along a given dimension.
+
+        Parameters
+        ----------
+        dim : string
+          Which dimension the minimum index is taken.
+        keep_dims: bool
+          If True, the given dimension is kept with size one.
+
+        Returns
+        -------
+        idx : DataArray
+          DataArray which stores the first occurence of the minimum index
+        """
+        return self._idx_min_max('indexes_min', dim, keep_dims)
+
     @property
     def coords(self):
         """Dictionary of xarray.DataArray objects corresponding to coordinate

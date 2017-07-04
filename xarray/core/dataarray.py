@@ -520,29 +520,82 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return Indexes(self._coords, self.sizes)
 
-    def argmin_indexes(self, dims=None):
-        """Return indexes of the minimum values along a dim(dims).
-        Result will be stored as an OrderedDict, mappig dimension nemes to
-        DataArrays with minimum indexes.
-        """
-        arg_dict = self.variable.argmin_indexes(dims)
-        for key, item in arg_dict.items():
-            arg_dict[key] = DataArray(item, dims=item.dims, name=key,
-                                      coords={d: self.coords[d] for d in
-                                              item.dims})
-        return arg_dict
+    def idxmax(self, dim=None, keep_dims=False):
+        """Return indexes of the maximum values along a given dimension.
 
-    def argmax_indexes(self, dims=None):
-        """Return the indices of the maximum values along a dim(s).
-        Result will be stored as an OrderedDict, mappig dimension nemes to
-        DataArrays with maximum indexes.
+        Parameters
+        ----------
+        dim : string
+          If True, the given dimension is kept with size one.
+        keep_dims: bool
+            If True, the given dimension is kept with size one.
+
+        Returns
+        -------
+        idx : DataArray
+          DataArray which stores the first occurence of the maximum index
         """
-        arg_dict = self.variable.argmax_indexes(dims)
+        ds = self._to_temp_dataset().idxmax(dim, keep_dims)
+        return self._from_temp_dataset(ds)
+
+    def idxmin(self, dim=None, keep_dims=False):
+        """Return indexes of the minimum values along a given dimension.
+
+        Parameters
+        ----------
+        dim : string
+            Which dimension the maximum index is taken.
+        keep_dims: bool
+            If True, the given dimension is kept with size one.
+
+        Returns
+        -------
+        idx : DataArray
+          DataArray which stores the first occurence of the minimum index
+        """
+        ds = self._to_temp_dataset().idxmin(dim, keep_dims)
+        return self._from_temp_dataset(ds)
+
+    def _indexes_min_max(self, func, dims):
+        """ Methods for indexes_min and indexes_max """
+        arg_dict = getattr(self.variable, func)(dims)
+
+        variables = OrderedDict()
         for key, item in arg_dict.items():
-            arg_dict[key] = DataArray(item, dims=item.dims, name=key,
-                                      coords={d: self.coords[d] for d in
-                                              item.dims})
-        return arg_dict
+            coords={d: self.coords[d] for d in item.dims}
+            variables[key] = DataArray(item, dims=item.dims, name=key,
+                                       coords=coords)
+        return Dataset(variables)
+
+    def indexes_min(self, dims=None):
+        """Return indexes of the minimum values along a dim(dims).
+
+        Parameters
+        ----------
+        dim : string
+            Which dimension the minimum index is taken.
+
+        Returns
+        -------
+        indexes : Dataset
+          Dataset mappig dimension nemes to minimum indexes.
+        """
+        return self._indexes_min_max('indexes_min', dims)
+
+    def indexes_max(self, dims=None):
+        """Return indexes of the minimum values along a dim(dims).
+
+        Parameters
+        ----------
+        dim : string
+            Which dimension the maximum index is taken.
+
+        Returns
+        -------
+        indexes : Dataset
+          Dataset mappig dimension nemes to maximum indexes.
+        """
+        return self._indexes_min_max('indexes_max', dims)
 
     @property
     def coords(self):

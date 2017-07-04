@@ -2567,26 +2567,26 @@ class TestDataArray(TestCase):
         actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
 
-    def test_agmin_indexes(self):
+    def test_indexes_min(self):
         da = DataArray([[1, 2], [-1, 40], [5, 6]],
                        [('x', ['c', 'b', 'a']), ('y', [1, 0])])
 
-        actual = da.argmin_indexes()
+        actual = da.indexes_min()
         expected = {'x': DataArray(1, name='x'), 'y': DataArray(0, name='y')}
         self.assertDataArrayIdentical(actual['x'], expected['x'])
         self.assertDataArrayIdentical(actual['y'], expected['y'])
-        actual = da.argmax_indexes()
+        actual = da.indexes_max()
         expected = {'x': DataArray(1, name='x'), 'y': DataArray(1, name='y')}
 
-        actual = da.argmin_indexes(dims='x')
-        expected = {'x': DataArray([1, 0], dims=['y'], coords={'y': da['y']},
-                                   name='x')}
-        self.assertDataArrayIdentical(actual['x'], expected['x'])
-        actual = da.argmax_indexes(dims='x')
-        expected = {'x': DataArray([2, 1], dims=['y'], coords={'y': da['y']},
-                                   name='x')}
-        self.assertDataArrayIdentical(actual['x'], expected['x'])
-        self.assertDataArrayIdentical(actual['x'], expected['x'])
+        actual = da.indexes_min(dims='x')
+        expected = Dataset({'x': DataArray([1, 0], dims=['y'],
+                                           coords={'y': da['y']})})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = da.indexes_max(dims='x')
+        expected = Dataset({'x': DataArray([2, 1], dims=['y'],
+                                           coords={'y': da['y']})})
+        self.assertDatasetIdentical(actual, expected)
 
 
 @pytest.fixture(params=[1])

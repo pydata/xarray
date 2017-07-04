@@ -3449,6 +3449,59 @@ class TestDataset(TestCase):
         actual = ds.sortby(['x', 'y'], ascending=False)
         self.assertDatasetEqual(actual, ds)
 
+    def test_idxmin_max(self):
+        ds = Dataset({'A': DataArray([[7, 2], [3, 4], [5, 6]],
+                                     [('x', ['c', 'b', 'a']),
+                                      ('y', [1, 0])]),
+                      'B': DataArray([[5, 11], [7, 8], [9, 10]],
+                                     dims=['x', 'y'])})
+        actual = ds.idxmax(dim='x')
+        expected = Dataset({'A': DataArray([0, 2], [('y', [1, 0])]),
+                            'B': DataArray([2, 0], dims=['y'])},
+                           coords={'x': ['c', 'b', 'a']})
+        self.assertDatasetIdentical(actual['x'], expected['x'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.idxmin(dim='x')
+        expected = Dataset({'A': DataArray([1, 0], [('y', [1, 0])]),
+                            'B': DataArray([0, 1], dims=['y'])},
+                           coords={'x': ['c', 'b', 'a']})
+        self.assertDatasetIdentical(actual['x'], expected['x'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.idxmax(dim='x', keep_dims=True)
+        expected = Dataset({'A': DataArray([[0, 2]], dims=['x', 'y']),
+                            'B': DataArray([[2, 0]], dims=['x', 'y'])},
+                           coords={'y': [1, 0]})
+        self.assertDatasetIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(ValueError, 'dim should be specified'):
+            ds.idxmin()
+
+    def test_idxmin_max_1dim(self):
+        ds = Dataset({'A': DataArray([1, 0, 2], [('x', ['c', 'b', 'a'])]),
+                      'B': DataArray([1, 0, 2], [('y', [1, 2, 3])])})
+        actual = ds.idxmax()
+        expected = ds.idxmax()
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.idxmax('x')
+
+        # Here we only compare array-values because actual['A'] does not have
+        # coordinates 'x' (as actual['A'] is 0-dimensional)
+        self.assertTrue(np.allclose(actual['A'].values,
+                                    ds['A'].idxmax().values))
+        self.assertDataArrayIdentical(actual['B'], ds['B'])
+        self.assertDataArrayIdentical(actual['x'], ds['x'])
+        self.assertDataArrayIdentical(actual['y'], ds['y'])
+
+        with self.assertRaisesRegexp(ValueError, 'with keep_dims option'):
+            actual = ds.idxmax(keep_dims=True)
+
+        actual = ds.idxmax('x', keep_dims=True)
+        expected = Dataset({'A': DataArray([2], dims=['x']),
+                            'B': DataArray([1, 0, 2], [('y', [1, 2, 3])])})
+        self.assertDatasetIdentical(actual, expected)
 
 # Py.test tests
 
