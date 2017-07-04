@@ -1143,11 +1143,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def imag(self):
         return type(self)(self.dims, self.data.imag, self._attrs)
 
-    def _indexes_min_max(self, funcname, dims=None, keep_dims=False):
+    def _indexes_min_max(self, funcname, dims, skipna, keep_dims):
         """ return indexes of the minimum or maximum along dim, as an
         OrderedDict of Variables.
         dims should be None or str or sequence of strs.
-        funcname is one of ['argmin' or 'argmax']
+        funcname is one of ['argmin', 'argmax']
         """
         if dims is None:
             dims = self.dims
@@ -1172,7 +1172,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         transposed = self.transpose(*(kept_dims + dims))
         flattened = transposed.data.reshape(kept_shape + [drop_size])
-        flattened_args = getattr(flattened, funcname)(axis=-1)
+        flattened_args = getattr(duck_array_ops, funcname)(
+                            flattened, axis=-1, skipna=skipna)
         args = np.unravel_index(flattened_args, drop_shape)
 
         arg_dict = OrderedDict()
@@ -1183,11 +1184,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return arg_dict
 
-    def indexes_min(self, dims=None, keep_dims=False):
-        return self._indexes_min_max('argmin', dims=dims, keep_dims=keep_dims)
+    def indexes_min(self, dims=None, skipna=True, keep_dims=False):
+        return self._indexes_min_max('argmin', dims=dims, skipna=skipna,
+                                     keep_dims=keep_dims)
 
-    def indexes_max(self, dims=None, keep_dims=False):
-        return self._indexes_min_max('argmax', dims=dims, keep_dims=keep_dims)
+    def indexes_max(self, dims=None, skipna=True, keep_dims=False):
+        return self._indexes_min_max('argmax', dims=dims, skipna=skipna,
+                                     keep_dims=keep_dims)
 
     def __array_wrap__(self, obj, context=None):
         return Variable(self.dims, obj)

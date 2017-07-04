@@ -520,7 +520,7 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return Indexes(self._coords, self.sizes)
 
-    def idxmax(self, dim=None, keep_dims=False):
+    def idxmax(self, dim=None, skipna=True, keep_dims=False):
         """Return indexes of the maximum values along a given dimension.
 
         Parameters
@@ -535,10 +535,10 @@ class DataArray(AbstractArray, BaseDataObject):
         idx : DataArray
           DataArray which stores the first occurence of the maximum index
         """
-        ds = self._to_temp_dataset().idxmax(dim, keep_dims)
+        ds = self._to_temp_dataset().idxmax(dim, skipna, keep_dims)
         return self._from_temp_dataset(ds)
 
-    def idxmin(self, dim=None, keep_dims=False):
+    def idxmin(self, dim=None, skipna=True, keep_dims=False):
         """Return indexes of the minimum values along a given dimension.
 
         Parameters
@@ -553,10 +553,10 @@ class DataArray(AbstractArray, BaseDataObject):
         idx : DataArray
           DataArray which stores the first occurence of the minimum index
         """
-        ds = self._to_temp_dataset().idxmin(dim, keep_dims)
+        ds = self._to_temp_dataset().idxmin(dim, skipna, keep_dims)
         return self._from_temp_dataset(ds)
 
-    def _indexes_min_max(self, func, dims):
+    def _indexes_min_max(self, func, dims, skipna):
         """ Methods for indexes_min and indexes_max """
         arg_dict = getattr(self.variable, func)(dims)
 
@@ -567,35 +567,41 @@ class DataArray(AbstractArray, BaseDataObject):
                                        coords=coords)
         return Dataset(variables)
 
-    def indexes_min(self, dims=None):
+    def indexes_min(self, dims=None, skipna=True):
         """Return indexes of the minimum values along a dim(dims).
 
         Parameters
         ----------
         dim : string
             Which dimension the minimum index is taken.
+        skipna: boolean
+            Exclude NA/null values. If an entire row/column is NA, the result
+            will be first index.
 
         Returns
         -------
         indexes : Dataset
           Dataset mappig dimension nemes to minimum indexes.
         """
-        return self._indexes_min_max('indexes_min', dims)
+        return self._indexes_min_max('indexes_min', dims, skipna)
 
-    def indexes_max(self, dims=None):
+    def indexes_max(self, dims=None, skipna=True):
         """Return indexes of the minimum values along a dim(dims).
 
         Parameters
         ----------
         dim : string
             Which dimension the maximum index is taken.
+        skipna: boolean
+            Exclude NA/null values. If an entire row/column is NA, the result
+            will be first index.
 
         Returns
         -------
         indexes : Dataset
           Dataset mappig dimension nemes to maximum indexes.
         """
-        return self._indexes_min_max('indexes_max', dims)
+        return self._indexes_min_max('indexes_max', dims, skipna)
 
     @property
     def coords(self):

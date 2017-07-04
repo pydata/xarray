@@ -215,9 +215,9 @@ def inject_reduce_methods(cls):
         only_1dim = getattr(f, 'only_1dim', False)
         only_1dim_doc = _REDUCE_ONLY1DIM_DOCSTRING if only_1dim else ''
         if only_1dim:
-            extra_args = cls._reduce_extra_args_docstring.format(name=name)
-        else:
             extra_args = cls._reduce1dim_extra_args_docstring.format(name=name)
+        else:
+            extra_args = cls._reduce_extra_args_docstring.format(name=name)
 
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name

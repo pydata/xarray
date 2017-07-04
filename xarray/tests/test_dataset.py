@@ -3503,6 +3503,24 @@ class TestDataset(TestCase):
                             'B': DataArray([1, 0, 2], [('y', [1, 2, 3])])})
         self.assertDatasetIdentical(actual, expected)
 
+    def test_idxmin_max_skipna(self):
+        ds = Dataset({'A': DataArray([[7, np.nan], [np.nan, 4], [5, 6]],
+                                     [('x', ['c', 'b', 'a']),
+                                      ('y', [1, 0])]),
+                      'B': DataArray([[5, 11], [7, 8], [np.nan, 10]],
+                                     dims=['x', 'y'])})
+        actual = ds.idxmin(dim='x')
+        expected = Dataset({'A': DataArray([2, 1], [('y', [1, 0])]),
+                            'B': DataArray([0, 1], dims=['y'])},
+                           coords={'x': ['c', 'b', 'a']})
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = ds.idxmin(dim='x', skipna=False)
+        expected = Dataset({'A': DataArray([1, 0], [('y', [1, 0])]),
+                            'B': DataArray([2, 1], dims=['y'])},
+                           coords={'x': ['c', 'b', 'a']})
+        self.assertDatasetIdentical(actual, expected)
+
 # Py.test tests
 
 
