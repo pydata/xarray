@@ -21,12 +21,16 @@ v0.9.7 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
-  coordinates so that they are centered in each pixel.
-  By `Greg Brener <https://github.com/gbrener>`_.
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
 
 Bug fixes
 ~~~~~~~~~
+
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
 
 .. _whats-new.0.9.6:
 
@@ -208,6 +212,9 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
+  
 Bug fixes
 ~~~~~~~~~
 - Rolling operations now keep preserve original dimension order (:issue:`1125`).
@@ -445,6 +452,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

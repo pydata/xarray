@@ -198,6 +198,24 @@ def _func_slash_method_wrapper(f, name=None):
     return func
 
 
+def rolling_count(rolling):
+
+    not_null = rolling.obj.notnull()
+    instance_attr_dict = {'center': rolling.center,
+                          'min_periods': rolling.min_periods,
+                          rolling.dim: rolling.window}
+    rolling_count = not_null.rolling(**instance_attr_dict).sum()
+
+    if rolling.min_periods is None:
+        return rolling_count
+
+    # otherwise we need to filter out points where there aren't enough periods
+    # but not_null is False, and so the NaNs don't flow through
+    # array with points where there are enough values given min_periods
+    enough_periods = rolling_count >= rolling.min_periods
+
+    return rolling_count.where(enough_periods)
+
 def inject_reduce_methods(cls):
     methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
                 for name in REDUCE_METHODS] +
@@ -305,6 +323,13 @@ def inject_bottleneck_rolling_methods(cls):
             name=func.__name__, da_or_ds='DataArray')
         setattr(cls, name, func)
 
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__, da_or_ds='DataArray')
+    setattr(cls, 'count', func)
+
     # bottleneck rolling methods
     if has_bottleneck:
         # TODO: Bump the required version of bottlneck to 1.1 and remove all
@@ -352,3 +377,9 @@ def inject_datasetrolling_methods(cls):
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
             name=func.__name__, da_or_ds='Dataset')
         setattr(cls, name, func)
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__, da_or_ds='Dataset')
+    setattr(cls, 'count', func)
