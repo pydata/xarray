@@ -709,6 +709,58 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[range(10), range(11)] = 1
         self.assertArrayEqual(v.values, np.ones((10, 11)))
 
+    def test_bloadcast_indexes(self):
+        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
+
+        with self.assertRaisesRegexp(IndexError, "Indexing with multiple"):
+            v._broadcast_indexes(dict(x=[0, 1], y=[0, 1]))
+
+        with self.assertRaisesRegexp(IndexError, "Indexing with a multi-"):
+            v._broadcast_indexes([[0, 1], [1, 2]])
+
+        dims, index_tuple = v._broadcast_indexes([0, 1])
+        self.assertTrue(dims == ['x', 'y'])
+        self.assertTrue(np.allclose(index_tuple[0], [0, 1]))
+        self.assertTrue(index_tuple[1] == slice(None, None, None))
+
+        ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
+        dims, index_tuple = v._broadcast_indexes(ind)
+        self.assertTrue(dims == ['a', 'b', 'y'])
+        self.assertTrue(np.allclose(index_tuple[0], [[0, 1, 2], [2, 1, 0]]))
+        self.assertTrue(index_tuple[1] == slice(None, None, None))
+
+        ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
+        dims, index_tuple = v._broadcast_indexes(dict(y=ind))
+        self.assertTrue(dims == ['x', 'a', 'b'])
+        self.assertTrue(index_tuple[0] == slice(None, None, None))
+        self.assertTrue(np.allclose(index_tuple[1], [[0, 1, 2], [2, 1, 0]]))
+
+        # with broadcast
+        ind = Variable(['a'], [0, 1])
+        dims, index_tuple = v._broadcast_indexes(dict(x=[0, 1], y=ind))
+        self.assertTrue(dims == ['a'])
+        self.assertTrue(np.allclose(index_tuple[0], [0, 1]))
+        self.assertTrue(np.allclose(index_tuple[1], [0, 1]))
+
+        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
+        dims, index_tuple = v._broadcast_indexes(dict(x=[[1, 0], [1, 0]],
+                                                      y=ind))
+        self.assertTrue(dims == ['a', 'b'])
+        self.assertTrue(np.allclose(index_tuple[0], [[1, 0], [1, 0]]))
+        self.assertTrue(np.allclose(index_tuple[1], [[0, 0], [1, 1]]))
+
+        # broadcast impossible case
+        with self.assertRaisesRegexp(IndexError, "Broadcasting failed "):
+            ind = Variable(['a'], [0, 1])
+            dims, index_tuple = v._broadcast_indexes(dict(x=[[1, 0], [1, 0]],
+                                                          y=ind))
+        # with integer
+        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
+        dims, index_tuple = v._broadcast_indexes(dict(x=0, y=ind))
+        self.assertTrue(dims == ['a', 'b'])
+        self.assertTrue(np.allclose(index_tuple[0], 0))
+        self.assertTrue(np.allclose(index_tuple[1], [[0, 0], [1, 1]]))
+
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
         self.assertVariableIdentical(v.isel(time=slice(None)), v)

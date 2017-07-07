@@ -28,6 +28,7 @@ except ImportError:
     pass
 
 
+
 def as_variable(obj, name=None):
     """Convert an object into a Variable.
 
@@ -399,6 +400,100 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                      if not isinstance(k, integer_types))
         values = self._indexable_data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
+        if hasattr(values, 'ndim'):
+            assert values.ndim == len(dims), (values.ndim, len(dims))
+        else:
+            assert len(dims) == 0, len(dims)
+        return type(self)(dims, values, self._attrs, self._encoding,
+                          fastpath=True)
+
+    def _broadcast_indexes(self, key):
+        """
+        Parameters
+        -----------
+        key: One of
+            array
+            a mapping of dimension names to index.
+
+        Returns
+        -------
+        indexers: list of integer, array-like, or slice. This is aligned
+            along self.dims.
+        dims: Tuple of strings.
+            Dimension of the resultant variable.
+        """
+        if not utils.is_dict_like(key):
+            key = {self.dims[0]: key}
+        example_v = None
+        indexes = OrderedDict()
+        for k, v in key.items():
+            if not isinstance(v, (integer_types, slice, Variable)):
+                if not hasattr(key, 'ndim'):  # convert list or tuple
+                    v = np.array(v)
+            if example_v is None and isinstance(v, Variable):
+                example_v = v
+            indexes[k] = v
+
+        # When all the keys are array or integer, slice
+        if example_v is None:
+            # more than one (unlabelled) arrays
+            if len([v for k, v in indexes.items()
+                    if not isinstance(v, (integer_types, slice))]) > 1:
+                raise IndexError("Indexing with multiple unlabelled arrays "
+                                 "is not allowed.")
+            # multi-dimensional unlabelled array
+            if any([v.ndim > 1 for k, v in indexes.items()
+                    if not isinstance(v, integer_types)]):
+                raise IndexError("Indexing with a multi-dimensional unlabelled"
+                                 "array is not allowed.")
+            # convert the array into Variable
+            for k, v in indexes.items():
+                if not hasattr(v, 'dims'):
+                    indexes[k] = type(self)([k], v)
+                    example_v = v
+
+        for k, v in indexes.items():
+            # Found unlabelled array
+            if not isinstance(v, (Variable, integer_types, slice)):
+                if (v.ndim > example_v.ndim or
+                        any([example_v.ndim != v.ndim for k, v
+                             in indexes.items() if isinstance(v, Variable)])):
+                    raise IndexError("Broadcasting failed because dimensions "
+                                     "does not match.")
+                else:
+                    _, indexes[k], _ = _broadcast_compat_data(example_v, v)
+
+        # now indexes is a list.
+        index_tuple = tuple(indexes.get(d, slice(None)) for d in self.dims)
+        index_tuple = indexing.expanded_indexer(index_tuple, self.ndim)
+
+        # comput dims
+        dims = []
+        for i, d in enumerate(self.dims):
+            if d in indexes.keys():
+                if isinstance(v, Variable):
+                    for d in v.dims:
+                        if d not in dims:
+                            dims.append(d)
+            else:
+                dims.append(d)
+
+        return dims, index_tuple
+
+    def getitem2(self, variables):
+        """Return a new Array object whose contents are consistent with
+        getting the provided key from the underlying data.
+
+        Parameters
+        -----------
+        variables: Variable or a dict mapping dimension to Variables.
+
+        This method will replace original __getitem__ after we confirm its
+        stability.
+        """
+        dims, key = self._broadcast_indexes(key)
+        key = indexing.expanded_indexer(key, self.ndim)
+        values = self._indexable_data[key]
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
