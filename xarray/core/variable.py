@@ -417,10 +417,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         Returns
         -------
-        indexers: list of integer, array-like, or slice. This is aligned
-            along self.dims.
         dims: Tuple of strings.
             Dimension of the resultant variable.
+        indexers: list of integer, array-like, or slice. This is aligned
+            along self.dims.
         """
         if not utils.is_dict_like(key):
             key = {self.dims[0]: key}
@@ -463,7 +463,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 else:
                     _, indexes[k], _ = _broadcast_compat_data(example_v, v)
 
-        # now indexes is a list.
         index_tuple = tuple(indexes.get(d, slice(None)) for d in self.dims)
         index_tuple = indexing.expanded_indexer(index_tuple, self.ndim)
 
@@ -480,20 +479,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return dims, index_tuple
 
-    def getitem2(self, variables):
+    def getitem2(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
 
-        Parameters
-        -----------
-        variables: Variable or a dict mapping dimension to Variables.
+        NB. __getitem__ and __setitem__ implement "diagonal indexing" like
+        np.ndarray.
 
-        This method will replace original __getitem__ after we confirm its
-        stability.
+        This method will replace __getitem__ after we make sure its stability.
         """
-        dims, key = self._broadcast_indexes(key)
-        key = indexing.expanded_indexer(key, self.ndim)
-        values = self._indexable_data[key]
+        dims, index_tuple = self._broadcast_indexes(key)
+        values = self._data[index_tuple]
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
