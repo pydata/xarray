@@ -709,75 +709,96 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[range(10), range(11)] = 1
         self.assertArrayEqual(v.values, np.ones((10, 11)))
 
-    def test_getitem2(self):
+    def test_getitem2_basic(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
-        with self.assertRaisesRegexp(IndexError, "Indexing with multiple"):
-            v.getitem2(dict(x=[0, 1], y=[0, 1]))
+        v_new = v.getitem2(dict(x=0))
+        self.assertTrue(v_new.dims == ('y', ))
+        self.assertArrayEqual(v_new, v._data[0])
 
-        with self.assertRaisesRegexp(IndexError, "Indexing with a multi-"):
-            v.getitem2([[0, 1], [1, 2]])
+        v_new = v.getitem2(dict(x=0, y=slice(None)))
+        self.assertTrue(v_new.dims == ('y', ))
+        self.assertArrayEqual(v_new, v._data[0])
 
-        dims, index_tuple = v._broadcast_indexes([0, 1])
-        self.assertTrue(dims == ['x', 'y'])
-        self.assertTrue(np.allclose(index_tuple[0], [0, 1]))
-        self.assertTrue(index_tuple[1] == slice(None, None, None))
+        v_new = v.getitem2(dict(x=0, y=1))
+        self.assertTrue(v_new.dims == ())
+        self.assertArrayEqual(v_new, v._data[0, 1])
+
+        v_new = v.getitem2(dict(y=1))
+        self.assertTrue(v_new.dims == ('x', ))
+        self.assertArrayEqual(v_new, v._data[:, 1])
+
+        # tuple argument
+        v_new = v.getitem2((slice(None), 1))
+        self.assertTrue(v_new.dims == ('x', ))
+        self.assertArrayEqual(v_new, v._data[:, 1])
+
+    def test_getitem2_advanced(self):
+        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
+
+        # orthogonal indexing
+        v_new = v.getitem2(([0, 1], [1, 0]))
+        self.assertTrue(v_new.dims == ('x', 'y'))
+        self.assertArrayEqual(v_new, v._data[[0, 1]][:, [1, 0]])
+
         v_new = v.getitem2([0, 1])
         self.assertTrue(v_new.dims == ('x', 'y'))
         self.assertArrayEqual(v_new, v._data[[0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
-        dims, index_tuple = v._broadcast_indexes(ind)
-        self.assertTrue(dims == ['a', 'b', 'y'])
-        self.assertTrue(np.allclose(index_tuple[0], [[0, 1, 1], [1, 1, 0]]))
-        self.assertTrue(index_tuple[1] == slice(None, None, None))
         v_new = v.getitem2(ind)
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
         self.assertArrayEqual(v_new, v._data[([0, 1, 1], [1, 1, 0]), :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
-        dims, index_tuple = v._broadcast_indexes(dict(y=ind))
-        self.assertTrue(dims == ['x', 'a', 'b'])
-        self.assertTrue(len(index_tuple) == 2)
-        self.assertTrue(index_tuple[0] == slice(None, None, None))
-        self.assertTrue(np.allclose(index_tuple[1], [[0, 1, 2], [2, 1, 0]]))
         v_new = v.getitem2(dict(y=ind))
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
         self.assertArrayEqual(v_new, v._data[:, ([0, 1, 2], [2, 1, 0])])
 
-        # with broadcast
+        # with mixed arguments
         ind = Variable(['a'], [0, 1])
-        dims, index_tuple = v._broadcast_indexes(dict(x=[0, 1], y=ind))
-        self.assertTrue(dims == ['a'])
-        self.assertTrue(np.allclose(index_tuple[0], [0, 1]))
-        self.assertTrue(np.allclose(index_tuple[1], [0, 1]))
         v_new = v.getitem2(dict(x=[0, 1], y=ind))
-        self.assertArrayEqual(v_new, v._data[[0, 1], [0, 1]])
+        self.assertTrue(v_new.dims == ('x', 'a'))
+        self.assertArrayEqual(v_new, v._data[[0, 1]][:, [0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        dims, index_tuple = v._broadcast_indexes(dict(x=[[1, 0], [1, 0]],
-                                                      y=ind))
-        self.assertTrue(dims == ['a', 'b'])
-        self.assertTrue(np.allclose(index_tuple[0], [[1, 0], [1, 0]]))
-        self.assertTrue(np.allclose(index_tuple[1], [[0, 0], [1, 1]]))
-        v_new = v.getitem2(dict(x=[[1, 0], [1, 0]], y=ind))
-        self.assertArrayEqual(v_new,
-                              v._data[([1, 0], [1, 0]), ([0, 0], [1, 1])])
-
-        # broadcast impossible case
-        with self.assertRaisesRegexp(IndexError, "Broadcasting failed "):
-            ind = Variable(['a'], [0, 1])
-            v.getitem2(dict(x=[[1, 0], [1, 0]], y=ind))
+        v_new = v.getitem2(dict(x=[1, 0], y=ind))
+        self.assertTrue(v_new.dims == ('x', 'a', 'b'))
+        self.assertArrayEqual(v_new, v._data[[1, 0]][:, ind])
 
         # with integer
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        dims, index_tuple = v._broadcast_indexes(dict(x=0, y=ind))
-        self.assertTrue(dims == ['a', 'b'])
-        self.assertTrue(np.allclose(index_tuple[0], 0))
-        self.assertTrue(np.allclose(index_tuple[1], [[0, 0], [1, 1]]))
         v_new = v.getitem2(dict(x=0, y=ind))
-        self.assertArrayEqual(v_new,
-                              v._data[0, ([0, 0], [1, 1])])
+        self.assertTrue(v_new.dims == ('a', 'b'))
+        self.assertArrayEqual(v_new[0], v._data[0][[0, 0]])
+        self.assertArrayEqual(v_new[1], v._data[0][[1, 1]])
+
+        # with slice
+        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
+        v_new = v.getitem2(dict(x=slice(None), y=ind))
+        self.assertTrue(v_new.dims == ('x', 'a', 'b'))
+        self.assertArrayEqual(v_new, v._data[:, [[0, 0], [1, 1]]])
+
+        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
+        v_new = v.getitem2(dict(x=ind, y=slice(None)))
+        self.assertTrue(v_new.dims == ('a', 'b', 'y'))
+        self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], :])
+
+        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
+        v_new = v.getitem2(dict(x=ind, y=slice(None, 1)))
+        self.assertTrue(v_new.dims == ('a', 'b', 'y'))
+        self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], slice(None, 1)])
+
+    def test_getitem2_error(self):
+        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
+
+        with self.assertRaisesRegexp(IndexError, "Unlabelled multi-"):
+            v.getitem2([[0, 1], [1, 2]])
+
+        with self.assertRaisesRegexp(ValueError, "operands cannot be "):
+            ind_x = Variable(['a', 'b'], [[0, 0], [1, 1]])
+            ind_y = Variable(['a'], [0])
+            v.getitem2((ind_x, ind_y))
 
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
