@@ -417,7 +417,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             raise TypeError("this variable's data is stored in a dask array, "
                             'which does not support item assignment. To '
                             'assign to this variable, you must first load it '
-                            'into memory explicitly using the .load_data() '
+                            'into memory explicitly using the .load() '
                             'method or accessing its .values attribute.')
         data = orthogonally_indexable(self._data)
         data[key] = value
