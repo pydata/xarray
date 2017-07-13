@@ -1485,7 +1485,7 @@ class TestDataset(TestCase):
             renamed['renamed_var1'].values
 
     def test_rename_old_name(self):
-        #regtest for GH1477
+        # regtest for GH1477
         data = create_test_data()
 
         with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
