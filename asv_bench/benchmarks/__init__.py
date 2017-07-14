@@ -10,6 +10,13 @@ np.random.seed(10)
 _counter = itertools.count()
 
 
+def requires_dask():
+    try:
+        import dask
+    except ImportError:
+        raise NotImplementedError
+
+
 def randn(shape, frac_nan=None, chunks=None):
     if chunks is None:
         x = np.random.standard_normal(shape)
