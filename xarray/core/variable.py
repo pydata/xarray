@@ -28,7 +28,6 @@ except ImportError:
     pass
 
 
-
 def as_variable(obj, name=None):
     """Convert an object into a Variable.
 
@@ -377,36 +376,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             return key
 
-    def __getitem__(self, key):
-        """Return a new Array object whose contents are consistent with
-        getting the provided key from the underlying data.
-
-        NB. __getitem__ and __setitem__ implement "orthogonal indexing" like
-        netCDF4-python, where the key can only include integers, slices
-        (including `Ellipsis`) and 1d arrays, each of which are applied
-        orthogonally along their respective dimensions.
-
-        The difference does not matter in most cases unless you are using
-        numpy's "fancy indexing," which can otherwise result in data arrays
-        whose shapes is inconsistent (or just uninterpretable with) with the
-        variable's dimensions.
-
-        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
-        array `x.values` directly.
-        """
-        key = self._item_key_to_tuple(key)
-        key = indexing.expanded_indexer(key, self.ndim)
-        dims = tuple(dim for k, dim in zip(key, self.dims)
-                     if not isinstance(k, integer_types))
-        values = self._indexable_data[key]
-        # orthogonal indexing should ensure the dimensionality is consistent
-        if hasattr(values, 'ndim'):
-            assert values.ndim == len(dims), (values.ndim, len(dims))
-        else:
-            assert len(dims) == 0, len(dims)
-        return type(self)(dims, values, self._attrs, self._encoding,
-                          fastpath=True)
-
     def _broadcast_indexes(self, key):
         """
         Parameters
@@ -436,6 +405,25 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                      if not isinstance(k, integer_types))
         return dims, key
 
+    def nonzero(self):
+        """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
+        if isinstance(self._data, (np.ndarray, pd.Index, PandasIndexAdapter)):
+            nonzeros = np.nonzero(self._data)
+        elif isinstance(self._data, dask_array_type):
+            # TODO we should replace dask's native nonzero
+            # after https://github.com/dask/dask/issues/1076 is implemented.
+            nonzeros = np.nonzero(self.load()._data)
+
+        return tuple([as_variable(nz, name=dim) for nz, dim
+                      in zip(nonzeros, self.dims)])
+
+    def _isbool(self):
+        """ Return if the variabe is bool or not """
+        if isinstance(self._data, (np.ndarray, PandasIndexAdapter, pd.Index)):
+            return self._data.dtype is np.dtype('bool')
+        elif isinstance(self._data, dask_array_type):
+            raise NotImplementedError
+
     def _broadcast_indexes_advanced(self, key):
         variables = []
 
@@ -451,13 +439,26 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                                      "cannot be used for indexing.")
                 else:
                     raise e
-            variables.append(variable)
+            if variable._isbool():  # boolean indexing case
+                variables.extend(list(variable.nonzero()))
+            else:
+                variables.append(variable)
         variables = _broadcast_compat_variables(*variables)
         dims = variables[0].dims  # all variables have the same dims
         key = tuple(variable.data for variable in variables)
         return dims, key
 
-    def getitem2(self, key):
+    def _ensure_array(self, value):
+        """ For np.ndarray-based-Variable, we always want the result of
+        indexing to be a NumPy array. If it's not, then it really should be a
+        0d array. Doing the coercion here instead of inside
+        variable.as_compatible_data makes it less error prone."""
+        if isinstance(self._data, np.ndarray):
+            if not isinstance(value, np.ndarray):
+                value = utils.to_0d_array(value)
+        return value
+
+    def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
 
@@ -467,7 +468,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         This method will replace __getitem__ after we make sure its stability.
         """
         dims, index_tuple = self._broadcast_indexes(key)
-        values = self._data[index_tuple]
+        try:
+            values = self._ensure_array(self._data[index_tuple])
+        except NotImplementedError:
+            # TODO temporal implementation.
+            # Need to wait for dask's nd index support?
+            values = self._ensure_array(self.load()._data[index_tuple])
+
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:

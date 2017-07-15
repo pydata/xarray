@@ -474,6 +474,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
+        self.isdask = False
 
     def test_data_and_values(self):
         v = Variable(['time', 'x'], self.d)
@@ -680,6 +681,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_items(self):
         data = np.random.random((10, 11))
         v = Variable(['x', 'y'], data)
+        if self.isdask:
+            v = v.chunk()
         # test slicing
         self.assertVariableIdentical(v, v[:])
         self.assertVariableIdentical(v, v[...])
@@ -709,96 +712,96 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[range(10), range(11)] = 1
         self.assertArrayEqual(v.values, np.ones((10, 11)))
 
-    def test_getitem2_basic(self):
+    def test_getitem_basic(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
-        v_new = v.getitem2(dict(x=0))
+        v_new = v[dict(x=0)]
         self.assertTrue(v_new.dims == ('y', ))
         self.assertArrayEqual(v_new, v._data[0])
 
-        v_new = v.getitem2(dict(x=0, y=slice(None)))
+        v_new = v[dict(x=0, y=slice(None))]
         self.assertTrue(v_new.dims == ('y', ))
         self.assertArrayEqual(v_new, v._data[0])
 
-        v_new = v.getitem2(dict(x=0, y=1))
+        v_new = v[dict(x=0, y=1)]
         self.assertTrue(v_new.dims == ())
         self.assertArrayEqual(v_new, v._data[0, 1])
 
-        v_new = v.getitem2(dict(y=1))
+        v_new = v[dict(y=1)]
         self.assertTrue(v_new.dims == ('x', ))
         self.assertArrayEqual(v_new, v._data[:, 1])
 
         # tuple argument
-        v_new = v.getitem2((slice(None), 1))
+        v_new = v[(slice(None), 1)]
         self.assertTrue(v_new.dims == ('x', ))
         self.assertArrayEqual(v_new, v._data[:, 1])
 
-    def test_getitem2_advanced(self):
+    def test_getitem_advanced(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
         # orthogonal indexing
-        v_new = v.getitem2(([0, 1], [1, 0]))
+        v_new = v[([0, 1], [1, 0])]
         self.assertTrue(v_new.dims == ('x', 'y'))
         self.assertArrayEqual(v_new, v._data[[0, 1]][:, [1, 0]])
 
-        v_new = v.getitem2([0, 1])
+        v_new = v[[0, 1]]
         self.assertTrue(v_new.dims == ('x', 'y'))
         self.assertArrayEqual(v_new, v._data[[0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
-        v_new = v.getitem2(ind)
+        v_new = v[ind]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
         self.assertArrayEqual(v_new, v._data[([0, 1, 1], [1, 1, 0]), :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
-        v_new = v.getitem2(dict(y=ind))
+        v_new = v[dict(y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
         self.assertArrayEqual(v_new, v._data[:, ([0, 1, 2], [2, 1, 0])])
 
         # with mixed arguments
         ind = Variable(['a'], [0, 1])
-        v_new = v.getitem2(dict(x=[0, 1], y=ind))
+        v_new = v[dict(x=[0, 1], y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a'))
         self.assertArrayEqual(v_new, v._data[[0, 1]][:, [0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v.getitem2(dict(x=[1, 0], y=ind))
+        v_new = v[dict(x=[1, 0], y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
         self.assertArrayEqual(v_new, v._data[[1, 0]][:, ind])
 
         # with integer
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v.getitem2(dict(x=0, y=ind))
+        v_new = v[dict(x=0, y=ind)]
         self.assertTrue(v_new.dims == ('a', 'b'))
         self.assertArrayEqual(v_new[0], v._data[0][[0, 0]])
         self.assertArrayEqual(v_new[1], v._data[0][[1, 1]])
 
         # with slice
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v.getitem2(dict(x=slice(None), y=ind))
+        v_new = v[dict(x=slice(None), y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
         self.assertArrayEqual(v_new, v._data[:, [[0, 0], [1, 1]]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v.getitem2(dict(x=ind, y=slice(None)))
+        v_new = v[dict(x=ind, y=slice(None))]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
         self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], :])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v.getitem2(dict(x=ind, y=slice(None, 1)))
+        v_new = v[dict(x=ind, y=slice(None, 1))]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
         self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], slice(None, 1)])
 
-    def test_getitem2_error(self):
+    def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
         with self.assertRaisesRegexp(IndexError, "Unlabelled multi-"):
-            v.getitem2([[0, 1], [1, 2]])
+            v[[[0, 1], [1, 2]]]
 
         with self.assertRaisesRegexp(ValueError, "operands cannot be "):
             ind_x = Variable(['a', 'b'], [[0, 0], [1, 1]])
             ind_y = Variable(['a'], [0])
-            v.getitem2((ind_x, ind_y))
+            v[(ind_x, ind_y)]
 
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
@@ -1177,6 +1180,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x'], [2, 3])
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
+
+
+class TestVariable_withDask(TestVariable):
+    cls = staticmethod(Variable)
+
+    def setUp(self):
+        super(TestVariable_withDask, self).setUp()
+        self.isdask = True
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
