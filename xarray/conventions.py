@@ -852,7 +852,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                           RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        has_fill = (fill_value is not None and 
+        has_fill = (fill_value is not None and
                     not np.any(pd.isnull(fill_value)))
         if (has_fill or scale_factor is not None or add_offset is not None):
             if fill_value.dtype.kind in ['U', 'S']:
