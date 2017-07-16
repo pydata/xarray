@@ -852,13 +852,14 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                           RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if ((fill_value is not None and not np.any(pd.isnull(fill_value))) or
-                scale_factor is not None or add_offset is not None):
+        has_fill = (fill_value is not None and 
+                    not np.any(pd.isnull(fill_value)))
+        if (has_fill or scale_factor is not None or add_offset is not None):
             if fill_value.dtype.kind in ['U', 'S']:
                 dtype = object
             else:
                 dtype = float
-            if is_unsigned is not None:
+            if (is_unsigned is not None) and has_fill:
                 # Need to convert the fill_value to unsigned, too
                 # According to the CF spec, the fill value is of the same
                 # type as its variable, i.e. its storage format on disk
