@@ -823,7 +823,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = CharToStringArray(data)
 
     is_unsigned = pop_to(attributes, encoding, '_Unsigned')
-    if (is_unsigned is not None) & (mask_and_scale == True):
+    if (is_unsigned is not None) & (mask_and_scale is True):
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
