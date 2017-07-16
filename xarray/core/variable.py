@@ -456,6 +456,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if isinstance(self._data, np.ndarray):
             if not isinstance(value, np.ndarray):
                 value = utils.to_0d_array(value)
+        elif isinstance(self._data, dask_array_type):
+            print(value)
+            if not isinstance(value, (dask_array_type, dask_array_type)):
+                value = utils.to_0d_array(value)
+
         return value
 
     def __getitem__(self, key):

@@ -142,9 +142,9 @@ class VariableSubclassTestCases(object):
         listarray = np.empty((1,), dtype=object)
         listarray[0] = [1, 2, 3]
         x = self.cls('x', listarray)
-        assert x.data == listarray
-        assert x[0].data == listarray.squeeze()
-        assert x.squeeze().data == listarray.squeeze()
+        self.assertArrayEqual(x.data, listarray)
+        self.assertArrayEqual(x[0].data, listarray.squeeze())
+        self.assertArrayEqual(x.squeeze().data, listarray.squeeze())
 
     def test_index_and_concat_datetime(self):
         # regression test for #125
@@ -474,7 +474,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
-        self.isdask = False
 
     def test_data_and_values(self):
         v = Variable(['time', 'x'], self.d)
@@ -681,8 +680,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_items(self):
         data = np.random.random((10, 11))
         v = Variable(['x', 'y'], data)
-        if self.isdask:
-            v = v.chunk()
         # test slicing
         self.assertVariableIdentical(v, v[:])
         self.assertVariableIdentical(v, v[...])
@@ -1182,12 +1179,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, actual)
 
 
+@pytest.mark.xfail
 class TestVariable_withDask(TestVariable):
-    cls = staticmethod(Variable)
+    cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     def setUp(self):
         super(TestVariable_withDask, self).setUp()
-        self.isdask = True
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
@@ -1267,7 +1264,6 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         with self.assertWarns('deprecated'):
             x = Coordinate('x', [1, 2, 3])
         self.assertIsInstance(x, IndexVariable)
-
 
 
 class TestAsCompatibleData(TestCase):
