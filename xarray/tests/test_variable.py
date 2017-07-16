@@ -208,6 +208,7 @@ class VariableSubclassTestCases(object):
 
     def test_pandas_period_index(self):
         v = self.cls(['x'], pd.period_range(start='2000', periods=20, freq='B'))
+        v = v.load()  # for dask-based Variable
         self.assertEqual(v[0], pd.Period('2000', freq='B'))
         assert "Period('2000-01-03', 'B')" in repr(v)
 
@@ -463,10 +464,11 @@ class VariableSubclassTestCases(object):
         array = self.cls('x', np.arange(5))
         orig_data = array._data
         copied = array.copy(deep=True)
-        array.load()
-        assert type(array._data) is type(orig_data)
-        assert type(copied._data) is type(orig_data)
-        self.assertVariableIdentical(array, copied)
+        if array.chunks is None:
+            array.load()
+            assert type(array._data) is type(orig_data)
+            assert type(copied._data) is type(orig_data)
+            self.assertVariableIdentical(array, copied)
 
 
 class TestVariable(TestCase, VariableSubclassTestCases):
@@ -1179,12 +1181,28 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, actual)
 
 
-@pytest.mark.xfail
 class TestVariable_withDask(TestVariable):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     def setUp(self):
         super(TestVariable_withDask, self).setUp()
+
+    @pytest.mark.xfail
+    def test_0d_object_array_with_list(self):
+        super(TestVariable_withDask, self).test_0d_object_array_with_list()
+
+    @pytest.mark.xfail
+    def test_array_interface(self):
+        # dask array does not have `argsort`
+        super(TestVariable_withDask, self).test_array_interface()
+
+    @pytest.mark.xfail
+    def test_copy_index(self):
+        super(TestVariable_withDask, self).test_copy_index()
+
+    @pytest.mark.xfail
+    def test_eq_all_dtypes(self):
+        super(TestVariable_withDask, self).test_eq_all_dtypes()
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
