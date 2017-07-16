@@ -18,7 +18,8 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, orthogonally_indexable)
+from .indexing import (DaskIndexingAdapter, PandasIndexAdapter,
+                       broadcasted_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -297,7 +298,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _indexable_data(self):
-        return orthogonally_indexable(self._data)
+        return broadcasted_indexable(self._data)
 
     def load(self):
         """Manually trigger loading of this variable's data from disk or a
@@ -417,7 +418,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return tuple([as_variable(nz, name=dim) for nz, dim
                       in zip(nonzeros, self.dims)])
 
-    def _isbool(self):
+    def _isbool_type(self):
         """ Return if the variabe is bool or not """
         if isinstance(self._data, (np.ndarray, PandasIndexAdapter, pd.Index)):
             return self._data.dtype is np.dtype('bool')
@@ -439,7 +440,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                                      "cannot be used for indexing.")
                 else:
                     raise e
-            if variable._isbool():  # boolean indexing case
+            if variable._isbool_type():  # boolean indexing case
                 variables.extend(list(variable.nonzero()))
             else:
                 variables.append(variable)
@@ -447,21 +448,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims = variables[0].dims  # all variables have the same dims
         key = tuple(variable.data for variable in variables)
         return dims, key
-
-    def _ensure_array(self, value):
-        """ For np.ndarray-based-Variable, we always want the result of
-        indexing to be a NumPy array. If it's not, then it really should be a
-        0d array. Doing the coercion here instead of inside
-        variable.as_compatible_data makes it less error prone."""
-        if isinstance(self._data, np.ndarray):
-            if not isinstance(value, np.ndarray):
-                value = utils.to_0d_array(value)
-        elif isinstance(self._data, dask_array_type):
-            print(value)
-            if not isinstance(value, (dask_array_type, dask_array_type)):
-                value = utils.to_0d_array(value)
-
-        return value
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -473,13 +459,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         This method will replace __getitem__ after we make sure its stability.
         """
         dims, index_tuple = self._broadcast_indexes(key)
-        try:
-            values = self._ensure_array(self._data[index_tuple])
-        except NotImplementedError:
-            # TODO temporal implementation.
-            # Need to wait for dask's nd index support?
-            values = self._ensure_array(self.load()._data[index_tuple])
-
+        values = self._indexable_data[index_tuple]
         if hasattr(values, 'ndim'):
             assert values.ndim == len(dims), (values.ndim, len(dims))
         else:
@@ -493,15 +473,15 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         See __getitem__ for more details.
         """
-        key = self._item_key_to_tuple(key)
+        dims, index_tuple = self._broadcast_indexes(key)
         if isinstance(self._data, dask_array_type):
             raise TypeError("this variable's data is stored in a dask array, "
                             'which does not support item assignment. To '
                             'assign to this variable, you must first load it '
                             'into memory explicitly using the .load_data() '
                             'method or accessing its .values attribute.')
-        data = orthogonally_indexable(self._data)
-        data[key] = value
+        data = broadcasted_indexable(self._data)
+        data[index_tuple] = value
 
     @property
     def attrs(self):

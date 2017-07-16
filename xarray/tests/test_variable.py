@@ -750,46 +750,47 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
-        self.assertArrayEqual(v_new, v._data[([0, 1, 1], [1, 1, 0]), :])
+        self.assertArrayEqual(v_new, v.load()._data[([0, 1, 1], [1, 1, 0]), :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
         v_new = v[dict(y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
-        self.assertArrayEqual(v_new, v._data[:, ([0, 1, 2], [2, 1, 0])])
+        self.assertArrayEqual(v_new, v.load()._data[:, ([0, 1, 2], [2, 1, 0])])
 
         # with mixed arguments
         ind = Variable(['a'], [0, 1])
         v_new = v[dict(x=[0, 1], y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a'))
-        self.assertArrayEqual(v_new, v._data[[0, 1]][:, [0, 1]])
+        self.assertArrayEqual(v_new, v.load()._data[[0, 1]][:, [0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=[1, 0], y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
-        self.assertArrayEqual(v_new, v._data[[1, 0]][:, ind])
+        self.assertArrayEqual(v_new, v.load()._data[[1, 0]][:, ind])
 
         # with integer
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=0, y=ind)]
         self.assertTrue(v_new.dims == ('a', 'b'))
-        self.assertArrayEqual(v_new[0], v._data[0][[0, 0]])
-        self.assertArrayEqual(v_new[1], v._data[0][[1, 1]])
+        self.assertArrayEqual(v_new[0], v.load()._data[0][[0, 0]])
+        self.assertArrayEqual(v_new[1], v.load()._data[0][[1, 1]])
 
         # with slice
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=slice(None), y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
-        self.assertArrayEqual(v_new, v._data[:, [[0, 0], [1, 1]]])
+        self.assertArrayEqual(v_new, v.load()._data[:, [[0, 0], [1, 1]]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None))]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
-        self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], :])
+        self.assertArrayEqual(v_new, v.load()._data[[[0, 0], [1, 1]], :])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None, 1))]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
-        self.assertArrayEqual(v_new, v._data[[[0, 0], [1, 1]], slice(None, 1)])
+        self.assertArrayEqual(v_new,
+                              v.load()._data[[[0, 0], [1, 1]], slice(None, 1)])
 
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])

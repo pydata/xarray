@@ -371,7 +371,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        array = orthogonally_indexable(self.array)
+        array = broadcasted_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, key):
@@ -434,7 +434,7 @@ class MemoryCachedArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-def orthogonally_indexable(array):
+def broadcasted_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
@@ -445,24 +445,10 @@ def orthogonally_indexable(array):
 
 
 class NumpyIndexingAdapter(utils.NDArrayMixin):
-    """Wrap a NumPy array to use orthogonal indexing (array indexing
-    accesses different dimensions independently, like netCDF4-python variables)
+    """Wrap a NumPy array to use broadcasted indexing
     """
-    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
-    # it implements orthogonal indexing, except it casts to a numpy array,
-    # isn't lazy and supports writing values.
     def __init__(self, array):
-        self.array = np.asarray(array)
-
-    def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
-
-    def _convert_key(self, key):
-        key = expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, integer_types + (slice,)) for k in key):
-            # key would trigger fancy indexing
-            key = orthogonal_indexer(key, self.shape)
-        return key
+        self.array = array
 
     def _ensure_ndarray(self, value):
         # We always want the result of indexing to be a NumPy array. If it's
@@ -474,29 +460,37 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
         return value
 
     def __getitem__(self, key):
-        key = self._convert_key(key)
         return self._ensure_ndarray(self.array[key])
 
     def __setitem__(self, key, value):
-        key = self._convert_key(key)
         self.array[key] = value
 
 
 class DaskIndexingAdapter(utils.NDArrayMixin):
-    """Wrap a dask array to support orthogonal indexing
+    """Wrap a dask array to support broadcasted-indexing.
     """
     def __init__(self, array):
         self.array = array
 
     def __getitem__(self, key):
-        key = expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, integer_types + (slice,)) for k in key):
+        """ key: tuple of Variable, slice, integer """
+        # basic or orthogonal indexing
+        if all(isinstance(k, (integer_types, slice)) or k.squeeze().ndim <= 1
+               for k in key):
             value = self.array
             for axis, subkey in reversed(list(enumerate(key))):
+                if hasattr(subkey, 'squeeze'):
+                    subkey = subkey.squeeze()
+                    if subkey.ndim == 0:  # make at least 1-d array
+                        subkey = subkey.flatten()
                 value = value[(slice(None),) * axis + (subkey,)]
+            return value
         else:
-            value = self.array[key]
-        return value
+            # TODO Dask does not support nd-array indexing.
+            # flatten() -> .vindex[] -> reshape() should be used
+            # instead of `.load()`
+            value = np.asarray(self.array)[key]
+            return value
 
 
 class PandasIndexAdapter(utils.NDArrayMixin):
