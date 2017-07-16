@@ -61,7 +61,6 @@ def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
     """
     # by default, cast to float to ensure NaN is meaningful
     values = np.array(array, dtype=dtype, copy=True)
-
     if fill_value is not None and not np.all(pd.isnull(fill_value)):
         if getattr(fill_value, 'size', 1) > 1:
             fill_values = fill_value  # multiple fill values
@@ -667,7 +666,11 @@ def maybe_encode_dtype(var, name=None):
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if '_Unsigned' in encoding:
-                    data = data.astype('i%s' % dtype.itemsize)
+                    unsigned_dtype = 'i%s' % dtype.itemsize
+                    old_fill = np.asarray(attrs['_FillValue'])
+                    new_fill = old_fill.astype(unsigned_dtype)
+                    attrs['_FillValue'] = new_fill
+                    data = data.astype(unsigned_dtype)
                     pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
@@ -820,7 +823,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             data = CharToStringArray(data)
 
     is_unsigned = pop_to(attributes, encoding, '_Unsigned')
-    if is_unsigned is not None:
+    if (is_unsigned is not None) & (mask_and_scale == True):
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
@@ -842,7 +845,6 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "and decoding explicitly using "
                                  "xarray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
-
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
             warnings.warn("variable has multiple fill values {0}, decoding "
@@ -856,6 +858,11 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 dtype = object
             else:
                 dtype = float
+            if is_unsigned is not None:
+                # Need to convert the fill_value to unsigned, too
+                # According to the CF spec, the fill value is of the same
+                # type as its variable, i.e. its storage format on disk
+                fill_value = np.asarray(fill_value, dtype=data.unsigned_dtype)
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 

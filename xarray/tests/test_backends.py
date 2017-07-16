@@ -70,7 +70,9 @@ def create_unsigned_masked_scaled_data():
 
 
 def create_encoded_unsigned_masked_scaled_data():
-    attributes = {'_FillValue': 255, '_Unsigned': 'true',
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': 'true',
                   'add_offset': 10, 'scale_factor': np.float32(0.1)}
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
