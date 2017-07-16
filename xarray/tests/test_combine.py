@@ -123,6 +123,30 @@ class TestConcatDataset(TestCase):
                                              coords={'x': [1, 2, 3]})})
         self.assertDatasetIdentical(expected, actual)
 
+    def test_concat_prealigned(self):
+        # concat over new dimension
+        ds1 = Dataset({'foo': (['x'], [1, 2])},
+                      coords={'x': (['x'], [1, 2]), 'z': (['x'], ['a', 'b'])})
+        ds2 = Dataset({'foo': (['x'], [1, 2])},
+                      coords={'x': (['x'], [1, 3]), 'z': (['x'], ['f', 'g'])})
+        actual = concat([ds1, ds2], 'y', prealigned=True)
+        # the concatenated datset should just ignore all coords in ds2 and only
+        # concat data variables, regardless of whether they are the same
+        expected = Dataset({'foo': (['y', 'x'], [[1, 2], [1, 2]])},
+                           coords=ds1.coords)
+        self.assertDatasetIdentical(expected, actual)
+
+        # concat over existing dimension
+        data = create_test_data()
+        for k in list(data):
+            if 'dim3' in data[k].dims:
+                del data[k]
+
+        split_data = [data.isel(dim1=slice(3)),
+                      data.isel(dim1=slice(3, None))]
+        concat_data = concat(split_data, 'dim1', prealigned=True)
+        self.assertDatasetIdentical(data, concat_data)
+
     def test_concat_errors(self):
         data = create_test_data()
         split_data = [data.isel(dim1=slice(3)),
