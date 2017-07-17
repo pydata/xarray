@@ -665,7 +665,7 @@ def maybe_encode_dtype(var, name=None):
                                   'any _FillValue to use for NaNs' % name,
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
-                if '_Unsigned' in encoding:
+                if encoding.get('_Unsigned', False):
                     unsigned_dtype = 'i%s' % dtype.itemsize
                     old_fill = np.asarray(attrs['_FillValue'])
                     new_fill = old_fill.astype(unsigned_dtype)
@@ -822,8 +822,9 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             dimensions = dimensions[:-1]
             data = CharToStringArray(data)
 
-    is_unsigned = pop_to(attributes, encoding, '_Unsigned')
-    if (is_unsigned is not None) & (mask_and_scale is True):
+    pop_to(attributes, encoding, '_Unsigned')
+    is_unsigned = encoding.get('_Unsigned', False)
+    if (is_unsigned) and (mask_and_scale is True):
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
@@ -859,7 +860,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 dtype = object
             else:
                 dtype = float
-            if (is_unsigned is not None) and has_fill:
+            if is_unsigned and has_fill:
                 # Need to convert the fill_value to unsigned, too
                 # According to the CF spec, the fill value is of the same
                 # type as its variable, i.e. its storage format on disk
