@@ -392,10 +392,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        self.assertDatasetIdentical(encoded,
-                                    create_encoded_unsigned_masked_scaled_data(
-                                    )
-                                    )
+        self.assertDatasetIdentical(
+            encoded, create_encoded_unsigned_masked_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(encoded,
@@ -418,8 +416,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # make sure roundtrip encoding didn't change the
         # original dataset.
         self.assertDatasetIdentical(encoded,
-                                    create_encoded_masked_and_scaled_data()
-                                    )
+                                    create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(encoded,
