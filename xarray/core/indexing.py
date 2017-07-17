@@ -496,7 +496,6 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         return self._ensure_ndarray(self.array[key])
-
     def __setitem__(self, key, value):
         self.array[key] = value
 
@@ -505,26 +504,42 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
     """Wrap a dask array to support broadcasted-indexing.
     """
     def __init__(self, array):
+        """ This adapter is usually called in Variable.__getitem__ with
+        array=Variable._broadcast_indexes
+        """
         self.array = array
 
-    def __getitem__(self, key):
+    def _broadcast_indexes(self, key):
         """ key: tuple of ndarray, slice, integer """
         if all(isinstance(k, integer_types + (slice,)) for k in key):
             # basic indexing
-            return self.array[key]
-        elif all(k.shape == (1,) * (i - 1) + (max(k.shape),) + (1,) * (i - 1)
-                 for i, k in enumerate(key)
-                 if isinstance(k, np.ndarray)):
+            return key
+        elif all(k.shape ==
+                 (1,) * i + (max(k.shape),) + (1,) * (k.ndim - i - 1)
+                 for i, k in enumerate(key) if hasattr(k, 'shape')):
             # orthogonal indexing
             # dask only supports one list in an indexer, so convert to slice if
             # possible
             key = tuple(maybe_convert_to_slice(np.ravel(k), size)
                         for k, size in zip(key, self.shape))
-            return self.array[key]
+            return key
         # TODO: handle point-wise indexing with vindex
         else:
             raise IndexError(
-                'dask does not support fancy indexing with key: {}'.format(key))
+              'dask does not support fancy indexing with key: {}'.format(key))
+
+    def __getitem__(self, key):
+        key = self._broadcast_indexes(key)
+        return self.array[key]
+
+    def __setitem__(self, key, value):
+        key = self._broadcast_indexes(key)
+        raise TypeError("this variable's data is stored in a dask array, "
+                        'which does not support item assignment. To '
+                        'assign to this variable, you must first load it '
+                        'into memory explicitly using the .load_data() '
+                        'method or accessing its .values attribute.')
+        self.array[key] = value
 
 
 class PandasIndexAdapter(utils.NDArrayMixin):

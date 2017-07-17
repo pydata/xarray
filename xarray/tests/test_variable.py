@@ -747,6 +747,26 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertTrue(v_new.dims == ('x', 'y'))
         self.assertArrayEqual(v_new, v._data[[0, 1]])
 
+        # with mixed arguments
+        ind = Variable(['a'], [0, 1])
+        v_new = v[dict(x=[0, 1], y=ind)]
+        self.assertTrue(v_new.dims == ('x', 'a'))
+        self.assertArrayEqual(v_new, v.load()._data[[0, 1]][:, [0, 1]])
+
+        # boolean indexing
+        v_new = v[dict(x=[True, False], y=[False, True])]
+        self.assertTrue(v_new.dims == ('x', 'y'))
+        self.assertArrayEqual(v_new, v.load()._data[0][1])
+
+        ind = Variable(['a'], [True, False])
+        v_new = v[dict(y=ind)]
+        self.assertTrue(v_new.dims == ('x', 'a'))
+        self.assertArrayEqual(v_new, v.load()._data[:, 0:1])
+
+    def test_getitem_fancy(self):
+        # Note  This fancy getitem is not supported by dask-based Variable.
+        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
+
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
         self.assertTrue(v_new.dims == ('a', 'b', 'y'))
@@ -756,12 +776,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v_new = v[dict(y=ind)]
         self.assertTrue(v_new.dims == ('x', 'a', 'b'))
         self.assertArrayEqual(v_new, v.load()._data[:, ([0, 1, 2], [2, 1, 0])])
-
-        # with mixed arguments
-        ind = Variable(['a'], [0, 1])
-        v_new = v[dict(x=[0, 1], y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a'))
-        self.assertArrayEqual(v_new, v.load()._data[[0, 1]][:, [0, 1]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=[1, 0], y=ind)]
@@ -802,6 +816,35 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             ind_x = Variable(['a', 'b'], [[0, 0], [1, 1]])
             ind_y = Variable(['a'], [0])
             v[(ind_x, ind_y)]
+
+        with self.assertRaisesRegexp(IndexError, "2-dimensional boolean"):
+            ind = Variable(['a', 'b'], [[True, False], [False, True]])
+            v[dict(x=ind)]
+
+    def test_setitem(self):
+        v = self.cls(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
+        v[0, 1] = 1
+        self.assertTrue(v[0, 1] == 1)
+
+        v = self.cls(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
+        v[dict(x=[0, 1])] = 1
+        self.assertArrayEqual(v[[0, 1]], np.ones_like(v[[0, 1]]))
+
+        # boolean indexing
+        v = self.cls(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
+        v[dict(x=[True, False])] = 1
+
+        self.assertArrayEqual(v[0], np.ones_like(v[0]))
+        v = self.cls(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
+        v[dict(x=[True, False], y=[False, True])] = 1
+        self.assertTrue(v[0, 1] == 1)
+
+        # dimension broadcast
+        v = self.cls(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
+        ind = Variable(['a'], [0, 1])
+        v[dict(x=ind)] = Variable(['a', 'y'], np.ones((2, 3), dtype=int) * 10)
+        self.assertArrayEqual(v[0], np.ones_like(v[0]) * 10)
+        self.assertArrayEqual(v[1], np.ones_like(v[0]) * 10)
 
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
@@ -1204,6 +1247,14 @@ class TestVariable_withDask(TestVariable):
     @pytest.mark.xfail
     def test_eq_all_dtypes(self):
         super(TestVariable_withDask, self).test_eq_all_dtypes()
+
+    @pytest.mark.xfail
+    def test_getitem_fancy(self):
+        super(TestVariable_withDask, self).test_getitem_fancy()
+
+    @pytest.mark.xfail
+    def test_setitem(self):
+        super(TestVariable_withDask, self).test_setitem()
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):

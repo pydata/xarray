@@ -18,8 +18,7 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (DaskIndexingAdapter, PandasIndexAdapter,
-                       broadcasted_indexable)
+from .indexing import (PandasIndexAdapter, broadcasted_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -27,6 +26,13 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+
+class MissingDimensionsError(ValueError):
+    """Error class used when we can't safely guess a dimension name.
+    """
+    # inherits from ValueError for backward compatibility
+    # TODO: move this to an xarray.exceptions module?
 
 
 def as_variable(obj, name=None):
@@ -87,7 +93,7 @@ def as_variable(obj, name=None):
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
-            raise ValueError(
+            raise MissingDimensionsError(
                 'cannot set variable %r with %r-dimensional data '
                 'without explicit dimension names. Pass a tuple of '
                 '(dims, data) instead.' % (name, data.ndim))
@@ -99,7 +105,7 @@ def as_variable(obj, name=None):
     if name is not None and name in obj.dims:
         # convert the Variable into an Index
         if obj.ndim != 1:
-            raise ValueError(
+            raise MissingDimensionsError(
                 '%r has more than 1-dimension and the same name as one of its '
                 'dimensions %r. xarray disallows such variables because they '
                 'conflict with the coordinates used to label dimensions.'
@@ -408,22 +414,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
-        if isinstance(self._data, (np.ndarray, pd.Index, PandasIndexAdapter)):
-            nonzeros = np.nonzero(self._data)
-        elif isinstance(self._data, dask_array_type):
-            # TODO we should replace dask's native nonzero
-            # after https://github.com/dask/dask/issues/1076 is implemented.
-            nonzeros = np.nonzero(self.load()._data)
-
+        # TODO we should replace dask's native nonzero
+        # after https://github.com/dask/dask/issues/1076 is implemented.
+        nonzeros = np.nonzero(self.data)
         return tuple([as_variable(nz, name=dim) for nz, dim
                       in zip(nonzeros, self.dims)])
-
-    def _isbool_type(self):
-        """ Return if the variabe is bool or not """
-        if isinstance(self._data, (np.ndarray, PandasIndexAdapter, pd.Index)):
-            return self._data.dtype is np.dtype('bool')
-        elif isinstance(self._data, dask_array_type):
-            raise NotImplementedError
 
     def _broadcast_indexes_advanced(self, key):
         variables = []
@@ -432,15 +427,16 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if isinstance(value, slice):
                 value = np.arange(self.sizes[dim])[value]
 
-            try:  # TODO we need our own Exception.
+            try:
                 variable = as_variable(value, name=dim)
-            except ValueError as e:
-                if "cannot set variable" in str(e):
-                    raise IndexError("Unlabelled multi-dimensional array "
-                                     "cannot be used for indexing.")
-                else:
-                    raise e
-            if variable._isbool_type():  # boolean indexing case
+            except MissingDimensionsError:  # change to better exception
+                raise IndexError("Unlabelled multi-dimensional array "
+                                 "cannot be used for indexing.")
+
+            if variable.dtype.kind == 'b':  # boolean indexing case
+                if variable.ndim > 1:
+                    raise IndexError("{}-dimensional boolean indexing is "
+                                     "not supported. ".format(variable.ndim))
                 variables.extend(list(variable.nonzero()))
             else:
                 variables.append(variable)
@@ -474,14 +470,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         See __getitem__ for more details.
         """
         dims, index_tuple = self._broadcast_indexes(key)
-        if isinstance(self._data, dask_array_type):
-            raise TypeError("this variable's data is stored in a dask array, "
-                            'which does not support item assignment. To '
-                            'assign to this variable, you must first load it '
-                            'into memory explicitly using the .load_data() '
-                            'method or accessing its .values attribute.')
         data = broadcasted_indexable(self._data)
-        data[index_tuple] = value
+        if isinstance(value, Variable):
+            data[index_tuple] = value.set_dims(dims)
+        else:
+            data[index_tuple] = value
 
     @property
     def attrs(self):
