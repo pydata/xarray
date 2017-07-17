@@ -425,7 +425,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         for dim, value in zip(self.dims, key):
             if isinstance(value, slice):
-                value = np.arange(self.sizes[dim])[value]
+                value = np.arange(*value.indices(self.sizes[dim]))
 
             try:
                 variable = as_variable(value, name=dim)
