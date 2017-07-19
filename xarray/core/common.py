@@ -565,7 +565,7 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, [(dim.dims, dim)], name=resample_dim)
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
-        resampler = self.resample_cls(self, group=group, dim=dim_name,
+        resampler = self._resample_cls(self, group=group, dim=dim_name,
                                       grouper=time_grouper,
                                       resample_dim=resample_dim)
 
@@ -591,7 +591,7 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        gb = self._groupby_cls(self, group, grouper=time_grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:

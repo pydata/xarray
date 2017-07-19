@@ -532,9 +532,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             combined = self._concat_shortcut(applied, dim, positions)
         else:
             combined = concat(applied, dim)
-            print(combined[dim])
-            #combined = _maybe_reorder(combined, dim, positions)
-            print(combined[dim])
+            combined = _maybe_reorder(combined, dim, positions)
 
         if isinstance(combined, type(self._obj)):
             # only restore dimension order for arrays
