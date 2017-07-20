@@ -1224,7 +1224,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
         self.assertVariableIdentical(expected, actual)
 
-
+@requires_dask
 class TestVariable_withDask(TestVariable):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
