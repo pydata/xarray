@@ -526,6 +526,17 @@ def orthogonalize_indexers(key, shape):
     return key
 
 
+class BroadcastedIndexingAdapter(utils.NDArrayMixin):
+    """ An array wrapper for orthogonally indexed arrays, such as netCDF. """
+    def __init__(self, array):
+        self.array = array
+
+    def __getitem__(self, key):
+        key = expanded_indexer(key, self.ndim)
+        key = orthogonalize_indexers(key, self.shape)
+        return self.array[key]
+
+
 def broadcasted_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)

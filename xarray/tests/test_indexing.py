@@ -6,8 +6,86 @@ import pandas as pd
 import pytest
 
 from xarray import Dataset, DataArray, Variable
-from xarray.core import indexing
+from xarray.core import indexing, utils
 from . import TestCase, ReturnItem
+
+
+class NumpyOrthogonalIndexingAdapter(utils.NDArrayMixin):
+    """Wrap a NumPy array to use orthogonal indexing (array indexing
+    accesses different dimensions independently, like netCDF4-python variables)
+    """
+    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
+    # it implements orthogonal indexing, except it casts to a numpy array,
+    # isn't lazy and supports writing values.
+    def __init__(self, array):
+        self.array = np.asarray(array)
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
+
+    def _convert_key(self, key):
+        key = indexing.expanded_indexer(key, self.ndim)
+        if any(not isinstance(k, indexing.integer_types + (slice,))
+                for k in key):
+            # key would trigger fancy indexing
+            key = indexing.orthogonal_indexer(key, self.shape)
+        return key
+
+    def _ensure_ndarray(self, value):
+        # We always want the result of indexing to be a NumPy array. If it's
+        # not, then it really should be a 0d array. Doing the coercion here
+        # instead of inside variable.as_compatible_data makes it less error
+        # prone.
+        if not isinstance(value, np.ndarray):
+            value = utils.to_0d_array(value)
+        return value
+
+    def __getitem__(self, key):
+        key = self._convert_key(key)
+        return type(self)(self._ensure_ndarray(self.array[key]))
+
+    def __setitem__(self, key, value):
+        key = self._convert_key(key)
+        self.array[key] = value
+
+
+class TestNumpyOrthogonalIndexingAdapter(TestCase):
+    def test_basic(self):
+        def maybe_boolean_array(array, size):
+            """ Map boolean array to size 'size' by appendin False in its tail
+            """
+            if hasattr(array, 'dtype') and array.dtype.kind == 'b':
+                array_new = np.ndarray(size, dtype='?')
+                array_new[:array.size] = array
+                array_new[array.size:] = False
+                return array_new
+            return array
+
+        original = np.random.rand(10, 20, 30)
+        orthogonal = NumpyOrthogonalIndexingAdapter(original)
+        I = ReturnItem()
+        # test broadcasted indexers
+        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
+        for i in indexers:
+            for j in indexers:
+                for k in indexers:
+                    actual = orthogonal[i, j, k]
+                    j = maybe_boolean_array(j, 20)
+                    k = maybe_boolean_array(k, 30)
+                    if isinstance(i, int):
+                        if isinstance(j, int):
+                            expected = original[i][j][k]
+                        else:
+                            expected = original[i][j][:, k]
+                    else:
+                        if isinstance(j, int):
+                            expected = original[i][:, j][:, k]
+                        else:
+                            expected = original[i][:, j][:, :, k]
+                    self.assertArrayEqual(actual, expected)
+        # indivisual testing
+        self.assertTrue(orthogonal[np.array([0]), :, :].shape == (1, 20, 30))
+        self.assertArrayEqual(orthogonal[[0], :, :], original[[0], :, :])
 
 
 class TestIndexers(TestCase):
@@ -204,9 +282,8 @@ class TestLazyArray(TestCase):
                 actual = x[new_slice]
                 self.assertArrayEqual(expected, actual)
 
-    @pytest.mark.xfail
     def test_lazily_indexed_array(self):
-        x = indexing.NumpyIndexingAdapter(np.random.rand(10, 20, 30))
+        x = NumpyOrthogonalIndexingAdapter(np.random.rand(10, 20, 30))
         lazy = indexing.LazilyIndexedArray(x)
         I = ReturnItem()
         # test orthogonally applied indexers
@@ -326,3 +403,25 @@ class Test_orthogonalize_indexers(TestCase):
         with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
             indexing.orthogonalize_indexers((np.ones((1, 2)), np.ones((2, 1))),
                                             shape=(3, 2))
+
+
+class TestBroadcastedIndexingAdapter(TestCase):
+    def test_basic(self):
+        original = np.random.rand(10, 20, 30)
+        v = Variable(('i', 'j', 'k'), original)
+        orthogonal = NumpyOrthogonalIndexingAdapter(original)
+        wrapped = indexing.BroadcastedIndexingAdapter(orthogonal)
+        I = ReturnItem()
+        # test broadcasted indexers
+        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
+        for i in indexers:
+            for j in indexers:
+                for k in indexers:
+                    actual_ortho = orthogonal[i, j, k]
+                    dims, indexer = v._broadcast_indexes((i, j, k))
+                    expected = original[indexer]
+                    actual = wrapped[indexer]
+                    self.assertEqual(expected.shape, actual_ortho.shape)
+                    self.assertArrayEqual(expected, actual_ortho)
+                    self.assertEqual(expected.shape, actual.shape)
+                    self.assertArrayEqual(expected, actual)
