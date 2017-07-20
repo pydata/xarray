@@ -284,25 +284,27 @@ class TestLazyArray(TestCase):
 
     def test_lazily_indexed_array(self):
         x = NumpyOrthogonalIndexingAdapter(np.random.rand(10, 20, 30))
+        v = Variable(['i', 'j', 'k'], x.array)
         lazy = indexing.LazilyIndexedArray(x)
+        v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()
         # test orthogonally applied indexers
         indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], np.arange(10) < 5]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
-                    expected = np.asarray(x[i, j, k])
-                    for actual in [lazy[i, j, k],
-                                   lazy[:, j, k][i],
-                                   lazy[:, :, k][:, j][i]]:
+                    expected = np.asarray(v[i, j, k])
+                    for actual in [v_lazy[i, j, k],
+                                   v_lazy[:, j, k][i],
+                                   v_lazy[:, :, k][:, j][i]]:
                         self.assertEqual(expected.shape, actual.shape)
                         self.assertArrayEqual(expected, actual)
         # test sequentially applied indexers
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
         for i, j in indexers:
-            expected = np.asarray(x[i][j])
-            actual = lazy[i][j]
+            expected = np.asarray(v[i][j])
+            actual = v_lazy[i][j]
             self.assertEqual(expected.shape, actual.shape)
             self.assertArrayEqual(expected, actual)
 

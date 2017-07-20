@@ -388,7 +388,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         self.key = key
 
     def _updated_key(self, new_key):
-        new_key = iter(canonicalize_indexer(new_key, self.ndim))
+        new_key = iter(orthogonalize_indexers(new_key, self.shape))
         key = []
         for size, k in zip(self.array.shape, self.key):
             if isinstance(k, integer_types):
@@ -481,6 +481,8 @@ def orthogonalize_indexers(key, shape):
     key: tuple of np.ndarray, ndarray, slice, integer
     shape: shape of array
     """
+    key = expanded_indexer(key, len(shape))
+
     if all(isinstance(k, integer_types + (slice,)) for k in key):
         # basic indexing
         return key
