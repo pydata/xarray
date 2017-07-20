@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import pandas as pd
+import pytest
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
@@ -203,6 +204,7 @@ class TestLazyArray(TestCase):
                 actual = x[new_slice]
                 self.assertArrayEqual(expected, actual)
 
+    @pytest.mark.xfail
     def test_lazily_indexed_array(self):
         x = indexing.NumpyIndexingAdapter(np.random.rand(10, 20, 30))
         lazy = indexing.LazilyIndexedArray(x)
@@ -278,3 +280,49 @@ class TestMemoryCachedArray(TestCase):
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(['foo', 'bar']))
         assert np.array(x[0][()]) == 'foo'
+
+
+class Test_orthogonalize_indexers(TestCase):
+    def assert1dIndexEqual(self, x, y, size):
+        """ Compare 1d vector, slice, array """
+        def vectorize(array):
+            if isinstance(array, slice):  # slice
+                return np.arange(*array.indices(size))
+            if hasattr(array, 'dtype') and array.dtype.kind == 'b':
+                # boolean array
+                return np.arange(len(array))[array]
+            return np.arange(size)[array]
+
+        self.assertArrayEqual(vectorize(x), vectorize(y))
+        self.assertArrayEqual(vectorize(x).shape, vectorize(y).shape)
+
+    def test(self):
+        original = np.random.rand(10, 20, 30)
+        v = Variable(('i', 'j', 'k'), original)
+        I = ReturnItem()
+        # test broadcasted indexers
+        indexers = [I[:], 0, -2, I[:3], [4, 1, 2, 3], [0], np.arange(10) < 5]
+        for i in indexers:
+            for j in indexers:
+                for k in indexers:
+                    dims, indexer = v._broadcast_indexes((i, j, k))
+                    orthogonalized = indexing.orthogonalize_indexers(
+                                                        indexer, v.shape)
+                    dim_new, indexer_new = v._broadcast_indexes(orthogonalized)
+
+                    self.assertArrayEqual(original[indexer],
+                                          original[indexer_new])
+                    orthogonalized_new = indexing.orthogonalize_indexers(
+                                                        indexer_new, v.shape)
+                    self.assertArrayEqual(orthogonalized[0],
+                                          orthogonalized_new[0])
+                    self.assertArrayEqual(orthogonalized[0],
+                                          orthogonalized_new[0])
+
+    def test_error(self):
+        with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
+            indexing.orthogonalize_indexers((np.ones((2, 2)), np.ones((2, 1))),
+                                            shape=(3, 2))
+        with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
+            indexing.orthogonalize_indexers((np.ones((1, 2)), np.ones((2, 1))),
+                                            shape=(3, 2))
