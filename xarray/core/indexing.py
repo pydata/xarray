@@ -520,12 +520,10 @@ def orthogonalize_indexers(key, shape):
         else:
             key[i] = np.ravel(k)
             cursor += 1
-    key = tuple(maybe_convert_to_slice(k, size) if hasattr(k, 'dim') else k
+    key = tuple(k if isinstance(k, integer_types)
+                else maybe_convert_to_slice(k, size)
                 for k, size in zip(key, shape))
     return key
-
-    #except ValueError:
-    #    raise IndexError("Indexer cannot be orthogonalized: {}".format(key))
 
 
 def broadcasted_indexable(array):
