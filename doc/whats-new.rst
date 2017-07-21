@@ -21,8 +21,24 @@ v0.9.7 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
+
 Bug fixes
 ~~~~~~~~~
+
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
+
+- :py:meth:`~xarray.Dataset.rename` method now doesn't throw errors
+  if some ``Variable`` is renamed to the same name as another ``Variable``
+  as long as that other ``Variable`` is also renamed. This method now
+  does throw when two ``Variables`` would end up with the same name
+  after the rename (since one of them would get overwritten in this
+  case). See (:issue:`1477`) for details.
+  By `Prakhar Goel <https://github.com/newt0311>`_.
 
 .. _whats-new.0.9.6:
 
@@ -203,6 +219,9 @@ Enhancements
   to ``py.test`` (:issue:`1336`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
 ~~~~~~~~~
@@ -441,6 +460,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

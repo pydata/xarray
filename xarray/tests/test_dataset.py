@@ -873,8 +873,10 @@ class TestDataset(TestCase):
         data = Dataset({'x': ('td', np.arange(3)), 'td': td})
         self.assertDatasetEqual(data, data.sel(td=td))
         self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0 days'))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0h'))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0 days')))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0h')))
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
@@ -1474,7 +1476,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
-        with self.assertRaisesRegexp(ValueError, "'var1' already exists"):
+        with self.assertRaisesRegexp(ValueError, "'var1' conflicts"):
             data.rename({'var2': 'var1'})
 
         # verify that we can rename a variable without accessing the data
@@ -1483,6 +1485,16 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+    def test_rename_old_name(self):
+        # regtest for GH1477
+        data = create_test_data()
+
+        with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
+            data.rename({'var1': 'samecol', 'var2': 'samecol'})
+
+        # This shouldn't cause any problems.
+        data.rename({'var1': 'var2', 'var2': 'var1'})
 
     def test_rename_same_name(self):
         data = create_test_data()

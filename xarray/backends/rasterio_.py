@@ -87,7 +87,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
 
     This should work with any file that rasterio can open (most often:
     geoTIFF). The x and y coordinates are generated automatically from the
-    file's geoinformation.
+    file's geoinformation, shifted to the center of each pixel (see
+    `"PixelIsArea" Raster Space
+    <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
+    for more information).
 
     Parameters
     ----------
@@ -132,8 +135,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     dx, dy = riods.res[0], -riods.res[1]
     x0 = riods.bounds.right if dx < 0 else riods.bounds.left
     y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    coords['y'] = np.linspace(start=y0, num=ny, stop=(y0 + (ny - 1) * dy))
-    coords['x'] = np.linspace(start=x0, num=nx, stop=(x0 + (nx - 1) * dx))
+    coords['y'] = np.linspace(start=y0 + dy/2, num=ny,
+                              stop=(y0 + (ny - 1) * dy) + dy/2)
+    coords['x'] = np.linspace(start=x0 + dx/2, num=nx,
+                              stop=(x0 + (nx - 1) * dx) + dx/2)
 
     # Attributes
     attrs = {}
@@ -141,7 +146,17 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # CRS is a dict-like object specific to rasterio
         # We convert it back to a PROJ4 string using rasterio itself
         attrs['crs'] = riods.crs.to_string()
-    # Maybe we'd like to parse other attributes here (for later)
+    if hasattr(riods, 'res'):
+        # (width, height) tuple of pixels in units of CRS
+        attrs['res'] = riods.res
+    if hasattr(riods, 'is_tiled'):
+        # Is the TIF tiled? (bool)
+        # We cast it to an int for netCDF compatibility
+        attrs['is_tiled'] = np.uint8(riods.is_tiled)
+    if hasattr(riods, 'transform'):
+        # Affine transformation matrix (tuple of floats)
+        # Describes coefficients mapping pixel coordinates to CRS
+        attrs['transform'] = tuple(riods.transform)
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 

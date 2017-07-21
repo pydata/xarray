@@ -1443,7 +1443,6 @@ class TestPyNioAutocloseTrue(TestPyNio):
 class TestRasterio(TestCase):
 
     def test_serialization_utm(self):
-
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1462,17 +1461,25 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # Tests
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'band': [1, 2, 3],
-                                         'y': -np.arange(ny) * 2000 + 80000,
-                                         'x': np.arange(nx) * 1000 + 5000,
-                                         })
+                                 coords={
+                                     'band': [1, 2, 3],
+                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
+                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
+                                 })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -1498,18 +1505,25 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data, indexes=1)
+                dx, dy = s.res[0], -s.res[1]
 
             # Tests
             expected = DataArray(data[np.newaxis, ...],
                                  dims=('band', 'y', 'x'),
                                  coords={'band': [1],
-                                         'y': -np.arange(ny)*2 + 2,
-                                         'x': np.arange(nx)*0.5 + 1,
+                                         'y': -np.arange(ny)*2 + 2 + dy/2,
+                                         'x': np.arange(nx)*0.5 + 1 + dx/2,
                                          })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -1536,11 +1550,12 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': np.arange(nx)*0.5 + 1,
-                                         'y': -np.arange(ny)*2 + 2,
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
                                          'band': [1, 2, 3]})
 
             with xr.open_rasterio(tmp_file, cache=False) as actual:
@@ -1628,11 +1643,12 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': np.arange(nx)*0.5 + 1,
-                                         'y': -np.arange(ny)*2 + 2,
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
                                          'band': [1, 2, 3]})
 
             # Cache is the default
@@ -1671,6 +1687,7 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # Chunk at open time
             with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
@@ -1681,8 +1698,8 @@ class TestRasterio(TestCase):
 
                 # ref
                 expected = DataArray(data, dims=('band', 'y', 'x'),
-                                     coords={'x': np.arange(nx)*0.5 + 1,
-                                             'y': -np.arange(ny)*2 + 2,
+                                     coords={'x': np.arange(nx)*0.5 + 1 + dx/2,
+                                             'y': -np.arange(ny)*2 + 2 + dy/2,
                                              'band': [1, 2, 3]})
 
                 # do some arithmetic
