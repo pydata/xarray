@@ -542,7 +542,10 @@ def unbroadcast_indexes(key, shape):
         else:
             key[i] = np.ravel(k)
             cursor += 1
-    return tuple(key)
+
+    return tuple(k if isinstance(k, (integer_types, slice))
+                 else maybe_convert_to_slice(k, size)
+                 for k, size in zip(key, shape))
 
 
 class BroadcastIndexedAdapter(utils.NDArrayMixin):
@@ -608,11 +611,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
 
     def _broadcast_indexes(self, key):
         try:
-            key = unbroadcast_indexes(key, self.shape)
-            return tuple(k if isinstance(k, (integer_types, slice))
-                         else maybe_convert_to_slice(k, size)
-                         for k, size in zip(key, self.shape))
-
+            return unbroadcast_indexes(key, self.shape)
         except IndexError:
             # TODO: handle point-wise indexing with vindex
             raise IndexError(

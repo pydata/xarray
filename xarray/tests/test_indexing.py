@@ -362,19 +362,6 @@ class TestMemoryCachedArray(TestCase):
 
 
 class Test_unbroadcast_indexes(TestCase):
-    def assert1dIndexEqual(self, x, y, size):
-        """ Compare 1d vector, slice, array """
-        def vectorize(array):
-            if isinstance(array, slice):  # slice
-                return np.arange(*array.indices(size))
-            if hasattr(array, 'dtype') and array.dtype.kind == 'b':
-                # boolean array
-                return np.arange(len(array))[array]
-            return np.arange(size)[array]
-
-        self.assertArrayEqual(vectorize(x), vectorize(y))
-        self.assertArrayEqual(vectorize(x).shape, vectorize(y).shape)
-
     def test(self):
         original = np.random.rand(10, 20, 30)
         v = Variable(('i', 'j', 'k'), original)
