@@ -82,6 +82,7 @@ install:
       conda remove scipy;
     fi
   - python setup.py install
+  - python xarray/util/print_versions.py
 
 script:
   - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS

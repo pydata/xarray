@@ -27,6 +27,7 @@ except ImportError:  # pragma: no cover
                       'the source directory, please instead create a new '
                       'virtual environment (using conda or virtualenv) and '
                       'then install it in-place by running: pip install -e .')
+from .util.print_versions import show_versions
 
 from . import tutorial
 from . import ufuncs
