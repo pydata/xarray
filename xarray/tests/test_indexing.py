@@ -360,7 +360,7 @@ class TestMemoryCachedArray(TestCase):
         assert np.array(x[0][()]) == 'foo'
 
 
-class Test_unbroadcast_indexers(TestCase):
+class Test_unbroadcast_indexes(TestCase):
     def assert1dIndexEqual(self, x, y, size):
         """ Compare 1d vector, slice, array """
         def vectorize(array):
@@ -384,13 +384,13 @@ class Test_unbroadcast_indexers(TestCase):
             for j in indexers:
                 for k in indexers:
                     dims, indexer = v._broadcast_indexes((i, j, k))
-                    orthogonalized = indexing.unbroadcast_indexers(
+                    orthogonalized = indexing.unbroadcast_indexes(
                                                         indexer, v.shape)
                     dim_new, indexer_new = v._broadcast_indexes(orthogonalized)
 
                     self.assertArrayEqual(original[indexer],
                                           original[indexer_new])
-                    orthogonalized_new = indexing.unbroadcast_indexers(
+                    orthogonalized_new = indexing.unbroadcast_indexes(
                                                         indexer_new, v.shape)
                     self.assertArrayEqual(orthogonalized[0],
                                           orthogonalized_new[0])
@@ -399,10 +399,10 @@ class Test_unbroadcast_indexers(TestCase):
 
     def test_error(self):
         with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.unbroadcast_indexers((np.ones((2, 2)), np.ones((2, 1))),
+            indexing.unbroadcast_indexes((np.ones((2, 2)), np.ones((2, 1))),
                                           shape=(3, 2))
         with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.unbroadcast_indexers((np.ones((1, 2)), np.ones((2, 1))),
+            indexing.unbroadcast_indexes((np.ones((1, 2)), np.ones((2, 1))),
                                           shape=(3, 2))
 
 

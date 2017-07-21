@@ -492,7 +492,7 @@ class MemoryCachedArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-def unbroadcast_indexers(key, shape):
+def unbroadcast_indexes(key, shape):
     """
     Convert broadcasted indexers to orthogonal indexers.
     If there is no valid mapping, raises IndexError.
@@ -560,12 +560,12 @@ class BroadcastedIndexingAdapter(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
-        key = unbroadcast_indexers(key, self.shape)
+        key = unbroadcast_indexes(key, self.shape)
         return type(self)(self.array[key])
 
     def __setitem__(self, key, value):
         key = expanded_indexer(key, self.ndim)
-        key = unbroadcast_indexers(key, self.shape)
+        key = unbroadcast_indexes(key, self.shape)
         self.array[key] = value
 
 
@@ -612,7 +612,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
 
     def _broadcast_indexes(self, key):
         try:
-            return unbroadcast_indexers(key, self.shape)
+            return unbroadcast_indexes(key, self.shape)
             # TODO: handle point-wise indexing with vindex
         except IndexError:
             raise IndexError(
