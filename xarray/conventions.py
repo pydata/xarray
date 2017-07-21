@@ -666,11 +666,12 @@ def maybe_encode_dtype(var, name=None):
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if encoding.get('_Unsigned', False):
-                    unsigned_dtype = 'i%s' % dtype.itemsize
-                    old_fill = np.asarray(attrs['_FillValue'])
-                    new_fill = old_fill.astype(unsigned_dtype)
-                    attrs['_FillValue'] = new_fill
-                    data = data.astype(unsigned_dtype)
+                    signed_dtype = 'i%s' % dtype.itemsize
+                    if '_FillValue' in var.attrs:
+                        old_fill = np.asarray(attrs['_FillValue'])
+                        new_fill = old_fill.astype(signed_dtype)
+                        attrs['_FillValue'] = new_fill
+                    data = data.astype(signed_dtype)
                     pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
@@ -824,7 +825,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     pop_to(attributes, encoding, '_Unsigned')
     is_unsigned = encoding.get('_Unsigned', False)
-    if (is_unsigned) and (mask_and_scale is True):
+    if is_unsigned and mask_and_scale:
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
@@ -860,11 +861,12 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 dtype = object
             else:
                 dtype = float
-            if is_unsigned and has_fill:
-                # Need to convert the fill_value to unsigned, too
-                # According to the CF spec, the fill value is of the same
-                # type as its variable, i.e. its storage format on disk
-                fill_value = np.asarray(fill_value, dtype=data.unsigned_dtype)
+            # According to the CF spec, the fill value is of the same
+            # type as its variable, i.e. its storage format on disk.
+            # This handles the case where the fill_value also needs to be
+            # converted to its unsigned value.
+            if has_fill:
+                fill_value = np.asarray(fill_value, dtype=data.dtype)
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 

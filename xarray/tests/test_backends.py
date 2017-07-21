@@ -381,23 +381,36 @@ class CFEncodedDataTest(DatasetIOTestCases):
         decoded = create_unsigned_masked_scaled_data()
         encoded = create_encoded_unsigned_masked_scaled_data()
         with self.roundtrip(decoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
-            # TODO: this assumes that all roundtrips will first
-            # encode.  Is that something we want to test for?
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
             self.assertDatasetAllClose(encoded, actual)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
         self.assertDatasetIdentical(
             encoded, create_encoded_unsigned_masked_scaled_data())
         with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
             self.assertDatasetAllClose(decoded, actual)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
             self.assertDatasetAllClose(encoded, actual)
 
     def test_roundtrip_mask_and_scale(self):
