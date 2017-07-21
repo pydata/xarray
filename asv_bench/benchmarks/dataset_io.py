@@ -164,3 +164,167 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
         with dask.set_options(get=dask.multiprocessing.get):
             xr.open_dataset(self.filepath, engine='scipy',
                             chunks=self.time_chunks).load()
+
+
+class IOMultipleNetCDF(object):
+    """
+    A few examples that benchmark reading/writing multiple netCDF files with
+    xarray
+    """
+
+    timeout = 300.
+    repeat = 1
+    number = 5
+
+    def make_ds(self, nfiles=10):
+
+        # multiple Dataset
+        self.ds = xr.Dataset()
+        self.nt = 1000
+        self.nx = 90
+        self.ny = 45
+        self.nfiles = nfiles
+
+        self.block_chunks = {'time': self.nt / 4,
+                             'lon': self.nx / 3,
+                             'lat': self.ny / 3}
+
+        self.time_chunks = {'time': int(self.nt / 36)}
+
+        self.time_vars = np.split(
+            pd.date_range('1970-01-01', periods=self.nt, freq='D'),
+            self.nfiles)
+
+        self.ds_list = []
+        self.filenames_list = []
+        for i, times in enumerate(self.time_vars):
+            ds = xr.Dataset()
+            nt = len(times)
+            lons = xr.DataArray(np.linspace(0, 360, self.nx), dims=('lon', ),
+                                attrs={'units': 'degrees east',
+                                       'long_name': 'longitude'})
+            lats = xr.DataArray(np.linspace(-90, 90, self.ny), dims=('lat', ),
+                                attrs={'units': 'degrees north',
+                                       'long_name': 'latitude'})
+            ds['foo'] = xr.DataArray(randn((nt, self.nx, self.ny),
+                                           frac_nan=0.2),
+                                     coords={'lon': lons, 'lat': lats,
+                                             'time': times},
+                                     dims=('time', 'lon', 'lat'),
+                                     name='foo', encoding=None,
+                                     attrs={'units': 'foo units',
+                                            'description': 'a description'})
+            ds['bar'] = xr.DataArray(randn((nt, self.nx, self.ny),
+                                           frac_nan=0.2),
+                                     coords={'lon': lons, 'lat': lats,
+                                             'time': times},
+                                     dims=('time', 'lon', 'lat'),
+                                     name='bar', encoding=None,
+                                     attrs={'units': 'bar units',
+                                            'description': 'a description'})
+            ds['baz'] = xr.DataArray(randn((self.nx, self.ny),
+                                           frac_nan=0.2).astype(np.float32),
+                                     coords={'lon': lons, 'lat': lats},
+                                     dims=('lon', 'lat'),
+                                     name='baz', encoding=None,
+                                     attrs={'units': 'baz units',
+                                            'description': 'a description'})
+
+            ds.attrs = {'history': 'created for xarray benchmarking'}
+
+            self.ds_list.append(ds)
+            self.filenames_list.append('test_netcdf_%i.nc' % i)
+
+
+class IOWriteMultipleNetCDF3(IOMultipleNetCDF):
+    def setup(self):
+        self.make_ds()
+        self.format = 'NETCDF3_64BIT'
+
+    def time_write_dataset_netcdf4(self):
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          engine='netcdf4',
+                          format=self.format)
+
+    def time_write_dataset_scipy(self):
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          engine='scipy',
+                          format=self.format)
+
+
+class IOReadMultipleNetCDF4(IOMultipleNetCDF):
+    def setup(self):
+
+        requires_dask()
+
+        self.make_ds()
+        self.format = 'NETCDF4'
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          format=self.format)
+
+    def time_load_dataset_netcdf4(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4').load()
+
+
+class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
+    def setup(self):
+
+        requires_dask()
+
+        self.make_ds()
+        self.format = 'NETCDF3_64BIT'
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          format=self.format)
+
+    def time_load_dataset_scipy(self):
+        xr.open_mfdataset(self.filenames_list, engine='scipy').load()
+
+
+class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
+    def setup(self):
+
+        requires_dask()
+
+        self.make_ds()
+        self.format = 'NETCDF4'
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          format=self.format)
+
+    def time_load_dataset_netcdf4_with_block_chunks(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                          chunks=self.block_chunks).load()
+
+    def time_load_dataset_netcdf4_with_block_chunks_multiprocessing(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                              chunks=self.block_chunks).load()
+
+    def time_load_dataset_netcdf4_with_time_chunks(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                          chunks=self.time_chunks).load()
+
+    def time_load_dataset_netcdf4_with_time_chunks_multiprocessing(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                              chunks=self.time_chunks).load()
+
+
+class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
+    def setup(self):
+
+        requires_dask()
+
+        self.make_ds()
+        self.format = 'NETCDF3_64BIT'
+        xr.save_mfdataset(self.ds_list, self.filenames_list,
+                          format=self.format)
+
+    def time_load_dataset_scipy_with_block_chunks(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='scipy',
+                              chunks=self.block_chunks).load()
+
+    def time_load_dataset_scipy_with_time_chunks(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='scipy',
+                              chunks=self.time_chunks).load()
