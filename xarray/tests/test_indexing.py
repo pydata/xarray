@@ -282,8 +282,9 @@ class TestLazyArray(TestCase):
                 self.assertArrayEqual(expected, actual)
 
     def test_lazily_indexed_array(self):
-        x = np.random.rand(10, 20, 30)
-        v = Variable(['i', 'j', 'k'], x)
+        original = np.random.rand(10, 20, 30)
+        x = NumpyOrthogonalIndexingAdapter(original)
+        v = Variable(['i', 'j', 'k'], original)
         lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()
@@ -406,12 +407,12 @@ class Test_unbroadcast_indexes(TestCase):
                                           shape=(3, 2))
 
 
-class TestBroadcastedIndexingAdapter(TestCase):
+class TestBroadcastIndexedAdapter(TestCase):
     def test_basic(self):
         original = np.random.rand(10, 20, 30)
         v = Variable(('i', 'j', 'k'), original)
         orthogonal = NumpyOrthogonalIndexingAdapter(original)
-        wrapped = indexing.BroadcastedIndexingAdapter(orthogonal)
+        wrapped = indexing.BroadcastIndexedAdapter(orthogonal)
         I = ReturnItem()
         # test broadcasted indexers
         indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
@@ -427,4 +428,4 @@ class TestBroadcastedIndexingAdapter(TestCase):
                     self.assertEqual(expected.shape, actual.shape)
                     self.assertArrayEqual(expected, actual)
                     self.assertTrue(type(actual),
-                                    indexing.BroadcastedIndexingAdapter)
+                                    indexing.BroadcastIndexedAdapter)

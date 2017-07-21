@@ -42,7 +42,6 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-# TODO should be deprecated
 def canonicalize_indexer(key, ndim):
     """Given an indexer for orthogonal array indexing, return an indexer that
     is a tuple composed entirely of slices, integer ndarrays and native python
@@ -433,7 +432,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     For using orthogonal indexers, use OrthogonalLazilyIndexedArray.
     """
     def __init__(self, array, key=None):
-        self.array = BroadcastedIndexingAdapter(
+        self.array = BroadcastIndexedAdapter(
                                 OrthogonalLazilyIndexedArray(array, key))
 
     @property
@@ -543,13 +542,10 @@ def unbroadcast_indexes(key, shape):
         else:
             key[i] = np.ravel(k)
             cursor += 1
-    key = tuple(k if isinstance(k, integer_types)
-                else maybe_convert_to_slice(k, size)
-                for k, size in zip(key, shape))
-    return key
+    return tuple(key)
 
 
-class BroadcastedIndexingAdapter(utils.NDArrayMixin):
+class BroadcastIndexedAdapter(utils.NDArrayMixin):
     """ An array wrapper for orthogonally indexed arrays, such as netCDF
     in order to indexed by broadcasted indexers. """
     def __init__(self, array):
@@ -612,9 +608,13 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
 
     def _broadcast_indexes(self, key):
         try:
-            return unbroadcast_indexes(key, self.shape)
-            # TODO: handle point-wise indexing with vindex
+            key = unbroadcast_indexes(key, self.shape)
+            return tuple(k if isinstance(k, (integer_types, slice))
+                         else maybe_convert_to_slice(k, size)
+                         for k, size in zip(key, self.shape))
+
         except IndexError:
+            # TODO: handle point-wise indexing with vindex
             raise IndexError(
               'dask does not support fancy indexing with key: {}'.format(key))
 
