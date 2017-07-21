@@ -369,8 +369,11 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class LazilyIndexedArray(utils.NDArrayMixin):
+class OrthogonalLazilyIndexedArray(utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
+
+    This is array is indexed by orthogonal-indexing. For using broadcasted
+    indexers, use LazilyIndexedArray.
     """
     def __init__(self, array, key=None):
         """
@@ -388,7 +391,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         self.key = key
 
     def _updated_key(self, new_key):
-        new_key = iter(unbroadcast_indexers(new_key, self.shape))
+        new_key = iter(new_key)
         key = []
         for size, k in zip(self.array.shape, self.key):
             if isinstance(k, integer_types):
@@ -408,10 +411,10 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        array = broadcasted_indexable(self.array)
-        return np.asarray(array[self.key], dtype=None)
+        return np.asarray(self.array[self.key], dtype=None)
 
     def __getitem__(self, key):
+        key = expanded_indexer(key, self.ndim)
         return type(self)(self.array, self._updated_key(key))
 
     def __setitem__(self, key, value):
@@ -421,6 +424,24 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
                 (type(self).__name__, self.array, self.key))
+
+
+class LazilyIndexedArray(utils.NDArrayMixin):
+    """ Wrap an array that handles orthogonal indexing to make indexing lazy
+
+    This is LazilyIndexedArray is indexed by broadcaseted-indexing.
+    For using orthogonal indexers, use OrthogonalLazilyIndexedArray.
+    """
+    def __init__(self, array, key=None):
+        self.array = BroadcastedIndexingAdapter(
+                                OrthogonalLazilyIndexedArray(array, key))
+
+    @property
+    def shape(self):
+        return self.array.array.shape
+
+    def __repr__(self):
+        return self.array.array.__repr__()
 
 
 def _wrap_numpy_scalars(array):
@@ -529,14 +550,23 @@ def unbroadcast_indexers(key, shape):
 
 
 class BroadcastedIndexingAdapter(utils.NDArrayMixin):
-    """ An array wrapper for orthogonally indexed arrays, such as netCDF. """
+    """ An array wrapper for orthogonally indexed arrays, such as netCDF
+    in order to indexed by broadcasted indexers. """
     def __init__(self, array):
         self.array = array
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
         key = unbroadcast_indexers(key, self.shape)
-        return self.array[key]
+        return type(self)(self.array[key])
+
+    def __setitem__(self, key, value):
+        key = expanded_indexer(key, self.ndim)
+        key = unbroadcast_indexers(key, self.shape)
+        self.array[key] = value
 
 
 def broadcasted_indexable(array):

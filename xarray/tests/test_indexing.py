@@ -282,13 +282,13 @@ class TestLazyArray(TestCase):
                 self.assertArrayEqual(expected, actual)
 
     def test_lazily_indexed_array(self):
-        x = NumpyOrthogonalIndexingAdapter(np.random.rand(10, 20, 30))
-        v = Variable(['i', 'j', 'k'], x.array)
+        x = np.random.rand(10, 20, 30)
+        v = Variable(['i', 'j', 'k'], x)
         lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()
         # test orthogonally applied indexers
-        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], np.arange(10) < 5]
+        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
@@ -426,3 +426,5 @@ class TestBroadcastedIndexingAdapter(TestCase):
                     self.assertArrayEqual(expected, actual_ortho)
                     self.assertEqual(expected.shape, actual.shape)
                     self.assertArrayEqual(expected, actual)
+                    self.assertTrue(type(actual),
+                                    indexing.BroadcastedIndexingAdapter)
