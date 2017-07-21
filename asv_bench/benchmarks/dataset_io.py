@@ -265,6 +265,9 @@ class IOReadMultipleNetCDF4(IOMultipleNetCDF):
     def time_load_dataset_netcdf4(self):
         xr.open_mfdataset(self.filenames_list, engine='netcdf4').load()
 
+    def time_open_dataset_netcdf4(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4')
+
 
 class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
     def setup(self):
@@ -278,6 +281,9 @@ class IOReadMultipleNetCDF3(IOReadMultipleNetCDF4):
 
     def time_load_dataset_scipy(self):
         xr.open_mfdataset(self.filenames_list, engine='scipy').load()
+
+    def time_open_dataset_scipy(self):
+        xr.open_mfdataset(self.filenames_list, engine='scipy')
 
 
 class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
@@ -308,6 +314,24 @@ class IOReadMultipleNetCDF4Dask(IOMultipleNetCDF):
             xr.open_mfdataset(self.filenames_list, engine='netcdf4',
                               chunks=self.time_chunks).load()
 
+    def time_open_dataset_netcdf4_with_block_chunks(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                          chunks=self.block_chunks)
+
+    def time_open_dataset_netcdf4_with_block_chunks_multiprocessing(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                              chunks=self.block_chunks)
+
+    def time_open_dataset_netcdf4_with_time_chunks(self):
+        xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                          chunks=self.time_chunks)
+
+    def time_open_dataset_netcdf4_with_time_chunks_multiprocessing(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='netcdf4',
+                              chunks=self.time_chunks)
+
 
 class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
     def setup(self):
@@ -328,3 +352,13 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
         with dask.set_options(get=dask.multiprocessing.get):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.time_chunks).load()
+
+    def time_open_dataset_scipy_with_block_chunks(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='scipy',
+                              chunks=self.block_chunks)
+
+    def time_open_dataset_scipy_with_time_chunks(self):
+        with dask.set_options(get=dask.multiprocessing.get):
+            xr.open_mfdataset(self.filenames_list, engine='scipy',
+                              chunks=self.time_chunks)
