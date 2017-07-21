@@ -74,7 +74,7 @@ def show_versions(as_json=False):
         ("netCDF4", lambda mod: mod.__version__),
         # ("pydap", lambda mod: mod.version.version),
         ("h5netcdf", lambda mod: mod.__version__),
-        ("pynio", lambda mod: mod.__version__),
+        ("Nio", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("cyordereddict", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
