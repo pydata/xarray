@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import pandas as pd
-import pytest
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing, utils
@@ -361,7 +360,7 @@ class TestMemoryCachedArray(TestCase):
         assert np.array(x[0][()]) == 'foo'
 
 
-class Test_orthogonalize_indexers(TestCase):
+class Test_unbroadcast_indexers(TestCase):
     def assert1dIndexEqual(self, x, y, size):
         """ Compare 1d vector, slice, array """
         def vectorize(array):
@@ -385,13 +384,13 @@ class Test_orthogonalize_indexers(TestCase):
             for j in indexers:
                 for k in indexers:
                     dims, indexer = v._broadcast_indexes((i, j, k))
-                    orthogonalized = indexing.orthogonalize_indexers(
+                    orthogonalized = indexing.unbroadcast_indexers(
                                                         indexer, v.shape)
                     dim_new, indexer_new = v._broadcast_indexes(orthogonalized)
 
                     self.assertArrayEqual(original[indexer],
                                           original[indexer_new])
-                    orthogonalized_new = indexing.orthogonalize_indexers(
+                    orthogonalized_new = indexing.unbroadcast_indexers(
                                                         indexer_new, v.shape)
                     self.assertArrayEqual(orthogonalized[0],
                                           orthogonalized_new[0])
@@ -400,11 +399,11 @@ class Test_orthogonalize_indexers(TestCase):
 
     def test_error(self):
         with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.orthogonalize_indexers((np.ones((2, 2)), np.ones((2, 1))),
-                                            shape=(3, 2))
+            indexing.unbroadcast_indexers((np.ones((2, 2)), np.ones((2, 1))),
+                                          shape=(3, 2))
         with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.orthogonalize_indexers((np.ones((1, 2)), np.ones((2, 1))),
-                                            shape=(3, 2))
+            indexing.unbroadcast_indexers((np.ones((1, 2)), np.ones((2, 1))),
+                                          shape=(3, 2))
 
 
 class TestBroadcastedIndexingAdapter(TestCase):
