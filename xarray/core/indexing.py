@@ -510,7 +510,7 @@ def unbroadcast_indexes(key, shape):
     i_dim = 0
     orthogonal_keys = []
     for k in key:
-        if hasattr(k, 'shape'):  # array
+        if hasattr(k, '__len__'):  # array
             if k.shape[i_dim] != k.size:
                 raise IndexError(
                     "Indexer cannot be orthogonalized: {}".format(k))
