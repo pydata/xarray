@@ -319,7 +319,7 @@ class DatasetIOTestCases(object):
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
-            indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)

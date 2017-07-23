@@ -368,10 +368,10 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class OrthogonalLazilyIndexedArray(utils.NDArrayMixin):
+class LazilyIndexedArray(utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
 
-    This is array is indexed by orthogonal-indexing. For using broadcasted
+    This is array is indexed by broadcasted-indexing. For using broadcasted
     indexers, use LazilyIndexedArray.
     """
     def __init__(self, array, key=None):
@@ -384,10 +384,18 @@ class OrthogonalLazilyIndexedArray(utils.NDArrayMixin):
             Array indexer. If provided, it is assumed to already be in
             canonical expanded form.
         """
-        if key is None:
-            key = (slice(None),) * array.ndim
-        self.array = array
-        self.key = key
+        # We need to ensure that self.array is not LazilyIndexedArray,
+        # because LazilyIndexedArray is not orthogonaly indexable
+        if isinstance(array, type(self)):
+            self.array = array.array
+            self.key = array.key
+            if key is not None:
+                self.key = self._updated_key(key)
+        else:
+            if key is None:
+                key = (slice(None),) * array.ndim
+            self.array = array
+            self.key = key
 
     def _updated_key(self, new_key):
         new_key = iter(new_key)
@@ -414,33 +422,18 @@ class OrthogonalLazilyIndexedArray(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
+        key = unbroadcast_indexes(key, self.shape)
         return type(self)(self.array, self._updated_key(key))
 
     def __setitem__(self, key, value):
+        key = expanded_indexer(key, self.ndim)
+        key = unbroadcast_indexes(key, self.shape)
         key = self._updated_key(key)
         self.array[key] = value
 
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
                 (type(self).__name__, self.array, self.key))
-
-
-class LazilyIndexedArray(utils.NDArrayMixin):
-    """ Wrap an array that handles orthogonal indexing to make indexing lazy
-
-    This is LazilyIndexedArray is indexed by broadcaseted-indexing.
-    For using orthogonal indexers, use OrthogonalLazilyIndexedArray.
-    """
-    def __init__(self, array, key=None):
-        self.array = BroadcastIndexedAdapter(
-                                OrthogonalLazilyIndexedArray(array, key))
-
-    @property
-    def shape(self):
-        return self.array.array.shape
-
-    def __repr__(self):
-        return self.array.array.__repr__()
 
 
 def _wrap_numpy_scalars(array):
