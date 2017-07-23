@@ -507,45 +507,19 @@ def unbroadcast_indexes(key, shape):
         # basic indexing
         return key
 
-    # Here, we need to distinguish integer and 1-element array
-    # E.G. If (key[0].shape, key[1].shape, key[2].shape) is
-    #   ((4, 1), (1, 1), (1, 3)) -> result_shape = [4, 3]
-    #   ((4, 1, 1), (1, 1, 1), (1, 1, 3)) -> result_shape = [4, 1, 3]
-    result_shape = [1] * key[0].ndim
+    i_dim = 0
+    orthogonal_keys = []
     for k in key:
-        if k.size != 1:
-            try:
-                result_shape[k.shape.index(k.size)] = k.size
-            except ValueError:
+        if hasattr(k, 'shape'):  # array
+            if k.shape[i_dim] != k.size:
                 raise IndexError(
                     "Indexer cannot be orthogonalized: {}".format(k))
-    # sanity check
-    dims = [k.shape.index(k.size) for k in key]
-    if dims[0] != 0:
-        raise IndexError("Indexer cannot be orthogonalized: {}".format(key))
-    while len(dims) > 0:  # remove 0
-        try:
-            dims.remove(0)
-        except ValueError:
-            break
-    for i in range(1, len(dims)):
-        if dims[i-1] > dims[i]:  # dims should be increasing
-            raise IndexError("Indexer cannot be orthogonalized:{}".format(key))
-
-    cursor = 0  # index moving in result_shape
-    key = list(key)
-    for i, k in enumerate(key):
-        if (k.size == 1 and
-                (len(result_shape) <= cursor or result_shape[cursor] != 1)):
-            # integer
-            key[i] = k.item()
-        else:
-            key[i] = np.ravel(k)
-            cursor += 1
-
-    return tuple(k if isinstance(k, (integer_types, slice))
-                 else maybe_convert_to_slice(k, size)
-                 for k, size in zip(key, shape))
+            else:
+                i_dim += 1
+                orthogonal_keys.append(np.ravel(k))
+        else:  # integer
+            orthogonal_keys.append(k)
+    return tuple(orthogonal_keys)
 
 
 class BroadcastIndexedAdapter(utils.NDArrayMixin):
@@ -609,20 +583,27 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         """
         self.array = array
 
-    def _broadcast_indexes(self, key):
+    def _orthogonalize_indexes(self, key):
         try:
-            return unbroadcast_indexes(key, self.shape)
+            key = unbroadcast_indexes(key, self.shape)
+            # convert them to slice if possible
+            return tuple(k if isinstance(k, (integer_types, slice))
+                         else maybe_convert_to_slice(k, size)
+                         for k, size in zip(key, self.shape))
+
         except IndexError:
             # TODO: handle point-wise indexing with vindex
             raise IndexError(
               'dask does not support fancy indexing with key: {}'.format(key))
 
     def __getitem__(self, key):
-        key = self._broadcast_indexes(key)
+        key = self._orthogonalize_indexes(key)
+        # TODO any orthogonalized key can be indexed recursively.
+        # TODO support vindex
         return self.array[key]
 
     def __setitem__(self, key, value):
-        key = self._broadcast_indexes(key)
+        key = self._orthogonalize_indexes(key)
         raise TypeError("this variable's data is stored in a dask array, "
                         'which does not support item assignment. To '
                         'assign to this variable, you must first load it '

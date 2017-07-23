@@ -405,11 +405,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if all([isinstance(k, basic_indexing_types) for k in key]):
             return self._broadcast_indexes_basic(key)
         else:
-            return self._broadcast_indexes_advanced(key)
+            vindexes = [np.asarray(k) for k in key if
+                        not isinstance(k, integer_types + (slice,))]
+            # slices and only one vector, no integers.
+            if (len(vindexes) == 0 and vindexes[0].ndim == 1 and
+                    sum([isinstance(k, slice) for k in key]) == len(key)-1):
+                return self._broadcast_indexes_1vector(key)
+            else:  # fancy indexing
+                return self._broadcast_indexes_advanced(key)
 
     def _broadcast_indexes_basic(self, key):
         dims = tuple(dim for k, dim in zip(key, self.dims)
                      if not isinstance(k, integer_types))
+        return dims, key
+
+    def _broadcast_indexes_1vector(self, key):
+        dims = tuple(key.dims[0] if hasattr(k, 'dims') else dim
+                     for k, dim in zip(key, self.dims))
         return dims, key
 
     def nonzero(self):
@@ -442,7 +454,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 variables.append(variable)
         variables = _broadcast_compat_variables(*variables)
         dims = variables[0].dims  # all variables have the same dims
-        key = tuple(variable.data for variable in variables)
+        # overwrite if there is integers
+        key = tuple(k if isinstance(k, integer_types) else variable.data
+                    for variable, k in zip(variables, key))
         return dims, key
 
     def __getitem__(self, key):
