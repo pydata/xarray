@@ -577,23 +577,27 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array = array
 
     def _orthogonalize_indexes(self, key):
-        try:
-            key = unbroadcast_indexes(key, self.shape)
-            # convert them to slice if possible
-            return tuple(k if isinstance(k, (integer_types, slice))
-                         else maybe_convert_to_slice(k, size)
-                         for k, size in zip(key, self.shape))
-
-        except IndexError:
-            # TODO: handle point-wise indexing with vindex
-            raise IndexError(
-              'dask does not support fancy indexing with key: {}'.format(key))
+        key = unbroadcast_indexes(key, self.shape)
+        # convert them to slice if possible
+        return tuple(k if isinstance(k, (integer_types, slice))
+                     else maybe_convert_to_slice(k, size)
+                     for k, size in zip(key, self.shape))
 
     def __getitem__(self, key):
-        key = self._orthogonalize_indexes(key)
-        # TODO any orthogonalized key can be indexed recursively.
-        # TODO support vindex
-        return self.array[key]
+        try:
+            key = self._orthogonalize_indexes(key)
+            try:
+                return self.array[key]
+            except NotImplementedError:
+                # manual orthogonal indexing.
+                value = self.array
+                for axis, subkey in reversed(list(enumerate(key))):
+                    value = value[(slice(None),) * axis + (subkey,)]
+                return value
+        except IndexError:
+            # TODO should support vindex
+            raise IndexError(
+              'dask does not support fancy indexing with key: {}'.format(key))
 
     def __setitem__(self, key, value):
         key = self._orthogonalize_indexes(key)
