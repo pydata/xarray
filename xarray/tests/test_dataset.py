@@ -274,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with self.assertWarns('deprecated'):
+        with pytest.warns(FutureWarning):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -873,8 +873,10 @@ class TestDataset(TestCase):
         data = Dataset({'x': ('td', np.arange(3)), 'td': td})
         self.assertDatasetEqual(data, data.sel(td=td))
         self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0 days'))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0h'))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0 days')))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0h')))
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
@@ -1245,6 +1247,17 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
 
+    def test_align_exact(self):
+        left = xr.Dataset(coords={'x': [0, 1]})
+        right = xr.Dataset(coords={'x': [1, 2]})
+
+        left1, left2 = xr.align(left, left, join='exact')
+        self.assertDatasetIdentical(left1, left)
+        self.assertDatasetIdentical(left2, left)
+
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+            xr.align(left, right, join='exact')
+
     def test_align_exclude(self):
         x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
                                       coords={'x': [1, 2], 'y': [3, 4]})})
@@ -1463,7 +1476,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
-        with self.assertRaisesRegexp(ValueError, "'var1' already exists"):
+        with self.assertRaisesRegexp(ValueError, "'var1' conflicts"):
             data.rename({'var2': 'var1'})
 
         # verify that we can rename a variable without accessing the data
@@ -1472,6 +1485,16 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+    def test_rename_old_name(self):
+        # regtest for GH1477
+        data = create_test_data()
+
+        with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
+            data.rename({'var1': 'samecol', 'var2': 'samecol'})
+
+        # This shouldn't cause any problems.
+        data.rename({'var1': 'var2', 'var2': 'var1'})
 
     def test_rename_same_name(self):
         data = create_test_data()

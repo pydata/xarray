@@ -1528,8 +1528,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if k not in self and k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or dimension in this dataset" % k)
-            if v in self and k != v:
-                raise ValueError('the new name %r already exists' % v)
 
         variables = OrderedDict()
         coord_names = set()
@@ -1538,6 +1536,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
             var.dims = dims
+            if name in variables:
+                raise ValueError('the new name %r conflicts' % (name,))
             variables[name] = var
             if k in self._coord_names:
                 coord_names.add(name)
@@ -1944,13 +1944,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-        join : {'outer', 'inner', 'left', 'right'}, optional
+        join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
             - 'inner': use the intersection of the indexes
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
+            - 'exact': error instead of aligning non-equal indexes
 
         Returns
         -------

@@ -13,32 +13,110 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.9.6:
+.. _whats-new.0.9.7:
 
-v0.9.6 (unreleased)
+v0.9.7 (unreleased)
 -------------------
-
-- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
-for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
-By `Daniel Rothenberg <https://github.com/darothen>`_.
 
 Enhancements
 ~~~~~~~~~~~~
-- New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
-  that enable sorting along dimensions (:issue:`967`).
-  (see :ref:`reshape.sort`).
-  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
-     `Kyle Heuton <https://github.com/kheuton>`_.
+
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
 
 Bug fixes
 ~~~~~~~~~
 
-- Fix test suite failure caused by changes to ``pandas.cut`` function (:issue:`1386`).
-By `Ryan Abernathey <https://github.com/rabernat>`_.
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
+
+- :py:meth:`~xarray.Dataset.rename` method now doesn't throw errors
+  if some ``Variable`` is renamed to the same name as another ``Variable``
+  as long as that other ``Variable`` is also renamed. This method now
+  does throw when two ``Variables`` would end up with the same name
+  after the rename (since one of them would get overwritten in this
+  case). See (:issue:`1477`) for details.
+  By `Prakhar Goel <https://github.com/newt0311>`_.
+
+.. _whats-new.0.9.6:
+
+v0.9.6 (8 June 2017)
+--------------------
+
+This release includes a number of backwards compatible enhancements and bug
+fixes.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
+  that enable sorting along dimensions (:issue:`967`).
+  See :ref:`the docs <reshape.sort>` for examples.
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
+  `Kyle Heuton <https://github.com/kheuton>`_.
+
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+  for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
+
+- Renamed internal dask arrays created by ``open_dataset`` to match new dask
+  conventions (:issue:`1343`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- :py:meth:`~xarray.as_variable` is now part of the public API (:issue:`1303`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- :py:func:`~xarray.align` now supports ``join='exact'``, which raises
+  an error instead of aligning when indexes to be aligned are not equal.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- New function :py:func:`~xarray.open_rasterio` for opening raster files with
+  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  See :ref:`the docs <io.rasterio>` for details.
+  By `Joe Hamman <https://github.com/jhamman>`_,
+  `Nic Wayand <https://github.com/NicWayand>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_
+
+Bug fixes
+~~~~~~~~~
+
+- Fix error from repeated indexing of datasets loaded from disk (:issue:`1374`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
-``data_vars``.
-By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  ``data_vars``.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
+
+- ``DataArray.chunk()`` now accepts dask specific kwargs like
+  ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Support for ``engine='pydap'`` with recent releases of Pydap (3.2.2+),
+  including on Python 3 (:issue:`1174`).
+
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+Testing
+~~~~~~~
+
+- Fix test suite failure caused by changes to ``pandas.cut`` function
+  (:issue:`1386`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
 
 .. _whats-new.0.9.5:
 
@@ -141,6 +219,9 @@ Enhancements
   to ``py.test`` (:issue:`1336`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
 ~~~~~~~~~
@@ -379,6 +460,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

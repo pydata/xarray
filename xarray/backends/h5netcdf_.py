@@ -62,9 +62,10 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                                    group=group)
         self.ds = opener()
         if autoclose:
-            raise NotImplemented('autoclose=True is not implemented '
-                                 'for the h5netcdf backend pending further '
-                                 'exploration, e.g., bug fixes (in h5netcdf?)')
+            raise NotImplementedError('autoclose=True is not implemented '
+                                      'for the h5netcdf backend pending '
+                                      'further exploration, e.g., bug fixes '
+                                      '(in h5netcdf?)')
         self._autoclose = False
         self._isopen = True
         self.format = format

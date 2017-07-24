@@ -29,7 +29,7 @@ For more extensive plotting applications consider the following projects:
   a high-level interface for drawing attractive statistical graphics."
   Integrates well with pandas.
 
-- `HoloViews <http://ioam.github.io/holoviews/>`_
+- `HoloViews <http://holoviews.org/>`_
   and `GeoViews <http://geo.holoviews.org/>`_: "Composable, declarative
   data structures for building even complex visualizations easily." Includes
   native support for xarray objects.
