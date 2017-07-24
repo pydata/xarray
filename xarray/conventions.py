@@ -24,6 +24,13 @@ from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
+_NS_PER_TIME_DELTA = {'us': 1e3,
+                      'ms': 1e6,
+                      's': 1e9,
+                      'm': 1e9 * 60,
+                      'h': 1e9 * 60 * 60,
+                      'D': 1e9 * 60 * 60 * 24}
+
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
                    dtype=float):
@@ -160,14 +167,8 @@ def decode_cf_datetime(num_dates, units, calendar=None):
 
         # Cast input dates to integers of nanoseconds because `pd.to_datetime`
         # works much faster when dealing with integers
-        ns_per_time_delta = {'us': 1e3,
-                             'ms': 1e6,
-                             's': 1e9,
-                             'm': 1e9 * 60,
-                             'h': 1e9 * 60 * 60,
-                             'D': 1e9 * 60 * 60 * 24}
         flat_num_dates_ns_int = (flat_num_dates *
-                                 ns_per_time_delta[delta]).astype(np.int64)
+                                 _NS_PER_TIME_DELTA[delta]).astype(np.int64)
 
         dates = (pd.to_timedelta(flat_num_dates_ns_int, 'ns') +
                  ref_date).values
