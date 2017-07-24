@@ -68,8 +68,8 @@ def show_versions(as_json=False):
         # (MODULE_NAME, f(mod) -> mod version)
         ("xarray", lambda mod: mod.__version__),
         ("pandas", lambda mod: mod.__version__),
-        ("numpy", lambda mod: mod.version.version),
-        ("scipy", lambda mod: mod.version.version),
+        ("numpy", lambda mod: mod.__version__),
+        ("scipy", lambda mod: mod.__version__),
         # xarray optionals
         ("netCDF4", lambda mod: mod.__version__),
         # ("pydap", lambda mod: mod.version.version),
