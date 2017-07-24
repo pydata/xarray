@@ -368,7 +368,29 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
     return indexer
 
 
-class LazilyIndexedArray(utils.NDArrayMixin):
+class IndexableArrayAdapter(object):
+    """ Base class for array adapters subject for orthogonal-indexing or
+    broadcasted-indexing.
+
+    indexing_type: One of `orthogonal` or `broadcast`
+    """
+    def __init__(self, indexing_type='orthogonal'):
+        assert indexing_type in ['orthogonal', 'broadcast']
+        self._indexing_type = indexing_type
+
+    @property
+    def indexing_type(self):
+        return self._indexing_type
+
+
+def indexing_type_of(array):
+    if isinstance(array, np.ndarray):
+        return 'broadcast'
+    else:
+        return getattr(array, 'indexing_type', 'orthogonal')
+
+
+class LazilyIndexedArray(IndexableArrayAdapter, utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
 
     This is array is indexed by broadcasted-indexing. For using broadcasted
@@ -384,6 +406,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
             Array indexer. If provided, it is assumed to already be in
             canonical expanded form.
         """
+        super(LazilyIndexedArray, self).__init__(indexing_type='broadcast')
         # We need to ensure that self.array is not LazilyIndexedArray,
         # because LazilyIndexedArray is not orthogonaly indexable
         if isinstance(array, type(self)):
@@ -391,6 +414,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
             self.key = array.key
             if key is not None:
                 self.key = self._updated_key(key)
+
         else:
             if key is None:
                 key = (slice(None),) * array.ndim
@@ -418,7 +442,14 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        return np.asarray(self.array[self.key], dtype=None)
+        if indexing_type_of(self.array) == 'broadcast':
+            # manual orthogonal indexing.
+            value = np.asarray(self.array, dtype=None)
+            for axis, subkey in reversed(list(enumerate(self.key))):
+                value = value[(slice(None),) * axis + (subkey,)]
+            return value
+        else:
+            return np.asarray(self.array[self.key], dtype=None)
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
@@ -429,6 +460,12 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         key = expanded_indexer(key, self.ndim)
         key = unbroadcast_indexes(key, self.shape)
         key = self._updated_key(key)
+
+        if indexing_type_of(self.array) == 'broadcast':
+            # TODO Should prepare LazilyIndexedArray for
+            # BroadcastIndexableAdapter
+            raise NotImplementedError('LaziyIndexedArray wrapps '
+                                      'OrthogonalIndexableAdapter.')
         self.array[key] = value
 
     def __repr__(self):
@@ -444,8 +481,9 @@ def _wrap_numpy_scalars(array):
         return array
 
 
-class CopyOnWriteArray(utils.NDArrayMixin):
+class CopyOnWriteArray(IndexableArrayAdapter, utils.NDArrayMixin):
     def __init__(self, array):
+        super(CopyOnWriteArray, self).__init__(indexing_type_of(array))
         self.array = array
         self._copied = False
 
@@ -465,8 +503,9 @@ class CopyOnWriteArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-class MemoryCachedArray(utils.NDArrayMixin):
+class MemoryCachedArray(IndexableArrayAdapter, utils.NDArrayMixin):
     def __init__(self, array):
+        super(MemoryCachedArray, self).__init__(indexing_type_of(array))
         self.array = _wrap_numpy_scalars(array)
 
     def _ensure_cached(self):
@@ -515,10 +554,11 @@ def unbroadcast_indexes(key, shape):
     return tuple(orthogonal_keys)
 
 
-class BroadcastIndexedAdapter(utils.NDArrayMixin):
+class BroadcastIndexedAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
     """ An array wrapper for orthogonally indexed arrays, such as netCDF
     in order to indexed by broadcasted indexers. """
     def __init__(self, array):
+        super(BroadcastIndexedAdapter, self).__init__('broadcast')
         self.array = array
 
     def __array__(self, dtype=None):
@@ -545,10 +585,11 @@ def broadcasted_indexable(array):
     return array
 
 
-class NumpyIndexingAdapter(utils.NDArrayMixin):
+class NumpyIndexingAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
     """Wrap a NumPy array to use broadcasted indexing
     """
     def __init__(self, array):
+        super(NumpyIndexingAdapter, self).__init__('broadcast')
         self.array = array
 
     def _ensure_ndarray(self, value):
@@ -567,13 +608,14 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
         self.array[key] = value
 
 
-class DaskIndexingAdapter(utils.NDArrayMixin):
+class DaskIndexingAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
     """Wrap a dask array to support broadcasted-indexing.
     """
     def __init__(self, array):
         """ This adapter is usually called in Variable.__getitem__ with
         array=Variable._broadcast_indexes
         """
+        super(DaskIndexingAdapter, self).__init__('broadcast')
         self.array = array
 
     def _orthogonalize_indexes(self, key):
@@ -609,11 +651,12 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array[key] = value
 
 
-class PandasIndexAdapter(utils.NDArrayMixin):
+class PandasIndexAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
     """Wrap a pandas.Index to be better about preserving dtypes and to handle
     indexing by length 1 tuples like numpy
     """
     def __init__(self, array, dtype=None):
+        super(PandasIndexAdapter, self).__init__('broadcast')
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
