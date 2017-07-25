@@ -440,15 +440,16 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         indexer = []
         for k in key:
             if isinstance(k, Variable):
-                indexer.append(k.data)
-            elif isinstance(k, integer_types + (slice,)):
+                k = k.data
+
+            if isinstance(k, integer_types + (slice,)):
                 indexer.append(k)
             else:
                 k = np.asarray(k)
                 if k.ndim > 1:
                     raise IndexError("Unlabelled multi-dimensional array "
                                      "cannot be used for indexing.")
-                indexer.append(k)
+                indexer.append(k if k.dtype.kind != 'b' else k.nonzero()[0])
         return dims, OuterIndexer(indexer)
 
     def nonzero(self):
