@@ -496,7 +496,6 @@ class LazilyIndexedArray(utils.NDArrayMixin):
             raise NotImplementedError('Vectorized indexing for {} is not '
                                       'implemented.'.format(type(self)))
         key = expanded_indexer(key, self.ndim)
-        print(key)
         return type(self)(self.array, self._updated_key(key))
 
     def __setitem__(self, key, value):
