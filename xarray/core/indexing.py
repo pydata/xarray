@@ -414,33 +414,8 @@ class VectorizedIndexer(IndexerTuple):
     """ Tuple for vectorized indexing """
 
 
-class IndexableArrayAdapter(object):
-    """ Base class for array adapters subject for orthogonal-indexing or
-    broadcasted-indexing.
-
-    indexing_type: One of `orthogonal` or `broadcast`
-    """
-    def __init__(self, indexing_type='orthogonal'):
-        assert indexing_type in ['orthogonal', 'broadcast']
-        self._indexing_type = indexing_type
-
-    @property
-    def indexing_type(self):
-        return self._indexing_type
-
-
-def indexing_type_of(array):
-    if isinstance(array, np.ndarray):
-        return 'broadcast'
-    else:
-        return getattr(array, 'indexing_type', 'orthogonal')
-
-
 class LazilyIndexedArray(utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
-
-    This is array is indexed by broadcasted-indexing. For using broadcasted
-    indexers, use LazilyIndexedArray.
     """
     def __init__(self, array, key=None):
         """
