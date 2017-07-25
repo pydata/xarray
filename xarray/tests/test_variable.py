@@ -679,6 +679,45 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertIn('200000 values with dtype', repr(v))
         self.assertIsInstance(v._data, LazilyIndexedArray)
 
+    def test_detect_indexer_type(self):
+        """ Tests indexer type was correctly detected. """
+        data = np.random.random((10, 11))
+        v = Variable(['x', 'y'], data)
+
+        _, ind = v._broadcast_indexes((0, 1))
+        self.assertTrue(type(ind) == indexing.BasicIndexer)
+
+        _, ind = v._broadcast_indexes((0, slice(0, 8, 2)))
+        self.assertTrue(type(ind) == indexing.BasicIndexer)
+
+        _, ind = v._broadcast_indexes((0, [0, 1]))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        _, ind = v._broadcast_indexes(([0, 1], 1))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        _, ind = v._broadcast_indexes(([0, 1], [1, 2]))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        _, ind = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        vind = Variable(('a', ), [0, 1])
+        _, ind = v._broadcast_indexes((vind, slice(0, 8, 2)))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        vind = Variable(('y', ), [0, 1])
+        _, ind = v._broadcast_indexes((vind, 3))
+        self.assertTrue(type(ind) == indexing.OuterIndexer)
+
+        vind = Variable(('a', ), [0, 1])
+        _, ind = v._broadcast_indexes((vind, vind))
+        self.assertTrue(type(ind) == indexing.VectorizedIndexer)
+
+        vind = Variable(('a', 'b'), [[0, 2], [1, 3]])
+        _, ind = v._broadcast_indexes((vind, 3))
+        self.assertTrue(type(ind) == indexing.VectorizedIndexer)
+
     def test_items(self):
         data = np.random.random((10, 11))
         v = Variable(['x', 'y'], data)

@@ -18,7 +18,8 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, broadcasted_indexable)
+from .indexing import (PandasIndexAdapter, broadcasted_indexable, BasicIndexer,
+                       OuterIndexer, VectorizedIndexer)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -404,25 +405,51 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         basic_indexing_types = integer_types + (slice,)
         if all([isinstance(k, basic_indexing_types) for k in key]):
             return self._broadcast_indexes_basic(key)
-        else:
-            vindexes = [np.asarray(k) for k in key if
-                        not isinstance(k, integer_types + (slice,))]
-            # slices and only one vector, no integers.
-            if (len(vindexes) == 0 and vindexes[0].ndim == 1 and
-                    sum([isinstance(k, slice) for k in key]) == len(key)-1):
-                return self._broadcast_indexes_1vector(key)
-            else:  # fancy indexing
-                return self._broadcast_indexes_advanced(key)
+
+        # Detect it can be mapped as an outer indexer
+        # If all key is unlabelled, or
+        # key can be mapped as an OuterIndexer.
+        if all(not isinstance(k, Variable) for k in key):
+            return self._broadcast_indexes_outer(key)
+
+        # If all key is 1-dimensional and there are no duplicate labels,
+        # key can be mapped as an OuterIndexer.
+        dims = []
+        for k, d in zip(key, self.dims):
+            if isinstance(k, Variable):
+                if len(k.dims) > 1:
+                    return self._broadcast_indexes_advanced(key)
+                dims.append(k.dims[0])
+            if not isinstance(k, integer_types):
+                dims.append(d)
+
+        if len(set(dims)) == len(dims):
+            return self._broadcast_indexes_outer(key)
+
+        return self._broadcast_indexes_advanced(key)
 
     def _broadcast_indexes_basic(self, key):
         dims = tuple(dim for k, dim in zip(key, self.dims)
                      if not isinstance(k, integer_types))
-        return dims, key
+        return dims, BasicIndexer(key)
 
-    def _broadcast_indexes_1vector(self, key):
-        dims = tuple(key.dims[0] if hasattr(k, 'dims') else dim
-                     for k, dim in zip(key, self.dims))
-        return dims, key
+    def _broadcast_indexes_outer(self, key):
+        dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
+                     for k, dim in zip(key, self.dims)
+                     if not isinstance(k, integer_types))
+        indexer = []
+        for k in key:
+            if isinstance(k, Variable):
+                indexer.append(k.data)
+            elif isinstance(k, integer_types + (slice,)):
+                indexer.append(k)
+            else:
+                k = np.asarray(k)
+                if k.ndim > 1:
+                    raise IndexError("Unlabelled multi-dimensional array "
+                                     "cannot be used for indexing.")
+                indexer.append(k)
+        return dims, OuterIndexer(indexer)
 
     def nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
@@ -455,8 +482,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         variables = _broadcast_compat_variables(*variables)
         dims = variables[0].dims  # all variables have the same dims
         # overwrite if there is integers
-        key = tuple(k if isinstance(k, integer_types) else variable.data
-                    for variable, k in zip(variables, key))
+        key = VectorizedIndexer(k if isinstance(k, integer_types)
+                                else variable.data
+                                for variable, k in zip(variables, key))
         return dims, key
 
     def __getitem__(self, key):

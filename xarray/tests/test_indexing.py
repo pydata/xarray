@@ -367,58 +367,21 @@ class TestMemoryCachedArray(TestCase):
         assert np.array(x[0][()]) == 'foo'
 
 
-class Test_unbroadcast_indexes(TestCase):
-    def test(self):
+class TestIndexerTuple(TestCase):
+    """ Make sure OuterIndexer.vectorize gives similar result to
+    v._broadcast_indexes_advanced
+    """
+    def test_outer_indexer(self):
         original = np.random.rand(10, 20, 30)
-        v = Variable(('i', 'j', 'k'), original)
+        v = Variable(['i', 'j', 'k'], original)
         I = ReturnItem()
-        # test broadcasted indexers
-        indexers = [I[:], 0, -2, I[:3], [4, 1, 2, 3], [0], np.arange(10) < 5]
+        # test orthogonally applied indexers
+        indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
+                    np.arange(10) < 5]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
-                    dims, indexer = v._broadcast_indexes((i, j, k))
-                    orthogonalized = indexing.unbroadcast_indexes(
-                                                        indexer, v.shape)
-                    dim_new, indexer_new = v._broadcast_indexes(orthogonalized)
-
-                    self.assertArrayEqual(original[indexer],
-                                          original[indexer_new])
-                    orthogonalized_new = indexing.unbroadcast_indexes(
-                                                        indexer_new, v.shape)
-                    self.assertArrayEqual(orthogonalized[0],
-                                          orthogonalized_new[0])
-                    self.assertArrayEqual(orthogonalized[0],
-                                          orthogonalized_new[0])
-
-    def test_error(self):
-        with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.unbroadcast_indexes((np.ones((2, 2)), np.ones((2, 1))),
-                                          shape=(3, 2))
-        with self.assertRaisesRegexp(IndexError, 'Indexer cannot be'):
-            indexing.unbroadcast_indexes((np.ones((1, 2)), np.ones((2, 1))),
-                                          shape=(3, 2))
-
-
-class TestBroadcastIndexedAdapter(TestCase):
-    def test_basic(self):
-        original = np.random.rand(10, 20, 30)
-        v = Variable(('i', 'j', 'k'), original)
-        orthogonal = NumpyOrthogonalIndexingAdapter(original)
-        wrapped = indexing.BroadcastIndexedAdapter(orthogonal)
-        I = ReturnItem()
-        # test broadcasted indexers
-        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
-        for i in indexers:
-            for j in indexers:
-                for k in indexers:
-                    actual_ortho = orthogonal[i, j, k]
-                    dims, indexer = v._broadcast_indexes((i, j, k))
-                    expected = original[indexer]
-                    actual = wrapped[indexer]
-                    self.assertEqual(expected.shape, actual_ortho.shape)
-                    self.assertArrayEqual(expected, actual_ortho)
-                    self.assertEqual(expected.shape, actual.shape)
-                    self.assertArrayEqual(expected, actual)
-                    self.assertTrue(type(actual),
-                                    indexing.BroadcastIndexedAdapter)
+                    outer_index = indexing.OuterIndexer((i, j, k))
+                    _, expected = v._broadcast_indexes_advanced((i, j, k))
+                    actual = outer_index.vectorize(v.shape)
+                    self.assertArrayEqual(v.data[actual], v.data[expected])
