@@ -390,7 +390,11 @@ class OuterIndexer(IndexerTuple):
         if len([k for k in self if not isinstance(k, slice)]) <= 1:
             # if there is only one vector and all others are slice,
             # it can be safely converted to vectorized indexer
-            return VectorizedIndexer(self)
+            # Boolean index should be converted to integer array.
+            return VectorizedIndexer(
+                [k.nonzero()[0]
+                 if (isinstance(k, np.ndarray) and k.dtype.kind == 'b')
+                 else k for k in self])
         else:
             n_dim = len([k for k in self if not isinstance(k, integer_types)])
             i_dim = 0
