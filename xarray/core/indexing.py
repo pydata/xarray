@@ -443,6 +443,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
             self.key = key
 
     def _updated_key(self, new_key):
+        # TODO should suport VectorizedIndexer
         new_key = iter(new_key)
         key = []
         for size, k in zip(self.array.shape, self.key):
@@ -570,14 +571,13 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
         self.array[key] = value
 
 
-class DaskIndexingAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
+class DaskIndexingAdapter(utils.NDArrayMixin):
     """Wrap a dask array to support broadcasted-indexing.
     """
     def __init__(self, array):
         """ This adapter is usually called in Variable.__getitem__ with
         array=Variable._broadcast_indexes
         """
-        super(DaskIndexingAdapter, self).__init__('broadcast')
         self.array = array
 
     def __getitem__(self, key):
@@ -603,12 +603,11 @@ class DaskIndexingAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
                         'method or accessing its .values attribute.')
 
 
-class PandasIndexAdapter(IndexableArrayAdapter, utils.NDArrayMixin):
+class PandasIndexAdapter(utils.NDArrayMixin):
     """Wrap a pandas.Index to be better about preserving dtypes and to handle
     indexing by length 1 tuples like numpy
     """
     def __init__(self, array, dtype=None):
-        super(PandasIndexAdapter, self).__init__('broadcast')
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:
             if isinstance(array, pd.PeriodIndex):
