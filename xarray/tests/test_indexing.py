@@ -372,6 +372,10 @@ class TestIndexerTuple(TestCase):
     v._broadcast_indexes_advanced
     """
     def test_outer_indexer(self):
+        def nonzero(x):
+            if isinstance(x, np.ndarray) and x.dtype.kind == 'b':
+                x = x.nonzero()[0]
+            return x
         original = np.random.rand(10, 20, 30)
         v = Variable(['i', 'j', 'k'], original)
         I = ReturnItem()
@@ -381,7 +385,8 @@ class TestIndexerTuple(TestCase):
         for i in indexers:
             for j in indexers:
                 for k in indexers:
-                    outer_index = indexing.OuterIndexer((i, j, k))
+                    outer_index = indexing.OuterIndexer(
+                                        (nonzero(i), nonzero(j), nonzero(k)))
                     _, expected = v._broadcast_indexes_advanced((i, j, k))
                     actual = outer_index.vectorize(v.shape)
                     self.assertArrayEqual(v.data[actual], v.data[expected])
