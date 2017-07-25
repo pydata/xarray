@@ -83,7 +83,7 @@ class TestNumpyOrthogonalIndexingAdapter(TestCase):
                             expected = original[i][:, j][:, :, k]
                     self.assertArrayEqual(actual, expected)
         # indivisual testing
-        self.assertTrue(orthogonal[np.array([0]), :, :].shape == (1, 20, 30))
+        assert orthogonal[np.array([0]), :, :].shape == (1, 20, 30)
         self.assertArrayEqual(orthogonal[[0], :, :], original[[0], :, :])
 
 
@@ -299,8 +299,8 @@ class TestLazyArray(TestCase):
                                    v_lazy[:, :, k][:, j][i]]:
                         self.assertEqual(expected.shape, actual.shape)
                         self.assertArrayEqual(expected, actual)
-                        self.assertTrue(isinstance(
-                            actual._data, indexing.LazilyIndexedArray))
+                        assert isinstance(actual._data,
+                                          indexing.LazilyIndexedArray)
         # test sequentially applied indexers
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
@@ -309,10 +309,9 @@ class TestLazyArray(TestCase):
             actual = v_lazy[i][j]
             self.assertEqual(expected.shape, actual.shape)
             self.assertArrayEqual(expected, actual)
-            self.assertTrue(isinstance(
-                actual._data, indexing.LazilyIndexedArray))
-            self.assertTrue(isinstance(actual._data.array,
-                                       NumpyOrthogonalIndexingAdapter))
+            assert isinstance(actual._data, indexing.LazilyIndexedArray)
+            assert isinstance(actual._data.array,
+                              NumpyOrthogonalIndexingAdapter)
 
 
 class TestCopyOnWriteArray(TestCase):

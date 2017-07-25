@@ -685,38 +685,38 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x', 'y'], data)
 
         _, ind = v._broadcast_indexes((0, 1))
-        self.assertTrue(type(ind) == indexing.BasicIndexer)
+        assert type(ind) == indexing.BasicIndexer
 
         _, ind = v._broadcast_indexes((0, slice(0, 8, 2)))
-        self.assertTrue(type(ind) == indexing.BasicIndexer)
+        assert type(ind) == indexing.BasicIndexer
 
         _, ind = v._broadcast_indexes((0, [0, 1]))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         _, ind = v._broadcast_indexes(([0, 1], 1))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         _, ind = v._broadcast_indexes(([0, 1], [1, 2]))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         _, ind = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('a', ), [0, 1])
         _, ind = v._broadcast_indexes((vind, slice(0, 8, 2)))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('y', ), [0, 1])
         _, ind = v._broadcast_indexes((vind, 3))
-        self.assertTrue(type(ind) == indexing.OuterIndexer)
+        assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('a', ), [0, 1])
         _, ind = v._broadcast_indexes((vind, vind))
-        self.assertTrue(type(ind) == indexing.VectorizedIndexer)
+        assert type(ind) == indexing.VectorizedIndexer
 
         vind = Variable(('a', 'b'), [[0, 2], [1, 3]])
         _, ind = v._broadcast_indexes((vind, 3))
-        self.assertTrue(type(ind) == indexing.VectorizedIndexer)
+        assert type(ind) == indexing.VectorizedIndexer
 
     def test_items(self):
         data = np.random.random((10, 11))
@@ -754,24 +754,24 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
         v_new = v[dict(x=0)]
-        self.assertTrue(v_new.dims == ('y', ))
+        assert v_new.dims == ('y', )
         self.assertArrayEqual(v_new, v._data[0])
 
         v_new = v[dict(x=0, y=slice(None))]
-        self.assertTrue(v_new.dims == ('y', ))
+        assert v_new.dims == ('y', )
         self.assertArrayEqual(v_new, v._data[0])
 
         v_new = v[dict(x=0, y=1)]
-        self.assertTrue(v_new.dims == ())
+        assert v_new.dims == ()
         self.assertArrayEqual(v_new, v._data[0, 1])
 
         v_new = v[dict(y=1)]
-        self.assertTrue(v_new.dims == ('x', ))
+        assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data[:, 1])
 
         # tuple argument
         v_new = v[(slice(None), 1)]
-        self.assertTrue(v_new.dims == ('x', ))
+        assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data[:, 1])
 
     def test_getitem_advanced(self):
@@ -779,27 +779,27 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         # orthogonal indexing
         v_new = v[([0, 1], [1, 0])]
-        self.assertTrue(v_new.dims == ('x', 'y'))
+        assert v_new.dims == ('x', 'y')
         self.assertArrayEqual(v_new, v._data[[0, 1]][:, [1, 0]])
 
         v_new = v[[0, 1]]
-        self.assertTrue(v_new.dims == ('x', 'y'))
+        assert v_new.dims == ('x', 'y')
         self.assertArrayEqual(v_new, v._data[[0, 1]])
 
         # with mixed arguments
         ind = Variable(['a'], [0, 1])
         v_new = v[dict(x=[0, 1], y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a'))
+        assert v_new.dims == ('x', 'a')
         self.assertArrayEqual(v_new, v.load()._data[[0, 1]][:, [0, 1]])
 
         # boolean indexing
         v_new = v[dict(x=[True, False], y=[False, True])]
-        self.assertTrue(v_new.dims == ('x', 'y'))
+        assert v_new.dims == ('x', 'y')
         self.assertArrayEqual(v_new, v.load()._data[0][1])
 
         ind = Variable(['a'], [True, False])
         v_new = v[dict(y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a'))
+        assert v_new.dims == ('x', 'a')
         self.assertArrayEqual(v_new, v.load()._data[:, 0:1])
 
     def test_getitem_fancy(self):
@@ -808,40 +808,40 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
-        self.assertTrue(v_new.dims == ('a', 'b', 'y'))
+        assert v_new.dims == ('a', 'b', 'y')
         self.assertArrayEqual(v_new, v.load()._data[([0, 1, 1], [1, 1, 0]), :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
         v_new = v[dict(y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a', 'b'))
+        assert v_new.dims == ('x', 'a', 'b')
         self.assertArrayEqual(v_new, v.load()._data[:, ([0, 1, 2], [2, 1, 0])])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=[1, 0], y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a', 'b'))
+        assert v_new.dims == ('x', 'a', 'b')
         self.assertArrayEqual(v_new, v.load()._data[[1, 0]][:, ind])
 
         # with integer
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=0, y=ind)]
-        self.assertTrue(v_new.dims == ('a', 'b'))
+        assert v_new.dims == ('a', 'b')
         self.assertArrayEqual(v_new[0], v.load()._data[0][[0, 0]])
         self.assertArrayEqual(v_new[1], v.load()._data[0][[1, 1]])
 
         # with slice
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=slice(None), y=ind)]
-        self.assertTrue(v_new.dims == ('x', 'a', 'b'))
+        assert v_new.dims == ('x', 'a', 'b')
         self.assertArrayEqual(v_new, v.load()._data[:, [[0, 0], [1, 1]]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None))]
-        self.assertTrue(v_new.dims == ('a', 'b', 'y'))
+        assert v_new.dims == ('a', 'b', 'y')
         self.assertArrayEqual(v_new, v.load()._data[[[0, 0], [1, 1]], :])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None, 1))]
-        self.assertTrue(v_new.dims == ('a', 'b', 'y'))
+        assert v_new.dims == ('a', 'b', 'y')
         self.assertArrayEqual(v_new,
                               v.load()._data[[[0, 0], [1, 1]], slice(None, 1)])
 
