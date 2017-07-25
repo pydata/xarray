@@ -43,6 +43,10 @@ Bug fixes
   case). See (:issue:`1477`) for details.
   By `Prakhar Goel <https://github.com/newt0311>`_.
 
+- Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
+  ``rtol`` arguments when called on ``DataArray`` objects.
+  By `Stephan Hoyer <http://github.com/shoyer>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
