@@ -25,6 +25,9 @@ Enhancements
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_
 
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
 Bug fixes
 ~~~~~~~~~
 
