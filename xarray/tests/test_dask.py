@@ -411,18 +411,22 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         actual = ds.to_dataframe()
 
-        # test if lazy
+        # test if we have dask dataframes
         self.assertIsInstance(actual, dask.dataframe.DataFrame)
 
+        print(expected)
+        print(actual)
+        assert False, (actual)
+
         # use the .equals method to check all DataFrame metadata
-        assert expected.compute().equals(actual.compute()), (expected, actual)
+        #assert expected.equals(actual), (expected, actual)
 
         # verify coords are included
-        actual = ds.set_coords('b').to_dataframe()
-        assert expected.compute().equals(actual.compute()), (expected, actual)
+        #actual = ds.set_coords('b').to_dataframe()
+        #assert expected.equals(actual), (expected, actual)
 
         # check roundtrip
-        self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual.compute()))
+        #self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
 
         # test a case with a MultiIndex
         #w = np.random.randn(2, 3)
@@ -440,22 +444,22 @@ class TestDataArrayAndDataset(DaskTestCase):
         # test if lazy
         #self.assertIsInstance(actual, dask.dataframe.DataFrame)
 
-        #self.assertTrue(expected.compute().equals(actual.compute()))
+        #self.assertTrue(expected.equals(actual))
 
         # check roundtrip
         #self.assertDatasetIdentical(ds.assign_coords(x=[0, 1]),
-        #                            Dataset.from_dataframe(actual.compute()))
+        #                            Dataset.from_dataframe(actual))
 
         # check pathological cases
-        df = dask.dataframe.from_pandas(pd.DataFrame([1]), npartitions=1)
-        actual = Dataset.from_dataframe(df.compute())
-        expected = Dataset({0: ('index', [1])}, {'index': [0]})
-        self.assertDatasetIdentical(expected, actual)
+        #df = dask.dataframe.from_pandas(pd.DataFrame([1]), npartitions=1)
+        #actual = Dataset.from_dataframe(df)
+        #expected = Dataset({0: ('index', [1])}, {'index': [0]})
+        #self.assertDatasetIdentical(expected, actual)
 
-        df = dask.dataframe.from_pandas(pd.DataFrame(), npartitions=1)
-        actual = Dataset.from_dataframe(df.compute())
-        expected = Dataset(coords={'index': []})
-        self.assertDatasetIdentical(expected, actual)
+        #df = dask.dataframe.from_pandas(pd.DataFrame(), npartitions=1)
+        #actual = Dataset.from_dataframe(df)
+        #expected = Dataset(coords={'index': []})
+        #self.assertDatasetIdentical(expected, actual)
 
 
 kernel_call_count = 0

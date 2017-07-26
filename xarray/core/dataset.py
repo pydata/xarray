@@ -2333,13 +2333,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         lazy_data = {k: v._data for k, v in self.variables.items()
                      if isinstance(v._data, dask_array_type)}
 
-        if lazy_data:
-            import dask.dataframe
+        if lazy_data and not isinstance(index, pd.MultiIndex):
+            import dask.dataframe as dd
+            import dask.array as da
 
-            data = [self._variables[k].set_dims(ordered_dims).data.reshape(-1) for k in columns]
-            df = pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+            data = [self._variables[k].data.reshape(-1) for k in columns]
 
-            df = dask.dataframe.from_pandas(df, npartitions=1)
+            data.append(index)
+            columns.append(index.name)
+
+            df = dd.from_dask_array(da.stack(data, axis=1), columns=columns)
+            df.set_index(index.name)
 
         else:
             # data is already in memory
