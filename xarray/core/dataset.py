@@ -2327,10 +2327,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def _to_dataframe(self, ordered_dims):
         columns = [k for k in self if k not in self.dims]
-        data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
-                for k in columns]
+
         index = self.coords.to_index(ordered_dims)
-        return pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+
+        lazy_data = {k: v._data for k, v in self.variables.items()
+                     if isinstance(v._data, dask_array_type)}
+
+        if lazy_data:
+            import dask.dataframe
+
+            data = [self._variables[k].set_dims(ordered_dims).data.reshape(-1) for k in columns]
+            df = pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+
+            df = dask.dataframe.from_pandas(df, npartitions=1)
+
+        else:
+            # data is already in memory
+            data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
+                for k in columns]
+            df = pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
+
+        return df
 
     def to_dataframe(self):
         """Convert this dataset into a pandas.DataFrame.
