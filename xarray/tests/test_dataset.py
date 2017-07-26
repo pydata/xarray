@@ -274,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with self.assertWarns('deprecated'):
+        with pytest.warns(FutureWarning):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -873,8 +873,10 @@ class TestDataset(TestCase):
         data = Dataset({'x': ('td', np.arange(3)), 'td': td})
         self.assertDatasetEqual(data, data.sel(td=td))
         self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0 days'))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0h'))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0 days')))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0h')))
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
@@ -916,6 +918,8 @@ class TestDataset(TestCase):
 
         actual = data.isel_points(dim1=pdim1, dim2=pdim2)
         assert 'points' in actual.dims
+        assert 'dim3' in actual.dims
+        assert 'dim3' not in actual.data_vars
         np.testing.assert_array_equal(data['dim2'][pdim2], actual['dim2'])
 
         # test that the order of the indexers doesn't matter
@@ -1243,6 +1247,17 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
 
+    def test_align_exact(self):
+        left = xr.Dataset(coords={'x': [0, 1]})
+        right = xr.Dataset(coords={'x': [1, 2]})
+
+        left1, left2 = xr.align(left, left, join='exact')
+        self.assertDatasetIdentical(left1, left)
+        self.assertDatasetIdentical(left2, left)
+
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+            xr.align(left, right, join='exact')
+
     def test_align_exclude(self):
         x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
                                       coords={'x': [1, 2], 'y': [3, 4]})})
@@ -1461,7 +1476,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
-        with self.assertRaisesRegexp(ValueError, "'var1' already exists"):
+        with self.assertRaisesRegexp(ValueError, "'var1' conflicts"):
             data.rename({'var2': 'var1'})
 
         # verify that we can rename a variable without accessing the data
@@ -1470,6 +1485,16 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+    def test_rename_old_name(self):
+        # regtest for GH1477
+        data = create_test_data()
+
+        with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
+            data.rename({'var1': 'samecol', 'var2': 'samecol'})
+
+        # This shouldn't cause any problems.
+        data.rename({'var1': 'var2', 'var2': 'var1'})
 
     def test_rename_same_name(self):
         data = create_test_data()
@@ -3313,12 +3338,101 @@ class TestDataset(TestCase):
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2],
-                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
+                         [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
         actual = dsx0.combine_first(dsy2)
         expected = xr.merge([dsy2, dsx0])
         self.assertDatasetEqual(actual, expected)
 
-### Py.test tests
+    def test_sortby(self):
+        ds = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6]],
+                                     [('x', ['c', 'b', 'a']),
+                                      ('y', [1, 0])]),
+                      'B': DataArray([[5, 6], [7, 8], [9, 10]],
+                                     dims=['x', 'y'])})
+
+        sorted1d = Dataset({'A': DataArray([[5, 6], [3, 4], [1, 2]],
+                                           [('x', ['a', 'b', 'c']),
+                                            ('y', [1, 0])]),
+                            'B': DataArray([[9, 10], [7, 8], [5, 6]],
+                                           dims=['x', 'y'])})
+
+        sorted2d = Dataset({'A': DataArray([[6, 5], [4, 3], [2, 1]],
+                                           [('x', ['a', 'b', 'c']),
+                                            ('y', [0, 1])]),
+                            'B': DataArray([[10, 9], [8, 7], [6, 5]],
+                                           dims=['x', 'y'])})
+
+        expected = sorted1d
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
+        actual = ds.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(dax, ascending=False)
+        self.assertDatasetEqual(actual, ds)
+
+        # test alignment (fills in nan for 'c')
+        dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
+        actual = ds.sortby(dax_short)
+        self.assertDatasetEqual(actual, expected)
+
+        # test 1-D lexsort
+        # dax0 is sorted first to give indices of [1, 2, 0]
+        # and then dax1 would be used to move index 2 ahead of 1
+        dax0 = DataArray([100, 95, 95], [('x', ['c', 'b', 'a'])])
+        dax1 = DataArray([0, 1, 0], [('x', ['c', 'b', 'a'])])
+        actual = ds.sortby([dax0, dax1])  # lexsort underneath gives [2, 1, 0]
+        self.assertDatasetEqual(actual, expected)
+
+        expected = sorted2d
+        # test multi-dim sort by 1D dataarray values
+        day = DataArray([90, 80], [('y', [1, 0])])
+        actual = ds.sortby([day, dax])
+        self.assertDatasetEqual(actual, expected)
+
+        # test exception-raising
+        with pytest.raises(KeyError) as excinfo:
+            actual = ds.sortby('z')
+
+        with pytest.raises(ValueError) as excinfo:
+            actual = ds.sortby(ds['A'])
+        assert "DataArray is not 1-D" in str(excinfo.value)
+
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            pytest.skip('numpy 1.11.0 or later to support object data-type.')
+
+        expected = sorted1d
+        actual = ds.sortby('x')
+        self.assertDatasetEqual(actual, expected)
+
+        # test pandas.MultiIndex
+        indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
+        midx = pd.MultiIndex.from_tuples(indices, names=['one', 'two'])
+        ds_midx = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6], [7, 8]],
+                                          [('x', midx), ('y', [1, 0])]),
+                           'B': DataArray([[5, 6], [7, 8], [9, 10], [11, 12]],
+                                          dims=['x', 'y'])})
+        actual = ds_midx.sortby('x')
+        midx_reversed = pd.MultiIndex.from_tuples(tuple(reversed(indices)),
+                                                  names=['one', 'two'])
+        expected = Dataset({'A': DataArray([[7, 8], [5, 6], [3, 4], [1, 2]],
+                                           [('x', midx_reversed),
+                                            ('y', [1, 0])]),
+                            'B': DataArray([[11, 12], [9, 10], [7, 8], [5, 6]],
+                                           dims=['x', 'y'])})
+        self.assertDatasetEqual(actual, expected)
+
+        # multi-dim sort by coordinate objects
+        expected = sorted2d
+        actual = ds.sortby(['x', 'y'])
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(['x', 'y'], ascending=False)
+        self.assertDatasetEqual(actual, ds)
+
+
+# Py.test tests
 
 
 @pytest.fixture()

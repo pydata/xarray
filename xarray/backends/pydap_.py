@@ -69,8 +69,8 @@ class PydapDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
-                                 for k, v in self.ds.iteritems())
+        return FrozenOrderedDict((k, self.open_store_variable(self.ds[k]))
+                                 for k in self.ds.keys())
 
     def get_attrs(self):
         return Frozen(_fix_global_attributes(self.ds.attributes))

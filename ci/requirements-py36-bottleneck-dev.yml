@@ -11,9 +11,11 @@ dependencies:
   - netcdf4
   - pytest
   - numpy
+  - pandas
   - scipy
+  - seaborn
   - toolz
   - pip:
+    - git+https://github.com/kwgoodman/bottleneck.git
     - coveralls
     - pytest-cov
-    - pydap

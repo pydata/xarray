@@ -22,12 +22,12 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, PY3, ExitStack
+from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky)
+               flaky, network, requires_rasterio, assert_identical)
 from .test_dataset import create_test_data
 
 try:
@@ -897,6 +897,15 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         for var in expected.values():
             self.assertTrue(var.dtype.isnative)
 
+    @requires_netCDF4
+    def test_nc4_scipy(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, 'w', format='NETCDF4') as rootgrp:
+                rootgrp.createGroup('foo')
+
+            with self.assertRaisesRegexp(TypeError, 'pip install netcdf4'):
+                open_dataset(tmp_file, engine='scipy')
+
 
 class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
@@ -1334,7 +1343,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                                     for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
                 self.assertIn(var_name, dask_name)
-                self.assertIn(tmp, dask_name)
+                self.assertEqual(dask_name[:13], 'open_dataset-')
             self.assertEqual(original_names, repeat_names)
 
     def test_dataarray_compute(self):
@@ -1352,6 +1361,7 @@ class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
 
 
+@network
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
@@ -1427,6 +1437,279 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 class TestPyNioAutocloseTrue(TestPyNio):
     autoclose = True
+
+
+@requires_rasterio
+class TestRasterio(TestCase):
+
+    def test_serialization_utm(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in utm proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+                dx, dy = s.res[0], -s.res[1]
+
+            # Tests
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={
+                                     'band': [1, 2, 3],
+                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
+                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
+                                 })
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert 'crs' in rioda.attrs
+                assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
+
+                # Write it to a netcdf and read again (roundtrip)
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
+
+    def test_serialization_platecarree(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny = 8, 10
+            data = np.arange(80, dtype=rasterio.float32).reshape(ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=1,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data, indexes=1)
+                dx, dy = s.res[0], -s.res[1]
+
+            # Tests
+            expected = DataArray(data[np.newaxis, ...],
+                                 dims=('band', 'y', 'x'),
+                                 coords={'band': [1],
+                                         'y': -np.arange(ny)*2 + 2 + dy/2,
+                                         'x': np.arange(nx)*0.5 + 1 + dx/2,
+                                         })
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert 'crs' in rioda.attrs
+                assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
+
+                # Write it to a netcdf and read again (roundtrip)
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
+
+    def test_indexing(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+                dx, dy = s.res[0], -s.res[1]
+
+            # ref
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
+                                         'band': [1, 2, 3]})
+
+            with xr.open_rasterio(tmp_file, cache=False) as actual:
+
+                # tests
+                # assert_allclose checks all data + coordinates
+                assert_allclose(actual, expected)
+
+                # Slicing
+                ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
+                ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
+                assert_allclose(ac, ex)
+
+                ex = expected.isel(band=slice(1, 2), x=slice(2, 5),
+                                   y=slice(5, 7))
+                ac = actual.isel(band=slice(1, 2), x=slice(2, 5),
+                                 y=slice(5, 7))
+                assert_allclose(ac, ex)
+
+                # Selecting lists of bands is fine
+                ex = expected.isel(band=[1, 2])
+                ac = actual.isel(band=[1, 2])
+                assert_allclose(ac, ex)
+                ex = expected.isel(band=[0, 2])
+                ac = actual.isel(band=[0, 2])
+                assert_allclose(ac, ex)
+
+                # but on x and y only windowed operations are allowed, more
+                # exotic slicing should raise an error
+                err_msg = 'not valid on rasterio'
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[2, 4], y=[1, 3]).values
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[4, 2]).values
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=slice(5, 2, -1)).values
+
+                # Integer indexing
+                ex = expected.isel(band=1)
+                ac = actual.isel(band=1)
+                assert_allclose(ac, ex)
+
+                ex = expected.isel(x=1, y=2)
+                ac = actual.isel(x=1, y=2)
+                assert_allclose(ac, ex)
+
+                ex = expected.isel(band=0, x=1, y=2)
+                ac = actual.isel(band=0, x=1, y=2)
+                assert_allclose(ac, ex)
+
+                # Mixed
+                ex = actual.isel(x=slice(2), y=slice(2))
+                ac = actual.isel(x=[0, 1], y=[0, 1])
+                assert_allclose(ac, ex)
+
+                ex = expected.isel(band=0, x=1, y=slice(5, 7))
+                ac = actual.isel(band=0, x=1, y=slice(5, 7))
+                assert_allclose(ac, ex)
+
+                ex = expected.isel(band=0, x=slice(2, 5), y=2)
+                ac = actual.isel(band=0, x=slice(2, 5), y=2)
+                assert_allclose(ac, ex)
+
+                # One-element lists
+                ex = expected.isel(band=[0], x=slice(2, 5), y=[2])
+                ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
+                assert_allclose(ac, ex)
+
+    def test_caching(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+                dx, dy = s.res[0], -s.res[1]
+
+            # ref
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
+                                         'band': [1, 2, 3]})
+
+            # Cache is the default
+            with xr.open_rasterio(tmp_file) as actual:
+
+                # Without cache an error is raised
+                err_msg = 'not valid on rasterio'
+                with self.assertRaisesRegexp(IndexError, err_msg):
+                    actual.isel(x=[2, 4]).values
+
+                # This should cache everything
+                assert_allclose(actual, expected)
+
+                # once cached, non-windowed indexing should become possible
+                ac = actual.isel(x=[2, 4])
+                ex = expected.isel(x=[2, 4])
+                assert_allclose(ac, ex)
+
+    @requires_dask
+    def test_chunks(self):
+
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in latlong proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 8, 10, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(1, 2, 0.5, 2.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs='+proj=latlong',
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+                dx, dy = s.res[0], -s.res[1]
+
+            # Chunk at open time
+            with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+
+                import dask.array as da
+                self.assertIsInstance(actual.data, da.Array)
+                assert 'open_rasterio' in actual.data.name
+
+                # ref
+                expected = DataArray(data, dims=('band', 'y', 'x'),
+                                     coords={'x': np.arange(nx)*0.5 + 1 + dx/2,
+                                             'y': -np.arange(ny)*2 + 2 + dy/2,
+                                             'band': [1, 2, 3]})
+
+                # do some arithmetic
+                ac = actual.mean()
+                ex = expected.mean()
+                assert_allclose(ac, ex)
+
+                ac = actual.sel(band=1).mean(dim='x')
+                ex = expected.sel(band=1).mean(dim='x')
+                assert_allclose(ac, ex)
 
 
 class TestEncodingInvalid(TestCase):

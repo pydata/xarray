@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 from collections import Mapping, defaultdict
+from distutils.version import LooseVersion
 from numbers import Number
 
 import sys
@@ -1267,6 +1268,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
+        non_indexed_coords = set(self.coords) - set(coords)
 
         # All the indexers should be iterables
         # Check that indexers are valid dims, integers, and 1D
@@ -1328,7 +1330,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 # If not indexed just add it back to variables or coordinates
                 variables[name] = var
 
-        coord_names = set(coords) & set(variables)
+        coord_names = (set(coords) & set(variables)) | non_indexed_coords
 
         dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
         # Add the dim coord to the new dset. Must be done after creation
@@ -1526,8 +1528,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if k not in self and k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or dimension in this dataset" % k)
-            if v in self and k != v:
-                raise ValueError('the new name %r already exists' % v)
 
         variables = OrderedDict()
         coord_names = set()
@@ -1536,6 +1536,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
             var.dims = dims
+            if name in variables:
+                raise ValueError('the new name %r conflicts' % (name,))
             variables[name] = var
             if k in self._coord_names:
                 coord_names.add(name)
@@ -1942,13 +1944,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             - 'no_conflicts': only values which are not null in both datasets
               must be equal. The returned dataset then contains the combination
               of all non-null values.
-        join : {'outer', 'inner', 'left', 'right'}, optional
+        join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
             Method for joining ``self`` and ``other`` along shared dimensions:
 
             - 'outer': use the union of the indexes
             - 'inner': use the intersection of the indexes
             - 'left': use indexes from ``self``
             - 'right': use indexes from ``other``
+            - 'exact': error instead of aligning non-equal indexes
 
         Returns
         -------
@@ -2740,6 +2743,67 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             variables[name] = var.roll(**var_shifts)
 
         return self._replace_vars_and_dims(variables)
+
+    def sortby(self, variables, ascending=True):
+        """
+        Sort object by labels or values (along an axis).
+
+        Sorts the dataset, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+        NaNs are sorted to the end, following Numpy convention.
+
+        If multiple sorts along the same dimension is
+        given, numpy's lexsort is performed along that dimension:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        and the FIRST key in the sequence is used as the primary sort key,
+        followed by the 2nd key, etc.
+
+        Parameters
+        ----------
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords/data_vars whose values are used to sort the dataset.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
+
+        Returns
+        -------
+        sorted: Dataset
+            A new dataset where all the specified dims are sorted by dim
+            labels.
+        """
+        from .dataarray import DataArray
+
+        if not isinstance(variables, list):
+            variables = [variables]
+        else:
+            variables = variables
+        variables = [v if isinstance(v, DataArray) else self[v]
+                     for v in variables]
+        aligned_vars = align(self, *variables, join='left')
+        aligned_self = aligned_vars[0]
+        aligned_other_vars = aligned_vars[1:]
+        vars_by_dim = defaultdict(list)
+        for data_array in aligned_other_vars:
+            if data_array.ndim != 1:
+                raise ValueError("Input DataArray is not 1-D.")
+            if (data_array.dtype == object and
+                    LooseVersion(np.__version__) < LooseVersion('1.11.0')):
+                raise NotImplementedError(
+                    'sortby uses np.lexsort under the hood, which requires '
+                    'numpy 1.11.0 or later to support object data-type.')
+            (key,) = data_array.dims
+            vars_by_dim[key].append(data_array)
+
+        indices = {}
+        for key, arrays in vars_by_dim.items():
+            order = np.lexsort(tuple(reversed(arrays)))
+            indices[key] = order if ascending else order[::-1]
+        return aligned_self.isel(**indices)
 
     def quantile(self, q, dim=None, interpolation='linear',
                  numeric_only=False, keep_attrs=False):

@@ -9,7 +9,11 @@ import warnings
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from pandas.tslib import OutOfBoundsDatetime
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 from .core import duck_array_ops, indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items, last_item
@@ -19,6 +23,13 @@ from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
+
+_NS_PER_TIME_DELTA = {'us': 1e3,
+                      'ms': 1e6,
+                      's': 1e9,
+                      'm': 1e9 * 60,
+                      'h': 1e9 * 60 * 60,
+                      'D': 1e9 * 60 * 60 * 24}
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
@@ -122,11 +133,14 @@ def decode_cf_datetime(num_dates, units, calendar=None):
     operations, which makes it much faster than netCDF4.num2date. In such a
     case, the returned array will be of type np.datetime64.
 
+    Note that time unit in `units` must not be smaller than microseconds and
+    not larger than days.
+
     See also
     --------
     netCDF4.num2date
     """
-    num_dates = np.asarray(num_dates, dtype=float)
+    num_dates = np.asarray(num_dates)
     flat_num_dates = num_dates.ravel()
     if calendar is None:
         calendar = 'standard'
@@ -151,10 +165,18 @@ def decode_cf_datetime(num_dates, units, calendar=None):
         pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
         pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
-        dates = (pd.to_timedelta(flat_num_dates, delta) + ref_date).values
+        # Cast input dates to integers of nanoseconds because `pd.to_datetime`
+        # works much faster when dealing with integers
+        flat_num_dates_ns_int = (flat_num_dates *
+                                 _NS_PER_TIME_DELTA[delta]).astype(np.int64)
+
+        dates = (pd.to_timedelta(flat_num_dates_ns_int, 'ns') +
+                 ref_date).values
 
     except (OutOfBoundsDatetime, OverflowError):
-        dates = _decode_datetime_with_netcdf4(flat_num_dates, units, calendar)
+        dates = _decode_datetime_with_netcdf4(flat_num_dates.astype(np.float),
+                                              units,
+                                              calendar)
 
     return dates.reshape(num_dates.shape)
 
