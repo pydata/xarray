@@ -657,7 +657,6 @@ class DataArrayResample(DataArrayGroupBy):
 
         return combined
 
-
     def reduce(self, func, dim=None, axis=None, shortcut=True,
                keep_attrs=False, **kwargs):
         """Reduce the items in this group by applying `func` along the
@@ -691,8 +690,6 @@ class DataArrayResample(DataArrayGroupBy):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
-
-        # return result.rename({self._resample_dim: self._dim})
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
