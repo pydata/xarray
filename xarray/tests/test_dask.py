@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
-from xarray.core.pycompat import suppress
+from xarray.core.pycompat import suppress, OrderedDict
 from . import TestCase, requires_dask
 
 from xarray.tests import unittest
@@ -16,6 +16,7 @@ from xarray.tests import unittest
 with suppress(ImportError):
     import dask
     import dask.array as da
+    import dask.dataframe
 
 
 class DaskTestCase(TestCase):
@@ -25,9 +26,9 @@ class DaskTestCase(TestCase):
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
-                    self.assertIsInstance(var.data, np.ndarray)
+                    self.assertIsInstance(v.data, np.ndarray)
                 else:
-                    self.assertIsInstance(var.data, da.Array)
+                    self.assertIsInstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             self.assertIsInstance(actual.data, da.Array)
             for k, v in actual.coords.items():
@@ -392,6 +393,69 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable,
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
+
+    def test_to_and_from_dataframe(self):
+        # adapted from TestDataset::test_to_and_from_dataframe()
+        # but with dask DataFrames instead of pandas DataFrames
+
+        x = da.from_array(np.random.randn(10), chunks=3)
+        y = da.from_array(np.random.randn(10), chunks=3)
+        t = list('abcdefghij')
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+        expected_pd = pd.DataFrame(np.array([x, y]).T,
+                                columns=['a', 'b'],
+                                index=pd.Index(t, name='t'))
+        expected = dask.dataframe.from_pandas(expected_pd,chunksize=3)
+
+        actual = ds.to_dataframe()
+
+        # test if lazy
+        self.assertIsInstance(actual, dask.dataframe.DataFrame)
+
+        # use the .equals method to check all DataFrame metadata
+        assert expected.compute().equals(actual), (expected, actual)
+
+        # verify coords are included
+        actual = ds.set_coords('b').to_dataframe()
+        assert expected.compute().equals(actual), (expected, actual)
+
+        # check roundtrip
+        self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
+
+        # test a case with a MultiIndex
+        w = np.random.randn(2, 3)
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['y'] = ('y', list('abc'))
+        exp_index = pd.MultiIndex.from_arrays(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            names=['x', 'y'])
+        expected_pd = pd.DataFrame(w.reshape(-1), columns=['w'],
+                                   index=exp_index)
+        expected = dask.dataframe.from_pandas(expected_pd)
+
+        actual = ds.to_dataframe()
+
+        # test if lazy
+        self.assertIsInstance(actual, dask.dataframe.DataFrame)
+
+        self.assertTrue(expected.compute().equals(actual))
+
+        # check roundtrip
+        self.assertDatasetIdentical(ds.assign_coords(x=[0, 1]),
+                                    Dataset.from_dataframe(actual))
+
+        # check pathological cases
+        df = dask.dataframe.from_pandas(pd.DataFrame([1]))
+        actual = Dataset.from_dataframe(df)
+        expected = Dataset({0: ('index', [1])}, {'index': [0]})
+        self.assertDatasetIdentical(expected, actual)
+
+        df = dask.dataframe.from_pandas(pd.DataFrame())
+        actual = Dataset.from_dataframe(df)
+        expected = Dataset(coords={'index': []})
+        self.assertDatasetIdentical(expected, actual)
 
 
 kernel_call_count = 0
