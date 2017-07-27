@@ -16,7 +16,7 @@ from xarray.tests import unittest
 with suppress(ImportError):
     import dask
     import dask.array as da
-    import dask.dataframe
+    import dask.dataframe as dd
 
 
 class DaskTestCase(TestCase):
@@ -407,12 +407,12 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected_pd = pd.DataFrame(np.array([x, y]).T,
                                 columns=['a', 'b'],
                                 index=pd.Index(t, name='t'))
-        expected = dask.dataframe.from_pandas(expected_pd, chunksize=4)
+        expected = dd.from_pandas(expected_pd, chunksize=4)
 
         actual = ds.to_dask_dataframe()
 
         # test if we have dask dataframes
-        self.assertIsInstance(actual, dask.dataframe.DataFrame)
+        self.assertIsInstance(actual, dd.DataFrame)
 
         # use the .equals from pandas to check dataframes are equivalent
         assert expected.compute().equals(actual.compute()), (expected, actual)
