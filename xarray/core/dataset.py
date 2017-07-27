@@ -2387,8 +2387,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def to_dask_dataframe(self, set_index=True):
-        """Convert this dataset into a dask.dataframe.DataFrame.
+        """
+        Convert this dataset into a dask.dataframe.DataFrame.
 
+        Non-index variables in this dataset form the columns of the
+        DataFrame.
+
+        If set_index=True, the dask DataFrame is indexed by
+        this dataset's coordinate. Since dask DataFrames to not support
+        multi-indexes, this only works if there is one coordinate dimension.
         """
 
         import dask.dataframe as dd
@@ -2396,21 +2403,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         columns = [k for k in self if k not in self.dims]
 
-        index = self.coords.to_index(self.dims)
-
-        lazy_data = {k: v._data for k, v in self.variables.items()
-                     if isinstance(v._data, dask_array_type)}
-
         data = [self._variables[k].data.reshape(-1) for k in columns]
         df = dd.from_dask_array(da.stack(data, axis=1), columns=columns)
 
-        # approach 2 -- doesn't work as is
-        #data = [dd.from_dask_array(self._variables[k].data.reshape(-1), columns=k) for k in columns]
-        #df = data[0]
-        #for d in data[1:]:
-        #    df = dd.merge(df, d)
-
         if set_index:
+            index = self.coords.to_index(self.dims)
+
             index = dd.from_array(index.values).repartition(divisions=df.divisions)
             df = df.set_index(index, sort=False)
 

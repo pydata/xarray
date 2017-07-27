@@ -399,7 +399,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         # but with dask DataFrames instead of pandas DataFrames
 
         x = da.from_array(np.random.randn(10), chunks=4)
-        y = da.from_array(np.random.randn(10), chunks=4)
+        y = np.random.randn(10)
         t = list('abcdefghij')
         ds = Dataset(OrderedDict([('a', ('t', x)),
                                   ('b', ('t', y)),
@@ -416,7 +416,6 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         # use the .equals from pandas to check dataframes are equivalent
         assert expected.compute().equals(actual.compute()), (expected, actual)
-
 
 kernel_call_count = 0
 def kernel():
