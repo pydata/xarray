@@ -398,8 +398,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         # adapted from TestDataset::test_to_and_from_dataframe()
         # but with dask DataFrames instead of pandas DataFrames
 
-        x = da.from_array(np.random.randn(10), chunks=3)
-        y = da.from_array(np.random.randn(10), chunks=3)
+        x = da.from_array(np.random.randn(10), chunks=4)
+        y = da.from_array(np.random.randn(10), chunks=4)
         t = list('abcdefghij')
         ds = Dataset(OrderedDict([('a', ('t', x)),
                                   ('b', ('t', y)),
@@ -407,59 +407,15 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected_pd = pd.DataFrame(np.array([x, y]).T,
                                 columns=['a', 'b'],
                                 index=pd.Index(t, name='t'))
-        expected = dask.dataframe.from_pandas(expected_pd,chunksize=3)
+        expected = dask.dataframe.from_pandas(expected_pd, chunksize=4)
 
         actual = ds.to_dataframe()
 
         # test if we have dask dataframes
         self.assertIsInstance(actual, dask.dataframe.DataFrame)
 
-        print(expected)
-        print(actual)
-        assert False, (actual)
-
-        # use the .equals method to check all DataFrame metadata
-        #assert expected.equals(actual), (expected, actual)
-
-        # verify coords are included
-        #actual = ds.set_coords('b').to_dataframe()
-        #assert expected.equals(actual), (expected, actual)
-
-        # check roundtrip
-        #self.assertDatasetIdentical(ds, Dataset.from_dataframe(actual))
-
-        # test a case with a MultiIndex
-        #w = np.random.randn(2, 3)
-        #ds = Dataset({'w': (('x', 'y'), w)})
-        #ds['y'] = ('y', list('abc'))
-        #exp_index = pd.MultiIndex.from_arrays(
-        #    [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
-        ##    names=['x', 'y'])
-        #expected_pd = pd.DataFrame(w.reshape(-1), columns=['w'],
-        #                           index=exp_index)
-        #expected = dask.dataframe.from_pandas(expected_pd)
-
-        #actual = ds.to_dataframe()
-
-        # test if lazy
-        #self.assertIsInstance(actual, dask.dataframe.DataFrame)
-
-        #self.assertTrue(expected.equals(actual))
-
-        # check roundtrip
-        #self.assertDatasetIdentical(ds.assign_coords(x=[0, 1]),
-        #                            Dataset.from_dataframe(actual))
-
-        # check pathological cases
-        #df = dask.dataframe.from_pandas(pd.DataFrame([1]), npartitions=1)
-        #actual = Dataset.from_dataframe(df)
-        #expected = Dataset({0: ('index', [1])}, {'index': [0]})
-        #self.assertDatasetIdentical(expected, actual)
-
-        #df = dask.dataframe.from_pandas(pd.DataFrame(), npartitions=1)
-        #actual = Dataset.from_dataframe(df)
-        #expected = Dataset(coords={'index': []})
-        #self.assertDatasetIdentical(expected, actual)
+        # use the .equals from pandas to check dataframes are equivalent
+        assert expected.compute().equals(actual.compute()), (expected, actual)
 
 
 kernel_call_count = 0

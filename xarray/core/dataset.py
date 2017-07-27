@@ -2337,16 +2337,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             import dask.dataframe as dd
             import dask.array as da
 
+            # approach 1
             data = [self._variables[k].data.reshape(-1) for k in columns]
-
-            data.append(index)
-            columns.append(index.name)
-
             df = dd.from_dask_array(da.stack(data, axis=1), columns=columns)
-            df.set_index(index.name)
 
+            # approach 2 -- doesn't work as is
+            #data = [dd.from_dask_array(self._variables[k].data.reshape(-1), columns=k) for k in columns]
+            #df = data[0]
+            #for d in data[1:]:
+            #    df = dd.merge(df, d)
+
+            index = dd.from_array(index.values).repartition(divisions=df.divisions)
+
+            df = df.set_index(index, sort=False)
         else:
-            # data is already in memory
             data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
             df = pd.DataFrame(OrderedDict(zip(columns, data)), index=index)
