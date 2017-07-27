@@ -394,7 +394,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    def test_to_and_from_dataframe(self):
+    def test_to_dask_dataframe(self):
         # adapted from TestDataset::test_to_and_from_dataframe()
         # but with dask DataFrames instead of pandas DataFrames
 
@@ -409,7 +409,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                                 index=pd.Index(t, name='t'))
         expected = dask.dataframe.from_pandas(expected_pd, chunksize=4)
 
-        actual = ds.to_dataframe()
+        actual = ds.to_dask_dataframe()
 
         # test if we have dask dataframes
         self.assertIsInstance(actual, dask.dataframe.DataFrame)
