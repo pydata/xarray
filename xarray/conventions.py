@@ -552,6 +552,34 @@ class BoolTypeArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
+class UnsignedIntTypeArray(utils.NDArrayMixin):
+    """Decode arrays on the fly from signed integer to unsigned
+    integer. Typically used when _Unsigned is set at as a netCDF
+    attribute on a signed integer variable.
+
+    >>> sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+
+    >>> sb.dtype
+    dtype('int8')
+
+    >>> UnsignedIntTypeArray(sb).dtype
+    dtype('uint8')
+
+    >>> UnsignedIntTypeArray(sb)[:]
+    array([  0,   1, 127, 128, 255], dtype=uint8)
+    """
+    def __init__(self, array):
+        self.array = array
+        self.unsigned_dtype = np.dtype('u%s' % array.dtype.itemsize)
+
+    @property
+    def dtype(self):
+        return self.unsigned_dtype
+
+    def __getitem__(self, key):
+        return np.asarray(self.array[key], dtype=self.dtype)
+
+
 def string_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
@@ -655,6 +683,14 @@ def maybe_encode_dtype(var, name=None):
                                   'any _FillValue to use for NaNs' % name,
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
+                if encoding.get('_Unsigned', False):
+                    signed_dtype = 'i%s' % dtype.itemsize
+                    if '_FillValue' in var.attrs:
+                        old_fill = np.asarray(attrs['_FillValue'])
+                        new_fill = old_fill.astype(signed_dtype)
+                        attrs['_FillValue'] = new_fill
+                    data = data.astype(signed_dtype)
+                    pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
                 data = string_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
@@ -779,7 +815,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         example: ['h', 'e', 'l', 'l', 'o'] -> 'hello'
     mask_and_scale: bool
         Lazily scale (using scale_factor and add_offset) and mask
-        (using _FillValue).
+        (using _FillValue). If the _Unsigned attribute is present
+        treat integer arrays as unsigned.
     decode_times : bool
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
     decode_endianness : bool
@@ -804,6 +841,16 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             dimensions = dimensions[:-1]
             data = CharToStringArray(data)
 
+    pop_to(attributes, encoding, '_Unsigned')
+    is_unsigned = encoding.get('_Unsigned', False)
+    if is_unsigned and mask_and_scale:
+        if data.dtype.kind == 'i':
+            data = UnsignedIntTypeArray(data)
+        else:
+            warnings.warn("variable has _Unsigned attribute but is not "
+                          "of integer type. Ignoring attribute.",
+                          RuntimeWarning, stacklevel=3)
+
     if mask_and_scale:
         if 'missing_value' in attributes:
             # missing_value is deprecated, but we still want to support it as
@@ -818,7 +865,6 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                                  "and decoding explicitly using "
                                  "xarray.conventions.decode_cf(ds)")
             attributes['_FillValue'] = attributes.pop('missing_value')
-
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
             warnings.warn("variable has multiple fill values {0}, decoding "
@@ -826,12 +872,19 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                           RuntimeWarning, stacklevel=3)
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
-        if ((fill_value is not None and not np.any(pd.isnull(fill_value))) or
-                scale_factor is not None or add_offset is not None):
+        has_fill = (fill_value is not None and
+                    not np.any(pd.isnull(fill_value)))
+        if (has_fill or scale_factor is not None or add_offset is not None):
             if fill_value.dtype.kind in ['U', 'S']:
                 dtype = object
             else:
                 dtype = float
+            # According to the CF spec, the fill value is of the same
+            # type as its variable, i.e. its storage format on disk.
+            # This handles the case where the fill_value also needs to be
+            # converted to its unsigned value.
+            if has_fill:
+                fill_value = np.asarray(fill_value, dtype=data.dtype)
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 
