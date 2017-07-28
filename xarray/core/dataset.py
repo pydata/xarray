@@ -2384,7 +2384,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             obj[name] = (dims, data)
         return obj
 
-    def to_dask_dataframe(self, set_index=True):
+    def to_dask_dataframe(self, set_index=False):
         """
         Convert this dataset into a dask.dataframe.DataFrame.
 

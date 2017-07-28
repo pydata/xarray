@@ -409,7 +409,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                                 index=pd.Index(t, name='t'))
         expected = dd.from_pandas(expected_pd, chunksize=4)
 
-        actual = ds.to_dask_dataframe()
+        actual = ds.to_dask_dataframe(set_index=True)
 
         # test if we have dask dataframes
         self.assertIsInstance(actual, dd.DataFrame)
