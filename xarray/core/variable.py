@@ -18,7 +18,7 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, broadcasted_indexable, BasicIndexer,
+from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
                        OuterIndexer, VectorizedIndexer)
 
 import xarray as xr  # only for Dataset and DataArray
@@ -27,6 +27,9 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+
+basic_indexing_types = integer_types + (slice,)
 
 
 class MissingDimensionsError(ValueError):
@@ -305,7 +308,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _indexable_data(self):
-        return broadcasted_indexable(self._data)
+        return xarray_indexable(self._data)
 
     def load(self):
         """Manually trigger loading of this variable's data from disk or a
@@ -402,8 +405,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
-        basic_indexing_types = integer_types + (slice,)
-        if all([isinstance(k, basic_indexing_types) for k in key]):
+        if all(isinstance(k, basic_indexing_types) for k in key):
             return self._broadcast_indexes_basic(key)
 
         # Detect it can be mapped as an outer indexer
@@ -442,23 +444,24 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if isinstance(k, Variable):
                 k = k.data
 
-            if isinstance(k, integer_types + (slice,)):
+            if isinstance(k, basic_indexing_types):
                 indexer.append(k)
             else:
                 k = np.asarray(k)
                 if k.ndim > 1:
                     raise IndexError("Unlabelled multi-dimensional array "
-                                     "cannot be used for indexing.")
-                indexer.append(k if k.dtype.kind != 'b' else k.nonzero()[0])
+                                     "cannot be used for indexing: {}".format(
+                                         k))
+                indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
         return dims, OuterIndexer(indexer)
 
-    def nonzero(self):
+    def _nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
         # TODO we should replace dask's native nonzero
         # after https://github.com/dask/dask/issues/1076 is implemented.
         nonzeros = np.nonzero(self.data)
-        return tuple([as_variable(nz, name=dim) for nz, dim
-                      in zip(nonzeros, self.dims)])
+        return tuple(Variable((dim), nz) for nz, dim
+                     in zip(nonzeros, self.dims))
 
     def _broadcast_indexes_advanced(self, key):
         variables = []
@@ -477,25 +480,29 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 if variable.ndim > 1:
                     raise IndexError("{}-dimensional boolean indexing is "
                                      "not supported. ".format(variable.ndim))
-                variables.extend(list(variable.nonzero()))
+                variables.extend(variable._nonzero())
             else:
                 variables.append(variable)
         variables = _broadcast_compat_variables(*variables)
         dims = variables[0].dims  # all variables have the same dims
         # overwrite if there is integers
-        key = VectorizedIndexer(k if isinstance(k, integer_types)
-                                else variable.data
-                                for variable, k in zip(variables, key))
+        key = VectorizedIndexer(variable.data for variable, k
+                                in zip(variables, key))
         return dims, key
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
 
-        NB. __getitem__ and __setitem__ implement "diagonal indexing" like
-        np.ndarray.
+        # TODO more docstrings.
+        NB. __getitem__ and __setitem__ implement xarray-style indexing,
+        where if keys are unlabelled arrays, we index the array orthogonally
+        with them. If keys are labelled array (such as Variables), they are
+        broadcasted with our usual scheme and then the array is indexed with
+        the broadcasted key, like numpy's fancy indexing.
 
-        This method will replace __getitem__ after we make sure its stability.
+        If you really want to do indexing like `x[x > 0]`, manipulate the numpy
+        array `x.values` directly.
         """
         dims, index_tuple = self._broadcast_indexes(key)
         values = self._indexable_data[index_tuple]
@@ -513,7 +520,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         See __getitem__ for more details.
         """
         dims, index_tuple = self._broadcast_indexes(key)
-        data = broadcasted_indexable(self._data)
+        data = xarray_indexable(self._data)
         if isinstance(value, Variable):
             data[index_tuple] = value.set_dims(dims)
         else:

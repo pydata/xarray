@@ -107,30 +107,6 @@ class TestIndexers(TestCase):
         with self.assertRaisesRegexp(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
 
-    def test_maybe_convert_to_slice(self):
-
-        cases = [
-            (1,),
-            (1, 1),
-            (1, 2),
-            (10,),
-            (0, 10),
-            (5, 10),
-            (5, 8),
-            (None, 5),
-            (None, -3),
-            (0, 10, 2),
-            (10, None, -1),
-            (7, 3, -2),
-        ]
-        for case in cases:
-            slice_obj = slice(*case)
-            base_array = np.arange(*slice_obj.indices(10))
-            for array in [base_array, base_array - 10]:
-                actual = indexing.maybe_convert_to_slice(array, 10)
-                self.assertArrayEqual(np.arange(10)[actual],
-                                      np.arange(10)[slice_obj])
-
     def test_orthogonal_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)

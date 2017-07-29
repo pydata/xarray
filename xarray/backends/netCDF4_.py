@@ -50,6 +50,9 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        # Make sure it is not an OuterIndexer
+        key = tuple(key)
+
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:

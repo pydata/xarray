@@ -73,41 +73,6 @@ def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
 
 
-def maybe_convert_to_slice(indexer, size):
-    """Convert an indexer into an equivalent slice object, if possible.
-
-    Arguments
-    ---------
-    indexer : int, slice or np.ndarray
-        If a numpy array, must have integer dtype.
-    size : integer
-        Integer size of the dimension to be indexed.
-    """
-    if indexer.ndim != 1 or not isinstance(indexer, np.ndarray):
-        return indexer
-
-    if indexer.size == 0:
-        return slice(0, 0)
-
-    if indexer.min() < -size or indexer.max() >= size:
-        raise IndexError(
-            'indexer has elements out of bounds for axis of size {}: {}'
-            .format(size, indexer))
-
-    indexer = np.where(indexer < 0, indexer + size, indexer)
-    if indexer.size == 1:
-        i = int(indexer[0])
-        return slice(i, i + 1)
-
-    start = int(indexer[0])
-    step = int(indexer[1] - start)
-    stop = start + step * indexer.size
-    guess = slice(start, stop, step)
-    if np.array_equal(_expand_slice(guess, size), indexer):
-        return guess
-    return indexer
-
-
 # TODO should be deprecated
 def orthogonal_indexer(key, shape):
     """Given a key for orthogonal array indexing, returns an equivalent key
@@ -403,7 +368,7 @@ class OuterIndexer(IndexerTuple):
                     if isinstance(k, slice):
                         k = np.arange(*k.indices(size))
                     if k.dtype.kind == 'b':
-                        k = k.nonzero()[0]
+                        (k, ) = k.nonzero()
                     shape = [(1,) * i_dim + (k.size, ) +
                              (1,) * (n_dim - i_dim - 1)]
                     new_key.append(k.reshape(*shape))
@@ -438,21 +403,23 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         else:
             if key is None:
                 key = (slice(None),) * array.ndim
-                if len(key) > 0:
-                    key = OuterIndexer(key)
+                key = OuterIndexer(key)
             self.array = array
             self.key = key
 
     def _updated_key(self, new_key):
         # TODO should suport VectorizedIndexer
-        new_key = iter(new_key)
+        if isinstance(new_key, VectorizedIndexer):
+            raise NotImplementedError('Vectorized indexing for {} is not '
+                                      'implemented.'.format(type(self)))
+        new_key = iter(expanded_indexer(new_key, self.ndim))
         key = []
         for size, k in zip(self.array.shape, self.key):
             if isinstance(k, integer_types):
                 key.append(k)
             else:
                 key.append(_index_indexer_1d(k, next(new_key), size))
-        return () if len(key) == 0 else OuterIndexer(key)
+        return OuterIndexer(key)
 
     @property
     def shape(self):
@@ -465,21 +432,13 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        array = broadcasted_indexable(self.array)
+        array = xarray_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, key):
-        if isinstance(key, VectorizedIndexer):
-            raise NotImplementedError('Vectorized indexing for {} is not '
-                                      'implemented.'.format(type(self)))
-        key = expanded_indexer(key, self.ndim)
         return type(self)(self.array, self._updated_key(key))
 
     def __setitem__(self, key, value):
-        if isinstance(key, VectorizedIndexer):
-            raise NotImplementedError('Vectorized indexing for {} is not '
-                                      'implemented.'.format(type(self)))
-        key = expanded_indexer(key, self.ndim)
         key = self._updated_key(key)
         self.array[key] = value
 
@@ -536,7 +495,7 @@ class MemoryCachedArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-def broadcasted_indexable(array):
+def xarray_indexable(array):
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
@@ -573,7 +532,7 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
 
 
 class DaskIndexingAdapter(utils.NDArrayMixin):
-    """Wrap a dask array to support broadcasted-indexing.
+    """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
         """ This adapter is usually called in Variable.__getitem__ with
@@ -582,19 +541,19 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-        if not isinstance(key, VectorizedIndexer):
-            try:
-                return self.array[key]
-            except NotImplementedError:
-                # manual orthogonal indexing.
-                value = self.array
-                for axis, subkey in reversed(list(enumerate(key))):
-                    value = value[(slice(None),) * axis + (subkey,)]
-                return value
-        else:
+        if isinstance(key, VectorizedIndexer):
             # TODO should support vindex
             raise IndexError(
-              'dask does not support vectorized indexing : {}'.format(key))
+                'dask does not support vectorized indexing : {}'.format(key))
+
+        try:
+            return self.array[key]
+        except NotImplementedError:
+            # manual orthogonal indexing.
+            value = self.array
+            for axis, subkey in reversed(list(enumerate(key))):
+                value = value[(slice(None),) * axis + (subkey,)]
+            return value
 
     def __setitem__(self, key, value):
         raise TypeError("this variable's data is stored in a dask array, "
