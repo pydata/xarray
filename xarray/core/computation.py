@@ -19,6 +19,7 @@ from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()
 _DEFAULT_FILL_VALUE = object()
+_DEFAULT_NAME = object()
 
 
 class _UFuncSignature(object):
@@ -109,8 +110,8 @@ def result_name(objects):
     # type: List[object] -> Any
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
-    names = {getattr(obj, 'name', None) for obj in objects}
-    names.discard(None)
+    names = {getattr(obj, 'name', _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
     if len(names) == 1:
         name, = names
     else:
@@ -220,11 +221,20 @@ def ordered_set_intersection(all_keys):
     return [key for key in all_keys[0] if key in intersection]
 
 
+def assert_and_return_exact_match(all_keys):
+    first_keys = all_keys[0]
+    for keys in all_keys[1:]:
+        if keys != first_keys:
+            raise ValueError('exact match required for variable names')
+    return first_keys
+
+
 _JOINERS = {
     'inner': ordered_set_intersection,
     'outer': ordered_set_union,
     'left': operator.itemgetter(0),
     'right': operator.itemgetter(-1),
+    'exact': assert_and_return_exact_match,
 }
 
 

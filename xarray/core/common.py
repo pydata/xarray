@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
+from . import dtypes
 from . import formatting
+from . import ops
 from .utils import SortedKeysDict, not_implemented, Frozen
 
 
@@ -557,64 +559,69 @@ class BaseDataObject(AttrAccessMixin):
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
-    def where(self, cond, other=None, drop=False):
-        """Return an object of the same shape with all entries where cond is
-        True and all other entries masked.
+    def where(self, cond, other=dtypes.NA, drop=False):
+        """Return elements from `self` or `other` depending on `cond`.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
 
         Parameters
         ----------
-        cond : boolean DataArray or Dataset
-        other : unimplemented, optional
-            Unimplemented placeholder for compatibility with future
-            numpy / pandas versions
+        cond : DataArray or Dataset with boolean dtype
+            Locations at which to preserve this object's values.
+        other : scalar, DataArray or Dataset, optional
+            Value to use for locations in this object where ``cond`` is False.
+            By default, these locations filled with NA.
         drop : boolean, optional
-            Coordinate labels that only correspond to NA values should be
-            dropped
+            If True, coordinate labels that only correspond to False values of
+            the condition are dropped from the result. Mutually exclusive with
+            ``other``.
 
         Returns
         -------
-        same type as caller or if drop=True same type as caller with dimensions
-        reduced for dim element where mask is True
+        Same type as caller.
 
         Examples
         --------
 
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
-        >>> a.where((a > 6) & (a < 18))
+        >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,  nan,  nan,  nan],
-               [ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
+        array([[  0.,   1.,   2.,   3.,  nan],
+               [  5.,   6.,   7.,  nan,  nan],
+               [ 10.,  11.,  nan,  nan,  nan],
+               [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
-        Coordinates:
-          * y        (y) int64 0 1 2 3 4
-          * x        (x) int64 0 1 2 3 4
-        >>> a.where((a > 6) & (a < 18), drop=True)
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
-        Coordinates:
-          * x        (x) int64 1 2 3
-          * y        (y) int64 0 1 2 3 4
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8, -1],
+               [10, 11, 12, -1, -1],
+               [15, 16, -1, -1, -1],
+               [20, -1, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
         """
-        if other is not None:
-            raise NotImplementedError("The optional argument 'other' has not "
-                                      "yet been implemented")
+        from .alignment import align
+        from .dataarray import DataArray
+        from .dataset import Dataset
 
         if drop:
-            from .dataarray import DataArray
-            from .dataset import Dataset
-            from .alignment import align
+            if other is not dtypes.NA:
+                raise ValueError('cannot set `other` if drop=True')
 
             if not isinstance(cond, (Dataset, DataArray)):
-                raise TypeError("Cond argument is %r but must be a %r or %r" %
+                raise TypeError("cond argument is %r but must be a %r or %r" %
                                 (cond, Dataset, DataArray))
+
             # align so we can use integer indexing
             self, cond = align(self, cond)
 
@@ -627,16 +634,11 @@ class BaseDataObject(AttrAccessMixin):
             # clip the data corresponding to coordinate dims that are not used
             nonzeros = zip(clipcond.dims, np.nonzero(clipcond.values))
             indexers = {k: np.unique(v) for k, v in nonzeros}
-            outobj = self.isel(**indexers)
-            outcond = cond.isel(**indexers)
-        else:
-            outobj = self
-            outcond = cond
 
-        # preserve attributes
-        out = outobj._where(outcond)
-        out._copy_attrs_from(self)
-        return out
+            self = self.isel(**indexers)
+            cond = cond.isel(**indexers)
+
+        return ops.where(self, cond, other)
 
     def close(self):
         """Close any files linked to this object
@@ -656,42 +658,6 @@ class BaseDataObject(AttrAccessMixin):
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
         __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def _maybe_promote(dtype):
-    """Simpler equivalent of pandas.core.common._maybe_promote"""
-    # N.B. these casting rules should match pandas
-    if np.issubdtype(dtype, float):
-        fill_value = np.nan
-    elif np.issubdtype(dtype, int):
-        # convert to floating point so NaN is valid
-        dtype = float
-        fill_value = np.nan
-    elif np.issubdtype(dtype, complex):
-        fill_value = np.nan + np.nan * 1j
-    elif np.issubdtype(dtype, np.datetime64):
-        fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
-    else:
-        dtype = object
-        fill_value = np.nan
-    return np.dtype(dtype), fill_value
-
-
-def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
-    """
-    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
-
-
-def _get_fill_value(dtype):
-    """Return a fill value that appropriately promotes types when used with
-    np.concatenate
-    """
-    _, fill_value = _maybe_promote(dtype)
-    return fill_value
 
 
 def full_like(other, fill_value, dtype=None):
@@ -761,10 +727,3 @@ def ones_like(other, dtype=None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
-
-
-def is_datetime_like(dtype):
-    """Check if a dtype is a subclass of the numpy datetime types
-    """
-    return (np.issubdtype(dtype, np.datetime64) or
-            np.issubdtype(dtype, np.timedelta64))

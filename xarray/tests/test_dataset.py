@@ -2667,16 +2667,27 @@ class TestDataset(TestCase):
         self.assertEqual(actual.a.attrs, ds.a.attrs)
 
         # attrs
-        da = DataArray(range(5), name='a', attrs={'attr':'da'})
+        da = DataArray(range(5), name='a', attrs={'attr': 'da'})
         actual = da.where(da.values > 1)
         self.assertEqual(actual.name, 'a')
         self.assertEqual(actual.attrs, da.attrs)
 
-        ds = Dataset({'a': da}, attrs={'attr':'ds'})
+        ds = Dataset({'a': da}, attrs={'attr': 'ds'})
         actual = ds.where(ds > 0)
         self.assertEqual(actual.attrs, ds.attrs)
         self.assertEqual(actual.a.name, 'a')
         self.assertEqual(actual.a.attrs, ds.a.attrs)
+
+    def test_where_other(self):
+        ds = Dataset({'a': ('x', range(5))})
+        expected = Dataset({'a': ('x', [-1, -1, 2, 3, 4])})
+        actual = ds.where(ds > 1, -1)
+        assert_equal(expected, actual)
+        assert actual.a.dtype == int
+
+        with pytest.raises(ValueError) as excinfo:
+            ds.where(ds > 1, other=0, drop=True)
+        assert "cannot set" in str(excinfo.value)
 
     def test_where_drop(self):
         # if drop=True

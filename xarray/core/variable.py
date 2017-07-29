@@ -12,6 +12,7 @@ import pandas as pd
 
 from . import common
 from . import duck_array_ops
+from . import dtypes
 from . import indexing
 from . import nputils
 from . import ops
@@ -121,6 +122,13 @@ def _maybe_wrap_data(data):
     return data
 
 
+def _possibly_convert_objects(values):
+    """Convert arrays of datetime.datetime and datetime.timedelta objects into
+    datetime64 and timedelta64, according to the pandas convention.
+    """
+    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
+
+
 def as_compatible_data(data, fastpath=False):
     """Prepare and wrap data to put in a Variable.
 
@@ -171,7 +179,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
-            dtype, fill_value = common._maybe_promote(data.dtype)
+            dtype, fill_value = dtypes.maybe_promote(data.dtype)
             data = np.asarray(data, dtype=dtype)
             data[mask] = fill_value
         else:
@@ -179,7 +187,7 @@ def as_compatible_data(data, fastpath=False):
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
-            data = common._possibly_convert_objects(data)
+            data = _possibly_convert_objects(data)
         elif data.dtype.kind == 'M':
             data = np.asarray(data, 'datetime64[ns]')
         elif data.dtype.kind == 'm':
@@ -603,7 +611,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             keep = slice(None)
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
-        dtype, fill_value = common._maybe_promote(self.dtype)
+        dtype, fill_value = dtypes.maybe_promote(self.dtype)
 
         shape = list(self.shape)
         shape[axis] = min(abs(count), shape[axis])
@@ -890,8 +898,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def fillna(self, value):
         return ops.fillna(self, value)
 
-    def where(self, cond):
-        return self._where(cond)
+    def where(self, cond, other=dtypes.NA):
+        return ops.where(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                allow_lazy=False, **kwargs):

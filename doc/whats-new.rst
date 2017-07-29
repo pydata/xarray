@@ -31,6 +31,9 @@ Enhancements
 
 - Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
   By `Christian Chwala <https://github.com/cchwala>`_.
+- :py:meth:`~xarray.Dataset.where` now supports the ``other`` argument, for
+  filling with a value other than ``NaN`` (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -49,7 +52,7 @@ Bug fixes
 
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
   ``rtol`` arguments when called on ``DataArray`` objects.
-  By `Stephan Hoyer <http://github.com/shoyer>`_.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 
