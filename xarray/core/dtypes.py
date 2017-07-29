@@ -2,7 +2,7 @@ import numpy as np
 
 
 class NA(object):
-    """Sentinel value to indicate a dtype appropriate NA value."""
+    """Use as a sentinel value to indicate a dtype appropriate NA value."""
 
 
 def maybe_promote(dtype):
