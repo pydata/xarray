@@ -38,6 +38,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self._shape
 
     def __getitem__(self, key):
+        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
 
         # make our job a bit easier
         key = indexing.canonicalize_indexer(key, self._ndims)

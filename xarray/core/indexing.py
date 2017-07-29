@@ -336,6 +336,10 @@ def _index_indexer_1d(old_indexer, applied_indexer, size):
 
 class IndexerTuple(tuple):
     """ Base class for xarray indexing tuples """
+    def to_tuple(self):
+        """ Converts to a native python tuple  """
+        return tuple(self)
+
     def __repr__(self):
         return type(self).__name__ + super(IndexerTuple, self).__repr__()
 
@@ -523,11 +527,13 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
     def __getitem__(self, key):
         if isinstance(key, OuterIndexer):
             key = key.vectorize(self.shape)
+        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
         return self._ensure_ndarray(self.array[key])
 
     def __setitem__(self, key, value):
         if isinstance(key, OuterIndexer):
             key = key.vectorize(self.shape)
+        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
         self.array[key] = value
 
 
@@ -547,6 +553,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
                 'dask does not support vectorized indexing : {}'.format(key))
 
         try:
+            key = key.to_tuple() if hasattr(key, 'to_tuple') else key
             return self.array[key]
         except NotImplementedError:
             # manual orthogonal indexing.

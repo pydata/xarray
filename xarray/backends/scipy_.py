@@ -48,6 +48,8 @@ class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
     def __getitem__(self, key):
         if isinstance(key, OuterIndexer):
             key = key.vectorize(self.shape)
+
+        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
         with self.datastore.ensure_open(autoclose=True):
             data = NumpyIndexingAdapter(self.get_array())[key]
             # Copy data if the source file is mmapped.
