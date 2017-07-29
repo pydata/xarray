@@ -483,11 +483,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 variables.extend(variable._nonzero())
             else:
                 variables.append(variable)
-        variables = _broadcast_compat_variables(*variables)
+        try:
+            variables = _broadcast_compat_variables(*variables)
+        except ValueError:
+            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
         dims = variables[0].dims  # all variables have the same dims
         # overwrite if there is integers
-        key = VectorizedIndexer(variable.data for variable, k
-                                in zip(variables, key))
+        key = VectorizedIndexer(variable.data for variable in variables)
         return dims, key
 
     def __getitem__(self, key):
@@ -1325,12 +1327,13 @@ class IndexVariable(Variable):
         return self.copy(deep=False)
 
     def __getitem__(self, key):
-        key = self._item_key_to_tuple(key)
-        values = self._indexable_data[key]
+        dims, index_tuple = self._broadcast_indexes(key)
+        assert len(dims) <= 1
+        values = self._indexable_data[index_tuple]
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
-            return type(self)(self.dims, values, self._attrs,
+            return type(self)(dims, values, self._attrs,
                               self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):

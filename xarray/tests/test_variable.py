@@ -53,6 +53,30 @@ class VariableSubclassTestCases(object):
         expected = v[0]
         self.assertVariableIdentical(expected, actual)
 
+    def test_getitem_1d(self):
+        v = self.cls(['x'], [0, 1, 2])
+
+        v_new = v[dict(x=[0, 1])]
+        assert v_new.dims == ('x', )
+        self.assertArrayEqual(v_new, v._data[[0, 1]])
+
+        v_new = v[dict(x=slice(None))]
+        assert v_new.dims == ('x', )
+        self.assertArrayEqual(v_new, v._data)
+
+        v_new = v[dict(x=Variable('a', [0, 1]))]
+        assert v_new.dims == ('a', )
+        self.assertArrayEqual(v_new, v._data[[0, 1]])
+
+        v_new = v[dict(x=1)]
+        assert v_new.dims == ()
+        self.assertArrayEqual(v_new, v._data[1])
+
+        # tuple argument
+        v_new = v[slice(None)]
+        assert v_new.dims == ('x', )
+        self.assertArrayEqual(v_new, v._data)
+
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed
@@ -851,7 +875,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with self.assertRaisesRegexp(IndexError, "Unlabelled multi-"):
             v[[[0, 1], [1, 2]]]
 
-        with self.assertRaisesRegexp(ValueError, "operands cannot be "):
+        with self.assertRaisesRegexp(IndexError, "Dimensions of indexers "):
             ind_x = Variable(['a', 'b'], [[0, 0], [1, 1]])
             ind_y = Variable(['a'], [0])
             v[(ind_x, ind_y)]

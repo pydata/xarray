@@ -541,6 +541,7 @@ class PandasIndexAdapter(utils.NDArrayMixin):
             # objects don't like tuples)
             key, = key
 
+        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
         result = self.array[key]
 
         if isinstance(result, pd.Index):
