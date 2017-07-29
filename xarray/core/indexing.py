@@ -9,7 +9,7 @@ import pandas as pd
 from . import utils
 from .pycompat import (iteritems, range, integer_types, dask_array_type,
                        suppress)
-from .utils import is_full_slice, is_dict_like
+from .utils import is_dict_like
 
 
 def expanded_indexer(key, ndim):
@@ -42,80 +42,8 @@ def expanded_indexer(key, ndim):
     return tuple(new_key)
 
 
-# TODO deprecate
-def canonicalize_indexer(key, ndim):
-    """Given an indexer for orthogonal array indexing, return an indexer that
-    is a tuple composed entirely of slices, integer ndarrays and native python
-    ints.
-    """
-    def canonicalize(indexer):
-        if not isinstance(indexer, slice):
-            indexer = np.asarray(indexer)
-            if indexer.ndim == 0:
-                indexer = int(np.asscalar(indexer))
-            else:
-                if indexer.ndim != 1:
-                    raise ValueError('orthogonal array indexing only supports '
-                                     '1d arrays')
-                if indexer.dtype.kind == 'b':
-                    indexer, = np.nonzero(indexer)
-                elif indexer.dtype.kind != 'i':
-                    raise ValueError('invalid subkey %r for integer based '
-                                     'array indexing; all subkeys must be '
-                                     'slices, integers or sequences of '
-                                     'integers or Booleans' % indexer)
-        return indexer
-
-    return tuple(canonicalize(k) for k in expanded_indexer(key, ndim))
-
-
 def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
-
-
-# TODO should be deprecated
-def orthogonal_indexer(key, shape):
-    """Given a key for orthogonal array indexing, returns an equivalent key
-    suitable for indexing a numpy.ndarray with fancy indexing.
-    """
-    # replace Ellipsis objects with slices
-    key = list(canonicalize_indexer(key, len(shape)))
-    # replace 1d arrays and slices with broadcast compatible arrays
-    # note: we treat integers separately (instead of turning them into 1d
-    # arrays) because integers (and only integers) collapse axes when used with
-    # __getitem__
-    non_int_keys = [n for n, k in enumerate(key)
-                    if not isinstance(k, integer_types)]
-
-    def full_slices_unselected(n_list):
-        def all_full_slices(key_index):
-            return all(is_full_slice(key[n]) for n in key_index)
-        if not n_list:
-            return n_list
-        elif all_full_slices(range(n_list[0] + 1)):
-            return full_slices_unselected(n_list[1:])
-        elif all_full_slices(range(n_list[-1], len(key))):
-            return full_slices_unselected(n_list[:-1])
-        else:
-            return n_list
-
-    # However, testing suggests it is OK to keep contiguous sequences of full
-    # slices at the start or the end of the key. Keeping slices around (when
-    # possible) instead of converting slices to arrays significantly speeds up
-    # indexing.
-    # (Honestly, I don't understand when it's not OK to keep slices even in
-    # between integer indices if as array is somewhere in the key, but such are
-    # the admittedly mind-boggling ways of numpy's advanced indexing.)
-    array_keys = full_slices_unselected(non_int_keys)
-
-    def maybe_expand_slice(k, length):
-        return _expand_slice(k, length) if isinstance(k, slice) else k
-
-    array_indexers = np.ix_(*(maybe_expand_slice(key[n], shape[n])
-                              for n in array_keys))
-    for i, n in enumerate(array_keys):
-        key[n] = array_indexers[i]
-    return tuple(key)
 
 
 def _try_get_item(x):

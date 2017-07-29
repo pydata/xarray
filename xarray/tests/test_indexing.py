@@ -6,12 +6,85 @@ import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing, utils
+from xarray.core.pycompat import integer_types
 from . import TestCase, ReturnItem
+
+
+def canonicalize_indexer(key, ndim):
+    """Given an indexer for orthogonal array indexing, return an indexer that
+    is a tuple composed entirely of slices, integer ndarrays and native python
+    ints.
+    """
+    def canonicalize(indexer):
+        if not isinstance(indexer, slice):
+            indexer = np.asarray(indexer)
+            if indexer.ndim == 0:
+                indexer = int(np.asscalar(indexer))
+            else:
+                if indexer.ndim != 1:
+                    raise ValueError('orthogonal array indexing only supports '
+                                     '1d arrays')
+                if indexer.dtype.kind == 'b':
+                    indexer, = np.nonzero(indexer)
+                elif indexer.dtype.kind != 'i':
+                    raise ValueError('invalid subkey %r for integer based '
+                                     'array indexing; all subkeys must be '
+                                     'slices, integers or sequences of '
+                                     'integers or Booleans' % indexer)
+        return indexer
+
+    return tuple(canonicalize(k) for k in indexing.expanded_indexer(key, ndim))
+
+
+def orthogonal_indexer(key, shape):
+    """Given a key for orthogonal array indexing, returns an equivalent key
+    suitable for indexing a numpy.ndarray with fancy indexing.
+    """
+    # replace Ellipsis objects with slices
+    key = list(canonicalize_indexer(key, len(shape)))
+    # replace 1d arrays and slices with broadcast compatible arrays
+    # note: we treat integers separately (instead of turning them into 1d
+    # arrays) because integers (and only integers) collapse axes when used with
+    # __getitem__
+    non_int_keys = [n for n, k in enumerate(key)
+                    if not isinstance(k, integer_types)]
+
+    def full_slices_unselected(n_list):
+        def all_full_slices(key_index):
+            return all(utils.is_full_slice(key[n]) for n in key_index)
+        if not n_list:
+            return n_list
+        elif all_full_slices(range(n_list[0] + 1)):
+            return full_slices_unselected(n_list[1:])
+        elif all_full_slices(range(n_list[-1], len(key))):
+            return full_slices_unselected(n_list[:-1])
+        else:
+            return n_list
+
+    # However, testing suggests it is OK to keep contiguous sequences of full
+    # slices at the start or the end of the key. Keeping slices around (when
+    # possible) instead of converting slices to arrays significantly speeds up
+    # indexing.
+    # (Honestly, I don't understand when it's not OK to keep slices even in
+    # between integer indices if as array is somewhere in the key, but such are
+    # the admittedly mind-boggling ways of numpy's advanced indexing.)
+    array_keys = full_slices_unselected(non_int_keys)
+
+    def maybe_expand_slice(k, length):
+        return indexing._expand_slice(k, length) if isinstance(k, slice) else k
+
+    array_indexers = np.ix_(*(maybe_expand_slice(key[n], shape[n])
+                              for n in array_keys))
+    for i, n in enumerate(array_keys):
+        key[n] = array_indexers[i]
+    return tuple(key)
 
 
 class NumpyOrthogonalIndexingAdapter(utils.NDArrayMixin):
     """Wrap a NumPy array to use orthogonal indexing (array indexing
     accesses different dimensions independently, like netCDF4-python variables)
+
+    This class is only for testing.
     """
     # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
     # it implements orthogonal indexing, except it casts to a numpy array,
@@ -27,7 +100,7 @@ class NumpyOrthogonalIndexingAdapter(utils.NDArrayMixin):
         if any(not isinstance(k, indexing.integer_types + (slice,))
                 for k in key):
             # key would trigger fancy indexing
-            key = indexing.orthogonal_indexer(key, self.shape)
+            key = orthogonal_indexer(key, self.shape)
         return key
 
     def _ensure_ndarray(self, value):
@@ -119,7 +192,7 @@ class TestIndexers(TestCase):
                   I[::-2], I[5::-2], I[:3:-2], I[2:5:-1], I[7:3:-2], I[:3, :4],
                   I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
                   I[:2, :3, y], I[0, y, :, :4, 0]]:
-            j = indexing.orthogonal_indexer(i, x.shape)
+            j = orthogonal_indexer(i, x.shape)
             self.assertArrayEqual(x[i], x[j])
             self.assertArrayEqual(self.set_to_zero(x, i),
                                   self.set_to_zero(x, j))
@@ -137,16 +210,16 @@ class TestIndexers(TestCase):
                 (I[0, :, y, :, 0], I[0, :, :5, :, 0], (11, 5, 13)),
                 (I[:, :, y, :, 0], I[:, :, :5, :, 0], (10, 11, 5, 13)),
                 (I[:, :, y, z, :], I[:, :, :5, 2:8:2], (10, 11, 5, 3, 14))]:
-            k = indexing.orthogonal_indexer(i, x.shape)
+            k = orthogonal_indexer(i, x.shape)
             self.assertEqual(shape, x[k].shape)
             self.assertArrayEqual(x[j], x[k])
             self.assertArrayEqual(self.set_to_zero(x, j),
                                   self.set_to_zero(x, k))
         # standard numpy (non-orthogonal) indexing doesn't work anymore
         with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
-            indexing.orthogonal_indexer(x > 0, x.shape)
+            orthogonal_indexer(x > 0, x.shape)
         with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
-            print(indexing.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
+            print(orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
 
     def test_asarray_tuplesafe(self):
         res = indexing._asarray_tuplesafe(('a', 1))
