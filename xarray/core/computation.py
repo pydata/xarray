@@ -20,6 +20,7 @@ from .utils import is_dict_like
 _DEFAULT_FROZEN_SET = frozenset()
 _DEFAULT_FILL_VALUE = object()
 _DEFAULT_NAME = object()
+_JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
 class _UFuncSignature(object):
@@ -225,7 +226,9 @@ def assert_and_return_exact_match(all_keys):
     first_keys = all_keys[0]
     for keys in all_keys[1:]:
         if keys != first_keys:
-            raise ValueError('exact match required for variable names')
+            raise ValueError(
+                'exact match required for all data variable names, but %r != %r'
+                % (keys, first_keys))
     return first_keys
 
 
@@ -330,7 +333,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     keep_attrs = kwargs.pop('keep_attrs', False)
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
-    if dataset_join != 'inner' and fill_value is _DEFAULT_FILL_VALUE:
+    if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
+            fill_value is _DEFAULT_FILL_VALUE):
         raise TypeError('To apply an operation to datasets with different ',
                         'data variables, you must supply the ',
                         'dataset_fill_value argument.')

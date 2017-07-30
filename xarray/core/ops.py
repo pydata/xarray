@@ -170,9 +170,12 @@ def where(self, cond, other=dtypes.NA):
     Same type as caller.
     """
     from .computation import apply_ufunc
-
+    # alignment for three arguments is complicated, so don't support it yet
+    join = 'inner' if other is dtypes.NA else 'exact'
     return apply_ufunc(duck_array_ops.where_method,
                        self, cond, other,
+                       join=join,
+                       dataset_join=join,
                        dask_array='allowed',
                        keep_attrs=True)
 

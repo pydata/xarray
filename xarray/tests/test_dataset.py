@@ -27,7 +27,7 @@ from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
                                   integer_types)
 from xarray.core.common import full_like
 
-from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
+from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
@@ -2679,15 +2679,20 @@ class TestDataset(TestCase):
         self.assertEqual(actual.a.attrs, ds.a.attrs)
 
     def test_where_other(self):
-        ds = Dataset({'a': ('x', range(5))})
-        expected = Dataset({'a': ('x', [-1, -1, 2, 3, 4])})
+        ds = Dataset({'a': ('x', range(5))}, {'x': range(5)})
+        expected = Dataset({'a': ('x', [-1, -1, 2, 3, 4])}, {'x': range(5)})
         actual = ds.where(ds > 1, -1)
         assert_equal(expected, actual)
         assert actual.a.dtype == int
 
-        with pytest.raises(ValueError) as excinfo:
+        with raises_regex(ValueError, "cannot set"):
             ds.where(ds > 1, other=0, drop=True)
-        assert "cannot set" in str(excinfo.value)
+
+        with raises_regex(ValueError, "indexes .* are not equal"):
+            ds.where(ds > 1, ds.isel(x=slice(3)))
+
+        with raises_regex(ValueError, "exact match required"):
+            ds.where(ds > 1, ds.assign(b=2))
 
     def test_where_drop(self):
         # if drop=True

@@ -182,6 +182,13 @@ class TestCase(unittest.TestCase):
         assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
 
 
+@contextmanager
+def raises_regex(error, pattern):
+    with pytest.raises(error) as excinfo:
+        yield
+    excinfo.match(pattern)
+
+
 class UnexpectedDataAccess(Exception):
     pass
 
