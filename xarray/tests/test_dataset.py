@@ -900,7 +900,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['station'].drop(['dim2']),
                                       stations['station'])
 
-        with self.assertRaisesRegexp(ValueError, 'Inconsistent coordinates'):
+        with self.assertRaisesRegexp(ValueError, 'conflicting values for '):
             data.isel(dim1=DataArray([0, 1, 2], dims='station',
                                      coords={'station': [0, 1, 2]}),
                       dim2=DataArray([0, 1, 2], dims='station',

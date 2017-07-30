@@ -24,7 +24,7 @@ from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
-                    merge_data_and_coords)
+                    merge_data_and_coords, merge_variables)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable,
@@ -1135,17 +1135,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # extract new coordinates from indexers
-        variables = OrderedDict()
-        for k, v in iteritems(indexers):
-            if isinstance(v, DataArray):
-                for c, var in v.coords.items():
-                    if c in variables:
-                        if not variables[c].equals(var.variable):
-                            raise ValueError('Inconsistent coordinates : {0}'
-                                             ' and {1}'.format(variables[c],
-                                                               var))
-                    else:
-                        variables[c] = var.variable
+        variables = merge_variables([v._coords for _, v in
+                                     iteritems(indexers)
+                                     if isinstance(v, DataArray)],
+                                    compat='identical')
+
         coord_names = set(self._coord_names) | set(variables)
 
         # a tuple, e.g. (('x', ), [0, 1]), is converted to Variable
