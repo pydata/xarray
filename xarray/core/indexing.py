@@ -95,7 +95,20 @@ def get_loc(index, label, method=None, tolerance=None):
 
 
 def get_indexer(index, labels, method=None, tolerance=None):
+    """ Call pd.Index.get_indexer(labels). If labels are Variable,
+    The return type is also a Variable with the same dimension to
+    labels.
+    """
+    from .variable import Variable
+
     kwargs = _index_method_kwargs(method, tolerance)
+    if isinstance(labels, Variable):
+        if labels.ndim > 1:
+            indexers = np.array(index.get_indexer(labels.data.flatten(),
+                                                  **kwargs))
+            return Variable(labels.dims, indexers.reshape(labels.shape))
+        else:
+            return Variable(labels.dims, index.get_indexer(labels, **kwargs))
     return index.get_indexer(labels, **kwargs)
 
 
@@ -145,14 +158,14 @@ def convert_label_indexer(index, label, index_name='', method=None,
             )
 
     else:
-        label = _asarray_tuplesafe(label)
+        label = label if hasattr(label, 'dims') else _asarray_tuplesafe(label)
         if label.ndim == 0:
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label.item(), level=0)
             else:
                 indexer = get_loc(index, label.item(), method, tolerance)
         elif label.dtype.kind == 'b':
-            indexer, = np.nonzero(label)
+            indexer = label
         else:
             indexer = get_indexer(index, label, method, tolerance)
             if np.any(indexer < 0):

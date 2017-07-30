@@ -853,47 +853,49 @@ class TestDataset(TestCase):
         pdim1 = [1, 2, 3]
         pdim2 = [4, 5, 1]
         pdim3 = [1, 2, 3]
-        actual = data.isel(dim1=(('test_coord'), pdim1),
-                           dim2=(('test_coord'), pdim2),
-                           dim3=(('test_coord'), pdim3))
+        actual = data.isel(dim1=(('test_coord', ), pdim1),
+                           dim2=(('test_coord', ), pdim2),
+                           dim3=(('test_coord', ), pdim3))
         assert 'test_coord' in actual.dims
         assert actual.coords['test_coord'].shape == (len(pdim1), )
 
         # Should work with DataArray
         actual = data.isel(dim1=DataArray(pdim1, dims='test_coord'),
-                           dim2=(('test_coord'), pdim2),
-                           dim3=(('test_coord'), pdim3))
+                           dim2=(('test_coord', ), pdim2),
+                           dim3=(('test_coord', ), pdim3))
         assert 'test_coord' in actual.dims
         assert actual.coords['test_coord'].shape == (len(pdim1), )
 
-        actual = data.isel(dim1=(('points'), pdim1), dim2=(('points'), pdim2))
+        actual = data.isel(dim1=(('points', ), pdim1),
+                           dim2=(('points', ), pdim2))
         assert 'points' in actual.dims
         assert 'dim3' in actual.dims
         assert 'dim3' not in actual.data_vars
         np.testing.assert_array_equal(data['dim2'][pdim2], actual['dim2'])
 
         # test that the order of the indexers doesn't matter
-        self.assertDatasetIdentical(data.isel(dim1=(('points'), pdim1),
-                                              dim2=(('points'), pdim2)),
-                                    data.isel(dim2=(('points'), pdim2),
-                                              dim1=(('points'), pdim1)))
+        self.assertDatasetIdentical(data.isel(dim1=(('points', ), pdim1),
+                                              dim2=(('points', ), pdim2)),
+                                    data.isel(dim2=(('points', ), pdim2),
+                                              dim1=(('points', ), pdim1)))
         # make sure we're raising errors in the right places
         with self.assertRaisesRegexp(IndexError,
                                      'Dimensions of indexers mismatch'):
-            data.isel(dim1=(('points'), [1, 2]), dim2=(('points'), [1, 2, 3]))
+            data.isel(dim1=(('points', ), [1, 2]),
+                      dim2=(('points', ), [1, 2, 3]))
         with self.assertRaisesRegexp(TypeError, 'cannot use a Dataset'):
             data.isel(dim1=Dataset({'points': [1, 2]}))
 
         # test to be sure we keep around variables that were not indexed
         ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
-        actual = ds.isel(x=(('points'), [0, 1, 2]))
+        actual = ds.isel(x=(('points', ), [0, 1, 2]))
         self.assertDataArrayIdentical(ds['y'], actual['y'])
 
         # tests using index or DataArray as a dim
         stations = Dataset()
-        stations['station'] = ('station', ['A', 'B', 'C'])
-        stations['dim1s'] = ('station', [1, 2, 3])
-        stations['dim2s'] = ('station', [4, 5, 1])
+        stations['station'] = (('station', ), ['A', 'B', 'C'])
+        stations['dim1s'] = (('station', ), [1, 2, 3])
+        stations['dim2s'] = (('station', ), [4, 5, 1])
 
         actual = data.isel(dim1=stations['dim1s'],
                            dim2=stations['dim2s'])
@@ -910,8 +912,8 @@ class TestDataset(TestCase):
 
         # multi-dimensional selection
         stations = Dataset()
-        stations['a'] = ('a', ['A', 'B', 'C'])
-        stations['b'] = ('b', [0, 1])
+        stations['a'] = (('a', ), ['A', 'B', 'C'])
+        stations['b'] = (('b', ), [0, 1])
         stations['dim1s'] = (('a', 'b'), [[1, 2], [2, 3], [3, 4]])
         stations['dim2s'] = (('a', ), [4, 5, 1])
 
@@ -1015,22 +1017,9 @@ class TestDataset(TestCase):
                                     data.isel_points(dim2=pdim2, dim1=pdim1))
 
         # make sure we're raising errors in the right places
-        with self.assertRaisesRegexp(ValueError,
-                                     'All indexers must be the same length'):
+        with self.assertRaisesRegexp(IndexError,
+                                     'Dimensions of indexers mismatch'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
-        with self.assertRaisesRegexp(ValueError,
-                                     'dimension bad_key does not exist'):
-            data.isel_points(bad_key=[1, 2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
-            data.isel_points(dim1=[1.5, 2.2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
-            data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
-        with self.assertRaisesRegexp(ValueError,
-                                     'Indexers must be 1 dimensional'):
-            data.isel_points(dim1=1, dim2=2)
-        with self.assertRaisesRegexp(ValueError,
-                                     'Existing dimension names are not valid'):
-            data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
 
         # test to be sure we keep around variables that were not indexed
         ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})
@@ -1085,15 +1074,46 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
-        expected = Dataset({'foo': ('points', [0, 4, 8])}
-                            )
+        expected = Dataset({'foo': ('points', [0, 4, 8])})
         actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
         self.assertDatasetIdentical(expected, actual)
 
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
         expected.coords.update({'x': ('points', [0, 1, 2]),
-                                'y': ('points', [0, 1, 2])
-                                })
+                                'y': ('points', [0, 1, 2])})
+        actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
+                                 method='pad')
+        self.assertDatasetIdentical(expected, actual)
+
+        if pd.__version__ >= '0.17':
+            with self.assertRaises(KeyError):
+                data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+
+    def test_sel_fancy(self):
+        data = create_test_data()
+
+        # add in a range() index
+        data['dim1'] = data.dim1
+
+        pdim1 = [1, 2, 3]
+        pdim2 = [4, 5, 1]
+        pdim3 = [1, 2, 3]
+        expected = data.isel(dim1=(('test_coord', ), pdim1),
+                             dim2=(('test_coord', ), pdim2),
+                             dim3=(('test_coord'), pdim3))
+        actual = data.sel(dim1=(('test_coord', ), data.dim1[pdim1]),
+                          dim2=(('test_coord', ), data.dim2[pdim2]),
+                          dim3=(('test_coord', ), data.dim3[pdim3]))
+        self.assertDatasetIdentical(expected, actual)
+
+        data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
+        expected = Dataset({'foo': ('points', [0, 4, 8])})
+        actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
+        self.assertDatasetIdentical(expected, actual)
+
+        data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
+        expected.coords.update({'x': ('points', [0, 1, 2]),
+                                'y': ('points', [0, 1, 2])})
         actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
