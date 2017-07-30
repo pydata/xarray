@@ -1110,6 +1110,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
+            indexer can be a integer, slice, array-like or even DataArray.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out.
 
         Returns
         -------
@@ -1123,27 +1126,42 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         See Also
         --------
         Dataset.sel
-        Dataset.sel_points
-        Dataset.isel_points
         DataArray.isel
         """
+        from .dataarray import DataArray
+
         invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        # all indexers should be int, slice or np.ndarrays
-        indexers = [(k, (np.asarray(v)
-                         if not isinstance(v, integer_types + (slice,))
-                         else v))
+        # extract new coordinates from indexers
+        variables = OrderedDict()
+        for k, v in iteritems(indexers):
+            if isinstance(v, DataArray):
+                for c, var in v.coords.items():
+                    if c in variables:
+                        if not variables[c].equals(var.variable):
+                            raise ValueError('Inconsistent coordinates : {0}'
+                                             ' and {1}'.format(variables[c],
+                                                               var))
+                    else:
+                        variables[c] = var.variable
+        coord_names = set(self._coord_names) | set(variables)
+
+        # a tuple, e.g. (('x', ), [0, 1]), is converted to Variable
+        # all indexers should be int, slice, np.ndarrays, or Variable
+        indexers = [(k, Variable(dims=v[0], data=v[1]) if isinstance(v, tuple)
+                     else v if isinstance(v, integer_types + (slice, Variable))
+                     else v.variable if isinstance(v, DataArray)
+                     else np.asarray(v))
                     for k, v in iteritems(indexers)]
 
-        variables = OrderedDict()
         for name, var in iteritems(self._variables):
             var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
-        coord_names = set(self._coord_names) & set(variables)
+        coord_names = coord_names & set(variables)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
