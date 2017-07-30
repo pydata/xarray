@@ -1135,6 +1135,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # extract new coordinates from indexers
+        # we don't need to call align() explicitly, because merge_variables
+        # already checks for exact alignment between dimension coordinates
         variables = merge_variables([v._coords for v in indexers.values()
                                      if isinstance(v, DataArray)])
         coord_names = set(self._coord_names) | set(variables)
