@@ -881,6 +881,8 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(IndexError,
                                      'Dimensions of indexers mismatch'):
             data.isel(dim1=(('points'), [1, 2]), dim2=(('points'), [1, 2, 3]))
+        with self.assertRaisesRegexp(TypeError, 'cannot use a Dataset'):
+            data.isel(dim1=Dataset({'points': [1, 2]}))
 
         # test to be sure we keep around variables that were not indexed
         ds = Dataset({'x': [1, 2, 3, 4], 'y': 0})

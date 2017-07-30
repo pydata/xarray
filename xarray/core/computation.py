@@ -136,6 +136,23 @@ def build_output_coords(
         signature,                 # type: _UFuncSignature
         exclude_dims=frozenset(),  # type: set
 ):
+    """Build output coordinates for an operation.
+
+    Parameters
+    ----------
+    args : list
+        List of raw operation arguments. Any valid types for xarray operations
+        are OK, e.g., scalars, Variable, DataArray, Dataset.
+    signature : _UfuncSignature
+        Core dimensions signature for the operation.
+    exclude_dims : optional set
+        Dimensions excluded from the operation. Coordinates along these
+        dimensions are dropped.
+
+    Returns
+    -------
+    OrderedDict of Variable objects with merged coordinates.
+    """
     # type: (...) -> List[OrderedDict[Any, Variable]]
     input_coords = _get_coord_variables(args)
 
