@@ -50,7 +50,7 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
+        key = indexing.to_tuple(key)
 
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)

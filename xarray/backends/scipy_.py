@@ -11,7 +11,7 @@ from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
 from ..core.utils import (Frozen, FrozenOrderedDict, NdimSizeLenMixin,
                           DunderArrayMixin)
-from ..core.indexing import NumpyIndexingAdapter, OuterIndexer
+from ..core.indexing import NumpyIndexingAdapter, OuterIndexer, to_tuple
 
 from .common import WritableCFDataStore, DataStorePickleMixin
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
@@ -49,7 +49,7 @@ class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         if isinstance(key, OuterIndexer):
             key = key.vectorize(self.shape)
 
-        key = key.to_tuple() if hasattr(key, 'to_tuple') else key
+        key = to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             data = NumpyIndexingAdapter(self.get_array())[key]
             # Copy data if the source file is mmapped.
