@@ -29,7 +29,7 @@ except ImportError:
     pass
 
 
-basic_indexing_types = integer_types + (slice,)
+BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
 class MissingDimensionsError(ValueError):
@@ -405,7 +405,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
-        if all(isinstance(k, basic_indexing_types) for k in key):
+        if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
 
         # Detect it can be mapped as an outer indexer
@@ -444,7 +444,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if isinstance(k, Variable):
                 k = k.data
 
-            if isinstance(k, basic_indexing_types):
+            if isinstance(k, BASIC_INDEXING_TYPES):
                 indexer.append(k)
             else:
                 k = np.asarray(k)
