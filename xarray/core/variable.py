@@ -1328,7 +1328,9 @@ class IndexVariable(Variable):
 
     def __getitem__(self, key):
         dims, index_tuple = self._broadcast_indexes(key)
-        assert len(dims) <= 1
+        if len(dims) > 1:
+            raise IndexError('Multiple dimension array cannot be used for '
+                             'indexing IndexVariable: {}'.format(key))
         values = self._indexable_data[index_tuple]
         if not hasattr(values, 'ndim') or values.ndim == 0:
             return Variable((), values, self._attrs, self._encoding)
