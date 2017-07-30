@@ -5,159 +5,8 @@ import numpy as np
 import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
-from xarray.core import indexing, utils
-from xarray.core.pycompat import integer_types
+from xarray.core import indexing
 from . import TestCase, ReturnItem
-
-
-def canonicalize_indexer(key, ndim):
-    """Given an indexer for orthogonal array indexing, return an indexer that
-    is a tuple composed entirely of slices, integer ndarrays and native python
-    ints.
-    """
-    def canonicalize(indexer):
-        if not isinstance(indexer, slice):
-            indexer = np.asarray(indexer)
-            if indexer.ndim == 0:
-                indexer = int(np.asscalar(indexer))
-            else:
-                if indexer.ndim != 1:
-                    raise ValueError('orthogonal array indexing only supports '
-                                     '1d arrays')
-                if indexer.dtype.kind == 'b':
-                    indexer, = np.nonzero(indexer)
-                elif indexer.dtype.kind != 'i':
-                    raise ValueError('invalid subkey %r for integer based '
-                                     'array indexing; all subkeys must be '
-                                     'slices, integers or sequences of '
-                                     'integers or Booleans' % indexer)
-        return indexer
-
-    return tuple(canonicalize(k) for k in indexing.expanded_indexer(key, ndim))
-
-
-def orthogonal_indexer(key, shape):
-    """Given a key for orthogonal array indexing, returns an equivalent key
-    suitable for indexing a numpy.ndarray with fancy indexing.
-    """
-    # replace Ellipsis objects with slices
-    key = list(canonicalize_indexer(key, len(shape)))
-    # replace 1d arrays and slices with broadcast compatible arrays
-    # note: we treat integers separately (instead of turning them into 1d
-    # arrays) because integers (and only integers) collapse axes when used with
-    # __getitem__
-    non_int_keys = [n for n, k in enumerate(key)
-                    if not isinstance(k, integer_types)]
-
-    def full_slices_unselected(n_list):
-        def all_full_slices(key_index):
-            return all(utils.is_full_slice(key[n]) for n in key_index)
-        if not n_list:
-            return n_list
-        elif all_full_slices(range(n_list[0] + 1)):
-            return full_slices_unselected(n_list[1:])
-        elif all_full_slices(range(n_list[-1], len(key))):
-            return full_slices_unselected(n_list[:-1])
-        else:
-            return n_list
-
-    # However, testing suggests it is OK to keep contiguous sequences of full
-    # slices at the start or the end of the key. Keeping slices around (when
-    # possible) instead of converting slices to arrays significantly speeds up
-    # indexing.
-    # (Honestly, I don't understand when it's not OK to keep slices even in
-    # between integer indices if as array is somewhere in the key, but such are
-    # the admittedly mind-boggling ways of numpy's advanced indexing.)
-    array_keys = full_slices_unselected(non_int_keys)
-
-    def maybe_expand_slice(k, length):
-        return indexing._expand_slice(k, length) if isinstance(k, slice) else k
-
-    array_indexers = np.ix_(*(maybe_expand_slice(key[n], shape[n])
-                              for n in array_keys))
-    for i, n in enumerate(array_keys):
-        key[n] = array_indexers[i]
-    return tuple(key)
-
-
-class NumpyOrthogonalIndexingAdapter(utils.NDArrayMixin):
-    """Wrap a NumPy array to use orthogonal indexing (array indexing
-    accesses different dimensions independently, like netCDF4-python variables)
-
-    This class is only for testing.
-    """
-    # note: this object is somewhat similar to biggus.NumpyArrayAdapter in that
-    # it implements orthogonal indexing, except it casts to a numpy array,
-    # isn't lazy and supports writing values.
-    def __init__(self, array):
-        self.array = np.asarray(array)
-
-    def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
-
-    def _convert_key(self, key):
-        key = indexing.expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, indexing.integer_types + (slice,))
-                for k in key):
-            # key would trigger fancy indexing
-            key = orthogonal_indexer(key, self.shape)
-        return key
-
-    def _ensure_ndarray(self, value):
-        # We always want the result of indexing to be a NumPy array. If it's
-        # not, then it really should be a 0d array. Doing the coercion here
-        # instead of inside variable.as_compatible_data makes it less error
-        # prone.
-        if not isinstance(value, np.ndarray):
-            value = utils.to_0d_array(value)
-        return value
-
-    def __getitem__(self, key):
-        key = self._convert_key(key)
-        return type(self)(self._ensure_ndarray(self.array[key]))
-
-    def __setitem__(self, key, value):
-        key = self._convert_key(key)
-        self.array[key] = value
-
-
-class TestNumpyOrthogonalIndexingAdapter(TestCase):
-    def test_basic(self):
-        def maybe_boolean_array(array, size):
-            """ Map boolean array to size 'size' by appendin False in its tail
-            """
-            if hasattr(array, 'dtype') and array.dtype.kind == 'b':
-                array_new = np.ndarray(size, dtype='?')
-                array_new[:array.size] = array
-                array_new[array.size:] = False
-                return array_new
-            return array
-
-        original = np.random.rand(10, 20, 30)
-        orthogonal = NumpyOrthogonalIndexingAdapter(original)
-        I = ReturnItem()
-        # test broadcasted indexers
-        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
-        for i in indexers:
-            for j in indexers:
-                for k in indexers:
-                    actual = orthogonal[i, j, k]
-                    j = maybe_boolean_array(j, 20)
-                    k = maybe_boolean_array(k, 30)
-                    if isinstance(i, int):
-                        if isinstance(j, int):
-                            expected = original[i][j][k]
-                        else:
-                            expected = original[i][j][:, k]
-                    else:
-                        if isinstance(j, int):
-                            expected = original[i][:, j][:, k]
-                        else:
-                            expected = original[i][:, j][:, :, k]
-                    self.assertArrayEqual(actual, expected)
-        # indivisual testing
-        assert orthogonal[np.array([0]), :, :].shape == (1, 20, 30)
-        self.assertArrayEqual(orthogonal[[0], :, :], original[[0], :, :])
 
 
 class TestIndexers(TestCase):
@@ -179,47 +28,6 @@ class TestIndexers(TestCase):
                                   self.set_to_zero(x, j))
         with self.assertRaisesRegexp(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
-
-    def test_orthogonal_indexer(self):
-        x = np.random.randn(10, 11, 12, 13, 14)
-        y = np.arange(5)
-        I = ReturnItem()
-        # orthogonal and numpy indexing should be equivalent, because we only
-        # use at most one array and it never in between two slice objects
-        # (i.e., we try to avoid numpy's mind-boggling "partial indexing"
-        # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html)
-        for i in [I[:], I[0], I[0, 0], I[:5], I[5:], I[2:5], I[3:-3], I[::-1],
-                  I[::-2], I[5::-2], I[:3:-2], I[2:5:-1], I[7:3:-2], I[:3, :4],
-                  I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
-                  I[:2, :3, y], I[0, y, :, :4, 0]]:
-            j = orthogonal_indexer(i, x.shape)
-            self.assertArrayEqual(x[i], x[j])
-            self.assertArrayEqual(self.set_to_zero(x, i),
-                                  self.set_to_zero(x, j))
-        # for more complicated cases, check orthogonal indexing is still
-        # equivalent to slicing
-        z = np.arange(2, 8, 2)
-        for i, j, shape in [
-                (I[y, y], I[:5, :5], (5, 5, 12, 13, 14)),
-                (I[y, z], I[:5, 2:8:2], (5, 3, 12, 13, 14)),
-                (I[0, y, y], I[0, :5, :5], (5, 5, 13, 14)),
-                (I[y, 0, z], I[:5, 0, 2:8:2], (5, 3, 13, 14)),
-                (I[y, :, z], I[:5, :, 2:8:2], (5, 11, 3, 13, 14)),
-                (I[0, :, z], I[0, :, 2:8:2], (11, 3, 13, 14)),
-                (I[0, :2, y, y, 0], I[0, :2, :5, :5, 0], (2, 5, 5)),
-                (I[0, :, y, :, 0], I[0, :, :5, :, 0], (11, 5, 13)),
-                (I[:, :, y, :, 0], I[:, :, :5, :, 0], (10, 11, 5, 13)),
-                (I[:, :, y, z, :], I[:, :, :5, 2:8:2], (10, 11, 5, 3, 14))]:
-            k = orthogonal_indexer(i, x.shape)
-            self.assertEqual(shape, x[k].shape)
-            self.assertArrayEqual(x[j], x[k])
-            self.assertArrayEqual(self.set_to_zero(x, j),
-                                  self.set_to_zero(x, k))
-        # standard numpy (non-orthogonal) indexing doesn't work anymore
-        with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
-            orthogonal_indexer(x > 0, x.shape)
-        with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
-            print(orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
 
     def test_asarray_tuplesafe(self):
         res = indexing._asarray_tuplesafe(('a', 1))
@@ -332,7 +140,7 @@ class TestLazyArray(TestCase):
 
     def test_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
-        x = NumpyOrthogonalIndexingAdapter(original)
+        x = indexing.NumpyIndexingAdapter(original)
         v = Variable(['i', 'j', 'k'], original)
         lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
@@ -360,7 +168,7 @@ class TestLazyArray(TestCase):
             self.assertArrayEqual(expected, actual)
             assert isinstance(actual._data, indexing.LazilyIndexedArray)
             assert isinstance(actual._data.array,
-                              NumpyOrthogonalIndexingAdapter)
+                              indexing.NumpyIndexingAdapter)
 
 
 class TestCopyOnWriteArray(TestCase):
