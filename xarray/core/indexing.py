@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import utils
+from .npcompat import moveaxis
 from .pycompat import (iteritems, range, integer_types, dask_array_type,
                        suppress)
 from .utils import is_dict_like
@@ -314,6 +315,10 @@ class VectorizedIndexer(IndexerTuple):
     """ Tuple for vectorized indexing """
 
 
+class PointwiseIndexer(IndexerTuple):
+    """ Tuple for pointwise indexing with dask.array's vindex """
+
+
 class LazilyIndexedArray(utils.NDArrayMixin):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
     """
@@ -477,10 +482,11 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-        if isinstance(key, VectorizedIndexer):
-            # TODO should support vindex
-            raise IndexError(
-                'dask does not support vectorized indexing : {}'.format(key))
+        # should always get PointwiseIndexer instead
+        assert not isinstance(key, VectorizedIndexer)
+
+        if isinstance(key, PointwiseIndexer):
+            return self._getitem_pointwise(key)
 
         try:
             key = to_tuple(key)
@@ -491,6 +497,30 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
             for axis, subkey in reversed(list(enumerate(key))):
                 value = value[(slice(None),) * axis + (subkey,)]
             return value
+
+    def _getitem_pointwise(self, key):
+        pointwise_shape, pointwise_index = next(
+           (k.shape, i) for i, k in enumerate(key)
+           if not isinstance(k, slice))
+        # dask's indexing only handles 1d arrays
+        flat_key = tuple(k if isinstance(k, slice) else k.ravel()
+                         for k in key)
+
+        if len([k for k in key if not isinstance(k, slice)]) == 1:
+            # vindex requires more than one non-slice :(
+            # but we can use normal indexing instead
+            indexed = self.array[flat_key]
+            new_shape = (indexed.shape[:pointwise_index] +
+                         pointwise_shape +
+                         indexed.shape[pointwise_index + 1:])
+            return indexed.reshape(new_shape)
+        else:
+            indexed = self.array.vindex[flat_key]
+            # vindex always moves slices to the end
+            reshaped = indexed.reshape(pointwise_shape + indexed.shape[1:])
+            # reorder dimensions to match order of appearance
+            positions = np.arange(0, len(pointwise_shape))
+            return moveaxis(reshaped, positions, positions + pointwise_index)
 
     def __setitem__(self, key, value):
         raise TypeError("this variable's data is stored in a dask array, "
