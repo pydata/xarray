@@ -62,6 +62,23 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
+def create_unsigned_masked_scaled_data():
+    encoding = {'_FillValue': 255, '_Unsigned': 'true', 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan])
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_unsigned_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': 'true',
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
 def create_boolean_data():
     attributes = {'units': '-'}
     return Dataset({'x': ('t', [True, False, False, True], attributes)})
@@ -360,16 +377,54 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
+    def test_unsigned_roundtrip_mask_and_scale(self):
+        decoded = create_unsigned_masked_scaled_data()
+        encoded = create_encoded_unsigned_masked_scaled_data()
+        with self.roundtrip(decoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        # make sure roundtrip encoding didn't change the
+        # original dataset.
+        self.assertDatasetIdentical(
+            encoded, create_encoded_unsigned_masked_scaled_data())
+        with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             self.assertDatasetAllClose(encoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -377,7 +432,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
                                     create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
 
     def test_coordinates_encoding(self):

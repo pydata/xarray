@@ -24,6 +24,10 @@ Enhancements
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
+  a signed integer data type should be interpreted as unsigned bytes
+  (:issue:`1444`).
+  By `Eric Bruning <https://github.com/deeplycloudy>`_.
 
 - Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
   By `Christian Chwala <https://github.com/cchwala>`_.
@@ -42,6 +46,10 @@ Bug fixes
   after the rename (since one of them would get overwritten in this
   case). See (:issue:`1477`) for details.
   By `Prakhar Goel <https://github.com/newt0311>`_.
+
+- Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
+  ``rtol`` arguments when called on ``DataArray`` objects.
+  By `Stephan Hoyer <http://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 

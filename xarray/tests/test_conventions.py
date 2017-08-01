@@ -108,6 +108,15 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
+class TestUnsignedIntTypeArray(TestCase):
+    def test_unsignedinttype_array(self):
+        sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+        ub = conventions.UnsignedIntTypeArray(sb)
+        self.assertEqual(ub.dtype, np.dtype('u1'))
+        self.assertArrayEqual(ub, np.array([0, 1, 127, 128, 255],
+                                           dtype=np.dtype('u1')))
+
+
 class TestBoolTypeArray(TestCase):
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
