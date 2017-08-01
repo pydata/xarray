@@ -2397,18 +2397,43 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
 
         import dask.dataframe as dd
-        import dask.array as da
+        from dask.base import tokenize
 
         columns = [k for k in self if k not in self.dims]
+        ordered_dims = self.dims
 
-        data = [self._variables[k].data.reshape(-1) for k in columns]
-        df = dd.from_dask_array(da.stack(data, axis=1), columns=columns)
+        data = [self._variables[k].set_dims(ordered_dims).data.reshape(-1) for k in columns]
+
+        meta_data = {c: np.array([], dtype=d.dtype) for (c, d) in zip(columns, data)}
+        meta = pd.DataFrame(meta_data, columns=columns)
+
+        divisions = [0]
+        for c in data[0].chunks[0]:
+            divisions.append(divisions[-1] + c)
 
         if set_index:
-            index = self.coords.to_index(self.dims)
+            index = self.coords.to_index(ordered_dims)
+            # partition index
+            index = [(index[a:b]) for a, b in
+                  zip(divisions[:-1], divisions[1:])]
+        else:
+            index = [(np.arange, a, b, 1, 'i8') for a, b in
+                  zip(divisions[:-1], divisions[1:])]
 
-            index = dd.from_array(index.values).repartition(divisions=df.divisions)
-            df = df.set_index(index, sort=False)
+        token = tokenize(self, set_index)
+        name = 'to_dask_dataframe-' + token
+
+        dsk = {}
+        for i in range(len(divisions)-1):
+            ind = index[i]
+            data_chunk = (dict, [ (c, d[divisions[i]:divisions[i+1]])
+                                   for (c, d) in zip(columns, data)] )
+            if isinstance(meta, pd.Series):
+                dsk[name, i] = (pd.Series, data_chunk, ind, meta.dtype, meta.name)
+            else:
+                dsk[name, i] = (pd.DataFrame, data_chunk, ind, meta.columns)
+
+        df = dd.DataFrame(dsk, name, meta, divisions)
 
         return df
 

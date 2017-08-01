@@ -399,23 +399,56 @@ class TestDataArrayAndDataset(DaskTestCase):
         # but with dask DataFrames instead of pandas DataFrames
 
         x = da.from_array(np.random.randn(10), chunks=4)
-        y = np.random.randn(10)
+        y = np.arange(10, dtype='uint8')
         t = list('abcdefghij')
+
         ds = Dataset(OrderedDict([('a', ('t', x)),
                                   ('b', ('t', y)),
                                   ('t', ('t', t))]))
-        expected_pd = pd.DataFrame(np.array([x, y]).T,
-                                columns=['a', 'b'],
-                                index=pd.Index(t, name='t'))
+
+        expected_pd = pd.DataFrame({'a' : x,
+                                    'b' : y },
+                                    index=pd.Index(t, name='t'))
+
+        # test if 1-D index is correctly set up
         expected = dd.from_pandas(expected_pd, chunksize=4)
-
         actual = ds.to_dask_dataframe(set_index=True)
-
         # test if we have dask dataframes
         self.assertIsInstance(actual, dd.DataFrame)
 
         # use the .equals from pandas to check dataframes are equivalent
         assert expected.compute().equals(actual.compute()), (expected, actual)
+
+
+        # test if no index is given
+        expected = dd.from_pandas(expected_pd.reset_index(drop=True),
+                                  chunksize=4)
+        actual = ds.to_dask_dataframe(set_index=False)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert expected.compute().equals(actual.compute()), (expected, actual)
+
+
+        # test if 2-D dataset is supplied
+        w = da.from_array(np.random.randn(2, 3), chunks= (1,2))
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['y'] = ('y', list('abc'))
+        ds['x'] = ('x', [0, 1])
+
+        # dask dataframes do not (yet) support multiindex,
+        # but when then do, this would be the expected index:
+        exp_index = pd.MultiIndex.from_arrays(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            names=['x', 'y'])
+        expected = pd.DataFrame({'w' : w.reshape(-1)},
+                                index=exp_index)
+        # so for now, drop the index
+        expected = expected.reset_index(drop=True)
+
+        actual = ds.to_dask_dataframe(set_index=False)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert expected.equals(actual.compute()), (expected, actual.compute())
+
+
 
 kernel_call_count = 0
 def kernel():
