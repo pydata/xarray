@@ -1815,6 +1815,14 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
+    def test_resample_with_timezone(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10, tz='UTC')
+        array = DataArray(np.arange(10), [('time', times)])
+
+        actual = array.resample(time='24H').mean()
+        expected = DataArray(array.to_series().resample('24H').mean())
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_resample_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
