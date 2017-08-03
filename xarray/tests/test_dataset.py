@@ -2200,26 +2200,6 @@ class TestDataset(TestCase):
             result = actual.reduce(method)
             self.assertDatasetEqual(expected, result)
 
-    def test_resample_and_first_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        ds = Dataset(
-            {'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
-             'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-             'time': times})
-
-        actual = ds.resample('1D', dim='time', how='first',
-                             keep_attrs=True)
-        expected = ds.isel(time=[0, 4, 8])
-        self.assertDatasetIdentical(expected, actual)
-
-        # upsampling
-        expected_time = pd.date_range('2000-01-01', freq='3H',
-                                      periods=19)
-        expected = ds.reindex(time=expected_time)
-        for how in ['mean', 'sum', 'first', 'last', np.mean]:
-            actual = ds.resample('3H', 'time', how=how)
-            self.assertDatasetEqual(expected, actual)
-
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
@@ -2228,22 +2208,6 @@ class TestDataset(TestCase):
         ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample(time='1D').mean(keep_attrs=True)
-        actual = resampled_ds['bar'].attrs
-        expected = ds['bar'].attrs
-        self.assertEqual(expected, actual)
-
-        actual = resampled_ds.attrs
-        expected = ds.attrs
-        self.assertEqual(expected, actual)
-
-    def test_resample_by_mean_with_keep_attrs_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
-                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-                      'time': times})
-        ds.attrs['dsmeta'] = 'dsdata'
-
-        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
         actual = resampled_ds['bar'].attrs
         expected = ds['bar'].attrs
         self.assertEqual(expected, actual)
@@ -2264,18 +2228,6 @@ class TestDataset(TestCase):
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
 
-    def test_resample_by_mean_discarding_attrs_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
-                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-                      'time': times})
-        ds.attrs['dsmeta'] = 'dsdata'
-
-        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
-
-        assert resampled_ds['bar'].attrs == {}
-        assert resampled_ds.attrs == {}
-
     def test_resample_by_last_discarding_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
@@ -2284,18 +2236,6 @@ class TestDataset(TestCase):
         ds.attrs['dsmeta'] = 'dsdata'
 
         resampled_ds = ds.resample(time='1D').last(keep_attrs=False)
-
-        assert resampled_ds['bar'].attrs == {}
-        assert resampled_ds.attrs == {}
-
-    def test_resample_by_last_discarding_attrs_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
-                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
-                      'time': times})
-        ds.attrs['dsmeta'] = 'dsdata'
-
-        resampled_ds = ds.resample('1D', dim='time', how='last', keep_attrs=False)
 
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
@@ -2311,6 +2251,68 @@ class TestDataset(TestCase):
         expected = ds.resample('1D', dim='time', how='mean')
         actual = ds.resample(time='1D').mean()
         self.assertDataArrayIdentical(expected, actual)
+
+    def test_resample_and_first_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset(
+            {'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+             'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+             'time': times})
+
+        actual = ds.resample('1D', dim='time', how='first',
+                             keep_attrs=True)
+        expected = ds.isel(time=[0, 4, 8])
+        self.assertDatasetIdentical(expected, actual)
+
+        # upsampling
+        expected_time = pd.date_range('2000-01-01', freq='3H',
+                                      periods=19)
+        expected = ds.reindex(time=expected_time)
+        for how in ['mean', 'sum', 'first', 'last', np.mean]:
+            actual = ds.resample('3H', 'time', how=how)
+            self.assertDatasetEqual(expected, actual)
+
+    def test_resample_by_mean_with_keep_attrs_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
+        actual = resampled_ds['bar'].attrs
+        expected = ds['bar'].attrs
+        self.assertEqual(expected, actual)
+
+        actual = resampled_ds.attrs
+        expected = ds.attrs
+        self.assertEqual(expected, actual)
+
+    def test_resample_by_mean_discarding_attrs_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
+
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
+
+
+
+    def test_resample_by_last_discarding_attrs_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        resampled_ds = ds.resample('1D', dim='time', how='last', keep_attrs=False)
+
+        assert resampled_ds['bar'].attrs == {}
+        assert resampled_ds.attrs == {}
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
