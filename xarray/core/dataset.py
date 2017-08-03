@@ -14,6 +14,7 @@ import pandas as pd
 from . import ops
 from . import utils
 from . import groupby
+from . import resample
 from . import rolling
 from . import indexing
 from . import alignment
@@ -304,7 +305,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     """
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
-    _resample_cls = groupby.DatasetResample
+    _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):

@@ -12,6 +12,7 @@ from ..plot.plot import _PlotMethods
 from . import duck_array_ops
 from . import indexing
 from . import groupby
+from . import resample
 from . import rolling
 from . import ops
 from . import utils
@@ -160,7 +161,7 @@ class DataArray(AbstractArray, BaseDataObject):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
-    _resample_cls = groupby.DataArrayResample
+    _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
 
