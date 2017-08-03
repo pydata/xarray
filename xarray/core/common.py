@@ -510,9 +510,9 @@ class BaseDataObject(AttrAccessMixin):
             a function that can be called like ``how(values, axis)`` to reduce
             ndarray values along the given axis. Valid choices that can be
             provided as a string include all the usual Dataset/DataArray
-            aggregations (``all``, ``any``, ``argmax``, ``argmin``, ``max``,
-            ``mean``, ``median``, ``min``, ``prod``, ``sum``, ``std`` and
-            ``var``), as well as ``first`` and ``last``.
+            aggregations (``all``, ``any``, ``argmax``, ``argmin``,
+            ``count,`` ``max``, ``mean``, ``median``, ``min``, ``prod``,
+            ``sum``, ``std`` and ``var``), as well as ``first`` and ``last``.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -596,6 +596,8 @@ class BaseDataObject(AttrAccessMixin):
             f = getattr(gb, how)
             if how in ['first', 'last']:
                 result = f(skipna=skipna, keep_attrs=keep_attrs)
+            elif how == 'count':
+                result = f(dim=dim.name, keep_attrs=keep_attrs)
             else:
                 result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:

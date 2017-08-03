@@ -1913,6 +1913,26 @@ class TestDataArray(TestCase):
                              name='time')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_resample_count_old_api(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+
+        actual = array.resample('1D', dim='time', how='count')
+        expected = DataArray([4, 4, 2], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
+        # verify that labels don't use the first value
+        actual = array.resample('24H', dim='time', how='count')
+        expected = DataArray(array.to_series().resample('24H', how='count'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        # missing values
+        array = array.astype(float)
+        array[:2] = np.nan
+        actual = array.resample('1D', dim='time', how='count')
+        expected = DataArray([2, 4, 2], [('time', times[::4])])
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_resample_first_keep_attrs_old_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -1962,8 +1982,9 @@ class TestDataArray(TestCase):
         for name in ['mean', 'median', 'sum', 'first', 'last']:
             method = getattr(actual, name)
             self.assertDataArrayIdentical(expected, method())
-        for method in [np.mean, np.sum, np.max]:
+        for method in [np.mean, np.sum, np.max, np.min]:
             actual = array.resample(time='12H').reduce(method)
+            self.assertDataArrayIdentical(expected, actual)
 
     def test_resample_upsampling_old_api(self):
         times = pd.date_range('2000-01-01', freq='1D', periods=5)
