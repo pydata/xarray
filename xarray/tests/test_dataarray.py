@@ -1863,37 +1863,6 @@ class TestDataArray(TestCase):
     #     actual = array.resample(time='24H').mean()
     #     self.assertDataArrayIdentical(expected, actual)
 
-    def test_resample_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10), [('time', times)])
-
-        actual = array.resample('6H', dim='time')
-        self.assertDataArrayIdentical(array, actual)
-
-        actual = array.resample('24H', dim='time')
-        expected = DataArray(array.to_series().resample('24H', how='mean'))
-        self.assertDataArrayIdentical(expected, actual)
-
-        actual = array.resample('24H', dim='time', how=np.mean)
-        self.assertDataArrayIdentical(expected, actual)
-
-        with self.assertRaisesRegexp(ValueError, 'index must be monotonic'):
-            array[[2, 0, 1]].resample('1D', dim='time')
-
-    def test_resample_upsampling(self):
-        times = pd.date_range('2000-01-01', freq='1D', periods=5)
-        array = DataArray(np.arange(5), [('time', times)])
-
-        expected_time = pd.date_range('2000-01-01', freq='12H', periods=9)
-        actual = array.resample(time='12H')
-        expected = array.reindex(time=expected_time)
-        for name in ['mean', 'median', 'sum', 'first', 'last']:
-            method = getattr(actual, name)
-            self.assertDataArrayIdentical(expected, method())
-        for method in [np.mean, np.sum, np.max, np.min]:
-            actual = array.resample(time='12H').reduce(method)
-            self.assertDataArrayIdentical(expected, actual)
-
     def test_resample_old_vs_new_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
@@ -1923,107 +1892,18 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(old_mean, expected)
         self.assertDataArrayIdentical(new_mean, expected)
 
-    def test_resample_first_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10), [('time', times)])
-
-        actual = array.resample('1D', dim='time', how='first')
-        expected = DataArray([0, 4, 8], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-        # verify that labels don't use the first value
-        actual = array.resample('24H', dim='time', how='first')
-        expected = DataArray(array.to_series().resample('24H', how='first'))
-        self.assertDataArrayIdentical(expected, actual)
-
-        # missing values
-        array = array.astype(float)
-        array[:2] = np.nan
-        actual = array.resample('1D', dim='time', how='first')
-        expected = DataArray([2, 4, 8], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-        actual = array.resample('1D', dim='time', how='first', skipna=False)
-        expected = DataArray([np.nan, 4, 8], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-        # regression test for http://stackoverflow.com/questions/33158558/
-        array = Dataset({'time': times})['time']
-        actual = array.resample('1D', dim='time', how='last')
-        expected_times = pd.to_datetime(['2000-01-01T18', '2000-01-02T18',
-                                         '2000-01-03T06'])
-        expected = DataArray(expected_times, [('time', times[::4])],
-                             name='time')
-        self.assertDataArrayIdentical(expected, actual)
-
-    def test_resample_count_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10), [('time', times)])
-
-        actual = array.resample('1D', dim='time', how='count')
-        expected = DataArray([4, 4, 2], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-        # verify that labels don't use the first value
-        actual = array.resample('24H', dim='time', how='count')
-        expected = DataArray(array.to_series().resample('24H', how='count'))
-        self.assertDataArrayIdentical(expected, actual)
-
-        # missing values
-        array = array.astype(float)
-        array[:2] = np.nan
-        actual = array.resample('1D', dim='time', how='count')
-        expected = DataArray([2, 4, 2], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-    def test_resample_first_keep_attrs_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10), [('time', times)])
-        array.attrs['meta'] = 'data'
-
-        resampled_array = array.resample('1D', dim='time', how='first',
-                                         keep_attrs=True)
-        actual = resampled_array.attrs
-        expected = array.attrs
-        self.assertEqual(expected, actual)
-
-        resampled_array = array.resample('1D', dim='time', how='first',
-                                         keep_attrs=False)
-        assert resampled_array.attrs == {}
-
-    def test_resample_mean_keep_attrs_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.arange(10), [('time', times)])
-        array.attrs['meta'] = 'data'
-
-        resampled_array = array.resample('1D', dim='time', how='mean',
-                                         keep_attrs=True)
-        actual = resampled_array.attrs
-        expected = array.attrs
-        self.assertEqual(expected, actual)
-
-        resampled_array = array.resample('1D', dim='time', how='mean',
-                                         keep_attrs=False)
-        assert resampled_array.attrs == {}
-
-    def test_resample_skipna_old_api(self):
-        times = pd.date_range('2000-01-01', freq='6H', periods=10)
-        array = DataArray(np.ones(10), [('time', times)])
-        array[1] = np.nan
-
-        actual = array.resample('1D', dim='time', skipna=False)
-        expected = DataArray([np.nan, 1, 1], [('time', times[::4])])
-        self.assertDataArrayIdentical(expected, actual)
-
-    def test_resample_upsampling_old_api(self):
-        times = pd.date_range('2000-01-01', freq='1D', periods=5)
-        array = DataArray(np.arange(5), [('time', times)])
-
-        expected_time = pd.date_range('2000-01-01', freq='12H', periods=9)
-        expected = array.reindex(time=expected_time)
-        for how in ['mean', 'median', 'sum', 'first', 'last', np.mean]:
-            actual = array.resample('12H', 'time', how=how)
-            self.assertDataArrayIdentical(expected, actual)
+        # Try other common resampling methods
+        resampler = array.resample(time='1D')
+        for method in ['mean', 'median', 'sum', 'first', 'last', 'count']:
+            # Discard attributes on the call using the new api to match
+            # convention from old api
+            new_api = getattr(resampler, method)(keep_attrs=False)
+            old_api = array.resample('1D', dim='time', how=method)
+            self.assertDatasetIdentical(new_api, old_api)
+        for method in [np.mean, np.sum, np.max, np.min]:
+            new_api = resampler.reduce(method)
+            old_api = array.resample('1D', dim='time', how=method)
+            self.assertDatasetIdentical(new_api, old_api)
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
