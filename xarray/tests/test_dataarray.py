@@ -1945,8 +1945,9 @@ class TestDataArray(TestCase):
         actual = array.resample(time='3H').ffill()
         expected_data = np.repeat(data, 2, axis=-1)
         expected_times = times.to_series().resample('3H').asfreq().index
+        expected_data = expected_data[..., :len(expected_times)]
         expected = DataArray(expected_data,
-                             {'time':, expected_times, 'x': xs, 'y': ys},
+                             {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
         self.assertDataArrayIdentical(expected, actual)
 
@@ -1955,8 +1956,9 @@ class TestDataArray(TestCase):
         expected_data = np.repeat(np.flip(data, axis=-1), 2, axis=-1)
         expected_data = np.flip(expected_data, axis=-1)
         expected_times = times.to_series().resample('3H').asfreq().index
+        expected_data = expected_data[..., :len(expected_times)]
         expected = DataArray(expected_data,
-                             {'time':, expected_times, 'x': xs, 'y': ys},
+                             {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
         self.assertDataArrayIdentical(expected, actual)
 
