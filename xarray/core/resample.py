@@ -5,7 +5,8 @@ from __future__ import print_function
 from scipy.interpolate import interp1d
 
 from . import ops
-from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
+from .combine import merge
+from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy, _dummy_copy
 from .utils import maybe_wrap_array
 
 RESAMPLE_DIM = '__resample_dim__'
@@ -208,7 +209,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         return self.apply(reduce_array, shortcut=shortcut)
 
     def _interpolate(self, kind='linear'):
-        _upsampled = self.mean()
+        from .dataarray import DataArray
 
         x = self._obj[self._dim].astype('float')
         y = self._obj.values
@@ -216,10 +217,15 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                      assume_sorted=True)
-        new_x = _upsampled[self._dim].astype('float')
-        _upsampled.values[:] = f(new_x)
+        new_x = self._full_index.values.astype('float')
 
-        return _upsampled
+        # construct new up-sampled DataArray
+        dummy = self._obj.copy()
+        dims = dummy.dims
+        coords = dummy.coords
+        coords[self._dim] = self._full_index
+        return DataArray(f(new_x), coords, dims, name=dummy.name,
+                         attrs=dummy.attrs)
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
@@ -305,6 +311,34 @@ class DatasetResample(DatasetGroupBy, Resample):
         return self.apply(reduce_dataset)
 
         # return result.rename({self._resample_dim: self._dim})
+
+    def _interpolate(self, kind='linear'):
+        from .dataarray import DataArray
+
+        new_x = self._full_index.values.astype('float')
+
+        arrs = []
+        # Apply the interpolation to each DataArray in our original Dataset
+        for v in self._obj.data_vars:
+            _da = self._obj[v].copy()
+
+            x = _da[self._dim].astype('float')
+            y = _da.values
+            axis = _da.get_axis_num(self._dim)
+
+            f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
+                         assume_sorted=True)
+
+            # construct new up-sampled DataArray
+            dims = _da.dims
+            coords = _da.coords
+            coords[self._dim] = self._full_index
+            arrs.append(DataArray(f(new_x), coords, dims, name=_da.name,
+                                  attrs=_da.attrs))
+
+        # Merge into a new Dataset to return
+        return merge(arrs)
+
 
 ops.inject_reduce_methods(DatasetResample)
 ops.inject_binary_ops(DatasetResample)
