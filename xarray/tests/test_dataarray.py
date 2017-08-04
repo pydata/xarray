@@ -1911,6 +1911,61 @@ class TestDataArray(TestCase):
                 old_api = array.resample('1D', dim='time', how=method)
             self.assertDatasetIdentical(new_api, old_api)
 
+    def test_upsample(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        array = DataArray(np.arange(5), [('time', times)])
+
+        # Forward-fill
+        actual = array.resample(time='3H').ffill()
+        expected = DataArray(array.to_series().resample('3H').ffill())
+        self.assertDataArrayIdentical(expected, actual)
+
+        # Backward-fill
+        actual = array.resample(time='3H').bfill()
+        expected = DataArray(array.to_series().resample('3H').bfill())
+        self.assertDataArrayIdentical(expected, actual)
+
+        # No filling (as frequency)
+        actual = array.resample(time='3H').asfreq()
+        expected = DataArray(array.to_series().resample('3H').asfreq())
+        self.assertDataArrayIdentical(expected, actual)
+
+    def test_upsample_nd(self):
+        # Same as before, but now we try on multi-dimensional DataArrays.
+        # TODO: Finish me
+        xs = np.arange(6)
+        ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        data = np.tile(np.arange(5), (6, 3, 1))
+        array = DataArray(data,
+                          {'time': times, 'x': xs, 'y': ys},
+                          ('x', 'y', 'time'))
+
+        # Forward-fill
+        actual = array.resample(time='3H').ffill()
+        expected_data = np.repeat(data, 2, axis=-1)
+        expected_times = times.to_series().resample('3H').asfreq().index
+        expected = DataArray(expected_data,
+                             {'time':, expected_times, 'x': xs, 'y': ys},
+                             ('x', 'y', 'time'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        # Backward-fill
+        actual = array.resample(time='3H').ffill()
+        expected_data = np.repeat(np.flip(data, axis=-1), 2, axis=-1)
+        expected_data = np.flip(expected_data, axis=-1)
+        expected_times = times.to_series().resample('3H').asfreq().index
+        expected = DataArray(expected_data,
+                             {'time':, expected_times, 'x': xs, 'y': ys},
+                             ('x', 'y', 'time'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        pass
+
+    def test_upsample_interpolate(self):
+        # TODO: Implement me
+        pass
+
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
                           coords={'x': list('abcdef')}, dims=['x', 'y'])
