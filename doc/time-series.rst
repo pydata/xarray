@@ -167,9 +167,13 @@ resampling group:
 
    ds.resample(time='6H').reduce(np.mean)
 
-Resampling does not yet work for upsampling.
+For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
+and ``interpolate``:
 
-Of course, all of these resampling and groupby operation work on both Dataset
+.. sample code block which shows some sample data up-sampled with the four
+different methods compared n a single plot. Use timeseries data.
+
+All of these resampling and groupby operation work on both Dataset
 and DataArray objects with any number of additional dimensions.
 
 .. note::

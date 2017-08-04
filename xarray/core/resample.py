@@ -116,6 +116,7 @@ class DataArrayResample(DataArrayGroupBy):
                              **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
+
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
 
