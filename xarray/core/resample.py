@@ -2,14 +2,89 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from scipy.interpolate import interp1d
+
 from . import ops
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+from .groupby import DataArrayGroupBy, DatasetGroupBy, GroupBy
 from .utils import maybe_wrap_array
 
 RESAMPLE_DIM = '__resample_dim__'
 
 
-class DataArrayResample(DataArrayGroupBy):
+class Resample(GroupBy):
+    """An object that extends the `GroupBy` object with additional logic
+    for handling specialized re-sampling operations.
+
+    You should create a `Resample` object by using the `DataArray.resample` or
+    `Dataset.resample` methods.
+
+    See Also
+    --------
+    DataArray.resample
+    Dataset.resample
+
+    """
+
+    def _upsample(self, method, *args, **kwargs):
+        """Dispatch function to call appropriate up-sampling methods on
+        data.
+
+        This method should not be called directly; instead, use one of the
+        wrapper functions supplied by `Resample`.
+
+        Parameters
+        ----------
+        method : str {'asfreq', 'pad', 'ffill', 'backfill', 'bfill', 'nearest',
+                 'interpolate'}
+            Method to use for up-sampling
+
+        See Also
+        --------
+        Resample.asfreq
+        Resample.pad
+        Resample.backfill
+        Resample.interpolate
+
+        """
+
+        _upsampled_means = self.mean()
+
+        if method == 'asfreq':
+            return _upsampled_means
+
+        elif method in ['pad', 'ffill', 'backfill', 'bfill', 'nearest']:
+            kwargs = kwargs.copy()
+            kwargs.update(**{self._dim: _upsampled_means[self._dim]})
+            return self._obj.reindex(method=method, *args, **kwargs)
+
+        elif method == 'interpolate':
+            raise NotImplementedError
+
+        else:
+            raise ValueError('Specified method was "{}" but must be one of'
+                             '"asfreq", "ffill", "bfill", or "interpolate"'
+                             .format(method))
+
+    def asfreq(self):
+        """Return values of original object at the new up-sampling frequency;
+        essentially a re-index with new times set to NaN.
+        """
+        return self._upsample('asfreq')
+
+    def pad(self):
+        """Forward fill new values at up-sampled frequency.
+        """
+        return self._upsample('pad')
+    ffill = pad
+
+    def backfill(self):
+        """Backward fill new values at up-sampled frequency.
+        """
+        return self._upsample('backfill')
+    bfill = backfill
+
+
+class DataArrayResample(DataArrayGroupBy, Resample):
     """DataArrayGroupBy object specialized to time resampling operations over a
     specified dimension
     """
@@ -116,12 +191,11 @@ class DataArrayResample(DataArrayGroupBy):
                              **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
-
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
 
 
-class DatasetResample(DatasetGroupBy):
+class DatasetResample(DatasetGroupBy, Resample):
     """DatasetGroupBy object specialized to resampling a specified dimension
     """
 
