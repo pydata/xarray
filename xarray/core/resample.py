@@ -58,7 +58,7 @@ class Resample(GroupBy):
             return self._obj.reindex(method=method, *args, **kwargs)
 
         elif method == 'interpolate':
-            raise NotImplementedError
+            return self._interpolate(*args, **kwargs)
 
         else:
             raise ValueError('Specified method was "{}" but must be one of'
@@ -82,6 +82,22 @@ class Resample(GroupBy):
         """
         return self._upsample('backfill')
     bfill = backfill
+
+    def interpolate(self, kind='linear'):
+        """Interpolate up-sampled data using the original data
+        as knots.
+
+        Parameters
+        ----------
+        kind : str {'linear', 'nearest', 'zero', 'slinear',
+               'quadratic', 'cubic'}
+            Interpolation method to use.
+
+        """
+        return self._interpolate(kind=kind)
+
+    def _interpolate(self, kind='linear'):
+        raise NotImplementedError
 
 
 class DataArrayResample(DataArrayGroupBy, Resample):
@@ -190,6 +206,20 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             return ar.reduce(func, self._dim, axis=None, keep_attrs=keep_attrs,
                              **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
+
+    def _interpolate(self, kind='linear'):
+        _upsampled = self.mean()
+
+        x = self._obj[self._dim].astype('float')
+        y = self._obj.values
+        axis = self._obj.get_axis_num(self._dim)
+
+        f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
+                     assume_sorted=True)
+        new_x = _upsampled[self._dim].astype('float')
+        _upsampled.values[:] = f(new_x)
+
+        return _upsampled
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
