@@ -1135,23 +1135,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             raise ValueError("dimensions %r do not exist" % invalid)
 
         # extract new coordinates from indexers
-        variables = merge_variables([v._coords for _, v in
-                                     iteritems(indexers)
-                                     if isinstance(v, DataArray)],
-                                    compat='identical')
-
+        # we don't need to call align() explicitly, because merge_variables
+        # already checks for exact alignment between dimension coordinates
+        variables = merge_variables([v._coords for v in indexers.values()
+                                     if isinstance(v, DataArray)])
         coord_names = set(self._coord_names) | set(variables)
 
-        # a tuple, e.g. (('x', ), [0, 1]), is converted to Variable
         # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers = [(k, Variable(dims=v[0], data=v[1]) if isinstance(v, tuple)
-                     else v if isinstance(v, integer_types + (slice, Variable))
-                     else v.variable if isinstance(v, DataArray)
-                     else np.asarray(v))
-                    for k, v in iteritems(indexers)]
+        indexers_list = []
+        for k, v in iteritems(indexers):
+            if isinstance(v, integer_types + (slice, Variable)):
+                pass
+            elif isinstance(v, DataArray):
+                v = v.variable
+            elif isinstance(v, tuple):
+                v = as_variable(v)
+            elif isinstance(v, Dataset):
+                raise TypeError('cannot use a Dataset as an indexer')
+            else:
+                v = np.asarray(v)
+            indexers_list.append((k, v))
 
         for name, var in iteritems(self._variables):
-            var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
+            var_indexers = {k: v for k, v in indexers_list if k in var.dims}
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var

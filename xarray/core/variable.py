@@ -19,7 +19,7 @@ from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
 from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
-                       OuterIndexer, VectorizedIndexer)
+                       OuterIndexer, PointwiseIndexer, VectorizedIndexer)
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -464,8 +464,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                      in zip(nonzeros, self.dims))
 
     def _broadcast_indexes_advanced(self, key):
-        variables = []
+        if isinstance(self._data, dask_array_type):
+            # dask only supports a very restricted form of advanced indexing
+            return self._broadcast_indexes_dask_pointwise(key)
 
+        variables = []
         for dim, value in zip(self.dims, key):
             if isinstance(value, slice):
                 value = np.arange(*value.indices(self.sizes[dim]))
@@ -492,6 +495,46 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = VectorizedIndexer(variable.data for variable in variables)
         return dims, key
 
+    def _broadcast_indexes_dask_pointwise(self, key):
+        if any(not isinstance(k, (Variable, slice)) for k in key):
+            raise IndexError(
+                'Vectorized indexing with dask requires that all indexers are '
+                'labeled arrays or full slice objects: {}'.format(key))
+
+        if any(isinstance(k, Variable) and k.dtype.kind == 'b' for k in key):
+            raise IndexError(
+                'Vectorized indexing with dask does not support booleans: {}'
+                .format(key))
+
+        dims_set = {k.dims for k in key if isinstance(k, Variable)}
+        if len(dims_set) != 1:
+            raise IndexError(
+                'Vectorized indexing with dask requires that all labeled '
+                'arrays in the indexer have the same dimension names, but '
+                'arrays have different dimensions: {}'.format(key))
+        (unique_dims,) = dims_set
+
+        shapes_set = {k.shape for k in key if isinstance(k, Variable)}
+        if len(shapes_set) != 1:
+            # matches message in _broadcast_indexes_advanced
+            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
+
+        dims = []
+        found_first_array = False
+        for k, d in zip(key, self.dims):
+            if isinstance(k, slice):
+                if d in unique_dims:
+                    raise IndexError(
+                        'Labeled arrays used in vectorized indexing with dask '
+                        'cannot reuse a sliced dimension: {}'.format(d))
+                dims.append(d)
+            elif not found_first_array:
+                dims.extend(k.dims)
+                found_first_array = True
+
+        key = PointwiseIndexer(getattr(k, 'data', k) for k in key)
+        return tuple(dims), key
+
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
@@ -507,12 +550,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         array `x.values` directly.
         """
         dims, index_tuple = self._broadcast_indexes(key)
-        values = self._indexable_data[index_tuple]
-        if hasattr(values, 'ndim'):
-            assert values.ndim == len(dims), (values.ndim, len(dims))
+        data = self._indexable_data[index_tuple]
+        if hasattr(data, 'ndim'):
+            assert data.ndim == len(dims), (data.ndim, len(dims))
         else:
             assert len(dims) == 0, len(dims)
-        return type(self)(dims, values, self._attrs, self._encoding,
+        return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
     def __setitem__(self, key, value):

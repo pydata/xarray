@@ -1,10 +1,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
+import operator
+
 import numpy as np
 
 try:
-    from numpy import broadcast_to, stack, nanprod, nancumsum, nancumprod
+    from numpy import (broadcast_to, stack, nanprod, nancumsum, nancumprod,
+                       moveaxis)
 except ImportError:  # pragma: no cover
     # Code copied from newer versions of NumPy (v1.10 to v1.12).
     # Used under the terms of NumPy's license, see licenses/NUMPY_LICENSE.
@@ -371,3 +375,130 @@ except ImportError:  # pragma: no cover
         """
         a, mask = _replace_nan(a, 1)
         return np.cumprod(a, axis=axis, dtype=dtype, out=out)
+
+
+    def normalize_axis_tuple(axis, ndim, argname=None, allow_duplicate=False):
+        """
+        Normalizes an axis argument into a tuple of non-negative integer axes.
+
+        This handles shorthands such as ``1`` and converts them to ``(1,)``,
+        as well as performing the handling of negative indices covered by
+        `normalize_axis_index`.
+
+        By default, this forbids axes from being specified multiple times.
+
+        Used internally by multi-axis-checking logic.
+
+        .. versionadded:: 1.13.0
+
+        Parameters
+        ----------
+        axis : int, iterable of int
+            The un-normalized index or indices of the axis.
+        ndim : int
+            The number of dimensions of the array that `axis` should be normalized
+            against.
+        argname : str, optional
+            A prefix to put before the error message, typically the name of the
+            argument.
+        allow_duplicate : bool, optional
+            If False, the default, disallow an axis from being specified twice.
+
+        Returns
+        -------
+        normalized_axes : tuple of int
+            The normalized axis index, such that `0 <= normalized_axis < ndim`
+
+        Raises
+        ------
+        AxisError
+            If any axis provided is out of range
+        ValueError
+            If an axis is repeated
+
+        See also
+        --------
+        normalize_axis_index : normalizing a single scalar axis
+        """
+        try:
+            axis = [operator.index(axis)]
+        except TypeError:
+            axis = tuple(axis)
+        axis = tuple(normalize_axis_index(ax, ndim, argname) for ax in axis)
+        if not allow_duplicate and len(set(axis)) != len(axis):
+            if argname:
+                raise ValueError('repeated axis in `{}` argument'.format(argname))
+            else:
+                raise ValueError('repeated axis')
+        return axis
+
+
+    def moveaxis(a, source, destination):
+        """
+        Move axes of an array to new positions.
+
+        Other axes remain in their original order.
+
+        .. versionadded::1.11.0
+
+        Parameters
+        ----------
+        a : np.ndarray
+            The array whose axes should be reordered.
+        source : int or sequence of int
+            Original positions of the axes to move. These must be unique.
+        destination : int or sequence of int
+            Destination positions for each of the original axes. These must also be
+            unique.
+
+        Returns
+        -------
+        result : np.ndarray
+            Array with moved axes. This array is a view of the input array.
+
+        See Also
+        --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+        Examples
+        --------
+
+        >>> x = np.zeros((3, 4, 5))
+        >>> np.moveaxis(x, 0, -1).shape
+        (4, 5, 3)
+        >>> np.moveaxis(x, -1, 0).shape
+        (5, 3, 4)
+
+        These all achieve the same result:
+
+        >>> np.transpose(x).shape
+        (5, 4, 3)
+        >>> np.swapaxes(x, 0, -1).shape
+        (5, 4, 3)
+        >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+        (5, 4, 3)
+        >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+        (5, 4, 3)
+
+        """
+        try:
+            # allow duck-array types if they define transpose
+            transpose = a.transpose
+        except AttributeError:
+            a = np.asarray(a)
+            transpose = a.transpose
+
+        source = normalize_axis_tuple(source, a.ndim, 'source')
+        destination = normalize_axis_tuple(destination, a.ndim, 'destination')
+        if len(source) != len(destination):
+            raise ValueError('`source` and `destination` arguments must have '
+                             'the same number of elements')
+
+        order = [n for n in range(a.ndim) if n not in source]
+
+        for dest, src in sorted(zip(destination, source)):
+            order.insert(dest, src)
+
+        result = transpose(order)
+        return result
