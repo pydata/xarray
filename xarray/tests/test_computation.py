@@ -578,3 +578,10 @@ def test_apply_dask():
     actual = dask_safe_identity(dataset)
     assert isinstance(actual['y'].data, da.Array)
     assert_identical(dataset, actual)
+
+
+def test_where():
+    cond = xr.DataArray([True, False], dims='x')
+    actual = xr.where(cond, 1, 0)
+    expected = xr.DataArray([1, 0], dims='x')
+    assert_identical(expected, actual)

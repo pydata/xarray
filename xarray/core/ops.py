@@ -154,7 +154,7 @@ def fillna(data, other, join="left", dataset_join="left"):
                        keep_attrs=True)
 
 
-def where(self, cond, other=dtypes.NA):
+def where_method(self, cond, other=dtypes.NA):
     """Return elements from `self` or `other` depending on `cond`.
 
     Parameters

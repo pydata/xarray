@@ -31,8 +31,28 @@ Enhancements
 
 - Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
   By `Christian Chwala <https://github.com/cchwala>`_.
-- :py:meth:`~xarray.Dataset.where` now supports the ``other`` argument, for
-  filling with a value other than ``NaN`` (:issue:`576`).
+
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes

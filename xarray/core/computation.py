@@ -764,3 +764,45 @@ def apply_ufunc(func, *args, **kwargs):
         return variables_ufunc(*args)
     else:
         return array_ufunc(*args)
+
+
+def where(cond, x, y):
+    """Return elements from `x` or `y` depending on `cond`.
+
+    Performs xarray-like broadcasting across input arguments.
+
+    Parameters
+    ----------
+    cond : scalar, array, Variable, DataArray or Dataset with boolean dtype
+        When True, return values from `x`, otherwise returns values from `y`.
+    x, y : scalar, array, Variable, DataArray or Dataset
+        Values from which to choose. All dimension coordinates on these objects
+        must be aligned with each other and with `cond`.
+
+    Returns
+    -------
+    In priority order: Dataset, DataArray, Variable or array, whichever
+    type appears as an input argument.
+
+    Examples
+    --------
+
+    >>> cond = xr.DataArray([True, False], dims=['x'])
+    >>> x = xr.DataArray([1, 2], dims=['y'])
+    >>> xr.where(cond, x, 0)
+    <xarray.DataArray (x: 2, y: 2)>
+    array([[1, 2],
+           [0, 0]])
+    Dimensions without coordinates: x, y
+
+    See also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where : equivalent methods
+    """
+    # alignment for three arguments is complicated, so don't support it yet
+    return apply_ufunc(duck_array_ops.where,
+                       cond, x, y,
+                       join='exact',
+                       dataset_join='exact',
+                       dask_array='allowed')

@@ -899,7 +899,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return ops.fillna(self, value)
 
     def where(self, cond, other=dtypes.NA):
-        return ops.where(self, cond, other)
+        return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                allow_lazy=False, **kwargs):

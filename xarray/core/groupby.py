@@ -399,7 +399,7 @@ class GroupBy(object):
         --------
         Dataset.where
         """
-        return ops.where(self, cond, other)
+        return ops.where_method(self, cond, other)
 
     def _first_or_last(self, op, skipna, keep_attrs):
         if isinstance(self._group_indices[0], integer_types):

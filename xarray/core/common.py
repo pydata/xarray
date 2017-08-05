@@ -560,7 +560,7 @@ class BaseDataObject(AttrAccessMixin):
         return result
 
     def where(self, cond, other=dtypes.NA, drop=False):
-        """Return elements from `self` or `other` depending on `cond`.
+        """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
@@ -609,6 +609,11 @@ class BaseDataObject(AttrAccessMixin):
                [ 10.,  11.,  nan,  nan],
                [ 15.,  nan,  nan,  nan]])
         Dimensions without coordinates: x, y
+
+        See also
+        --------
+        numpy.where : corresponding numpy function
+        where : equivalent function
         """
         from .alignment import align
         from .dataarray import DataArray
@@ -638,7 +643,7 @@ class BaseDataObject(AttrAccessMixin):
             self = self.isel(**indexers)
             cond = cond.isel(**indexers)
 
-        return ops.where(self, cond, other)
+        return ops.where_method(self, cond, other)
 
     def close(self):
         """Close any files linked to this object
