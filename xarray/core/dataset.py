@@ -1222,6 +1222,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         from .dataarray import DataArray
 
+        new_coords = {k: v._coords for k, v in indexers.items()
+                      if isinstance(v, DataArray)}
+
         for k, v in indexers.items():
             if isinstance(v, tuple):
                 if (k in self.indexes and
@@ -1243,6 +1246,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
+        # attach indexer's coordinate to pos_indexers
+        for k, v in new_coords.items():
+            pos_indexers[k] = DataArray(pos_indexers[k], dims=v.keys(),
+                                        coords=v)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

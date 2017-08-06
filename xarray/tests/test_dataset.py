@@ -865,6 +865,44 @@ class TestDataset(TestCase):
                            dim3=(('test_coord', ), pdim3))
         assert 'test_coord' in actual.dims
         assert actual.coords['test_coord'].shape == (len(pdim1), )
+        expected = data.isel(dim1=(('test_coord', ), pdim1),
+                             dim2=(('test_coord', ), pdim2),
+                             dim3=(('test_coord', ), pdim3))
+        self.assertDatasetIdentical(actual, expected)
+
+        # DataArray with coordinate
+        idx1 = DataArray(pdim1, dims=['a'], coords={'a': np.random.randn(3)})
+        idx2 = DataArray(pdim2, dims=['b'], coords={'b': np.random.randn(3)})
+        idx3 = DataArray(pdim3, dims=['c'], coords={'c': np.random.randn(3)})
+        # Should work with DataArray
+        actual = data.isel(dim1=idx1, dim2=idx2, dim3=idx3)
+        assert 'a' in actual.dims
+        assert 'b' in actual.dims
+        assert 'c' in actual.dims
+        assert 'time' in actual.coords
+        assert 'dim2' in actual.coords
+        assert 'dim3' in actual.coords
+        expected = data.isel(dim1=(('a', ), pdim1),
+                             dim2=(('b', ), pdim2),
+                             dim3=(('c', ), pdim3))
+        expected = expected.assign_coords(a=idx1['a'], b=idx2['b'],
+                                          c=idx3['c'])
+        self.assertDatasetIdentical(actual, expected)
+
+        idx1 = DataArray(pdim1, dims=['a'], coords={'a': np.random.randn(3)})
+        idx2 = DataArray(pdim2, dims=['a'])
+        idx3 = DataArray(pdim3, dims=['a'])
+        # Should work with DataArray
+        actual = data.isel(dim1=idx1, dim2=idx2, dim3=idx3)
+        assert 'a' in actual.dims
+        assert 'time' in actual.coords
+        assert 'dim2' in actual.coords
+        assert 'dim3' in actual.coords
+        expected = data.isel(dim1=(('a', ), pdim1),
+                             dim2=(('a', ), pdim2),
+                             dim3=(('a', ), pdim3))
+        expected = expected.assign_coords(a=idx1['a'])
+        self.assertDatasetIdentical(actual, expected)
 
         actual = data.isel(dim1=(('points', ), pdim1),
                            dim2=(('points', ), pdim2))
@@ -891,7 +929,7 @@ class TestDataset(TestCase):
         actual = ds.isel(x=(('points', ), [0, 1, 2]))
         self.assertDataArrayIdentical(ds['y'], actual['y'])
 
-        # tests using index or DataArray as a dim
+        # tests using index or DataArray as indexers
         stations = Dataset()
         stations['station'] = (('station', ), ['A', 'B', 'C'])
         stations['dim1s'] = (('station', ), [1, 2, 3])
@@ -916,13 +954,14 @@ class TestDataset(TestCase):
         stations['b'] = (('b', ), [0, 1])
         stations['dim1s'] = (('a', 'b'), [[1, 2], [2, 3], [3, 4]])
         stations['dim2s'] = (('a', ), [4, 5, 1])
-
-        actual = data.isel(dim1=stations['dim1s'],
-                           dim2=stations['dim2s'])
+        actual = data.isel(dim1=stations['dim1s'], dim2=stations['dim2s'])
         assert 'a' in actual.coords
         assert 'a' in actual.dims
         assert 'b' in actual.coords
         assert 'b' in actual.dims
+        assert 'dim2' in actual.coords
+        assert 'a' in actual['dim2'].dims
+
         self.assertDataArrayIdentical(actual['a'].drop(['dim2']),
                                       stations['a'])
         self.assertDataArrayIdentical(actual['b'], stations['b'])
@@ -932,6 +971,7 @@ class TestDataset(TestCase):
                                               stations['dim2s'].variable]
         expected_var3 = data['var3'].variable[slice(None),
                                               stations['dim1s'].variable]
+        self.assertDataArrayEqual(actual['a'].drop('dim2'), stations['a'])
         self.assertArrayEqual(actual['var1'], expected_var1)
         self.assertArrayEqual(actual['var2'], expected_var2)
         self.assertArrayEqual(actual['var3'], expected_var3)
@@ -1106,17 +1146,61 @@ class TestDataset(TestCase):
                           dim3=(('test_coord', ), data.dim3[pdim3]))
         self.assertDatasetIdentical(expected, actual)
 
-        data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
-        expected = Dataset({'foo': ('points', [0, 4, 8])})
-        actual = data.sel_points(x=[0, 1, 2], y=[0, 1, 2])
+        # DataArray Indexer
+        idx_t = DataArray(data['time'][[3, 2, 1]].values, dims=['a'],
+                          coords={'a': ['a', 'b', 'c']})
+        idx_2 = DataArray(data['dim2'][[3, 2, 1]].values, dims=['a'],
+                          coords={'a': ['a', 'b', 'c']})
+        idx_3 = DataArray(data['dim3'][[3, 2, 1]].values, dims=['a'],
+                          coords={'a': ['a', 'b', 'c']})
+        actual = data.sel(time=idx_t, dim2=idx_2, dim3=idx_3)
+        expected = data.isel(time=(('a', ), [3, 2, 1]),
+                             dim2=(('a', ), [3, 2, 1]),
+                             dim3=(('a', ), [3, 2, 1]))
+        expected = expected.assign_coords(a=idx_t['a'])
         self.assertDatasetIdentical(expected, actual)
 
+        idx_t = DataArray(data['time'][[3, 2, 1]].values, dims=['a'],
+                          coords={'a': ['a', 'b', 'c']})
+        idx_2 = DataArray(data['dim2'][[2, 1, 3]].values, dims=['b'],
+                          coords={'b': [0, 1, 2]})
+        idx_3 = DataArray(data['dim3'][[1, 2, 1]].values, dims=['c'],
+                          coords={'c': [0.0, 1.1, 2.2]})
+        actual = data.sel(time=idx_t, dim2=idx_2, dim3=idx_3)
+        expected = data.isel(time=(('a', ), [3, 2, 1]),
+                             dim2=(('b', ), [2, 1, 3]),
+                             dim3=(('c', ), [1, 2, 1]))
+        expected = expected.assign_coords(a=idx_t['a'], b=idx_2['b'],
+                                          c=idx_3['c'])
+        self.assertDatasetIdentical(expected, actual)
+
+        # Multi Dimensional indexers
+        #data.sel(x=[])
+
+        # test from sel_points
+        data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
+
+        expected = Dataset({'foo': ('points', [0, 4, 8])},
+                           coords={'x': (('points', ), [0, 1, 2]),
+                                   'y': (('points', ), [0, 1, 2])})
+        actual = data.sel(x=(('points', ), [0, 1, 2]),
+                          y=(('points', ), [0, 1, 2]))
+        self.assertDatasetIdentical(expected, actual)
+
         expected.coords.update({'x': ('points', [0, 1, 2]),
                                 'y': ('points', [0, 1, 2])})
-        actual = data.sel_points(x=[0.1, 1.1, 2.5], y=[0, 1.2, 2.0],
-                                 method='pad')
+        actual = data.sel(x=(('points', ), [0.1, 1.1, 2.5]),
+                          y=(('points', ), [0, 1.2, 2.0]), method='pad')
         self.assertDatasetIdentical(expected, actual)
+
+        idx_x = DataArray([0, 1, 2], dims=['a'], coords={'a': ['a', 'b', 'c']})
+        idx_y = DataArray([0, 2, 1], dims=['b'], coords={'b': [0, 3, 6]})
+        expected_ary = data['foo'][[0, 1, 2], [0, 2, 1]]
+        actual = data.sel(x=idx_x, y=idx_y)
+        self.assertArrayEqual(expected_ary, actual['foo'])
+        self.assertDataArrayIdentical(actual['a'].drop('x'), idx_x['a'])
+        self.assertDataArrayIdentical(actual['b'].drop('y'), idx_y['b'])
 
         if pd.__version__ >= '0.17':
             with self.assertRaises(KeyError):
