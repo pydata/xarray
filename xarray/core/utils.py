@@ -8,7 +8,7 @@ import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping, Iterable
+from collections import Mapping, MutableMapping, MutableSet, Iterable
 
 import numpy as np
 import pandas as pd
@@ -376,6 +376,43 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
 
     def __len__(self):
         raise len(iter(self))
+
+
+class OrderedSet(MutableSet):
+    """A simple ordered set.
+
+    The API matches the builtin set, but it preserves insertion order of
+    elements, like an OrderedDict.
+    """
+    def __init__(self, values=None):
+        self._ordered_dict = OrderedDict()
+        if values is not None:
+            self |= values
+
+    # Required methods for MutableSet
+
+    def __contains__(self, value):
+        return value in self._ordered_dict
+
+    def __iter__(self):
+        return iter(self._ordered_dict)
+
+    def __len__(self):
+        return len(self._ordered_dict)
+
+    def add(self, value):
+        self._ordered_dict[value] = None
+
+    def discard(self, value):
+        del self._ordered_dict[value]
+
+    # Additional methods
+
+    def update(self, values):
+        self |= values
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, list(self))
 
 
 class NdimSizeLenMixin(object):
