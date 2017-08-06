@@ -577,6 +577,13 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('y',)
         self.assertArrayEqual(v_new, v_data[[0, 1], [0, 1]])
 
+        # with multiple slices
+        v = self.cls(['x', 'y', 'z'], [[[1, 2, 3], [4, 5, 6]]])
+        ind = Variable(['a', 'b'], [[0]])
+        v_new = v[ind, :, :]
+        expected = Variable(['a', 'b', 'y', 'z'], v.data[np.newaxis, ...])
+        self.assertVariableIdentical(v_new, expected)
+
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
@@ -1331,6 +1338,7 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
+        import dask
         if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
             pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_fancy()

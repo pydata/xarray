@@ -406,7 +406,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             self._data. The type of this argument indicates the type of
             indexing to perform, either basic, outer or vectorized.
         new_order : Optional[Sequence[int]]
-            Optional reordering to do on the result of indexing.
+            Optional reordering to do on the result of indexing. If not None,
+            the first len(new_order) indexing should be moved to these
+            positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
@@ -517,13 +519,19 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         out_key = [variable.data for variable in variables]
         out_dims = tuple(out_dims_set)
-        reorder = []
+        slice_positions = set()
         for i, value in slices:
             out_key.insert(i, value)
             new_position = out_dims.index(self.dims[i])
-            reorder.append(new_position)
+            slice_positions.add(new_position)
 
-        return out_dims, VectorizedIndexer(out_key), reorder
+        if slice_positions:
+            new_order = [i for i in range(len(out_dims))
+                         if i not in slice_positions]
+        else:
+            new_order = None
+
+        return out_dims, VectorizedIndexer(out_key), new_order
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -542,7 +550,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims, index_tuple, new_order = self._broadcast_indexes(key)
         data = self._indexable_data[index_tuple]
         if new_order:
-            data = moveaxis(data, -(1 + np.arange(len(new_order))), new_order)
+            data = moveaxis(data, range(len(new_order)), new_order)
         assert getattr(data, 'ndim', 0) == len(dims), (data.ndim, len(dims))
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
@@ -567,7 +575,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                     % (value.shape, len(dims)))
 
             value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
-            value = moveaxis(value, new_order, -(1 + np.arange(len(new_order))))
+            value = moveaxis(value, new_order, range(len(new_order)))
 
         self._indexable_data[index_tuple] = value
 
