@@ -584,6 +584,12 @@ class VariableSubclassTestCases(object):
         expected = Variable(['a', 'b', 'y', 'z'], v.data[np.newaxis, ...])
         self.assertVariableIdentical(v_new, expected)
 
+        v = Variable(['w', 'x', 'y', 'z'], [[[[1, 2, 3], [4, 5, 6]]]])
+        ind = Variable(['y'], [0])
+        v_new = v[ind, :, 1:2, 2]
+        expected = Variable(['y', 'x'], [[6]])
+        self.assertVariableIdentical(v_new, expected)
+
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 

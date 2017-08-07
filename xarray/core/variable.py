@@ -508,7 +508,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                     # result. This is significantly faster/more efficient for
                     # most array backends.
                     values = np.arange(*value.indices(self.sizes[dim]))
-                    variables.insert(i, Variable((dim,), values))
+                    variables.insert(i - len(slices), Variable((dim,), values))
                 else:
                     slices.append((i, value))
 

@@ -245,7 +245,7 @@ class TestIndexerTuple(TestCase):
         for i, j, k in itertools.product(indexers, repeat=3):
 
             _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
-            expected_data = nputils.VectorizedIndex(v.data)[expected]
+            expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
             if new_order:
                 old_order = range(len(new_order))
                 expected_data = moveaxis(expected_data, old_order, new_order)

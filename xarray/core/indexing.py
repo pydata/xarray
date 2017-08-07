@@ -477,7 +477,7 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
             key = _outer_to_numpy_indexer(key, self.array.shape)
 
         if isinstance(key, VectorizedIndexer):
-            array = nputils.VectorizedIndex(self.array)
+            array = nputils.NumpyVIndexAdapter(self.array)
         else:
             array = self.array
 

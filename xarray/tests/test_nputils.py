@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from xarray.core.nputils import _is_contiguous, VectorizedIndex
+from xarray.core.nputils import _is_contiguous, NumpyVIndexAdapter
 
 
 def test_is_contiguous():
@@ -12,7 +12,7 @@ def test_is_contiguous():
 
 def test_vindex():
     x = np.arange(3 * 4 * 5).reshape((3, 4, 5))
-    vindex = VectorizedIndex(x)
+    vindex = NumpyVIndexAdapter(x)
 
     # getitem
     assert_array_equal(vindex[0], x[0])

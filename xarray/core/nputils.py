@@ -116,7 +116,7 @@ def _advanced_indexer_subspaces(key):
     return mixed_positions, vindex_positions
 
 
-class VectorizedIndex(object):
+class NumpyVIndexAdapter(object):
     """Object that implements indexing like vindex on a np.ndarray.
 
     This is a pure Python implementation of (some of) the logic in this NumPy
