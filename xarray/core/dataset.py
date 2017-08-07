@@ -1225,23 +1225,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         new_coords = {k: v._coords for k, v in indexers.items()
                       if isinstance(v, DataArray)}
 
-        for k, v in indexers.items():
-            if isinstance(v, tuple):
-                if (k in self.indexes and
-                    (isinstance(self.indexes[k].data, pd.MultiIndex) or
-                     self.indexes[k].dtype == 'object')):
-                    # If array dtype is tuple, we should be carefully check
-                    # whether indexer should be Variable or not.
-                    try:
-                        v_tmp = as_variable(v)
-                        # TODO should check dtype consistency
-                        indexers[k] = v_tmp
-                    except (ValueError, TypeError):
-                        pass
-                else:
-                    indexers[k] = as_variable(v)
-            elif isinstance(v, DataArray):
-                indexers[k] = v.variable
+        indexers = {k: v.variable if isinstance(v, DataArray) else v
+                    for k, v in indexers.items()}
 
         pos_indexers, new_indexes = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
@@ -1291,30 +1276,98 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel_points
         DataArray.isel_points
         """
+        indexer_dims = set(indexers)
 
-        import warnings
-        warnings.warn('Dataset.isel_points is deprecated: use Dataset.isel()'
-                      'instead', DeprecationWarning, stacklevel=2)
+        def take(variable, slices):
+            # Note: remove helper function when once when numpy
+            # supports vindex https://github.com/numpy/numpy/pull/6075
+            if hasattr(variable.data, 'vindex'):
+                # Special case for dask backed arrays to use vectorised list indexing
+                sel = variable.data.vindex[slices]
+            else:
+                # Otherwise assume backend is numpy array with 'fancy' indexing
+                sel = variable.data[slices]
+            return sel
 
-        from .dataarray import DataArray
-        if isinstance(dim, DataArray):
-            indexers = {k: DataArray(v, dims=[dim.name], coords=dim.coords)
-                        for k, v in iteritems(indexers)}
-            return self.isel(**indexers)
+        def relevant_keys(mapping):
+            return [k for k, v in mapping.items()
+                    if any(d in indexer_dims for d in v.dims)]
 
-        if isinstance(dim, (list, np.ndarray)):
-            indexers = {k: DataArray(v, dims=['points'],
-                                     coords={'points': dim})
-                        for k, v in iteritems(indexers)}
-            return self.isel(**indexers)
+        coords = relevant_keys(self.coords)
+        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
+        indexers_dict = dict(indexers)
+        non_indexed_dims = set(self.dims) - indexer_dims
+        non_indexed_coords = set(self.coords) - set(coords)
 
-        if isinstance(dim, pd.Index):
-            indexers = {k: DataArray(v, dims=[dim.name, ],
-                                     coords={dim.name: dim})
-                        for k, v in iteritems(indexers)}
-            return self.isel(**indexers)
+        # All the indexers should be iterables
+        # Check that indexers are valid dims, integers, and 1D
+        for k, v in indexers:
+            if k not in self.dims:
+                raise ValueError("dimension %s does not exist" % k)
+            if v.dtype.kind != 'i':
+                raise TypeError('Indexers must be integers')
+            if v.ndim != 1:
+                raise ValueError('Indexers must be 1 dimensional')
 
-        return self.isel(**{k: ((dim, ), v) for k, v in iteritems(indexers)})
+        # all the indexers should have the same length
+        lengths = set(len(v) for k, v in indexers)
+        if len(lengths) > 1:
+            raise ValueError('All indexers must be the same length')
+
+        # Existing dimensions are not valid choices for the dim argument
+        if isinstance(dim, basestring):
+            if dim in self.dims:
+                # dim is an invalid string
+                raise ValueError('Existing dimension names are not valid '
+                                 'choices for the dim argument in sel_points')
+
+        elif hasattr(dim, 'dims'):
+            # dim is a DataArray or Coordinate
+            if dim.name in self.dims:
+                # dim already exists
+                raise ValueError('Existing dimensions are not valid choices '
+                                 'for the dim argument in sel_points')
+
+        # Set the new dim_name, and optionally the new dim coordinate
+        # dim is either an array-like or a string
+        if not utils.is_scalar(dim):
+            # dim is array like get name or assign 'points', get as variable
+            dim_name = 'points' if not hasattr(dim, 'name') else dim.name
+            dim_coord = as_variable(dim, name=dim_name)
+        else:
+            # dim is a string
+            dim_name = dim
+            dim_coord = None
+
+        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
+
+        variables = OrderedDict()
+
+        for name, var in reordered.variables.items():
+            if name in indexers_dict or any(d in indexer_dims for d in var.dims):
+                # slice if var is an indexer or depends on an indexed dim
+                slc = [indexers_dict[k]
+                       if k in indexers_dict
+                       else slice(None) for k in var.dims]
+
+                var_dims = [dim_name] + [d for d in var.dims
+                                         if d in non_indexed_dims]
+                selection = take(var, tuple(slc))
+                var_subset = type(var)(var_dims, selection, var.attrs)
+                variables[name] = var_subset
+            else:
+                # If not indexed just add it back to variables or coordinates
+                variables[name] = var
+
+        coord_names = (set(coords) & set(variables)) | non_indexed_coords
+
+        dset = self._replace_vars_and_dims(variables, coord_names=coord_names)
+        # Add the dim coord to the new dset. Must be done after creation
+        # because_replace_vars_and_dims can only access existing coords,
+        # not add new ones
+        if dim_coord is not None:
+            dset.coords[dim_name] = dim_coord
+        return dset
 
     def sel_points(self, dim='points', method=None, tolerance=None,
                    **indexers):

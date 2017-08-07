@@ -657,11 +657,14 @@ class TestDataArray(TestCase):
         actual = da.isel_points(y=y, x=x, dim='test_coord')
         assert actual.coords['test_coord'].shape == (len(y), )
         assert list(actual.coords) == ['time']
-        assert actual.dims == ('time', 'test_coord')
+        assert actual.dims == ('test_coord', 'time')
 
         actual = da.isel_points(y=y, x=x)
         assert 'points' in actual.dims
-        np.testing.assert_equal(actual, expected)
+        # Note that because xarray always concatenates along the first
+        # dimension, We must transpose the result to match the numpy style of
+        # concatenation.
+        np.testing.assert_equal(actual.T, expected)
 
         # a few corner cases
         da.isel_points(time=[1, 2], x=[2, 2], y=[3, 4])
@@ -673,7 +676,7 @@ class TestDataArray(TestCase):
         x = [-2, 2]
         expected = da.values[:, y, x]
         actual = da.isel_points(x=x, y=y).values
-        np.testing.assert_equal(actual, expected)
+        np.testing.assert_equal(actual.T, expected)
 
         # test that the order of the indexers doesn't matter
         self.assertDataArrayIdentical(
@@ -681,9 +684,22 @@ class TestDataArray(TestCase):
             da.isel_points(x=x, y=y))
 
         # make sure we're raising errors in the right places
-        with self.assertRaisesRegexp(IndexError,
-                                     'Dimensions of indexers mismatch'):
+        with self.assertRaisesRegexp(ValueError,
+                                     'All indexers must be the same length'):
             da.isel_points(y=[1, 2], x=[1, 2, 3])
+        with self.assertRaisesRegexp(ValueError,
+                                     'dimension bad_key does not exist'):
+            da.isel_points(bad_key=[1, 2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            da.isel_points(y=[1.5, 2.2])
+        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+            da.isel_points(x=[1, 2, 3], y=slice(3))
+        with self.assertRaisesRegexp(ValueError,
+                                     'Indexers must be 1 dimensional'):
+            da.isel_points(y=1, x=2)
+        with self.assertRaisesRegexp(ValueError,
+                                     'Existing dimension names are not'):
+            da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
         # using non string dims
         actual = da.isel_points(y=[1, 2], x=[1, 2], dim=['A', 'B'])
