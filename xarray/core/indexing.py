@@ -8,7 +8,6 @@ import pandas as pd
 
 from . import nputils
 from . import utils
-from .npcompat import moveaxis
 from .pycompat import (iteritems, range, integer_types, dask_array_type,
                        suppress)
 from .utils import is_dict_like
@@ -301,10 +300,6 @@ class OuterIndexer(IndexerTuple):
 
 class VectorizedIndexer(IndexerTuple):
     """ Tuple for vectorized indexing """
-
-
-class PointwiseIndexer(IndexerTuple):
-    """ Tuple for pointwise indexing with dask.array's vindex """
 
 
 class LazilyIndexedArray(utils.NDArrayMixin):

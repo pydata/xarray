@@ -593,7 +593,7 @@ class VariableSubclassTestCases(object):
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
-        with self.assertRaisesRegexp(IndexError, "Unlabelled multi-"):
+        with self.assertRaisesRegexp(IndexError, "labeled multi-"):
             v[[[0, 1], [1, 2]]]
 
         ind_x = Variable(['a'], [0, 1, 1])

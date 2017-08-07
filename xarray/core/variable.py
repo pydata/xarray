@@ -20,7 +20,7 @@ from .npcompat import moveaxis
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
 from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
-                       OuterIndexer, PointwiseIndexer, VectorizedIndexer)
+                       OuterIndexer, VectorizedIndexer)
 from .utils import OrderedSet
 
 import xarray as xr  # only for Dataset and DataArray
@@ -417,7 +417,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return self._broadcast_indexes_basic(key)
 
         # Detect it can be mapped as an outer indexer
-        # If all key is unlabelled, or
+        # If all key is unlabeled, or
         # key can be mapped as an OuterIndexer.
         if all(not isinstance(k, Variable) for k in key):
             return self._broadcast_indexes_outer(key)
@@ -457,7 +457,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             else:
                 k = np.asarray(k)
                 if k.ndim > 1:
-                    raise IndexError("Unlabelled multi-dimensional array "
+                    raise IndexError("Unlabeled multi-dimensional array "
                                      "cannot be used for indexing: {}".format(
                                          k))
                 indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
@@ -482,7 +482,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 try:
                     variable = as_variable(value, name=dim)
                 except MissingDimensionsError:  # change to better exception
-                    raise IndexError("Unlabelled multi-dimensional array "
+                    raise IndexError("Unlabeled multi-dimensional array "
                                      "cannot be used for indexing.")
 
                 if variable.dtype.kind == 'b':  # boolean indexing case
@@ -537,10 +537,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """Return a new Array object whose contents are consistent with
         getting the provided key from the underlying data.
 
-        # TODO more docstrings.
         NB. __getitem__ and __setitem__ implement xarray-style indexing,
-        where if keys are unlabelled arrays, we index the array orthogonally
-        with them. If keys are labelled array (such as Variables), they are
+        where if keys are unlabeled arrays, we index the array orthogonally
+        with them. If keys are labeled array (such as Variables), they are
         broadcasted with our usual scheme and then the array is indexed with
         the broadcasted key, like numpy's fancy indexing.
 

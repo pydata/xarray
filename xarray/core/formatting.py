@@ -21,7 +21,7 @@ except ImportError:
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
-from .indexing import IndexerTuple
+from .indexing import BasicIndexer
 
 
 def pretty_print(x, numchars):
@@ -69,7 +69,7 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = IndexerTuple((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), )
+    indexer = BasicIndexer((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), )
                            + (slice(None), ) * n_steps)
     return indexer
 
