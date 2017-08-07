@@ -6,6 +6,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+from . import nputils
 from . import utils
 from .npcompat import moveaxis
 from .pycompat import (iteritems, range, integer_types, dask_array_type,
@@ -296,32 +297,6 @@ class OuterIndexer(IndexerTuple):
     """ Tuple for outer/orthogonal indexing.
     All the item is one of integer, slice, and 1d-np.ndarray.
     """
-    def vectorize(self, shape):
-        """ Convert to a vectorized indexer.
-        shape: shape of the array subject to the indexing.
-        """
-        if len([k for k in self if not isinstance(k, slice)]) <= 1:
-            # if there is only one vector and all others are slice,
-            # it can be safely converted to vectorized indexer
-            # Boolean index should be converted to integer array.
-            return VectorizedIndexer(self)
-        else:
-            n_dim = len([k for k in self if not isinstance(k, integer_types)])
-            i_dim = 0
-            new_key = []
-            for k, size in zip(self, shape):
-                if isinstance(k, integer_types):
-                    new_key.append(k)
-                else:  # np.ndarray or slice
-                    if isinstance(k, slice):
-                        k = np.arange(*k.indices(size))
-                    if k.dtype.kind == 'b':
-                        (k, ) = k.nonzero()
-                    shape = [(1,) * i_dim + (k.size, ) +
-                             (1,) * (n_dim - i_dim - 1)]
-                    new_key.append(k.reshape(*shape))
-                    i_dim += 1
-            return VectorizedIndexer(new_key)
 
 
 class VectorizedIndexer(IndexerTuple):
@@ -457,6 +432,44 @@ def xarray_indexable(array):
     return array
 
 
+def _outer_to_numpy_indexer(key, shape):
+    """Convert an OuterIndexer into an indexer for NumPy.
+
+    Parameters
+    ----------
+    key : OuterIndexer
+        Outer indexing tuple to convert.
+    shape : tuple
+        Shape of the array subject to the indexing.
+
+    Returns
+    -------
+    tuple
+        Base tuple suitable for use to index a NumPy array.
+    """
+    if len([k for k in key if not isinstance(k, slice)]) <= 1:
+        # If there is only one vector and all others are slice,
+        # it can be safely used in mixed basic/advanced indexing.
+        # Boolean index should already be converted to integer array.
+        return tuple(key)
+
+    n_dim = len([k for k in key if not isinstance(k, integer_types)])
+    i_dim = 0
+    new_key = []
+    for k, size in zip(key, shape):
+        if isinstance(k, integer_types):
+            new_key.append(k)
+        else:  # np.ndarray or slice
+            if isinstance(k, slice):
+                k = np.arange(*k.indices(size))
+            assert k.dtype.kind == 'i'
+            shape = [(1,) * i_dim + (k.size, ) +
+                     (1,) * (n_dim - i_dim - 1)]
+            new_key.append(k.reshape(*shape))
+            i_dim += 1
+    return tuple(new_key)
+
+
 class NumpyIndexingAdapter(utils.NDArrayMixin):
     """Wrap a NumPy array to use broadcasted indexing
     """
@@ -472,17 +485,24 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
             value = utils.to_0d_array(value)
         return value
 
-    def __getitem__(self, key):
+    def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
-            key = key.vectorize(self.shape)
-        key = to_tuple(key)
-        return self._ensure_ndarray(self.array[key])
+            key = _outer_to_numpy_indexer(key, self.array.shape)
+
+        if isinstance(key, VectorizedIndexer):
+            array = nputils.NumpyVIndexAdapter(self.array)
+        else:
+            array = self.array
+
+        return array, to_tuple(key)
+
+    def __getitem__(self, key):
+        array, key = self._indexing_array_and_key(key)
+        return self._ensure_ndarray(array[key])
 
     def __setitem__(self, key, value):
-        if isinstance(key, OuterIndexer):
-            key = key.vectorize(self.shape)
-        key = to_tuple(key)
-        self.array[key] = value
+        array, key = self._indexing_array_and_key(key)
+        array[key] = value
 
 
 class DaskIndexingAdapter(utils.NDArrayMixin):
@@ -495,51 +515,28 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
-        # should always get PointwiseIndexer instead
-        assert not isinstance(key, VectorizedIndexer)
-
-        if isinstance(key, PointwiseIndexer):
-            return self._getitem_pointwise(key)
-
-        try:
-            key = to_tuple(key)
-            return self.array[key]
-        except NotImplementedError:
-            # manual orthogonal indexing.
-            value = self.array
-            for axis, subkey in reversed(list(enumerate(key))):
-                value = value[(slice(None),) * axis + (subkey,)]
-            return value
-
-    def _getitem_pointwise(self, key):
-        pointwise_shape, pointwise_index = next(
-           (k.shape, i) for i, k in enumerate(key)
-           if not isinstance(k, slice))
-        # dask's indexing only handles 1d arrays
-        flat_key = tuple(k if isinstance(k, slice) else k.ravel()
-                         for k in key)
-
-        if len([k for k in key if not isinstance(k, slice)]) == 1:
-            # vindex requires more than one non-slice :(
-            # but we can use normal indexing instead
-            indexed = self.array[flat_key]
-            new_shape = (indexed.shape[:pointwise_index] +
-                         pointwise_shape +
-                         indexed.shape[pointwise_index + 1:])
-            return indexed.reshape(new_shape)
+        if isinstance(key, BasicIndexer):
+            return self.array[tuple(key)]
+        elif isinstance(key, VectorizedIndexer):
+            return self.array.vindex[tuple(key)]
         else:
-            indexed = self.array.vindex[flat_key]
-            # vindex always moves slices to the end
-            reshaped = indexed.reshape(pointwise_shape + indexed.shape[1:])
-            # reorder dimensions to match order of appearance
-            positions = np.arange(0, len(pointwise_shape))
-            return moveaxis(reshaped, positions, positions + pointwise_index)
+            assert isinstance(key, OuterIndexer)
+            key = tuple(key)
+            try:
+                return self.array[key]
+            except NotImplementedError:
+                # manual orthogonal indexing.
+                # TODO: port this upstream into dask in a saner way.
+                value = self.array
+                for axis, subkey in reversed(list(enumerate(key))):
+                    value = value[(slice(None),) * axis + (subkey,)]
+                return value
 
     def __setitem__(self, key, value):
         raise TypeError("this variable's data is stored in a dask array, "
                         'which does not support item assignment. To '
                         'assign to this variable, you must first load it '
-                        'into memory explicitly using the .load_data() '
+                        'into memory explicitly using the .load() '
                         'method or accessing its .values attribute.')
 
 

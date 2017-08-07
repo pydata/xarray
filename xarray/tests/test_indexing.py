@@ -1,11 +1,15 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import itertools
+
 import numpy as np
 import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
+from xarray.core import nputils
+from xarray.core.npcompat import moveaxis
 from . import TestCase, ReturnItem
 
 
@@ -224,8 +228,8 @@ class TestMemoryCachedArray(TestCase):
 
 
 class TestIndexerTuple(TestCase):
-    """ Make sure OuterIndexer.vectorize gives similar result to
-    v._broadcast_indexes_advanced
+    """ Make sure _outer_to_numpy_indexer gives similar result to
+    Variable._broadcast_indexes_vectorized
     """
     def test_outer_indexer(self):
         def nonzero(x):
@@ -238,11 +242,16 @@ class TestIndexerTuple(TestCase):
         # test orthogonally applied indexers
         indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
                     np.arange(10) < 5]
-        for i in indexers:
-            for j in indexers:
-                for k in indexers:
-                    outer_index = indexing.OuterIndexer(
-                                        (nonzero(i), nonzero(j), nonzero(k)))
-                    _, expected = v._broadcast_indexes_advanced((i, j, k))
-                    actual = outer_index.vectorize(v.shape)
-                    self.assertArrayEqual(v.data[actual], v.data[expected])
+        for i, j, k in itertools.product(indexers, repeat=3):
+
+            _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
+            expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
+            if new_order:
+                old_order = range(len(new_order))
+                expected_data = moveaxis(expected_data, old_order, new_order)
+
+            outer_index = indexing.OuterIndexer(
+                (nonzero(i), nonzero(j), nonzero(k)))
+            actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
+            actual_data = v.data[actual]
+            self.assertArrayEqual(actual_data, expected_data)

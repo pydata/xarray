@@ -524,14 +524,13 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(v_new, v_data[:, 0:1])
 
     def test_getitem_fancy(self):
-        # dask-based Variable objects don't support this full set of operations.
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
         v_data = v.compute().data
 
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
         assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[([0, 1, 1], [1, 1, 0]), :])
+        self.assertArrayEqual(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
         v_new = v[dict(y=ind)]
@@ -572,6 +571,25 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('a', 'b', 'y')
         self.assertArrayEqual(v_new, v_data[[[0, 0], [1, 1]], slice(None, 1)])
 
+        # slice matches explicit dimension
+        ind = Variable(['y'], [0, 1])
+        v_new = v[ind, :2]
+        assert v_new.dims == ('y',)
+        self.assertArrayEqual(v_new, v_data[[0, 1], [0, 1]])
+
+        # with multiple slices
+        v = self.cls(['x', 'y', 'z'], [[[1, 2, 3], [4, 5, 6]]])
+        ind = Variable(['a', 'b'], [[0]])
+        v_new = v[ind, :, :]
+        expected = Variable(['a', 'b', 'y', 'z'], v.data[np.newaxis, ...])
+        self.assertVariableIdentical(v_new, expected)
+
+        v = Variable(['w', 'x', 'y', 'z'], [[[[1, 2, 3], [4, 5, 6]]]])
+        ind = Variable(['y'], [0])
+        v_new = v[ind, :, 1:2, 2]
+        expected = Variable(['y', 'x'], [[6]])
+        self.assertVariableIdentical(v_new, expected)
+
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
@@ -584,10 +602,7 @@ class VariableSubclassTestCases(object):
             v[ind_x, ind_y]
 
         ind = Variable(['a', 'b'], [[True, False], [False, True]])
-        msg = ('dask does not support booleans'
-               if type(self) is TestVariable_withDask
-               else '2-dimensional boolean')
-        with self.assertRaisesRegexp(IndexError, msg):
+        with self.assertRaisesRegexp(IndexError, '2-dimensional boolean'):
             v[dict(x=ind)]
 
 
@@ -804,38 +819,38 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         data = np.random.random((10, 11))
         v = Variable(['x', 'y'], data)
 
-        _, ind = v._broadcast_indexes((0, 1))
+        _, ind, _ = v._broadcast_indexes((0, 1))
         assert type(ind) == indexing.BasicIndexer
 
-        _, ind = v._broadcast_indexes((0, slice(0, 8, 2)))
+        _, ind, _ = v._broadcast_indexes((0, slice(0, 8, 2)))
         assert type(ind) == indexing.BasicIndexer
 
-        _, ind = v._broadcast_indexes((0, [0, 1]))
+        _, ind, _ = v._broadcast_indexes((0, [0, 1]))
         assert type(ind) == indexing.OuterIndexer
 
-        _, ind = v._broadcast_indexes(([0, 1], 1))
+        _, ind, _ = v._broadcast_indexes(([0, 1], 1))
         assert type(ind) == indexing.OuterIndexer
 
-        _, ind = v._broadcast_indexes(([0, 1], [1, 2]))
+        _, ind, _ = v._broadcast_indexes(([0, 1], [1, 2]))
         assert type(ind) == indexing.OuterIndexer
 
-        _, ind = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
+        _, ind, _ = v._broadcast_indexes(([0, 1], slice(0, 8, 2)))
         assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('a', ), [0, 1])
-        _, ind = v._broadcast_indexes((vind, slice(0, 8, 2)))
+        _, ind, _ = v._broadcast_indexes((vind, slice(0, 8, 2)))
         assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('y', ), [0, 1])
-        _, ind = v._broadcast_indexes((vind, 3))
+        _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) == indexing.OuterIndexer
 
         vind = Variable(('a', ), [0, 1])
-        _, ind = v._broadcast_indexes((vind, vind))
+        _, ind, _ = v._broadcast_indexes((vind, vind))
         assert type(ind) == indexing.VectorizedIndexer
 
         vind = Variable(('a', 'b'), [[0, 2], [1, 3]])
-        _, ind = v._broadcast_indexes((vind, 3))
+        _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) == indexing.VectorizedIndexer
 
     def test_items(self):
@@ -1291,6 +1306,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertTrue(v[0, 1] == 1)
 
         # dimension broadcast
+        v = Variable(['x', 'y'], np.ones((3, 2)))
+        ind = Variable(['a', 'b'], [[0, 1]])
+        v[ind, :] = 0
+        expected = Variable(['x', 'y'], [[0, 0], [0, 0], [1, 1]])
+        self.assertVariableIdentical(expected, v)
+
+        with self.assertRaisesRegexp(ValueError, "shape mismatch"):
+            v[ind, ind] = np.zeros((1, 2, 1))
+
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
         ind = Variable(['a'], [0, 1])
         v[dict(x=ind)] = Variable(['a', 'y'], np.ones((2, 3), dtype=int) * 10)
@@ -1299,69 +1323,31 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
 
 @requires_dask
-class TestVariable_withDask(TestCase, VariableSubclassTestCases):
+class TestVariableWithDask(TestCase, VariableSubclassTestCases):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     @pytest.mark.xfail
     def test_0d_object_array_with_list(self):
-        super(TestVariable_withDask, self).test_0d_object_array_with_list()
+        super(TestVariableWithDask, self).test_0d_object_array_with_list()
 
     @pytest.mark.xfail
     def test_array_interface(self):
         # dask array does not have `argsort`
-        super(TestVariable_withDask, self).test_array_interface()
+        super(TestVariableWithDask, self).test_array_interface()
 
     @pytest.mark.xfail
     def test_copy_index(self):
-        super(TestVariable_withDask, self).test_copy_index()
+        super(TestVariableWithDask, self).test_copy_index()
 
     @pytest.mark.xfail
     def test_eq_all_dtypes(self):
-        super(TestVariable_withDask, self).test_eq_all_dtypes()
-
-    @pytest.mark.xfail
-    def test_getitem_fancy(self):
-        super(TestVariable_withDask, self).test_getitem_fancy()
+        super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        # selectively copied from the superclass.
-        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
-        v_data = v.compute().data
-
-        ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
-        v_new = v[ind]
-        assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[([0, 1, 1], [1, 1, 0]), :])
-
-        ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
-        v_new = v[dict(y=ind)]
-        assert v_new.dims == ('x', 'a', 'b')
-        self.assertArrayEqual(v_new, v_data[:, ([0, 1, 2], [2, 1, 0])])
-
-        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        with self.assertRaisesRegexp(IndexError, 'same dimension names'):
-            v_new = v[dict(x=ind[:, 0], y=ind)]
-
-        # along diagonal
-        ind = Variable(['a'], [0, 1])
-        v_new = v[ind, ind]
-        assert v_new.dims == ('a',)
-        self.assertArrayEqual(v_new, v_data[[0, 1], [0, 1]])
-
-        # with slice
-        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v[dict(x=slice(None), y=ind)]
-        assert v_new.dims == ('x', 'a', 'b')
-        self.assertArrayEqual(v_new, v_data[:, [[0, 0], [1, 1]]])
-
-        ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
-        v_new = v[dict(x=ind, y=slice(None))]
-        assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[[[0, 0], [1, 1]], :])
-
-        ind = Variable(['x', 'b'], [[0, 0], [1, 1]])
-        with self.assertRaisesRegexp(IndexError, 'reuse a sliced dimension'):
-            v_new = v[dict(x=slice(None), y=ind)]
+        import dask
+        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
+            pytest.xfail("vindex from latest dask is required")
+        super(TestVariableWithDask, self).test_getitem_fancy()
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):

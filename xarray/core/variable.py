@@ -16,10 +16,12 @@ from . import indexing
 from . import nputils
 from . import ops
 from . import utils
+from .npcompat import moveaxis
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
 from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
                        OuterIndexer, PointwiseIndexer, VectorizedIndexer)
+from .utils import OrderedSet
 
 import xarray as xr  # only for Dataset and DataArray
 
@@ -388,19 +390,25 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return key
 
     def _broadcast_indexes(self, key):
-        """
+        """Prepare an indexing key for an indexing operation.
+
         Parameters
         -----------
-        key: One of
-            array
-            a mapping of dimension names to index.
+        key: int, slice, array, dict or tuple of integer, slices and arrays
+            Any valid input for indexing.
 
         Returns
         -------
-        dims: Tuple of strings.
+        dims: tuple
             Dimension of the resultant variable.
-        indexers: list of integer, array-like, or slice. This is aligned
-            along self.dims.
+        indexers: IndexingTuple subclass
+            Tuple of integer, array-like, or slices to use when indexing
+            self._data. The type of this argument indicates the type of
+            indexing to perform, either basic, outer or vectorized.
+        new_order : Optional[Sequence[int]]
+            Optional reordering to do on the result of indexing. If not None,
+            the first len(new_order) indexing should be moved to these
+            positions.
         """
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
@@ -420,7 +428,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         for k, d in zip(key, self.dims):
             if isinstance(k, Variable):
                 if len(k.dims) > 1:
-                    return self._broadcast_indexes_advanced(key)
+                    return self._broadcast_indexes_vectorized(key)
                 dims.append(k.dims[0])
             if not isinstance(k, integer_types):
                 dims.append(d)
@@ -428,12 +436,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if len(set(dims)) == len(dims):
             return self._broadcast_indexes_outer(key)
 
-        return self._broadcast_indexes_advanced(key)
+        return self._broadcast_indexes_vectorized(key)
 
     def _broadcast_indexes_basic(self, key):
         dims = tuple(dim for k, dim in zip(key, self.dims)
                      if not isinstance(k, integer_types))
-        return dims, BasicIndexer(key)
+        return dims, BasicIndexer(key), None
 
     def _broadcast_indexes_outer(self, key):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
@@ -453,7 +461,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                                      "cannot be used for indexing: {}".format(
                                          k))
                 indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
-        return dims, OuterIndexer(indexer)
+        return dims, OuterIndexer(indexer), None
 
     def _nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
@@ -463,77 +471,67 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return tuple(Variable((dim), nz) for nz, dim
                      in zip(nonzeros, self.dims))
 
-    def _broadcast_indexes_advanced(self, key):
-        if isinstance(self._data, dask_array_type):
-            # dask only supports a very restricted form of advanced indexing
-            return self._broadcast_indexes_dask_pointwise(key)
+    def _broadcast_indexes_vectorized(self, key):
 
         variables = []
+        out_dims_set = OrderedSet()
         for dim, value in zip(self.dims, key):
             if isinstance(value, slice):
-                value = np.arange(*value.indices(self.sizes[dim]))
-
-            try:
-                variable = as_variable(value, name=dim)
-            except MissingDimensionsError:  # change to better exception
-                raise IndexError("Unlabelled multi-dimensional array "
-                                 "cannot be used for indexing.")
-
-            if variable.dtype.kind == 'b':  # boolean indexing case
-                if variable.ndim > 1:
-                    raise IndexError("{}-dimensional boolean indexing is "
-                                     "not supported. ".format(variable.ndim))
-                variables.extend(variable._nonzero())
+                out_dims_set.add(dim)
             else:
+                try:
+                    variable = as_variable(value, name=dim)
+                except MissingDimensionsError:  # change to better exception
+                    raise IndexError("Unlabelled multi-dimensional array "
+                                     "cannot be used for indexing.")
+
+                if variable.dtype.kind == 'b':  # boolean indexing case
+                    if variable.ndim > 1:
+                        raise IndexError("{}-dimensional boolean indexing is "
+                                         "not supported. ".format(variable.ndim))
+                    (variable,) = variable._nonzero()
+
                 variables.append(variable)
+                out_dims_set.update(variable.dims)
+
+        variable_dims = set()
+        for variable in variables:
+            variable_dims.update(variable.dims)
+
+        slices = []
+        for i, (dim, value) in enumerate(zip(self.dims, key)):
+            if isinstance(value, slice):
+                if dim in variable_dims:
+                    # We only convert slice objects to variables if they share
+                    # a dimension with at least one other variable. Otherwise,
+                    # we can equivalently leave them as slices and transpose the
+                    # result. This is significantly faster/more efficient for
+                    # most array backends.
+                    values = np.arange(*value.indices(self.sizes[dim]))
+                    variables.insert(i - len(slices), Variable((dim,), values))
+                else:
+                    slices.append((i, value))
+
         try:
             variables = _broadcast_compat_variables(*variables)
         except ValueError:
             raise IndexError("Dimensions of indexers mismatch: {}".format(key))
-        dims = variables[0].dims  # all variables have the same dims
-        # overwrite if there is integers
-        key = VectorizedIndexer(variable.data for variable in variables)
-        return dims, key
 
-    def _broadcast_indexes_dask_pointwise(self, key):
-        if any(not isinstance(k, (Variable, slice)) for k in key):
-            raise IndexError(
-                'Vectorized indexing with dask requires that all indexers are '
-                'labeled arrays or full slice objects: {}'.format(key))
+        out_key = [variable.data for variable in variables]
+        out_dims = tuple(out_dims_set)
+        slice_positions = set()
+        for i, value in slices:
+            out_key.insert(i, value)
+            new_position = out_dims.index(self.dims[i])
+            slice_positions.add(new_position)
 
-        if any(isinstance(k, Variable) and k.dtype.kind == 'b' for k in key):
-            raise IndexError(
-                'Vectorized indexing with dask does not support booleans: {}'
-                .format(key))
+        if slice_positions:
+            new_order = [i for i in range(len(out_dims))
+                         if i not in slice_positions]
+        else:
+            new_order = None
 
-        dims_set = {k.dims for k in key if isinstance(k, Variable)}
-        if len(dims_set) != 1:
-            raise IndexError(
-                'Vectorized indexing with dask requires that all labeled '
-                'arrays in the indexer have the same dimension names, but '
-                'arrays have different dimensions: {}'.format(key))
-        (unique_dims,) = dims_set
-
-        shapes_set = {k.shape for k in key if isinstance(k, Variable)}
-        if len(shapes_set) != 1:
-            # matches message in _broadcast_indexes_advanced
-            raise IndexError("Dimensions of indexers mismatch: {}".format(key))
-
-        dims = []
-        found_first_array = False
-        for k, d in zip(key, self.dims):
-            if isinstance(k, slice):
-                if d in unique_dims:
-                    raise IndexError(
-                        'Labeled arrays used in vectorized indexing with dask '
-                        'cannot reuse a sliced dimension: {}'.format(d))
-                dims.append(d)
-            elif not found_first_array:
-                dims.extend(k.dims)
-                found_first_array = True
-
-        key = PointwiseIndexer(getattr(k, 'data', k) for k in key)
-        return tuple(dims), key
+        return out_dims, VectorizedIndexer(out_key), new_order
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -549,12 +547,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
-        dims, index_tuple = self._broadcast_indexes(key)
+        dims, index_tuple, new_order = self._broadcast_indexes(key)
         data = self._indexable_data[index_tuple]
-        if hasattr(data, 'ndim'):
-            assert data.ndim == len(dims), (data.ndim, len(dims))
-        else:
-            assert len(dims) == 0, len(dims)
+        if new_order:
+            data = moveaxis(data, range(len(new_order)), new_order)
+        assert getattr(data, 'ndim', 0) == len(dims), (data.ndim, len(dims))
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
@@ -564,12 +561,23 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         See __getitem__ for more details.
         """
-        dims, index_tuple = self._broadcast_indexes(key)
-        data = xarray_indexable(self._data)
+        dims, index_tuple, new_order = self._broadcast_indexes(key)
+
         if isinstance(value, Variable):
-            data[index_tuple] = value.set_dims(dims)
-        else:
-            data[index_tuple] = value
+            value = value.set_dims(dims).data
+
+        if new_order:
+            value = duck_array_ops.asarray(value)
+            if value.ndim > len(dims):
+                raise ValueError(
+                    'shape mismatch: value array of shape %s could not be'
+                    'broadcast to indexing result with %s dimensions'
+                    % (value.shape, len(dims)))
+
+            value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
+            value = moveaxis(value, new_order, range(len(new_order)))
+
+        self._indexable_data[index_tuple] = value
 
     @property
     def attrs(self):
@@ -910,8 +918,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         missing_dims = set(self.dims) - set(dims)
         if missing_dims:
-            raise ValueError('new dimensions must be a superset of existing '
-                             'dimensions')
+            raise ValueError('new dimensions %r must be a superset of existing '
+                             'dimensions %r' % (dims, self.dims))
 
         self_dims = set(self.dims)
         expanded_dims = tuple(
@@ -1370,12 +1378,12 @@ class IndexVariable(Variable):
         return self.copy(deep=False)
 
     def __getitem__(self, key):
-        dims, index_tuple = self._broadcast_indexes(key)
+        dims, index_tuple, _ = self._broadcast_indexes(key)
         if len(dims) > 1:
             raise IndexError('Multiple dimension array cannot be used for '
                              'indexing IndexVariable: {}'.format(key))
         values = self._indexable_data[index_tuple]
-        if not hasattr(values, 'ndim') or values.ndim == 0:
+        if getattr(values, 'ndim', 0) == 0:
             return Variable((), values, self._attrs, self._encoding)
         else:
             return type(self)(dims, values, self._attrs,
