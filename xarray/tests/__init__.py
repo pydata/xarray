@@ -4,6 +4,7 @@ from __future__ import print_function
 import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+import re
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -186,7 +187,10 @@ class TestCase(unittest.TestCase):
 def raises_regex(error, pattern):
     with pytest.raises(error) as excinfo:
         yield
-    excinfo.match(pattern)
+    message = str(excinfo.value)
+    if not re.match(pattern, message):
+        raise AssertionError('exception %r did not match pattern %s'
+                             % (excinfo.value, pattern))
 
 
 class UnexpectedDataAccess(Exception):
