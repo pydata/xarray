@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from . import npcompat
+from . import dtypes
 from .pycompat import dask_array_type
 from .nputils import nanfirst, nanlast
 
@@ -148,11 +149,14 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
-def where_method(data, cond, other=np.nan):
-    """Select values from this object that are True in cond. Everything else
-    gets masked with other. Follows normal broadcasting and alignment rules.
-    """
+def where_method(data, cond, other=dtypes.NA):
+    if other is dtypes.NA:
+        other = dtypes.get_fill_value(data.dtype)
     return where(cond, data, other)
+
+
+def fillna(data, other):
+    return where(isnull(data), other, data)
 
 
 @contextlib.contextmanager

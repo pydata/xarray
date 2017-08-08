@@ -19,6 +19,8 @@ from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()
 _DEFAULT_FILL_VALUE = object()
+_DEFAULT_NAME = object()
+_JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
 class _UFuncSignature(object):
@@ -109,8 +111,8 @@ def result_name(objects):
     # type: List[object] -> Any
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
-    names = {getattr(obj, 'name', None) for obj in objects}
-    names.discard(None)
+    names = {getattr(obj, 'name', _DEFAULT_NAME) for obj in objects}
+    names.discard(_DEFAULT_NAME)
     if len(names) == 1:
         name, = names
     else:
@@ -220,11 +222,22 @@ def ordered_set_intersection(all_keys):
     return [key for key in all_keys[0] if key in intersection]
 
 
+def assert_and_return_exact_match(all_keys):
+    first_keys = all_keys[0]
+    for keys in all_keys[1:]:
+        if keys != first_keys:
+            raise ValueError(
+                'exact match required for all data variable names, but %r != %r'
+                % (keys, first_keys))
+    return first_keys
+
+
 _JOINERS = {
     'inner': ordered_set_intersection,
     'outer': ordered_set_union,
     'left': operator.itemgetter(0),
     'right': operator.itemgetter(-1),
+    'exact': assert_and_return_exact_match,
 }
 
 
@@ -320,7 +333,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     keep_attrs = kwargs.pop('keep_attrs', False)
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
-    if dataset_join != 'inner' and fill_value is _DEFAULT_FILL_VALUE:
+    if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
+            fill_value is _DEFAULT_FILL_VALUE):
         raise TypeError('To apply an operation to datasets with different ',
                         'data variables, you must supply the ',
                         'dataset_fill_value argument.')
@@ -750,3 +764,45 @@ def apply_ufunc(func, *args, **kwargs):
         return variables_ufunc(*args)
     else:
         return array_ufunc(*args)
+
+
+def where(cond, x, y):
+    """Return elements from `x` or `y` depending on `cond`.
+
+    Performs xarray-like broadcasting across input arguments.
+
+    Parameters
+    ----------
+    cond : scalar, array, Variable, DataArray or Dataset with boolean dtype
+        When True, return values from `x`, otherwise returns values from `y`.
+    x, y : scalar, array, Variable, DataArray or Dataset
+        Values from which to choose. All dimension coordinates on these objects
+        must be aligned with each other and with `cond`.
+
+    Returns
+    -------
+    In priority order: Dataset, DataArray, Variable or array, whichever
+    type appears as an input argument.
+
+    Examples
+    --------
+
+    >>> cond = xr.DataArray([True, False], dims=['x'])
+    >>> x = xr.DataArray([1, 2], dims=['y'])
+    >>> xr.where(cond, x, 0)
+    <xarray.DataArray (x: 2, y: 2)>
+    array([[1, 2],
+           [0, 0]])
+    Dimensions without coordinates: x, y
+
+    See also
+    --------
+    numpy.where : corresponding numpy function
+    Dataset.where, DataArray.where : equivalent methods
+    """
+    # alignment for three arguments is complicated, so don't support it yet
+    return apply_ufunc(duck_array_ops.where,
+                       cond, x, y,
+                       join='exact',
+                       dataset_join='exact',
+                       dask_array='allowed')
