@@ -1100,8 +1100,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coordinate variable.
 
         Coordinates to be extracted and attached should satisfy
-        + dimension coordinate of the indexers
-        + does not have a different name from sef.variables
+        + Dimension coordinate of the indexers.
+          Non-dimension coordinate of the indexers are not attached.
+        + Only coordinate with a name different from any of sef.variables.
         """
         from .dataarray import DataArray
 
@@ -1262,8 +1263,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         )
         # attach indexer's coordinate to pos_indexers
         for k, v in new_coords.items():
-            pos_indexers[k] = DataArray(pos_indexers[k], dims=v.keys(),
-                                        coords=v)
+            pos_indexers[k] = DataArray(pos_indexers[k], coords=v)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

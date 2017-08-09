@@ -103,8 +103,11 @@ class _LocIndexer(object):
         return indexing.remap_label_indexers(self.data_array, key)
 
     def __getitem__(self, key):
-        pos_indexers, new_indexes = self._remap_key(key)
-        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
+        if not utils.is_dict_like(key):
+            # expand the indexer so we can handle Ellipsis
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+        return self.data_array.sel(**key)
 
     def __setitem__(self, key, value):
         pos_indexers, _ = self._remap_key(key)
@@ -468,14 +471,14 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             return self._getitem_coord(key)
         else:
-            # orthogonal array indexing
+            # xarray-style array indexing
             return self.isel(**self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
-            # orthogonal array indexing
+            # xarray-style array indexing
             self.variable[key] = value
 
     def __delitem__(self, key):
@@ -688,11 +691,9 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
-        result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes)
+        ds = self._to_temp_dataset().sel(drop=drop, method=method,
+                                         tolerance=tolerance, **indexers)
+        return self._from_temp_dataset(ds)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer

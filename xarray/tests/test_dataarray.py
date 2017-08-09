@@ -595,6 +595,31 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[1], da.sel(x=b))
         self.assertDataArrayIdentical(da[[1]], da.sel(x=slice(b, b)))
 
+    def test_sel_dataarray(self):
+        # indexing with DataArray
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+
+        ind = DataArray(['a', 'b', 'c'], dims=['x'])
+        actual = da.sel(x=ind)
+        self.assertDataArrayIdentical(actual, da.isel(x=[0, 1, 2]))
+
+        # along new dimension
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'])
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+
+        # with coordinate
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'],
+                        coords={'new_dim': [0, 1, 2]})
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+        assert 'new_dim' in actual.coords
+        self.assertDataArrayEqual(actual['new_dim'].drop('x'),
+                                  ind['new_dim'])
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
         self.assertDataArrayIdentical(array[0], array.sel(x=0))

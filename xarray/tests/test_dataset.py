@@ -1067,6 +1067,32 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
+    def test_sel_dataarray(self):
+        data = create_test_data()
+
+        ind = DataArray([0.0, 0.5, 1.0], dims=['dim2'])
+        actual = data.sel(dim2=ind)
+        self.assertDatasetEqual(actual, data.isel(dim2=[0, 1, 2]))
+
+        # with different dimension
+        ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'])
+        actual = data.sel(dim2=ind)
+        expected = data.isel(dim2=[0, 1, 2]).rename({'dim2': 'new_dim'})
+        assert 'new_dim' in actual.dims
+        self.assertDatasetEqual(actual.drop('dim2'), expected.drop('new_dim'))
+
+        # with coordinate
+        ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'],
+                        coords={'new_dim': ['a', 'b', 'c']})
+        actual = data.sel(dim2=ind)
+        expected = data.isel(dim2=[0, 1, 2]).rename({'dim2': 'new_dim'})
+        assert 'new_dim' in actual.dims
+        assert 'new_dim' in actual.coords
+        self.assertDatasetEqual(actual.drop('new_dim').drop('dim2'),
+                                expected.drop('new_dim'))
+        self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
+                                  ind['new_dim'])
+
     def test_sel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         expected = Dataset({'foo': 1})
