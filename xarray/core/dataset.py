@@ -1094,6 +1094,33 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
 
+    def _get_indexers_coordinates(self, indexers):
+        """  Extract coordinates from indexers.
+        Returns an OrderedDict mapping from coordinate name to the
+        coordinate variable.
+
+        Coordinates to be extracted and attached should satisfy
+        + dimension coordinate of the indexers
+        + does not have a different name from sef.variables
+        """
+        from .dataarray import DataArray
+
+        coord_list = []
+        for k, v in indexers.items():
+            if isinstance(v, DataArray):
+                coords = {d: v.coords[d].variable for d in v.dims
+                          if d in v.coords and d not in self.variables}
+                if v.dtype.kind == 'b' and v.dims[0] in coords:
+                    # Make sure in case of boolean DataArray, its
+                    # coordinate should be also indexed.
+                    assert v.ndim == 1  # we only support 1-d boolean array
+                    coords[v.dims[0]] = coords[v.dims[0]][v.variable]
+                coord_list.append(coords)
+
+        # we don't need to call align() explicitly, because merge_variables
+        # already checks for exact alignment between dimension coordinates
+        return merge_variables(coord_list)
+
     def isel(self, drop=False, **indexers):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
@@ -1134,13 +1161,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        # extract new coordinates from indexers
-        # we don't need to call align() explicitly, because merge_variables
-        # already checks for exact alignment between dimension coordinates
-        variables = merge_variables([v._coords for v in indexers.values()
-                                     if isinstance(v, DataArray)])
-        coord_names = set(self._coord_names) | set(variables)
-
         # all indexers should be int, slice, np.ndarrays, or Variable
         indexers_list = []
         for k, v in iteritems(indexers):
@@ -1156,11 +1176,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 v = np.asarray(v)
             indexers_list.append((k, v))
 
+        coord_vars = self._get_indexers_coordinates(indexers)
+        coord_names = set(self._coord_names) | set(coord_vars)
+
+        variables = OrderedDict()
         for name, var in iteritems(self._variables):
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
+
+        # attatch / overwrite coordinate in indexers
+        for k, v in coord_vars.items():
+            variables[k] = v
+
         coord_names = coord_names & set(variables)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 

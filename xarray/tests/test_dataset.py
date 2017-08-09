@@ -976,6 +976,63 @@ class TestDataset(TestCase):
         self.assertArrayEqual(actual['var2'], expected_var2)
         self.assertArrayEqual(actual['var3'], expected_var3)
 
+    def test_isel_dataarray(self):
+        """ Test for indexing by DataArray """
+        data = create_test_data()
+        # indexing with DataArray with same-name coordinates.
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim1'],
+                                coords={'dim1': np.random.randn(3)})
+        actual = data.isel(dim1=indexing_da)
+        self.assertDataArrayIdentical(indexing_da['dim1'], actual['dim1'])
+        self.assertDataArrayIdentical(data['dim2'], actual['dim2'])
+
+        # not overwrite coordinate
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': np.random.randn(3)})
+        actual = data.isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(actual['dim2'],
+                                      data['dim2'].isel(dim2=np.arange(1, 4)))
+
+        # isel for the coordinate. Should not attach the coordinate
+        actual = data['dim2'].isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(actual,
+                                      data['dim2'].isel(dim2=np.arange(1, 4)))
+
+        # boolean data array with coordinate with the same name
+        indexing_da = (indexing_da < 3)
+        actual = data.isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(actual['dim2'], data['dim2'][:2])
+
+        # boolean data array with coordinate with the different name
+        indexing_da = DataArray(np.arange(1, 4), dims=['new_dim'],
+                                coords={'new_dim': np.random.randn(3)})
+        actual = data.isel(dim2=indexing_da < 3)
+        assert 'new_dim' in actual
+        assert 'new_dim' in actual.coords
+        self.assertDataArrayIdentical(actual['new_dim'].drop('dim2'),
+                                      indexing_da['new_dim'][:2])
+
+        # non-dimension coordinate will be ignored
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': np.random.randn(3),
+                                        'non_dim': (('dim2', ),
+                                                    np.random.randn(3))})
+        actual = data.isel(dim2=indexing_da)
+        assert 'non_dim' not in actual
+        assert 'non_dim' not in actual.coords
+
+        # indexing with DataArray with drop=True
+        indexing_da = DataArray(np.arange(1, 4), dims=['a'],
+                                coords={'a': np.random.randn(3)})
+        actual = data.isel(dim1=indexing_da)
+        assert 'a' in actual
+        assert 'dim1' not in actual
+
+        # Index by a scalar DataArray
+        indexing_da = DataArray(3, dims=[], coords={'station': 2})
+        actual = data.isel(dim2=indexing_da)
+        assert 'station' not in actual
+
     def test_sel(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),
