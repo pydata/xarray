@@ -523,6 +523,12 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('x', 'a')
         self.assertArrayEqual(v_new, v_data[:, 0:1])
 
+        # with scalar variable
+        ind = Variable((), 2)
+        v_new = v[dict(y=ind)]
+        expected = v[dict(y=2)]
+        self.assertArrayEqual(v_new, expected)
+
     def test_getitem_fancy(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
         v_data = v.compute().data
