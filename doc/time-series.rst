@@ -152,9 +152,9 @@ For example, we can downsample our dataset from hourly to 6-hourly:
 
     ds.resample(time='6H')
 
-This will create a specialized ``GroupBy`` object which saves information
+This will create a specialized ``Resample`` object which saves information
 necessary for resampling. All of the reduction methods which work with
-``GroupBy`` objects can also be used for resampling:
+``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
 
@@ -178,15 +178,15 @@ and DataArray objects with any number of additional dimensions.
 
 .. note::
 
-   The ``resample`` api was updated in version ?? to reflect similar updates
-   in pandas` ``resample`` api to be more groupby-like. Older style calls to
-   ``resample`` will still be supported for a short period:
+   The ``resample`` api was updated in version 0.10.0 to reflect similar
+   updates in pandas ``resample`` api to be more groupby-like. Older style
+   calls to ``resample`` will still be supported for a short period:
 
    .. ipython:: python
 
     ds.resample('6H', dim='time', how='mean')
 
-   Using the depcreated api, resample will also work for upsampling, in which
+   Using the deprecated api, resample will also work for upsampling, in which
    case intervals without any values are marked by ``NaN``:
 
 .. ipython:: python

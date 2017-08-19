@@ -12,7 +12,7 @@ from .utils import maybe_wrap_array
 RESAMPLE_DIM = '__resample_dim__'
 
 
-class Resample(GroupBy):
+class Resample(object):
     """An object that extends the `GroupBy` object with additional logic
     for handling specialized re-sampling operations.
 
@@ -53,7 +53,7 @@ class Resample(GroupBy):
         if method == 'asfreq':
             return _upsampled_means
 
-        elif method in ['pad', 'ffill', 'backfill', 'bfill', 'nearest']:
+        elif method in ['pad', 'ffill', 'backfill', 'bfill']:
             kwargs = kwargs.copy()
             kwargs.update(**{self._dim: _upsampled_means[self._dim]})
             return self._obj.reindex(method=method, *args, **kwargs)
@@ -84,6 +84,12 @@ class Resample(GroupBy):
         return self._upsample('backfill')
     bfill = backfill
 
+    def nearest(self):
+        """Take new values from nearest original coordinate to up-sampled
+        frequency coordinates.
+        """
+        return self.interpolate('nearest')
+
     def interpolate(self, kind='linear'):
         """Interpolate up-sampled data using the original data
         as knots.
@@ -92,7 +98,8 @@ class Resample(GroupBy):
         ----------
         kind : str {'linear', 'nearest', 'zero', 'slinear',
                'quadratic', 'cubic'}
-            Interpolation method to use.
+            Interpolation method to use; refer to to
+            `scipy.interpolate.interp1d` for full details.
 
         """
         return self._interpolate(kind=kind)

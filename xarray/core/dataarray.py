@@ -1550,8 +1550,8 @@ class DataArray(AbstractArray, BaseDataObject):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                align_type = OPTIONS[
-                    'arithmetic_join'] if join is None else join
+                align_type = (OPTIONS['arithmetic_join']
+                              if join is None else join)
                 self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)

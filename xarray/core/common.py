@@ -550,7 +550,7 @@ class BaseDataObject(AttrAccessMixin):
         # More than one indexer is ambiguous, but we do in fact need one if
         # "dim" was not provided, until the old API is fully deprecated
         if len(indexer) != 1:
-            raise NotImplementedError(
+            raise ValueError(
                 "Resampling only supported along single dimensions."
             )
         dim, freq = indexer.popitem()
@@ -560,8 +560,8 @@ class BaseDataObject(AttrAccessMixin):
             dim = self[dim]
             resample_dim = "resampled_" + dim_name
         else:
-            raise ValueError("Dimension name should be a string; "
-                             "was passed %r" % dim)
+            raise TypeError("Dimension name should be a string; "
+                            "was passed %r" % dim)
         group = DataArray(dim, [(dim.dims, dim)], name=resample_dim)
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
