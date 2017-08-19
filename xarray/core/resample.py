@@ -48,7 +48,7 @@ class Resample(object):
 
         """
 
-        _upsampled_means = self.mean()
+        _upsampled_means = self.mean(self._dim)
 
         if method == 'asfreq':
             return _upsampled_means
