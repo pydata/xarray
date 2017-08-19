@@ -95,8 +95,8 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. ipython:: python
 
-    time = time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
-    ds = xr.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
+    time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
+    ds = xr.Dataset({'foo': ('time', np.arange(365 * 4)), 'time': time})
     ds.time.dt.hour
     ds.time.dt.dayofweek
 
