@@ -25,6 +25,13 @@ Enhancements
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_
 
+- A new resampling interface to match pandas' group-by-like API was added to
+  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`.
+  Timeseries resampling is fully supported for data with arbitrary dimensions
+  as is both downsampling and upsampling (including linear, quadratic, cubic,
+  and spline interpolation).
+  By `Daniel Rothenberg <https://github.com/darothen>`_
+
 Bug fixes
 ~~~~~~~~~
 
