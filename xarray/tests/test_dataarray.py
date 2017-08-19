@@ -1917,9 +1917,14 @@ class TestDataArray(TestCase):
         expected = DataArray(array.to_series().resample('3H').bfill())
         self.assertDataArrayIdentical(expected, actual)
 
-        # No filling (as frequency)
+        # As frequency
         actual = array.resample(time='3H').asfreq()
         expected = DataArray(array.to_series().resample('3H').asfreq())
+        self.assertDataArrayIdentical(expected, actual)
+
+        # Pad
+        actual = array.resample(time='3H').pad()
+        expected = DataArray(array.to_series().resample('3H').pad())
         self.assertDataArrayIdentical(expected, actual)
 
     def test_upsample_nd(self):
@@ -1948,6 +1953,27 @@ class TestDataArray(TestCase):
         expected_data = np.flip(expected_data, axis=-1)
         expected_times = times.to_series().resample('3H').asfreq().index
         expected_data = expected_data[..., :len(expected_times)]
+        expected = DataArray(expected_data,
+                             {'time': expected_times, 'x': xs, 'y': ys},
+                             ('x', 'y', 'time'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        # As frequency
+        actual = array.resample(time='3H').asfreq()
+        expected_data = np.repeat(data, 2, axis=-1).astype(float)[..., :-1]
+        expected_data[..., 1::2] = np.nan
+        expected_times = times.to_series().resample('3H').asfreq().index
+        expected = DataArray(expected_data,
+                             {'time': expected_times, 'x': xs, 'y': ys},
+                             ('x', 'y', 'time'))
+        self.assertDataArrayIdentical(expected, actual)
+
+        # Pad
+        actual = array.resample(time='3H').pad()
+        expected_data = np.repeat(data, 2, axis=-1)
+        expected_data[..., 1::2] = expected_data[..., ::2]
+        expected_data = expected_data[..., :-1]
+        expected_times = times.to_series().resample('3H').asfreq().index
         expected = DataArray(expected_data,
                              {'time': expected_times, 'x': xs, 'y': ys},
                              ('x', 'y', 'time'))
