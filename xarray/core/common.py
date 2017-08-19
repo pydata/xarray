@@ -478,41 +478,16 @@ class BaseDataObject(AttrAccessMixin):
         return self._rolling_cls(self, min_periods=min_periods,
                                  center=center, **windows)
 
-    def resample(self, freq=None, dim=None, how='mean', skipna=None,
+    def resample(self, freq=None, dim=None, how=None, skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. Upsampling with filling is
-        not yet supported; if any intervals contain no values in the original
+        not supported; if any intervals contain no values from the original
         object, they will be given the value ``NaN``.
 
         Parameters
         ----------
-        freq : str
-            String in the '#offset' to specify the step-size along the
-            resampled dimension, where '#' is an (optional) integer multipler
-            (default 1) and 'offset' is any pandas date offset alias. Examples
-            of valid offsets include:
-
-            * 'AS': year start
-            * 'QS-DEC': quarterly, starting on December 1
-            * 'MS': month start
-            * 'D': day
-            * 'H': hour
-            * 'Min': minute
-
-            The full list of these offset aliases is documented in pandas [1]_.
-        dim : str
-            Name of the dimension to resample along (e.g., 'time').
-        how : str or func, optional
-            Used for downsampling. If a string, ``how`` must be a valid
-            aggregation operation supported by xarray. Otherwise, ``how`` must be
-            a function that can be called like ``how(values, axis)`` to reduce
-            ndarray values along the given axis. Valid choices that can be
-            provided as a string include all the usual Dataset/DataArray
-            aggregations (``all``, ``any``, ``argmax``, ``argmin``,
-            ``count,`` ``max``, ``mean``, ``median``, ``min``, ``prod``,
-            ``sum``, ``std`` and ``var``), as well as ``first`` and ``last``.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -544,8 +519,14 @@ class BaseDataObject(AttrAccessMixin):
         from .dataarray import DataArray
 
         if dim is not None:
+            if how is None:
+                how = 'mean'
             return self._resample_immediately(freq, dim, how, skipna, closed,
                                               label, base, keep_attrs)
+
+        if (how is not None) and indexer:
+            raise TypeError("If passing an 'indexer' then 'dim' "
+                            "and 'how' should not be used")
 
         # More than one indexer is ambiguous, but we do in fact need one if
         # "dim" was not provided, until the old API is fully deprecated
