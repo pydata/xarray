@@ -1854,14 +1854,6 @@ class TestDataArray(TestCase):
         actual = array.resample('1D', dim='__resample_dim__', how='first')
         self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension')
 
-    # def test_resample_with_timezone(self):
-    #     times = pd.date_range('2000-01-01', freq='6H', periods=12, tz='EST')
-    #     array = DataArray(np.arange(12), [('time', times)])
-    #
-    #     expected = DataArray(array.to_series().resample('24H').mean())
-    #     print(expected)
-    #     actual = array.resample(time='24H').mean()
-    #     self.assertDataArrayIdentical(expected, actual)
 
     def test_resample_old_vs_new_api(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -1932,7 +1924,6 @@ class TestDataArray(TestCase):
 
     def test_upsample_nd(self):
         # Same as before, but now we try on multi-dimensional DataArrays.
-        # TODO: Finish me
         xs = np.arange(6)
         ys = np.arange(3)
         times = pd.date_range('2000-01-01', freq='6H', periods=5)
@@ -1962,11 +1953,35 @@ class TestDataArray(TestCase):
                              ('x', 'y', 'time'))
         self.assertDataArrayIdentical(expected, actual)
 
-        pass
-
     def test_upsample_interpolate(self):
-        # TODO: Implement me
-        pass
+        from scipy.interpolate import interp1d
+        xs = np.arange(6)
+        ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+
+        z = np.arange(5)**2
+        data = np.tile(z, (6, 3, 1))
+        array = DataArray(data,
+                          {'time': times, 'x': xs, 'y': ys},
+                          ('x', 'y', 'time'))
+
+        expected_times = times.to_series().resample('1H').asfreq().index
+        # Split the times into equal sub-intervals to simulate the 6 hour
+        # to 1 hour up-sampling
+        new_times_idx = np.linspace(0, len(times)-1, len(times)*5)
+        for kind in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                     'cubic']:
+            actual = array.resample(time='1H').interpolate(kind)
+            f = interp1d(np.arange(len(times)), data, kind=kind, axis=-1,
+                         bounds_error=True, assume_sorted=True)
+            expected_data = f(new_times_idx)
+            expected = DataArray(expected_data,
+                                 {'time': expected_times, 'x': xs, 'y': ys},
+                                 ('x', 'y', 'time'))
+            # Use AllClose because there are some small differences in how
+            # we upsample timeseries versus the integer indexing as I've
+            # done here due to floating point arithmetic
+            self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
