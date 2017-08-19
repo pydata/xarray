@@ -15,6 +15,11 @@ core functionality.
     import numpy as np
     import pandas as pd
     import xarray as xr
+
+    # Use defaults so we don't get gridlines in generated docs
+    import matplotlib as mpl
+    mpl.rcdefaults()
+
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -163,18 +168,14 @@ necessary for resampling. All of the reduction methods which work with
 You can also supply an arbitrary reduction function to aggregate over each
 resampling group:
 
-.. ipython: python
+.. ipython:: python
 
    ds.resample(time='6H').reduce(np.mean)
 
 For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
-and ``interpolate``:
-
-.. sample code block which shows some sample data up-sampled with the four
-different methods compared n a single plot. Use timeseries data.
-
-All of these resampling and groupby operation work on both Dataset
-and DataArray objects with any number of additional dimensions.
+and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
+supports all of its schemes. All of these resampling operations work on both
+Dataset and DataArray objects with an arbitrary number of dimensions.
 
 .. note::
 
@@ -188,10 +189,6 @@ and DataArray objects with any number of additional dimensions.
 
    Using the deprecated api, resample will also work for upsampling, in which
    case intervals without any values are marked by ``NaN``:
-
-.. ipython:: python
-
-    ds.resample('30Min', dime='time')
 
 
 For more examples of using grouped operations on a time dimension, see
