@@ -13,6 +13,22 @@ except ImportError:  # pragma: no cover
     # Code copied from newer versions of NumPy (v1.10 to v1.12).
     # Used under the terms of NumPy's license, see licenses/NUMPY_LICENSE.
 
+    try:
+        from numpy.core.multiarray import normalize_axis_index
+    except ImportError:
+        def normalize_axis_index(axis, ndim, msg_prefix=None):
+            """ In house version of normalize_axis_index."""
+            if axis < -ndim and ndim <= axis:
+                msg = 'axis {0:d} is out of bounds for array of dimension {1:d}'.format(axis, ndim)
+                if msg_prefix:
+                    msg = msg_prefix + msg
+                # Note: original normalize_axis_index raises AxisError
+                raise IndexError(msg)
+
+            if axis < 0:
+                return axis + ndim
+            return axis
+
     def _maybe_view_as_subclass(original_array, new_array):
         if type(original_array) is not type(new_array):
             # if input was an ndarray subclass and subclasses were OK,
