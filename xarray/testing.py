@@ -116,30 +116,26 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     import xarray as xr
     ___tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
+    kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims
-        allclose = _data_allclose_or_equiv(a.values, b.values,
-                                           rtol=rtol, atol=atol,
-                                           decode_bytes=decode_bytes)
+        allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
         assert allclose, '{}\n{}'.format(a.values, b.values)
     elif isinstance(a, xr.DataArray):
-        assert_allclose(a.variable, b.variable)
+        assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
             # can't recurse with this function as coord is sometimes a
             # DataArray, so call into _data_allclose_or_equiv directly
             allclose = _data_allclose_or_equiv(a.coords[v].values,
-                                               b.coords[v].values,
-                                               rtol=rtol, atol=atol,
-                                               decode_bytes=decode_bytes)
+                                               b.coords[v].values, **kwargs)
             assert allclose, '{}\n{}'.format(a.coords[v].values,
                                              b.coords[v].values)
     elif isinstance(a, xr.Dataset):
         assert set(a) == set(b)
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
-            assert_allclose(a[k], b[k], rtol=rtol, atol=atol,
-                            decode_bytes=decode_bytes)
+            assert_allclose(a[k], b[k], **kwargs)
 
     else:
         raise TypeError('{} not supported by assertion comparison'

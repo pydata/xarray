@@ -15,6 +15,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
+from . import dtypes
 from . import duck_array_ops
 from .pycompat import PY3
 from .nputils import array_eq, array_ne
@@ -145,11 +146,37 @@ def fillna(data, other, join="left", dataset_join="left"):
     """
     from .computation import apply_ufunc
 
-    def _fillna(data, other):
-        return duck_array_ops.where(duck_array_ops.isnull(data), other, data)
-    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
+    return apply_ufunc(duck_array_ops.fillna, data, other,
+                       join=join,
+                       dask_array="allowed",
                        dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
+                       keep_attrs=True)
+
+
+def where_method(self, cond, other=dtypes.NA):
+    """Return elements from `self` or `other` depending on `cond`.
+
+    Parameters
+    ----------
+    cond : DataArray or Dataset with boolean dtype
+        Locations at which to preserve this objects values.
+    other : scalar, DataArray or Dataset, optional
+        Value to use for locations in this object where ``cond`` is False.
+        By default, inserts missing values.
+
+    Returns
+    -------
+    Same type as caller.
+    """
+    from .computation import apply_ufunc
+    # alignment for three arguments is complicated, so don't support it yet
+    join = 'inner' if other is dtypes.NA else 'exact'
+    return apply_ufunc(duck_array_ops.where_method,
+                       self, cond, other,
+                       join=join,
+                       dataset_join=join,
+                       dask_array='allowed',
                        keep_attrs=True)
 
 
@@ -267,10 +294,6 @@ def inject_binary_ops(cls, inplace=False):
 
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
-
-    # patch in where
-    f = _func_slash_method_wrapper(duck_array_ops.where_method, 'where')
-    setattr(cls, '_where', cls._binary_op(f))
 
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants

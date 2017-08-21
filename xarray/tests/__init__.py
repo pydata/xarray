@@ -4,6 +4,7 @@ from __future__ import print_function
 import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+import re
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -180,6 +181,16 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
+
+
+@contextmanager
+def raises_regex(error, pattern):
+    with pytest.raises(error) as excinfo:
+        yield
+    message = str(excinfo.value)
+    if not re.match(pattern, message):
+        raise AssertionError('exception %r did not match pattern %s'
+                             % (excinfo.value, pattern))
 
 
 class UnexpectedDataAccess(Exception):

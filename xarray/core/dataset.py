@@ -22,7 +22,8 @@ from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
-from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
+from .common import ImplementsDatasetReduce, BaseDataObject
+from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords, merge_variables)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,

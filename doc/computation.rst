@@ -25,7 +25,7 @@ numpy) over all array values:
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.random.randn(2, 3),
+    arr = xr.DataArray(np.random.RandomState(0).randn(2, 3),
                        [('x', ['a', 'b']), ('y', [10, 20, 30])])
     arr - 3
     abs(arr)
@@ -38,6 +38,12 @@ __ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
 .. ipython:: python
 
     np.sin(arr)
+
+Use :py:func:`~xarray.where` to conditionally switch between values:
+
+.. ipython:: python
+
+    xr.where(arr > 0, 'positive', 'negative')
 
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 

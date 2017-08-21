@@ -2,10 +2,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from .common import is_datetime_like
+from .dtypes import is_datetime_like
 from .pycompat import dask_array_type
-
-from functools import partial
 
 import numpy as np
 import pandas as pd
