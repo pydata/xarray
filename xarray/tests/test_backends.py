@@ -1302,24 +1302,24 @@ class DaskTest(TestCase, DatasetIOTestCases):
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
-    @pytest.mark.parametrize("_create_tmp_file", [create_tmp_file,
-                                                  create_tmp_file_pathlib])
-    def test_open_mfdataset(self, _create_tmp_file):
+    def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
-        with _create_tmp_file() as tmp1:
-            with _create_tmp_file() as tmp2:
-                original.isel(x=slice(5)).to_netcdf(tmp1)
-                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
-                    self.assertIsInstance(actual.foo.variable.data, da.Array)
-                    self.assertEqual(actual.foo.variable.data.chunks,
-                                     ((5, 5),))
-                    self.assertDatasetAllClose(original, actual)
-                with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
-                                    autoclose=self.autoclose) as actual:
-                    self.assertEqual(actual.foo.variable.data.chunks,
-                                     ((3, 2, 3, 2),))
+        for _create_tmp_file in [create_tmp_file, create_tmp_file_pathlib]:
+            with _create_tmp_file() as tmp1:
+                with _create_tmp_file() as tmp2:
+                    original.isel(x=slice(5)).to_netcdf(tmp1)
+                    original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                    with open_mfdataset([tmp1, tmp2],
+                                        autoclose=self.autoclose) as actual:
+                        self.assertIsInstance(actual.foo.variable.data,
+                                              da.Array)
+                        self.assertEqual(actual.foo.variable.data.chunks,
+                                         ((5, 5),))
+                        self.assertDatasetAllClose(original, actual)
+                    with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
+                                        autoclose=self.autoclose) as actual:
+                        self.assertEqual(actual.foo.variable.data.chunks,
+                                         ((3, 2, 3, 2),))
 
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
