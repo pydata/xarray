@@ -110,8 +110,10 @@ def _advanced_indexer_subspaces(key):
         return (), ()
 
     non_slices = [k for k in key if not isinstance(k, slice)]
-    ndim = len(np.broadcast(*non_slices).shape if len(non_slices) > 1
-               else non_slices[0].shape)
+    if len(non_slices) == 1:  # older np.broadcast does not support one array
+        ndim = len(getattr(non_slices[0], 'shape', []))  # should be 0 for int
+    else:
+        ndim = len(np.broadcast(*non_slices).shape)
     mixed_positions = advanced_index_positions[0] + np.arange(ndim)
     vindex_positions = np.arange(ndim)
     return mixed_positions, vindex_positions
