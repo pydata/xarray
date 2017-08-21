@@ -6,6 +6,7 @@ from threading import Lock
 import contextlib
 import itertools
 import os.path
+from pathlib import Path
 import pickle
 import shutil
 import tempfile
@@ -46,6 +47,11 @@ ON_WINDOWS = sys.platform == 'win32'
 
 def open_example_dataset(name, *args, **kwargs):
     return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
+                        *args, **kwargs)
+
+
+def open_example_dataset_pathlib(name, *args, **kwargs):
+    return open_dataset(Path(os.path.dirname(__file__)) / 'data' / name,
                         *args, **kwargs)
 
 
@@ -308,6 +314,15 @@ class DatasetIOTestCases(object):
 
     def test_roundtrip_example_1_netcdf(self):
         expected = open_example_dataset('example_1.nc')
+        with self.roundtrip(expected) as actual:
+            # we allow the attributes to differ since that
+            # will depend on the encoding used.  For example,
+            # without CF encoding 'actual' will end up with
+            # a dtype attribute.
+            self.assertDatasetEqual(expected, actual)
+
+    def test_roundtrip_example_1_netcdf_pathlib(self):
+        expected = open_example_dataset_pathlib('example_1.nc')
         with self.roundtrip(expected) as actual:
             # we allow the attributes to differ since that
             # will depend on the encoding used.  For example,

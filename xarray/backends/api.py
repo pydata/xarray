@@ -6,6 +6,7 @@ from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
+from pathlib import Path
 
 import numpy as np
 
@@ -139,12 +140,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
+    filename_or_obj : str, file, pathlib.Path or xarray.backends.*DataStore
         Strings are interpreted as a path to a netCDF file or an OpenDAP URL
         and opened with python-netCDF4, unless the filename ends with .gz, in
         which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+        netCDF3 supported). `pathlib.Path`s are cast to strings. File-like
+        objects are opened with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -252,6 +253,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store.close()
 
         return ds2
+
+    if isinstance(filename_or_obj, Path):
+        filename_or_obj = str(filename_or_obj)
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
