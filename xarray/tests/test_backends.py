@@ -507,6 +507,20 @@ def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
             if not allow_cleanup_failure:
                 raise
 
+
+@contextlib.contextmanager
+def create_tmp_file_pathlib(suffix='.nc', allow_cleanup_failure=False):
+    temp_dir = tempfile.mkdtemp()
+    path = Path(os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix)))
+    try:
+        yield path
+    finally:
+        try:
+            shutil.rmtree(temp_dir)
+        except OSError:
+            if not allow_cleanup_failure:
+                raise
+
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
     def test_open_group(self):
@@ -1039,10 +1053,12 @@ class DaskTest(TestCase, DatasetIOTestCases):
             actual.foo.values  # no caching
             assert not actual.foo.variable._in_memory
 
-    def test_open_mfdataset(self):
+    @pytest.mark.parametrize("_create_tmp_file", [create_tmp_file,
+                                                  create_tmp_file_pathlib])
+    def test_open_mfdataset(self, _create_tmp_file):
         original = Dataset({'foo': ('x', np.random.randn(10))})
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
+        with _create_tmp_file() as tmp1:
+            with _create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
