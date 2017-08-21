@@ -6,6 +6,8 @@ from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
+from pathlib import Path
+from types import GeneratorType
 
 import numpy as np
 
@@ -253,6 +255,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
+    if isinstance(filename_or_obj, Path):
+        filename_or_obj = str(filename_or_obj)
+
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
     elif isinstance(filename_or_obj, basestring):
@@ -494,8 +499,15 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     auto_combine
     open_dataset
     """
+    # handle output of pathlib.Path.glob()
+    if isinstance(paths, GeneratorType):
+        paths = list(paths)
+    if isinstance(paths[0], Path):
+        paths = sorted(str(p) for p in paths)
+
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
+
     if not paths:
         raise IOError('no files to open')
 
