@@ -500,6 +500,9 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
     signature = kwargs.pop('signature')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
+    dask = kwargs.pop('dask', 'forbidden')
+    output_dtypes = kwargs.pop('output_dtypes', None)
+    output_sizes = kwargs.pop('output_sizes', None)
     if kwargs:
         raise TypeError('apply_variable_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -515,6 +518,22 @@ def apply_variable_ufunc(func, *args, **kwargs):
                   else arg
                   for arg, core_dims in zip(args, signature.input_core_dims)]
 
+    if any(isinstance(array, dask_array_type) for array in input_data):
+        if dask == 'forbidden':
+            raise ValueError('encountered dask array, but did not set '
+                             "dask='allowed'")
+        elif dask == 'parallelized':
+            input_dims = [broadcast_dims + input_dims
+                          for input_dims in signature.input_core_dims]
+            numpy_func = func
+            func = lambda *arrays: _apply_with_dask_atop(
+                numpy_func, arrays, input_dims, output_dims, signature,
+                output_dtypes, output_sizes)
+        elif dask == 'allowed':
+            pass
+        else:
+            raise ValueError('unknown setting for dask array handling: {}'
+                             .format(dask))
     result_data = func(*input_data)
 
     if signature.n_outputs > 1:
@@ -527,24 +546,65 @@ def apply_variable_ufunc(func, *args, **kwargs):
         return Variable(dims, result_data)
 
 
+def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
+                          output_dtypes, output_sizes=None):
+    import dask.array as da
+
+    if signature.n_outputs > 1:
+        raise NotImplementedError(
+            "multiple outputs not yet supported with dask='parallelized'")
+
+    if output_dtypes is None:
+        raise ValueError(
+            "output dtypes (output_dtypes) required when using dask='parallelized'")
+    if len(output_dtypes) != signature.n_outputs:
+        raise ValueError('wrong number of output dtypes')
+    (dtype,) = output_dtypes
+
+    if output_sizes is None:
+        output_sizes = {}
+
+    new_dims = signature.all_output_core_dims - signature.all_input_core_dims
+    if any(dim not in output_sizes for dim in new_dims):
+        raise ValueError('output core dimensions not found on inputs must have '
+                         'explicitly set sizes with ``output_sizes``: {}'
+                         .format(new_dims))
+
+    args2 = []
+    for data, core_dims in zip(args, signature.input_core_dims):
+        if isinstance(data, dask_array_type):
+            # core dimensions cannot span multiple chunks
+            chunks = {axis: (data.shape[axis],)
+                      for axis, dim in enumerate(core_dims, -len(core_dims))}
+            data = data.rechunk(chunks)
+        args2.append(data)
+
+    (out_ind,) = output_dims
+    atop_args = [ai for a in zip(args2, input_dims) for ai in a]
+    return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
+                   new_axes=output_sizes)
+
+
 def apply_array_ufunc(func, *args, **kwargs):
-    """apply_variable_ufunc(func, *args, dask_array='forbidden')
+    """apply_array_ufunc(func, *args, dask='forbidden')
     """
-    dask_array = kwargs.pop('dask_array', 'forbidden')
+    dask = kwargs.pop('dask', 'forbidden')
     if kwargs:
         raise TypeError('apply_array_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
 
     if any(isinstance(arg, dask_array_type) for arg in args):
-        # TODO: add a mode dask_array='auto' when dask.array gets a function
-        # for applying arbitrary gufuncs
-        if dask_array == 'forbidden':
+        if dask == 'forbidden':
             raise ValueError('encountered dask array, but did not set '
-                             "dask_array='allowed'")
-        elif dask_array != 'allowed':
-            raise ValueError('unknown setting for dask array handling: %r'
-                             % dask_array)
-        # fall through
+                             "dask='allowed'")
+        elif dask == 'parallelized':
+            raise ValueError("cannot use dask='parallelized' unless at least "
+                             'one input is an xarray object')
+        elif dask == 'allowed':
+            pass
+        else:
+            raise ValueError('unknown setting for dask array handling: {}'
+                             .format(dask))
     return func(*args)
 
 
@@ -559,7 +619,9 @@ def apply_ufunc(func, *args, **kwargs):
                    dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
                    keep_attrs : bool = False,
                    kwargs : Mapping = None,
-                   dask_array : str = 'forbidden')
+                   dask_array : str = 'forbidden',
+                   output_dtypes : Optional[Sequence] = None,
+                   output_sizes : Optional[Mapping[Any, int]] = None)
 
     Apply a vectorized function for unlabeled arrays on xarray objects.
 
@@ -630,10 +692,20 @@ def apply_ufunc(func, *args, **kwargs):
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
         Optional keyword arguments passed directly on to call ``func``.
-    dask_array: 'forbidden' or 'allowed', optional
-        Whether or not to allow applying the ufunc to objects containing lazy
-        data in the form of dask arrays. By default, this is forbidden, to
-        avoid implicitly converting lazy data.
+    dask: 'forbidden', 'allowed' or 'parallelized', optional
+        How to handle applying to objects containing lazy data in the form of
+        dask arrays:
+        - 'forbidden' (default): raise an error if a dask array is encountered.
+        - 'allowed': pass dask arrays directly on to ``func``.
+        - 'parallelized': automatically parallelize ``func`` if any of the
+          inputs are a dask array. If used, the ``otypes`` argument must also be
+          provided. Multiple output arguments are not yet supported.
+    output_dtypes : list of dtypes, optional
+        Optional list of output dtypes. Only used if dask='parallelized'.
+    output_sizes : dict, optional
+        Optional mapping from dimension names to sizes for outputs. Only used if
+        dask='parallelized' and new dimensions (not found on inputs) appear on
+        outputs.
 
     Returns
     -------
@@ -710,7 +782,9 @@ def apply_ufunc(func, *args, **kwargs):
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
     dataset_fill_value = kwargs.pop('dataset_fill_value', _DEFAULT_FILL_VALUE)
     kwargs_ = kwargs.pop('kwargs', None)
-    dask_array = kwargs.pop('dask_array', 'forbidden')
+    dask = kwargs.pop('dask', 'forbidden')
+    output_dtypes = kwargs.pop('output_dtypes', None)
+    output_sizes = kwargs.pop('output_sizes', None)
     if kwargs:
         raise TypeError('apply_ufunc() got unexpected keyword arguments: %s'
                         % list(kwargs))
@@ -727,12 +801,12 @@ def apply_ufunc(func, *args, **kwargs):
     if kwargs_:
         func = functools.partial(func, **kwargs_)
 
-    array_ufunc = functools.partial(
-        apply_array_ufunc, func, dask_array=dask_array)
-
-    variables_ufunc = functools.partial(apply_variable_ufunc, array_ufunc,
+    variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
-                                        exclude_dims=exclude_dims)
+                                        exclude_dims=exclude_dims,
+                                        dask=dask,
+                                        output_dtypes=output_dtypes,
+                                        output_sizes=output_sizes)
 
     if any(isinstance(a, GroupBy) for a in args):
         # kwargs has already been added into func
@@ -744,7 +818,7 @@ def apply_ufunc(func, *args, **kwargs):
                                        dataset_join=dataset_join,
                                        dataset_fill_value=dataset_fill_value,
                                        keep_attrs=keep_attrs,
-                                       dask_array=dask_array)
+                                       dask=dask)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args,
@@ -763,7 +837,7 @@ def apply_ufunc(func, *args, **kwargs):
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:
-        return array_ufunc(*args)
+        return apply_array_ufunc(func, *args, dask=dask)
 
 
 def where(cond, x, y):
@@ -805,4 +879,4 @@ def where(cond, x, y):
                        cond, x, y,
                        join='exact',
                        dataset_join='exact',
-                       dask_array='allowed')
+                       dask='allowed')

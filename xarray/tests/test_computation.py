@@ -13,7 +13,7 @@ from xarray.core.computation import (
     join_dict_keys, ordered_set_intersection, ordered_set_union,
     unified_dim_sizes, apply_ufunc)
 
-from . import requires_dask
+from . import requires_dask, raises_regex
 
 
 def assert_identical(a, b):
@@ -344,7 +344,7 @@ def test_apply_exclude():
                              output_core_dims=[[dim]],
                              exclude_dims={dim})
         if isinstance(result, (xr.Dataset, xr.DataArray)):
-            # note: this will fail dim is not a coordinate on any input
+            # note: this will fail if dim is not a coordinate on any input
             new_coord = np.concatenate([obj.coords[dim] for obj in objects])
             result.coords[dim] = new_coord
         return result
@@ -530,25 +530,17 @@ def test_dataset_join():
     assert_identical(actual, expected)
 
 
-class _NoCacheVariable(xr.Variable):
-    """Subclass of Variable for testing that does not cache values."""
-    # TODO: remove this class when we change the default behavior for caching
-    # dask.array objects.
-    def _data_cached(self):
-        return np.asarray(self._data)
-
-
 @requires_dask
 def test_apply_dask():
     import dask.array as da
 
     array = da.ones((2,), chunks=2)
-    variable = _NoCacheVariable('x', array)
+    variable = xr.Variable('x', array)
     coords = xr.DataArray(variable).coords.variables
     data_array = xr.DataArray(variable, coords, fastpath=True)
     dataset = xr.Dataset({'y': variable})
 
-    # encountered dask array, but did not set dask_array='allowed'
+    # encountered dask array, but did not set dask='allowed'
     with pytest.raises(ValueError):
         apply_ufunc(identity, array)
     with pytest.raises(ValueError):
@@ -560,10 +552,10 @@ def test_apply_dask():
 
     # unknown setting for dask array handling
     with pytest.raises(ValueError):
-        apply_ufunc(identity, array, dask_array='auto')
+        apply_ufunc(identity, array, dask='unknown')
 
     def dask_safe_identity(x):
-        return apply_ufunc(identity, x, dask_array='allowed')
+        return apply_ufunc(identity, x, dask='allowed')
 
     assert array is dask_safe_identity(array)
 
@@ -578,6 +570,104 @@ def test_apply_dask():
     actual = dask_safe_identity(dataset)
     assert isinstance(actual['y'].data, da.Array)
     assert_identical(dataset, actual)
+
+
+@requires_dask
+def test_apply_dask_parallelized():
+    import dask.array as da
+
+    array = da.ones((2, 2), chunks=(1, 1))
+    data_array = xr.DataArray(array, dims=('x', 'y'))
+
+    actual = apply_ufunc(identity, data_array, dask='parallelized',
+                         output_dtypes=[float])
+    assert isinstance(actual.data, da.Array)
+    assert actual.data.chunks == array.chunks
+    assert_identical(data_array, actual)
+
+    # check rechunking of core dimensions
+    actual = apply_ufunc(identity, data_array, dask='parallelized',
+                         output_dtypes=[float],
+                         input_core_dims=[('y',)],
+                         output_core_dims=[('y',)])
+    assert isinstance(actual.data, da.Array)
+    assert actual.data.chunks == ((1, 1), (2,))
+    assert_identical(data_array, actual)
+
+
+@requires_dask
+def test_apply_dask_parallelized_errors():
+    import dask.array as da
+
+    array = da.ones((2, 2), chunks=(1, 1))
+    data_array = xr.DataArray(array, dims=('x', 'y'))
+
+    with pytest.raises(NotImplementedError):
+        apply_ufunc(identity, data_array, output_core_dims=[['z'], ['z']],
+                    dask='parallelized')
+    with raises_regex(ValueError, 'dtypes'):
+        apply_ufunc(identity, data_array, dask='parallelized')
+    with raises_regex(ValueError, 'wrong number'):
+        apply_ufunc(identity, data_array, dask='parallelized',
+                    output_dtypes=[float, float])
+    with raises_regex(ValueError, 'output_sizes'):
+        apply_ufunc(identity, data_array, output_core_dims=[['z']],
+                    output_dtypes=[float], dask='parallelized')
+    with raises_regex(ValueError, 'at least one input is an xarray object'):
+        apply_ufunc(identity, array, dask='parallelized')
+
+
+@requires_dask
+def test_apply_dask_multiple_inputs():
+    import dask.array as da
+
+    def covariance(x, y):
+        return ((x - x.mean(axis=-1, keepdims=True))
+                * (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
+
+    rs = np.random.RandomState(42)
+    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 2))
+    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 2))
+    data_array_1 = xr.DataArray(array1, dims=('x', 'y'))
+    data_array_2 = xr.DataArray(array2, dims=('x', 'y'))
+
+    expected = apply_ufunc(
+        covariance, data_array_1.compute(), data_array_2.compute(),
+        input_core_dims=[['y'], ['y']])
+    allowed = apply_ufunc(
+        covariance, data_array_1, data_array_2, input_core_dims=[['y'], ['y']],
+        dask='allowed')
+    assert isinstance(allowed.data, da.Array)
+    xr.testing.assert_allclose(expected, allowed.compute())
+
+    parallelized = apply_ufunc(
+        covariance, data_array_1, data_array_2, input_core_dims=[['y'], ['y']],
+        dask='parallelized', output_dtypes=[float])
+    assert isinstance(parallelized.data, da.Array)
+    xr.testing.assert_allclose(expected, parallelized.compute())
+
+
+@requires_dask
+def test_apply_dask_new_output_dimension():
+    import dask.array as da
+
+    array = da.ones((2, 2), chunks=(1, 1))
+    data_array = xr.DataArray(array, dims=('x', 'y'))
+
+    def stack_negative(obj):
+        def func(x):
+            return xr.core.npcompat.stack([x, -x], axis=-1)
+        return apply_ufunc(func, obj, output_core_dims=[['sign']],
+                           dask='parallelized', output_dtypes=[obj.dtype],
+                           output_sizes={'sign': 2})
+
+    expected = stack_negative(data_array.compute())
+
+    actual = stack_negative(data_array)
+    assert actual.dims == ('x', 'y', 'sign')
+    assert actual.shape == (2, 2, 2)
+    assert isinstance(actual.data, da.Array)
+    assert_identical(expected, actual)
 
 
 def test_where():
