@@ -177,7 +177,7 @@ class DataArray(AbstractArray, BaseDataObject):
             If dict-like, should be a mapping from dimension names to the
             corresponding coordinates.
         dims : str or sequence of str, optional
-            Name(s) of the the data dimension(s). Must be either a string (only
+            Name(s) of the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords`` (if possible) and otherwise default to
