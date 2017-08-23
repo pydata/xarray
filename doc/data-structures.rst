@@ -48,7 +48,7 @@ The :py:class:`~xarray.DataArray` constructor takes:
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
 - ``coords``: a list or dictionary of coordinates
 - ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible.
+  taken from ``coords`` if possible (deprecated).
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
