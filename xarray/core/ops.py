@@ -148,7 +148,7 @@ def fillna(data, other, join="left", dataset_join="left"):
 
     return apply_ufunc(duck_array_ops.fillna, data, other,
                        join=join,
-                       dask_array="allowed",
+                       dask="allowed",
                        dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
                        keep_attrs=True)
@@ -176,7 +176,7 @@ def where_method(self, cond, other=dtypes.NA):
                        self, cond, other,
                        join=join,
                        dataset_join=join,
-                       dask_array='allowed',
+                       dask='allowed',
                        keep_attrs=True)
 
 
