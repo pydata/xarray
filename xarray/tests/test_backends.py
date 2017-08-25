@@ -6,7 +6,10 @@ from threading import Lock
 import contextlib
 import itertools
 import os.path
-from pathlib import Path
+try:
+    from pathlib2 import Path
+except ImportError:
+    from pathlib import Path
 import pickle
 import shutil
 import tempfile

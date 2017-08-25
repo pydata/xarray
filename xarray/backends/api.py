@@ -6,7 +6,11 @@ from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
-from pathlib import Path
+try:
+    from pathlib2 import Path
+except ImportError:
+    from pathlib import Path
+
 
 import numpy as np
 
