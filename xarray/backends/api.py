@@ -145,11 +145,11 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     Parameters
     ----------
     filename_or_obj : str, Path, file or xarray.backends.*DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file oran OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+        Strings and Path objects are interpreted as a path to a netCDF file
+        oran OpenDAP URL and opened with python-netCDF4, unless the filename
+        ends with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -325,12 +325,12 @@ def open_dataarray(*args, **kwargs):
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Paths are interpreted as a path to a netCDF file or an
+        OpenDAP URL and opened with python-netCDF4, unless the filename ends
+        with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -445,7 +445,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open.  Paths can be given as strings or as pathlib Paths.
+        list of files to open.  Paths can be given as strings or as pathlib
+        Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.

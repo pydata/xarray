@@ -1963,3 +1963,13 @@ class TestDataArrayToNetCDF(TestCase):
             expected = data.drop('y')
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 self.assertDataArrayIdentical(expected, loaded)
+
+    def test_dataarray_to_netcdf_no_name_pathlib(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        with create_tmp_file() as tmp:
+            tmp = Path(tmp)
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)
