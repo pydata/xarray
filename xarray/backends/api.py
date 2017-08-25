@@ -499,14 +499,10 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     auto_combine
     open_dataset
     """
-    # handle output of pathlib.Path.glob()
-    if isinstance(paths, GeneratorType):
-        paths = list(paths)
-    if isinstance(paths[0], Path):
-        paths = sorted(str(p) for p in paths)
-
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
+    else:
+        paths = [str(p) if isinstance(p, Path) else p for p in paths]
 
     if not paths:
         raise IOError('no files to open')
@@ -613,7 +609,9 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'},
+        optional
+
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API

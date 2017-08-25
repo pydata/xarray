@@ -6,7 +6,6 @@ from threading import Lock
 import contextlib
 import itertools
 import os.path
-from pathlib import Path
 import pickle
 import shutil
 import tempfile
@@ -47,11 +46,6 @@ ON_WINDOWS = sys.platform == 'win32'
 
 def open_example_dataset(name, *args, **kwargs):
     return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
-                        *args, **kwargs)
-
-
-def open_example_dataset_pathlib(name, *args, **kwargs):
-    return open_dataset(Path(os.path.dirname(__file__)) / 'data' / name,
                         *args, **kwargs)
 
 
@@ -321,15 +315,6 @@ class DatasetIOTestCases(object):
             # a dtype attribute.
             self.assertDatasetEqual(expected, actual)
 
-    def test_roundtrip_example_1_netcdf_pathlib(self):
-        expected = open_example_dataset_pathlib('example_1.nc')
-        with self.roundtrip(expected) as actual:
-            # we allow the attributes to differ since that
-            # will depend on the encoding used.  For example,
-            # without CF encoding 'actual' will end up with
-            # a dtype attribute.
-            self.assertDatasetEqual(expected, actual)
-
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
                            {'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
@@ -574,20 +559,6 @@ _counter = itertools.count()
 def create_tmp_file(suffix='.nc', allow_cleanup_failure=False):
     temp_dir = tempfile.mkdtemp()
     path = os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix))
-    try:
-        yield path
-    finally:
-        try:
-            shutil.rmtree(temp_dir)
-        except OSError:
-            if not allow_cleanup_failure:
-                raise
-
-
-@contextlib.contextmanager
-def create_tmp_file_pathlib(suffix='.nc', allow_cleanup_failure=False):
-    temp_dir = tempfile.mkdtemp()
-    path = Path(os.path.join(temp_dir, 'temp-%s%s' % (next(_counter), suffix)))
     try:
         yield path
     finally:
@@ -1304,22 +1275,20 @@ class DaskTest(TestCase, DatasetIOTestCases):
 
     def test_open_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
-        for _create_tmp_file in [create_tmp_file, create_tmp_file_pathlib]:
-            with _create_tmp_file() as tmp1:
-                with _create_tmp_file() as tmp2:
-                    original.isel(x=slice(5)).to_netcdf(tmp1)
-                    original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                    with open_mfdataset([tmp1, tmp2],
-                                        autoclose=self.autoclose) as actual:
-                        self.assertIsInstance(actual.foo.variable.data,
-                                              da.Array)
-                        self.assertEqual(actual.foo.variable.data.chunks,
-                                         ((5, 5),))
-                        self.assertDatasetAllClose(original, actual)
-                    with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
-                                        autoclose=self.autoclose) as actual:
-                        self.assertEqual(actual.foo.variable.data.chunks,
-                                         ((3, 2, 3, 2),))
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertIsInstance(actual.foo.variable.data, da.Array)
+                    self.assertEqual(actual.foo.variable.data.chunks,
+                                     ((5, 5),))
+                    self.assertDatasetAllClose(original, actual)
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
+                                    autoclose=self.autoclose) as actual:
+                    self.assertEqual(actual.foo.variable.data.chunks,
+                                     ((3, 2, 3, 2),))
 
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
