@@ -6,6 +6,7 @@ from threading import Lock
 import contextlib
 import itertools
 import os.path
+from pathlib import Path
 import pickle
 import shutil
 import tempfile
@@ -1293,6 +1294,18 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+    def test_open_mfdataset_pathlib(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetAllClose(original, actual)
+
     def test_attrs_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -1342,6 +1355,19 @@ class DaskTest(TestCase, DatasetIOTestCases):
             save_mfdataset([ds, ds], ['same', 'same'])
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
+
+    def test_save_mfdataset_pathlib_roundtrip(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetIdentical(actual, original)
 
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})

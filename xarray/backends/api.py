@@ -7,7 +7,6 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 from pathlib import Path
-from types import GeneratorType
 
 import numpy as np
 
@@ -141,8 +140,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file oran OpenDAP URL
         and opened with python-netCDF4, unless the filename ends with .gz, in
         which case the file is gunzipped and opened with scipy.io.netcdf (only
         netCDF3 supported). File-like objects are opened with scipy.io.netcdf
@@ -442,7 +441,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open.
+        list of files to open.  Paths can be given as strings or as pathlib Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -540,6 +539,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``writer`` argument is only for the private use of save_mfdataset.
     """
+    if isinstance(path_or_file, Path):
+        path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
     if path_or_file is None:
@@ -604,13 +605,13 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     ----------
     datasets : list of xarray.Dataset
         List of datasets to save.
-    paths : list of str
+    paths : list of str or list of Paths
         List of paths to which to save each corresponding dataset.
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'},
-        optional
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+              'NETCDF3_CLASSIC'}, optional
 
         File format for the resulting netCDF file:
 
