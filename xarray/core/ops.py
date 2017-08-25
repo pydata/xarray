@@ -15,6 +15,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
+from . import dtypes
 from . import duck_array_ops
 from .pycompat import PY3
 from .nputils import array_eq, array_ne
@@ -145,11 +146,37 @@ def fillna(data, other, join="left", dataset_join="left"):
     """
     from .computation import apply_ufunc
 
-    def _fillna(data, other):
-        return duck_array_ops.where(duck_array_ops.isnull(data), other, data)
-    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
+    return apply_ufunc(duck_array_ops.fillna, data, other,
+                       join=join,
+                       dask_array="allowed",
                        dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
+                       keep_attrs=True)
+
+
+def where_method(self, cond, other=dtypes.NA):
+    """Return elements from `self` or `other` depending on `cond`.
+
+    Parameters
+    ----------
+    cond : DataArray or Dataset with boolean dtype
+        Locations at which to preserve this objects values.
+    other : scalar, DataArray or Dataset, optional
+        Value to use for locations in this object where ``cond`` is False.
+        By default, inserts missing values.
+
+    Returns
+    -------
+    Same type as caller.
+    """
+    from .computation import apply_ufunc
+    # alignment for three arguments is complicated, so don't support it yet
+    join = 'inner' if other is dtypes.NA else 'exact'
+    return apply_ufunc(duck_array_ops.where_method,
+                       self, cond, other,
+                       join=join,
+                       dataset_join=join,
+                       dask_array='allowed',
                        keep_attrs=True)
 
 
@@ -197,6 +224,24 @@ def _func_slash_method_wrapper(f, name=None):
     func.__doc__ = f.__doc__
     return func
 
+
+def rolling_count(rolling):
+
+    not_null = rolling.obj.notnull()
+    instance_attr_dict = {'center': rolling.center,
+                          'min_periods': rolling.min_periods,
+                          rolling.dim: rolling.window}
+    rolling_count = not_null.rolling(**instance_attr_dict).sum()
+
+    if rolling.min_periods is None:
+        return rolling_count
+
+    # otherwise we need to filter out points where there aren't enough periods
+    # but not_null is False, and so the NaNs don't flow through
+    # array with points where there are enough values given min_periods
+    enough_periods = rolling_count >= rolling.min_periods
+
+    return rolling_count.where(enough_periods)
 
 def inject_reduce_methods(cls):
     methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
@@ -250,10 +295,6 @@ def inject_binary_ops(cls, inplace=False):
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
 
-    # patch in where
-    f = _func_slash_method_wrapper(duck_array_ops.where_method, 'where')
-    setattr(cls, '_where', cls._binary_op(f))
-
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
         setattr(cls, op_str('r' + name),
@@ -305,6 +346,13 @@ def inject_bottleneck_rolling_methods(cls):
             name=func.__name__, da_or_ds='DataArray')
         setattr(cls, name, func)
 
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__, da_or_ds='DataArray')
+    setattr(cls, 'count', func)
+
     # bottleneck rolling methods
     if has_bottleneck:
         # TODO: Bump the required version of bottlneck to 1.1 and remove all
@@ -352,3 +400,9 @@ def inject_datasetrolling_methods(cls):
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
             name=func.__name__, da_or_ds='Dataset')
         setattr(cls, name, func)
+    # bottleneck doesn't offer rolling_count, so we construct it ourselves
+    func = rolling_count
+    func.__name__ = 'count'
+    func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
+        name=func.__name__, da_or_ds='Dataset')
+    setattr(cls, 'count', func)

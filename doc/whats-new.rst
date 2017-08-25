@@ -21,8 +21,58 @@ v0.9.7 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
+  a signed integer data type should be interpreted as unsigned bytes
+  (:issue:`1444`).
+  By `Eric Bruning <https://github.com/deeplycloudy>`_.
+
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
+
+- :py:meth:`~xarray.Dataset.rename` method now doesn't throw errors
+  if some ``Variable`` is renamed to the same name as another ``Variable``
+  as long as that other ``Variable`` is also renamed. This method now
+  does throw when two ``Variables`` would end up with the same name
+  after the rename (since one of them would get overwritten in this
+  case). See (:issue:`1477`) for details.
+  By `Prakhar Goel <https://github.com/newt0311>`_.
+
+- Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
+  ``rtol`` arguments when called on ``DataArray`` objects.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 
@@ -203,6 +253,9 @@ Enhancements
   to ``py.test`` (:issue:`1336`).
   By `Stephan Hoyer <https://github.com/shoyer>`_ and
   `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
 
 Bug fixes
 ~~~~~~~~~
@@ -441,6 +494,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

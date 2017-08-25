@@ -1529,8 +1529,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if k not in self and k not in self.dims:
                 raise ValueError("cannot rename %r because it is not a "
                                  "variable or dimension in this dataset" % k)
-            if v in self and k != v:
-                raise ValueError('the new name %r already exists' % v)
 
         variables = OrderedDict()
         coord_names = set()
@@ -1539,6 +1537,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dims = tuple(name_dict.get(dim, dim) for dim in v.dims)
             var = v.copy(deep=False)
             var.dims = dims
+            if name in variables:
+                raise ValueError('the new name %r conflicts' % (name,))
             variables[name] = var
             if k in self._coord_names:
                 coord_names.add(name)

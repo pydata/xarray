@@ -5,8 +5,6 @@ from __future__ import print_function
 from .common import is_np_datetime_like, _contains_datetime_like_objects
 from .pycompat import dask_array_type
 
-from functools import partial
-
 import numpy as np
 import pandas as pd
 

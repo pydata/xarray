@@ -62,6 +62,23 @@ def create_encoded_masked_and_scaled_data():
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
 
 
+def create_unsigned_masked_scaled_data():
+    encoding = {'_FillValue': 255, '_Unsigned': 'true', 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan])
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_unsigned_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': 'true',
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
 def create_boolean_data():
     attributes = {'units': '-'}
     return Dataset({'x': ('t', [True, False, False, True], attributes)})
@@ -386,16 +403,54 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
+    def test_unsigned_roundtrip_mask_and_scale(self):
+        decoded = create_unsigned_masked_scaled_data()
+        encoded = create_encoded_unsigned_masked_scaled_data()
+        with self.roundtrip(decoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        # make sure roundtrip encoding didn't change the
+        # original dataset.
+        self.assertDatasetIdentical(
+            encoded, create_encoded_unsigned_masked_scaled_data())
+        with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             self.assertDatasetAllClose(encoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -403,7 +458,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
                                     create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
 
     def test_coordinates_encoding(self):
@@ -1469,7 +1525,6 @@ class TestPyNioAutocloseTrue(TestPyNio):
 class TestRasterio(TestCase):
 
     def test_serialization_utm(self):
-
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1488,17 +1543,25 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # Tests
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'band': [1, 2, 3],
-                                         'y': -np.arange(ny) * 2000 + 80000,
-                                         'x': np.arange(nx) * 1000 + 5000,
-                                         })
+                                 coords={
+                                     'band': [1, 2, 3],
+                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
+                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
+                                 })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -1524,18 +1587,25 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data, indexes=1)
+                dx, dy = s.res[0], -s.res[1]
 
             # Tests
             expected = DataArray(data[np.newaxis, ...],
                                  dims=('band', 'y', 'x'),
                                  coords={'band': [1],
-                                         'y': -np.arange(ny)*2 + 2,
-                                         'x': np.arange(nx)*0.5 + 1,
+                                         'y': -np.arange(ny)*2 + 2 + dy/2,
+                                         'x': np.arange(nx)*0.5 + 1 + dx/2,
                                          })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
 
                 # Write it to a netcdf and read again (roundtrip)
                 with create_tmp_file(suffix='.nc') as tmp_nc_file:
@@ -1562,11 +1632,12 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': np.arange(nx)*0.5 + 1,
-                                         'y': -np.arange(ny)*2 + 2,
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
                                          'band': [1, 2, 3]})
 
             with xr.open_rasterio(tmp_file, cache=False) as actual:
@@ -1654,11 +1725,12 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': np.arange(nx)*0.5 + 1,
-                                         'y': -np.arange(ny)*2 + 2,
+                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
+                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
                                          'band': [1, 2, 3]})
 
             # Cache is the default
@@ -1697,6 +1769,7 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.write(data)
+                dx, dy = s.res[0], -s.res[1]
 
             # Chunk at open time
             with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
@@ -1707,8 +1780,8 @@ class TestRasterio(TestCase):
 
                 # ref
                 expected = DataArray(data, dims=('band', 'y', 'x'),
-                                     coords={'x': np.arange(nx)*0.5 + 1,
-                                             'y': -np.arange(ny)*2 + 2,
+                                     coords={'x': np.arange(nx)*0.5 + 1 + dx/2,
+                                             'y': -np.arange(ny)*2 + 2 + dy/2,
                                              'band': [1, 2, 3]})
 
                 # do some arithmetic
