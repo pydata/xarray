@@ -6,10 +6,6 @@ from threading import Lock
 import contextlib
 import itertools
 import os.path
-try:
-    from pathlib import Path
-except ImportError:
-    from pathlib2 import Path
 import pickle
 import shutil
 import tempfile
@@ -43,6 +39,12 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+with suppress(ImportError):
+    try:
+        from pathlib import Path
+    except ImportError:
+        from pathlib2 import Path
 
 
 ON_WINDOWS = sys.platform == 'win32'
