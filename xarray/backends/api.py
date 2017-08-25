@@ -7,9 +7,13 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 try:
-    from pathlib2 import Path
-except ImportError:
-    from pathlib import Path
+    try:
+        from pathlib import Path
+    except ImportError as e:
+        from pathlib2 import Path
+    path_type = (Path, )
+except ImportError as e:
+    path_type = ()
 
 
 import numpy as np
@@ -258,7 +262,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
-    if isinstance(filename_or_obj, Path):
+    if isinstance(filename_or_obj, path_type):
         filename_or_obj = str(filename_or_obj)
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
@@ -506,7 +510,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
     else:
-        paths = [str(p) if isinstance(p, Path) else p for p in paths]
+        paths = [str(p) if isinstance(p, path_type) else p for p in paths]
 
     if not paths:
         raise IOError('no files to open')
@@ -544,7 +548,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``writer`` argument is only for the private use of save_mfdataset.
     """
-    if isinstance(path_or_file, Path):
+    if isinstance(path_or_file, path_type):
         path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
