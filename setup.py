@@ -37,9 +37,6 @@ CLASSIFIERS = [
 
 INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
-if sys.version_info < (3, 0):
-    INSTALL_REQUIRES.append('pathlib2')
-    TESTS_REQUIRE.append('pathlib2')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
