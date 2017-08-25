@@ -4,7 +4,7 @@ from __future__ import print_function
 import numpy as np
 
 try:
-    from numpy import nancumsum, nancumprod
+    from numpy import nanprod, nancumsum, nancumprod
 except ImportError:  # pragma: no cover
     # Code copied from newer versions of NumPy (v1.10 to v1.12).
     # Used under the terms of NumPy's license, see licenses/NUMPY_LICENSE.
