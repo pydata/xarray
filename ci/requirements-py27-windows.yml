@@ -9,6 +9,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
+  - pathlib2
   - pytest
   - numpy
   - pandas
