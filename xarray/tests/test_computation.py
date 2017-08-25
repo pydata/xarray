@@ -275,7 +275,7 @@ def test_apply_output_core_dimension():
 
     def stack_negative(obj):
         def func(x):
-            return xr.core.npcompat.stack([x, -x], axis=-1)
+            return np.stack([x, -x], axis=-1)
         result = apply_ufunc(func, obj, output_core_dims=[['sign']])
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords['sign'] = [1, -1]
@@ -303,7 +303,7 @@ def test_apply_output_core_dimension():
 
     def original_and_stack_negative(obj):
         def func(x):
-            return (x, xr.core.npcompat.stack([x, -x], axis=-1))
+            return (x, np.stack([x, -x], axis=-1))
         result = apply_ufunc(func, obj, output_core_dims=[[], ['sign']])
         if isinstance(result[1], (xr.Dataset, xr.DataArray)):
             result[1].coords['sign'] = [1, -1]

@@ -3,8 +3,6 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 
-from numpy import broadcast_to, stack, nanprod
-
 try:
     from numpy import nancumsum, nancumprod
 except ImportError:  # pragma: no cover
