@@ -175,11 +175,9 @@ class DataArray(AbstractArray, BaseDataObject):
         coords : sequence or dict of array_like objects, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             If dict-like, should be a mapping from dimension names to the
-            corresponding coordinates. If sequence-like, should be a sequence
-            of tuples where the first element is the dimension name and the
-            second element is the corresponding coordinate array_like object.
+            corresponding coordinates.
         dims : str or sequence of str, optional
-            Name(s) of the data dimension(s). Must be either a string (only
+            Name(s) of the the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords`` (if possible) and otherwise default to
