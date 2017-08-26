@@ -6,14 +6,6 @@ from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
-try:
-    try:
-        from pathlib import Path
-    except ImportError as e:
-        from pathlib2 import Path
-    path_type = (Path, )
-except ImportError as e:
-    path_type = ()
 
 
 import numpy as np
@@ -23,7 +15,7 @@ from .common import ArrayWriter, GLOBAL_LOCK
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.pycompat import basestring
+from ..core.pycompat import basestring, path_type
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
