@@ -22,13 +22,13 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
-                                  suppress)
+from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring)
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, requires_rasterio, assert_identical)
+               requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
+               assert_allclose, flaky, network, requires_rasterio,
+               assert_identical)
 from .test_dataset import create_test_data
 
 try:
@@ -41,11 +41,13 @@ try:
 except ImportError:
     pass
 
-with suppress(ImportError):
+try:
+    from pathlib import Path
+except ImportError:
     try:
         from pathlib import Path
     except ImportError:
-        from pathlib2 import Path
+        pass
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -309,7 +311,8 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_float64_data(self):
-        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi], dtype='float64'))})
+        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi],
+                                                dtype='float64'))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -745,7 +748,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 v.scale_factor = 0.1
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
-            # first make sure netCDF4 reads the masked and scaled data correctly
+            # first make sure netCDF4 reads the masked and scaled data
+            # correctly
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
@@ -1300,6 +1304,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+    @requires_pathlib
     def test_open_mfdataset_pathlib(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -1362,6 +1367,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
 
+    @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         datasets = [original.isel(x=slice(5)),
@@ -1967,6 +1973,7 @@ class TestDataArrayToNetCDF(TestCase):
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 self.assertDataArrayIdentical(expected, loaded)
 
+    @requires_pathlib
     def test_dataarray_to_netcdf_no_name_pathlib(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)))
 
