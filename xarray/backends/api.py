@@ -142,7 +142,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     ----------
     filename_or_obj : str, Path, file or xarray.backends.*DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
-        oran OpenDAP URL and opened with python-netCDF4, unless the filename
+        or an OpenDAP URL and opened with python-netCDF4, unless the filename
         ends with .gz, in which case the file is gunzipped and opened with
         scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
         with scipy.io.netcdf (only netCDF3 supported).

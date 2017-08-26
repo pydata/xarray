@@ -45,7 +45,7 @@ try:
     from pathlib import Path
 except ImportError:
     try:
-        from pathlib import Path
+        from pathlib2 import Path
     except ImportError:
         pass
 
