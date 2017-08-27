@@ -978,6 +978,7 @@ class TestDataset(TestCase):
 
     def test_isel_dataarray(self):
         """ Test for indexing by DataArray """
+        import warnings
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(np.arange(1, 4), dims=['dim1'],
@@ -992,11 +993,27 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da)
         self.assertDataArrayIdentical(actual['dim2'],
                                       data['dim2'].isel(dim2=np.arange(1, 4)))
+        # make sure the coordinate confliction raises a warning
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            actual = data.isel(dim2=indexing_da)
+            assert len(w) == 1
+            assert issubclass(w[-1].category, DeprecationWarning)
+            assert "Indexer's coordiante dim2 conflicts" in str(w[-1].message)
 
         # isel for the coordinate. Should not attach the coordinate
         actual = data['dim2'].isel(dim2=indexing_da)
         self.assertDataArrayIdentical(actual,
                                       data['dim2'].isel(dim2=np.arange(1, 4)))
+
+        # same name coordinate which does not conflict
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': data['dim2'].values[1:4]})
+        self.assertDataArrayIdentical(data['dim2'][1:4], indexing_da['dim2'])
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            actual = data.isel(dim2=indexing_da)
+            assert len(w) == 0  # no warning
 
         # boolean data array with coordinate with the same name
         indexing_da = (indexing_da < 3)

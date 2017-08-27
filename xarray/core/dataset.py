@@ -1104,19 +1104,35 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         + Dimension coordinate of the indexers.
           Non-dimension coordinate of the indexers are not attached.
         + Only coordinate with a name different from any of sef.variables.
+
+        If self already has the same name coordinate, we raise an ValueError.
         """
         from .dataarray import DataArray
+        import warnings
 
         coord_list = []
         for k, v in indexers.items():
             if isinstance(v, DataArray):
                 coords = {d: v.coords[d].variable for d in v.dims
-                          if d in v.coords and d not in self.variables}
+                          if d in v.coords}
                 if v.dtype.kind == 'b' and v.dims[0] in coords:
                     # Make sure in case of boolean DataArray, its
                     # coordinate should be also indexed.
                     assert v.ndim == 1  # we only support 1-d boolean array
                     coords[v.dims[0]] = coords[v.dims[0]][v.variable]
+
+                for k, vc in self.variables.items():
+                    if k in coords and not vc[v.values].equals(coords[k]):
+                        # TODO raise an Error in the next release
+                        warnings.warn(
+                            "Indexer's coordiante {0:s} conflicts to the "
+                            "exisiting coordinate. This will raise an error "
+                            "in the next release. Use `.drop(\'{0:s}\')` to "
+                            "index without attaching the indexer's "
+                            "coordinate.".format(k), DeprecationWarning,
+                            stacklevel=2)
+                        del coords[k]
+
                 coord_list.append(coords)
 
         # we don't need to call align() explicitly, because merge_variables
