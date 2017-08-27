@@ -1125,12 +1125,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     if k in coords and not vc[v.values].equals(coords[k]):
                         # TODO raise an Error in the next release
                         warnings.warn(
-                            "Indexer's coordiante {0:s} conflicts to the "
+                            "Indexer's coordiante {0:s} conflicts with the "
                             "exisiting coordinate. This will raise an error "
-                            "in the next release. Use `.drop(\'{0:s}\')` to "
-                            "index without attaching the indexer's "
-                            "coordinate.".format(k), DeprecationWarning,
-                            stacklevel=2)
+                            "in the next release. "
+                            "Use `.isel({0:s}=ind.drop(\'{0:s}\'))` to "
+                            "index safely.".format(k),
+                            FutureWarning, stacklevel=3)
                         del coords[k]
 
                 coord_list.append(coords)
