@@ -1050,6 +1050,8 @@ class TestDataset(TestCase):
         indexing_da = DataArray(3, dims=[], coords={'station': 2})
         actual = data.isel(dim2=indexing_da)
         assert 'station' not in actual
+        actual = data.isel(dim2=indexing_da['station'])
+        assert 'station' not in actual
 
     def test_isel_dataarray_error(self):
         data = create_test_data()
