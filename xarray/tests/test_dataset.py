@@ -994,9 +994,10 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['dim2'],
                                       data['dim2'].isel(dim2=np.arange(1, 4)))
         # make sure the coordinate confliction raises a warning
-        with pytest.warns(FutureWarning) as w:
+        with pytest.warns(FutureWarning) as ws:
             actual = data.isel(dim2=indexing_da)
-            assert "Indexer's coordiante dim2 conflicts" in str(w[-1].message)
+            assert any(["Indexer's coordiante dim2 conflicts" in str(w.message)
+                        for w in ws])
 
         # isel for the coordinate. Should not attach the coordinate
         actual = data['dim2'].isel(dim2=indexing_da)
