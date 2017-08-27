@@ -1008,10 +1008,11 @@ class TestDataset(TestCase):
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': data['dim2'].values[1:4]})
         self.assertDataArrayIdentical(data['dim2'][1:4], indexing_da['dim2'])
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.warns(FutureWarning) as ws:
             actual = data.isel(dim2=indexing_da)
-            assert len(w) == 0  # no warning
+            # does not warn
+            assert all(["Indexer's coordiante dim2 conflicts" not in
+                        str(w.message) for w in ws])
 
         # boolean data array with coordinate with the same name
         indexing_da = (indexing_da < 3)
@@ -1047,6 +1048,16 @@ class TestDataset(TestCase):
         indexing_da = DataArray(3, dims=[], coords={'station': 2})
         actual = data.isel(dim2=indexing_da)
         assert 'station' not in actual
+
+    def test_isel_dataarray_error(self):
+        data = create_test_data()
+
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': np.random.randn(3)})
+        with self.assertRaisesRegexp(ValueError, 'Trying to index along'):
+            data.isel(dim1=indexing_da)
+        # this should not raise an error
+        data.isel(dim1=indexing_da, dim2=indexing_da)
 
     def test_sel(self):
         data = create_test_data()

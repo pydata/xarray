@@ -1096,7 +1096,42 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return self._replace_vars_and_dims(variables)
 
     def _validate_indexers(self, indexers):
-        pass
+        """ Here we make sure
+        + indexer has a valid keys
+        + indexer is in a valid data type
+        + raise an Error for some confusing case.
+        """
+        from .dataarray import DataArray
+
+        invalid = [k for k in indexers if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        for k, v in iteritems(indexers):
+            dims = getattr(v, 'dims', None)
+            if (dims is not None and k not in dims and
+                    any([d not in indexers for d in dims]) and
+                    any([d in self.dims for d in dims])):
+                raise ValueError(
+                    'Trying to index along dimension {0:s} with a variable '
+                    'with dimensions {1:s}, which is also a dimension of the '
+                    'indexed array.'.format(k, str(dims)))
+
+        # all indexers should be int, slice, np.ndarrays, or Variable
+        indexers_list = []
+        for k, v in iteritems(indexers):
+            if isinstance(v, integer_types + (slice, Variable)):
+                pass
+            elif isinstance(v, DataArray):
+                v = v.variable
+            elif isinstance(v, tuple):
+                v = as_variable(v)
+            elif isinstance(v, Dataset):
+                raise TypeError('cannot use a Dataset as an indexer')
+            else:
+                v = np.asarray(v)
+            indexers_list.append((k, v))
+        return indexers_list
 
     def _get_indexers_coordinates(self, indexers):
         """  Extract coordinates from indexers.
@@ -1176,26 +1211,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel
         DataArray.isel
         """
-        from .dataarray import DataArray
-
-        invalid = [k for k in indexers if k not in self.dims]
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
-
-        # all indexers should be int, slice, np.ndarrays, or Variable
-        indexers_list = []
-        for k, v in iteritems(indexers):
-            if isinstance(v, integer_types + (slice, Variable)):
-                pass
-            elif isinstance(v, DataArray):
-                v = v.variable
-            elif isinstance(v, tuple):
-                v = as_variable(v)
-            elif isinstance(v, Dataset):
-                raise TypeError('cannot use a Dataset as an indexer')
-            else:
-                v = np.asarray(v)
-            indexers_list.append((k, v))
+        indexers_list = self._validate_indexers(indexers)
 
         coord_vars = self._get_indexers_coordinates(indexers)
         coord_names = set(self._coord_names) | set(coord_vars)
