@@ -996,7 +996,6 @@ class TestDataset(TestCase):
         # make sure the coordinate confliction raises a warning
         with pytest.warns(FutureWarning) as w:
             actual = data.isel(dim2=indexing_da)
-            assert len(w) == 1
             assert "Indexer's coordiante dim2 conflicts" in str(w[-1].message)
 
         # isel for the coordinate. Should not attach the coordinate

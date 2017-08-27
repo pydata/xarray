@@ -1095,6 +1095,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
 
+    def _validate_indexers(self, indexers):
+        pass
+
     def _get_indexers_coordinates(self, indexers):
         """  Extract coordinates from indexers.
         Returns an OrderedDict mapping from coordinate name to the
