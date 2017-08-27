@@ -1008,11 +1008,13 @@ class TestDataset(TestCase):
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': data['dim2'].values[1:4]})
         self.assertDataArrayIdentical(data['dim2'][1:4], indexing_da['dim2'])
+
         with pytest.warns(FutureWarning) as ws:
             actual = data.isel(dim2=indexing_da)
             # does not warn
             assert all(["Indexer's coordiante dim2 conflicts" not in
                         str(w.message) for w in ws])
+            warnings.warn('dummy', FutureWarning, stacklevel=3)
 
         # boolean data array with coordinate with the same name
         indexing_da = (indexing_da < 3)
