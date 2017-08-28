@@ -2596,6 +2596,7 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
@@ -2697,6 +2698,7 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
                                da_rolling.values[:-1])
     np.testing.assert_allclose(s_rolling.index,
                                da_rolling['index'])
+
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))

@@ -381,7 +381,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def test_values(self):
         # Test that invoking the values property does not convert the dask
         # backend to numpy
-        a = DataArray([1,2]).chunk()
+        a = DataArray([1, 2]).chunk()
         self.assertFalse(a._in_memory)
         self.assertEquals(a.values.tolist(), [1, 2])
         self.assertFalse(a._in_memory)
@@ -395,6 +395,8 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 kernel_call_count = 0
+
+
 def kernel():
     """Dask kernel to test pickling/unpickling.
     Must be global to make it pickleable.
@@ -402,6 +404,7 @@ def kernel():
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1)
+
 
 def build_dask_array():
     global kernel_call_count
