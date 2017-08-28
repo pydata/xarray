@@ -279,7 +279,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                                          allow_remote=True)
         if engine == 'netcdf4':
             store = backends.NetCDF4DataStore(filename_or_obj, group=group,
-                                              autoclose=autoclose)
+                                              autoclose=autoclose,
+                                              allow_object=True)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj,
                                             autoclose=autoclose)
@@ -524,7 +525,8 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None,
+              allow_object=False):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -564,8 +566,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     sync = writer is None
 
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_cls(target, mode, format, group, writer)
-
+    store = store_cls(target, mode, format, group, writer,
+                      allow_object=allow_object)
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:

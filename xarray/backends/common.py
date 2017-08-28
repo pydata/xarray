@@ -184,10 +184,24 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None):
+    def __init__(self, writer=None, allow_object=False):
+        self.allow_object = allow_object
         if writer is None:
             writer = ArrayWriter()
         self.writer = writer
+
+    @property
+    def allow_object(self):
+        return self._allow_object
+
+    @allow_object.setter
+    def allow_object(self, value):
+        if value:
+            msg = "'{}' does not support native Python object " \
+                  "serialization'".format(self.__class__.__name__)
+            raise NotImplemented(msg)
+        else:
+            self._allow_object = value
 
     def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
@@ -241,7 +255,8 @@ class WritableCFDataStore(AbstractWritableDataStore):
     def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
+        cf_variables, cf_attrs = cf_encoder(variables, attributes,
+                                            allow_object=self.allow_object)
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
                                         *args, **kwargs)
 

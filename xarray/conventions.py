@@ -717,7 +717,7 @@ def maybe_encode_bools(var):
     return var
 
 
-def _infer_dtype(array):
+def _infer_dtype(array, allow_object=False):
     """Given an object array with no missing values, infer its dtype from its
     first element
     """
@@ -730,12 +730,15 @@ def _infer_dtype(array):
             # the length of their first element
             dtype = np.dtype(dtype.kind)
         elif dtype.kind == 'O':
-            raise ValueError('unable to infer dtype; xarray cannot '
-                             'serialize arbitrary Python objects')
+            if allow_object:
+                dtype = np.dtype(object)
+            else:
+                raise ValueError('unable to infer dtype; xarray cannot '
+                                 'serialize arbitrary Python objects')
     return dtype
 
 
-def ensure_dtype_not_object(var):
+def maybe_infer_dtype(var, allow_object=False):
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == 'O':
         dims, data, attrs, encoding = _var_as_tuple(var)
@@ -743,7 +746,8 @@ def ensure_dtype_not_object(var):
         if missing.any():
             # nb. this will fail for dask.array data
             non_missing_values = data[~missing]
-            inferred_dtype = _infer_dtype(non_missing_values)
+            inferred_dtype = _infer_dtype(non_missing_values,
+                                          allow_object=allow_object)
 
             if inferred_dtype.kind in ['S', 'U']:
                 # There is no safe bit-pattern for NA in typical binary string
@@ -760,12 +764,13 @@ def ensure_dtype_not_object(var):
             data = np.array(data, dtype=inferred_dtype, copy=True)
             data[missing] = fill_value
         else:
-            data = data.astype(dtype=_infer_dtype(data))
+            data = data.astype(dtype=_infer_dtype(data,
+                                                  allow_object=allow_object))
         var = Variable(dims, data, attrs, encoding)
     return var
 
 
-def encode_cf_variable(var, needs_copy=True, name=None):
+def encode_cf_variable(var, needs_copy=True, name=None, allow_object=False):
     """
     Converts an Variable into an Variable which follows some
     of the CF conventions:
@@ -779,6 +784,9 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     ----------
     var : xarray.Variable
         A variable holding un-encoded data.
+    allow_object : bool
+        Whether to allow objects to pass the encoder or to throw an error if
+        this is attempted.
 
     Returns
     -------
@@ -792,7 +800,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     var = maybe_encode_dtype(var, name)
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
-    var = ensure_dtype_not_object(var)
+    var = maybe_infer_dtype(var, allow_object=allow_object)
     return var
 
 
@@ -1129,7 +1137,7 @@ def encode_dataset_coordinates(dataset):
                                non_dim_coord_names=non_dim_coord_names)
 
 
-def cf_encoder(variables, attributes):
+def cf_encoder(variables, attributes, allow_object=False):
     """
     A function which takes a dicts of variables and attributes
     and encodes them to conform to CF conventions as much
@@ -1146,6 +1154,9 @@ def cf_encoder(variables, attributes):
         A dictionary mapping from variable name to xarray.Variable
     attributes : dict
         A dictionary mapping from attribute name to value
+    allow_object : bool
+        Whether to allow objects to pass the encoder or to throw an error if
+        this is attempted.
 
     Returns
     -------
@@ -1156,6 +1167,7 @@ def cf_encoder(variables, attributes):
 
     See also: encode_cf_variable
     """
-    new_vars = OrderedDict((k, encode_cf_variable(v, name=k))
+    new_vars = OrderedDict((k, encode_cf_variable(v, name=k,
+                                                  allow_object=allow_object))
                            for k, v in iteritems(variables))
     return new_vars, attributes
