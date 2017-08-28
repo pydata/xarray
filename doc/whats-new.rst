@@ -55,6 +55,10 @@ Enhancements
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Added :py:func:`~xarray.show_versions` function to aid in debugging
+  (:issue:`1485`).
+  By `Joe Hamman` <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
