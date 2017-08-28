@@ -74,6 +74,10 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Stop repr() and the Jupyter Notebook from automatically computing dask
+  variables (:issue:`1522`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
