@@ -475,7 +475,7 @@ def kernel():
     """
     global kernel_call_count
     kernel_call_count += 1
-    return np.ones(1)
+    return np.ones(1, dtype=np.int64)
 
 
 def build_dask_array(name):
@@ -483,4 +483,4 @@ def build_dask_array(name):
     kernel_call_count = 0
     return dask.array.Array(
         dask={(name, 0): (kernel, )}, name=name,
-        chunks=((1,),), dtype=int)
+        chunks=((1,),), dtype=np.int64)
