@@ -42,6 +42,9 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         import Nio
         opener = functools.partial(Nio.open_file, filename, mode=mode)
         self.ds = opener()
+        # xarray provides its own support for FillValue,
+        # so turn off PyNIO's support for the same.
+        self.ds.set_option('MaskedArrayMode', 'MaskedNever')
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener

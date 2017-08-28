@@ -7,8 +7,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from . import duck_array_ops, utils
-from .common import _maybe_promote
+from . import duck_array_ops
+from . import dtypes
+from . import utils
 from .indexing import get_indexer
 from .pycompat import iteritems, OrderedDict, suppress
 from .utils import is_full_slice, is_dict_like
@@ -368,7 +369,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
             if any_not_full_slices(assign_to):
                 # there are missing values to in-fill
                 data = var[assign_from].data
-                dtype, fill_value = _maybe_promote(var.dtype)
+                dtype, fill_value = dtypes.maybe_promote(var.dtype)
 
                 if isinstance(data, np.ndarray):
                     shape = tuple(new_sizes.get(dim, size)
