@@ -196,8 +196,8 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def _summarize_var_or_coord(name, var, col_width, show_values=True,
-                            marker=' ', max_width=None):
+def summarize_variable(name, var, col_width, show_values=True,
+                       marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
     first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
@@ -222,30 +222,20 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
     relevant_coord = coord[:30]
     return u'\n'.join(
-        [_summarize_var_or_coord(lname,
-                                 relevant_coord.get_level_variable(lname),
-                                 col_width, marker=marker)
+        [summarize_variable(lname,
+                            relevant_coord.get_level_variable(lname),
+                            col_width, marker=marker)
          for lname in coord.level_names])
 
 
-def _not_remote(var):
-    """Helper function to identify if array is positively identifiable as
-    coming from a remote source.
-    """
-    source = var.encoding.get('source')
-    if source and source.startswith('http') and not var._in_memory:
-        return False
-    return True
-
-
-def summarize_var(name, var, col_width):
-    show_values = _not_remote(var)
-    return _summarize_var_or_coord(name, var, col_width, show_values)
+def summarize_datavar(name, var, col_width):
+    show_values = var._in_memory
+    return summarize_variable(name, var.variable, col_width, show_values)
 
 
 def summarize_coord(name, var, col_width):
     is_index = name in var.dims
-    show_values = is_index or _not_remote(var)
+    show_values = var._in_memory
     marker = u'*' if is_index else u' '
     if is_index:
         coord = var.variable.to_index_variable()
@@ -253,7 +243,7 @@ def summarize_coord(name, var, col_width):
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),
                  _summarize_coord_levels(coord, col_width)])
-    return _summarize_var_or_coord(name, var, col_width, show_values, marker)
+    return summarize_variable(name, var.variable, col_width, show_values, marker)
 
 
 def summarize_attr(key, value, col_width=None):
@@ -307,7 +297,7 @@ def _mapping_repr(mapping, title, summarizer, col_width=None):
 
 
 data_vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
-                                   summarizer=summarize_var)
+                                   summarizer=summarize_datavar)
 
 
 attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
