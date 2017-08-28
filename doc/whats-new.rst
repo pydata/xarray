@@ -18,6 +18,13 @@ What's New
 v0.9.7 (unreleased)
 -------------------
 
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -54,9 +61,6 @@ Enhancements
   the ``other`` argument, for filling with a value other than ``NaN``
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Deprecate supports of old numpy < 1.11 and pandas < 0.18 (:issue:`1512`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 
 Bug fixes
