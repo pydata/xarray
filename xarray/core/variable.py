@@ -1114,9 +1114,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
 
         if isinstance(self.data, dask_array_type):
-            TypeError("quantile does not work for arrays stored as dask "
-                      "arrays. Load the data via .compute() or .load() prior "
-                      "to calling this method.")
+            raise TypeError("quantile does not work for arrays stored as dask "
+                            "arrays. Load the data via .compute() or .load() "
+                            "prior to calling this method.")
         if LooseVersion(np.__version__) < LooseVersion('1.10.0'):
             raise NotImplementedError(
                 'quantile requres numpy version 1.10.0 or later')
