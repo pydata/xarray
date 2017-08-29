@@ -18,6 +18,21 @@ What's New
 v0.9.7 (unreleased)
 -------------------
 
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- xarray now supports vectorized indexing, where we consider the dimension of
+  indexer, e.g. `array.sel(x=ind)` with `ind.dims == ('y', )` .
+  This enables us more advanced indexing, including outer indexing, diagonal
+  indexing, as well as vectorized indexing.
+  Due to this change, existing uses of xarray objects to index other xarray
+  objects will break in some cases.
+  See *** for the details.
+  (:issue:`1444`, :issue:***, )
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+
 Enhancements
 ~~~~~~~~~~~~
 

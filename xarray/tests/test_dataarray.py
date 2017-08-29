@@ -741,10 +741,24 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
         self.assertDataArrayIdentical(da[:, :4], da.loc[:, self.ds['y'] < 4])
+
+    def test_loc_assign(self):
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+        # assignment
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
         da.loc[{'x': slice('a', 'j')}] = 2
         self.assertTrue(np.all(da.values == 2))
+
+        da.loc[{'x': slice('a', 'j')}] = 2
+        self.assertTrue(np.all(da.values == 2))
+
+        # Multi dimensional case
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0] = 0
+        self.assertTrue(np.all(da.values[0, 0] == 0))
+        self.assertTrue(np.all(da.values[0, 1] != 0))
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])
