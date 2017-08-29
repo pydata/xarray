@@ -11,16 +11,16 @@ Indexing and selecting data
     import xarray as xr
     np.random.seed(123456)
 
-The basic way to access each element of xarray's multi-dimensional
-object is to use Python `[obj]` syntax, such as `array[i, j]`.
+The most basic way to access each element of xarray's multi-dimensional
+object is to use Python ``[obj]`` syntax, such as ``array[i, j]``.
 As xarray objects can store coordinates corresponding to each dimension of the
 array, label-based indexing similar to pandas object is also possible.
-In label-based indexing, the element position i is automatically looked-up from
-the coordinate values.
+In label-based indexing, the element position ``i`` is automatically
+looked-up from the coordinate values.
 
-Furthermore, the dimensions of xarray object have names and
-you can also lookup the dimensions ordering by name,
-instead of remembering the positional ordering of dimensions by yourself.
+Dimensions of xarray object have names and you can also lookup the dimensions
+ordering by name, instead of remembering the positional ordering of dimensions
+by yourself.
 
 Thus in total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
@@ -42,6 +42,7 @@ below and summarized in this table:
 | By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
 |                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
 +------------------+--------------+---------------------------------+--------------------------------+
+
 
 Positional indexing
 -------------------
@@ -131,10 +132,89 @@ Python :py:func:`slice` objects or 1-dimensional arrays.
 __ http://legacy.python.org/dev/peps/pep-0472/
 
 
-Assignment
-----------
+.. _advanced_indexing:
 
-As described later, 
+Indexing multi-dimensional array
+---------------------------------
+
+As similar to numpy's nd-array, xarray supports two types of indexing,
+`basic- and advanced-indexing`__.
+However, our indexing rule differs from numpy's nd-array.
+
+__ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+
+Our indexing is basically orthogonal, i.e.
+if you pass multiple integer sequences to an array, they work independently
+along each dimension (similar to the way vector subscripts work in fortran).
+
+.. ipython:: python
+
+    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+    da
+    da[[0, 1], [1, 1]]
+    # Sequential indexing gives the same result.
+    da[[0, 1], [1, 1]] == da[[0, 1]][:, [1, 1]]
+
+
+In order to make more advanced indexing, you can supply
+:py:meth:`~xarray.DataArray` as indexers.
+If :py:meth:`~xarray.DataArray` is provided as indexers, the dimension of the
+resultant array is determined by the indexers' dimension names,
+
+.. ipython:: python
+
+    ind_x = xr.DataArray([0, 1], dims=['x'])
+    ind_y = xr.DataArray([0, 1], dims=['y'])
+    da[ind_x, ind_y]  # orthogonal indexing
+    da[ind_x, ind_x]  # vectorized indexing
+
+If you just provide slices or sequences, which do not have named-dimensions,
+they will be understood as the same dimension to index along.
+
+.. ipython:: python
+
+    # Because [0, 1] is used to index along dimension 'x',
+    # it is assumed to have dimension 'x'
+    da[[0, 1], ind_x]
+
+
+Furthermore, you can use multi-dimensional :py:meth:`~xarray.DataArray`
+as indexers,
+
+.. ipython:: python
+
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    da[ind]
+
+To summarize, our indexing rule is based on our `broadcasting`__ scheme.
+For the above example, the result shape will be
+
+__ :py:meth:`~xarray.broadcast`
+
+
+These advanced indexing also works with ``isel``, ``loc``, and ``sel``.
+
+.. ipython:: python
+
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    da.isel(y=ind)  # same to da[:, ind]
+
+    ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
+    da.loc[:, ind]  # same to da.sel(y=ind)
+
+
+Assigning values
+----------------
+
+As similar to `numpy's nd-array`__, the value assignment behaves differently
+depending on whether basic- or advanced-indexing.
+
+__ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes
+
+1. Basic indexing.
+   Indexer consists of slice, ellipse, or integer. Not a sequences of integer.
 
 .. warning::
 
@@ -397,7 +477,6 @@ should still avoid assignment with chained indexing.
 
 .. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
-.. _advanced_indexing:
 
 Orthogonal (outer) vs. vectorized indexing
 ------------------------------------------
