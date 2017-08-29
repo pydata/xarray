@@ -1107,16 +1107,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
-        for k, v in iteritems(indexers):
-            dims = getattr(v, 'dims', None)
-            if (dims is not None and k not in dims and
-                    any([d not in indexers for d in dims]) and
-                    any([d in self.dims for d in dims])):
-                raise ValueError(
-                    'Trying to index along dimension {0:s} with a variable '
-                    'with dimensions {1:s}, which is also a dimension of the '
-                    'indexed array.'.format(k, str(dims)))
-
         # all indexers should be int, slice, np.ndarrays, or Variable
         indexers_list = []
         for k, v in iteritems(indexers):

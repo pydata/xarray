@@ -1053,22 +1053,6 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da['station'])
         assert 'station' not in actual
 
-    def test_isel_dataarray_error(self):
-        data = create_test_data()
-        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
-                                coords={'dim2': np.random.randn(3)})
-        with self.assertRaisesRegexp(ValueError, 'Trying to index along'):
-            data.isel(dim1=indexing_da)
-        # this should not raise an error
-        data.isel(dim1=indexing_da, dim2=indexing_da)
-
-        # slice and vector mixed indexing resulting in the same dimension
-        another_data = DataArray(np.arange(60).reshape(3, 4, 5),
-                                 dims=['x', 'y', 'z'])
-        ind = DataArray([0, 1, 2], dims=['x'])
-        with self.assertRaisesRegexp(ValueError, 'Trying to index along'):
-            another_data.isel(y=ind)
-
     def test_sel(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),

@@ -606,10 +606,8 @@ class VariableSubclassTestCases(object):
         expected[2] = v.data[2, 2]
         self.assertVariableIdentical(v_new, expected)
 
-        v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
-        ind = Variable(['x'], [0, 1])
-        with self.assertRaisesRegexp(IndexError, 'Dimensions of indexers mis'):
-            v_new = v[:, ind]
+        v_new = v[:, ind.data]
+        assert v_new.shape == (3, 3, 5)
 
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
@@ -626,6 +624,10 @@ class VariableSubclassTestCases(object):
         with self.assertRaisesRegexp(IndexError, '2-dimensional boolean'):
             v[dict(x=ind)]
 
+        v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
+        ind = Variable(['x'], [0, 1])
+        with self.assertRaisesRegexp(IndexError, 'Dimensions of indexers mis'):
+            v_new = v[:, ind]
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
