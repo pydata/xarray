@@ -1,4 +1,4 @@
-﻿.. currentmodule:: xarray
+.. currentmodule:: xarray
 
 What's New
 ==========
@@ -74,9 +74,14 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if 
-   it is none.
+- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+  objects with data stored as ``dask`` arrays (:issue:`1529`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
+  it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
+
 
 .. _whats-new.0.9.6:
 
