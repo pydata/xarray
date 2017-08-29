@@ -82,7 +82,6 @@ Bug fixes
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
 
-
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
