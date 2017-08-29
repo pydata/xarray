@@ -232,8 +232,7 @@ mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, np_compat=True,
-                              no_bottleneck=True)
+prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
 cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
                                  no_bottleneck=True, keep_dims=True)
 cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
