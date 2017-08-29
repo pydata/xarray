@@ -77,6 +77,13 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data)
 
+        # 1d-variable should be indexable by multi-dimensional Variable
+        ind = Variable(('a', 'b'), [[0, 1], [0, 1]])
+        v_new = v[ind]
+        assert v_new.dims == ('a', 'b')
+        expected = np.array(v._data)[([0, 1], [0, 1]), ]
+        self.assertArrayEqual(v_new, expected)
+
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed

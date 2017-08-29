@@ -11,16 +11,10 @@ Indexing and selecting data
     import xarray as xr
     np.random.seed(123456)
 
-The basic way to access each element of xarray's multi-dimensional
-object is to use Python `[obj]` syntax, such as `array[i, j]`.
-As xarray objects can store coordinates corresponding to each dimension of the
-array, label-based indexing similar to pandas object is also possible.
-In label-based indexing, the element position i is automatically looked-up from
-the coordinate values.
-
-Furthermore, the dimensions of xarray object have names and
-you can also lookup the dimensions ordering by name,
-instead of remembering the positional ordering of dimensions by yourself.
+Similarly to pandas objects, xarray objects support both integer and label
+based lookups along each dimension. However, xarray objects also have named
+dimensions, so you can optionally use dimension names instead of relying on the
+positional ordering of dimensions.
 
 Thus in total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
@@ -64,8 +58,9 @@ Attributes are persisted in all indexing operations.
 .. warning::
 
     Positional indexing deviates from the NumPy when indexing with multiple
-    arrays like ``arr[[0, 1], [0, 1]]``, as described in
-    :ref:`advanced_indexing`.
+    arrays like ``arr[[0, 1], [0, 1]]``, as described in :ref:`orthogonal`.
+    See :ref:`pointwise indexing` for how to achieve this functionality in
+    xarray.
 
 xarray also supports label-based indexing, just like pandas. Because
 we use a :py:class:`pandas.Index` under the hood, label based indexing is very
@@ -90,10 +85,10 @@ Setting values with label based indexing is also supported:
     arr
 
 
-Indexing with dimension names
------------------------------
+Indexing with labeled dimensions
+--------------------------------
 
-With the dimension names, we do not have to rely on dimension order and can
+With labeled dimensions, we do not have to rely on dimension order and can
 use them explicitly to slice data. There are two ways to do this:
 
 1. Use a dictionary as the argument for array positional or label based array
@@ -130,16 +125,10 @@ Python :py:func:`slice` objects or 1-dimensional arrays.
 
 __ http://legacy.python.org/dev/peps/pep-0472/
 
-
-Assignment
-----------
-
-As described later, 
-
 .. warning::
 
-    Do not try to assign values when using any of the indexing methods ``isel``
-    or ``sel``::
+    Do not try to assign values when using any of the indexing methods ``isel``,
+    ``isel_points``, ``sel`` or ``sel_points``::
 
         # DO NOT do this
         arr.isel(space=0) = 0
@@ -397,7 +386,7 @@ should still avoid assignment with chained indexing.
 
 .. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
-.. _advanced_indexing:
+.. _orthogonal:
 
 Orthogonal (outer) vs. vectorized indexing
 ------------------------------------------

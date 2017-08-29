@@ -475,6 +475,14 @@ class TestDataArray(TestCase):
         actual = da[ind]
         self.assertArrayEqual(actual, da.values[[[0, 1], [0, 1]], :])
 
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                       coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+        ind = xr.DataArray([[0, 1], [0, 1]], dims=['X', 'Y'])
+        actual = da[ind]
+        expected = da.values[[[0, 1], [0, 1]], :]
+        self.assertArrayEqual(actual, expected)
+        assert actual.dims == ('X', 'Y', 'y')
+
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),
