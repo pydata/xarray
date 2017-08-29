@@ -1,4 +1,4 @@
-.. currentmodule:: xarray
+﻿.. currentmodule:: xarray
 
 What's New
 ==========
@@ -73,6 +73,10 @@ Bug fixes
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if 
+   it is none.
+  By `Leevi Annala <https://github.com/leevei>`_.
 
 .. _whats-new.0.9.6:
 
