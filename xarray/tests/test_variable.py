@@ -596,6 +596,21 @@ class VariableSubclassTestCases(object):
         expected = Variable(['y', 'x'], [[6]])
         self.assertVariableIdentical(v_new, expected)
 
+        # slice and vector mixed indexing resulting in the same dimension
+        v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
+        ind = Variable(['x'], [0, 1, 2])
+        v_new = v[:, ind]
+        expected = Variable(('x', 'z'), np.zeros((3, 5)))
+        expected[0] = v.data[0, 0]
+        expected[1] = v.data[1, 1]
+        expected[2] = v.data[2, 2]
+        self.assertVariableIdentical(v_new, expected)
+
+        v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
+        ind = Variable(['x'], [0, 1])
+        with self.assertRaisesRegexp(IndexError, 'Dimensions of indexers mis'):
+            v_new = v[:, ind]
+
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
