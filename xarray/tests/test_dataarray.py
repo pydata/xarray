@@ -468,6 +468,31 @@ class TestDataArray(TestCase):
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_getitem_dataarray(self):
+        # It should not conflict
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
+        ind = DataArray([[0, 1], [0, 1]], dims=['x', 'z'])
+        actual = da[ind]
+        self.assertArrayEqual(actual, da.values[[[0, 1], [0, 1]], :])
+
+    def test_setitem(self):
+        # basic indexing should work as numpy's indexing
+        tuples = [(0, 0), (0, slice(None, None)),
+                  (slice(None, None), slice(None, None)),
+                  (slice(None, None), 0),
+                  ([1, 0], slice(None, None)),
+                  (slice(None, None), [1, 0])]
+        for t in tuples:
+            expected = np.arange(6).reshape(3, 2)
+            orig = DataArray(np.arange(6).reshape(3, 2),
+                             {'x': [1, 2, 3], 'y': ['a', 'b'], 'z': 4,
+                              'x2': ('x', ['a', 'b', 'c']),
+                              'y2': ('y', ['d', 'e'])},
+                             dims=['x', 'y'])
+            orig[t] = 1
+            expected[t] = 1
+            self.assertArrayEqual(orig.values, expected)
+
     def test_attr_sources_multiindex(self):
         # make sure attr-style access for multi-index levels
         # returns DataArray objects
@@ -756,9 +781,14 @@ class TestDataArray(TestCase):
 
         # Multi dimensional case
         da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0, 0] = 0
+        assert da.values[0, 0] == 0
+        assert da.values[0, 1] != 0
+
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
         da.loc[0] = 0
-        self.assertTrue(np.all(da.values[0, 0] == 0))
-        self.assertTrue(np.all(da.values[0, 1] != 0))
+        self.assertTrue(np.all(da.values[0] == np.zeros(4)))
+        assert da.values[1, 0] != 0
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])

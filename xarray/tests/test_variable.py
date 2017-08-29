@@ -538,6 +538,13 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('a', 'b', 'y')
         self.assertArrayEqual(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
 
+        # It would be ok if indexed with the multi-dimensional array including
+        # the same name
+        ind = Variable(['x', 'b'], [[0, 1, 1], [1, 1, 0]])
+        v_new = v[ind]
+        assert v_new.dims == ('x', 'b', 'y')
+        self.assertArrayEqual(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
+
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
         v_new = v[dict(y=ind)]
         assert v_new.dims == ('x', 'a', 'b')

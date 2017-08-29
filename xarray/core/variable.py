@@ -491,7 +491,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 out_dims_set.add(dim)
             else:
                 try:
-                    variable = as_variable(value, name=dim)
+                    variable = (value if isinstance(value, Variable) else
+                                as_variable(value, name=dim))
                 except MissingDimensionsError:  # change to better exception
                     raise IndexError("Unlabeled multi-dimensional array "
                                      "cannot be used for indexing.")
