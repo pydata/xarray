@@ -216,13 +216,29 @@ These advanced indexing also works with ``isel``, ``loc``, and ``sel``.
 Assigning values
 ----------------
 
-As similar to `numpy's nd-array`__, the value assignment behaves differently
-depending on whether basic- or advanced-indexing.
+As similar to ``numpy's nd-array``, the value assignment behaves differently
+depending on whether `basic- or advanced-indexing`__.
 
-__ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes
+__ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
-1. Basic indexing.
+1. Basic indexing
    Indexer consists of slice, ellipse, or integer. Not a sequences of integer.
+   By basic indexing, you can select a subset of an array to assign values.
+
+.. ipython:: python
+
+    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+    da
+    da[0, 0] = -1  # Assign -1 to one element
+    da
+
+    da[0] = -2  # The shape is different but broadcastable
+    da
+
+    da.loc[:, 'a'] = -3  # assignment through label-based indexing is also possible
+    da
+
 
 .. warning::
 
@@ -232,12 +248,11 @@ __ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-note
         # DO NOT do this
         arr.isel(space=0) = 0
 
-    Depending on whether the underlying numpy indexing returns a copy or a
-    view, the method will fail, and when it fails, **it will fail
-    silently**. Instead, you should use normal index assignment::
-
-        # this is safe
-        arr[dict(space=0)] = 0
+2. Advanced indexing
+    If the underlying indexing is advanced, indexing returns a copy of the
+    array not a view.
+    In this case, the method will fail, and when it fails, **it will fail
+    silently**.
 
 .. _pointwise indexing:
 
