@@ -11,8 +11,12 @@ Indexing and selecting data
     import xarray as xr
     np.random.seed(123456)
 
+
+The point of xarray is to introduce a numpy-ndarray-like multidimensional array object into a powerful pandas's flexible data handling scheme.
+We provide several types (say, numpy-like and pandas-like, and more advanced) indexing functionalities.
+
 The most basic way to access each element of xarray's multi-dimensional
-object is to use Python ``[obj]`` syntax, such as ``array[i, j]``.
+object is to use Python ``[obj]`` syntax, such as ``array[i, j]``, where ``i`` and ``j`` are both integers.
 As xarray objects can store coordinates corresponding to each dimension of the
 array, label-based indexing similar to pandas object is also possible.
 In label-based indexing, the element position ``i`` is automatically
@@ -42,6 +46,12 @@ below and summarized in this table:
 | By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
 |                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
 +------------------+--------------+---------------------------------+--------------------------------+
+
+
+More advanced indexing is also possible for all the four types of indexings by
+supplying :py:class:`~xarray.DataArray` objects as indexer.
+See :ref:`advanced_indexing` for the details.
+
 
 
 Positional indexing
@@ -171,7 +181,7 @@ resultant array is determined by the indexers' dimension names,
     da[ind_x, ind_x]  # vectorized indexing
 
 If you just provide slices or sequences, which do not have named-dimensions,
-they will be understood as the same dimension to index along.
+they will be understood as the same dimension which is indexed along.
 
 .. ipython:: python
 
@@ -188,10 +198,8 @@ as indexers,
     ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
     da[ind]
 
-To summarize, our indexing rule is based on our `broadcasting`__ scheme.
-For the above example, the result shape will be
-
-__ :py:meth:`~xarray.broadcast`
+To summarize, our indexing rule is based on our :ref:`compute.broadcasting`
+scheme.
 
 
 These advanced indexing also works with ``isel``, ``loc``, and ``sel``.
