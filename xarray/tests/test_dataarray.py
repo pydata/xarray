@@ -483,6 +483,23 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(actual, expected)
         assert actual.dims == ('X', 'Y', 'y')
 
+        # boolean indexing
+        ind = xr.DataArray([True, True, False], dims=['x'])
+        self.assertDataArrayEqual(da[ind], da[[0, 1], :])
+        self.assertDataArrayEqual(da[ind], da[[0, 1]])
+        self.assertDataArrayEqual(da[ind], da[ind.values])
+
+        ind = xr.DataArray([True, True, False], dims=['a'],
+                           coords={'a': [0, 1, 2]})
+        actual = da[ind]
+        assert 'a' in actual
+        self.assertArrayEqual(actual['a'], [0, 1])
+
+        # make sure we can index a np.ndarray
+        array = np.arange(3)
+        actual = array[ind]
+        self.assertArrayEqual(actual, [0, 1])
+
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),
