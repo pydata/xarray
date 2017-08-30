@@ -495,11 +495,6 @@ class TestDataArray(TestCase):
         assert 'a' in actual
         self.assertArrayEqual(actual['a'], [0, 1])
 
-        # make sure we can index a np.ndarray
-        array = np.arange(3)
-        actual = array[ind]
-        self.assertArrayEqual(actual, [0, 1])
-
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),
