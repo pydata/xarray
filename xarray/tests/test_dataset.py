@@ -240,15 +240,17 @@ class TestDataset(TestCase):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
-        # regression for GH1120
-        with self.assertRaises(MergeError):
-            Dataset(data_vars=dict(v=('x', [1, 2, 3, 4])),
-                    coords=dict(y=DataArray([.1, .2, .3, .4], dims='x')))
 
         # verify handling of DataArrays
         expected = Dataset({'x': x1, 'z': z})
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
+
+    def test_constructor_invalid_dims(self):
+        # regression for GH1120
+        with self.assertRaises(MergeError):
+            Dataset(data_vars=dict(v=('y', [1, 2, 3, 4])),
+                    coords=dict(y=DataArray([.1, .2, .3, .4], dims='x')))
 
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
