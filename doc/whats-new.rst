@@ -28,7 +28,7 @@ Backward Incompatible Changes
   Due to this change, existing uses of xarray objects to index other xarray
   objects will break in some cases.
   See *** for the details.
-  (:issue:`1444`, :issue:***, )
+  (:issue:`1444`, :issue:`1436`, )
   By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
 

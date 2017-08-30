@@ -77,6 +77,15 @@ class VariableSubclassTestCases(object):
         assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data)
 
+    def test_getitem_1d_fancy(self):
+        v = self.cls(['x'], [0, 1, 2])
+        # 1d-variable should be indexable by multi-dimensional Variable
+        ind = Variable(('a', 'b'), [[0, 1], [0, 1]])
+        v_new = v[ind]
+        assert v_new.dims == ('a', 'b')
+        expected = np.array(v._data)[([0, 1], [0, 1]), ]
+        self.assertArrayEqual(v_new, expected)
+
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed
@@ -1372,6 +1381,18 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
     @pytest.mark.xfail
     def test_eq_all_dtypes(self):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
+
+    def test_getitem_fancy(self):
+        import dask
+        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
+            pytest.xfail("vindex from latest dask is required")
+        super(TestVariableWithDask, self).test_getitem_fancy()
+
+    def test_getitem_1d_fancy(self):
+        import dask
+        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
+            pytest.xfail("vindex from latest dask is required")
+        super(TestVariableWithDask, self).test_getitem_1d_fancy()
 
     def test_getitem_fancy(self):
         import dask
