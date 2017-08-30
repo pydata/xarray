@@ -78,6 +78,11 @@ Bug fixes
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
+  coordinate shares a name with a dimension but is comprised of arbitrary
+  dimensions(:issue:`1120`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
