@@ -58,7 +58,7 @@ def canonicalize_indexer(key, ndim):
                                      '1d arrays')
                 if indexer.dtype.kind == 'b':
                     indexer, = np.nonzero(indexer)
-                elif indexer.dtype.kind != 'i':
+                elif indexer.dtype.kind not in {'i', 'u'}:
                     raise ValueError('invalid subkey %r for integer based '
                                      'array indexing; all subkeys must be '
                                      'slices, integers or sequences of '
