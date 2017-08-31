@@ -105,8 +105,6 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
-   Dataset.isel_points
-   Dataset.sel_points
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
@@ -247,8 +245,6 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   DataArray.isel_points
-   DataArray.sel_points
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like

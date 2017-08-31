@@ -13,7 +13,7 @@ Indexing and selecting data
 
 
 The point of xarray is to introduce a numpy-ndarray-like multidimensional array object into a powerful pandas's flexible data handling scheme.
-We provide several types (say, numpy-like and pandas-like, and more advanced) indexing functionalities.
+We provide several (say, numpy-like, pandas-like, and more advanced type) indexing functionalities.
 
 The most basic way to access each element of xarray's multi-dimensional
 object is to use Python ``[obj]`` syntax, such as ``array[i, j]``, where ``i`` and ``j`` are both integers.
@@ -83,7 +83,6 @@ fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attri
 
 .. ipython:: python
 
-    # Coordinate 'time'
     arr.loc['2000-01-01':'2000-01-02', 'IA']
 
 In this example, the selected is a subpart of the array
@@ -105,9 +104,9 @@ Setting values with label based indexing is also supported:
     arr
 
 .. note::
-  Like indexing in numpy ndarray __,
-  depending on whether indexing returns view or copies, setting value
-  fails. For the details of the value assignment, see :ref:`assigning_values`.
+  Like indexing in numpy `ndarray`__,
+  setting values could fail depending on whether indexing returns views or copies.
+  For the details of the value assignment, see :ref:`assigning_values`.
 
   __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
@@ -152,6 +151,7 @@ Python :py:func:`slice` objects or 1-dimensional arrays.
 
 __ http://legacy.python.org/dev/peps/pep-0472/
 
+.. _nearest neighbor lookups:
 
 Nearest neighbor lookups
 ------------------------
@@ -174,9 +174,6 @@ Tolerance limits the maximum distance for valid matches with an inexact lookup:
 .. ipython:: python
 
    data.reindex(x=[1.1, 1.5], method='nearest', tolerance=0.2)
-
-Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
-version 0.16 or newer. Using ``tolerance`` requries pandas version 0.17 or newer.
 
 The method parameter is not yet supported if any of the arguments
 to ``.sel()`` is a ``slice`` object:
@@ -217,7 +214,7 @@ simultaneously, returning a new dataset:
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
-arrays). However, you can do normal indexing with labeled dimensions:
+arrays). However, you can do normal indexing with dimension names:
 
 .. ipython:: python
 
@@ -239,8 +236,6 @@ index labels along a dimension dropped:
     ds.drop(['IN', 'IL'], dim='space')
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
-
-.. _nearest neighbor lookups:
 
 
 .. _masking with where:
@@ -344,9 +339,9 @@ Basic and Advanced Indexing
 
 As similar to numpy's nd-array, xarray supports two types of indexing,
 `basic- and advanced-indexing`__.
-However, our indexing rule differs from numpy's nd-array.
+However, our indexing rule differs from numpy.
 
-.. __ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+__ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
 
 Our indexing is basically orthogonal, i.e.
@@ -381,7 +376,7 @@ they will be understood as the same dimension which is indexed along.
 .. ipython:: python
 
     # Because [0, 1] is used to index along dimension 'x',
-    # [0, 1] is assumed to have dimension 'x'
+    # it is assumed to have dimension 'x'
     da[[0, 1], ind_x]
 
 
@@ -394,7 +389,7 @@ indexers' dimension,
     ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
     da[ind]
 
-To summarize, our indexing rule is based on our broadcasting scheme.
+To summarize, our advanced indexing is based on our broadcasting scheme.
 See :ref:`compute.broadcasting` for the detail.
 
 
@@ -414,8 +409,13 @@ and also for Dataset
 .. ipython:: python
 
     ds2 = da.to_dataset(name='bar')
-    ds2.isel(x=xr.DataArray([0, 1, 2], dims=['points']),
-             y=xr.DataArray([0, 1, 0], dims=['points']))
+    ds2.isel(x=xr.DataArray([0, 1, 2], dims=['points']))
+
+.. note::
+  This advanced indexing was newly added in v.0.10.
+  In the older version of xarray, dimensions of indexers are not used.
+  Special methods to realize some advanced indexing,
+  ``isel_points`` and ``sel_points`` are now deprecated.
 
 
 More advanced indexing
@@ -435,12 +435,11 @@ The following is an example of the pointwise indexing,
 where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
 and mapped along a new dimension ``z``.
 
-If you want to add a coordinate to the dimension ``z``,
-you can supply a :py:meth:`~xarray.DataArray` with a coordinate as indexers,
+If you want to add a coordinate to the new dimension ``z``,
+you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
 
 .. ipython:: python
 
-    # z will have a coordinate
     da.isel(x=xr.DataArray([0, 1, 6], dims='z',
                            coords={'z': ['a', 'b', 'c']}),
             y=xr.DataArray([0, 1, 0], dims='z'))
