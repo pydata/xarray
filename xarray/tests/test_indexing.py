@@ -164,6 +164,11 @@ class TestIndexers(TestCase):
                      [True,  True,  True,  True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
+    def test_uint_indexer(self):
+        # regression test for #1405
+        da = DataArray([1, 2, 3], dims='x')
+        da.isel(x=np.array([0], dtype="uint64"))
+
 
 class TestLazyArray(TestCase):
     def test_slice_slice(self):
