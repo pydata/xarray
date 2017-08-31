@@ -2925,8 +2925,6 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
 
         ds = create_test_data(seed=123)

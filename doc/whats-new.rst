@@ -25,6 +25,12 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 
 Enhancements
 ~~~~~~~~~~~~
@@ -62,6 +68,12 @@ Enhancements
   the ``other`` argument, for filling with a value other than ``NaN``
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
