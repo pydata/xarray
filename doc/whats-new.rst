@@ -55,6 +55,12 @@ Enhancements
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
+
 Bug fixes
 ~~~~~~~~~
 
