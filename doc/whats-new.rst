@@ -23,27 +23,20 @@ Enhancements
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
-  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`:
+  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  (:issue:`799`):
 
   .. ipython::
     :verbatim:
-    In [1]: import xarray as xr
 
-    In [2]: from pathlib import Path # In Python 2, use pathlib2!
+    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
 
     In [3]: data_dir = Path("data/")
 
     In [4]: one_file = data_dir / "dta_for_month_01.nc"
 
-    In [5]: print(xr.open_dataset(one_file))
+    In [5]: xr.open_dataset(one_file)
     Out[5]:
-    <xarray.Dataset>
-    [...]
-
-    In [6]: all_files = data_dir.glob("dta_for_month_*.nc")
-
-    In [7]: print(xr.open_mfdataset(all_files))
-    Out[7]:
     <xarray.Dataset>
     [...]
 
