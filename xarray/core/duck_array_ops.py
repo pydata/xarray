@@ -83,10 +83,10 @@ transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
-broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
+broadcast_to = _dask_or_eager_func('broadcast_to')
 
 concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
-stack = _dask_or_eager_func('stack', npcompat, list_of_args=True)
+stack = _dask_or_eager_func('stack', list_of_args=True)
 
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
@@ -232,8 +232,7 @@ mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, np_compat=True,
-                              no_bottleneck=True)
+prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
 cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
                                  no_bottleneck=True, keep_dims=True)
 cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
