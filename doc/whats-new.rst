@@ -27,7 +27,7 @@ Backward Incompatible Changes
   indexing, as well as vectorized indexing.
   Due to this change, existing uses of xarray objects to index other xarray
   objects will break in some cases.
-  See *** for the details.
+  See :ref:`indexing` for the details.
   (:issue:`1444`, :issue:`1436`, )
   By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
