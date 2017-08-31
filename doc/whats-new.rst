@@ -62,6 +62,11 @@ Enhancements
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -81,6 +86,10 @@ Bug fixes
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+  objects with data stored as ``dask`` arrays (:issue:`1529`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 

@@ -187,10 +187,15 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)
 
+    _disable_mask_and_scale(ds)
+
+    return ds
+
+
+def _disable_mask_and_scale(ds):
     for var in ds.variables.values():
         # we handle masking and scaling ourselves
         var.set_auto_maskandscale(False)
-    return ds
 
 
 class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
@@ -198,24 +203,40 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
-    def __init__(self, filename, mode='r', format='NETCDF4', group=None,
-                 writer=None, clobber=True, diskless=False, persist=False,
+    def __init__(self, netcdf4_dataset, mode='r', writer=None, opener=None,
                  autoclose=False):
+
+        if autoclose and opener is None:
+            raise ValueError('autoclose requires an opener')
+
+        _disable_mask_and_scale(netcdf4_dataset)
+
+        self.ds = netcdf4_dataset
+        self._autoclose = autoclose
+        self._isopen = True
+        self.format = self.ds.data_model
+        self._filename = self.ds.filepath()
+        self.is_remote = is_remote_uri(self._filename)
+        self._mode = mode = 'a' if mode == 'w' else mode
+        if opener:
+            self._opener = functools.partial(opener, mode=self._mode)
+        else:
+            self._opener = opener
+        super(NetCDF4DataStore, self).__init__(writer)
+
+    @classmethod
+    def open(cls, filename, mode='r', format='NETCDF4', group=None,
+             writer=None, clobber=True, diskless=False, persist=False,
+             autoclose=False):
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
                                    group=group, clobber=clobber,
                                    diskless=diskless, persist=persist,
                                    format=format)
-        self.ds = opener()
-        self._autoclose = autoclose
-        self._isopen = True
-        self.format = format
-        self.is_remote = is_remote_uri(filename)
-        self._filename = filename
-        self._mode = 'a' if mode == 'w' else mode
-        self._opener = functools.partial(opener, mode=self._mode)
-        super(NetCDF4DataStore, self).__init__(writer)
+        ds = opener()
+        return cls(ds, mode=mode, writer=writer, opener=opener,
+                   autoclose=autoclose)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
