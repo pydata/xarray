@@ -13,28 +13,286 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.9.7:
 
-.. _whats-new.0.9.2:
-
-v0.9.2 (unreleased)
+v0.10.0 (unreleased)
 -------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
+  also supplying an explicit ``dims`` argument is no longer supported. This
+  behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 
 Enhancements
 ~~~~~~~~~~~~
-- When bottleneck version 1.1 or later is installed, use bottleneck for rolling
-  `var`, `argmin`, `argmax`, and `rank` computations. Also, `rolling.median`
-  now also accepts a `min_periods` argument (:issue:`1276`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 
-- When `plot()` is called on a 2D DataArray and only one dimension is
-  specified with `x=` or `y=`, the other dimension is now guessed. By
-  `Vincent Noel <https://github.com/vnoel>`_.
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
+  a signed integer data type should be interpreted as unsigned bytes
+  (:issue:`1444`).
+  By `Eric Bruning <https://github.com/deeplycloudy>`_.
+
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
-- ``rolling`` now keeps its original dimension order (:issue:`1125`).
+
+- :py:func:`~xarray.open_rasterio` method now shifts the rasterio
+  coordinates so that they are centered in each pixel.
+  By `Greg Brener <https://github.com/gbrener>`_.
+
+- :py:meth:`~xarray.Dataset.rename` method now doesn't throw errors
+  if some ``Variable`` is renamed to the same name as another ``Variable``
+  as long as that other ``Variable`` is also renamed. This method now
+  does throw when two ``Variables`` would end up with the same name
+  after the rename (since one of them would get overwritten in this
+  case). See (:issue:`1477`) for details.
+  By `Prakhar Goel <https://github.com/newt0311>`_.
+
+- Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
+  ``rtol`` arguments when called on ``DataArray`` objects.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+  objects with data stored as ``dask`` arrays (:issue:`1529`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+.. _whats-new.0.9.6:
+
+v0.9.6 (8 June 2017)
+--------------------
+
+This release includes a number of backwards compatible enhancements and bug
+fixes.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xarray.Dataset.sortby` method to ``Dataset`` and ``DataArray``
+  that enable sorting along dimensions (:issue:`967`).
+  See :ref:`the docs <reshape.sort>` for examples.
+  By `Chun-Wei Yuan <https://github.com/chunweiyuan>`_ and
+  `Kyle Heuton <https://github.com/kheuton>`_.
+
+- Add ``.dt`` accessor to DataArrays for computing datetime-like properties
+  for the values they contain, similar to ``pandas.Series`` (:issue:`358`).
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
+
+- Renamed internal dask arrays created by ``open_dataset`` to match new dask
+  conventions (:issue:`1343`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- :py:meth:`~xarray.as_variable` is now part of the public API (:issue:`1303`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- :py:func:`~xarray.align` now supports ``join='exact'``, which raises
+  an error instead of aligning when indexes to be aligned are not equal.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- New function :py:func:`~xarray.open_rasterio` for opening raster files with
+  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  See :ref:`the docs <io.rasterio>` for details.
+  By `Joe Hamman <https://github.com/jhamman>`_,
+  `Nic Wayand <https://github.com/NicWayand>`_ and
+  `Fabien Maussion <https://github.com/fmaussion>`_
+
+Bug fixes
+~~~~~~~~~
+
+- Fix error from repeated indexing of datasets loaded from disk (:issue:`1374`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix a bug where ``.isel_points`` wrongly assigns unselected coordinate to
+  ``data_vars``.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Tutorial datasets are now checked against a reference MD5 sum to confirm
+  successful download (:issue:`1392`). By `Matthew Gidden
+  <https://github.com/gidden>`_.
+
+- ``DataArray.chunk()`` now accepts dask specific kwargs like
+  ``Dataset.chunk()`` does. By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Support for ``engine='pydap'`` with recent releases of Pydap (3.2.2+),
+  including on Python 3 (:issue:`1174`).
+
+Documentation
+~~~~~~~~~~~~~
+
+- A new `gallery <http://xarray.pydata.org/en/latest/auto_gallery/index.html>`_
+  allows to add interactive examples to the documentation.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+Testing
+~~~~~~~
+
+- Fix test suite failure caused by changes to ``pandas.cut`` function
+  (:issue:`1386`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Enhanced tests suite by use of ``@network`` decorator, which is
+  controlled via ``--run-network-tests`` command line argument
+  to ``py.test`` (:issue:`1393`).
+  By `Matthew Gidden <https://github.com/gidden>`_.
+
+.. _whats-new.0.9.5:
+
+v0.9.5 (17 April, 2017)
+-----------------------
+
+Remove an inadvertently introduced print statement.
+
+.. _whats-new.0.9.3:
+
+v0.9.3 (16 April, 2017)
+-----------------------
+
+This minor release includes bug-fixes and backwards compatible enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New :py:meth:`~xarray.DataArray.persist` method to Datasets and DataArrays to
+  enable persisting data in distributed memory when using Dask (:issue:`1344`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
+- New :py:meth:`~xarray.DataArray.expand_dims` method for ``DataArray`` and
+  ``Dataset`` (:issue:`1326`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fix ``.where()`` with ``drop=True`` when arguments do not have indexes
+  (:issue:`1350`). This bug, introduced in v0.9, resulted in xarray producing
+  incorrect results in some cases.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed writing to file-like objects with :py:meth:`~xarray.Dataset.to_netcdf`
+  (:issue:`1320`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed explicitly setting ``engine='scipy'`` with ``to_netcdf`` when not
+  providing a path (:issue:`1321`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed open_dataarray does not pass properly its parameters to open_dataset
+  (:issue:`1359`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Ensure test suite works when runs from an installed version of xarray
+  (:issue:`1336`). Use ``@pytest.mark.slow`` instead of a custom flag to mark
+  slow tests.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+.. _whats-new.0.9.2:
+
+v0.9.2 (2 April 2017)
+---------------------
+
+The minor release includes bug-fixes and backwards compatible enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- ``rolling`` on Dataset is now supported (:issue:`859`).
+
+- ``.rolling()`` on Dataset is now supported (:issue:`859`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- When bottleneck version 1.1 or later is installed, use bottleneck for rolling
+  ``var``, ``argmin``, ``argmax``, and ``rank`` computations. Also, rolling
+  median now accepts a ``min_periods`` argument (:issue:`1276`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- When ``.plot()`` is called on a 2D DataArray and only one dimension is
+  specified with ``x=`` or ``y=``, the other dimension is now guessed
+  (:issue:`1291`).
+  By `Vincent Noel <https://github.com/vnoel>`_.
+
+- Added new method :py:meth:`~Dataset.assign_attrs` to ``DataArray`` and
+  ``Dataset``, a chained-method compatible implementation of the
+  ``dict.update`` method on attrs (:issue:`1281`).
+  By `Henry S. Harrison <https://hsharrison.github.io>`_.
+
+- Added new ``autoclose=True`` argument to
+  :py:func:`~xarray.open_mfdataset` to explicitly close opened files when not in
+  use to prevent occurrence of an OS Error related to too many open files
+  (:issue:`1198`).
+  Note, the default is ``autoclose=False``, which is consistent with
+  previous xarray behavior.
+  By `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- The ``repr()`` of ``Dataset`` and ``DataArray`` attributes uses a similar
+  format to coordinates and variables, with vertically aligned entries
+  truncated to fit on a single line (:issue:`1319`).  Hopefully this will stop
+  people writing ``data.attrs = {}`` and discarding metadata in notebooks for
+  the sake of cleaner output.  The full metadata is still available as
+  ``data.attrs``.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+
+- Enhanced tests suite by use of ``@slow`` and ``@flaky`` decorators, which are
+  controlled via ``--run-flaky`` and ``--skip-slow`` command line arguments
+  to ``py.test`` (:issue:`1336`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
+
+- New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
+  which providing a rolling count of valid values (:issue:`1138`).
+
+Bug fixes
+~~~~~~~~~
+- Rolling operations now keep preserve original dimension order (:issue:`1125`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fixed ``sel`` with ``method='nearest'`` on Python 2.7 and 64-bit Windows
+  (:issue:`1140`).
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed ``where`` with ``drop='True'`` for empty masks (:issue:`1341`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_ and
+  `Phillip J. Wolfram <https://github.com/pwolfram>`_.
 
 .. _whats-new.0.9.1:
 
@@ -260,6 +518,7 @@ Enhancements
 - New :py:meth:`~DataArray.quantile` method to calculate quantiles from
   DataArray objects (:issue:`1187`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

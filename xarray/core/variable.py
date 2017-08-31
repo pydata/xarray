@@ -11,11 +11,14 @@ import numpy as np
 import pandas as pd
 
 from . import common
+from . import duck_array_ops
+from . import dtypes
 from . import indexing
+from . import nputils
 from . import ops
 from . import utils
-from . import nputils
-from .pycompat import basestring, OrderedDict, zip, dask_array_type
+from .pycompat import (basestring, OrderedDict, zip, integer_types,
+                       dask_array_type)
 from .indexing import (PandasIndexAdapter, orthogonally_indexable)
 
 import xarray as xr  # only for Dataset and DataArray
@@ -26,14 +29,32 @@ except ImportError:
     pass
 
 
-def as_variable(obj, name=None, copy=False):
-    """Convert an object into an Variable.
+def as_variable(obj, name=None):
+    """Convert an object into a Variable.
 
-    - If the object is already an `Variable`, return a shallow copy.
-    - Otherwise, if the object has 'dims' and 'data' attributes, convert
-      it into a new `Variable`.
-    - If all else fails, attempt to convert the object into an `Variable` by
-      unpacking it into the arguments for `Variable.__init__`.
+    Parameters
+    ----------
+    obj : object
+        Object to convert into a Variable.
+
+        - If the object is already a Variable, return a shallow copy.
+        - Otherwise, if the object has 'dims' and 'data' attributes, convert
+          it into a new Variable.
+        - If all else fails, attempt to convert the object into a Variable by
+          unpacking it into the arguments for creating a new Variable.
+    name : str, optional
+        If provided:
+
+        - `obj` can be a 1D array, which is assumed to label coordinate values
+          along a dimension of this given name.
+        - Variables with name matching one of their dimensions are converted
+          into `IndexVariable` objects.
+
+    Returns
+    -------
+    var : Variable
+        The newly created variable.
+
     """
     # TODO: consider extending this method to automatically handle Iris and
     # pandas objects.
@@ -45,7 +66,10 @@ def as_variable(obj, name=None, copy=False):
         obj = obj.copy(deep=False)
     elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
                                    hasattr(obj, 'values')):
-        obj = Variable(obj.dims, getattr(obj, 'data', obj.values),
+        obj_data = getattr(obj, 'data', None)
+        if obj_data is None:
+            obj_data = getattr(obj, 'values')
+        obj = Variable(obj.dims, obj_data,
                        getattr(obj, 'attrs', None),
                        getattr(obj, 'encoding', None))
     elif isinstance(obj, tuple):
@@ -73,7 +97,7 @@ def as_variable(obj, name=None, copy=False):
                         'explicit list of dimensions: %r' % obj)
 
     if name is not None and name in obj.dims:
-        # convert the into an Index
+        # convert the Variable into an Index
         if obj.ndim != 1:
             raise ValueError(
                 '%r has more than 1-dimension and the same name as one of its '
@@ -96,6 +120,13 @@ def _maybe_wrap_data(data):
     if isinstance(data, pd.Index):
         return PandasIndexAdapter(data)
     return data
+
+
+def _possibly_convert_objects(values):
+    """Convert arrays of datetime.datetime and datetime.timedelta objects into
+    datetime64 and timedelta64, according to the pandas convention.
+    """
+    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
 
 
 def as_compatible_data(data, fastpath=False):
@@ -148,7 +179,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, np.ma.MaskedArray):
         mask = np.ma.getmaskarray(data)
         if mask.any():
-            dtype, fill_value = common._maybe_promote(data.dtype)
+            dtype, fill_value = dtypes.maybe_promote(data.dtype)
             data = np.asarray(data, dtype=dtype)
             data[mask] = fill_value
         else:
@@ -156,7 +187,7 @@ def as_compatible_data(data, fastpath=False):
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
-            data = common._possibly_convert_objects(data)
+            data = _possibly_convert_objects(data)
         elif data.dtype.kind == 'M':
             data = np.asarray(data, 'datetime64[ns]')
         elif data.dtype.kind == 'm':
@@ -373,7 +404,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = self._item_key_to_tuple(key)
         key = indexing.expanded_indexer(key, self.ndim)
         dims = tuple(dim for k, dim in zip(key, self.dims)
-                     if not isinstance(k, (int, np.integer)))
+                     if not isinstance(k, integer_types))
         values = self._indexable_data[key]
         # orthogonal indexing should ensure the dimensionality is consistent
         if hasattr(values, 'ndim'):
@@ -394,7 +425,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             raise TypeError("this variable's data is stored in a dask array, "
                             'which does not support item assignment. To '
                             'assign to this variable, you must first load it '
-                            'into memory explicitly using the .load_data() '
+                            'into memory explicitly using the .load() '
                             'method or accessing its .values attribute.')
         data = orthogonally_indexable(self._data)
         data[key] = value
@@ -580,7 +611,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             keep = slice(None)
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
-        dtype, fill_value = common._maybe_promote(self.dtype)
+        dtype, fill_value = dtypes.maybe_promote(self.dtype)
 
         shape = list(self.shape)
         shape[axis] = min(abs(count), shape[axis])
@@ -599,7 +630,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             arrays = [trimmed_data, nans]
 
-        data = ops.concatenate(arrays, axis)
+        data = duck_array_ops.concatenate(arrays, axis)
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -642,7 +673,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         arrays = [self[(slice(None),) * axis + (idx,)].data
                   for idx in indices]
 
-        data = ops.concatenate(arrays, axis)
+        data = duck_array_ops.concatenate(arrays, axis)
 
         if isinstance(data, dask_array_type):
             # chunked data should come out with the same chunks; this makes
@@ -702,11 +733,20 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
-        data = ops.transpose(self.data, axes)
-        return type(self)(dims, data, self._attrs, self._encoding, fastpath=True)
+        data = duck_array_ops.transpose(self.data, axes)
+        return type(self)(dims, data, self._attrs, self._encoding,
+                          fastpath=True)
 
-    def expand_dims(self, dims, shape=None):
-        """Return a new variable with expanded dimensions.
+    def expand_dims(self, *args):
+        import warnings
+        warnings.warn('Variable.expand_dims is deprecated: use '
+                      'Variable.set_dims instead', DeprecationWarning,
+                      stacklevel=2)
+        return self.expand_dims(*args)
+
+    def set_dims(self, dims, shape=None):
+        """Return a new variable with given set of dimensions.
+        This method might be used to attach new dimension(s) to variable.
 
         When possible, this operation does not copy this variable's data.
 
@@ -743,7 +783,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         elif shape is not None:
             dims_map = dict(zip(dims, shape))
             tmp_shape = tuple(dims_map[d] for d in expanded_dims)
-            expanded_data = ops.broadcast_to(self.data, tmp_shape)
+            expanded_data = duck_array_ops.broadcast_to(self.data, tmp_shape)
         else:
             expanded_data = self.data[
                 (None,) * (len(expanded_dims) - self.ndim)]
@@ -858,8 +898,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def fillna(self, value):
         return ops.fillna(self, value)
 
-    def where(self, cond):
-        return self._where(cond)
+    def where(self, cond, other=dtypes.NA):
+        return ops.where_method(self, cond, other)
 
     def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                allow_lazy=False, **kwargs):
@@ -963,16 +1003,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
-            data = ops.concatenate(arrays, axis=axis)
+            data = duck_array_ops.concatenate(arrays, axis=axis)
             if positions is not None:
                 # TODO: deprecate this option -- we don't need it for groupby
                 # any more.
-                indices = nputils.inverse_permutation(np.concatenate(positions))
-                data = ops.take(data, indices, axis=axis)
+                indices = nputils.inverse_permutation(
+                    np.concatenate(positions))
+                data = duck_array_ops.take(data, indices, axis=axis)
         else:
             axis = 0
             dims = (dim,) + first_var.dims
-            data = ops.stack(arrays, axis=axis)
+            data = duck_array_ops.stack(arrays, axis=axis)
 
         attrs = OrderedDict(first_var.attrs)
         encoding = OrderedDict(first_var.encoding)
@@ -984,7 +1025,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         return cls(dims, data, attrs, encoding)
 
-    def equals(self, other, equiv=ops.array_equiv):
+    def equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the same dimensions and values;
         otherwise False.
 
@@ -1002,7 +1043,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         except (TypeError, AttributeError):
             return False
 
-    def broadcast_equals(self, other, equiv=ops.array_equiv):
+    def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the values after being broadcast against
         each other; otherwise False.
 
@@ -1031,7 +1072,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Variables can thus still be equal if there are locations where either,
         or both, contain NaN values.
         """
-        return self.broadcast_equals(other, equiv=ops.array_notnull_equiv)
+        return self.broadcast_equals(
+            other, equiv=duck_array_ops.array_notnull_equiv)
 
     def quantile(self, q, dim=None, interpolation='linear'):
         """Compute the qth quantile of the data along the specified dimension.
@@ -1073,9 +1115,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
 
         if isinstance(self.data, dask_array_type):
-            TypeError("quantile does not work for arrays stored as dask "
-                      "arrays. Load the data via .compute() or .load() prior "
-                      "to calling this method.")
+            raise TypeError("quantile does not work for arrays stored as dask "
+                            "arrays. Load the data via .compute() or .load() "
+                            "prior to calling this method.")
         if LooseVersion(np.__version__) < LooseVersion('1.10.0'):
             raise NotImplementedError(
                 'quantile requres numpy version 1.10.0 or later')
@@ -1336,7 +1378,7 @@ def _unified_dims(variables):
 
 def _broadcast_compat_variables(*variables):
     dims = tuple(_unified_dims(variables))
-    return tuple(var.expand_dims(dims) if var.dims != dims else var
+    return tuple(var.set_dims(dims) if var.dims != dims else var
                  for var in variables)
 
 
@@ -1352,7 +1394,7 @@ def broadcast_variables(*variables):
     """
     dims_map = _unified_dims(variables)
     dims_tuple = tuple(dims_map)
-    return tuple(var.expand_dims(dims_map) if var.dims != dims_tuple else var
+    return tuple(var.set_dims(dims_map) if var.dims != dims_tuple else var
                  for var in variables)
 
 

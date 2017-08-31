@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 
 from . import utils
-from .pycompat import iteritems, range, dask_array_type, suppress
+from .pycompat import (iteritems, range, integer_types, dask_array_type,
+                       suppress)
 from .utils import is_full_slice, is_dict_like
 
 
@@ -81,7 +82,8 @@ def orthogonal_indexer(key, shape):
     # note: we treat integers separately (instead of turning them into 1d
     # arrays) because integers (and only integers) collapse axes when used with
     # __getitem__
-    non_int_keys = [n for n, k in enumerate(key) if not isinstance(k, (int, np.integer))]
+    non_int_keys = [n for n, k in enumerate(key)
+                    if not isinstance(k, integer_types)]
 
     def full_slices_unselected(n_list):
         def all_full_slices(key_index):
@@ -316,7 +318,7 @@ def slice_slice(old_slice, applied_slice, size):
 
 
 def _index_indexer_1d(old_indexer, applied_indexer, size):
-    assert isinstance(applied_indexer, (int, np.integer, slice, np.ndarray))
+    assert isinstance(applied_indexer, integer_types + (slice, np.ndarray))
     if isinstance(applied_indexer, slice) and applied_indexer == slice(None):
         # shortcut for the usual case
         return old_indexer
@@ -352,7 +354,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         new_key = iter(canonicalize_indexer(new_key, self.ndim))
         key = []
         for size, k in zip(self.array.shape, self.key):
-            if isinstance(k, (int, np.integer)):
+            if isinstance(k, integer_types):
                 key.append(k)
             else:
                 key.append(_index_indexer_1d(k, next(new_key), size))
@@ -384,6 +386,14 @@ class LazilyIndexedArray(utils.NDArrayMixin):
                 (type(self).__name__, self.array, self.key))
 
 
+def _wrap_numpy_scalars(array):
+    """Wrap NumPy scalars in 0d arrays."""
+    if np.isscalar(array):
+        return np.array(array)
+    else:
+        return array
+
+
 class CopyOnWriteArray(utils.NDArrayMixin):
     def __init__(self, array):
         self.array = array
@@ -398,7 +408,7 @@ class CopyOnWriteArray(utils.NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
-        return type(self)(self.array[key])
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __setitem__(self, key, value):
         self._ensure_copied()
@@ -407,7 +417,7 @@ class CopyOnWriteArray(utils.NDArrayMixin):
 
 class MemoryCachedArray(utils.NDArrayMixin):
     def __init__(self, array):
-        self.array = array
+        self.array = _wrap_numpy_scalars(array)
 
     def _ensure_cached(self):
         if not isinstance(self.array, np.ndarray):
@@ -418,7 +428,7 @@ class MemoryCachedArray(utils.NDArrayMixin):
         return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
-        return type(self)(self.array[key])
+        return type(self)(_wrap_numpy_scalars(self.array[key]))
 
     def __setitem__(self, key, value):
         self.array[key] = value
@@ -449,7 +459,7 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
 
     def _convert_key(self, key):
         key = expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
+        if any(not isinstance(k, integer_types + (slice,)) for k in key):
             # key would trigger fancy indexing
             key = orthogonal_indexer(key, self.shape)
         return key
@@ -480,7 +490,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         key = expanded_indexer(key, self.ndim)
-        if any(not isinstance(k, (int, np.integer, slice)) for k in key):
+        if any(not isinstance(k, integer_types + (slice,)) for k in key):
             value = self.array
             for axis, subkey in reversed(list(enumerate(key))):
                 value = value[(slice(None),) * axis + (subkey,)]

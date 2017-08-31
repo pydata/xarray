@@ -46,9 +46,11 @@ The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
-- ``coords``: a list or dictionary of coordinates
-- ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible.
+- ``coords``: a list or dictionary of coordinates. If a list, it should be a
+  list of tuples where the first element is the dimension name and the second
+  element is the corresponding coordinate array_like object.
+- ``dims``: a list of dimension names. If omitted and ``coords`` is a list of
+  tuples, dimension names are taken from ``coords``.
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
@@ -198,6 +200,8 @@ Coordinates can also be set or removed by using the dictionary like syntax:
     foo.coords
     del foo['ranking']
     foo.coords
+
+For more details, see :ref:`coordinates` below.
 
 Dataset
 -------
@@ -472,19 +476,35 @@ objects in the ``coords`` attribute:
     ds.coords
 
 Unlike attributes, xarray *does* interpret and persist coordinates in
-operations that transform xarray objects.
+operations that transform xarray objects. There are two types of coordinates
+in xarray:
 
-One dimensional coordinates with a name equal to their sole dimension (marked
-by ``*`` when printing a dataset or data array) take on a special meaning in
-xarray. They are used for label based indexing and alignment,
-like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
-:py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
-:py:class:`pandas.Index` internally to store their values.
+- **dimension coordinates** are one dimensional coordinates with a name equal
+  to their sole dimension (marked by ``*`` when printing a dataset or data
+  array). They are used for label based indexing and alignment,
+  like the ``index`` found on a pandas :py:class:`~pandas.DataFrame` or
+  :py:class:`~pandas.Series`. Indeed, these "dimension" coordinates use a
+  :py:class:`pandas.Index` internally to store their values.
 
-Other than for indexing, xarray does not make any direct use of the values
-associated with coordinates. Coordinates with names not matching a dimension
-are not used for alignment or indexing, nor are they required to match when
-doing arithmetic (see :ref:`coordinates math`).
+- **non-dimension coordinates** are variables that contain coordinate
+  data, but are not a dimension coordinate. They can  be multidimensional
+  (see :ref:`examples.multidim`), and there is no relationship between the
+  name of a non-dimension coordinate and the name(s) of its dimension(s).
+  Non-dimension coordinates can be useful for indexing or plotting; otherwise,
+  xarray does not make any direct use of the values associated with them.
+  They are not used for alignment or automatic indexing, nor are they required
+  to match when doing arithmetic
+  (see :ref:`coordinates math`).
+
+.. note::
+
+  xarray's terminology differs from the `CF terminology`_, where the
+  "dimension coordinates" are called "coordinate variables", and the
+  "non-dimension coordinates" are called "auxiliary coordinate variables"
+  (see :issue:`1295` for more details).
+
+.. _CF terminology: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#terminology
+
 
 Modifying coordinates
 ~~~~~~~~~~~~~~~~~~~~~

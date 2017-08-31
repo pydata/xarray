@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
+from . import dtypes
 from . import formatting
+from . import ops
 from .utils import SortedKeysDict, not_implemented, Frozen
 
 
@@ -67,63 +69,6 @@ class ImplementsDatasetReduce(object):
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied."""
-
-
-class ImplementsRollingArrayReduce(object):
-    @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, **kwargs):
-            return self.reduce(func, **kwargs)
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            # bottleneck doesn't allow min_count to be 0, although it should
-            # work the same as if min_count = 1
-            if self.min_periods is not None and self.min_periods == 0:
-                min_count = self.min_periods + 1
-            else:
-                min_count = self.min_periods
-
-            values = func(self.obj.data, window=self.window,
-                          min_count=min_count, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce_without_min_count(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if self.min_periods is not None:
-                raise ValueError('Rolling.median does not accept min_periods')
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            values = func(self.obj.data, window=self.window, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
 
 
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
@@ -300,7 +245,8 @@ class BaseDataObject(AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            return pd.Index(range(self.sizes[key]), name=key)
+            # need to ensure dtype=int64 in case range is empty on Python 2
+            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
@@ -312,8 +258,10 @@ class BaseDataObject(AttrAccessMixin):
         return results
 
     def assign_coords(self, **kwargs):
-        """Assign new coordinates to this object, returning a new object
-        with all the original data in addition to the new coordinates.
+        """Assign new coordinates to this object.
+
+        Returns a new object with all the original data in addition to the new
+        coordinates.
 
         Parameters
         ----------
@@ -345,6 +293,29 @@ class BaseDataObject(AttrAccessMixin):
         results = self._calc_assign_results(kwargs)
         data.coords.update(results)
         return data
+
+    def assign_attrs(self, *args, **kwargs):
+        """Assign new attrs to this object.
+
+        Returns a new object equivalent to self.attrs.update(*args, **kwargs).
+
+        Parameters
+        ----------
+        args : positional arguments passed into ``attrs.update``.
+        kwargs : keyword arguments passed into ``attrs.update``.
+
+        Returns
+        -------
+        assigned : same type as caller
+            A new object with the new attrs in addition to the existing data.
+
+        See also
+        --------
+        Dataset.assign
+        """
+        out = self.copy(deep=False)
+        out.attrs.update(*args, **kwargs)
+        return out
 
     def pipe(self, func, *args, **kwargs):
         """
@@ -424,7 +395,7 @@ class BaseDataObject(AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        return self.groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
                      include_lowest=False, squeeze=True):
@@ -473,10 +444,10 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                                cut_kwargs={'right': right, 'labels': labels,
-                                            'precision': precision,
-                                            'include_lowest': include_lowest})
+        return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 cut_kwargs={'right': right, 'labels': labels,
+                                             'precision': precision,
+                                             'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
@@ -505,8 +476,8 @@ class BaseDataObject(AttrAccessMixin):
         rolling : type of input argument
         """
 
-        return self.rolling_cls(self, min_periods=min_periods,
-                                center=center, **windows)
+        return self._rolling_cls(self, min_periods=min_periods,
+                                 center=center, **windows)
 
     def resample(self, freq, dim, how='mean', skipna=None, closed=None,
                  label=None, base=0, keep_attrs=False):
@@ -576,7 +547,7 @@ class BaseDataObject(AttrAccessMixin):
         group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        gb = self._groupby_cls(self, group, grouper=time_grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
@@ -588,82 +559,91 @@ class BaseDataObject(AttrAccessMixin):
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
-    def where(self, cond, other=None, drop=False):
-        """Return an object of the same shape with all entries where cond is
-        True and all other entries masked.
+    def where(self, cond, other=dtypes.NA, drop=False):
+        """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
 
         Parameters
         ----------
-        cond : boolean DataArray or Dataset
-        other : unimplemented, optional
-            Unimplemented placeholder for compatibility with future
-            numpy / pandas versions
+        cond : DataArray or Dataset with boolean dtype
+            Locations at which to preserve this object's values.
+        other : scalar, DataArray or Dataset, optional
+            Value to use for locations in this object where ``cond`` is False.
+            By default, these locations filled with NA.
         drop : boolean, optional
-            Coordinate labels that only correspond to NA values should be
-            dropped
+            If True, coordinate labels that only correspond to False values of
+            the condition are dropped from the result. Mutually exclusive with
+            ``other``.
 
         Returns
         -------
-        same type as caller or if drop=True same type as caller with dimensions
-        reduced for dim element where mask is True
+        Same type as caller.
 
         Examples
         --------
 
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
-        >>> a.where((a > 6) & (a < 18))
+        >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,  nan,  nan,  nan],
-               [ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
+        array([[  0.,   1.,   2.,   3.,  nan],
+               [  5.,   6.,   7.,  nan,  nan],
+               [ 10.,  11.,  nan,  nan,  nan],
+               [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
-        Coordinates:
-          * y        (y) int64 0 1 2 3 4
-          * x        (x) int64 0 1 2 3 4
-        >>> a.where((a > 6) & (a < 18), drop=True)
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
-        Coordinates:
-          * x        (x) int64 1 2 3
-          * y        (y) int64 0 1 2 3 4
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8, -1],
+               [10, 11, 12, -1, -1],
+               [15, 16, -1, -1, -1],
+               [20, -1, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
+
+        See also
+        --------
+        numpy.where : corresponding numpy function
+        where : equivalent function
         """
-        if other is not None:
-            raise NotImplementedError("The optional argument 'other' has not "
-                                      "yet been implemented")
+        from .alignment import align
+        from .dataarray import DataArray
+        from .dataset import Dataset
 
         if drop:
-            from .dataarray import DataArray
-            from .dataset import Dataset
+            if other is not dtypes.NA:
+                raise ValueError('cannot set `other` if drop=True')
+
+            if not isinstance(cond, (Dataset, DataArray)):
+                raise TypeError("cond argument is %r but must be a %r or %r" %
+                                (cond, Dataset, DataArray))
+
+            # align so we can use integer indexing
+            self, cond = align(self, cond)
+
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
                 clipcond = cond.to_array().any('variable')
-            elif isinstance(cond, DataArray):
-                clipcond = cond
             else:
-                raise TypeError("Cond argument is %r but must be a %r or %r" %
-                                (cond, Dataset, DataArray))
+                clipcond = cond
 
             # clip the data corresponding to coordinate dims that are not used
-            clip = dict(zip(clipcond.dims, [np.unique(adim)
-                                            for adim in np.nonzero(clipcond.values)]))
-            outcond = cond.isel(**clip)
-            indexers = {dim: outcond.get_index(dim) for dim in outcond.dims}
-            outobj = self.sel(**indexers)
-        else:
-            outobj = self
-            outcond = cond
+            nonzeros = zip(clipcond.dims, np.nonzero(clipcond.values))
+            indexers = {k: np.unique(v) for k, v in nonzeros}
 
-        # preserve attributes
-        out = outobj._where(outcond)
-        out._copy_attrs_from(self)
-        return out
+            self = self.isel(**indexers)
+            cond = cond.isel(**indexers)
+
+        return ops.where_method(self, cond, other)
 
     def close(self):
         """Close any files linked to this object
@@ -683,42 +663,6 @@ class BaseDataObject(AttrAccessMixin):
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
         __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def _maybe_promote(dtype):
-    """Simpler equivalent of pandas.core.common._maybe_promote"""
-    # N.B. these casting rules should match pandas
-    if np.issubdtype(dtype, float):
-        fill_value = np.nan
-    elif np.issubdtype(dtype, int):
-        # convert to floating point so NaN is valid
-        dtype = float
-        fill_value = np.nan
-    elif np.issubdtype(dtype, complex):
-        fill_value = np.nan + np.nan * 1j
-    elif np.issubdtype(dtype, np.datetime64):
-        fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
-    else:
-        dtype = object
-        fill_value = np.nan
-    return np.dtype(dtype), fill_value
-
-
-def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
-    """
-    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
-
-
-def _get_fill_value(dtype):
-    """Return a fill value that appropriately promotes types when used with
-    np.concatenate
-    """
-    _, fill_value = _maybe_promote(dtype)
-    return fill_value
 
 
 def full_like(other, fill_value, dtype=None):

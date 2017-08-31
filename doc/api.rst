@@ -18,6 +18,7 @@ Top-level functions
    broadcast
    concat
    merge
+   where
    set_options
    full_like
    zeros_like
@@ -75,10 +76,12 @@ Dataset contents
    Dataset.copy
    Dataset.assign
    Dataset.assign_coords
+   Dataset.assign_attrs
    Dataset.pipe
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -121,6 +124,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
    Dataset.quantile
@@ -178,6 +182,7 @@ Reshaping and reorganizing
    Dataset.unstack
    Dataset.shift
    Dataset.roll
+   Dataset.sortby
 
 DataArray
 =========
@@ -217,9 +222,11 @@ DataArray contents
    :toctree: generated/
 
    DataArray.assign_coords
+   DataArray.assign_attrs
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
@@ -329,6 +336,7 @@ Reshaping and reorganizing
    DataArray.unstack
    DataArray.shift
    DataArray.roll
+   DataArray.sortby
 
 .. _api.ufuncs:
 
@@ -410,6 +418,7 @@ Dataset methods
 
    open_dataset
    open_mfdataset
+   open_rasterio
    Dataset.to_netcdf
    save_mfdataset
    Dataset.to_array
@@ -419,6 +428,7 @@ Dataset methods
    Dataset.from_dict
    Dataset.close
    Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
@@ -444,6 +454,7 @@ DataArray methods
    DataArray.from_cdms2
    DataArray.from_dict
    DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 
@@ -472,6 +483,14 @@ Testing
    testing.assert_identical
    testing.assert_allclose
 
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+
 Advanced API
 ============
 
@@ -480,6 +499,7 @@ Advanced API
 
    Variable
    IndexVariable
+   as_variable
    register_dataset_accessor
    register_dataarray_accessor
 

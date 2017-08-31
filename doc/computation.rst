@@ -25,7 +25,7 @@ numpy) over all array values:
 
 .. ipython:: python
 
-    arr = xr.DataArray(np.random.randn(2, 3),
+    arr = xr.DataArray(np.random.RandomState(0).randn(2, 3),
                        [('x', ['a', 'b']), ('y', [10, 20, 30])])
     arr - 3
     abs(arr)
@@ -38,6 +38,12 @@ __ http://docs.scipy.org/doc/numpy/reference/ufuncs.html
 .. ipython:: python
 
     np.sin(arr)
+
+Use :py:func:`~xarray.where` to conditionally switch between values:
+
+.. ipython:: python
+
+    xr.where(arr > 0, 'positive', 'negative')
 
 Data arrays also implement many :py:class:`numpy.ndarray` methods:
 
@@ -321,7 +327,7 @@ Arithmetic between two datasets matches data variables of the same name:
     ds - ds2
 
 Similarly to index based alignment, the result has the intersection of all
-matching variables, and ``ValueError`` is raised if the result would be empty.
+matching data variables.
 
 .. [1] In some future version of NumPy, we should be able to override ufuncs for
        datasets by making use of ``__numpy_ufunc__``.

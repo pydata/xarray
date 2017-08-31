@@ -222,6 +222,11 @@ class TestCopyOnWriteArray(TestCase):
         self.assertArrayEqual(wrapped, np.arange(10))
         self.assertArrayEqual(child, np.zeros(5))
 
+    def test_index_scalar(self):
+        # regression test for GH1374
+        x = indexing.CopyOnWriteArray(np.array(['foo', 'bar']))
+        assert np.array(x[0][()]) == 'foo'
+
 
 class TestMemoryCachedArray(TestCase):
     def test_wrapper(self):
@@ -244,3 +249,8 @@ class TestMemoryCachedArray(TestCase):
         wrapped = indexing.MemoryCachedArray(original)
         wrapped[:] = 0
         self.assertArrayEqual(original, np.zeros(10))
+
+    def test_index_scalar(self):
+        # regression test for GH1374
+        x = indexing.MemoryCachedArray(np.array(['foo', 'bar']))
+        assert np.array(x[0][()]) == 'foo'

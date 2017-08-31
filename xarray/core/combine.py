@@ -263,7 +263,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
             if var.dims != common_dims:
                 common_shape = tuple(non_concat_dims.get(d, dim_len)
                                      for d in common_dims)
-                var = var.expand_dims(common_dims, common_shape)
+                var = var.set_dims(common_dims, common_shape)
             yield var
 
     # stack up each variable to fill-out the dataset (in order)

@@ -23,11 +23,15 @@ import pytest
 from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
                     IndexVariable, open_dataset, set_options, MergeError)
 from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems, OrderedDict, unicode_type
+from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
+                                  integer_types)
 from xarray.core.common import full_like
 
-from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
+from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
+
+from xarray.tests import (assert_equal, assert_allclose,
+                          assert_array_equal)
 
 
 def create_test_data(seed=None):
@@ -97,7 +101,7 @@ class TestDataset(TestCase):
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
         Attributes:
-            foo: bar""") % data['dim3'].dtype
+            foo:      bar""") % data['dim3'].dtype
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -183,7 +187,7 @@ class TestDataset(TestCase):
         Data variables:
             *empty*
         Attributes:
-            å: ∑""" % u'ba®')
+            å:        ∑""" % u'ba®')
         actual = unicode_type(data)
         self.assertEqual(expected, actual)
 
@@ -270,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with self.assertWarns('deprecated'):
+        with self.assertRaisesRegexp(ValueError, 'DataArray dimensions'):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -869,8 +873,10 @@ class TestDataset(TestCase):
         data = Dataset({'x': ('td', np.arange(3)), 'td': td})
         self.assertDatasetEqual(data, data.sel(td=td))
         self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0 days'))
-        self.assertDatasetEqual(data.isel(td=0), data.sel(td='0h'))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0 days')))
+        self.assertDatasetEqual(data.isel(td=0),
+                                data.sel(td=pd.Timedelta('0h')))
         self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
@@ -912,6 +918,8 @@ class TestDataset(TestCase):
 
         actual = data.isel_points(dim1=pdim1, dim2=pdim2)
         assert 'points' in actual.dims
+        assert 'dim3' in actual.dims
+        assert 'dim3' not in actual.data_vars
         np.testing.assert_array_equal(data['dim2'][pdim2], actual['dim2'])
 
         # test that the order of the indexers doesn't matter
@@ -1239,6 +1247,17 @@ class TestDataset(TestCase):
         with self.assertRaises(TypeError):
             align(left, right, foo='bar')
 
+    def test_align_exact(self):
+        left = xr.Dataset(coords={'x': [0, 1]})
+        right = xr.Dataset(coords={'x': [1, 2]})
+
+        left1, left2 = xr.align(left, left, join='exact')
+        self.assertDatasetIdentical(left1, left)
+        self.assertDatasetIdentical(left2, left)
+
+        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+            xr.align(left, right, join='exact')
+
     def test_align_exclude(self):
         x = Dataset({'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
                                       coords={'x': [1, 2], 'y': [3, 4]})})
@@ -1275,9 +1294,11 @@ class TestDataset(TestCase):
         assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [1, 2, 3])])})
+        x = Dataset({'foo': DataArray([1, 2, 3], dims='x',
+                    coords=[('x', [1, 2, 3])])})
         x2, = align(x, indexes={'x': [2, 3, 1]})
-        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
+        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], dims='x',
+                              coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
 
     def test_align_non_unique(self):
@@ -1457,7 +1478,7 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
-        with self.assertRaisesRegexp(ValueError, "'var1' already exists"):
+        with self.assertRaisesRegexp(ValueError, "'var1' conflicts"):
             data.rename({'var2': 'var1'})
 
         # verify that we can rename a variable without accessing the data
@@ -1466,6 +1487,16 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with self.assertRaises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+    def test_rename_old_name(self):
+        # regtest for GH1477
+        data = create_test_data()
+
+        with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
+            data.rename({'var1': 'samecol', 'var2': 'samecol'})
+
+        # This shouldn't cause any problems.
+        data.rename({'var1': 'var2', 'var2': 'var1'})
 
     def test_rename_same_name(self):
         data = create_test_data()
@@ -1504,6 +1535,57 @@ class TestDataset(TestCase):
             original.swap_dims({'y': 'x'})
         with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
+
+    def test_expand_dims_error(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3)),
+                            'z': ('a', np.random.randn(3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['x'])
+
+        # Make sure it raises true error also for non-dimensional coordinates
+        # which has dimension.
+        original.set_coords('z', inplace=True)
+        with self.assertRaisesRegexp(ValueError, 'already exists'):
+            original.expand_dims(dim=['z'])
+
+    def test_expand_dims(self):
+        original = Dataset({'x': ('a', np.random.randn(3)),
+                            'y': (['b', 'a'], np.random.randn(4, 3))},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+
+        actual = original.expand_dims(['z'], [1])
+        expected = Dataset({'x': original['x'].expand_dims('z', 1),
+                            'y': original['y'].expand_dims('z', 1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
+
+        # another test with a negative axis
+        actual = original.expand_dims(['z'], [-1])
+        expected = Dataset({'x': original['x'].expand_dims('z', -1),
+                            'y': original['y'].expand_dims('z', -1)},
+                           coords={'a': np.linspace(0, 1, 3),
+                                   'b': np.linspace(0, 1, 4),
+                                   'c': np.linspace(0, 1, 5)},
+                           attrs={'key': 'entry'})
+        self.assertDatasetIdentical(expected, actual)
+        # make sure squeeze restores the original data set.
+        roundtripped = actual.squeeze('z')
+        self.assertDatasetIdentical(original, roundtripped)
 
     def test_set_index(self):
         expected = create_test_multiindex()
@@ -1848,6 +1930,18 @@ class TestDataset(TestCase):
         expected = expected.set_coords('c')
         self.assertDatasetIdentical(actual, expected)
 
+    def test_assign_attrs(self):
+        expected = Dataset(attrs=dict(a=1, b=2))
+        new = Dataset()
+        actual = new.assign_attrs(a=1, b=2)
+        self.assertDatasetIdentical(actual, expected)
+        self.assertEqual(new.attrs, {})
+
+        expected.attrs['c'] = 3
+        new_actual = actual.assign_attrs({'c': 3})
+        self.assertDatasetIdentical(new_actual, expected)
+        self.assertEqual(actual.attrs, dict(a=1, b=2))
+
     def test_assign_multiindex_level(self):
         data = create_test_multiindex()
         with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
@@ -1990,7 +2084,7 @@ class TestDataset(TestCase):
                         'letters': ('y', ['a', 'a', 'b', 'b'])})
 
         expected = data.mean('y')
-        expected['yonly'] = expected['yonly'].variable.expand_dims({'x': 3})
+        expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
         actual = data.groupby('x').mean()
         self.assertDatasetAllClose(expected, actual)
 
@@ -2000,7 +2094,7 @@ class TestDataset(TestCase):
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
                             'xonly': (data['xonly'].mean().variable
-                                      .expand_dims({'letters': 2})),
+                                      .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
         self.assertDatasetAllClose(expected, actual)
@@ -2575,16 +2669,32 @@ class TestDataset(TestCase):
         self.assertEqual(actual.a.attrs, ds.a.attrs)
 
         # attrs
-        da = DataArray(range(5), name='a', attrs={'attr':'da'})
+        da = DataArray(range(5), name='a', attrs={'attr': 'da'})
         actual = da.where(da.values > 1)
         self.assertEqual(actual.name, 'a')
         self.assertEqual(actual.attrs, da.attrs)
 
-        ds = Dataset({'a': da}, attrs={'attr':'ds'})
+        ds = Dataset({'a': da}, attrs={'attr': 'ds'})
         actual = ds.where(ds > 0)
         self.assertEqual(actual.attrs, ds.attrs)
         self.assertEqual(actual.a.name, 'a')
         self.assertEqual(actual.a.attrs, ds.a.attrs)
+
+    def test_where_other(self):
+        ds = Dataset({'a': ('x', range(5))}, {'x': range(5)})
+        expected = Dataset({'a': ('x', [-1, -1, 2, 3, 4])}, {'x': range(5)})
+        actual = ds.where(ds > 1, -1)
+        assert_equal(expected, actual)
+        assert actual.a.dtype == int
+
+        with raises_regex(ValueError, "cannot set"):
+            ds.where(ds > 1, other=0, drop=True)
+
+        with raises_regex(ValueError, "indexes .* are not equal"):
+            ds.where(ds > 1, ds.isel(x=slice(3)))
+
+        with raises_regex(ValueError, "exact match required"):
+            ds.where(ds > 1, ds.assign(b=2))
 
     def test_where_drop(self):
         # if drop=True
@@ -2641,6 +2751,21 @@ class TestDataset(TestCase):
         ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
         expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
         actual = ds.where(ds > 0, drop=True)
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_where_drop_empty(self):
+        # regression test for GH1341
+        array = DataArray(np.random.rand(100, 10),
+                          dims=['nCells', 'nVertLevels'])
+        mask = DataArray(np.zeros((100,), dtype='bool'), dims='nCells')
+        actual = array.where(mask, drop=True)
+        expected = DataArray(np.zeros((0, 10)), dims=['nCells', 'nVertLevels'])
+        self.assertDatasetIdentical(expected, actual)
+
+    def test_where_drop_no_indexes(self):
+        ds = Dataset({'foo': ('x', [0.0, 1.0])})
+        expected = Dataset({'foo': ('x', [1.0])})
+        actual = ds.where(ds == 1, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
     def test_reduce(self):
@@ -2785,7 +2910,7 @@ class TestDataset(TestCase):
     def test_reduce_only_one_axis(self):
 
         def mean_only_one_axis(x, axis):
-            if not isinstance(axis, (int, np.integer)):
+            if not isinstance(axis, integer_types):
                 raise TypeError('non-integer axis')
             return x.mean(axis)
 
@@ -2800,8 +2925,6 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
 
         ds = create_test_data(seed=123)
@@ -3231,12 +3354,101 @@ class TestDataset(TestCase):
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2],
-                        [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
+                         [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
         actual = dsx0.combine_first(dsy2)
         expected = xr.merge([dsy2, dsx0])
         self.assertDatasetEqual(actual, expected)
 
-### Py.test tests
+    def test_sortby(self):
+        ds = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6]],
+                                     [('x', ['c', 'b', 'a']),
+                                      ('y', [1, 0])]),
+                      'B': DataArray([[5, 6], [7, 8], [9, 10]],
+                                     dims=['x', 'y'])})
+
+        sorted1d = Dataset({'A': DataArray([[5, 6], [3, 4], [1, 2]],
+                                           [('x', ['a', 'b', 'c']),
+                                            ('y', [1, 0])]),
+                            'B': DataArray([[9, 10], [7, 8], [5, 6]],
+                                           dims=['x', 'y'])})
+
+        sorted2d = Dataset({'A': DataArray([[6, 5], [4, 3], [2, 1]],
+                                           [('x', ['a', 'b', 'c']),
+                                            ('y', [0, 1])]),
+                            'B': DataArray([[10, 9], [8, 7], [6, 5]],
+                                           dims=['x', 'y'])})
+
+        expected = sorted1d
+        dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
+        actual = ds.sortby(dax)
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(dax, ascending=False)
+        self.assertDatasetEqual(actual, ds)
+
+        # test alignment (fills in nan for 'c')
+        dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
+        actual = ds.sortby(dax_short)
+        self.assertDatasetEqual(actual, expected)
+
+        # test 1-D lexsort
+        # dax0 is sorted first to give indices of [1, 2, 0]
+        # and then dax1 would be used to move index 2 ahead of 1
+        dax0 = DataArray([100, 95, 95], [('x', ['c', 'b', 'a'])])
+        dax1 = DataArray([0, 1, 0], [('x', ['c', 'b', 'a'])])
+        actual = ds.sortby([dax0, dax1])  # lexsort underneath gives [2, 1, 0]
+        self.assertDatasetEqual(actual, expected)
+
+        expected = sorted2d
+        # test multi-dim sort by 1D dataarray values
+        day = DataArray([90, 80], [('y', [1, 0])])
+        actual = ds.sortby([day, dax])
+        self.assertDatasetEqual(actual, expected)
+
+        # test exception-raising
+        with pytest.raises(KeyError) as excinfo:
+            actual = ds.sortby('z')
+
+        with pytest.raises(ValueError) as excinfo:
+            actual = ds.sortby(ds['A'])
+        assert "DataArray is not 1-D" in str(excinfo.value)
+
+        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
+            pytest.skip('numpy 1.11.0 or later to support object data-type.')
+
+        expected = sorted1d
+        actual = ds.sortby('x')
+        self.assertDatasetEqual(actual, expected)
+
+        # test pandas.MultiIndex
+        indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
+        midx = pd.MultiIndex.from_tuples(indices, names=['one', 'two'])
+        ds_midx = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6], [7, 8]],
+                                          [('x', midx), ('y', [1, 0])]),
+                           'B': DataArray([[5, 6], [7, 8], [9, 10], [11, 12]],
+                                          dims=['x', 'y'])})
+        actual = ds_midx.sortby('x')
+        midx_reversed = pd.MultiIndex.from_tuples(tuple(reversed(indices)),
+                                                  names=['one', 'two'])
+        expected = Dataset({'A': DataArray([[7, 8], [5, 6], [3, 4], [1, 2]],
+                                           [('x', midx_reversed),
+                                            ('y', [1, 0])]),
+                            'B': DataArray([[11, 12], [9, 10], [7, 8], [5, 6]],
+                                           dims=['x', 'y'])})
+        self.assertDatasetEqual(actual, expected)
+
+        # multi-dim sort by coordinate objects
+        expected = sorted2d
+        actual = ds.sortby(['x', 'y'])
+        self.assertDatasetEqual(actual, expected)
+
+        # test descending order sort
+        actual = ds.sortby(['x', 'y'], ascending=False)
+        self.assertDatasetEqual(actual, ds)
+
+
+# Py.test tests
 
 
 @pytest.fixture()
@@ -3261,3 +3473,138 @@ def test_dir_unicode(data_set):
     data_set[u'unicode'] = 'uni'
     result = dir(data_set)
     assert u'unicode' in result
+
+
+@pytest.fixture(params=[1])
+def ds(request):
+    if request.param == 1:
+        return Dataset({'z1': (['y', 'x'], np.random.randn(2, 8)),
+                        'z2': (['time', 'y'], np.random.randn(10, 2))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
+
+    if request.param == 2:
+        return Dataset({'z1': (['time', 'y'], np.random.randn(10, 2)),
+                        'z2': (['time'], np.random.randn(10)),
+                        'z3': (['x', 'time'], np.random.randn(8, 10))},
+                       {'x': ('x', np.linspace(0, 1.0, 8)),
+                        'time': ('time', np.linspace(0, 1.0, 10)),
+                        'c': ('y', ['a', 'b']),
+                        'y': range(2)})
+
+
+def test_rolling_properties(ds):
+    pytest.importorskip('bottleneck', minversion='1.0')
+
+    # catching invalid args
+    with pytest.raises(ValueError) as exception:
+        ds.rolling(time=7, x=2)
+    assert 'exactly one dim/window should' in str(exception)
+    with pytest.raises(ValueError) as exception:
+        ds.rolling(time=-2)
+    assert 'window must be > 0' in str(exception)
+    with pytest.raises(ValueError) as exception:
+        ds.rolling(time=2, min_periods=0)
+    assert 'min_periods must be greater than zero' in str(exception)
+    with pytest.raises(KeyError) as exception:
+        ds.rolling(time2=2)
+    assert 'time2' in str(exception)
+
+@pytest.mark.parametrize('name',
+                         ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
+@pytest.mark.parametrize('center', (True, False, None))
+@pytest.mark.parametrize('min_periods', (1, None))
+@pytest.mark.parametrize('key', ('z1', 'z2'))
+def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
+    pytest.importorskip('bottleneck')
+    import bottleneck as bn
+
+    # skip if median and min_periods
+    if (min_periods == 1) and (name == 'median'):
+        pytest.skip()
+
+    # Test all bottleneck functions
+    rolling_obj = ds.rolling(time=7, min_periods=min_periods)
+
+    func_name = 'move_{0}'.format(name)
+    actual = getattr(rolling_obj, name)()
+    if key is 'z1':  # z1 does not depend on 'Time' axis. Stored as it is.
+        expected = ds[key]
+    elif key is 'z2':
+        expected = getattr(bn, func_name)(ds[key].values, window=7, axis=0,
+                                          min_count=min_periods)
+    assert_array_equal(actual[key].values, expected)
+
+    # Test center
+    rolling_obj = ds.rolling(time=7, center=center)
+    actual = getattr(rolling_obj, name)()['time']
+    assert_equal(actual, ds['time'])
+
+
+def test_rolling_invalid_args(ds):
+    pytest.importorskip('bottleneck', minversion="1.0")
+    import bottleneck as bn
+    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
+        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
+    with pytest.raises(ValueError) as exception:
+        da.rolling(time=7, min_periods=1).median()
+    assert 'Rolling.median does not' in str(exception)
+
+
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+def test_rolling_pandas_compat(center, window, min_periods):
+    df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
+                       'time': np.linspace(0, 1, 20)})
+    ds = Dataset.from_dataframe(df)
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    df_rolling = df.rolling(window, center=center,
+                            min_periods=min_periods).mean()
+    ds_rolling = ds.rolling(index=window, center=center,
+                            min_periods=min_periods).mean()
+    # pandas does some fancy stuff in the last position,
+    # we're not going to do that yet!
+    np.testing.assert_allclose(df_rolling['x'].values[:-1],
+                               ds_rolling['x'].values[:-1])
+    np.testing.assert_allclose(df_rolling.index,
+                               ds_rolling['index'])
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('ds', (1, 2), indirect=True)
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+@pytest.mark.parametrize('name',
+                         ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
+def test_rolling_reduce(ds, center, min_periods, window, name):
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    # std with window == 1 seems unstable in bottleneck
+    if name == 'std' and window == 1:
+        window = 2
+    if name == 'median':
+        min_periods = None
+
+    rolling_obj = ds.rolling(time=window, center=center,
+                             min_periods=min_periods)
+
+    # add nan prefix to numpy methods to get similar behavior as bottleneck
+    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
+    expected = getattr(rolling_obj, name)()
+    assert_allclose(actual, expected)
+    assert ds.dims == actual.dims
+    # make sure the order of data_var are not changed.
+    assert list(ds.data_vars.keys()) == list(actual.data_vars.keys())
+
+    # Make sure the dimension order is restored
+    for key, src_var in ds.data_vars.items():
+        assert src_var.dims == actual[key].dims

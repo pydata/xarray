@@ -9,11 +9,13 @@ import pandas as pd
 
 from ..plot.plot import _PlotMethods
 
+from . import duck_array_ops
 from . import indexing
 from . import groupby
 from . import rolling
 from . import ops
 from . import utils
+from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
@@ -45,15 +47,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                warnings.warn('inferring DataArray dimensions from dictionary '
-                              'like ``coords`` has been deprecated. Use an '
-                              'explicit list of ``dims`` instead.',
-                              FutureWarning, stacklevel=3)
-                dims = list(coords.keys())
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+                # deprecated in GH993, removed in GH1539
+                raise ValueError('inferring DataArray dimensions from '
+                                 'dictionary like ``coords`` has been '
+                                 'deprecated. Use an explicit list of '
+                                 '``dims`` instead.')
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:
@@ -155,8 +157,9 @@ class DataArray(AbstractArray, BaseDataObject):
     attrs : OrderedDict
         Dictionary for holding arbitrary metadata.
     """
-    groupby_cls = groupby.DataArrayGroupBy
-    rolling_cls = rolling.DataArrayRolling
+    _groupby_cls = groupby.DataArrayGroupBy
+    _rolling_cls = rolling.DataArrayRolling
+    dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
                  attrs=None, encoding=None, fastpath=False):
@@ -172,9 +175,11 @@ class DataArray(AbstractArray, BaseDataObject):
         coords : sequence or dict of array_like objects, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             If dict-like, should be a mapping from dimension names to the
-            corresponding coordinates.
+            corresponding coordinates. If sequence-like, should be a sequence
+            of tuples where the first element is the dimension name and the
+            second element is the corresponding coordinate array_like object.
         dims : str or sequence of str, optional
-            Name(s) of the the data dimension(s). Must be either a string (only
+            Name(s) of the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords`` (if possible) and otherwise default to
@@ -588,6 +593,16 @@ class DataArray(AbstractArray, BaseDataObject):
         new = self.copy(deep=False)
         return new.load()
 
+    def persist(self):
+        """ Trigger computation in constituent dask arrays
+
+        This keeps them as dask arrays but encourages them to keep data in
+        memory.  This is particularly useful when on a distributed machine.
+        When on a single machine consider using ``.compute()`` instead.
+        """
+        ds = self._to_temp_dataset().persist()
+        return self._from_temp_dataset(ds)
+
     def copy(self, deep=True):
         """Returns a copy of this array.
 
@@ -618,7 +633,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         return self.variable.chunks
 
-    def chunk(self, chunks=None):
+    def chunk(self, chunks=None, name_prefix='xarray-', token=None,
+              lock=False):
         """Coerce this array's data into a dask arrays with the given chunks.
 
         If this variable is a non-dask array, it will be converted to dask
@@ -634,6 +650,13 @@ class DataArray(AbstractArray, BaseDataObject):
         chunks : int, tuple or dict, optional
             Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
             ``{'x': 5, 'y': 5}``.
+        name_prefix : str, optional
+            Prefix for the name of the new dask array.
+        token : str, optional
+            Token uniquely identifying this array.
+        lock : optional
+            Passed on to :py:func:`dask.array.from_array`, if the array is not
+            already as dask array.
 
         Returns
         -------
@@ -642,7 +665,8 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(chunks, (list, tuple)):
             chunks = dict(zip(self.dims, chunks))
 
-        ds = self._to_temp_dataset().chunk(chunks)
+        ds = self._to_temp_dataset().chunk(chunks, name_prefix=name_prefix,
+                                           token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
     def isel(self, drop=False, **indexers):
@@ -838,6 +862,33 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.swap_dims
         """
         ds = self._to_temp_dataset().swap_dims(dims_dict)
+        return self._from_temp_dataset(ds)
+
+    def expand_dims(self, dim, axis=None):
+        """Return a new object with an additional axis (or axes) inserted at the
+        corresponding position in the array shape.
+
+        If dim is already a scalar coordinate, it will be promoted to a 1D
+        coordinate consisting of a single value.
+
+        Parameters
+        ----------
+        dim : str or sequence of str.
+            Dimensions to include on the new variable.
+            dimensions are inserted with length 1.
+        axis : integer, list (or tuple) of integers, or None
+            Axis position(s) where new axis is to be inserted (position(s) on
+            the result array). If a list (or tuple) of integers is passed,
+            multiple axes are inserted. In this case, dim arguments should be
+            same length list. If axis=None is passed, all the axes will be
+            inserted to the start of the result array.
+
+        Returns
+        -------
+        expanded : same type as caller
+            This object, but with an additional dimension(s).
+        """
+        ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
     def set_index(self, append=False, inplace=False, **indexes):
@@ -1742,7 +1793,7 @@ class DataArray(AbstractArray, BaseDataObject):
         self, other = align(self, other, join='inner', copy=False)
 
         axes = (self.get_axis_num(dims), other.get_axis_num(dims))
-        new_data = ops.tensordot(self.data, other.data, axes=axes)
+        new_data = duck_array_ops.tensordot(self.data, other.data, axes=axes)
 
         new_coords = self.coords.merge(other.coords)
         new_coords = new_coords.drop([d for d in dims if d in new_coords])
@@ -1750,6 +1801,41 @@ class DataArray(AbstractArray, BaseDataObject):
                     [d for d in other.dims if d not in dims])
 
         return type(self)(new_data, new_coords, new_dims)
+
+    def sortby(self, variables, ascending=True):
+        """
+        Sort object by labels or values (along an axis).
+
+        Sorts the dataarray, either along specified dimensions,
+        or according to values of 1-D dataarrays that share dimension
+        with calling object.
+
+        If the input variables are dataarrays, then the dataarrays are aligned
+        (via left-join) to the calling object prior to sorting by cell values.
+        NaNs are sorted to the end, following Numpy convention.
+
+        If multiple sorts along the same dimension is
+        given, numpy's lexsort is performed along that dimension:
+        https://docs.scipy.org/doc/numpy/reference/generated/numpy.lexsort.html
+        and the FIRST key in the sequence is used as the primary sort key,
+        followed by the 2nd key, etc.
+
+        Parameters
+        ----------
+        variables: str, DataArray, or list of either
+            1D DataArray objects or name(s) of 1D variable(s) in
+            coords whose values are used to sort this array.
+        ascending: boolean, optional
+            Whether to sort by ascending or descending order.
+
+        Returns
+        -------
+        sorted: DataArray
+            A new dataarray where all the specified dims are sorted by dim
+            labels.
+        """
+        ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
+        return self._from_temp_dataset(ds)
 
     def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
         """Compute the qth quantile of the data along the specified dimension.

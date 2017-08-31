@@ -5,13 +5,16 @@ channels:
 dependencies:
   - python=3.5
   - numpy=1.11.2
-  - pandas=0.19.1
+  - pandas=0.20.1
   - numpydoc=0.6.0
   - matplotlib=2.0.0
   - seaborn=0.7.1
   - dask=0.12.0
   - ipython=5.1.0
   - sphinx=1.5
-  - netCDF4=1.2.5
+  - netCDF4=1.2.9
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
-  - cartopy=0.14.3
+  - cartopy=0.15.1
+  - rasterio=0.36.0
+  - pip:
+    - sphinx-gallery

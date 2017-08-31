@@ -4,9 +4,11 @@ from __future__ import print_function
 import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+import re
 
 import numpy as np
 from numpy.testing import assert_array_equal
+from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
 from xarray.core import utils
@@ -75,42 +77,52 @@ try:
 except ImportError:
     has_bottleneck = False
 
+try:
+    import rasterio
+    has_rasterio = True
+except ImportError:
+    has_rasterio = False
+
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
-requires_matplotlib = pytest.mark.skipif(not has_matplotlib, reason='requires matplotlib')
+requires_matplotlib = pytest.mark.skipif(
+    not has_matplotlib, reason='requires matplotlib')
+requires_scipy = pytest.mark.skipif(
+    not has_scipy, reason='requires scipy')
+requires_pydap = pytest.mark.skipif(
+    not has_pydap, reason='requires pydap')
+requires_netCDF4 = pytest.mark.skipif(
+    not has_netCDF4, reason='requires netCDF4')
+requires_h5netcdf = pytest.mark.skipif(
+    not has_h5netcdf, reason='requires h5netcdf')
+requires_pynio = pytest.mark.skipif(
+    not has_pynio, reason='requires pynio')
+requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy and not has_netCDF4, reason='requires scipy or netCDF4')
+requires_dask = pytest.mark.skipif(
+    not has_dask, reason='requires dask')
+requires_bottleneck = pytest.mark.skipif(
+    not has_bottleneck, reason='requires bottleneck')
+requires_rasterio = pytest.mark.skipif(
+    not has_rasterio, reason='requires rasterio')
 
 
-def requires_scipy(test):
-    return test if has_scipy else pytest.mark.skip('requires scipy')(test)
+try:
+    _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
+    _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
+except ValueError:
+    # Can't get config from pytest, e.g., because xarray is installed instead
+    # of being run from a development version (and hence conftests.py is not
+    # available). Don't run flaky tests.
+    _SKIP_FLAKY = True
+    _SKIP_NETWORK_TESTS = True
 
-
-def requires_pydap(test):
-    return test if has_pydap else pytest.mark.skip('requires pydap.client')(test)
-
-
-def requires_netCDF4(test):
-    return test if has_netCDF4 else pytest.mark.skip('requires netCDF4')(test)
-
-
-def requires_h5netcdf(test):
-    return test if has_h5netcdf else pytest.mark.skip('requires h5netcdf')(test)
-
-
-def requires_pynio(test):
-    return test if has_pynio else pytest.mark.skip('requires pynio')(test)
-
-
-def requires_scipy_or_netCDF4(test):
-    return (test if has_scipy or has_netCDF4
-            else pytest.mark.skip('requires scipy or netCDF4')(test))
-
-
-def requires_dask(test):
-    return test if has_dask else pytest.mark.skip('requires dask')(test)
-
-
-def requires_bottleneck(test):
-    return test if has_bottleneck else pytest.mark.skip('requires bottleneck')(test)
+flaky = pytest.mark.skipif(
+    _SKIP_FLAKY, reason="set --run-flaky option to run flaky tests")
+network = pytest.mark.skipif(
+    _SKIP_NETWORK_TESTS,
+    reason="set --run-network-tests option to run tests requiring an "
+    "internet connection")
 
 
 class TestCase(unittest.TestCase):
@@ -125,8 +137,8 @@ class TestCase(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
-            assert len(w) > 0
-            assert any(message in str(wi.message) for wi in w)
+        assert len(w) > 0
+        assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
         assert_equal(v1, v2)
@@ -145,6 +157,9 @@ class TestCase(unittest.TestCase):
 
     def assertEqual(self, a1, a2):
         assert a1 == a2 or (a1 != a1 and a2 != a2)
+
+    def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
+        assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
     def assertDatasetEqual(self, d1, d2):
         assert_equal(d1, d2)
@@ -168,11 +183,22 @@ class TestCase(unittest.TestCase):
         assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
 
 
+@contextmanager
+def raises_regex(error, pattern):
+    with pytest.raises(error) as excinfo:
+        yield
+    message = str(excinfo.value)
+    if not re.match(pattern, message):
+        raise AssertionError('exception %r did not match pattern %s'
+                             % (excinfo.value, pattern))
+
+
 class UnexpectedDataAccess(Exception):
     pass
 
 
 class InaccessibleArray(utils.NDArrayMixin):
+
     def __init__(self, array):
         self.array = array
 
@@ -181,6 +207,7 @@ class InaccessibleArray(utils.NDArrayMixin):
 
 
 class ReturnItem(object):
+
     def __getitem__(self, key):
         return key
 

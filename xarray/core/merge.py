@@ -72,7 +72,7 @@ def unique_variable(name, variables, compat='broadcast_equals'):
 
         if compat == 'broadcast_equals':
             dim_lengths = broadcast_dimension_size(variables)
-            out = out.expand_dims(dim_lengths)
+            out = out.set_dims(dim_lengths)
 
         if compat == 'no_conflicts':
             combine_method = 'fillna'
@@ -457,7 +457,7 @@ def merge(objects, compat='no_conflicts', join='outer'):
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         How to combine objects with different indexes.
 
     Returns

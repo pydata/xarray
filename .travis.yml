@@ -21,7 +21,9 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36
   - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - python: 3.6
     env: CONDA_ENV=py36-netcdf4-dev
     addons:
@@ -33,11 +35,15 @@ matrix:
     env: CONDA_ENV=py36-dask-dev
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
   allow_failures:
   - python: 3.6
-    env: CONDA_ENV=py36-pydap
+    env:
+    - CONDA_ENV=py36
+    - EXTRA_FLAGS="--run-flaky --run-network-tests"
   - python: 3.6
     env: CONDA_ENV=py36-netcdf4-dev
     addons:
@@ -49,6 +55,8 @@ matrix:
     env: CONDA_ENV=py36-dask-dev
   - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
 
@@ -68,15 +76,10 @@ before_install:
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
-  # scipy should not have been installed, but it's included in older versions of
-  # the conda pandas package
-  - if [[ "$CONDA_ENV" == "py27-min" ]]; then
-      conda remove scipy;
-    fi
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing --verbose
+  - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS
 
 after_success:
   - coveralls

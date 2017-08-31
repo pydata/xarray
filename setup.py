@@ -9,7 +9,7 @@ from setuptools import Command
 
 MAJOR = 0
 MINOR = 9
-MICRO = 1
+MICRO = 6
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -35,7 +35,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
+INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
@@ -64,7 +64,8 @@ Important links
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """
 
-# code to extract and write the version copied from pandas
+# Code to extract and write the version copied from pandas.
+# Used under the terms of pandas's license, see licenses/PANDAS_LICENSE.
 FULLVERSION = VERSION
 write_version = True
 

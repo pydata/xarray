@@ -6,6 +6,7 @@ import numpy as np
 from .. import Variable
 from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
 from ..core import indexing
+from ..core.pycompat import integer_types
 
 from .common import AbstractDataStore, robust_getitem
 
@@ -29,7 +30,7 @@ class PydapArrayWrapper(NDArrayMixin):
         if not isinstance(key, tuple):
             key = (key,)
         for k in key:
-            if not (isinstance(k, (int, np.integer, slice)) or k is Ellipsis):
+            if not (isinstance(k, integer_types + (slice,)) or k is Ellipsis):
                 raise IndexError('pydap only supports indexing with int, '
                                  'slice and Ellipsis objects')
         # pull the data from the array attribute if possible, to avoid
@@ -38,7 +39,7 @@ class PydapArrayWrapper(NDArrayMixin):
         result = robust_getitem(array, key, catch=ValueError)
         # pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key)
-                     if isinstance(k, (int, np.integer)))
+                     if isinstance(k, integer_types))
         result = np.squeeze(result, axis)
         return result
 
@@ -68,8 +69,8 @@ class PydapDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        return FrozenOrderedDict((k, self.open_store_variable(v))
-                                 for k, v in self.ds.iteritems())
+        return FrozenOrderedDict((k, self.open_store_variable(self.ds[k]))
+                                 for k in self.ds.keys())
 
     def get_attrs(self):
         return Frozen(_fix_global_attributes(self.ds.attributes))
