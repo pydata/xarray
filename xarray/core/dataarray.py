@@ -47,15 +47,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                warnings.warn('inferring DataArray dimensions from dictionary '
-                              'like ``coords`` has been deprecated. Use an '
-                              'explicit list of ``dims`` instead.',
-                              FutureWarning, stacklevel=3)
-                dims = list(coords.keys())
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+                # deprecated in GH993, removed in GH1539
+                raise ValueError('inferring DataArray dimensions from '
+                                 'dictionary like ``coords`` has been '
+                                 'deprecated. Use an explicit list of '
+                                 '``dims`` instead.')
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:
