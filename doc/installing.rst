@@ -7,8 +7,8 @@ Required dependencies
 ---------------------
 
 - Python 2.7, 3.4, 3.5, or 3.6
-- `numpy <http://www.numpy.org/>`__ (1.7 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
+- `numpy <http://www.numpy.org/>`__ (1.11 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.18.0 or later)
 
 Optional dependencies
 ---------------------

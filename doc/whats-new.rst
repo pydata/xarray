@@ -18,6 +18,13 @@ What's New
 v0.9.7 (unreleased)
 -------------------
 
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 Enhancements
 ~~~~~~~~~~~~
 
