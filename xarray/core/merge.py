@@ -366,8 +366,11 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
 
 
 def assert_valid_explicit_coords(variables, explicit_coords):
-    '''raise a MergeError if an explicit coord shares a name with a dimension
-    but is comprised of arbitrary dimensions'''
+    """Validate explicit coordinate names/dims.
+
+    Raise a MergeError if an explicit coord shares a name with a dimension
+    but is comprised of arbitrary dimensions.
+    """
     var_dims = []
     for name, var in variables.items():
         if name not in explicit_coords:
