@@ -11,11 +11,12 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest
+from xarray.tests import unittest, assert_equal
 
 with suppress(ImportError):
     import dask
     import dask.array as da
+    import dask.multiprocessing
 
 
 class DaskTestCase(TestCase):
@@ -181,6 +182,26 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+
+    def test_compute_args(self):
+        a = DataArray([1, 2]).chunk()
+        expected = DataArray([1, 4])
+        b = a * a
+        # compute
+        b1 = b.compute(get=dask.multiprocessing.get)
+        assert b1._in_memory
+        assert_equal(b1, expected)
+        b2 = b.compute(get=dask.multiprocessing.get, num_workers=4)
+        assert b2._in_memory
+        assert_equal(b2, expected)
+        # load
+        b3 = b.load(get=dask.multiprocessing.get, num_workers=4)
+        assert b3._in_memory
+        assert_equal(b3, expected)
+        # persist
+        b4 = b.persist(get=dask.multiprocessing.get, num_workers=4)
+        assert b4._in_memory
+        assert_equal(b4, expected)
 
 
 @requires_dask
@@ -393,6 +414,32 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
 
+    def test_compute_args(self):
+        a = DataArray([1, 2], name='a').chunk()
+        expected = DataArray([1, 4], name='expected')
+        b = a * a
+        # compute
+        b1 = b.compute(get=dask.multiprocessing.get)
+        assert b1._in_memory
+        assert_equal(b1, expected)
+        b2 = b.compute(get=dask.multiprocessing.get, num_workers=4)
+        assert b2._in_memory
+        assert_equal(b2, expected)
+        # load
+        b3 = b.load(get=dask.multiprocessing.get, num_workers=4)
+        assert b3._in_memory
+        assert_equal(b3, expected)
+        # persist
+        b4 = b.persist(get=dask.multiprocessing.get, num_workers=4)
+        assert b4._in_memory
+        assert_equal(b4, expected)
+
+        # dataset
+        ds = a.to_dataset()
+        ds.compute(get=dask.multiprocessing.get, num_workers=4)
+        ds.load(get=dask.multiprocessing.get, num_workers=4)
+        ds.persist(get=dask.multiprocessing.get, num_workers=4)
+
 
 kernel_call_count = 0
 def kernel():
@@ -402,6 +449,7 @@ def kernel():
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1)
+
 
 def build_dask_array():
     global kernel_call_count
