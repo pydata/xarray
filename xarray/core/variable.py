@@ -500,7 +500,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 if variable.dtype.kind == 'b':  # boolean indexing case
                     if variable.ndim > 1:
                         raise IndexError("{}-dimensional boolean indexing is "
-                                         "not supported. ".format(variable.ndim))
+                                         "not supported. ".format(
+                                                                variable.ndim))
                     (variable,) = variable._nonzero()
 
                 variables.append(variable)
@@ -516,9 +517,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 if dim in variable_dims:
                     # We only convert slice objects to variables if they share
                     # a dimension with at least one other variable. Otherwise,
-                    # we can equivalently leave them as slices and transpose the
-                    # result. This is significantly faster/more efficient for
-                    # most array backends.
+                    # we can equivalently leave them as slices aknd transpose
+                    # the result. This is significantly faster/more efficient
+                    # for most array backends.
                     values = np.arange(*value.indices(self.sizes[dim]))
                     variables.insert(i - len(slices), Variable((dim,), values))
                 else:
@@ -585,7 +586,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
 
-            value = value[(len(dims) - value.ndim) * (np.newaxis,) + (Ellipsis,)]
+            value = value[(len(dims) - value.ndim) * (np.newaxis,) +
+                          (Ellipsis,)]
             value = moveaxis(value, new_order, range(len(new_order)))
 
         self._indexable_data[index_tuple] = value
@@ -929,8 +931,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         missing_dims = set(self.dims) - set(dims)
         if missing_dims:
-            raise ValueError('new dimensions %r must be a superset of existing '
-                             'dimensions %r' % (dims, self.dims))
+            raise ValueError('new dimensions %r must be a superset of '
+                             'existing dimensions %r' % (dims, self.dims))
 
         self_dims = set(self.dims)
         expanded_dims = tuple(

@@ -392,7 +392,6 @@ except ImportError:  # pragma: no cover
         a, mask = _replace_nan(a, 1)
         return np.cumprod(a, axis=axis, dtype=dtype, out=out)
 
-
     def normalize_axis_tuple(axis, ndim, argname=None, allow_duplicate=False):
         """
         Normalizes an axis argument into a tuple of non-negative integer axes.
@@ -412,8 +411,8 @@ except ImportError:  # pragma: no cover
         axis : int, iterable of int
             The un-normalized index or indices of the axis.
         ndim : int
-            The number of dimensions of the array that `axis` should be normalized
-            against.
+            The number of dimensions of the array that `axis` should be
+            normalized against.
         argname : str, optional
             A prefix to put before the error message, typically the name of the
             argument.
@@ -443,11 +442,11 @@ except ImportError:  # pragma: no cover
         axis = tuple(normalize_axis_index(ax, ndim, argname) for ax in axis)
         if not allow_duplicate and len(set(axis)) != len(axis):
             if argname:
-                raise ValueError('repeated axis in `{}` argument'.format(argname))
+                raise ValueError('repeated axis in `{}` argument'.format(
+                                                                    argname))
             else:
                 raise ValueError('repeated axis')
         return axis
-
 
     def moveaxis(a, source, destination):
         """
@@ -464,8 +463,8 @@ except ImportError:  # pragma: no cover
         source : int or sequence of int
             Original positions of the axes to move. These must be unique.
         destination : int or sequence of int
-            Destination positions for each of the original axes. These must also be
-            unique.
+            Destination positions for each of the original axes. These must
+            also be unique.
 
         Returns
         -------

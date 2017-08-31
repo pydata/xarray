@@ -1113,6 +1113,115 @@ class TestDataset(TestCase):
         self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
                                   ind['new_dim'])
 
+    def test_sel_equivalent_to_reindex_like(self):
+        data = create_test_data()
+        data['letters'] = ('dim3', 10 * ['a'])
+
+        expected = data.isel(dim1=slice(10), time=slice(13))
+        actual = data.reindex_like(expected)
+        self.assertDatasetIdentical(actual, expected)
+        actual_sel = data.sel(dim1=expected['dim1'], time=expected['time'])
+        self.assertDatasetIdentical(actual, actual_sel)
+
+        expected = data.copy(deep=True)
+        expected['dim3'] = ('dim3', list('cdefghijkl'))
+        expected['var3'][:-2] = expected['var3'][2:]
+        expected['var3'][-2:] = np.nan
+        expected['letters'] = expected['letters'].astype(object)
+        expected['letters'][-2:] = np.nan
+        expected['numbers'] = expected['numbers'].astype(float)
+        expected['numbers'][:-2] = expected['numbers'][2:].values
+        expected['numbers'][-2:] = np.nan
+        actual = data.reindex_like(expected)
+        self.assertDatasetIdentical(actual, expected)
+        actual_sel = data.sel(**{d: expected[d] for d in expected.dims})
+        self.assertDatasetIdentical(actual, actual_sel)
+
+    def _test_sel_equivalent_to_reindex(self):
+        data = create_test_data()
+        self.assertDatasetIdentical(data, data.reindex())
+
+        expected = data.assign_coords(dim1=data['dim1'])
+        actual = data.reindex(dim1=data['dim1'])
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reindex(dim1=data['dim1'].values)
+        self.assertDatasetIdentical(actual, expected)
+
+        actual = data.reindex(dim1=data['dim1'].to_index())
+        self.assertDatasetIdentical(actual, expected)
+
+        with self.assertRaisesRegexp(
+                ValueError, 'cannot reindex or align along dimension'):
+            data.reindex(dim1=data['dim1'][:5])
+
+        expected = data.isel(dim2=slice(5))
+        actual = data.reindex(dim2=data['dim2'][:5])
+        self.assertDatasetIdentical(actual, expected)
+
+        # test dict-like argument
+        actual = data.reindex({'dim2': data['dim2']})
+        expected = data
+        self.assertDatasetIdentical(actual, expected)
+        with self.assertRaisesRegexp(ValueError, 'cannot specify both'):
+            data.reindex({'x': 0}, x=0)
+        with self.assertRaisesRegexp(ValueError, 'dictionary'):
+            data.reindex('foo')
+
+        # invalid dimension
+        with self.assertRaisesRegexp(ValueError, 'invalid reindex dim'):
+            data.reindex(invalid=0)
+
+        # out of order
+        expected = data.sel(dim2=data['dim2'][:5:-1])
+        actual = data.reindex(dim2=data['dim2'][:5:-1])
+        self.assertDatasetIdentical(actual, expected)
+
+        # regression test for #279
+        expected = Dataset({'x': ('time', np.random.randn(5))},
+                           {'time': range(5)})
+        time2 = DataArray(np.arange(5), dims="time2")
+        actual = expected.reindex(time=time2)
+        self.assertDatasetIdentical(actual, expected)
+
+        # another regression test
+        ds = Dataset({'foo': (['x', 'y'], np.zeros((3, 4)))},
+                     {'x': range(3), 'y': range(4)})
+        expected = Dataset({'foo': (['x', 'y'], np.zeros((3, 2)))},
+                           {'x': [0, 1, 3], 'y': [0, 1]})
+        expected['foo'][-1] = np.nan
+        actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
+        self.assertDatasetIdentical(expected, actual)
+
+    def _test_sel_equivalent_to_reindex_variables_copied(self):
+        data = create_test_data()
+        reindexed_data = data.reindex(copy=False)
+        for k in data.variables:
+            assert reindexed_data.variables[k] is not data.variables[k]
+
+    def _test_sel_equivalent_to_reindex_method(self):
+        ds = Dataset({'x': ('y', [10, 20]), 'y': [0, 1]})
+        y = [-0.5, 0.5, 1.5]
+        actual = ds.reindex(y=y, method='backfill')
+        expected = Dataset({'x': ('y', [10, 20, np.nan]), 'y': y})
+        self.assertDatasetIdentical(expected, actual)
+
+        if pd.__version__ >= '0.17':
+            actual = ds.reindex(y=y, method='backfill', tolerance=0.1)
+            expected = Dataset({'x': ('y', 3 * [np.nan]), 'y': y})
+            self.assertDatasetIdentical(expected, actual)
+        else:
+            with self.assertRaisesRegexp(TypeError, 'tolerance'):
+                ds.reindex(y=y, method='backfill', tolerance=0.1)
+
+        actual = ds.reindex(y=y, method='pad')
+        expected = Dataset({'x': ('y', [np.nan, 10, 20]), 'y': y})
+        self.assertDatasetIdentical(expected, actual)
+
+        alt = Dataset({'y': y})
+        actual = ds.reindex_like(alt, method='pad')
+        self.assertDatasetIdentical(expected, actual)
+
     def test_sel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         expected = Dataset({'foo': 1})
@@ -1290,9 +1399,6 @@ class TestDataset(TestCase):
                                           c=idx_3['c'])
         self.assertDatasetIdentical(expected, actual)
 
-        # Multi Dimensional indexers
-        #data.sel(x=[])
-
         # test from sel_points
         data = Dataset({'foo': (('x', 'y'), np.arange(9).reshape(3, 3))})
         data.coords.update({'x': [0, 1, 2], 'y': [0, 1, 2]})
@@ -1307,7 +1413,8 @@ class TestDataset(TestCase):
         expected.coords.update({'x': ('points', [0, 1, 2]),
                                 'y': ('points', [0, 1, 2])})
         actual = data.sel(x=Variable(('points', ), [0.1, 1.1, 2.5]),
-                          y=Variable(('points', ), [0, 1.2, 2.0]), method='pad')
+                          y=Variable(('points', ), [0, 1.2, 2.0]),
+                          method='pad')
         self.assertDatasetIdentical(expected, actual)
 
         idx_x = DataArray([0, 1, 2], dims=['a'], coords={'a': ['a', 'b', 'c']})

@@ -240,7 +240,8 @@ class VariableSubclassTestCases(object):
         self.assertEqual(v[0].values, v.values[0])
 
     def test_pandas_period_index(self):
-        v = self.cls(['x'], pd.period_range(start='2000', periods=20, freq='B'))
+        v = self.cls(['x'], pd.period_range(start='2000', periods=20,
+                                            freq='B'))
         v = v.load()  # for dask-based Variable
         self.assertEqual(v[0], pd.Period('2000', freq='B'))
         assert "Period('2000-01-03', 'B')" in repr(v)
@@ -643,7 +644,8 @@ class VariableSubclassTestCases(object):
         v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
         ind = Variable(['x'], [0, 1])
         with self.assertRaisesRegexp(IndexError, 'Dimensions of indexers mis'):
-            v_new = v[:, ind]
+            v[:, ind]
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -1394,12 +1396,6 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
             pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
 
-    def test_getitem_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
-        super(TestVariableWithDask, self).test_getitem_fancy()
-
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
@@ -1566,10 +1562,9 @@ class TestAsCompatibleData(TestCase):
         self.assertEquals(expect.dtype, bool)
         self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
 
-
     @requires_dask
     def test_full_like_dask(self):
-        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'}).chunk(((1, 1), (2,)))
 
         def check(actual, expect_dtype, expect_values):

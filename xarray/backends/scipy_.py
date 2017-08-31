@@ -11,7 +11,7 @@ from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
 from ..core.utils import (Frozen, FrozenOrderedDict, NdimSizeLenMixin,
                           DunderArrayMixin)
-from ..core.indexing import NumpyIndexingAdapter, OuterIndexer, to_tuple
+from ..core.indexing import NumpyIndexingAdapter
 
 from .common import WritableCFDataStore, DataStorePickleMixin
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
