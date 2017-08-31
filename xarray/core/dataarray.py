@@ -52,11 +52,10 @@ def _infer_coords_and_dims(shape, coords, dims):
                                  'dictionary like ``coords`` has been '
                                  'deprecated. Use an explicit list of '
                                  '``dims`` instead.')
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord,
-                                        name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:

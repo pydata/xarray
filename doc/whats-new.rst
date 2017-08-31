@@ -22,7 +22,8 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
-  also supplying an explicit ``dims`` argument is no longer supported. (:issue:`727`).
+  also supplying an explicit ``dims`` argument is no longer supported. This
+  behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
