@@ -11,16 +11,19 @@ Indexing and selecting data
     import xarray as xr
     np.random.seed(123456)
 
-The basic way to access each element of xarray's multi-dimensional
-object is to use Python `[obj]` syntax, such as `array[i, j]`.
-As xarray objects can store coordinates corresponding to each dimension of the
-array, label-based indexing similar to pandas object is also possible.
-In label-based indexing, the element position i is automatically looked-up from
-the coordinate values.
 
-Furthermore, the dimensions of xarray object have names and
-you can also lookup the dimensions ordering by name,
-instead of remembering the positional ordering of dimensions by yourself.
+The point of xarray is to introduce a numpy-ndarray-like multidimensional array object into a powerful pandas's flexible data handling scheme.
+We provide several (say, numpy-like, pandas-like, and more advanced type) indexing functionalities.
+
+The most basic way to access each element of xarray's multi-dimensional
+object is to use Python ``[obj]`` syntax, such as ``array[i, j]``, where ``i`` and ``j`` are both integers.
+As xarray objects can store coordinates corresponding to each dimension of the
+array, label-based indexing similar to ``pandas.DataFrame.loc`` is also possible.
+In label-based indexing, the element position ``i`` is automatically
+looked-up from the coordinate values.
+
+Dimensions of xarray object have names and you can also lookup the dimensions
+by name, instead of remembering the positional ordering of dimensions by yourself.
 
 Thus in total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
@@ -42,6 +45,13 @@ below and summarized in this table:
 | By name          | By label     | ``arr.sel(space='IA')`` or |br| | ``ds.sel(space='IA')`` or |br| |
 |                  |              | ``arr.loc[dict(space='IA')]``   | ``ds.loc[dict(space='IA')]``   |
 +------------------+--------------+---------------------------------+--------------------------------+
+
+
+More advanced indexing is also possible for all the methods by
+supplying :py:class:`~xarray.DataArray` objects as indexer.
+See :ref:`advanced_indexing` for the details.
+
+
 
 Positional indexing
 -------------------
@@ -75,6 +85,10 @@ fast. To do label based indexing, use the :py:attr:`~xarray.DataArray.loc` attri
 
     arr.loc['2000-01-01':'2000-01-02', 'IA']
 
+In this example, the selected is a subpart of the array
+in the range '2000-01-01':'2000-01-02' along the first coordinate `time`
+and with 'IA' value from the second coordinate `space`.
+
 You can perform any of the label indexing operations `supported by pandas`__,
 including indexing with individual, slices and arrays of labels, as well as
 indexing with boolean arrays. Like pandas, label based indexing in xarray is
@@ -88,6 +102,13 @@ Setting values with label based indexing is also supported:
 
     arr.loc['2000-01-01', ['IL', 'IN']] = -10
     arr
+
+.. note::
+  Like indexing in numpy `ndarray`__,
+  setting values could fail depending on whether indexing returns views or copies.
+  For the details of the value assignment, see :ref:`assigning_values`.
+
+  __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-to-indexed-arrays
 
 
 Indexing with dimension names
@@ -130,55 +151,54 @@ Python :py:func:`slice` objects or 1-dimensional arrays.
 
 __ http://legacy.python.org/dev/peps/pep-0472/
 
+.. _nearest neighbor lookups:
 
-Assignment
-----------
+Nearest neighbor lookups
+------------------------
 
-As described later, 
-
-.. warning::
-
-    Do not try to assign values when using any of the indexing methods ``isel``
-    or ``sel``::
-
-        # DO NOT do this
-        arr.isel(space=0) = 0
-
-    Depending on whether the underlying numpy indexing returns a copy or a
-    view, the method will fail, and when it fails, **it will fail
-    silently**. Instead, you should use normal index assignment::
-
-        # this is safe
-        arr[dict(space=0)] = 0
-
-.. _pointwise indexing:
-
-Pointwise indexing
-------------------
-
-xarray pointwise indexing supports the indexing along multiple labeled dimensions
-using list-like objects. While :py:meth:`~xarray.DataArray.isel` performs
-orthogonal indexing, the :py:meth:`~xarray.DataArray.isel_points` method
-provides similar numpy indexing behavior as if you were using multiple
-lists to index an array (e.g. ``arr[[0, 1], [0, 1]]`` ):
+The label based selection methods :py:meth:`~xarray.Dataset.sel`,
+:py:meth:`~xarray.Dataset.reindex` and :py:meth:`~xarray.Dataset.reindex_like` all
+support ``method`` and ``tolerance`` keyword argument. The method parameter allows for
+enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
+``'backfill'`` or ``'nearest'``:
 
 .. ipython:: python
 
-    # index by integer array indices
-    da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
-    da
-    da.isel_points(x=[0, 1, 6], y=[0, 1, 0])
+   data = xr.DataArray([1, 2, 3], [('x', [0, 1, 2])])
+   data.sel(x=[1.1, 1.9], method='nearest')
+   data.sel(x=0.1, method='backfill')
+   data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
 
-There is also :py:meth:`~xarray.DataArray.sel_points`, which analogously
-allows you to do point-wise indexing by label:
+Tolerance limits the maximum distance for valid matches with an inexact lookup:
 
 .. ipython:: python
 
-    times = pd.to_datetime(['2000-01-03', '2000-01-02', '2000-01-01'])
-    arr.sel_points(space=['IA', 'IL', 'IN'], time=times)
+   data.reindex(x=[1.1, 1.5], method='nearest', tolerance=0.2)
 
-The equivalent pandas method to ``sel_points`` is
-:py:meth:`~pandas.DataFrame.lookup`.
+The method parameter is not yet supported if any of the arguments
+to ``.sel()`` is a ``slice`` object:
+
+.. ipython::
+   :verbatim:
+
+   In [1]: data.sel(x=slice(1, 3), method='nearest')
+   NotImplementedError
+
+However, you don't need to use ``method`` to do inexact slicing. Slicing
+already returns all values inside the range (inclusive), as long as the index
+labels are monotonic increasing:
+
+.. ipython:: python
+
+   data.sel(x=slice(0.9, 3.1))
+
+Indexing axes with monotonic decreasing labels also works, as long as the
+``slice`` or ``.loc`` arguments are also decreasing:
+
+.. ipython:: python
+
+   reversed_data = data[::-1]
+   reversed_data.loc[3.1:0.9]
 
 Dataset indexing
 ----------------
@@ -191,12 +211,10 @@ simultaneously, returning a new dataset:
     ds = arr.to_dataset(name='foo')
     ds.isel(space=[0], time=[0])
     ds.sel(time='2000-01-01')
-    ds2 = da.to_dataset(name='bar')
-    ds2.isel_points(x=[0, 1, 6], y=[0, 1, 0], dim='points')
 
 Positional indexing on a dataset is not supported because the ordering of
 dimensions in a dataset is somewhat ambiguous (it can vary between different
-arrays). However, you can do normal indexing with labeled dimensions:
+arrays). However, you can do normal indexing with dimension names:
 
 .. ipython:: python
 
@@ -219,57 +237,6 @@ index labels along a dimension dropped:
 
 ``drop`` is both a ``Dataset`` and ``DataArray`` method.
 
-.. _nearest neighbor lookups:
-
-Nearest neighbor lookups
-------------------------
-
-The label based selection methods :py:meth:`~xarray.Dataset.sel`,
-:py:meth:`~xarray.Dataset.reindex` and :py:meth:`~xarray.Dataset.reindex_like` all
-support ``method`` and ``tolerance`` keyword argument. The method parameter allows for
-enabling nearest neighbor (inexact) lookups by use of the methods ``'pad'``,
-``'backfill'`` or ``'nearest'``:
-
-.. ipython:: python
-
-    data = xr.DataArray([1, 2, 3], [('x', [0, 1, 2])])
-    data.sel(x=[1.1, 1.9], method='nearest')
-    data.sel(x=0.1, method='backfill')
-    data.reindex(x=[0.5, 1, 1.5, 2, 2.5], method='pad')
-
-Tolerance limits the maximum distance for valid matches with an inexact lookup:
-
-.. ipython:: python
-
-    data.reindex(x=[1.1, 1.5], method='nearest', tolerance=0.2)
-
-Using ``method='nearest'`` or a scalar argument with ``.sel()`` requires pandas
-version 0.16 or newer. Using ``tolerance`` requries pandas version 0.17 or newer.
-
-The method parameter is not yet supported if any of the arguments
-to ``.sel()`` is a ``slice`` object:
-
-.. ipython::
-    :verbatim:
-
-    In [1]: data.sel(x=slice(1, 3), method='nearest')
-    NotImplementedError
-
-However, you don't need to use ``method`` to do inexact slicing. Slicing
-already returns all values inside the range (inclusive), as long as the index
-labels are monotonic increasing:
-
-.. ipython:: python
-
-    data.sel(x=slice(0.9, 3.1))
-
-Indexing axes with monotonic decreasing labels also works, as long as the
-``slice`` or ``.loc`` arguments are also decreasing:
-
-.. ipython:: python
-
-    reversed_data = data[::-1]
-    reversed_data.loc[3.1:0.9]
 
 .. _masking with where:
 
@@ -364,67 +331,129 @@ labels of the 1st and 2nd dimension, respectively. You must specify all
 dimensions or use the ellipsis in the ``loc`` specifier, e.g. in the example
 above, ``mda.loc[{'one': 'a', 'two': 0}, :]`` or ``mda.loc[('a', 0), ...]``.
 
-Multi-dimensional indexing
---------------------------
-
-xarray does not yet support efficient routines for generalized multi-dimensional
-indexing or regridding. However, we are definitely interested in adding support
-for this in the future (see :issue:`475` for the ongoing discussion).
-
-.. _copies vs views:
-
-Copies vs. views
-----------------
-
-Whether array indexing returns a view or a copy of the underlying
-data depends on the nature of the labels. For positional (integer)
-indexing, xarray follows the same rules as NumPy:
-
-* Positional indexing with only integers and slices returns a view.
-* Positional indexing with arrays or lists returns a copy.
-
-The rules for label based indexing are more complex:
-
-* Label-based indexing with only slices returns a view.
-* Label-based indexing with arrays returns a copy.
-* Label-based indexing with scalars returns a view or a copy, depending
-  upon if the corresponding positional indexer can be represented as an
-  integer or a slice object. The exact rules are determined by pandas.
-
-Whether data is a copy or a view is more predictable in xarray than in pandas, so
-unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
-should still avoid assignment with chained indexing.
-
-.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
 
 .. _advanced_indexing:
 
-Orthogonal (outer) vs. vectorized indexing
-------------------------------------------
+Basic and Advanced Indexing
+---------------------------
 
-Indexing with xarray objects has one important difference from indexing numpy
-arrays: you can only use one-dimensional arrays to index xarray objects, and
-each indexer is applied "orthogonally" along independent axes, instead of
-using numpy's broadcasting rules to vectorize indexers. This means you can do
-indexing like this, which would require slightly more awkward syntax with
-numpy arrays:
+As similar to numpy's nd-array, xarray supports two types of indexing,
+`basic- and advanced-indexing`__.
+However, our indexing rule differs from numpy.
 
-.. ipython:: python
+__ https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
-    arr[arr['time.day'] > 1, arr['space'] != 'IL']
 
-This is a much simpler model than numpy's `advanced indexing`__. If you would
-like to do advanced-style array indexing in xarray, you have several options:
-
-* :ref:`pointwise indexing`
-* :ref:`masking with where`
-* Index the underlying NumPy array directly using ``.values``, e.g.,
-
-__ http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+Our indexing is basically orthogonal, i.e.
+if you pass multiple integer sequences to an array, they work independently
+along each dimension (similar to the way vector subscripts work in fortran).
 
 .. ipython:: python
 
-    arr.values[arr.values > 0.5]
+    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+    da
+    da[[0, 1], [1, 1]]
+    # Sequential indexing gives the same result.
+    da[[0, 1], [1, 1]] == da[[0, 1]][:, [1, 1]]
+
+
+In order to make more advanced indexing, you can supply
+:py:meth:`~xarray.DataArray` as indexers.
+In this case, the dimension of the resultant array is determined
+by the indexers' dimension names,
+
+.. ipython:: python
+
+    ind_x = xr.DataArray([0, 1], dims=['x'])
+    ind_y = xr.DataArray([0, 1], dims=['y'])
+    da[ind_x, ind_y]  # orthogonal indexing
+    da[ind_x, ind_x]  # vectorized indexing
+
+If you just provide slices or sequences, which do not have named-dimensions,
+they will be understood as the same dimension which is indexed along.
+
+.. ipython:: python
+
+    # Because [0, 1] is used to index along dimension 'x',
+    # it is assumed to have dimension 'x'
+    da[[0, 1], ind_x]
+
+
+Furthermore, you can use multi-dimensional :py:meth:`~xarray.DataArray`
+as indexers, where the resultant array dimension is also determined by
+indexers' dimension,
+
+.. ipython:: python
+
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    da[ind]
+
+To summarize, our advanced indexing is based on our broadcasting scheme.
+See :ref:`compute.broadcasting` for the detail.
+
+
+These advanced indexing also works with ``isel``, ``loc``, and ``sel``.
+
+.. ipython:: python
+
+    ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
+    da.isel(y=ind)  # same to da[:, ind]
+
+    ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
+    da.loc[:, ind]  # same to da.sel(y=ind)
+
+
+and also for Dataset
+
+.. ipython:: python
+
+    ds2 = da.to_dataset(name='bar')
+    ds2.isel(x=xr.DataArray([0, 1, 2], dims=['points']))
+
+.. note::
+  This advanced indexing was newly added in v.0.10.
+  In the older version of xarray, dimensions of indexers are not used.
+  Special methods to realize some advanced indexing,
+  ``isel_points`` and ``sel_points`` are now deprecated.
+
+
+More advanced indexing
+-----------------------
+
+The use of :py:meth:`~xarray.DataArray` as indexers enables very flexible indexing.
+The following is an example of the pointwise indexing,
+
+.. ipython:: python
+
+    # index by integer array indices
+    da = xr.DataArray(np.arange(56).reshape((7, 8)), dims=['x', 'y'])
+    da
+    da.isel(x=xr.DataArray([0, 1, 6], dims='z'),
+            y=xr.DataArray([0, 1, 0], dims='z'))
+
+where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
+and mapped along a new dimension ``z``.
+
+If you want to add a coordinate to the new dimension ``z``,
+you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
+
+.. ipython:: python
+
+    da.isel(x=xr.DataArray([0, 1, 6], dims='z',
+                           coords={'z': ['a', 'b', 'c']}),
+            y=xr.DataArray([0, 1, 0], dims='z'))
+
+
+Analogously, label-based pointwise-indexing is also possible by ``.sel`` method,
+
+.. ipython:: python
+
+    times = xr.DataArray(pd.to_datetime(['2000-01-03', '2000-01-02', '2000-01-01']),
+                         dims='new_time')
+    arr.sel(space=xr.DataArray(['IA', 'IL', 'IN'], dims=['new_time']),
+            time=times)
+
 
 .. _align and reindex:
 
@@ -534,3 +563,55 @@ labels:
 
     array
     array.get_index('x')
+
+
+.. _assigning_values:
+
+Assigning values
+----------------
+
+Whether array indexing returns a view or a copy of the underlying
+data depends on the nature of the labels.
+When it returns a view, the value assignment is possible.
+However if it returns a copy, the value assignment can fail,
+and if it fails it fails *silently*.
+
+For positional (integer)
+indexing, xarray follows the same rules as NumPy:
+
+* Positional indexing with only integers and slices returns a view.
+* Positional indexing with arrays or lists returns a copy.
+
+
+.. ipython:: python
+
+    da = xr.DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                      coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+    da
+    da[0, 0] = -1  # Assign -1 to one element
+    da
+
+    da[0] = -2  # The shape is different but broadcastable
+    da
+
+The rules for label based indexing are more complex:
+
+* Label-based indexing with only slices returns a view.
+* Label-based indexing with arrays returns a copy.
+* Label-based indexing with scalars returns a view or a copy, depending
+  upon if the corresponding positional indexer can be represented as an
+  integer or a slice object. The exact rules are determined by pandas.
+
+Whether data is a copy or a view is more predictable in xarray than in pandas, so
+unlike pandas, xarray does not produce `SettingWithCopy warnings`_. However, you
+should still avoid assignment with chained indexing.
+
+.. _SettingWithCopy warnings: http://pandas.pydata.org/pandas-docs/stable/indexing.html#returning-a-view-versus-a-copy
+
+.. warning::
+
+    Do not try to assign values when using any of the indexing methods ``isel``
+    or ``sel``::
+
+        # DO NOT do this
+        arr.isel(space=0) = 0
