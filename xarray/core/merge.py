@@ -365,19 +365,14 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
-def assert_valid_explicit_coords(variables, explicit_coords):
+def assert_valid_explicit_coords(variables, dims, explicit_coords):
     """Validate explicit coordinate names/dims.
 
     Raise a MergeError if an explicit coord shares a name with a dimension
     but is comprised of arbitrary dimensions.
     """
-    var_dims = []
-    for name, var in variables.items():
-        if name not in explicit_coords:
-            var_dims.extend(var.dims)
     for coord_name in explicit_coords:
-        if coord_name in var_dims and not all(
-                [d in var_dims for d in variables[coord_name].dims]):
+        if coord_name in dims and variables[coord_name].dims != (coord_name,):
             raise MergeError(
                 'coordinate %s shares a name with a dimension but '
                 'includes at least one arbitrary dimensions' % coord_name)
@@ -439,7 +434,7 @@ def merge_core(objs,
     dims = calculate_dimensions(variables)
 
     if explicit_coords is not None:
-        assert_valid_explicit_coords(variables, explicit_coords)
+        assert_valid_explicit_coords(variables, dims, explicit_coords)
         coord_names.update(explicit_coords)
 
     for dim, size in dims.items():
