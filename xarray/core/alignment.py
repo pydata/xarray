@@ -164,6 +164,7 @@ def align(*objects, **kwargs):
             new_obj = obj.copy(deep=copy)
         else:
             new_obj = obj.reindex(copy=copy, **valid_indexers)
+        new_obj.encoding = obj.encoding
         result.append(new_obj)
 
     return tuple(result)

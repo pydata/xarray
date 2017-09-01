@@ -25,12 +25,12 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 
 Enhancements
 ~~~~~~~~~~~~
@@ -74,6 +74,11 @@ Enhancements
   :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
+
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
 
 Bug fixes
 ~~~~~~~~~
