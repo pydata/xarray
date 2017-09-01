@@ -35,9 +35,31 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Support for `pathlib.Path` objects added to
+  :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
+  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  (:issue:`799`):
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
+
+    In [3]: data_dir = Path("data/")
+
+    In [4]: one_file = data_dir / "dta_for_month_01.nc"
+
+    In [5]: xr.open_dataset(one_file)
+    Out[5]:
+    <xarray.Dataset>
+    [...]
+
+  By `Willi Rath <https://github.com/willirath>`_.
+
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_
+
 - Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
   a signed integer data type should be interpreted as unsigned bytes
   (:issue:`1444`).

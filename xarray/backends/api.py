@@ -7,6 +7,7 @@ from glob import glob
 from io import BytesIO
 from numbers import Number
 
+
 import numpy as np
 
 from .. import backends, conventions
@@ -14,7 +15,7 @@ from .common import ArrayWriter, GLOBAL_LOCK
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.pycompat import basestring
+from ..core.pycompat import basestring, path_type
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -139,12 +140,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file
+        or an OpenDAP URL and opened with python-netCDF4, unless the filename
+        ends with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -253,6 +254,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
+    if isinstance(filename_or_obj, path_type):
+        filename_or_obj = str(filename_or_obj)
+
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
     elif isinstance(filename_or_obj, basestring):
@@ -318,12 +322,12 @@ def open_dataarray(*args, **kwargs):
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Paths are interpreted as a path to a netCDF file or an
+        OpenDAP URL and opened with python-netCDF4, unless the filename ends
+        with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -438,7 +442,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open.
+        list of files to open.  Paths can be given as strings or as pathlib
+        Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -497,6 +502,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     """
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
+    else:
+        paths = [str(p) if isinstance(p, path_type) else p for p in paths]
+
     if not paths:
         raise IOError('no files to open')
 
@@ -533,6 +541,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``writer`` argument is only for the private use of save_mfdataset.
     """
+    if isinstance(path_or_file, path_type):
+        path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
     if path_or_file is None:
@@ -597,12 +607,14 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     ----------
     datasets : list of xarray.Dataset
         List of datasets to save.
-    paths : list of str
+    paths : list of str or list of Paths
         List of paths to which to save each corresponding dataset.
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+              'NETCDF3_CLASSIC'}, optional
+
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
