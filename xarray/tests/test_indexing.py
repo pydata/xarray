@@ -9,7 +9,6 @@ import pandas as pd
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from xarray.core import nputils
-from xarray.core.npcompat import moveaxis
 from . import TestCase, ReturnItem
 
 
@@ -248,7 +247,7 @@ class TestIndexerTuple(TestCase):
             expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
             if new_order:
                 old_order = range(len(new_order))
-                expected_data = moveaxis(expected_data, old_order, new_order)
+                expected_data = np.moveaxis(expected_data, old_order, new_order)
 
             outer_index = indexing.OuterIndexer(
                 (nonzero(i), nonzero(j), nonzero(k)))

@@ -1289,7 +1289,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         )
         # attach indexer's coordinate to pos_indexers
         for k, v in new_coords.items():
-            pos_indexers[k] = DataArray(pos_indexers[k], coords=v)
+            if isinstance(pos_indexers[k], Variable):
+                pos_indexers[k] = DataArray(pos_indexers[k], coords=v,
+                                            dims=pos_indexers[k].dims)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

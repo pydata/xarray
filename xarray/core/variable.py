@@ -17,7 +17,6 @@ from . import indexing
 from . import nputils
 from . import ops
 from . import utils
-from .npcompat import moveaxis
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
 from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
@@ -562,7 +561,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims, index_tuple, new_order = self._broadcast_indexes(key)
         data = self._indexable_data[index_tuple]
         if new_order:
-            data = moveaxis(data, range(len(new_order)), new_order)
+            data = np.moveaxis(data, range(len(new_order)), new_order)
         assert getattr(data, 'ndim', 0) == len(dims), (data.ndim, len(dims))
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
@@ -588,7 +587,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
-            value = moveaxis(value, new_order, range(len(new_order)))
+            value = np.moveaxis(value, new_order, range(len(new_order)))
 
         self._indexable_data[index_tuple] = value
 

@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from .npcompat import moveaxis
-
 
 def _validate_axis(data, axis):
     ndim = data.ndim
@@ -130,9 +128,10 @@ class NumpyVIndexAdapter(object):
 
     def __getitem__(self, key):
         mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
-        return moveaxis(self._array[key], mixed_positions, vindex_positions)
+        return np.moveaxis(self._array[key], mixed_positions, vindex_positions)
 
     def __setitem__(self, key, value):
         """Value must have dimensionality matching the key."""
         mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
-        self._array[key] = moveaxis(value, vindex_positions, mixed_positions)
+        self._array[key] = np.moveaxis(value, vindex_positions,
+                                       mixed_positions)
