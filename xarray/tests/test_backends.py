@@ -773,6 +773,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = Dataset({'x': ((), 123)})
                 self.assertDatasetIdentical(expected, ds)
 
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            with backends.NetCDF4DataStore(nc, autoclose=False) as store:
+                with open_dataset(store) as ds:
+                    expected = Dataset({'x': ((), 42)})
+                    self.assertDatasetIdentical(expected, ds)
+
     def test_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -795,7 +807,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+            with backends.NetCDF4DataStore.open(tmp_file, mode='w') as store:
                 yield store
 
     @contextlib.contextmanager
@@ -983,8 +995,8 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w',
-                                           format='NETCDF3_CLASSIC') as store:
+            with backends.NetCDF4DataStore.open(
+                    tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
 
     @contextlib.contextmanager
@@ -1009,8 +1021,8 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w',
-                                           format='NETCDF4_CLASSIC') as store:
+            with backends.NetCDF4DataStore.open(
+                    tmp_file, mode='w', format='NETCDF4_CLASSIC') as store:
                 yield store
 
     @contextlib.contextmanager

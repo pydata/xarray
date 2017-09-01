@@ -282,8 +282,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
-            store = backends.NetCDF4DataStore(filename_or_obj, group=group,
-                                              autoclose=autoclose)
+            store = backends.NetCDF4DataStore.open(filename_or_obj,
+                                                   group=group,
+                                                   autoclose=autoclose)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj,
                                             autoclose=autoclose)
@@ -526,7 +527,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     return combined
 
 
-WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
+WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
                     'scipy': backends.ScipyDataStore,
                     'h5netcdf': backends.H5NetCDFStore}
 
@@ -563,7 +564,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     _validate_attrs(dataset)
 
     try:
-        store_cls = WRITEABLE_STORES[engine]
+        store_open = WRITEABLE_STORES[engine]
     except KeyError:
         raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
 
@@ -574,7 +575,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     sync = writer is None
 
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_cls(target, mode, format, group, writer)
+    store = store_open(target, mode, format, group, writer)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
