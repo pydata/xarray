@@ -184,8 +184,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
     def test_compute_args(self):
-        a = DataArray([1, 2]).chunk()
-        expected = DataArray([1, 4])
+        a = Variable('x', [1, 2]).chunk()
+        expected = Variable('x', [1, 4])
         b = a * a
         # compute
         b1 = b.compute(get=dask.multiprocessing.get)
@@ -198,10 +198,6 @@ class TestVariable(DaskTestCase):
         b3 = b.load(get=dask.multiprocessing.get, num_workers=4)
         assert b3._in_memory
         assert_equal(b3, expected)
-        # persist
-        b4 = b.persist(get=dask.multiprocessing.get, num_workers=4)
-        assert b4._in_memory
-        assert_equal(b4, expected)
 
 
 @requires_dask
