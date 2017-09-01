@@ -1352,7 +1352,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        dataset.to_netcdf(*args, **kwargs)
+        return dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
         """
