@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d
 from . import ops
 from .combine import merge
 from .groupby import DataArrayGroupBy, DatasetGroupBy
-from .pycompat import dask_array_type
+from .pycompat import dask_array_type, OrderedDict
 
 RESAMPLE_DIM = '__resample_dim__'
 
@@ -49,6 +49,13 @@ class Resample(object):
         """
 
         _upsampled_means = self.mean(self._dim)
+
+        # Drop non-dimension coordinates along the resampled dimension
+        for k, v in self._obj.coords.items():
+            if k == self._dim:
+                continue
+            if self._dim in v.dims:
+                self._obj = self._obj.drop(k)
 
         if method == 'asfreq':
             return _upsampled_means
@@ -196,8 +203,17 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         # construct new up-sampled DataArray
         dummy = self._obj.copy()
         dims = dummy.dims
-        coords = dummy.coords
-        coords[self._dim] = self._full_index
+
+        # drop any existing non-dimension coordinates along the resampling
+        # dimension
+        coords = OrderedDict()
+        for k, v in dummy.coords.items():
+            # is the resampling dimension
+            if k == self._dim:
+                coords[self._dim] = self._full_index
+            # else, check if resampling dim is in coordinate dimensions
+            elif self._dim not in v.dims:
+                coords[k] = v
         return DataArray(f(new_x), coords, dims, name=dummy.name,
                          attrs=dummy.attrs)
 
@@ -299,10 +315,19 @@ class DatasetResample(DatasetGroupBy, Resample):
             f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                          assume_sorted=True)
 
-            # construct new up-sampled DataArray
+            # drop any existing non-dimension coordinates along the resampling
+            # dimension
+            coords = OrderedDict()
+            for k, v in da.coords.items():
+                # is the resampling dimension
+                if k == self._dim:
+                    coords[self._dim] = self._full_index
+                # else, check if resampling dim is in coordinate dimensions
+                elif self._dim not in v.dims:
+                    coords[k] = v
             dims = da.dims
-            coords = da.coords
-            coords[self._dim] = self._full_index
+
+            # Construct new DataArray
             arrs.append(DataArray(f(new_x), coords, dims, name=da.name,
                                   attrs=da.attrs))
 

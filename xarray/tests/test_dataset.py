@@ -2240,6 +2240,35 @@ class TestDataset(TestCase):
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
 
+    def test_resample_drop_nondim_coords(self):
+        xs = np.arange(6)
+        ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        data = np.tile(np.arange(5), (6, 3, 1))
+        xx, yy = np.meshgrid(xs*5, ys*2.5)
+        tt = np.arange(len(times), dtype=int)
+        array = DataArray(data,
+                          {'time': times, 'x': xs, 'y': ys},
+                          ('x', 'y', 'time'))
+        xcoord = DataArray(xx.T, {'x': xs, 'y': ys}, ('x', 'y'))
+        ycoord = DataArray(yy.T, {'x': xs, 'y': ys}, ('x', 'y'))
+        tcoord = DataArray(tt, {'time': times}, ('time', ))
+        ds = Dataset({'data': array, 'xc': xcoord,
+                         'yc': ycoord, 'tc': tcoord})
+        ds = ds.set_coords(['xc', 'yc', 'tc'])
+
+        # Re-sample
+        actual = ds.resample(time="12H").mean('time')
+        assert 'tc' not in actual.coords
+
+        # Up-sample - filling
+        actual = ds.resample(time="1H").ffill()
+        assert 'tc' not in actual.coords
+
+        # Up-sample - interpolation
+        actual = ds.resample(time="1H").interpolate('linear')
+        assert 'tc' not in actual.coords
+
     def test_resample_old_vs_new_api(self):
 
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
