@@ -552,6 +552,19 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.dv[:3, :5],
                                       self.dv.isel(x=slice(3), y=slice(5)))
 
+    def test_isel_types(self):
+        # regression test for #1405
+        da = DataArray([1, 2, 3], dims='x')
+        # uint64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint64")),
+                                      da.isel(x=np.array([0])))
+        # uint32
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint32")),
+                                      da.isel(x=np.array([0])))
+        # int64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="int64")),
+                                      da.isel(x=np.array([0])))
+
     def test_isel_fancy(self):
         shape = (10, 7, 6)
         np_array = np.random.random(shape)

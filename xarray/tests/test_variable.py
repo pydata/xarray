@@ -539,6 +539,35 @@ class VariableSubclassTestCases(object):
         expected = v[dict(y=2)]
         self.assertArrayEqual(v_new, expected)
 
+    def test_getitem_uint_1d(self):
+        # regression test for #1405
+        v = self.cls(['x'], [0, 1, 2])
+        v_data = v.compute().data
+
+        v_new = v[np.array([0])]
+        self.assertArrayEqual(v_new, v_data[0])
+        v_new = v[np.array([0], dtype="uint64")]
+        self.assertArrayEqual(v_new, v_data[0])
+
+    def test_getitem_uint(self):
+        # regression test for #1405
+        v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
+        v_data = v.compute().data
+
+        v_new = v[np.array([0])]
+        self.assertArrayEqual(v_new, v_data[[0], :])
+        v_new = v[np.array([0], dtype="uint64")]
+        self.assertArrayEqual(v_new, v_data[[0], :])
+
+    def test_getitem_0d_array(self):
+        # make sure 0d-np.array can be used as an indexer
+        v = self.cls(['x'], [0, 1, 2])
+        v_data = v.compute().data
+
+        ind = np.array(0, dtype='int')  # This is 0d-array
+        v_new = v[np.array([0])[0]]
+        self.assertArrayEqual(v_new, v_data[0])
+
     def test_getitem_fancy(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
         v_data = v.compute().data
@@ -1495,6 +1524,10 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     @pytest.mark.xfail
     def test_getitem_fancy(self):
+        super(TestIndexVariable, self).test_getitem_fancy()
+
+    @pytest.mark.xfail
+    def test_getitem_uint(self):
         super(TestIndexVariable, self).test_getitem_fancy()
 
 

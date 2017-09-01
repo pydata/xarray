@@ -457,7 +457,7 @@ def _outer_to_numpy_indexer(key, shape):
         else:  # np.ndarray or slice
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
-            assert k.dtype.kind == 'i'
+            assert k.dtype.kind in {'i', 'u'}
             shape = [(1,) * i_dim + (k.size, ) +
                      (1,) * (n_dim - i_dim - 1)]
             new_key.append(k.reshape(*shape))
@@ -510,13 +510,18 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
         self.array = array
 
     def __getitem__(self, key):
+        def to_int_tuple(key):
+            # workaround for uint64 indexer (GH:1406)
+            return tuple([k.astype(int) if isinstance(k, np.ndarray)
+                          else k for k in key])
+
         if isinstance(key, BasicIndexer):
-            return self.array[tuple(key)]
+            return self.array[to_int_tuple(key)]
         elif isinstance(key, VectorizedIndexer):
-            return self.array.vindex[tuple(key)]
+            return self.array.vindex[to_int_tuple(tuple(key))]
         else:
             assert isinstance(key, OuterIndexer)
-            key = tuple(key)
+            key = to_int_tuple(tuple(key))
             try:
                 return self.array[key]
             except NotImplementedError:
