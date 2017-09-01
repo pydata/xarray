@@ -274,7 +274,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with pytest.warns(FutureWarning):
+        with self.assertRaisesRegexp(ValueError, 'DataArray dimensions'):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -1600,9 +1600,11 @@ class TestDataset(TestCase):
         assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [1, 2, 3])])})
+        x = Dataset({'foo': DataArray([1, 2, 3], dims='x',
+                    coords=[('x', [1, 2, 3])])})
         x2, = align(x, indexes={'x': [2, 3, 1]})
-        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
+        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], dims='x',
+                              coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
 
     def test_align_non_unique(self):
@@ -3229,8 +3231,6 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
 
         ds = create_test_data(seed=123)

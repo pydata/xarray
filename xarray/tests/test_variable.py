@@ -1259,6 +1259,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
                                             axis=axis)
                 np.testing.assert_allclose(actual.values, expected)
 
+    @requires_dask
+    def test_quantile_dask_raises(self):
+        # regression for GH1524
+        v = Variable(['x', 'y'], self.d).chunk(2)
+
+        with self.assertRaisesRegexp(TypeError, 'arrays stored as dask'):
+            v.quantile(0.5, dim='x')
+
     def test_big_endian_reduce(self):
         # regression test for GH489
         data = np.ones(5, dtype='>f4')
