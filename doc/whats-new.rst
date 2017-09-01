@@ -111,6 +111,10 @@ Bug fixes
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Fix positional indexing to allow the use of unsigned integers (:issue:`1405`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
