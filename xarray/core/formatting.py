@@ -243,7 +243,8 @@ def summarize_coord(name, var, col_width):
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),
                  _summarize_coord_levels(coord, col_width)])
-    return summarize_variable(name, var.variable, col_width, show_values, marker)
+    return summarize_variable(
+        name, var.variable, col_width, show_values, marker)
 
 
 def summarize_attr(key, value, col_width=None):

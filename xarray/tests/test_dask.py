@@ -382,7 +382,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         # to numpy in neither the data variables nor the non-index coords
         data = build_dask_array('data')
         nonindex_coord = build_dask_array('coord')
-        ds = Dataset(data_vars={'a': ('x', data)}, coords={'y': ('x', nonindex_coord)})
+        ds = Dataset(data_vars={'a': ('x', data)},
+                     coords={'y': ('x', nonindex_coord)})
         expected = dedent("""\
         <xarray.Dataset>
         Dimensions:  (x: 1)
@@ -417,7 +418,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         # to numpy in neither the data variables nor the non-index coords
         data = build_dask_array('data')
         nonindex_coord = build_dask_array('coord')
-        ds1 = Dataset(data_vars={'a': ('x', data)}, coords={'y': ('x', nonindex_coord)})
+        ds1 = Dataset(data_vars={'a': ('x', data)},
+                      coords={'y': ('x', nonindex_coord)})
         ds1.compute()
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds1['y']._in_memory)
@@ -432,10 +434,12 @@ class TestDataArrayAndDataset(DaskTestCase):
 
     def test_dataarray_getattr(self):
         # ipython/jupyter does a long list of getattr() calls to when trying to
-        # represent an object. Make sure we're not accidentally computing dask variables.
+        # represent an object.
+        # Make sure we're not accidentally computing dask variables.
         data = build_dask_array('data')
         nonindex_coord = build_dask_array('coord')
-        a = DataArray(data, dims=['x'], coords={'y': ('x', nonindex_coord)})
+        a = DataArray(data, dims=['x'],
+                      coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(a, 'NOTEXIST')
         self.assertEquals(kernel_call_count, 0)
@@ -445,7 +449,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         # to numpy in neither the data variables nor the non-index coords
         data = build_dask_array('data')
         nonindex_coord = build_dask_array('coord')
-        ds = Dataset(data_vars={'a': ('x', data)}, coords={'y': ('x', nonindex_coord)})
+        ds = Dataset(data_vars={'a': ('x', data)},
+                     coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(ds, 'NOTEXIST')
         self.assertEquals(kernel_call_count, 0)
