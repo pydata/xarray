@@ -83,6 +83,17 @@ try:
 except ImportError:
     has_rasterio = False
 
+try:
+    import pathlib
+    has_pathlib = True
+except ImportError:
+    try:
+        import pathlib2
+        has_pathlib = True
+    except ImportError:
+        has_pathlib = False
+
+
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(
@@ -105,6 +116,9 @@ requires_bottleneck = pytest.mark.skipif(
     not has_bottleneck, reason='requires bottleneck')
 requires_rasterio = pytest.mark.skipif(
     not has_rasterio, reason='requires rasterio')
+requires_pathlib = pytest.mark.skipif(
+    not has_pathlib, reason='requires pathlib / pathlib2'
+)
 
 
 try:

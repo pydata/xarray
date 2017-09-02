@@ -47,15 +47,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                warnings.warn('inferring DataArray dimensions from dictionary '
-                              'like ``coords`` has been deprecated. Use an '
-                              'explicit list of ``dims`` instead.',
-                              FutureWarning, stacklevel=3)
-                dims = list(coords.keys())
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+                # deprecated in GH993, removed in GH1539
+                raise ValueError('inferring DataArray dimensions from '
+                                 'dictionary like ``coords`` has been '
+                                 'deprecated. Use an explicit list of '
+                                 '``dims`` instead.')
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:
@@ -1286,7 +1286,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        path : str, optional
+        path : str or Path, optional
             Path to which to save this dataset. If no path is provided, this
             function returns the resulting netCDF file as a bytes object; in
             this case, we need to use scipy.io.netcdf, which does not support
@@ -1294,7 +1294,8 @@ class DataArray(AbstractArray, BaseDataObject):
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+                  'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1324,7 +1325,8 @@ class DataArray(AbstractArray, BaseDataObject):
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+               'zlib': True}, ...}``
 
         Notes
         -----
