@@ -100,6 +100,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.to_series` and
+  :py:meth:`~xarray.Dataset.to_dataframe` return an Index of the appropriate
+  type with pandas 0.21 (:issue:`1548`).
+
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
   By `Greg Brener <https://github.com/gbrener>`_.
