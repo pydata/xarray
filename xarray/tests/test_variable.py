@@ -1397,7 +1397,20 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         ind = Variable(['a'], [0, 1])
         v[dict(x=ind)] = Variable(['a', 'y'], np.ones((2, 3), dtype=int) * 10)
         self.assertArrayEqual(v[0], np.ones_like(v[0]) * 10)
-        self.assertArrayEqual(v[1], np.ones_like(v[0]) * 10)
+        self.assertArrayEqual(v[1], np.ones_like(v[1]) * 10)
+        assert v.dims == ('x', 'y')  # dimension should not change
+
+        # increment
+        v = Variable(['x', 'y'], np.arange(6).reshape(3, 2))
+        ind = Variable(['a'], [0, 1])
+        v[dict(x=ind)] += 1
+        expected = Variable(['x', 'y'], [[1, 2], [3, 4], [4, 5]])
+        self.assertVariableIdentical(v, expected)
+
+        ind = Variable(['a'], [0, 0])
+        v[dict(x=ind)] += 1
+        expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
+        self.assertVariableIdentical(v, expected)
 
 
 @requires_dask
