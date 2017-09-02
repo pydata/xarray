@@ -372,7 +372,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         <xarray.DataArray 'data' (x: 1)>
         dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
         Coordinates:
-            y        (x) int64 ...
+            y        (x) int64 dask.array<coord, shape=(1,), dtype=int64, chunksize=(1,)>
         Dimensions without coordinates: x""")
         self.assertEqual(expected, repr(a))
         self.assertEquals(kernel_call_count, 0)
@@ -388,10 +388,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         <xarray.Dataset>
         Dimensions:  (x: 1)
         Coordinates:
-            y        (x) int64 ...
+            y        (x) int64 dask.array<coord, shape=(1,), dtype=int64, chunksize=(1,)>
         Dimensions without coordinates: x
         Data variables:
-            a        (x) int64 ...""")
+            a        (x) int64 dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>""")
         self.assertEqual(expected, repr(ds))
         self.assertEquals(kernel_call_count, 0)
 
