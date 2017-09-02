@@ -924,7 +924,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        path : str or file-like object, optional
+        path : str, Path or file-like object, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -963,7 +963,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+                               'zlib': True}, ...}``
         unlimited_dims : sequence of str, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
