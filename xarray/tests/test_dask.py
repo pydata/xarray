@@ -135,7 +135,7 @@ class TestVariable(DaskTestCase):
     def test_repr(self):
         expected = dedent("""\
         <xarray.Variable (x: 4, y: 6)>
-        dask.array<array, shape=(4, 6), dtype=float64, chunksize=(2, 2)>""")
+        dask.array<shape=(4, 6), dtype=float64, chunksize=(2, 2)>""")
         self.assertEqual(expected, repr(self.lazy_var))
 
     def test_pickle(self):
@@ -370,9 +370,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(data, dims=['x'], coords={'y': ('x', nonindex_coord)})
         expected = dedent("""\
         <xarray.DataArray 'data' (x: 1)>
-        dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>
+        dask.array<shape=(1,), dtype=int64, chunksize=(1,)>
         Coordinates:
-            y        (x) int64 dask.array<coord, shape=(1,), dtype=int64, chunksize=(1,)>
+            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
         Dimensions without coordinates: x""")
         self.assertEqual(expected, repr(a))
         self.assertEquals(kernel_call_count, 0)
@@ -388,10 +388,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         <xarray.Dataset>
         Dimensions:  (x: 1)
         Coordinates:
-            y        (x) int64 dask.array<coord, shape=(1,), dtype=int64, chunksize=(1,)>
+            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
         Dimensions without coordinates: x
         Data variables:
-            a        (x) int64 dask.array<data, shape=(1,), dtype=int64, chunksize=(1,)>""")
+            a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>""")
         self.assertEqual(expected, repr(ds))
         self.assertEquals(kernel_call_count, 0)
 
