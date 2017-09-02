@@ -195,6 +195,17 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     return concat_over
 
 
+def _load_coords(dataset):
+    """Load into memory any non-index coords. Preserve original.
+    """
+    if all(coord._in_memory for coord in dataset.coords.values()):
+        return dataset
+    dataset = dataset.copy()
+    for coord in dataset.coords.values():
+        coord.load()
+    return dataset
+
+
 def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     """
     Concatenate a sequence of datasets along a new or existing dimension
@@ -208,6 +219,8 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     dim, coord = _calc_concat_dim_coord(dim)
     datasets = [as_dataset(ds) for ds in datasets]
     datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
+    # TODO: compute dask coords with a single invocation of dask.compute()
+    datasets = [_load_coords(ds) for ds in datasets]
 
     concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
 

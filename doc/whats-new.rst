@@ -116,7 +116,13 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+- :py:func:`~xarray.concat` was computing multiple times coordinates that are
+  not index and not in memory (e.g. dask-based); :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them once and store them as numpy arrays (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 

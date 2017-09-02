@@ -228,6 +228,22 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
+    def test_concat_loads_coords(self):
+        # Test that concat() computes dask-based, non-index
+        # coordinates exactly once and loads them in the output,
+        # while leaving the input unaltered.
+        y = build_dask_array()
+        ds1 = Dataset(coords={'x': [1], 'y': ('x', y)})
+        ds2 = Dataset(coords={'x': [1], 'y': ('x', [2.0])})
+        assert kernel_call_count == 0
+        ds3 = xr.concat([ds1, ds2], dim='z')
+        # BUG fixed in #1532 where getattr('to_dataset')
+        # will cause non-index coords to be computed.
+        assert kernel_call_count == 2
+        assert ds1['y'].data is y
+        assert isinstance(ds3['y'].data, np.ndarray)
+        assert ds3['y'].values.tolist() == [[1.0], [2.0]]
+
     def test_groupby(self):
         u = self.eager_array
         v = self.lazy_array
