@@ -1481,6 +1481,25 @@ class TestDataset(TestCase):
         actual = ds.reindex(x=[0, 1, 3], y=[0, 1])
         self.assertDatasetIdentical(expected, actual)
 
+    def test_reindex_warning(self):
+        import warnings
+        data = create_test_data()
+
+        with pytest.warns(FutureWarning) as ws:
+            # DataArray with different dimension raises Future warning
+            ind = xr.DataArray([0.0, 1.0], dims=['new_dim'], name='ind')
+            data.reindex(dim2=ind)
+            assert any(["Indexer ind has dimensions new_dim that are" not in
+                        str(w.message) for w in ws])
+
+        with pytest.warns(FutureWarning) as ws:
+            # Should not warn
+            ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
+            data.reindex(dim2=ind)
+            assert all(["Indexer ind has dimensions new_dim that are" not in
+                        str(w.message) for w in ws])
+            warnings.warn('dummy', FutureWarning, stacklevel=3)
+
     def test_reindex_variables_copied(self):
         data = create_test_data()
         reindexed_data = data.reindex(copy=False)
