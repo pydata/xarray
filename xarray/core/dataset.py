@@ -1582,17 +1582,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
                                                  'reindex')
 
-        from .dataarray import DataArray
-        import warnings
-        for dim, ind in indexers.items():
-            if isinstance(ind, DataArray) and ind.dims != ('dims', ):
-                warnings.warn(
-                    "Indexer has dimensions {0:s} that are different "
-                    "from that to be indexed along {1:s}. "
-                    "This will behave differently in the future.".format(
-                                                str(ind.dims), dim),
-                    FutureWarning, stacklevel=3)
-
         bad_dims = [d for d in indexers if d not in self.dims]
         if bad_dims:
             raise ValueError('invalid reindex dimensions: %s' % bad_dims)

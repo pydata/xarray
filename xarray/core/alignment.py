@@ -301,6 +301,9 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     reindexed : OrderedDict
         Another dict, with the items in variables but replaced indexes.
     """
+    from .dataarray import DataArray
+    import warnings
+
     # build up indexers for assignment along each dimension
     to_indexers = {}
     from_indexers = {}
@@ -354,6 +357,14 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     reindexed = OrderedDict()
 
     for dim, indexer in indexers.items():
+        if isinstance(indexer, DataArray) and indexer.dims != ('dims', ):
+            warnings.warn(
+                "Indexer has dimensions {0:s} that are different "
+                "from that to be indexed along {1:s}. "
+                "This will behave differently in the future.".format(
+                                            str(indexer.dims), dim),
+                FutureWarning, stacklevel=3)
+
         if dim in variables:
             var = variables[dim]
             args = (var.attrs, var.encoding)
