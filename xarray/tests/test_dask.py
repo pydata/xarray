@@ -6,6 +6,7 @@ import pickle
 from textwrap import dedent
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
@@ -13,7 +14,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest
+from xarray.tests import unittest, mock
 
 with suppress(ImportError):
     import dask
@@ -469,6 +470,47 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable,
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute'])
+def test_dask_kwargs_variable(method):
+    x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
+    # args should be passed on to da.Array.compute()
+    with mock.patch.object(da.Array, 'compute',
+                           return_value=np.arange(3)) as mock_compute:
+        getattr(x, method)(foo='bar')
+    mock_compute.assert_called_with(foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataarray(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = DataArray(data)
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataset(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = Dataset({'x': (('y'), data)})
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
 
 
 kernel_call_count = 0

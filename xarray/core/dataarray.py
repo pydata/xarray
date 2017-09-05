@@ -565,7 +565,7 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
-    def load(self):
+    def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -573,14 +573,23 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
-        ds = self._to_temp_dataset().load()
+        ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
         self._variable = new._variable
         self._coords = new._coords
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return a new array. The original is
         left unaltered.
@@ -589,18 +598,36 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
-    def persist(self):
+    def persist(self, **kwargs):
         """ Trigger computation in constituent dask arrays
 
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        See Also
+        --------
+        dask.persist
         """
-        ds = self._to_temp_dataset().persist()
+        ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
     def copy(self, deep=True):
@@ -1352,7 +1379,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        dataset.to_netcdf(*args, **kwargs)
+        return dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
         """
