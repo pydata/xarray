@@ -25,12 +25,12 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 
 Enhancements
 ~~~~~~~~~~~~
@@ -97,12 +97,19 @@ Enhancements
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
 
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
+
 Bug fixes
 ~~~~~~~~~
 
-- :py:meth:`~xarray.DataArray.to_series` and
-  :py:meth:`~xarray.Dataset.to_dataframe` return an Index of the appropriate
-  type with pandas 0.21 (:issue:`1548`).
+- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+  - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
+  - :py:meth:`~xarray.DataArray.to_series` and
+    :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
+    for 1D data (:issue:`1548`).
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
