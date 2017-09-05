@@ -13,6 +13,7 @@ dependencies:
   - netcdf4
   - numpy
   - pandas
+  - pathlib2
   - pynio
   - pytest
   - scipy

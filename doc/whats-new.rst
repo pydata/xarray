@@ -25,19 +25,41 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-
 Enhancements
 ~~~~~~~~~~~~
+
+- Support for `pathlib.Path` objects added to
+  :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
+  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  (:issue:`799`):
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
+
+    In [3]: data_dir = Path("data/")
+
+    In [4]: one_file = data_dir / "dta_for_month_01.nc"
+
+    In [5]: xr.open_dataset(one_file)
+    Out[5]:
+    <xarray.Dataset>
+    [...]
+
+  By `Willi Rath <https://github.com/willirath>`_.
 
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_
+
 - Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
   a signed integer data type should be interpreted as unsigned bytes
   (:issue:`1444`).
@@ -79,6 +101,10 @@ Enhancements
    methods. Any keyword arguments supplied to these methods are passed on to
    the corresponding dask function (:issue:`1523`).
    By `Joe Hamman <https://github.com/jhamman>`_.
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -102,6 +128,10 @@ Bug fixes
 - Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
+  it is none.
+  By `Leevi Annala <https://github.com/leevei>`_.
 
 .. _whats-new.0.9.6:
 

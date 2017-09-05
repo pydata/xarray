@@ -1036,13 +1036,14 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             data = duck_array_ops.stack(arrays, axis=axis)
 
         attrs = OrderedDict(first_var.attrs)
+        encoding = OrderedDict(first_var.encoding)
         if not shortcut:
             for var in variables:
                 if var.dims != first_var.dims:
                     raise ValueError('inconsistent dimensions')
                 utils.remove_incompatible_items(attrs, var.attrs)
 
-        return cls(dims, data, attrs)
+        return cls(dims, data, attrs, encoding)
 
     def equals(self, other, equiv=duck_array_ops.array_equiv):
         """True if two Variables have the same dimensions and values;

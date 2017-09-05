@@ -60,6 +60,16 @@ except ImportError:  # pragma: no cover
     dask_array_type = ()
 
 try:
+    try:
+        from pathlib import Path
+    except ImportError as e:
+        from pathlib2 import Path
+    path_type = (Path, )
+except ImportError as e:
+    path_type = ()
+
+
+try:
     from contextlib import suppress
 except ImportError:
     # Backport from CPython 3.5:
@@ -188,7 +198,7 @@ except ImportError:
             # We manipulate the exception state so it behaves as though
             # we were actually nesting multiple with statements
             frame_exc = sys.exc_info()[1]
-            
+
             def _fix_exception_context(new_exc, old_exc):
                 # Context may not be correct, so find the end of the chain
                 while 1:
