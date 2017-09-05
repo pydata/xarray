@@ -374,8 +374,9 @@ def assert_valid_explicit_coords(variables, dims, explicit_coords):
     for coord_name in explicit_coords:
         if coord_name in dims and variables[coord_name].dims != (coord_name,):
             raise MergeError(
-                'coordinate %s shares a name with a dimension but '
-                'includes at least one arbitrary dimensions' % coord_name)
+                'coordinate %s shares a name with a dataset dimension, but is '
+                'not a 1D variable along that dimension. This is disallowed '
+                'by the xarray data model.' % coord_name)
 
 
 def merge_core(objs,
