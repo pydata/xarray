@@ -268,6 +268,17 @@ class TestConcatDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
             concat([foo, bar], dim='w', data_vars='minimal')
 
+    def test_concat_encoding(self):
+        # Regression test for GH1297
+        ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
+                      'bar': (['x', 'y'], np.random.random((2, 3)))},
+                     {'x': [0, 1]})
+        foo = ds['foo']
+        foo.encoding = {"complevel": 5}
+        ds.encoding = {"unlimited_dims": 'x'}
+        assert concat([foo, foo], dim="x").encoding == foo.encoding
+        assert concat([ds, ds], dim="x").encoding == ds.encoding
+
     @requires_dask
     def test_concat_lazy(self):
         import dask.array as da

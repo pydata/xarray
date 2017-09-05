@@ -142,9 +142,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
 
     # Attributes
     attrs = {}
-    if hasattr(riods, 'crs'):
+    if hasattr(riods, 'crs') and riods.crs:
         # CRS is a dict-like object specific to rasterio
-        # We convert it back to a PROJ4 string using rasterio itself
+        # If CRS is not None, we convert it back to a PROJ4 string using
+        # rasterio itself
         attrs['crs'] = riods.crs.to_string()
     if hasattr(riods, 'res'):
         # (width, height) tuple of pixels in units of CRS

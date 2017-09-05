@@ -26,8 +26,9 @@ from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, requires_rasterio, assert_identical)
+               requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
+               assert_allclose, flaky, network, requires_rasterio,
+               assert_identical)
 from .test_dataset import create_test_data
 
 try:
@@ -39,6 +40,14 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+try:
+    from pathlib import Path
+except ImportError:
+    try:
+        from pathlib2 import Path
+    except ImportError:
+        pass
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -302,7 +311,8 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_float64_data(self):
-        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi], dtype='float64'))})
+        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi],
+                                                dtype='float64'))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -738,7 +748,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 v.scale_factor = 0.1
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
-            # first make sure netCDF4 reads the masked and scaled data correctly
+            # first make sure netCDF4 reads the masked and scaled data
+            # correctly
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
@@ -1305,6 +1316,19 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+    @requires_pathlib
+    def test_open_mfdataset_pathlib(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetAllClose(original, actual)
+
     def test_attrs_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -1354,6 +1378,20 @@ class DaskTest(TestCase, DatasetIOTestCases):
             save_mfdataset([ds, ds], ['same', 'same'])
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
+
+    @requires_pathlib
+    def test_save_mfdataset_pathlib_roundtrip(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetIdentical(actual, original)
 
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1946,3 +1984,20 @@ class TestDataArrayToNetCDF(TestCase):
             expected = data.drop('y')
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 self.assertDataArrayIdentical(expected, loaded)
+
+    def test_dataarray_to_netcdf_return_bytes(self):
+        # regression test for GH1410
+        data = xr.DataArray([1, 2, 3])
+        output = data.to_netcdf()
+        assert isinstance(output, bytes)
+
+    @requires_pathlib
+    def test_dataarray_to_netcdf_no_name_pathlib(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        with create_tmp_file() as tmp:
+            tmp = Path(tmp)
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)
