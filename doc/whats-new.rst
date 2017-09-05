@@ -105,7 +105,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fix ``isnull()`` to account for changes with pandas 0.21.
+- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+  - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
+  - :py:meth:`~xarray.DataArray.to_series` and
+    :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
+    for 1D data (:issue:`1548`).
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
