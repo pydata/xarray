@@ -5,6 +5,7 @@ import functools
 from collections import Mapping, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
+import warnings
 
 import sys
 
@@ -1100,7 +1101,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
-        + raise an Error for some confusing case.
         """
         from .dataarray import DataArray
 
@@ -1129,37 +1129,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Returns an OrderedDict mapping from coordinate name to the
         coordinate variable.
 
-        Coordinates to be extracted and attached should satisfy
-        + Dimension coordinate of the indexers.
-          Non-dimension coordinate of the indexers are not attached.
-        + Only coordinate with a name different from any of sef.variables.
-
-        If self already has the same name coordinate, we raise an ValueError.
+        Only coordinate with a name different from any of sef.variables will
+        be attached.
         """
         from .dataarray import DataArray
-        import warnings
 
         coord_list = []
         for k, v in indexers.items():
             if isinstance(v, DataArray):
-                coords = {d: v.coords[d].variable for d in v.dims
-                          if d in v.coords}
-                if v.dtype.kind == 'b' and v.dims[0] in coords:
+                if v.dtype.kind == 'b':
+                    if v.ndim != 1:  # we only support 1-d boolean array
+                        raise ValueError(
+                            '{0:d}d-boolean array is used for indexing. '
+                            'Only 1d-array is supported for boolean '
+                            'indexing'.format(v.ndim))
                     # Make sure in case of boolean DataArray, its
-                    # coordinate should be also indexed.
-                    assert v.ndim == 1  # we only support 1-d boolean array
-                    coords[v.dims[0]] = coords[v.dims[0]][v.variable]
+                    # coordinate is also indexed.
+                    v = v[v.values.nonzero()[0]]
+                coords = {d: v.coords[d].variable for d in v.coords}
 
                 for k, vc in self.variables.items():
                     if k in coords and not vc[v.values].equals(coords[k]):
-                        # TODO raise an Error in the next release
-                        warnings.warn(
-                            "Indexer's coordiante {0:s} conflicts with the "
-                            "exisiting coordinate. This will raise an error "
-                            "in the next release. "
-                            "Use `.isel({0:s}=ind.drop(\'{0:s}\'))` to "
-                            "index safely.".format(k),
-                            FutureWarning, stacklevel=3)
                         del coords[k]
 
                 coord_list.append(coords)
@@ -1479,7 +1469,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel_points
         """
-        import warnings
         warnings.warn('Dataset.sel_points is deprecated: use Dataset.sel()'
                       'instead', DeprecationWarning, stacklevel=2)
 

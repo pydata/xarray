@@ -993,11 +993,6 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da)
         self.assertDataArrayIdentical(actual['dim2'],
                                       data['dim2'].isel(dim2=np.arange(1, 4)))
-        # make sure the coordinate confliction raises a warning
-        with pytest.warns(FutureWarning) as ws:
-            actual = data.isel(dim2=indexing_da)
-            assert any(["Indexer's coordiante dim2 conflicts" in str(w.message)
-                        for w in ws])
 
         # isel for the coordinate. Should not attach the coordinate
         actual = data['dim2'].isel(dim2=indexing_da)
@@ -1009,17 +1004,25 @@ class TestDataset(TestCase):
                                 coords={'dim2': data['dim2'].values[1:4]})
         self.assertDataArrayIdentical(data['dim2'][1:4], indexing_da['dim2'])
 
-        with pytest.warns(FutureWarning) as ws:
-            actual = data.isel(dim2=indexing_da)
-            # does not warn
-            assert all(["Indexer's coordiante dim2 conflicts" not in
-                        str(w.message) for w in ws])
-            warnings.warn('dummy', FutureWarning, stacklevel=3)
-
         # boolean data array with coordinate with the same name
         indexing_da = (indexing_da < 3)
         actual = data.isel(dim2=indexing_da)
         self.assertDataArrayIdentical(actual['dim2'], data['dim2'][:2])
+
+        # boolean data array with non-dimensioncoordinate
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': data['dim2'].values[1:4],
+                                        'non_dim': (('dim2', ), [0, 1, 4]),
+                                        'non_dim2': 0})
+        indexing_da = (indexing_da < 3)
+        actual = data.isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(
+            actual['dim2'].drop('non_dim').drop('non_dim2').drop('non_dim3'),
+            data['dim2'][:2])
+        self.assertDataArrayIdentical(
+            actual['non_dim'], indexing_da['non_dim'][:2])
+        self.assertDataArrayIdentical(
+            actual['non_dim2'], indexing_da['non_dim2'])
 
         # boolean data array with coordinate with the different name
         indexing_da = DataArray(np.arange(1, 4), dims=['new_dim'],
@@ -1030,14 +1033,14 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['new_dim'].drop('dim2'),
                                       indexing_da['new_dim'][:2])
 
-        # non-dimension coordinate will be ignored
+        # non-dimension coordinate will be also attached
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3),
                                         'non_dim': (('dim2', ),
                                                     np.random.randn(3))})
         actual = data.isel(dim2=indexing_da)
-        assert 'non_dim' not in actual
-        assert 'non_dim' not in actual.coords
+        assert 'non_dim' in actual
+        assert 'non_dim' in actual.coords
 
         # indexing with DataArray with drop=True
         indexing_da = DataArray(np.arange(1, 4), dims=['a'],
@@ -1049,9 +1052,9 @@ class TestDataset(TestCase):
         # Index by a scalar DataArray
         indexing_da = DataArray(3, dims=[], coords={'station': 2})
         actual = data.isel(dim2=indexing_da)
-        assert 'station' not in actual
+        assert 'station' in actual
         actual = data.isel(dim2=indexing_da['station'])
-        assert 'station' not in actual
+        assert 'station' in actual
 
     def test_sel(self):
         data = create_test_data()
