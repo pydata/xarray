@@ -94,22 +94,20 @@ def get_loc(index, label, method=None, tolerance=None):
     return index.get_loc(label, **kwargs)
 
 
-def get_indexer(index, labels, method=None, tolerance=None):
+def get_indexer_nd(index, labels, method=None, tolerance=None):
     """ Call pd.Index.get_indexer(labels). If labels are Variable,
     The return type is also a Variable with the same dimension to
     labels.
     """
     from .variable import Variable
-
     kwargs = _index_method_kwargs(method, tolerance)
+
+    flat_labels = np.ravel(labels)
+    flat_indexer = index.get_indexer(flat_labels, **kwargs)
+    indexer = flat_indexer.reshape(labels.shape)
     if isinstance(labels, Variable):
-        if labels.ndim > 1:
-            indexers = np.array(index.get_indexer(labels.data.flatten(),
-                                                  **kwargs))
-            return Variable(labels.dims, indexers.reshape(labels.shape))
-        else:
-            return Variable(labels.dims, index.get_indexer(labels, **kwargs))
-    return index.get_indexer(labels, **kwargs)
+        indexer = Variable(labels.dims, indexer)
+    return indexer
 
 
 def convert_label_indexer(index, label, index_name='', method=None,
@@ -167,7 +165,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
         elif label.dtype.kind == 'b':
             indexer = label
         else:
-            indexer = get_indexer(index, label, method, tolerance)
+            indexer = get_indexer_nd(index, label, method, tolerance)
             if np.any(indexer < 0):
                 raise KeyError('not all values found in index %r'
                                % index_name)
@@ -332,8 +330,9 @@ class LazilyIndexedArray(utils.NDArrayMixin):
     def _updated_key(self, new_key):
         # TODO should suport VectorizedIndexer
         if isinstance(new_key, VectorizedIndexer):
-            raise NotImplementedError('Vectorized indexing for {} is not '
-                                      'implemented.'.format(type(self)))
+            raise NotImplementedError(
+                'Vectorized indexing for {} is not implemented. Load your '
+                'data first with .load() or .compute().'.format(type(self)))
         new_key = iter(expanded_indexer(new_key, self.ndim))
         key = []
         for size, k in zip(self.array.shape, self.key):
@@ -512,7 +511,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
     def __getitem__(self, key):
         def to_int_tuple(key):
             # workaround for uint64 indexer (GH:1406)
-            # TODO remove here after next dask releas (0.15.3)
+            # TODO remove here after next dask release (0.15.3)
             return tuple([k.astype(int) if isinstance(k, np.ndarray)
                           else k for k in key])
 

@@ -17,6 +17,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
+import warnings
 import xarray as xr
 import pytest
 
@@ -976,7 +977,7 @@ class TestDataset(TestCase):
         self.assertArrayEqual(actual['var2'], expected_var2)
         self.assertArrayEqual(actual['var3'], expected_var3)
 
-    def test_isel_dataarray(self):
+    def array(self):
         """ Test for indexing by DataArray """
         import warnings
         data = create_test_data()
@@ -1017,8 +1018,7 @@ class TestDataset(TestCase):
         indexing_da = (indexing_da < 3)
         actual = data.isel(dim2=indexing_da)
         self.assertDataArrayIdentical(
-            actual['dim2'].drop('non_dim').drop('non_dim2').drop('non_dim3'),
-            data['dim2'][:2])
+            actual['dim2'].drop('non_dim').drop('non_dim2'), data['dim2'][:2])
         self.assertDataArrayIdentical(
             actual['non_dim'], indexing_da['non_dim'][:2])
         self.assertDataArrayIdentical(
@@ -1100,9 +1100,18 @@ class TestDataset(TestCase):
         # with different dimension
         ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'])
         actual = data.sel(dim2=ind)
-        expected = data.isel(dim2=[0, 1, 2]).rename({'dim2': 'new_dim'})
+        expected = data.isel(dim2=Variable('new_dim', [0, 1, 2]))
         assert 'new_dim' in actual.dims
-        self.assertDatasetEqual(actual.drop('dim2'), expected.drop('new_dim'))
+        self.assertDatasetEqual(actual, expected)
+
+        # Multi-dimensional
+        ind = DataArray([[0.0], [0.5], [1.0]], dims=['new_dim', 'new_dim2'])
+        actual = data.sel(dim2=ind)
+        expected = data.isel(dim2=Variable(('new_dim', 'new_dim2'),
+                                           [[0], [1], [2]]))
+        assert 'new_dim' in actual.dims
+        assert 'new_dim2' in actual.dims
+        self.assertDatasetEqual(actual, expected)
 
         # with coordinate
         ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'],
@@ -1485,21 +1494,20 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
     def test_reindex_warning(self):
-        import warnings
         data = create_test_data()
 
         with pytest.warns(FutureWarning) as ws:
             # DataArray with different dimension raises Future warning
             ind = xr.DataArray([0.0, 1.0], dims=['new_dim'], name='ind')
             data.reindex(dim2=ind)
-            assert any(["Indexer ind has dimensions new_dim that are" not in
+            assert any(["Indexer has dimensions " in
                         str(w.message) for w in ws])
 
         with pytest.warns(FutureWarning) as ws:
             # Should not warn
             ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
             data.reindex(dim2=ind)
-            assert all(["Indexer ind has dimensions new_dim that are" not in
+            assert all(["Indexer has dimensions " not in
                         str(w.message) for w in ws])
             warnings.warn('dummy', FutureWarning, stacklevel=3)
 

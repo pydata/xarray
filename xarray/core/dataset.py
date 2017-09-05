@@ -1195,7 +1195,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         indexers_list = self._validate_indexers(indexers)
 
         coord_vars = self._get_indexers_coordinates(indexers)
-        coord_names = set(self._coord_names) | set(coord_vars)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
@@ -1204,11 +1203,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not (drop and name in var_indexers):
                 variables[name] = new_var
 
-        # attatch / overwrite coordinate in indexers
-        for k, v in coord_vars.items():
-            variables[k] = v
+        # attach coordinate in indexers
+        variables.update(coord_vars)
 
-        coord_names = coord_names & set(variables)
+        coord_names = set(variables) & set(self._coord_names) | set(coord_vars)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
@@ -1263,26 +1261,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         See Also
         --------
         Dataset.isel
-        Dataset.sel_points
-        Dataset.isel_points
         DataArray.sel
         """
         from .dataarray import DataArray
 
-        new_coords = {k: v._coords for k, v in indexers.items()
-                      if isinstance(v, DataArray)}
-
-        indexers = {k: v.variable if isinstance(v, DataArray) else v
-                    for k, v in indexers.items()}
+        v_indexers = {k: v.variable if isinstance(v, DataArray)  else v
+                      for k, v in indexers.items()}
 
         pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
+            self, v_indexers, method=method, tolerance=tolerance
         )
         # attach indexer's coordinate to pos_indexers
-        for k, v in new_coords.items():
-            if isinstance(pos_indexers[k], Variable):
-                pos_indexers[k] = DataArray(pos_indexers[k], coords=v,
-                                            dims=pos_indexers[k].dims)
+        for k, v in indexers.items():
+            if isinstance(v, DataArray):
+                pos_indexers[k] = DataArray(pos_indexers[k],
+                                            coords=v.coords, dims=v.dims)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 
