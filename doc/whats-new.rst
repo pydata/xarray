@@ -97,6 +97,10 @@ Enhancements
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
 
+ - Support passing keyword arguments to ``load``, ``compute``, and ``persist``
+   methods. Any keyword arguments supplied to these methods are passed on to
+   the corresponding dask function (:issue:`1523`).
+   By `Joe Hamman <https://github.com/jhamman>`_.
 - Encoding attributes are now preserved when xarray objects are concatenated.
   The encoding is copied from the first object  (:issue:`1297`).
   By `Joe Hamman <https://github.com/jhamman>`_ and

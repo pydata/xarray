@@ -307,19 +307,30 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _indexable_data(self):
         return orthogonally_indexable(self._data)
 
-    def load(self):
+    def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return this variable.
 
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
-        if not isinstance(self._data, np.ndarray):
+        if isinstance(self._data, dask_array_type):
+            self._data = as_compatible_data(self._data.compute(**kwargs))
+        elif not isinstance(self._data, np.ndarray):
             self._data = np.asarray(self._data)
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return a new variable. The original is
         left unaltered.
@@ -327,9 +338,18 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Normally, it should not be necessary to call this method in user code,
         because all xarray functions should either work on deferred data or
         load data automatically.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
     @property
     def values(self):
