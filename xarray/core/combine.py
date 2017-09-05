@@ -234,6 +234,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     result_vars = OrderedDict()
     result_coord_names = set(datasets[0].coords)
     result_attrs = datasets[0].attrs
+    result_encoding = datasets[0].encoding
 
     for k, v in datasets[0].variables.items():
         if k not in concat_over:
@@ -288,6 +289,7 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
 
     result = Dataset(result_vars, attrs=result_attrs)
     result = result.set_coords(result_coord_names)
+    result.encoding = result_encoding
 
     if coord is not None:
         # add concat dimension last to ensure that its in the final Dataset

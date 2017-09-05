@@ -37,6 +37,8 @@ CLASSIFIERS = [
 
 INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
+if sys.version_info[0] < 3:
+    TESTS_REQUIRE.append('mock')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
