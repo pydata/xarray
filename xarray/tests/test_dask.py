@@ -12,12 +12,11 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest, assert_equal, mock
+from xarray.tests import unittest, mock
 
 with suppress(ImportError):
     import dask
     import dask.array as da
-    import dask.multiprocessing
 
 
 class DaskTestCase(TestCase):
