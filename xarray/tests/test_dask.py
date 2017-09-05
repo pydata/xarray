@@ -412,6 +412,7 @@ def test_dask_kwargs_variable(method):
     mock_compute.assert_called_with(foo='bar')
 
 
+@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
@@ -430,7 +431,7 @@ def test_dask_kwargs_dataarray(method):
         getattr(x, method)(foo='bar')
     mock_func.assert_called_with(data, foo='bar')
 
-
+@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
