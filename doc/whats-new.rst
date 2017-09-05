@@ -105,6 +105,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix ``isnull()`` to account for changes with pandas 0.21.
+
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
   By `Greg Brener <https://github.com/gbrener>`_.
