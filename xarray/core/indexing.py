@@ -577,13 +577,16 @@ class PandasIndexAdapter(utils.NDArrayMixin):
         # .shape is broken on pandas prior to v0.15.2
         return (len(self.array),)
 
-    def __getitem__(self, key):
+    def __getitem__(self, tuple_key):
+        key = to_tuple(tuple_key)
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
             # objects don't like tuples)
             key, = key
 
-        key = to_tuple(key)
+        if getattr(key, 'ndim', 0) > 1:  # Return np-array if multidimensional
+            return NumpyIndexingAdapter(self.array.values)[tuple_key]
+
         result = self.array[key]
 
         if isinstance(result, pd.Index):

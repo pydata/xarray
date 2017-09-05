@@ -1391,10 +1391,6 @@ class IndexVariable(Variable):
 
     def __getitem__(self, key):
         dims, index_tuple, new_order = self._broadcast_indexes(key)
-        if len(dims) > 1:
-            return Variable(self.dims, self.data, self._attrs, self._encoding,
-                            fastpath=True)[key]
-
         values = self._indexable_data[index_tuple]
         if getattr(values, 'ndim', 0) != 1:
             # returns Variable rather than IndexVariable if multi-dimensional
