@@ -325,7 +325,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dask.array.compute
         """
         if isinstance(self._data, dask_array_type):
-            self._data = np.asarray(self._data.compute(**kwargs))
+            self._data = as_compatible_data(self._data.compute(**kwargs))
         elif not isinstance(self._data, np.ndarray):
             self._data = np.asarray(self._data)
         return self
