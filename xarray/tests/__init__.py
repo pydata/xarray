@@ -21,6 +21,11 @@ except ImportError:
     import unittest
 
 try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+try:
     import scipy
     has_scipy = True
 except ImportError:

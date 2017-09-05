@@ -5,7 +5,6 @@ import pickle
 import numpy as np
 import pandas as pd
 import pytest
-import mock
 
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
@@ -13,7 +12,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest, assert_equal
+from xarray.tests import unittest, assert_equal, mock
 
 with suppress(ImportError):
     import dask
@@ -401,11 +400,6 @@ class TestDataArrayAndDataset(DaskTestCase):
 @pytest.mark.parametrize("method", ['load', 'compute'])
 def test_dask_kwargs_variable(method):
     x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
-    with mock.patch.object(Variable, method,
-                           return_value=np.arange(3)) as mock_method:
-        getattr(x, method)(foo='bar')
-    mock_method.assert_called_with(foo='bar')
-
     # args should be passed on to da.Array.compute()
     with mock.patch.object(da.Array, 'compute',
                            return_value=np.arange(3)) as mock_compute:
@@ -418,11 +412,6 @@ def test_dask_kwargs_variable(method):
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = DataArray(data)
-    with mock.patch.object(DataArray, method,
-                           return_value=np.arange(3)) as mock_method:
-        getattr(x, method)(foo='bar')
-    mock_method.assert_called_with(foo='bar')
-
     if method in ['load', 'compute']:
         dask_func = 'dask.array.compute'
     else:
@@ -438,11 +427,6 @@ def test_dask_kwargs_dataarray(method):
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = Dataset({'x': (('y'), data)})
-    with mock.patch.object(Dataset, method,
-                           return_value=np.arange(3)) as mock_method:
-        getattr(x, method)(foo='bar')
-    mock_method.assert_called_with(foo='bar')
-
     if method in ['load', 'compute']:
         dask_func = 'dask.array.compute'
     else:

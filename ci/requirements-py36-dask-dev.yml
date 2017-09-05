@@ -8,7 +8,6 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - mock
   - numpy
   - pandas
   - seaborn

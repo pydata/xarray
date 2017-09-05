@@ -10,7 +10,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - pytest
-  - mock
   - numpy
   - pandas
   - scipy
