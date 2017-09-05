@@ -2397,7 +2397,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
 
         import dask.dataframe as dd
-        from dask.base import tokenize
+        import dask.array as da
 
         columns = [k for k in self if k not in self.dims]
         ordered_dims = self.dims
@@ -2407,15 +2407,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         data = [chunked._variables[k].set_dims(ordered_dims).data.reshape(-1) for k in columns]
 
-        chunks = data[0].chunks[0]
-
-        meta_data = {c: np.array([], dtype=d.dtype)
-                     for (c, d) in zip(columns, data)}
-        meta = pd.DataFrame(meta_data, columns=columns)
-
-        divisions = [0]
-        for chunk_size in chunks:
-            divisions.append(divisions[-1] + chunk_size)
+        df = dd.concat([dd.from_array(d, columns=c)
+                        for d, c in zip(data, columns)], axis=1)
 
         if set_index:
 
@@ -2430,31 +2423,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # might be needed instead:
             #index = self.coords.to_index(ordered_dims)
 
-            # partition the index
-            partitioned_index = [(index[a:b]) for a, b in
-                  zip(divisions[:-1], divisions[1:])]
-        else:
-            partitioned_index = [np.arange(a, b, 1, 'i8') for a, b in
-                  zip(divisions[:-1], divisions[1:])]
-        divisions[-1] -= 1
+            chunks = data[0].chunks[0]
+            chunked_index = da.from_array(index, chunks=chunks)
+            df_chunked_index = dd.from_array(chunked_index, columns=coord_dim)
 
-        divisions_indexed = [ind[0] for ind in partitioned_index]
-        divisions_indexed.append(partitioned_index[-1][-1])
+            df = dd.concat([df, df_chunked_index], axis=1)
+            df = df.set_index(coord_dim)
 
-        token = tokenize(self, set_index)
-        name = 'to_dask_dataframe-' + token
-
-        dsk = {}
-        for i, chunk_size in enumerate(chunks):
-            ind = partitioned_index[i]
-            data_chunk = (dict, [ (c, d[divisions[i]:divisions[i]+chunk_size])
-                                   for (c, d) in zip(columns, data)] )
-            if isinstance(meta, pd.Series):
-                dsk[name, i] = (pd.Series, data_chunk, ind, meta.dtype, meta.name)
-            else:
-                dsk[name, i] = (pd.DataFrame, data_chunk, ind, meta.columns)
-
-        df = dd.DataFrame(dsk, name, meta, divisions_indexed)
+        if isinstance(df, dd.Series):
+            df = df.to_frame()
 
         return df
 
