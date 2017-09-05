@@ -74,7 +74,8 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
         if len(ordered_dims) == 0:
             raise ValueError('no valid index for a 0-dimensional object')
         elif len(ordered_dims) == 1:
-            return self._data.get_index(ordered_dims[0])
+            (dim,) = ordered_dims
+            return self._data.get_index(dim)
         else:
             indexes = [self._data.get_index(k) for k in ordered_dims]
             names = list(ordered_dims)
