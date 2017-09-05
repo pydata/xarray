@@ -4,6 +4,8 @@ from __future__ import print_function
 import pickle
 import numpy as np
 import pandas as pd
+import pytest
+import mock
 
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
@@ -182,22 +184,6 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
-
-    def test_compute_args(self):
-        a = Variable('x', [1, 2]).chunk()
-        expected = Variable('x', [1, 4])
-        b = a * a
-        # compute
-        b1 = b.compute(get=dask.multiprocessing.get)
-        assert b1._in_memory
-        assert_equal(b1, expected)
-        b2 = b.compute(get=dask.multiprocessing.get, num_workers=4)
-        assert b2._in_memory
-        assert_equal(b2, expected)
-        # load
-        b3 = b.load(get=dask.multiprocessing.get, num_workers=4)
-        assert b3._in_memory
-        assert_equal(b3, expected)
 
 
 @requires_dask
@@ -410,31 +396,58 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
 
-    def test_compute_args(self):
-        a = DataArray([1, 2], name='a').chunk()
-        expected = DataArray([1, 4], name='expected')
-        b = a * a
-        # compute
-        b1 = b.compute(get=dask.multiprocessing.get)
-        assert b1._in_memory
-        assert_equal(b1, expected)
-        b2 = b.compute(get=dask.multiprocessing.get, num_workers=4)
-        assert b2._in_memory
-        assert_equal(b2, expected)
-        # load
-        b3 = b.load(get=dask.multiprocessing.get, num_workers=4)
-        assert b3._in_memory
-        assert_equal(b3, expected)
-        # persist
-        b4 = b.persist(get=dask.multiprocessing.get, num_workers=4)
-        assert b4._in_memory
-        assert_equal(b4, expected)
 
-        # dataset
-        ds = a.to_dataset()
-        ds.compute(get=dask.multiprocessing.get, num_workers=4)
-        ds.load(get=dask.multiprocessing.get, num_workers=4)
-        ds.persist(get=dask.multiprocessing.get, num_workers=4)
+@pytest.mark.parametrize("method", ['load', 'compute'])
+def test_dask_kwargs_variable(method):
+    x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
+    with mock.patch.object(Variable, method,
+                           return_value=np.arange(3)) as mock_method:
+        getattr(x, method)(foo='bar')
+    mock_method.assert_called_with(foo='bar')
+
+    # args should be passed on to da.Array.compute()
+    with mock.patch.object(da.Array, 'compute',
+                           return_value=np.arange(3)) as mock_compute:
+        getattr(x, method)(foo='bar')
+    mock_compute.assert_called_with(foo='bar')
+
+
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataarray(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = DataArray(data)
+    with mock.patch.object(DataArray, method,
+                           return_value=np.arange(3)) as mock_method:
+        getattr(x, method)(foo='bar')
+    mock_method.assert_called_with(foo='bar')
+
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataset(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = Dataset({'x': (('y'), data)})
+    with mock.patch.object(Dataset, method,
+                           return_value=np.arange(3)) as mock_method:
+        getattr(x, method)(foo='bar')
+    mock_method.assert_called_with(foo='bar')
+
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
 
 
 kernel_call_count = 0
