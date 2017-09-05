@@ -129,7 +129,7 @@ Bug fixes
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
 
-- Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when if no path is
+- Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
   provided (:issue:`1410`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
