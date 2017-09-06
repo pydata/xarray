@@ -135,6 +135,9 @@ Bug fixes
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
+  coordinate shares a name with a dimension but is comprised of arbitrary
+  dimensions(:issue:`1120`).
 - :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
