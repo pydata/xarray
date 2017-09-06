@@ -18,7 +18,8 @@ from xarray.core.common import full_like
 
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_identical, assert_equal, assert_allclose, assert_array_equal)
+    assert_identical, assert_equal, assert_allclose, assert_array_equal,
+    raises_regex)
 
 
 class TestDataArray(TestCase):
@@ -920,6 +921,29 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
             self.mda['level_1'] = np.arange(4)
             self.mda.coords['level_1'] = np.arange(4)
+
+    def test_coords_to_index(self):
+        da = DataArray(np.zeros((2, 3)), [('x', [1, 2]), ('y', list('abc'))])
+
+        with raises_regex(ValueError, 'no valid index'):
+            da[0, 0].coords.to_index()
+
+        expected = pd.Index(['a', 'b', 'c'], name='y')
+        actual = da[0].coords.to_index()
+        assert expected.equals(actual)
+
+        expected = pd.MultiIndex.from_product([[1, 2], ['a', 'b', 'c']],
+                                              names=['x', 'y'])
+        actual = da.coords.to_index()
+        assert expected.equals(actual)
+
+        expected = pd.MultiIndex.from_product([['a', 'b', 'c'], [1, 2]],
+                                              names=['y', 'x'])
+        actual = da.coords.to_index(['y', 'x'])
+        assert expected.equals(actual)
+
+        with raises_regex(ValueError, 'ordered_dims must match'):
+            da.coords.to_index(['x'])
 
     def test_coord_coords(self):
         orig = DataArray([10, 20],

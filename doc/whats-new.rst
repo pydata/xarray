@@ -38,12 +38,12 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 
 Enhancements
 ~~~~~~~~~~~~
@@ -110,8 +110,23 @@ Enhancements
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
 
+ - Support passing keyword arguments to ``load``, ``compute``, and ``persist``
+   methods. Any keyword arguments supplied to these methods are passed on to
+   the corresponding dask function (:issue:`1523`).
+   By `Joe Hamman <https://github.com/jhamman>`_.
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+  - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
+  - :py:meth:`~xarray.DataArray.to_series` and
+    :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
+    for 1D data (:issue:`1548`).
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
@@ -136,9 +151,16 @@ Bug fixes
 - Fix positional indexing to allow the use of unsigned integers (:issue:`1405`).
   By `Joe Hamman <https://github.com/jhamman>`_ and
   `Gerrit Holl <https://github.com/gerritholl`_.
+- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
+  coordinate shares a name with a dimension but is comprised of arbitrary
+  dimensions(:issue:`1120`).
 - :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
+
+- Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
+  provided (:issue:`1410`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 

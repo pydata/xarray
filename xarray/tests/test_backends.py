@@ -1985,6 +1985,12 @@ class TestDataArrayToNetCDF(TestCase):
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 self.assertDataArrayIdentical(expected, loaded)
 
+    def test_dataarray_to_netcdf_return_bytes(self):
+        # regression test for GH1410
+        data = xr.DataArray([1, 2, 3])
+        output = data.to_netcdf()
+        assert isinstance(output, bytes)
+
     @requires_pathlib
     def test_dataarray_to_netcdf_no_name_pathlib(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)))

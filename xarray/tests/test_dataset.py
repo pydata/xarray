@@ -247,6 +247,12 @@ class TestDataset(TestCase):
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_invalid_dims(self):
+        # regression for GH1120
+        with self.assertRaises(MergeError):
+            Dataset(data_vars=dict(v=('y', [1, 2, 3, 4])),
+                    coords=dict(y=DataArray([.1, .2, .3, .4], dims='x')))
+
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
         actual = Dataset({'x': 5.0 + np.arange(5)})
