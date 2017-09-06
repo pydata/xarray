@@ -99,14 +99,11 @@ def get_indexer_nd(index, labels, method=None, tolerance=None):
     The return type is also a Variable with the same dimension to
     labels.
     """
-    from .variable import Variable
     kwargs = _index_method_kwargs(method, tolerance)
 
     flat_labels = np.ravel(labels)
     flat_indexer = index.get_indexer(flat_labels, **kwargs)
     indexer = flat_indexer.reshape(labels.shape)
-    if isinstance(labels, Variable):
-        indexer = Variable(labels.dims, indexer)
     return indexer
 
 
@@ -156,7 +153,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
             )
 
     else:
-        label = label if hasattr(label, 'dims') else _asarray_tuplesafe(label)
+        label = (label if getattr(label, 'ndim', 1) > 1  # vectorized-indexing
+                 else _asarray_tuplesafe(label))
         if label.ndim == 0:
             if isinstance(index, pd.MultiIndex):
                 indexer, new_index = index.get_loc_level(label.item(), level=0)

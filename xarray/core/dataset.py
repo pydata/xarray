@@ -1297,7 +1297,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         from .dataarray import DataArray
 
-        v_indexers = {k: v.variable if isinstance(v, DataArray)  else v
+        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
                       for k, v in indexers.items()}
 
         pos_indexers, new_indexes = indexing.remap_label_indexers(
@@ -1305,6 +1305,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         )
         # attach indexer's coordinate to pos_indexers
         for k, v in indexers.items():
+            if isinstance(v, Variable):
+                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
             if isinstance(v, DataArray):
                 pos_indexers[k] = DataArray(pos_indexers[k],
                                             coords=v.coords, dims=v.dims)
