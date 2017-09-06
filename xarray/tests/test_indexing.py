@@ -243,6 +243,11 @@ class TestIndexerTuple(TestCase):
                     np.arange(10) < 5]
         for i, j, k in itertools.product(indexers, repeat=3):
 
+            if isinstance(j, np.ndarray) and j.dtype.kind == 'b':  # match size
+                j = np.arange(20) < 4
+            if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
+                k = np.arange(30) < 8
+
             _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
             expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
             if new_order:
