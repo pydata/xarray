@@ -1168,10 +1168,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     if v.ndim != 1:  # we only support 1-d boolean array
                         raise ValueError(
                             '{0:d}d-boolean array is used for indexing. '
-                            'Only 1d-array is supported for boolean '
-                            'indexing'.format(v.ndim))
+                            'Only 1d-array is supported.'.format(v.ndim))
                     # Make sure in case of boolean DataArray, its
-                    # coordinate is also indexed.
+                    # coordinate also should be indexed.
                     v = v[v.values.nonzero()[0]]
                 coords = {d: v.coords[d].variable for d in v.coords}
 
@@ -1203,15 +1202,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             by integers, slice objects or arrays.
             indexer can be a integer, slice, array-like or even DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
-            carried out.
+            carried out. See :ref:`indexing` for the details.
 
         Returns
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. In
-            general, each array's data will be a view of the array's data
-            in this dataset, unless numpy fancy indexing was triggered by using
+            array and dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict to this
+            object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
         See Also
@@ -1220,7 +1221,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         DataArray.isel
         """
         indexers_list = self._validate_indexers(indexers)
-
         coord_vars = self._get_indexers_coordinates(indexers)
 
         variables = OrderedDict()
@@ -1275,15 +1275,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             by scalars, slices or arrays of tick labels. For dimensions with
             multi-index, the indexer may also be a dict-like object with keys
             matching index level names.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
 
         Returns
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            variable and dimension is indexed by the appropriate indexers. In
-            general, each variable's data will be a view of the variable's data
-            in this dataset, unless numpy fancy indexing was triggered by using
+            variable and dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict to this
+            object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
+
 
         See Also
         --------

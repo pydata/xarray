@@ -539,6 +539,11 @@ class VariableSubclassTestCases(object):
         expected = v[dict(y=2)]
         self.assertArrayEqual(v_new, expected)
 
+        # with boolean variable with wrong shape
+        ind = np.array([True, False])
+        with self.assertRaisesRegexp(IndexError, 'Boolean array size 2 is '):
+            v[Variable(('a', 'b'), [[0, 1]]), ind]
+
     def test_getitem_uint_1d(self):
         # regression test for #1405
         v = self.cls(['x'], [0, 1, 2])

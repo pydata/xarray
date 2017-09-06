@@ -521,6 +521,11 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                         raise IndexError("{}-dimensional boolean indexing is "
                                          "not supported. ".format(
                                                                 variable.ndim))
+                    if self.shape[self.get_axis_num(dim)] != len(variable):
+                        raise IndexError(
+                            "Boolean array size {0:d} is used to index array "
+                            "with shape {1:s}.".format(len(variable),
+                                                       str(self.shape)))
                     (variable,) = variable._nonzero()
 
                 variables.append(variable)
