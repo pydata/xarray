@@ -1317,6 +1317,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel_points
         DataArray.isel_points
         """
+        warnings.warn('Dataset.isel_points is deprecated: use Dataset.isel()'
+                      'instead.', DeprecationWarning, stacklevel=2)
+
         indexer_dims = set(indexers)
 
         def take(variable, slices):
@@ -1463,7 +1466,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         DataArray.sel_points
         """
         warnings.warn('Dataset.sel_points is deprecated: use Dataset.sel()'
-                      'instead', DeprecationWarning, stacklevel=2)
+                      'instead.', DeprecationWarning, stacklevel=2)
 
         pos_indexers, _ = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
