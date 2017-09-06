@@ -1209,8 +1209,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
             array and dimension is indexed by the appropriate indexers.
-            If indexer DataArrays have coordinates that do not conflict to this
-            object, then these coordinates will be attached.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
             In general, each array's data will be a view of the array's data
             in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
@@ -1283,8 +1283,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
             variable and dimension is indexed by the appropriate indexers.
-            If indexer DataArrays have coordinates that do not conflict to this
-            object, then these coordinates will be attached.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
             In general, each array's data will be a view of the array's data
             in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.

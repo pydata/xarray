@@ -569,7 +569,6 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], [0, 1, 2])
         v_data = v.compute().data
 
-        ind = np.array(0, dtype='int')  # This is 0d-array
         v_new = v[np.array([0])[0]]
         self.assertArrayEqual(v_new, v_data[0])
 

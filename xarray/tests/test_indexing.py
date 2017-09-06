@@ -252,7 +252,8 @@ class TestIndexerTuple(TestCase):
             expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
             if new_order:
                 old_order = range(len(new_order))
-                expected_data = np.moveaxis(expected_data, old_order, new_order)
+                expected_data = np.moveaxis(expected_data, old_order,
+                                            new_order)
 
             outer_index = indexing.OuterIndexer(
                 (nonzero(i), nonzero(j), nonzero(k)))

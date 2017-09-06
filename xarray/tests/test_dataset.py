@@ -985,7 +985,6 @@ class TestDataset(TestCase):
 
     def array(self):
         """ Test for indexing by DataArray """
-        import warnings
         data = create_test_data()
         # indexing with DataArray with same-name coordinates.
         indexing_da = DataArray(np.arange(1, 4), dims=['dim1'],
