@@ -47,7 +47,7 @@ has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
 has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('pynio')
 has_dask, requires_dask = _importorskip('dask')
-has_bottleneck, requires_bottleneck = _importorskip('bottleneck', '1.0')
+has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
 
