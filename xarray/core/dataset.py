@@ -1164,6 +1164,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coord_list = []
         for k, v in indexers.items():
             if isinstance(v, DataArray):
+                v_coords = v.coords
                 if v.dtype.kind == 'b':
                     if v.ndim != 1:  # we only support 1-d boolean array
                         raise ValueError(
@@ -1171,8 +1172,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                             'Only 1d-array is supported.'.format(v.ndim))
                     # Make sure in case of boolean DataArray, its
                     # coordinate also should be indexed.
-                    v = v[v.values.nonzero()[0]]
-                coords = {d: v.coords[d].variable for d in v.coords}
+                    v_coords = v[v.values.nonzero()[0]].coords
+                coords = {d: v_coords[d].variable for d in v.coords}
 
                 for k, vc in self.variables.items():
                     if k in coords and not vc[v.values].equals(coords[k]):

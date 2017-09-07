@@ -490,12 +490,6 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(da[ind], da[[0, 1]])
         self.assertDataArrayEqual(da[ind], da[ind.values])
 
-        ind = xr.DataArray([True, True, False], dims=['a'],
-                           coords={'a': [0, 1, 2]})
-        actual = da[ind]
-        assert 'a' in actual
-        self.assertArrayEqual(actual['a'], [0, 1])
-
     def test_setitem(self):
         # basic indexing should work as numpy's indexing
         tuples = [(0, 0), (0, slice(None, None)),

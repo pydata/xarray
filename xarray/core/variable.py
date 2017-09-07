@@ -446,6 +446,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
 
+        self._validate_indexers(key)
         # Detect it can be mapped as an outer indexer
         # If all key is unlabeled, or
         # key can be mapped as an OuterIndexer.
@@ -473,6 +474,34 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                      if not isinstance(k, integer_types))
         return dims, BasicIndexer(key), None
 
+    def _validate_indexers(self, key):
+        """ Make sanity checks """
+        for dim, k in zip(self.dims, key):
+            if isinstance(k, BASIC_INDEXING_TYPES):
+                pass
+            else:
+                if not isinstance(k, Variable):
+                    k = np.asarray(k)
+                    if k.ndim > 1:
+                        raise IndexError(
+                            "Unlabeled multi-dimensional array cannot be "
+                            "used for indexing: {}".format(k))
+                if k.dtype.kind == 'b':
+                    if self.shape[self.get_axis_num(dim)] != len(k):
+                        raise IndexError(
+                            "Boolean array size {0:d} is used to index array "
+                            "with shape {1:s}.".format(len(k),
+                                                       str(self.shape)))
+                    if k.ndim > 1:
+                        raise IndexError("{}-dimensional boolean indexing is "
+                                         "not supported. ".format(k.ndim))
+                    if getattr(k, 'dims', (dim, )) != (dim, ):
+                        raise IndexError(
+                            "Boolean indexer should be unlabeled or on the "
+                            "same dimension to the indexed array. Indexer is "
+                            "on {0:s} but the target dimension is "
+                            "{1:s}.".format(str(k.dims), dim))
+
     def _broadcast_indexes_outer(self, key):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
                      for k, dim in zip(key, self.dims)
@@ -486,10 +515,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 indexer.append(k)
             else:
                 k = np.asarray(k)
-                if k.ndim > 1:
-                    raise IndexError("Unlabeled multi-dimensional array "
-                                     "cannot be used for indexing: {}".format(
-                                         k))
                 indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
         return dims, OuterIndexer(indexer), None
 
@@ -502,30 +527,15 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                      in zip(nonzeros, self.dims))
 
     def _broadcast_indexes_vectorized(self, key):
-
         variables = []
         out_dims_set = OrderedSet()
         for dim, value in zip(self.dims, key):
             if isinstance(value, slice):
                 out_dims_set.add(dim)
             else:
-                try:
-                    variable = (value if isinstance(value, Variable) else
-                                as_variable(value, name=dim))
-                except MissingDimensionsError:  # change to better exception
-                    raise IndexError("Unlabeled multi-dimensional array "
-                                     "cannot be used for indexing.")
-
+                variable = (value if isinstance(value, Variable) else
+                            as_variable(value, name=dim))
                 if variable.dtype.kind == 'b':  # boolean indexing case
-                    if variable.ndim > 1:
-                        raise IndexError("{}-dimensional boolean indexing is "
-                                         "not supported. ".format(
-                                                                variable.ndim))
-                    if self.shape[self.get_axis_num(dim)] != len(variable):
-                        raise IndexError(
-                            "Boolean array size {0:d} is used to index array "
-                            "with shape {1:s}.".format(len(variable),
-                                                       str(self.shape)))
                     (variable,) = variable._nonzero()
 
                 variables.append(variable)

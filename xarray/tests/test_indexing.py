@@ -153,6 +153,10 @@ class TestLazyArray(TestCase):
         for i in indexers:
             for j in indexers:
                 for k in indexers:
+                    if isinstance(j, np.ndarray) and j.dtype.kind == 'b':
+                         j = np.arange(20) < 5
+                    if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
+                         k = np.arange(30) < 5
                     expected = np.asarray(v[i, j, k])
                     for actual in [v_lazy[i, j, k],
                                    v_lazy[:, j, k][i],

@@ -86,6 +86,17 @@ class VariableSubclassTestCases(object):
         expected = np.array(v._data)[([0, 1], [0, 1]), ]
         self.assertArrayEqual(v_new, expected)
 
+        # boolean indexing
+        ind = Variable(('x', ), [True, False, True])
+        v_new = v[ind]
+        self.assertVariableIdentical(v[[0, 2]], v_new)
+        v_new = v[[True, False, True]]
+        self.assertVariableIdentical(v[[0, 2]], v_new)
+
+        with self.assertRaisesRegexp(IndexError, "Boolean indexer should"):
+            ind = Variable(('a', ), [True, False, True])
+            v[ind]
+
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
         """Given a 1-dimensional variable, verify that the variable is indexed
@@ -524,14 +535,9 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(v_new, v_data[[0, 1]][:, [0, 1]])
 
         # boolean indexing
-        v_new = v[dict(x=[True, False], y=[False, True])]
+        v_new = v[dict(x=[True, False], y=[False, True, False])]
         assert v_new.dims == ('x', 'y')
         self.assertArrayEqual(v_new, v_data[0][1])
-
-        ind = Variable(['a'], [True, False])
-        v_new = v[dict(y=ind)]
-        assert v_new.dims == ('x', 'a')
-        self.assertArrayEqual(v_new, v_data[:, 0:1])
 
         # with scalar variable
         ind = Variable((), 2)
@@ -543,6 +549,11 @@ class VariableSubclassTestCases(object):
         ind = np.array([True, False])
         with self.assertRaisesRegexp(IndexError, 'Boolean array size 2 is '):
             v[Variable(('a', 'b'), [[0, 1]]), ind]
+
+        # boolean indexing with different dimension
+        ind = Variable(['a'], [True, False, False])
+        with self.assertRaisesRegexp(IndexError, 'Boolean indexer should be'):
+            v[dict(y=ind)]
 
     def test_getitem_uint_1d(self):
         # regression test for #1405
@@ -1384,7 +1395,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         self.assertArrayEqual(v[0], np.ones_like(v[0]))
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
-        v[dict(x=[True, False], y=[False, True])] = 1
+        v[dict(x=[True, False], y=[False, True, False])] = 1
         self.assertTrue(v[0, 1] == 1)
 
         # dimension broadcast
