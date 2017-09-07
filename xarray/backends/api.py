@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os.path
-from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -10,7 +9,7 @@ from numbers import Number
 
 import numpy as np
 
-from .. import backends, conventions
+from .. import backends, conventions, Dataset
 from .common import ArrayWriter, GLOBAL_LOCK
 from ..core import indexing
 from ..core.combine import auto_combine
@@ -655,6 +654,11 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     if mode == 'w' and len(set(paths)) < len(paths):
         raise ValueError("cannot use mode='w' when writing multiple "
                          'datasets to the same path')
+
+    for obj in datasets:
+        if not isinstance(obj, Dataset):
+            raise TypeError('save_mfdataset only supports writing Dataset '
+                            'objects, recieved type %s' % type(obj))
 
     if groups is None:
         groups = [None] * len(datasets)

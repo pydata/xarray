@@ -23,7 +23,8 @@ Breaking changes
 
 - Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
   also supplying an explicit ``dims`` argument is no longer supported. This
-  behavior was deprecated in version 0.9 but is now an error (:issue:`727`).
+  behavior was deprecated in version 0.9 but will now raise an error
+  (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Backward Incompatible Changes
@@ -58,7 +59,7 @@ Enhancements
 
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
-  By `Greg Brener <https://github.com/gbrener>`_
+  By `Greg Brener <https://github.com/gbrener>`_.
 
 - Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
   a signed integer data type should be interpreted as unsigned bytes
@@ -97,23 +98,26 @@ Enhancements
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
 
- - Support passing keyword arguments to ``load``, ``compute``, and ``persist``
-   methods. Any keyword arguments supplied to these methods are passed on to
-   the corresponding dask function (:issue:`1523`).
-   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support passing keyword arguments to ``load``, ``compute``, and ``persist``
+  methods. Any keyword arguments supplied to these methods are passed on to
+  the corresponding dask function (:issue:`1523`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Encoding attributes are now preserved when xarray objects are concatenated.
   The encoding is copied from the first object  (:issue:`1297`).
   By `Joe Hamman <https://github.com/jhamman>`_ and
-  `Gerrit Holl <https://github.com/gerritholl`_.
+  `Gerrit Holl <https://github.com/gerritholl>`_.
 
 Bug fixes
 ~~~~~~~~~
 
 - Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+
   - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
   - :py:meth:`~xarray.DataArray.to_series` and
     :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
     for 1D data (:issue:`1548`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
@@ -144,6 +148,10 @@ Bug fixes
 
 - Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
   provided (:issue:`1410`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix :py:func:`xarray.save_mfdataset` to properly raise an informative error
+  when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
