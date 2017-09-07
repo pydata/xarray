@@ -1379,6 +1379,13 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
 
+    def test_save_mfdataset_invalid_dataarray(self):
+        # regression test for GH1555
+        da = DataArray([1, 2])
+        with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
+            save_mfdataset([da], ['dataarray'])
+
+
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
