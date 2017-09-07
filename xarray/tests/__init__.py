@@ -5,6 +5,7 @@ import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 import re
+import importlib
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -14,6 +15,21 @@ import pytest
 from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
+
+
+def _importorskip(modname, minversion=None):
+    try:
+        mod = importlib.import_module(modname)
+        has = True
+        if minversion is not None:
+            if LooseVersion(mod.__version__) < LooseVersion(minversion):
+                raise ImportError('Minimum version not satisfied')
+    except (ImportError, ModuleNotFoundError):
+        has = False
+
+    return (has, pytest.mark.skipif((not has),
+                                    reason='requires {}'.format(modname)))
+
 
 try:
     import unittest2 as unittest
@@ -25,111 +41,32 @@ try:
 except ImportError:
     import mock
 
-try:
-    import scipy
-    has_scipy = True
-except ImportError:
-    has_scipy = False
+has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
+has_scipy, requires_scipy = _importorskip('scipy')
+has_pydap, requires_pydap = _importorskip('pydap.client')
+has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
+has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
+has_pynio, requires_pynio = _importorskip('pynio')
+has_dask, requires_dask = _importorskip('dask')
+has_bottleneck, requires_bottleneck = _importorskip('bottleneck', '1.0')
+has_rasterio, requires_rasterio = _importorskip('rasterio')
+has_pathlib, requires_pathlib = _importorskip('pathlib')
 
-try:
-    import pydap.client
-    has_pydap = True
-except ImportError:
-    has_pydap = False
+# some special cases
+has_scipy_or_netCDF4 = has_scipy or has_netCDF4
+requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
+if not has_pathlib:
+    has_pathlib, requires_pathlib = _importorskip('pathlib2')
 
-try:
-    import netCDF4
-    has_netCDF4 = True
-except ImportError:
-    has_netCDF4 = False
-
-
-try:
-    import h5netcdf
-    has_h5netcdf = True
-except ImportError:
-    has_h5netcdf = False
-
-
-try:
-    import Nio
-    has_pynio = True
-except ImportError:
-    has_pynio = False
-
-
-try:
-    import dask.array
+if has_dask:
     import dask
     dask.set_options(get=dask.get)
-    has_dask = True
-except ImportError:
-    has_dask = False
-
-
-try:
-    import matplotlib
-    has_matplotlib = True
-except ImportError:
-    has_matplotlib = False
-
-
-try:
-    import bottleneck
-    if LooseVersion(bottleneck.__version__) < LooseVersion('1.0'):
-        raise ImportError('Fall back to numpy')
-    has_bottleneck = True
-except ImportError:
-    has_bottleneck = False
-
-try:
-    import rasterio
-    has_rasterio = True
-except ImportError:
-    has_rasterio = False
-
-try:
-    import pathlib
-    has_pathlib = True
-except ImportError:
-    try:
-        import pathlib2
-        has_pathlib = True
-    except ImportError:
-        has_pathlib = False
-
-
-# slighly simpler construction that the full functions.
-# Generally `pytest.importorskip('package')` inline is even easier
-requires_matplotlib = pytest.mark.skipif(
-    not has_matplotlib, reason='requires matplotlib')
-requires_scipy = pytest.mark.skipif(
-    not has_scipy, reason='requires scipy')
-requires_pydap = pytest.mark.skipif(
-    not has_pydap, reason='requires pydap')
-requires_netCDF4 = pytest.mark.skipif(
-    not has_netCDF4, reason='requires netCDF4')
-requires_h5netcdf = pytest.mark.skipif(
-    not has_h5netcdf, reason='requires h5netcdf')
-requires_pynio = pytest.mark.skipif(
-    not has_pynio, reason='requires pynio')
-requires_scipy_or_netCDF4 = pytest.mark.skipif(
-    not has_scipy and not has_netCDF4, reason='requires scipy or netCDF4')
-requires_dask = pytest.mark.skipif(
-    not has_dask, reason='requires dask')
-requires_bottleneck = pytest.mark.skipif(
-    not has_bottleneck, reason='requires bottleneck')
-requires_rasterio = pytest.mark.skipif(
-    not has_rasterio, reason='requires rasterio')
-requires_pathlib = pytest.mark.skipif(
-    not has_pathlib, reason='requires pathlib / pathlib2'
-)
-
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
     _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")
-except ValueError:
+except (ValueError, AttributeError):
     # Can't get config from pytest, e.g., because xarray is installed instead
     # of being run from a development version (and hence conftests.py is not
     # available). Don't run flaky tests.

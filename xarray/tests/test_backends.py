@@ -1508,8 +1508,6 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual, expected)
 
 
-@requires_scipy
-@requires_pynio
 class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
@@ -1529,6 +1527,8 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
+    @requires_scipy
+    @requires_pynio
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})
         expected = example.rename({'foo': 'bar', 'x': 'y'})
