@@ -111,6 +111,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Unsigned int support for reduce methods with skipna=True
+  (:issue:1562).
+  By `Keisuke Fujii` <https://github.com/fujiisoup>`_.
+
 - Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
 
   - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
