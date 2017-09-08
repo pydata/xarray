@@ -2797,6 +2797,15 @@ class TestDataset(TestCase):
 
         self.assertDatasetEqual(data.mean(dim=[]), data)
 
+        # uint support
+        data = xr.Dataset({'a': (('x', 'y'),
+                                 np.arange(6).reshape(3, 2).astype('uint')),
+                           'b': (('x', ), np.array([0.1, 0.2, np.nan]))})
+        actual = data.mean('x', skipna=True)
+        expected = xr.Dataset({'a': data['a'].mean('x'),
+                               'b': data['b'].mean('x', skipna=True)})
+        self.assertDatasetIdentical(actual, expected)
+
     def test_reduce_bad_dim(self):
         data = create_test_data()
         with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
