@@ -18,12 +18,14 @@ What's New
 v0.9.7 (unreleased)
 -------------------
 
-Enhancements
-~~~~~~~~~~~~
+Breaking changes
+~~~~~~~~~~~~~~~~
 
-- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
-  raster files are opened with :py:func:`~xarray.open_rasterio`.
-  By `Greg Brener <https://github.com/gbrener>`_
+- Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
+  also supplying an explicit ``dims`` argument is no longer supported. This
+  behavior was deprecated in version 0.9 but will now raise an error
+  (:issue:`727`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 - A new resampling interface to match pandas' group-by-like API was added to
   :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`.
@@ -31,6 +33,20 @@ Enhancements
   as is both downsampling and upsampling (including linear, quadratic, cubic,
   and spline interpolation).
   By `Daniel Rothenberg <https://github.com/darothen>`_
+
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
+  raster files are opened with :py:func:`~xarray.open_rasterio`.
+  By `Greg Brener <https://github.com/gbrener>`_
+
 
 Bug fixes
 ~~~~~~~~~
