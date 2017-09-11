@@ -129,6 +129,8 @@ the first letters of the corresponding months.
 
 You can use these shortcuts with both Datasets and DataArray coordinates.
 
+.. _resampling:
+
 Resampling and grouped operations
 ---------------------------------
 

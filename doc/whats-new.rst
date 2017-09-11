@@ -28,11 +28,34 @@ Breaking changes
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 - A new resampling interface to match pandas' group-by-like API was added to
-  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`.
-  Timeseries resampling is fully supported for data with arbitrary dimensions
-  as is both downsampling and upsampling (including linear, quadratic, cubic,
-  and spline interpolation).
-  By `Daniel Rothenberg <https://github.com/darothen>`_
+  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`
+  (:issue:`1272`). :ref:`Timeseries resampling <resampling>` is
+  fully supported for data  with arbitrary dimensions as is both downsampling
+  and upsampling (including linear, quadratic, cubic, and spline interpolation).
+
+  Old syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample('24H', dim='time', how='max')
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  New syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample(time='24H').max()
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  Note that both versions are currently supported, but using the old syntax will
+  produce a warning encouraging users to adopt the new syntax. By `Daniel
+  Rothenberg <https://github.com/darothen>`_
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
