@@ -5,7 +5,6 @@ from __future__ import print_function
 from scipy.interpolate import interp1d
 
 from . import ops
-from .combine import merge
 from .groupby import DataArrayGroupBy, DatasetGroupBy
 from .pycompat import dask_array_type, OrderedDict
 
@@ -134,7 +133,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                              "('{_dim}')! ".format(self))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
-
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
@@ -191,7 +189,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         from .dataarray import DataArray
 
         if isinstance(self._obj.data, dask_array_type):
-            raise TypeError('dask arrays not supported yet in resample.interpolate()')
+            raise TypeError('dask arrays not supported yet in '
+                            'resample.interpolate()')
 
         x = self._obj[self._dim].astype('float')
         y = self._obj.data
@@ -301,6 +300,7 @@ class DatasetResample(DatasetGroupBy, Resample):
             func, self._dim, keep_attrs, **kwargs)
 
     def _interpolate(self, kind='linear'):
+        """Apply scipy.interpolate.interp1d along resampling dimension."""
         from .dataset import Dataset
         from .variable import Variable
 
@@ -333,7 +333,7 @@ class DatasetResample(DatasetGroupBy, Resample):
                                  assume_sorted=True)
                     interpolated = Variable(variable.dims, f(new_times))
 
-                    data_vars[name ] = interpolated
+                    data_vars[name] = interpolated
 
         return Dataset(data_vars, coords)
 
