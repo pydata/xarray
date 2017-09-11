@@ -17,7 +17,7 @@ class Resample(object):
     for handling specialized re-sampling operations.
 
     You should create a `Resample` object by using the `DataArray.resample` or
-    `Dataset.resample` methods.
+    `Dataset.resample` methods. The dimension along re-sampling
 
     See Also
     --------
@@ -302,7 +302,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
     def _interpolate(self, kind='linear'):
         from .dataset import Dataset
-        from .variable import  Variable
+        from .variable import Variable
 
         old_times = self._obj[self._dim].astype(float)
         new_times = self._full_index.values.astype(float)
@@ -324,6 +324,10 @@ class DatasetResample(DatasetGroupBy, Resample):
 
                     axis = variable.get_axis_num(self._dim)
 
+                    # We've previously checked for monotonicity along the
+                    # re-sampling dimension (in __init__ via the GroupBy
+                    # constructor), so we can avoid sorting the data again by
+                    # passing 'assume_sorted=True'
                     f = interp1d(old_times, variable.data, kind=kind,
                                  axis=axis, bounds_error=True,
                                  assume_sorted=True)
