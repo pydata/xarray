@@ -191,8 +191,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         from .dataarray import DataArray
 
         if isinstance(self._obj.data, dask_array_type):
-            raise NotImplementedError(
-                'Resampling by interpolation does not work with dask arrays')
+            raise TypeError('dask arrays not supported yet in resample.interpolate()')
 
         x = self._obj[self._dim].astype('float')
         y = self._obj.data
@@ -302,42 +301,37 @@ class DatasetResample(DatasetGroupBy, Resample):
             func, self._dim, keep_attrs, **kwargs)
 
     def _interpolate(self, kind='linear'):
-        from .dataarray import DataArray
         from .dataset import Dataset
+        from .variable import  Variable
 
-        new_x = self._full_index.values.astype('float')
+        old_times = self._obj[self._dim].astype(float)
+        new_times = self._full_index.values.astype(float)
 
-        arrs = {}
-
-        # Prepare coordinates by dropping non-dimension coordinates along the
-        # resampling dimension.
-        # note: the lower-level Variable API could be used to speed this up
+        data_vars = OrderedDict()
         coords = OrderedDict()
-        for k, v in self._obj.coords.items():
-            # is the resampling dimension
-            if k == self._dim:
-                coords[self._dim] = self._full_index
-            # else, check if resampling dim is in coordinate dimensions
-            elif self._dim not in v.dims:
-                coords[k] = v
 
         # Apply the interpolation to each DataArray in our original Dataset
-        for var in self._obj.data_vars:
-            da = self._obj[var].copy()
+        for name, variable in self._obj.variables.items():
+            if name in self._obj.coords:
+                if name == self._dim:
+                    coords[self._dim] = self._full_index
+                elif self._dim not in variable.dims:
+                    coords[name] = variable
+                else:
+                    if isinstance(variable.data, dask_array_type):
+                        raise TypeError('dask arrays not supported yet in '
+                                        'resample.interpolate()')
 
-            x = da[self._dim].astype('float')
-            y = da.values
-            axis = da.get_axis_num(self._dim)
+                    axis = variable.get_axis_num(self._dim)
 
-            f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
-                         assume_sorted=True)
+                    f = interp1d(old_times, variable.data, kind=kind,
+                                 axis=axis, bounds_error=True,
+                                 assume_sorted=True)
+                    interpolated = Variable(variable.dims, f(new_times))
 
-            # Construct new DataArray
-            arrs[var] = DataArray(f(new_x), dims=da.dims, name=da.name,
-                                  attrs=da.attrs)
+                    data_vars[name ] = interpolated
 
-        # Merge into a new Dataset to return
-        return Dataset(arrs, coords=coords)
+        return Dataset(data_vars, coords)
 
 
 ops.inject_reduce_methods(DatasetResample)
