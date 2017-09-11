@@ -11,19 +11,19 @@ Indexing and selecting data
     import xarray as xr
     np.random.seed(123456)
 
+xarray offers extremely flexible indexing routines that combine the best
+features of NumPy and pandas for data selection.
 
-The point of xarray is to introduce a numpy-ndarray-like multidimensional array object into a powerful pandas's flexible data handling scheme.
-We provide several (say, numpy-like, pandas-like, and more advanced type) indexing functionalities.
-
-The most basic way to access each element of xarray's multi-dimensional
-object is to use Python ``[obj]`` syntax, such as ``array[i, j]``, where ``i`` and ``j`` are both integers.
-As xarray objects can store coordinates corresponding to each dimension of the
+The most basic way to access elements of a :py:class:`~xarray.DataArray`
+object is to use Python's ``[]`` syntax, such as ``array[i, j]``, where
+``i`` and ``j`` are both integers.
+As xarray objects can store coordinates corresponding to each dimension of an
 array, label-based indexing similar to ``pandas.DataFrame.loc`` is also possible.
 In label-based indexing, the element position ``i`` is automatically
 looked-up from the coordinate values.
 
-Dimensions of xarray object have names and you can also lookup the dimensions
-by name, instead of remembering the positional ordering of dimensions by yourself.
+Dimensions of xarray objects have names, so you can also lookup the dimensions
+by name, instead of remembering their positional order.
 
 Thus in total, xarray supports four different kinds of indexing, as described
 below and summarized in this table:
@@ -271,13 +271,15 @@ elements that are fully masked:
 Vectorized Indexing
 -------------------
 
-xarray supports many types of indexing with a `vectorized` manner.
+Like numpy and pandas, xarray supports indexing many array elements at once in a
+`vectorized` manner.
 
-If you provide an integer, slice, or unlabeled array (array without dimension names, such as ``np.ndarray``, ``list``, but not :py:meth:`~xarray.DataArray` or :py:meth:`~xarray.Variable`)
-our indexing is basically orthogonal.
-For example,
-if you pass multiple integer sequences to an array, they work independently
-along each dimension (similar to the way vector subscripts work in fortran).
+If you only provide integers, slices, or unlabeled arrays (array without
+dimension names, such as ``np.ndarray``, ``list``, but not
+:py:meth:`~xarray.DataArray` or :py:meth:`~xarray.Variable`) indexing can be
+understand as orthogonally. Each indexer component selects independently along
+the corresponding dimension, similar to how vector indexing works in Fortran or
+MATLAB, or after using the :py:func:`numpy.xi_` helper:
 
 .. ipython:: python
 
@@ -285,13 +287,11 @@ along each dimension (similar to the way vector subscripts work in fortran).
                       coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
     da
     da[[0, 1], [1, 1]]
-    # Sequential indexing gives the same result.
-    da[[0, 1], [1, 1]] == da[[0, 1]][:, [1, 1]]
 
-In order to make more advanced indexing, you can supply
-:py:meth:`~xarray.DataArray` as indexers.
-In this case, the dimension of the resultant array is determined
-by the indexers' dimension names,
+For more flexibility, you can supply :py:meth:`~xarray.DataArray` objects
+as indexers.
+Dimensions on resultant arrays are given by the ordered union of the indexers'
+dimensions:
 
 .. ipython:: python
 
@@ -300,9 +300,8 @@ by the indexers' dimension names,
     da[ind_x, ind_y]  # orthogonal indexing
     da[ind_x, ind_x]  # vectorized indexing
 
-Slices or sequences, which do not have named-dimensions,
-as a manner of fact,
-will be understood as the same dimension which is indexed along.
+Slices or sequences/arrays without named-dimensions are treated as if they have
+the same dimension which is indexed along:
 
 .. ipython:: python
 
@@ -312,17 +311,21 @@ will be understood as the same dimension which is indexed along.
 
 Furthermore, you can use multi-dimensional :py:meth:`~xarray.DataArray`
 as indexers, where the resultant array dimension is also determined by
-indexers' dimension,
+indexers' dimension:
 
 .. ipython:: python
 
     ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
     da[ind]
 
-To summarize, our advanced indexing is based on our broadcasting scheme.
-See :ref:`xarray_indexing_rules` for the full list of our indexing rule.
+In briefly, similar to how NumPy's `advanced indexing`_ works, vectorized
+indexing for xarray is based on our
+:ref:`broadcasting rules <compute.broadcasting>`.
+See :ref:`indexing.rules` for the complete specification.
 
-These vectorized indexing also works with ``isel``, ``loc``, and ``sel``.
+.. _advanced indexing: https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+
+Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 
 .. ipython:: python
 
@@ -332,21 +335,27 @@ These vectorized indexing also works with ``isel``, ``loc``, and ``sel``.
     ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
     da.loc[:, ind]  # same to da.sel(y=ind)
 
-
-and also for Dataset
+and also for ``Dataset``
 
 .. ipython:: python
 
     ds2 = da.to_dataset(name='bar')
     ds2.isel(x=xr.DataArray([0, 1, 2], dims=['points']))
 
+.. tip::
+
+  If you are lazily loading your data from disk, not every form of vectorized
+  indexing is supported (or if supported, may not be supported efficiently).
+  You may find increased performance by loading your data into memory first,
+  e.g., with :py:meth:`~xarray.Dataset.load`.
+
 .. note::
-  This advanced indexing was newly added in v.0.10.
-  In the older version of xarray, dimensions of indexers are not used.
-  Special methods to realize some advanced indexing,
+
+  Vectorized indexing is a new feature in v0.10.
+  In older versions of xarray, dimensions of indexers are ignored.
+  Dedicated methods for some advanced indexing use cases,
   ``isel_points`` and ``sel_points`` are now deprecated.
   See :ref:`more_advanced_indexing` for their alternative.
-
 
 .. _assigning_values:
 
@@ -416,8 +425,8 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
 More advanced indexing
 -----------------------
 
-The use of :py:meth:`~xarray.DataArray` as indexers enables very flexible indexing.
-The following is an example of the pointwise indexing,
+The use of :py:meth:`~xarray.DataArray` objects as indexers enables very
+flexible indexing. The following is an example of the pointwise indexing:
 
 .. ipython:: python
 
@@ -438,8 +447,8 @@ you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
                            coords={'z': ['a', 'b', 'c']}),
             y=xr.DataArray([0, 1, 0], dims='z'))
 
-
-Analogously, label-based pointwise-indexing is also possible by ``.sel`` method,
+Analogously, label-based pointwise-indexing is also possible by the ``.sel``
+method:
 
 .. ipython:: python
 
@@ -447,7 +456,6 @@ Analogously, label-based pointwise-indexing is also possible by ``.sel`` method,
                          dims='new_time')
     arr.sel(space=xr.DataArray(['IA', 'IL', 'IN'], dims=['new_time']),
             time=times)
-
 
 .. _align and reindex:
 
@@ -648,28 +656,43 @@ dimensions or use the ellipsis in the ``loc`` specifier, e.g. in the example
 above, ``mda.loc[{'one': 'a', 'two': 0}, :]`` or ``mda.loc[('a', 0), ...]``.
 
 
-.. _xarray_indexing_rules:
+.. _indexing.rules:
 
-xarray indexing rules
----------------------
+Indexing rules
+--------------
 
-The detailed indexing scheme in xarray is as follows.
-(Note that it is for the explanation purpose and the actual implementation is differ.)
+Here we describe the full rules xarray uses for vectorized indexing. Note that
+this is for the purposes of explanation: for the sake of efficiency and to
+support various backends, the actual implementation is different.
 
-0. (Only for label based indexing.) Look up positional indexes along each dimension based on :py:class:`pandas.Index`.
+0. (Only for label based indexing.) Look up positional indexes along each
+   dimension from the corresponding :py:class:`pandas.Index`.
 
-1. ``slice`` is converted to an array, such that ``np.arange(*slice.indices(...))``.
+1. A full slice object ``:`` is inserted for each dimension without an indexer.
 
-2. Assume dimension names of array indexers without dimension, such as ``np.ndarray`` and ``list``, from the dimensions to be indexed along. For example, ``v.isel(x=[0, 1])`` is understood as ``v.isel(x=xr.DataArray([0, 1], dims=['x']))``.
+2. ``slice`` objects are converted into arrays, given by
+   ``np.arange(*slice.indices(...))``.
 
-3. Broadcast all the indexers based on their dimension names (see :ref:`compute.broadcasting` for our name-based broadcasting).
+3. Assume dimension names for array indexers without dimensions, such as
+   ``np.ndarray`` and ``list``, from the dimensions to be indexed along.
+   For example, ``v.isel(x=[0, 1])`` is understood as
+   ``v.isel(x=xr.DataArray([0, 1], dims=['x']))``.
 
-4. Index the object by the broadcasted indexers.
+4. For each variable in a ``Dataset`` or  ``DataArray`` (the array and its
+   coordinates):
 
-5. If an indexer-DataArray has coordinates, attached them to the indexed object.
+   a. Broadcast all relevant indexers based on their dimension names
+      (see :ref:`compute.broadcasting` for full details).
+
+   b. Index the underling array by the broadcast indexers, using NumPy's
+      advanced indexing rules.
+
+5. If any indexer DataArray has coordinates and no coordinate with the
+   same name exists, attach them to the indexed object.
 
 .. note::
 
-  + There should not be a conflict between the coordinates of indexer- and indexed- DataArrays. In v.0.10.0, xarray raises ``FutureWarning`` if there is such a conflict, but in the next major release, it will raise an Error.
+  - ``IndexError`` is raised if there is a conflict between dimension
+     coordinates of indexer- and indexed- DataArrays.
 
-  + Only 1-dimensional boolean array can be used as an indexer.
+  - Only 1-dimensional boolean arrays can be used as indexers.
