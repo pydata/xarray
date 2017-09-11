@@ -16,10 +16,6 @@ core functionality.
     import pandas as pd
     import xarray as xr
 
-    # Use defaults so we don't get gridlines in generated docs
-    import matplotlib as mpl
-    mpl.rcdefaults()
-
     np.random.seed(123456)
 
 Creating datetime64 data
