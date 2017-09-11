@@ -303,26 +303,23 @@ class DatasetResample(DatasetGroupBy, Resample):
 
     def _interpolate(self, kind='linear'):
         from .dataarray import DataArray
+        from .dataset import Dataset
 
         new_x = self._full_index.values.astype('float')
 
-        arrs = []
+        arrs = {}
 
         # Prepare coordinates by dropping non-dimension coordinates along the
         # resampling dimension.
         # note: the lower-level Variable API could be used to speed this up
         coords = OrderedDict()
-        if self._obj.data_vars:
-            var = list(self._obj.data_vars.keys())[0]
-            da = self._obj[var].copy()
-
-            for k, v in da.coords.items():
-                # is the resampling dimension
-                if k == self._dim:
-                    coords[self._dim] = self._full_index
-                # else, check if resampling dim is in coordinate dimensions
-                elif self._dim not in v.dims:
-                    coords[k] = v
+        for k, v in self._obj.coords.items():
+            # is the resampling dimension
+            if k == self._dim:
+                coords[self._dim] = self._full_index
+            # else, check if resampling dim is in coordinate dimensions
+            elif self._dim not in v.dims:
+                coords[k] = v
 
         # Apply the interpolation to each DataArray in our original Dataset
         for var in self._obj.data_vars:
@@ -336,11 +333,11 @@ class DatasetResample(DatasetGroupBy, Resample):
                          assume_sorted=True)
 
             # Construct new DataArray
-            arrs.append(DataArray(f(new_x), coords, da.dims, name=da.name,
-                                  attrs=da.attrs))
+            arrs[var] = DataArray(f(new_x), dims=da.dims, name=da.name,
+                                  attrs=da.attrs)
 
         # Merge into a new Dataset to return
-        return merge(arrs)
+        return Dataset(arrs, coords=coords)
 
 
 ops.inject_reduce_methods(DatasetResample)
