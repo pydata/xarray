@@ -38,18 +38,22 @@ module:
 
     pickle.loads(pkl)
 
-Pickle support is important because it doesn't require any external libraries
+Pickling important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are two important caveats:
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
 
-1. To simplify serialization, xarray's support for pickle currently loads all
-   array values into memory before dumping an object. This means it is not
-   suitable for serializing datasets too big to load into memory (e.g., from
-   netCDF or OPeNDAP).
-2. Pickle will only work as long as the internal data structure of xarray objects
-   remains unchanged. Because the internal design of xarray is still being
-   refined, we make no guarantees (at this point) that objects pickled with
-   this version of xarray will work in future versions.
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
+  or :py:meth:`~xarray.Dataset.compute`.
 
 .. _dictionary io:
 
