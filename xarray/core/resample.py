@@ -60,7 +60,7 @@ class Resample(object):
         if method == 'asfreq':
             return _upsampled_means
 
-        elif method in ['pad', 'ffill', 'backfill', 'bfill']:
+        elif method in ['pad', 'ffill', 'backfill', 'bfill', 'nearest']:
             kwargs = kwargs.copy()
             kwargs.update(**{self._dim: _upsampled_means[self._dim]})
             return self._obj.reindex(method=method, *args, **kwargs)
@@ -95,7 +95,7 @@ class Resample(object):
         """Take new values from nearest original coordinate to up-sampled
         frequency coordinates.
         """
-        return self.interpolate('nearest')
+        return self._upsample('nearest')
 
     def interpolate(self, kind='linear'):
         """Interpolate up-sampled data using the original data
@@ -105,8 +105,11 @@ class Resample(object):
         ----------
         kind : str {'linear', 'nearest', 'zero', 'slinear',
                'quadratic', 'cubic'}
-            Interpolation method to use; refer to to
-            `scipy.interpolate.interp1d` for full details.
+            Interpolation scheme to use
+
+        See Also
+        --------
+        scipy.interpolate.interp1d
 
         """
         return self._interpolate(kind=kind)

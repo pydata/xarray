@@ -183,9 +183,6 @@ Dataset and DataArray objects with an arbitrary number of dimensions.
 
     ds.resample('6H', dim='time', how='mean')
 
-   Using the deprecated api, resample will also work for upsampling, in which
-   case intervals without any values are marked by ``NaN``:
-
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
