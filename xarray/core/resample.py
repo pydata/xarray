@@ -48,7 +48,7 @@ class Resample(object):
 
         """
 
-        _upsampled_means = self.mean(self._dim)
+        upsampled_index = self._full_index
 
         # Drop non-dimension coordinates along the resampled dimension
         for k, v in self._obj.coords.items():
@@ -58,11 +58,11 @@ class Resample(object):
                 self._obj = self._obj.drop(k)
 
         if method == 'asfreq':
-            return _upsampled_means
+            return self.mean(self._dim)
 
         elif method in ['pad', 'ffill', 'backfill', 'bfill', 'nearest']:
             kwargs = kwargs.copy()
-            kwargs.update(**{self._dim: _upsampled_means[self._dim]})
+            kwargs.update(**{self._dim: upsampled_index})
             return self._obj.reindex(method=method, *args, **kwargs)
 
         elif method == 'interpolate':
@@ -307,9 +307,26 @@ class DatasetResample(DatasetGroupBy, Resample):
         new_x = self._full_index.values.astype('float')
 
         arrs = []
+
+        # Prepare coordinates by dropping non-dimension coordinates along the
+        # resampling dimension.
+        # note: the lower-level Variable API could be used to speed this up
+        coords = OrderedDict()
+        if self._obj.data_vars:
+            var = list(self._obj.data_vars.keys())[0]
+            da = self._obj[var].copy()
+
+            for k, v in da.coords.items():
+                # is the resampling dimension
+                if k == self._dim:
+                    coords[self._dim] = self._full_index
+                # else, check if resampling dim is in coordinate dimensions
+                elif self._dim not in v.dims:
+                    coords[k] = v
+
         # Apply the interpolation to each DataArray in our original Dataset
-        for v in self._obj.data_vars:
-            da = self._obj[v].copy()
+        for var in self._obj.data_vars:
+            da = self._obj[var].copy()
 
             x = da[self._dim].astype('float')
             y = da.values
@@ -318,20 +335,8 @@ class DatasetResample(DatasetGroupBy, Resample):
             f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                          assume_sorted=True)
 
-            # drop any existing non-dimension coordinates along the resampling
-            # dimension
-            coords = OrderedDict()
-            for k, v in da.coords.items():
-                # is the resampling dimension
-                if k == self._dim:
-                    coords[self._dim] = self._full_index
-                # else, check if resampling dim is in coordinate dimensions
-                elif self._dim not in v.dims:
-                    coords[k] = v
-            dims = da.dims
-
             # Construct new DataArray
-            arrs.append(DataArray(f(new_x), coords, dims, name=da.name,
+            arrs.append(DataArray(f(new_x), coords, da.dims, name=da.name,
                                   attrs=da.attrs))
 
         # Merge into a new Dataset to return

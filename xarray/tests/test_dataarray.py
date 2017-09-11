@@ -1958,6 +1958,15 @@ class TestDataArray(TestCase):
         expected = DataArray(array.to_series().resample('3H').pad())
         self.assertDataArrayIdentical(expected, actual)
 
+        # Nearest
+        rs = array.resample(time='3H')
+        actual = rs.nearest()
+        new_times = rs._full_index
+        expected = DataArray(
+            array.reindex(time=new_times, method='nearest')
+        )
+        self.assertDataArrayIdentical(expected, actual)
+
     def test_upsample_nd(self):
         # Same as before, but now we try on multi-dimensional DataArrays.
         xs = np.arange(6)
