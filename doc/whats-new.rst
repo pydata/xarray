@@ -268,10 +268,6 @@ Enhancements
 
 - New aggregation on rolling objects :py:meth:`DataArray.rolling(...).count()`
   which providing a rolling count of valid values (:issue:`1138`).
-- :py:meth:`~DataArray.resample` and :py:meth:`~Dataset.resample` have been
-  updated with a new api to match the groupby-like api used by pandas since
-  v0.18.0 (:issue:`1269`).
-  By `Daniel Rothenberg <https://github.com/darothen>`_.
 
 Bug fixes
 ~~~~~~~~~
