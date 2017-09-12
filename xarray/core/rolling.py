@@ -10,8 +10,7 @@ from .common import full_like
 from .combine import concat
 from .ops import (inject_bottleneck_rolling_methods,
                   inject_datasetrolling_methods, has_bottleneck, bn)
-from .dask_array_ops import (dask_rolling_wrapper,
-                             dask_rolling_wrapper_without_min_count)
+from .dask_array_ops import dask_rolling_wrapper
 
 
 class Rolling(object):
@@ -101,7 +100,6 @@ class DataArrayRolling(Rolling):
     This class adds the following class methods;
     + _reduce_method(cls, func)
     + _bottleneck_reduce(cls, func)
-    + _bottleneck_reduce_without_min_count(cls, func)
 
     These class methods will be used to inject numpy or bottleneck function
     by doing
@@ -257,35 +255,6 @@ class DataArrayRolling(Rolling):
             else:
                 values = func(self.obj.data, window=self.window,
                               min_count=min_count, axis=axis)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce_without_min_count(cls, func):
-        """
-        Methods to return a wrapped function for `media` bottoleneck method.
-        bottleneck's median does not accept min_periods.
-        """
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if self.min_periods is not None:
-                raise ValueError('Rolling.median does not accept min_periods')
-
-            axis = self.obj.get_axis_num(self.dim)
-
-            if isinstance(self.obj.data, dask_array_type):
-                values = dask_rolling_wrapper_without_min_count(
-                    func, self.obj.data, window=self.window, axis=axis)
-            else:
-                values = func(self.obj.data, window=self.window,
-                              axis=axis)
 
             result = DataArray(values, self.obj.coords)
 

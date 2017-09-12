@@ -3511,7 +3511,7 @@ def ds(request):
 
 
 def test_rolling_properties(ds):
-    pytest.importorskip('bottleneck', minversion='1.0')
+    pytest.importorskip('bottleneck', minversion='1.1')
 
     # catching invalid args
     with pytest.raises(ValueError) as exception:
@@ -3527,18 +3527,14 @@ def test_rolling_properties(ds):
         ds.rolling(time2=2)
     assert 'time2' in str(exception)
 
+
 @pytest.mark.parametrize('name',
                          ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 @pytest.mark.parametrize('key', ('z1', 'z2'))
 def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
-    pytest.importorskip('bottleneck')
-    import bottleneck as bn
-
-    # skip if median and min_periods
-    if (min_periods == 1) and (name == 'median'):
-        pytest.skip()
+    bn = pytest.importorskip('bottleneck', minversion='1.1')
 
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
@@ -3556,16 +3552,6 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     rolling_obj = ds.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, ds['time'])
-
-
-def test_rolling_invalid_args(ds):
-    pytest.importorskip('bottleneck', minversion="1.0")
-    import bottleneck as bn
-    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
-        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
-    with pytest.raises(ValueError) as exception:
-        da.rolling(time=7, min_periods=1).median()
-    assert 'Rolling.median does not' in str(exception)
 
 
 @pytest.mark.parametrize('center', (True, False))
@@ -3606,8 +3592,6 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     # std with window == 1 seems unstable in bottleneck
     if name == 'std' and window == 1:
         window = 2
-    if name == 'median':
-        min_periods = None
 
     rolling_obj = ds.rolling(time=window, center=center,
                              min_periods=min_periods)

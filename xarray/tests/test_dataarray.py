@@ -2630,7 +2630,7 @@ def da(request):
 
 @pytest.fixture
 def da_dask(seed=123):
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('dask.array')
     rs = np.random.RandomState(seed)
     times = pd.date_range('2000-01-01', freq='1D', periods=21)
     values = rs.normal(size=(1, 21, 1))
@@ -2658,8 +2658,6 @@ def test_rolling_doc(da):
 
 
 def test_rolling_properties(da):
-    pytest.importorskip('bottleneck', minversion='1.0')
-
     rolling_obj = da.rolling(time=4)
 
     assert rolling_obj.obj.get_axis_num('time') == 1
@@ -2681,18 +2679,7 @@ def test_rolling_properties(da):
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
-    bn = pytest.importorskip('bottleneck')
-
-    # skip if median and min_periods bottleneck version < 1.1
-    if ((min_periods == 1) and
-        (name == 'median') and
-            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
-        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
-
-    # skip if var and bottleneck version < 1.1
-    if ((name == 'median') and
-            (LooseVersion(bn.__version__) < LooseVersion('1.1'))):
-        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
+    bn = pytest.importorskip('bottleneck', minversion="1.1")
 
     # Test all bottleneck functions
     rolling_obj = da.rolling(time=7, min_periods=min_periods)
@@ -2715,7 +2702,7 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
     pytest.importorskip('dask.array')
-    pytest.importorskip('bottleneck')
+    pytest.importorskip('bottleneck', minversion="1.1")
     # dask version
     rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
     actual = getattr(rolling_obj, name)().load()
@@ -2728,15 +2715,6 @@ def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
     assert_allclose(actual, expected)
 
 
-def test_rolling_invalid_args(da):
-    bn = pytest.importorskip('bottleneck', minversion="1.0")
-    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
-        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
-    with pytest.raises(ValueError) as exception:
-        da.rolling(time=7, min_periods=1).median()
-    assert 'Rolling.median does not' in str(exception)
-
-
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
@@ -2747,8 +2725,8 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    s_rolling = pd.rolling_mean(s, window, center=center,
-                                min_periods=min_periods)
+    s_rolling = s.rolling(window, center=center,
+                          min_periods=min_periods).mean()
     da_rolling = da.rolling(index=window, center=center,
                             min_periods=min_periods).mean()
     # pandas does some fancy stuff in the last position,
