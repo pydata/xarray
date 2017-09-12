@@ -9,8 +9,9 @@ from .pycompat import OrderedDict, zip, dask_array_type
 from .common import full_like
 from .combine import concat
 from .ops import (inject_bottleneck_rolling_methods,
-                  inject_datasetrolling_methods, has_bottleneck, bn,
-                  dask_rolling_wrapper, dask_rolling_wrapper_without_min_count)
+                  inject_datasetrolling_methods, has_bottleneck, bn)
+from .dask_array_ops import (dask_rolling_wrapper,
+                             dask_rolling_wrapper_without_min_count)
 
 
 class Rolling(object):
@@ -82,7 +83,6 @@ class Rolling(object):
             self._min_periods = min_periods
         self.center = center
         self.dim = dim
-        self.axis = self.obj.get_axis_num(self.dim)
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -247,14 +247,16 @@ class DataArrayRolling(Rolling):
             else:
                 min_count = self.min_periods
 
+            axis = self.obj.get_axis_num(self.dim)
+
             if isinstance(self.obj.data, dask_array_type):
                 values = dask_rolling_wrapper(func, self.obj.data,
                                               window=self.window,
                                               min_count=min_count,
-                                              axis=self.axis)
+                                              axis=axis)
             else:
                 values = func(self.obj.data, window=self.window,
-                              min_count=min_count, axis=self.axis)
+                              min_count=min_count, axis=axis)
 
             result = DataArray(values, self.obj.coords)
 
@@ -276,12 +278,14 @@ class DataArrayRolling(Rolling):
             if self.min_periods is not None:
                 raise ValueError('Rolling.median does not accept min_periods')
 
+            axis = self.obj.get_axis_num(self.dim)
+
             if isinstance(self.obj.data, dask_array_type):
                 values = dask_rolling_wrapper_without_min_count(
-                    func, self.obj.data, window=self.window, axis=self.axis)
+                    func, self.obj.data, window=self.window, axis=axis)
             else:
                 values = func(self.obj.data, window=self.window,
-                              axis=self.axis)
+                              axis=axis)
 
             result = DataArray(values, self.obj.coords)
 
