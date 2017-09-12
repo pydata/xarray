@@ -2627,6 +2627,17 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+
+@pytest.fixture
+def da_dask(seed=123):
+    rs = np.random.RandomState(seed)
+    times = pd.date_range('2000-01-01', freq='1D', periods=21)
+    values = rs.normal(size=(1, 21, 1))
+    da = DataArray(values, dims=('a', 'time', 'x')).chunk({'time': 7})
+    da['time'] = times
+    return da
+
+
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
@@ -2698,9 +2709,25 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da['time'])
 
 
+@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',
+                                  'median'))
+@pytest.mark.parametrize('center', (True, False, None))
+@pytest.mark.parametrize('min_periods', (1, None))
+def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
+    # dask version
+    rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
+    actual = getattr(rolling_obj, name)().load()
+    # numpy version
+    rolling_obj = da_dask.load().rolling(time=7, min_periods=min_periods)
+    expected = getattr(rolling_obj, name)()
+
+    # using all-close becuase rolling over ghost cells introduces some
+    # precision errors
+    assert_allclose(actual, expected)
+
+
 def test_rolling_invalid_args(da):
-    pytest.importorskip('bottleneck', minversion="1.0")
-    import bottleneck as bn
+    bn = pytest.importorskip('bottleneck', minversion="1.0")
     if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
         pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
     with pytest.raises(ValueError) as exception:
@@ -2728,6 +2755,7 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
                                da_rolling.values[:-1])
     np.testing.assert_allclose(s_rolling.index,
                                da_rolling['index'])
+
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))

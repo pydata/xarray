@@ -9,7 +9,8 @@ from .pycompat import OrderedDict, zip, dask_array_type
 from .common import full_like
 from .combine import concat
 from .ops import (inject_bottleneck_rolling_methods,
-                  inject_datasetrolling_methods, has_bottleneck, bn)
+                  inject_datasetrolling_methods, has_bottleneck, bn,
+                  dask_rolling_wrapper, dask_rolling_wrapper_without_min_count)
 
 
 class Rolling(object):
@@ -75,11 +76,13 @@ class Rolling(object):
             self._min_periods = window
         else:
             if min_periods <= 0:
-                raise ValueError('min_periods must be greater than zero or None')
+                raise ValueError(
+                    'min_periods must be greater than zero or None')
 
             self._min_periods = min_periods
         self.center = center
         self.dim = dim
+        self.axis = self.obj.get_axis_num(self.dim)
 
     def __repr__(self):
         """provide a nice str repr of our rolling object"""
@@ -237,20 +240,21 @@ class DataArrayRolling(Rolling):
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
             # bottleneck doesn't allow min_count to be 0, although it should
             # work the same as if min_count = 1
             if self.min_periods is not None and self.min_periods == 0:
-                min_count = self.min_periods + 1
+                min_count = 1
             else:
                 min_count = self.min_periods
 
-            values = func(self.obj.data, window=self.window,
-                          min_count=min_count,
-                          axis=self.obj.get_axis_num(self.dim))
+            if isinstance(self.obj.data, dask_array_type):
+                values = dask_rolling_wrapper(func, self.obj.data,
+                                              window=self.window,
+                                              min_count=min_count,
+                                              axis=self.axis)
+            else:
+                values = func(self.obj.data, window=self.window,
+                              min_count=min_count, axis=self.axis)
 
             result = DataArray(values, self.obj.coords)
 
@@ -273,11 +277,11 @@ class DataArrayRolling(Rolling):
                 raise ValueError('Rolling.median does not accept min_periods')
 
             if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            values = func(self.obj.data, window=self.window,
-                          axis=self.obj.get_axis_num(self.dim))
+                values = dask_rolling_wrapper_without_min_count(
+                    func, self.obj.data, window=self.window, axis=self.axis)
+            else:
+                values = func(self.obj.data, window=self.window,
+                              axis=self.axis)
 
             result = DataArray(values, self.obj.coords)
 

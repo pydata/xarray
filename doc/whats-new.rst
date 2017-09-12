@@ -108,6 +108,10 @@ Enhancements
   By `Joe Hamman <https://github.com/jhamman>`_ and
   `Gerrit Holl <https://github.com/gerritholl>`_.
 
+- Support applying rolling window operations using bottleneck's moving window
+  functions on data stored as dask arrays (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
