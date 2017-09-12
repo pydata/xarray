@@ -38,7 +38,7 @@ module:
 
     pickle.loads(pkl)
 
-Pickling important because it doesn't require any external libraries
+Pickling is important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
 :py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
 **not recommended for long-term storage**.
