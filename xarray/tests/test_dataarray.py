@@ -2630,6 +2630,7 @@ def da(request):
 
 @pytest.fixture
 def da_dask(seed=123):
+    pytest.importorskip('bottleneck')
     rs = np.random.RandomState(seed)
     times = pd.date_range('2000-01-01', freq='1D', periods=21)
     values = rs.normal(size=(1, 21, 1))
@@ -2680,8 +2681,7 @@ def test_rolling_properties(da):
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
-    pytest.importorskip('bottleneck')
-    import bottleneck as bn
+    bn = pytest.importorskip('bottleneck')
 
     # skip if median and min_periods bottleneck version < 1.1
     if ((min_periods == 1) and
@@ -2714,6 +2714,8 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
+    pytest.importorskip('dask.array')
+    pytest.importorskip('bottleneck')
     # dask version
     rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
     actual = getattr(rolling_obj, name)().load()
