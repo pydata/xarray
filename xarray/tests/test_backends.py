@@ -1509,6 +1509,22 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
 
+    def test_password(self):
+        from pydap.cas.urs import setup_session
+
+        url = ('https://disc2.gesdisc.eosdis.nasa.gov/opendap/TRMM_RT/'
+               'TRMM_3B42RT_Daily.7/2017/09/3B42RT_Daily.20170902.7.nc4')
+        session = setup_session('XarrayTestUser', 'Xarray2017', check_url=url)
+        store = xr.backends.PydapDataStore.open(url, session=session)
+
+        with xr.open_dataset(store) as ds:
+            expected_vars = ['precipitation_cnt', 'uncal_precipitation',
+                             'uncal_precipitation_cnt', 'precipitation',
+                             'randomError_cnt', 'randomError']
+
+            for var in expected_vars:
+                self.assertTrue(var in ds.data_vars)
+
     @requires_dask
     def test_dask(self):
         with self.create_datasets(chunks={'j': 2}) as (actual, expected):
