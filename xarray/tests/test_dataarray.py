@@ -2702,7 +2702,6 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
 @pytest.mark.parametrize('min_periods', (1, None))
 def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
     pytest.importorskip('dask.array')
-    pytest.importorskip('bottleneck', minversion="1.1")
     # dask version
     rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
     actual = getattr(rolling_obj, name)().load()
@@ -2710,7 +2709,7 @@ def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
     rolling_obj = da_dask.load().rolling(time=7, min_periods=min_periods)
     expected = getattr(rolling_obj, name)()
 
-    # using all-close becuase rolling over ghost cells introduces some
+    # using all-close because rolling over ghost cells introduces some
     # precision errors
     assert_allclose(actual, expected)
 
