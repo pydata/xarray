@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 
 import operator
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -22,10 +21,6 @@ from .nputils import array_eq, array_ne
 
 try:
     import bottleneck as bn
-    if LooseVersion(bn.__version__) < LooseVersion('1.1'):
-        # fall back to numpy
-        raise ImportError(
-            'bottleneck version {} is not supported'.format(bn.__version__))
     has_bottleneck = True
 except ImportError:
     # use numpy methods instead
