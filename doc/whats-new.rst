@@ -15,7 +15,7 @@ What's New
 
 .. _whats-new.0.9.7:
 
-v0.9.7 (unreleased)
+v0.10.0 (unreleased)
 -------------------
 
 Breaking changes
@@ -66,13 +66,93 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Support for `pathlib.Path` objects added to
+  :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
+  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  (:issue:`799`):
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
+
+    In [3]: data_dir = Path("data/")
+
+    In [4]: one_file = data_dir / "dta_for_month_01.nc"
+
+    In [5]: xr.open_dataset(one_file)
+    Out[5]:
+    <xarray.Dataset>
+    [...]
+
+  By `Willi Rath <https://github.com/willirath>`_.
+
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
-  By `Greg Brener <https://github.com/gbrener>`_
+  By `Greg Brener <https://github.com/gbrener>`_.
+
+- Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
+  a signed integer data type should be interpreted as unsigned bytes
+  (:issue:`1444`).
+  By `Eric Bruning <https://github.com/deeplycloudy>`_.
+
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
+
+- Support passing keyword arguments to ``load``, ``compute``, and ``persist``
+  methods. Any keyword arguments supplied to these methods are passed on to
+  the corresponding dask function (:issue:`1523`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl>`_.
 
 
 Bug fixes
 ~~~~~~~~~
+
+- Unsigned int support for reduce methods with skipna=True
+  (:issue:1562).
+  By `Keisuke Fujii` <https://github.com/fujiisoup>`_.
+
+- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+
+  - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
+  - :py:meth:`~xarray.DataArray.to_series` and
+    :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
+    for 1D data (:issue:`1548`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
@@ -85,6 +165,29 @@ Bug fixes
   after the rename (since one of them would get overwritten in this
   case). See (:issue:`1477`) for details.
   By `Prakhar Goel <https://github.com/newt0311>`_.
+
+- Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
+  ``rtol`` arguments when called on ``DataArray`` objects.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+  objects with data stored as ``dask`` arrays (:issue:`1529`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
+  coordinate shares a name with a dimension but is comprised of arbitrary
+  dimensions(:issue:`1120`).
+- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
+  it is none.
+  By `Leevi Annala <https://github.com/leevei>`_.
+
+- Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
+  provided (:issue:`1410`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix :py:func:`xarray.save_mfdataset` to properly raise an informative error
+  when objects other than  ``Dataset`` are provided (:issue:`1555`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 

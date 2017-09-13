@@ -26,8 +26,9 @@ from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, requires_rasterio, assert_identical)
+               requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
+               assert_allclose, flaky, network, requires_rasterio,
+               assert_identical)
 from .test_dataset import create_test_data
 
 try:
@@ -39,6 +40,14 @@ try:
     import dask.array as da
 except ImportError:
     pass
+
+try:
+    from pathlib import Path
+except ImportError:
+    try:
+        from pathlib2 import Path
+    except ImportError:
+        pass
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -60,6 +69,23 @@ def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
     return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+
+
+def create_unsigned_masked_scaled_data():
+    encoding = {'_FillValue': 255, '_Unsigned': 'true', 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan])
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_unsigned_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': 'true',
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
 
 
 def create_boolean_data():
@@ -285,7 +311,8 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_float64_data(self):
-        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi], dtype='float64'))})
+        expected = Dataset({'x': ('y', np.array([1.0, 2.0, np.pi],
+                                                dtype='float64'))})
         with self.roundtrip(expected) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -360,16 +387,54 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
+    def test_unsigned_roundtrip_mask_and_scale(self):
+        decoded = create_unsigned_masked_scaled_data()
+        encoded = create_encoded_unsigned_masked_scaled_data()
+        with self.roundtrip(decoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+        # make sure roundtrip encoding didn't change the
+        # original dataset.
+        self.assertDatasetIdentical(
+            encoded, create_encoded_unsigned_masked_scaled_data())
+        with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                self.assertEqual(decoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(decoded, actual)
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                self.assertEqual(encoded.variables[k].dtype,
+                                 actual.variables[k].dtype)
+            self.assertDatasetAllClose(encoded, actual)
+
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(decoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(decoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             self.assertDatasetAllClose(encoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -377,7 +442,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
                                     create_encoded_masked_and_scaled_data())
         with self.roundtrip(encoded) as actual:
             self.assertDatasetAllClose(decoded, actual)
-        with self.roundtrip(encoded, open_kwargs=dict(decode_cf=False)) as actual:
+        with self.roundtrip(encoded,
+                            open_kwargs=dict(decode_cf=False)) as actual:
             self.assertDatasetAllClose(encoded, actual)
 
     def test_coordinates_encoding(self):
@@ -682,7 +748,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 v.scale_factor = 0.1
                 v[:] = np.array([-1, -1, 0, 1, 2])
 
-            # first make sure netCDF4 reads the masked and scaled data correctly
+            # first make sure netCDF4 reads the masked and scaled data
+            # correctly
             with nc4.Dataset(tmp_file, mode='r') as nc:
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
@@ -706,6 +773,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = Dataset({'x': ((), 123)})
                 self.assertDatasetIdentical(expected, ds)
 
+    def test_already_open_dataset(self):
+        with create_tmp_file() as tmp_file:
+            with nc4.Dataset(tmp_file, mode='w') as nc:
+                v = nc.createVariable('x', 'int')
+                v[...] = 42
+
+            nc = nc4.Dataset(tmp_file, mode='r')
+            with backends.NetCDF4DataStore(nc, autoclose=False) as store:
+                with open_dataset(store) as ds:
+                    expected = Dataset({'x': ((), 42)})
+                    self.assertDatasetIdentical(expected, ds)
+
     def test_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -728,7 +807,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w') as store:
+            with backends.NetCDF4DataStore.open(tmp_file, mode='w') as store:
                 yield store
 
     @contextlib.contextmanager
@@ -916,8 +995,8 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w',
-                                           format='NETCDF3_CLASSIC') as store:
+            with backends.NetCDF4DataStore.open(
+                    tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
 
     @contextlib.contextmanager
@@ -942,8 +1021,8 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
-            with backends.NetCDF4DataStore(tmp_file, mode='w',
-                                           format='NETCDF4_CLASSIC') as store:
+            with backends.NetCDF4DataStore.open(
+                    tmp_file, mode='w', format='NETCDF4_CLASSIC') as store:
                 yield store
 
     @contextlib.contextmanager
@@ -1237,6 +1316,19 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+    @requires_pathlib
+    def test_open_mfdataset_pathlib(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetAllClose(original, actual)
+
     def test_attrs_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
@@ -1286,6 +1378,27 @@ class DaskTest(TestCase, DatasetIOTestCases):
             save_mfdataset([ds, ds], ['same', 'same'])
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
+
+    def test_save_mfdataset_invalid_dataarray(self):
+        # regression test for GH1555
+        da = DataArray([1, 2])
+        with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
+            save_mfdataset([da], ['dataarray'])
+
+
+    @requires_pathlib
+    def test_save_mfdataset_pathlib_roundtrip(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                tmp1 = Path(tmp1)
+                tmp2 = Path(tmp2)
+                save_mfdataset(datasets, [tmp1, tmp2])
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    self.assertDatasetIdentical(actual, original)
 
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1878,3 +1991,20 @@ class TestDataArrayToNetCDF(TestCase):
             expected = data.drop('y')
             with open_dataarray(tmp, drop_variables=['y']) as loaded:
                 self.assertDataArrayIdentical(expected, loaded)
+
+    def test_dataarray_to_netcdf_return_bytes(self):
+        # regression test for GH1410
+        data = xr.DataArray([1, 2, 3])
+        output = data.to_netcdf()
+        assert isinstance(output, bytes)
+
+    @requires_pathlib
+    def test_dataarray_to_netcdf_no_name_pathlib(self):
+        original_da = DataArray(np.arange(12).reshape((3, 4)))
+
+        with create_tmp_file() as tmp:
+            tmp = Path(tmp)
+            original_da.to_netcdf(tmp)
+
+            with open_dataarray(tmp) as loaded_da:
+                self.assertDataArrayIdentical(original_da, loaded_da)

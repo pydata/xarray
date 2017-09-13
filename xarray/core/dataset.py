@@ -23,7 +23,8 @@ from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
-from .common import ImplementsDatasetReduce, BaseDataObject, is_datetime_like
+from .common import ImplementsDatasetReduce, BaseDataObject
+from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
                     merge_data_and_coords)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
@@ -446,7 +447,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         return self.dims
 
-    def load(self):
+    def load(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return this dataset.
 
@@ -454,6 +455,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {k: v._data for k, v in self.variables.items()
@@ -462,7 +472,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             import dask.array as da
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = da.compute(*lazy_data.values())
+            evaluated_data = da.compute(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
@@ -474,7 +484,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return a new dataset. The original is
         left unaltered.
@@ -483,11 +493,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
-    def _persist_inplace(self):
+    def _persist_inplace(self, **kwargs):
         """ Persist all Dask arrays in memory """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {k: v._data for k, v in self.variables.items()
@@ -496,14 +515,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             import dask
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*lazy_data.values())
+            evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
 
         return self
 
-    def persist(self):
+    def persist(self, **kwargs):
         """ Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
@@ -511,9 +530,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         data as dask arrays.  This is particularly useful when using the
         dask.distributed scheduler and you want to load a large amount of data
         into distributed memory.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        See Also
+        --------
+        dask.persist
         """
         new = self.copy(deep=False)
-        return new._persist_inplace()
+        return new._persist_inplace(**kwargs)
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -925,7 +953,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Parameters
         ----------
-        path : str or file-like object, optional
+        path : str, Path or file-like object, optional
             Path to which to save this dataset. File-like objects are only
             supported by the scipy engine. If no path is provided, this
             function returns the resulting netCDF file as bytes; in this case,
@@ -964,7 +992,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+                               'zlib': True}, ...}``
         unlimited_dims : sequence of str, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.

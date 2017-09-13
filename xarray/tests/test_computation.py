@@ -9,7 +9,7 @@ import pytest
 
 import xarray as xr
 from xarray.core.computation import (
-    _UFuncSignature, broadcast_compat_data, collect_dict_values,
+    _UFuncSignature, result_name, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union,
     unified_dim_sizes, apply_ufunc)
 
@@ -36,6 +36,19 @@ def test_signature_properties():
     assert _UFuncSignature([['x']]) != _UFuncSignature([['y']])
 
 
+def test_result_name():
+
+    class Named(object):
+        def __init__(self, name=None):
+            self.name = name
+
+    assert result_name([1, 2]) is None
+    assert result_name([Named()]) is None
+    assert result_name([Named('foo'), 2]) == 'foo'
+    assert result_name([Named('foo'), Named('bar')]) is None
+    assert result_name([Named('foo'), Named()]) is None
+
+
 def test_ordered_set_union():
     assert list(ordered_set_union([[1, 2]])) == [1, 2]
     assert list(ordered_set_union([[1, 2], [2, 1]])) == [1, 2]
@@ -55,6 +68,8 @@ def test_join_dict_keys():
     assert list(join_dict_keys(dicts, 'right')) == ['y', 'z']
     assert list(join_dict_keys(dicts, 'inner')) == ['y']
     assert list(join_dict_keys(dicts, 'outer')) == ['x', 'y', 'z']
+    with pytest.raises(ValueError):
+        join_dict_keys(dicts, 'exact')
     with pytest.raises(KeyError):
         join_dict_keys(dicts, 'foobar')
 
@@ -260,7 +275,7 @@ def test_apply_output_core_dimension():
 
     def stack_negative(obj):
         def func(x):
-            return xr.core.npcompat.stack([x, -x], axis=-1)
+            return np.stack([x, -x], axis=-1)
         result = apply_ufunc(func, obj, output_core_dims=[['sign']])
         if isinstance(result, (xr.Dataset, xr.DataArray)):
             result.coords['sign'] = [1, -1]
@@ -288,7 +303,7 @@ def test_apply_output_core_dimension():
 
     def original_and_stack_negative(obj):
         def func(x):
-            return (x, xr.core.npcompat.stack([x, -x], axis=-1))
+            return (x, np.stack([x, -x], axis=-1))
         result = apply_ufunc(func, obj, output_core_dims=[[], ['sign']])
         if isinstance(result[1], (xr.Dataset, xr.DataArray)):
             result[1].coords['sign'] = [1, -1]
@@ -563,3 +578,10 @@ def test_apply_dask():
     actual = dask_safe_identity(dataset)
     assert isinstance(actual['y'].data, da.Array)
     assert_identical(dataset, actual)
+
+
+def test_where():
+    cond = xr.DataArray([True, False], dims='x')
+    actual = xr.where(cond, 1, 0)
+    expected = xr.DataArray([1, 0], dims='x')
+    assert_identical(expected, actual)

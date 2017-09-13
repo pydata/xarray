@@ -27,7 +27,7 @@ from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
                                   integer_types)
 from xarray.core.common import full_like
 
-from . import (TestCase, InaccessibleArray, UnexpectedDataAccess,
+from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
@@ -246,6 +246,12 @@ class TestDataset(TestCase):
         actual = Dataset({'z': expected['z']})
         self.assertDatasetIdentical(expected, actual)
 
+    def test_constructor_invalid_dims(self):
+        # regression for GH1120
+        with self.assertRaises(MergeError):
+            Dataset(data_vars=dict(v=('y', [1, 2, 3, 4])),
+                    coords=dict(y=DataArray([.1, .2, .3, .4], dims='x')))
+
     def test_constructor_1d(self):
         expected = Dataset({'x': (['x'], 5.0 + np.arange(5))})
         actual = Dataset({'x': 5.0 + np.arange(5)})
@@ -274,7 +280,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with pytest.warns(FutureWarning):
+        with self.assertRaisesRegexp(ValueError, 'DataArray dimensions'):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -1294,9 +1300,11 @@ class TestDataset(TestCase):
         assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [1, 2, 3])])})
+        x = Dataset({'foo': DataArray([1, 2, 3], dims='x',
+                    coords=[('x', [1, 2, 3])])})
         x2, = align(x, indexes={'x': [2, 3, 1]})
-        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], coords={'x': [2, 3, 1]})})
+        expected_x2 = Dataset({'foo': DataArray([2, 3, 1], dims='x',
+                              coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
 
     def test_align_non_unique(self):
@@ -2718,16 +2726,32 @@ class TestDataset(TestCase):
         self.assertEqual(actual.a.attrs, ds.a.attrs)
 
         # attrs
-        da = DataArray(range(5), name='a', attrs={'attr':'da'})
+        da = DataArray(range(5), name='a', attrs={'attr': 'da'})
         actual = da.where(da.values > 1)
         self.assertEqual(actual.name, 'a')
         self.assertEqual(actual.attrs, da.attrs)
 
-        ds = Dataset({'a': da}, attrs={'attr':'ds'})
+        ds = Dataset({'a': da}, attrs={'attr': 'ds'})
         actual = ds.where(ds > 0)
         self.assertEqual(actual.attrs, ds.attrs)
         self.assertEqual(actual.a.name, 'a')
         self.assertEqual(actual.a.attrs, ds.a.attrs)
+
+    def test_where_other(self):
+        ds = Dataset({'a': ('x', range(5))}, {'x': range(5)})
+        expected = Dataset({'a': ('x', [-1, -1, 2, 3, 4])}, {'x': range(5)})
+        actual = ds.where(ds > 1, -1)
+        assert_equal(expected, actual)
+        assert actual.a.dtype == int
+
+        with raises_regex(ValueError, "cannot set"):
+            ds.where(ds > 1, other=0, drop=True)
+
+        with raises_regex(ValueError, "indexes .* are not equal"):
+            ds.where(ds > 1, ds.isel(x=slice(3)))
+
+        with raises_regex(ValueError, "exact match required"):
+            ds.where(ds > 1, ds.assign(b=2))
 
     def test_where_drop(self):
         # if drop=True
@@ -2823,6 +2847,15 @@ class TestDataset(TestCase):
             self.assertItemsEqual(actual, expected)
 
         self.assertDatasetEqual(data.mean(dim=[]), data)
+
+        # uint support
+        data = xr.Dataset({'a': (('x', 'y'),
+                                 np.arange(6).reshape(3, 2).astype('uint')),
+                           'b': (('x', ), np.array([0.1, 0.2, np.nan]))})
+        actual = data.mean('x', skipna=True)
+        expected = xr.Dataset({'a': data['a'].mean('x'),
+                               'b': data['b'].mean('x', skipna=True)})
+        self.assertDatasetIdentical(actual, expected)
 
     def test_reduce_bad_dim(self):
         data = create_test_data()
@@ -2958,8 +2991,6 @@ class TestDataset(TestCase):
         with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
 
         ds = create_test_data(seed=123)

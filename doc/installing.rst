@@ -7,8 +7,8 @@ Required dependencies
 ---------------------
 
 - Python 2.7, 3.4, 3.5, or 3.6
-- `numpy <http://www.numpy.org/>`__ (1.7 or later)
-- `pandas <http://pandas.pydata.org/>`__ (0.15.0 or later)
+- `numpy <http://www.numpy.org/>`__ (1.11 or later)
+- `pandas <http://pandas.pydata.org/>`__ (0.18.0 or later)
 
 Optional dependencies
 ---------------------
@@ -73,6 +73,12 @@ pandas) installed first. Then, install xarray with pip::
 
     $ pip install xarray
 
-To run the test suite after installing xarray, install
-`py.test <https://pytest.org>`__ (``pip install pytest``) and run
+Testing
+-------
+
+To run the test suite after installing xarray, first install (via pypi or conda)
+- `py.test <https://pytest.org>`__: Simple unit testing library
+- `mock <https://pypi.python.org/pypi/mock>`__: additional testing library required for python version 2
+
+and run
 ``py.test --pyargs xarray``.

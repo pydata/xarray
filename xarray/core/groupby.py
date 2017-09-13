@@ -5,12 +5,13 @@ import functools
 import numpy as np
 import pandas as pd
 
+from . import dtypes
 from . import duck_array_ops
 from . import nputils
 from . import ops
 from .combine import concat
 from .common import (
-    ImplementsArrayReduce, ImplementsDatasetReduce, _maybe_promote,
+    ImplementsArrayReduce, ImplementsDatasetReduce,
 )
 from .pycompat import range, zip, integer_types
 from .utils import hashable, peek_at, maybe_wrap_array, safe_cast_to_index
@@ -44,27 +45,19 @@ def unique_value_groups(ar, sort=True):
     return values, groups
 
 
-def _get_fill_value(dtype):
-    """Return a fill value that appropriately promotes types when used with
-    np.concatenate
-    """
-    dtype, fill_value = _maybe_promote(dtype)
-    return fill_value
-
-
 def _dummy_copy(xarray_obj):
     from .dataset import Dataset
     from .dataarray import DataArray
     if isinstance(xarray_obj, Dataset):
-        res = Dataset(dict((k, _get_fill_value(v.dtype))
+        res = Dataset(dict((k, dtypes.get_fill_value(v.dtype))
                            for k, v in xarray_obj.data_vars.items()),
-                      dict((k, _get_fill_value(v.dtype))
+                      dict((k, dtypes.get_fill_value(v.dtype))
                            for k, v in xarray_obj.coords.items()
                            if k not in xarray_obj.dims),
                       xarray_obj.attrs)
     elif isinstance(xarray_obj, DataArray):
-        res = DataArray(_get_fill_value(xarray_obj.dtype),
-                        dict((k, _get_fill_value(v.dtype))
+        res = DataArray(dtypes.get_fill_value(xarray_obj.dtype),
+                        dict((k, dtypes.get_fill_value(v.dtype))
                              for k, v in xarray_obj.coords.items()
                              if k not in xarray_obj.dims),
                         dims=[],
@@ -387,16 +380,16 @@ class GroupBy(object):
         out = ops.fillna(self, value)
         return out
 
-    def where(self, cond):
-        """Return an object of the same shape with all entries where cond is
-        True and all other entries masked.
-
-        This operation follows the normal broadcasting and alignment rules that
-        xarray uses for binary arithmetic.
+    def where(self, cond, other=dtypes.NA):
+        """Return elements from `self` or `other` depending on `cond`.
 
         Parameters
         ----------
-        cond : DataArray or Dataset
+        cond : DataArray or Dataset with boolean dtype
+            Locations at which to preserve this objects values.
+        other : scalar, DataArray or Dataset, optional
+            Value to use for locations in this object where ``cond`` is False.
+            By default, inserts missing values.
 
         Returns
         -------
@@ -406,7 +399,7 @@ class GroupBy(object):
         --------
         Dataset.where
         """
-        return self._where(cond)
+        return ops.where_method(self, cond, other)
 
     def _first_or_last(self, op, skipna, keep_attrs):
         if isinstance(self._group_indices[0], integer_types):

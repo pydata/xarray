@@ -4,6 +4,7 @@ from __future__ import print_function
 import pickle
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
@@ -11,7 +12,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest
+from xarray.tests import mock
 
 with suppress(ImportError):
     import dask
@@ -175,7 +176,6 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
-    @unittest.skip('currently broken in dask, see GH1090')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -394,6 +394,47 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute'])
+def test_dask_kwargs_variable(method):
+    x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
+    # args should be passed on to da.Array.compute()
+    with mock.patch.object(da.Array, 'compute',
+                           return_value=np.arange(3)) as mock_compute:
+        getattr(x, method)(foo='bar')
+    mock_compute.assert_called_with(foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataarray(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = DataArray(data)
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataset(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = Dataset({'x': (('y'), data)})
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
 kernel_call_count = 0
 def kernel():
     """Dask kernel to test pickling/unpickling.
@@ -402,6 +443,7 @@ def kernel():
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1)
+
 
 def build_dask_array():
     global kernel_call_count

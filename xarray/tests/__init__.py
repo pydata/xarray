@@ -4,6 +4,7 @@ from __future__ import print_function
 import warnings
 from contextlib import contextmanager
 from distutils.version import LooseVersion
+import re
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -18,6 +19,11 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 try:
     import scipy
@@ -82,6 +88,17 @@ try:
 except ImportError:
     has_rasterio = False
 
+try:
+    import pathlib
+    has_pathlib = True
+except ImportError:
+    try:
+        import pathlib2
+        has_pathlib = True
+    except ImportError:
+        has_pathlib = False
+
+
 # slighly simpler construction that the full functions.
 # Generally `pytest.importorskip('package')` inline is even easier
 requires_matplotlib = pytest.mark.skipif(
@@ -104,6 +121,9 @@ requires_bottleneck = pytest.mark.skipif(
     not has_bottleneck, reason='requires bottleneck')
 requires_rasterio = pytest.mark.skipif(
     not has_rasterio, reason='requires rasterio')
+requires_pathlib = pytest.mark.skipif(
+    not has_pathlib, reason='requires pathlib / pathlib2'
+)
 
 
 try:
@@ -180,6 +200,16 @@ class TestCase(unittest.TestCase):
 
     def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
         assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
+
+
+@contextmanager
+def raises_regex(error, pattern):
+    with pytest.raises(error) as excinfo:
+        yield
+    message = str(excinfo.value)
+    if not re.match(pattern, message):
+        raise AssertionError('exception %r did not match pattern %s'
+                             % (excinfo.value, pattern))
 
 
 class UnexpectedDataAccess(Exception):

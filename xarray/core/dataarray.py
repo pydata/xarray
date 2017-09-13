@@ -48,15 +48,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                warnings.warn('inferring DataArray dimensions from dictionary '
-                              'like ``coords`` has been deprecated. Use an '
-                              'explicit list of ``dims`` instead.',
-                              FutureWarning, stacklevel=3)
-                dims = list(coords.keys())
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+                # deprecated in GH993, removed in GH1539
+                raise ValueError('inferring DataArray dimensions from '
+                                 'dictionary like ``coords`` has been '
+                                 'deprecated. Use an explicit list of '
+                                 '``dims`` instead.')
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:
@@ -179,9 +179,11 @@ class DataArray(AbstractArray, BaseDataObject):
         coords : sequence or dict of array_like objects, optional
             Coordinates (tick labels) to use for indexing along each dimension.
             If dict-like, should be a mapping from dimension names to the
-            corresponding coordinates.
+            corresponding coordinates. If sequence-like, should be a sequence
+            of tuples where the first element is the dimension name and the
+            second element is the corresponding coordinate array_like object.
         dims : str or sequence of str, optional
-            Name(s) of the the data dimension(s). Must be either a string (only
+            Name(s) of the data dimension(s). Must be either a string (only
             for 1D data) or a sequence of strings with length equal to the
             number of dimensions. If this argument is omitted, dimension names
             are taken from ``coords`` (if possible) and otherwise default to
@@ -567,7 +569,7 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
-    def load(self):
+    def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -575,14 +577,23 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
-        ds = self._to_temp_dataset().load()
+        ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
         self._variable = new._variable
         self._coords = new._coords
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return a new array. The original is
         left unaltered.
@@ -591,18 +602,36 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
-    def persist(self):
+    def persist(self, **kwargs):
         """ Trigger computation in constituent dask arrays
 
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        See Also
+        --------
+        dask.persist
         """
-        ds = self._to_temp_dataset().persist()
+        ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
     def copy(self, deep=True):
@@ -1288,7 +1317,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        path : str, optional
+        path : str or Path, optional
             Path to which to save this dataset. If no path is provided, this
             function returns the resulting netCDF file as a bytes object; in
             this case, we need to use scipy.io.netcdf, which does not support
@@ -1296,7 +1325,8 @@ class DataArray(AbstractArray, BaseDataObject):
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+                  'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1326,7 +1356,8 @@ class DataArray(AbstractArray, BaseDataObject):
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+               'zlib': True}, ...}``
 
         Notes
         -----
@@ -1352,7 +1383,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        dataset.to_netcdf(*args, **kwargs)
+        return dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
         """
