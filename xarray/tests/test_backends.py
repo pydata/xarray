@@ -31,6 +31,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical)
 from .test_dataset import create_test_data
 
+from xarray.tests import mock
+
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -1509,21 +1511,14 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
 
-    def test_password(self):
+    def test_session(self):
+        import pydap
         from pydap.cas.urs import setup_session
 
-        url = ('https://disc2.gesdisc.eosdis.nasa.gov/opendap/TRMM_RT/'
-               'TRMM_3B42RT_Daily.7/2017/09/3B42RT_Daily.20170902.7.nc4')
-        session = setup_session('XarrayTestUser', 'Xarray2017', check_url=url)
-        store = xr.backends.PydapDataStore.open(url, session=session)
-
-        with xr.open_dataset(store) as ds:
-            expected_vars = ['precipitation_cnt', 'uncal_precipitation',
-                             'uncal_precipitation_cnt', 'precipitation',
-                             'randomError_cnt', 'randomError']
-
-            for var in expected_vars:
-                self.assertTrue(var in ds.data_vars)
+        session = setup_session('XarrayTestUser', 'Xarray2017')
+        with mock.patch('pydap.client.open_url') as mock_func:
+            xr.backends.PydapDataStore.open('http://test.url', session=session)
+        mock_func.assert_called_with('http://test.url', session=session)
 
     @requires_dask
     def test_dask(self):
