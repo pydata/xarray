@@ -61,6 +61,11 @@ class PydapDataStore(AbstractDataStore):
     be useful if the netCDF4 library is not available.
     """
     def __init__(self, ds):
+        """
+        Parameters
+        ----------
+        ds : pydap DatasetType
+        """
         self.ds = ds
 
     @classmethod
