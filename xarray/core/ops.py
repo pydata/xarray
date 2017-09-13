@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 
 import operator
-import warnings
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -24,10 +23,7 @@ from .nputils import array_eq, array_ne
 try:
     import bottleneck as bn
     if LooseVersion(bn.__version__) < LooseVersion('1.1'):
-        warnings.warn(
-            "The installed version of bottleneck {ver} is not supported "
-            "in xarray and will be not be used\nThe minimum supported "
-            "version is 1.1\n".format(ver=bn.__version__), UserWarning)
+        # fall back to numpy
         raise ImportError(
             'bottleneck version {} is not supported'.format(bn.__version__))
     has_bottleneck = True

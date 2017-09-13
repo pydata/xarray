@@ -3511,8 +3511,6 @@ def ds(request):
 
 
 def test_rolling_properties(ds):
-    pytest.importorskip('bottleneck', minversion='1.1')
-
     # catching invalid args
     with pytest.raises(ValueError) as exception:
         ds.rolling(time=7, x=2)
@@ -3589,9 +3587,8 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    # std with window == 1 seems unstable in bottleneck
     if name == 'std' and window == 1:
-        window = 2
+        pytest.skip('std with window == 1 is unstable in bottleneck')
 
     rolling_obj = ds.rolling(time=window, center=center,
                              min_periods=min_periods)
