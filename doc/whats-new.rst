@@ -111,7 +111,7 @@ Enhancements
 - Changed :py:class:`~xarray.backends.PydapDataStore` to take a Pydap dataset.
   This permits opening Opendap datasets that require authentication, by
   instantiating a Pydap dataset with a session object. Also added
-  :py:func:`xarray.backends.PydapDataStore.open` which takes a url and session
+  :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
   object (:issue:`1068`).
   By `Philip Graae <https://github.com/mrpgraae>`_.
 
