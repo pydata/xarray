@@ -189,8 +189,13 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         from .dataarray import DataArray
 
         if isinstance(self._obj.data, dask_array_type):
-            raise TypeError('dask arrays not supported yet in '
-                            'resample.interpolate()')
+            raise TypeError(
+                "Up-sampling via interpolation was attempted on the the "
+                "variable '{}', but it is a dask array; dask arrays not "
+                "yet supprted in resample.interpolate(). Load into "
+                "memory with Dataset.load() before resampling."
+                .format(name)
+            )
 
         x = self._obj[self._dim].astype('float')
         y = self._obj.data
@@ -317,23 +322,28 @@ class DatasetResample(DatasetGroupBy, Resample):
                     coords[self._dim] = self._full_index
                 elif self._dim not in variable.dims:
                     coords[name] = variable
-                else:
-                    if isinstance(variable.data, dask_array_type):
-                        raise TypeError('dask arrays not supported yet in '
-                                        'resample.interpolate()')
+            else:
+                if isinstance(variable.data, dask_array_type):
+                    raise TypeError(
+                        "Up-sampling via interpolation was attempted on the the "
+                        "variable '{}', but it is a dask array; dask arrays not "
+                        "yet supprted in resample.interpolate(). Load into "
+                        "memory with Dataset.load() before resampling."
+                        .format(name)
+                    )
 
-                    axis = variable.get_axis_num(self._dim)
+                axis = variable.get_axis_num(self._dim)
 
-                    # We've previously checked for monotonicity along the
-                    # re-sampling dimension (in __init__ via the GroupBy
-                    # constructor), so we can avoid sorting the data again by
-                    # passing 'assume_sorted=True'
-                    f = interp1d(old_times, variable.data, kind=kind,
-                                 axis=axis, bounds_error=True,
-                                 assume_sorted=True)
-                    interpolated = Variable(variable.dims, f(new_times))
+                # We've previously checked for monotonicity along the
+                # re-sampling dimension (in __init__ via the GroupBy
+                # constructor), so we can avoid sorting the data again by
+                # passing 'assume_sorted=True'
+                f = interp1d(old_times, variable.data, kind=kind,
+                             axis=axis, bounds_error=True,
+                             assume_sorted=True)
+                interpolated = Variable(variable.dims, f(new_times))
 
-                    data_vars[name] = interpolated
+                data_vars[name] = interpolated
 
         return Dataset(data_vars, coords)
 
