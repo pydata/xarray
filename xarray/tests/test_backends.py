@@ -1512,7 +1512,6 @@ class PydapTest(TestCase):
                                     expected.isel(j=slice(1, 2)))
 
     def test_session(self):
-        import pydap
         from pydap.cas.urs import setup_session
 
         session = setup_session('XarrayTestUser', 'Xarray2017')
