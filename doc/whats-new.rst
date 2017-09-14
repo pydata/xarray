@@ -32,6 +32,9 @@ Backward Incompatible Changes
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- The minimum supported version bottleneck has increased to 1.1
+  (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -107,6 +110,10 @@ Enhancements
   The encoding is copied from the first object  (:issue:`1297`).
   By `Joe Hamman <https://github.com/jhamman>`_ and
   `Gerrit Holl <https://github.com/gerritholl>`_.
+
+- Support applying rolling window operations using bottleneck's moving window
+  functions on data stored as dask arrays (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
