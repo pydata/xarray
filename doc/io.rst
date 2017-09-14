@@ -403,7 +403,7 @@ HTTP Basic authentication::
                                             session=session)
     ds = xr.open_dataset(store)
 
-`Pydap's cas module`__ have functions that generate custom sessions for 
+`Pydap's cas module`__ has functions that generate custom sessions for 
 servers that use CAS single sign-on. For example, to connect to servers
 that require NASA's URS authentication::
 
