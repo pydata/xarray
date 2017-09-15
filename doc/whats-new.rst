@@ -32,6 +32,9 @@ Backward Incompatible Changes
 
 - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- The minimum supported version bottleneck has increased to 1.1
+  (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -114,6 +117,9 @@ Enhancements
   :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
   object (:issue:`1068`).
   By `Philip Graae <https://github.com/mrpgraae>`_.
+- Support applying rolling window operations using bottleneck's moving window
+  functions on data stored as dask arrays (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -1449,7 +1455,7 @@ a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
 documentation section :doc:`dask`.
 
-.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xray + dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
 
 Dask makes it possible to harness parallelism and manipulate gigantic datasets
 with xray. It is currently an optional dependency, but it may become required
