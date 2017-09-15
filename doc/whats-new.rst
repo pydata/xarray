@@ -117,6 +117,7 @@ Enhancements
   :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
   object (:issue:`1068`).
   By `Philip Graae <https://github.com/mrpgraae>`_.
+
 - Support applying rolling window operations using bottleneck's moving window
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
