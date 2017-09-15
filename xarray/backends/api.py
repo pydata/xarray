@@ -288,7 +288,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store = backends.ScipyDataStore(filename_or_obj,
                                             autoclose=autoclose)
         elif engine == 'pydap':
-            store = backends.PydapDataStore(filename_or_obj)
+            store = backends.PydapDataStore.open(filename_or_obj)
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                            autoclose=autoclose)
