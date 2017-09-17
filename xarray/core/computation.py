@@ -68,27 +68,8 @@ class _UFuncSignature(object):
         return len(self.input_core_dims)
 
     @property
-    def n_outputs(self):
+    def num_outputs(self):
         return len(self.output_core_dims)
-
-    @classmethod
-    def default(cls, n_inputs):
-        return cls([()] * n_inputs, [()])
-
-    @classmethod
-    def from_sequence(cls, nested):
-        if (not isinstance(nested, collections.Sequence) or
-                not len(nested) == 2 or
-                any(not isinstance(arg_list, collections.Sequence)
-                    for arg_list in nested) or
-                any(isinstance(arg, basestring) or
-                    not isinstance(arg, collections.Sequence)
-                    for arg_list in nested for arg in arg_list)):
-            raise TypeError('functions signatures not provided as a string '
-                            'must be a triply nested sequence providing the '
-                            'list of core dimensions for each variable, for '
-                            'both input and output.')
-        return cls(*nested)
 
     def __eq__(self, other):
         try:
@@ -190,7 +171,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     data_vars = [getattr(a, 'variable', a) for a in args]
     result_var = func(*data_vars)
 
-    if signature.n_outputs > 1:
+    if signature.num_outputs > 1:
         out = tuple(DataArray(variable, coords, name=name, fastpath=True)
                     for variable, coords in zip(result_var, result_coords))
     else:
@@ -269,10 +250,10 @@ def _as_variables_or_variable(arg):
 
 def _unpack_dict_tuples(
         result_vars,  # type: Mapping[Any, Tuple[Variable]]
-        n_outputs,    # type: int
+        num_outputs,    # type: int
 ):
     # type: (...) -> Tuple[Dict[Any, Variable]]
-    out = tuple(OrderedDict() for _ in range(n_outputs))
+    out = tuple(OrderedDict() for _ in range(num_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
             results_dict[name] = value
@@ -298,8 +279,8 @@ def apply_dict_of_variables_ufunc(func, *args, **kwargs):
     for name, variable_args in zip(names, grouped_by_name):
         result_vars[name] = func(*variable_args)
 
-    if signature.n_outputs > 1:
-        return _unpack_dict_tuples(result_vars, signature.n_outputs)
+    if signature.num_outputs > 1:
+        return _unpack_dict_tuples(result_vars, signature.num_outputs)
     else:
         return result_vars
 
@@ -335,8 +316,8 @@ def apply_dataset_ufunc(func, *args, **kwargs):
 
     if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
             fill_value is _DEFAULT_FILL_VALUE):
-        raise TypeError('To apply an operation to datasets with different ',
-                        'data variables, you must supply the ',
+        raise TypeError('to apply an operation to datasets with different '
+                        'data variables with apply_ufunc, you must supply the '
                         'dataset_fill_value argument.')
 
     if kwargs:
@@ -353,7 +334,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
         func, *args, signature=signature, join=dataset_join,
         fill_value=fill_value)
 
-    if signature.n_outputs > 1:
+    if signature.num_outputs > 1:
         out = tuple(_fast_dataset(*args)
                     for args in zip(result_vars, list_of_coords))
     else:
@@ -388,12 +369,12 @@ def apply_groupby_ufunc(func, *args):
     from .variable import Variable
 
     groupbys = [arg for arg in args if isinstance(arg, GroupBy)]
-    if not groupbys:
-        raise ValueError('must have at least one groupby to iterate over')
+    assert groupbys, 'must have at least one groupby to iterate over'
     first_groupby = groupbys[0]
     if any(not first_groupby._group.equals(gb._group) for gb in groupbys[1:]):
-        raise ValueError('can only perform operations over multiple groupbys '
-                         'at once if they are all grouped the same way')
+        raise ValueError('apply_ufunc can only perform operations over '
+                         'multiple GroupBy objets at once if they are all '
+                         'grouped the same way')
 
     grouped_dim = first_groupby._group.name
     unique_values = first_groupby._unique_coord.values
@@ -430,7 +411,7 @@ def unified_dim_sizes(variables, exclude_dims=frozenset()):
     for var in variables:
         if len(set(var.dims)) < len(var.dims):
             raise ValueError('broadcasting cannot handle duplicate '
-                             'dimensions: %r' % list(var.dims))
+                             'dimensions on a variable: %r' % list(var.dims))
         for dim, size in zip(var.dims, var.shape):
             if dim not in exclude_dims:
                 if dim not in dim_sizes:
@@ -462,15 +443,17 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     set_old_dims = set(old_dims)
     missing_core_dims = [d for d in core_dims if d not in set_old_dims]
     if missing_core_dims:
-        raise ValueError('operation requires dimensions missing on input '
-                         'variable: %r' % missing_core_dims)
+        raise ValueError('operand to apply_ufunc has required core dimensions '
+                         '%r, but some of these are missing on the input '
+                         'variable:  %r' % (list(core_dims), missing_core_dims))
 
     set_new_dims = set(new_dims)
     unexpected_dims = [d for d in old_dims if d not in set_new_dims]
     if unexpected_dims:
-        raise ValueError('operation encountered unexpected dimensions %r '
-                         'on input variable: these are core dimensions on '
-                         'other input or output variables' % unexpected_dims)
+        raise ValueError('operand to apply_ufunc encountered unexpected '
+                         'dimensions %r on an input variable: these are core '
+                         'dimensions on other input or output variables'
+                         % unexpected_dims)
 
     # for consistency with numpy, keep broadcast dimensions to the left
     old_broadcast_dims = tuple(d for d in broadcast_dims if d in set_old_dims)
@@ -520,8 +503,11 @@ def apply_variable_ufunc(func, *args, **kwargs):
 
     if any(isinstance(array, dask_array_type) for array in input_data):
         if dask == 'forbidden':
-            raise ValueError('encountered dask array, but did not set '
-                             "dask='allowed'")
+            raise ValueError('apply_ufunc encountered a dask array on an '
+                             'argument, but handling for dask arrays has not '
+                             'been enabled. Either set the ``dask`` argument '
+                             'or load your data into memory first with '
+                             '``.load()`` or ``.compute()``')
         elif dask == 'parallelized':
             input_dims = [broadcast_dims + input_dims
                           for input_dims in signature.input_core_dims]
@@ -532,11 +518,11 @@ def apply_variable_ufunc(func, *args, **kwargs):
         elif dask == 'allowed':
             pass
         else:
-            raise ValueError('unknown setting for dask array handling: {}'
-                             .format(dask))
+            raise ValueError('unknown setting for dask array handling in '
+                             'apply_ufunc: {}'.format(dask))
     result_data = func(*input_data)
 
-    if signature.n_outputs > 1:
+    if signature.num_outputs > 1:
         output = []
         for dims, data in zip(output_dims, result_data):
             output.append(Variable(dims, data))
@@ -550,15 +536,17 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
                           output_dtypes, output_sizes=None):
     import dask.array as da
 
-    if signature.n_outputs > 1:
-        raise NotImplementedError(
-            "multiple outputs not yet supported with dask='parallelized'")
+    if signature.num_outputs > 1:
+        raise NotImplementedError('multiple outputs from apply_ufunc not yet '
+                                  "supported with dask='parallelized'")
 
     if output_dtypes is None:
-        raise ValueError(
-            "output dtypes (output_dtypes) required when using dask='parallelized'")
-    if len(output_dtypes) != signature.n_outputs:
-        raise ValueError('wrong number of output dtypes')
+        raise ValueError('output dtypes (output_dtypes) must be supplied to '
+                         "apply_func when using dask='parallelized'")
+    if len(output_dtypes) != signature.num_outputs:
+        raise ValueError('apply_ufunc arguments output_dtypes and '
+                         'output_core_dims must have the same length: {} vs {}'
+                         .format(len(output_dtypes), signature.num_outputs))
     (dtype,) = output_dtypes
 
     if output_sizes is None:
@@ -566,7 +554,8 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
 
     new_dims = signature.all_output_core_dims - signature.all_input_core_dims
     if any(dim not in output_sizes for dim in new_dims):
-        raise ValueError('output core dimensions not found on inputs must have '
+        raise ValueError("when using dask='parallelized' with apply_ufunc, "
+                         'output core dimensions not found on inputs must have '
                          'explicitly set sizes with ``output_sizes``: {}'
                          .format(new_dims))
 
@@ -595,11 +584,14 @@ def apply_array_ufunc(func, *args, **kwargs):
 
     if any(isinstance(arg, dask_array_type) for arg in args):
         if dask == 'forbidden':
-            raise ValueError('encountered dask array, but did not set '
-                             "dask='allowed'")
+            raise ValueError('apply_ufunc encountered a dask array on an '
+                             'argument, but handling for dask arrays has not '
+                             'been enabled. Either set the ``dask`` argument '
+                             'or load your data into memory first with '
+                             '``.load()`` or ``.compute()``')
         elif dask == 'parallelized':
-            raise ValueError("cannot use dask='parallelized' unless at least "
-                             'one input is an xarray object')
+            raise ValueError("cannot use dask='parallelized' for apply_ufunc "
+                             'unless at least one input is an xarray object')
         elif dask == 'allowed':
             pass
         else:
@@ -619,7 +611,7 @@ def apply_ufunc(func, *args, **kwargs):
                    dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
                    keep_attrs : bool = False,
                    kwargs : Mapping = None,
-                   dask_array : str = 'forbidden',
+                   dask : str = 'forbidden',
                    output_dtypes : Optional[Sequence] = None,
                    output_sizes : Optional[Mapping[Any, int]] = None)
 
@@ -698,8 +690,8 @@ def apply_ufunc(func, *args, **kwargs):
         - 'forbidden' (default): raise an error if a dask array is encountered.
         - 'allowed': pass dask arrays directly on to ``func``.
         - 'parallelized': automatically parallelize ``func`` if any of the
-          inputs are a dask array. If used, the ``otypes`` argument must also be
-          provided. Multiple output arguments are not yet supported.
+          inputs are a dask array. If used, the ``output_dtypes`` argument must
+          also be provided. Multiple output arguments are not yet supported.
     output_dtypes : list of dtypes, optional
         Optional list of output dtypes. Only used if dask='parallelized'.
     output_sizes : dict, optional

@@ -30,8 +30,8 @@ def test_signature_properties():
     assert sig.output_core_dims == (('z',),)
     assert sig.all_input_core_dims == frozenset(['x', 'y'])
     assert sig.all_output_core_dims == frozenset(['z'])
-    assert sig.n_inputs == 2
-    assert sig.n_outputs == 1
+    assert sig.num_inputs == 2
+    assert sig.num_outputs == 1
     # dimension names matter
     assert _UFuncSignature([['x']]) != _UFuncSignature([['y']])
 
