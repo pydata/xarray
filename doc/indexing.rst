@@ -692,7 +692,4 @@ support various backends, the actual implementation is different.
 
 .. note::
 
-  - ``IndexError`` is raised if there is a conflict between dimension
-     coordinates of indexer- and indexed- DataArrays.
-
-  - Only 1-dimensional boolean arrays can be used as indexers.
+  Only 1-dimensional boolean arrays can be used as indexers.
