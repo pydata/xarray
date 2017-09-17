@@ -50,6 +50,80 @@ class Rolling(object):
         Returns
         -------
         rolling : type of input argument
+        
+        Examples
+        -------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON
+        
+        >>> lat = np.linspace(-90, 90, num=181)
+        >>> lon = np.linspace(0, 359, num=360)
+        >>> time = pd.date_range('15/12/1999', 
+                                 periods=12, freq=pd.DateOffset(months=1))
+        >>> a = np.repeat(np.repeat(np.linspace(0,11,num=12)[:, np.newaxis], 
+                          len(lat), axis=1)[:, :, np.newaxis], len(lon), axis=2)
+        >>> da = xr.DataArray(a, coords=[time, lat, lon], dims=['time','lat','lon'])
+        >>> da
+        <xarray.DataArray (time: 12, lat: 181, lon: 360)>
+        array([[[  0.,   0., ...,   0.,   0.],
+                [  0.,   0., ...,   0.,   0.],
+                ..., 
+                [  0.,   0., ...,   0.,   0.],
+                [  0.,   0., ...,   0.,   0.]],
+
+               [[  1.,   1., ...,   1.,   1.],
+                [  1.,   1., ...,   1.,   1.],
+                ..., 
+                [  1.,   1., ...,   1.,   1.],
+                [  1.,   1., ...,   1.,   1.]],
+
+               ..., 
+               [[ 10.,  10., ...,  10.,  10.],
+                [ 10.,  10., ...,  10.,  10.],
+                ..., 
+                [ 10.,  10., ...,  10.,  10.],
+                [ 10.,  10., ...,  10.,  10.]],
+
+               [[ 11.,  11., ...,  11.,  11.],
+                [ 11.,  11., ...,  11.,  11.],
+                ..., 
+                [ 11.,  11., ...,  11.,  11.],
+                [ 11.,  11., ...,  11.,  11.]]])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+          * lat      (lat) float64 -90.0 -89.0 -88.0 -87.0 -86.0 -85.0 -84.0 -83.0 ...
+          * lon      (lon) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 ...
+        >>> da_seasonal_avg = da.rolling(time=3).mean().dropna('time')
+        >>> da_seasonal_avg['time'] = time[1:len(time)-1]
+        >>> da_seasonal_avg
+        <xarray.DataArray (time: 10, lat: 181, lon: 360)>
+        array([[[  1.,   1., ...,   1.,   1.],
+                [  1.,   1., ...,   1.,   1.],
+                ..., 
+                [  1.,   1., ...,   1.,   1.],
+                [  1.,   1., ...,   1.,   1.]],
+        
+               [[  2.,   2., ...,   2.,   2.],
+                [  2.,   2., ...,   2.,   2.],
+                ..., 
+                [  2.,   2., ...,   2.,   2.],
+                [  2.,   2., ...,   2.,   2.]],
+        
+               ..., 
+               [[  9.,   9., ...,   9.,   9.],
+                [  9.,   9., ...,   9.,   9.],
+                ..., 
+                [  9.,   9., ...,   9.,   9.],
+                [  9.,   9., ...,   9.,   9.]],
+        
+               [[ 10.,  10., ...,  10.,  10.],
+                [ 10.,  10., ...,  10.,  10.],
+                ..., 
+                [ 10.,  10., ...,  10.,  10.],
+                [ 10.,  10., ...,  10.,  10.]]])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
+          * lat      (lat) float64 -90.0 -89.0 -88.0 -87.0 -86.0 -85.0 -84.0 -83.0 ...
+          * lon      (lon) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 ...
         """
 
         if (has_bottleneck and
