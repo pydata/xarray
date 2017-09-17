@@ -607,7 +607,7 @@ def test_apply_dask_parallelized_errors():
                     dask='parallelized')
     with raises_regex(ValueError, 'dtypes'):
         apply_ufunc(identity, data_array, dask='parallelized')
-    with raises_regex(ValueError, 'wrong number'):
+    with raises_regex(ValueError, 'must have the same length'):
         apply_ufunc(identity, data_array, dask='parallelized',
                     output_dtypes=[float, float])
     with raises_regex(ValueError, 'output_sizes'):

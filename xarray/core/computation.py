@@ -64,7 +64,7 @@ class _UFuncSignature(object):
         return self._all_core_dims
 
     @property
-    def n_inputs(self):
+    def num_inputs(self):
         return len(self.input_core_dims)
 
     @property
