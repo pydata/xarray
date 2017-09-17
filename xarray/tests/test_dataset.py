@@ -993,14 +993,16 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(indexing_da['dim1'], actual['dim1'])
         self.assertDataArrayIdentical(data['dim2'], actual['dim2'])
 
-        # not overwrite coordinate
+        # Conflict in the dimension coordinate
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3)})
-        actual = data.isel(dim2=indexing_da)
-        self.assertDataArrayIdentical(actual['dim2'],
-                                      data['dim2'].isel(dim2=np.arange(1, 4)))
+        with self.assertRaisesRegexp(IndexError, "Dimension coordinate dim2"):
+            actual = data.isel(dim2=indexing_da)
+        # Also the case for DataArray
+        with self.assertRaisesRegexp(IndexError, "Dimension coordinate dim2"):
+            actual = data['var2'].isel(dim2=indexing_da)
 
-        # isel for the coordinate. Should not attach the coordinate
+        # isel for the coordinate variable. Should not attach the coordinate
         actual = data['dim2'].isel(dim2=indexing_da)
         self.assertDataArrayIdentical(actual,
                                       data['dim2'].isel(dim2=np.arange(1, 4)))
@@ -1008,7 +1010,15 @@ class TestDataset(TestCase):
         # same name coordinate which does not conflict
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': data['dim2'].values[1:4]})
-        self.assertDataArrayIdentical(data['dim2'][1:4], indexing_da['dim2'])
+        actual = data.isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(actual['dim2'], indexing_da['dim2'])
+
+        # Silently drop conflicted (non-dimensional) coordinate of indexer
+        indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
+                                coords={'dim2': data['dim2'].values[1:4],
+                                        'numbers': ('dim2', np.arange(2, 5))})
+        actual = data.isel(dim2=indexing_da)
+        self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
 
         # boolean data array with coordinate with the same name
         indexing_da = DataArray(np.arange(1, 10), dims=['dim2'],
@@ -1034,19 +1044,11 @@ class TestDataset(TestCase):
 
         # non-dimension coordinate will be also attached
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
-                                coords={'dim2': np.random.randn(3),
-                                        'non_dim': (('dim2', ),
+                                coords={'non_dim': (('dim2', ),
                                                     np.random.randn(3))})
         actual = data.isel(dim2=indexing_da)
         assert 'non_dim' in actual
         assert 'non_dim' in actual.coords
-
-        # indexing with DataArray with drop=True
-        indexing_da = DataArray(np.arange(1, 4), dims=['a'],
-                                coords={'a': np.random.randn(3)})
-        actual = data.isel(dim1=indexing_da)
-        assert 'a' in actual
-        assert 'dim1' not in actual
 
         # Index by a scalar DataArray
         indexing_da = DataArray(3, dims=[], coords={'station': 2})
@@ -1123,6 +1125,23 @@ class TestDataset(TestCase):
                                 expected.drop('new_dim'))
         self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
                                   ind['new_dim'])
+
+        # with conflicted coordinate (silently ignored)
+        ind = DataArray([0.0, 0.5, 1.0], dims=['dim2'],
+                        coords={'dim2': ['a', 'b', 'c']})
+        actual = data.sel(dim2=ind)
+        expected = data.isel(dim2=[0, 1, 2])
+        self.assertDatasetEqual(actual, expected)
+
+        # with non-dimensional coordinate
+        ind = DataArray([0.0, 0.5, 1.0], dims=['dim2'],
+                        coords={'dim2': ['a', 'b', 'c'],
+                                'numbers': ('dim2', [0, 1, 2]),
+                                'new_dim': ('dim2', [1.1, 1.2, 1.3])})
+        actual = data.sel(dim2=ind)
+        expected = data.isel(dim2=[0, 1, 2])
+        self.assertDatasetEqual(actual.drop('new_dim'), expected)
+        assert np.allclose(actual['new_dim'].values, ind['new_dim'].values)
 
     def test_sel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})

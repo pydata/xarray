@@ -1173,17 +1173,59 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     # Make sure in case of boolean DataArray, its
                     # coordinate also should be indexed.
                     v_coords = v[v.values.nonzero()[0]].coords
-                coords = {d: v_coords[d].variable for d in v.coords}
 
-                for k, vc in self.variables.items():
-                    if k in coords and not vc[v.values].equals(coords[k]):
-                        del coords[k]
-
-                coord_list.append(coords)
+                coord_list.append({d: v_coords[d].variable for d in v.coords})
 
         # we don't need to call align() explicitly, because merge_variables
         # already checks for exact alignment between dimension coordinates
-        return merge_variables(coord_list)
+        coords = merge_variables(coord_list)
+
+        for k in self.dims:
+            # make sure there are not conflict in dimension coordinates
+            if (k in coords and k in self._variables and
+                    not coords[k].equals(self._variables[k])):
+                raise IndexError('Dimension coordinate {0:s} conflicts between'
+                                 ' indexed and indexing objects.'.format(k))
+        return coords
+
+    def _drop_nonpriority_coords(self, indexers, mode='sel'):
+        """
+        Drop non-priority coords from indexers.
+
+        indexers: mapping from dimension to indexers.
+        Mode: one of 'isel' | 'sel'
+        Returns: new indexer
+
+        Common rule:
+        1. If object is constructed from coordinate, the same name coordinates
+           of the indexer will be dropped.
+
+        Rules for `sel` mode
+        2. Indexed coordinates from the indexed object take precedence.
+        """
+        from .dataarray import DataArray, _ThisArray
+
+        # If Dataset is constructed from DataArray, skip consistency check
+        this_arr = None
+        for k, v in self._variables.items():
+            if isinstance(k, _ThisArray):
+                this_arr = v
+
+        def drop_coord(v, k):
+            return v.drop(k) if (isinstance(v, DataArray) and k in v) else v
+
+        new_indexers = OrderedDict()
+        for k, v in indexers.items():
+            # rule 1
+            if (this_arr is not None and k in self._variables and
+                    this_arr.equals(self._variables[k])):
+                new_indexers[k] = drop_coord(v, k)
+            # rule 2
+            elif mode == 'sel' and k in self._coord_names:
+                new_indexers[k] = drop_coord(v, k)
+            else:
+                new_indexers[k] = v
+        return new_indexers
 
     def isel(self, drop=False, **indexers):
         """Returns a new dataset with each array indexed along the specified
@@ -1221,8 +1263,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel
         DataArray.isel
         """
+        indexers = self._drop_nonpriority_coords(indexers, mode='isel')
         indexers_list = self._validate_indexers(indexers)
-        coord_vars = self._get_indexers_coordinates(indexers)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
@@ -1231,11 +1273,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not (drop and name in var_indexers):
                 variables[name] = new_var
 
-        # attach coordinate in indexers
-        variables.update(coord_vars)
-
-        coord_names = set(variables) & set(self._coord_names) | set(coord_vars)
-        return self._replace_vars_and_dims(variables, coord_names=coord_names)
+        coord_names = set(variables) & set(self._coord_names)
+        selected = self._replace_vars_and_dims(
+                        variables, coord_names=coord_names)
+        # Dataset consisting of only coordinate.
+        coord_vars = selected._get_indexers_coordinates(indexers)
+        coords = self._replace_vars_and_dims(
+                        coord_vars, coord_names=list(coord_vars.keys()))
+        # Drop conflicted variable from indexers coordinate
+        return coords.update(selected)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Returns a new dataset with each array indexed by tick labels
@@ -1298,6 +1344,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         from .dataarray import DataArray
 
+        indexers = self._drop_nonpriority_coords(indexers, mode='sel')
         v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
                       for k, v in indexers.items()}
 
