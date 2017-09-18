@@ -95,10 +95,7 @@ def get_loc(index, label, method=None, tolerance=None):
 
 
 def get_indexer_nd(index, labels, method=None, tolerance=None):
-    """ Call pd.Index.get_indexer(labels). If labels are Variable,
-    The return type is also a Variable with the same dimension to
-    labels.
-    """
+    """ Call pd.Index.get_indexer(labels). """
     kwargs = _index_method_kwargs(method, tolerance)
 
     flat_labels = np.ravel(labels)

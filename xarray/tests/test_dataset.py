@@ -1143,6 +1143,26 @@ class TestDataset(TestCase):
         self.assertDatasetEqual(actual.drop('new_dim'), expected)
         assert np.allclose(actual['new_dim'].values, ind['new_dim'].values)
 
+    def test_sel_dataarray_mindex(self):
+        midx = pd.MultiIndex.from_product([list('abc'), [0, 1]],
+                                          names=('one', 'two'))
+        mds = xr.Dataset({'var': (('x', 'y'), np.random.rand(6, 3))},
+                         coords={'x': midx, 'y': range(3)})
+        actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims='z'))
+        actual_sel = mds.sel(x=Variable('z', mds.indexes['x'][:3]))
+        assert actual_isel['x'].dims == ('z', )
+        assert actual_sel['x'].dims == ('z', )
+        self.assertDatasetIdentical(actual_isel, actual_sel)
+
+        # with coordinate
+        actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims='z',
+                                              coords={'z': [0, 1, 2]}))
+        actual_sel = mds.sel(x=xr.DataArray(mds.indexes['x'][:3], dims='z',
+                                            coords={'z': [0, 1, 2]}))
+        assert actual_isel['x'].dims == ('z', )
+        assert actual_sel['x'].dims == ('z', )
+        self.assertDatasetIdentical(actual_isel, actual_sel)
+
     def test_sel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         expected = Dataset({'foo': 1})
