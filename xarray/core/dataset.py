@@ -1220,7 +1220,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 this_arr = v
 
         def drop_coord(v, k):
-            return v.drop(k) if (isinstance(v, DataArray) and k in v) else v
+            return v.drop(k) if k in v.coords else v
 
         new_indexers = OrderedDict()
         for k, v in indexers.items():
@@ -1228,12 +1228,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if isinstance(v, DataArray):
                 # rule 1
                 if (this_arr is not None and k in self._variables and
-                        this_arr.equals(self._variables[k])):
+                        this_arr is self._variables[k]):
                     v = drop_coord(v, k)
                 # rule 2
-                if (k in getattr(v, 'coords', {}) and
-                        v.variable.equals(v.coords[k])):
-                    v = drop_coord(v, k)
+                for ck, cv in v.coords.items():
+                    if v.variable is cv.variable:
+                        v = drop_coord(v, ck)
                 # rule 3
                 if mode == 'sel' and k in self._coord_names:
                     v = drop_coord(v, k)

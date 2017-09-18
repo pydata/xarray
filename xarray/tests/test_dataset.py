@@ -1055,7 +1055,7 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da)
         assert 'station' in actual
         actual = data.isel(dim2=indexing_da['station'])
-        assert 'station' in actual
+        assert 'station' not in actual
 
         # indexer generated from coordinates
         indexing_ds = Dataset({}, coords={'dim2': [0, 1, 2]})
