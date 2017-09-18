@@ -1057,6 +1057,12 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da['station'])
         assert 'station' in actual
 
+        # indexer generated from coordinates
+        indexing_ds = Dataset({}, coords={'dim2': [0, 1, 2]})
+        actual = data.isel(dim2=indexing_ds['dim2'])
+        expected = data.isel(dim2=[0, 1, 2])
+        self.assertDatasetIdentical(actual, expected)
+
     def test_sel(self):
         data = create_test_data()
         int_slicers = {'dim1': slice(None, None, 2),

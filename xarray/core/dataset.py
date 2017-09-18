@@ -1205,8 +1205,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         1. If object is constructed from coordinate, the same name coordinates
            of the indexer will be dropped.
 
+        2. If an indexer is a DataArray with a coordinate of itself,
+           this coordinate will be dropped.
+
         Rules for `sel` mode
-        2. Indexed coordinates from the indexed object take precedence.
+        3. Indexed coordinates from the indexed object take precedence.
         """
         from .dataarray import DataArray, _ThisArray
 
@@ -1221,15 +1224,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         new_indexers = OrderedDict()
         for k, v in indexers.items():
-            # rule 1
-            if (this_arr is not None and k in self._variables and
-                    this_arr.equals(self._variables[k])):
-                new_indexers[k] = drop_coord(v, k)
-            # rule 2
-            elif mode == 'sel' and k in self._coord_names:
-                new_indexers[k] = drop_coord(v, k)
-            else:
-                new_indexers[k] = v
+            # only consider DataArray
+            if isinstance(v, DataArray):
+                # rule 1
+                if (this_arr is not None and k in self._variables and
+                        this_arr.equals(self._variables[k])):
+                    v = drop_coord(v, k)
+                # rule 2
+                if (k in getattr(v, 'coords', {}) and
+                        v.variable.equals(v.coords[k])):
+                    v = drop_coord(v, k)
+                # rule 3
+                if mode == 'sel' and k in self._coord_names:
+                    v = drop_coord(v, k)
+            new_indexers[k] = v
         return new_indexers
 
     def isel(self, drop=False, **indexers):
