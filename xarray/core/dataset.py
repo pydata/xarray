@@ -1186,7 +1186,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     not coords[k].equals(self._variables[k])):
                 raise IndexError('Dimension coordinate {0:s} conflicts between'
                                  ' indexed and indexing objects.'.format(k))
-        return coords
+
+        attached_coords = OrderedDict()
+        for k, v in coords.items():  # silently drop the conflicted variables.
+            if k not in self._variables:
+                attached_coords[k] = v
+        return attached_coords
 
     def _drop_nonpriority_coords(self, indexers, mode='sel'):
         """
@@ -1276,12 +1281,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         coord_names = set(variables) & set(self._coord_names)
         selected = self._replace_vars_and_dims(
                         variables, coord_names=coord_names)
-        # Dataset consisting of only coordinate.
+
+        # Extract coordinates from indexers
         coord_vars = selected._get_indexers_coordinates(indexers)
-        coords = self._replace_vars_and_dims(
-                        coord_vars, coord_names=list(coord_vars.keys()))
-        # Drop conflicted variable from indexers coordinate
-        return coords.update(selected)
+        variables.update(coord_vars)
+        coord_names = set(variables) & set(self._coord_names) | set(coord_vars)
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Returns a new dataset with each array indexed by tick labels
