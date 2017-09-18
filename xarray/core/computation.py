@@ -87,6 +87,13 @@ class _UFuncSignature(object):
                    list(self.input_core_dims),
                    list(self.output_core_dims)))
 
+    def __str__(self):
+        lhs = ','.join('({})'.format(','.join(dims))
+                       for dims in self.input_core_dims)
+        rhs = ','.join('({})'.format(','.join(dims))
+                       for dims in self.output_core_dims)
+        return '{}->{}'.format(lhs, rhs)
+
 
 def result_name(objects):
     # type: List[object] -> Any
@@ -618,6 +625,7 @@ def apply_ufunc(func, *args, **kwargs):
                    input_core_dims : Optional[Sequence[Sequence]] = None,
                    output_core_dims : Optional[Sequence[Sequence]] = ((),),
                    exclude_dims : Collection = frozenset(),
+                   vectorize : bool = False,
                    join : str = 'inner',
                    dataset_join : str = 'inner',
                    dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
@@ -641,8 +649,9 @@ def apply_ufunc(func, *args, **kwargs):
         (``.data``) that returns an array or tuple of arrays. If multiple
         arguments with non-matching dimensions are supplied, this function is
         expected to vectorize (broadcast) over axes of positional arguments in
-        the style of NumPy universal functions [1]_. If this function returns
-        multiple outputs, you most set ``output_core_dims`` as well.
+        the style of NumPy universal functions [1]_ (if this is not the case,
+        set ``vectorize=True``). If this function returns multiple outputs, you
+        most set ``output_core_dims`` as well.
     *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : Sequence[Sequence], optional
@@ -671,6 +680,12 @@ def apply_ufunc(func, *args, **kwargs):
         broadcasting entirely. Any input coordinates along these dimensions
         will be dropped. Each excluded dimension must also appear in
         ``input_core_dims`` for at least one argument.
+    vectorize : bool, optional
+        If True, then assume ``func`` only takes arrays defined over core
+        dimensions as input and vectorize it automatically with
+        :py:func:`numpy.vectorize`. This option exists for convenience, but is
+        almost always slower than supplying a pre-vectorized function.
+        Using this option requires NumPy version 1.12 or newer.
     join : {'outer', 'inner', 'left', 'right'}, optional
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -780,6 +795,7 @@ def apply_ufunc(func, *args, **kwargs):
 
     input_core_dims = kwargs.pop('input_core_dims', None)
     output_core_dims = kwargs.pop('output_core_dims', ((),))
+    vectorize = kwargs.pop('vectorize', False)
     join = kwargs.pop('join', 'inner')
     dataset_join = kwargs.pop('dataset_join', 'inner')
     keep_attrs = kwargs.pop('keep_attrs', False)
@@ -804,6 +820,12 @@ def apply_ufunc(func, *args, **kwargs):
 
     if kwargs_:
         func = functools.partial(func, **kwargs_)
+
+    if vectorize:
+        func = np.vectorize(func,
+                            otypes=output_dtypes,
+                            signature=str(signature),
+                            excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
