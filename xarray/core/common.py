@@ -477,7 +477,8 @@ class BaseDataObject(AttrAccessMixin):
         
         Examples
         --------
-        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON 
+        and keep the elements with data:
         
         >>> da = xr.DataArray(np.linspace(0,11,num=12),
         ...                   coords=[pd.date_range('15/12/1999',
