@@ -474,6 +474,32 @@ class BaseDataObject(AttrAccessMixin):
         Returns
         -------
         rolling : type of input argument
+        
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+        
+        >>> time = pd.date_range('15/12/1999',
+                                 periods=12, freq=pd.DateOffset(months=1))
+        >>> a = np.linspace(0,11,num=12)
+        >>> da = xr.DataArray(a, coords=[time], dims='time')
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da_avg = da.rolling(time=3).mean()
+        >>> da_avg
+        <xarray.DataArray (time: 12)>
+        array([ nan,  nan,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da_avg = da.rolling(time=3).mean().dropna('time')
+        >>> da_avg
+        <xarray.DataArray (time: 10)>
+        array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
         """
 
         return self._rolling_cls(self, min_periods=min_periods,
