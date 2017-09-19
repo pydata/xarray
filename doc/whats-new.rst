@@ -38,6 +38,17 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support for data_vars keyword added to
+  py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    In [8]: ds = xarray.open_mfdataset(paths, chunks={"time": 100}, data_vars="minimal", dim="time")
+    #instead of
+    In [8]: ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in paths], data_vars="minimal", dim="time")
+
+  By `Huziy Oleksandr <https://github.com/guziy>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
