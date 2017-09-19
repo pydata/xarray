@@ -10,7 +10,6 @@ from .common import full_like
 from .combine import concat
 from .ops import (inject_bottleneck_rolling_methods,
                   inject_datasetrolling_methods, has_bottleneck, bn)
-from .dask_array_ops import dask_rolling_wrapper
 
 
 class Rolling(object):
@@ -50,80 +49,6 @@ class Rolling(object):
         Returns
         -------
         rolling : type of input argument
-        
-        Examples
-        -------
-        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON
-        
-        >>> lat = np.linspace(-90, 90, num=181)
-        >>> lon = np.linspace(0, 359, num=360)
-        >>> time = pd.date_range('15/12/1999', 
-                                 periods=12, freq=pd.DateOffset(months=1))
-        >>> a = np.repeat(np.repeat(np.linspace(0,11,num=12)[:, np.newaxis], 
-                          len(lat), axis=1)[:, :, np.newaxis], len(lon), axis=2)
-        >>> da = xr.DataArray(a, coords=[time, lat, lon], dims=['time','lat','lon'])
-        >>> da
-        <xarray.DataArray (time: 12, lat: 181, lon: 360)>
-        array([[[  0.,   0., ...,   0.,   0.],
-                [  0.,   0., ...,   0.,   0.],
-                ..., 
-                [  0.,   0., ...,   0.,   0.],
-                [  0.,   0., ...,   0.,   0.]],
-
-               [[  1.,   1., ...,   1.,   1.],
-                [  1.,   1., ...,   1.,   1.],
-                ..., 
-                [  1.,   1., ...,   1.,   1.],
-                [  1.,   1., ...,   1.,   1.]],
-
-               ..., 
-               [[ 10.,  10., ...,  10.,  10.],
-                [ 10.,  10., ...,  10.,  10.],
-                ..., 
-                [ 10.,  10., ...,  10.,  10.],
-                [ 10.,  10., ...,  10.,  10.]],
-
-               [[ 11.,  11., ...,  11.,  11.],
-                [ 11.,  11., ...,  11.,  11.],
-                ..., 
-                [ 11.,  11., ...,  11.,  11.],
-                [ 11.,  11., ...,  11.,  11.]]])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-          * lat      (lat) float64 -90.0 -89.0 -88.0 -87.0 -86.0 -85.0 -84.0 -83.0 ...
-          * lon      (lon) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 ...
-        >>> da_seasonal_avg = da.rolling(time=3).mean().dropna('time')
-        >>> da_seasonal_avg['time'] = time[1:len(time)-1]
-        >>> da_seasonal_avg
-        <xarray.DataArray (time: 10, lat: 181, lon: 360)>
-        array([[[  1.,   1., ...,   1.,   1.],
-                [  1.,   1., ...,   1.,   1.],
-                ..., 
-                [  1.,   1., ...,   1.,   1.],
-                [  1.,   1., ...,   1.,   1.]],
-        
-               [[  2.,   2., ...,   2.,   2.],
-                [  2.,   2., ...,   2.,   2.],
-                ..., 
-                [  2.,   2., ...,   2.,   2.],
-                [  2.,   2., ...,   2.,   2.]],
-        
-               ..., 
-               [[  9.,   9., ...,   9.,   9.],
-                [  9.,   9., ...,   9.,   9.],
-                ..., 
-                [  9.,   9., ...,   9.,   9.],
-                [  9.,   9., ...,   9.,   9.]],
-        
-               [[ 10.,  10., ...,  10.,  10.],
-                [ 10.,  10., ...,  10.,  10.],
-                ..., 
-                [ 10.,  10., ...,  10.,  10.],
-                [ 10.,  10., ...,  10.,  10.]]])
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
-          * lat      (lat) float64 -90.0 -89.0 -88.0 -87.0 -86.0 -85.0 -84.0 -83.0 ...
-          * lon      (lon) float64 0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0 11.0 ...
         """
 
         if (has_bottleneck and
@@ -150,8 +75,7 @@ class Rolling(object):
             self._min_periods = window
         else:
             if min_periods <= 0:
-                raise ValueError(
-                    'min_periods must be greater than zero or None')
+                raise ValueError('min_periods must be greater than zero or None')
 
             self._min_periods = min_periods
         self.center = center
@@ -174,6 +98,7 @@ class DataArrayRolling(Rolling):
     This class adds the following class methods;
     + _reduce_method(cls, func)
     + _bottleneck_reduce(cls, func)
+    + _bottleneck_reduce_without_min_count(cls, func)
 
     These class methods will be used to inject numpy or bottleneck function
     by doing
@@ -312,23 +237,47 @@ class DataArrayRolling(Rolling):
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
+            if isinstance(self.obj.data, dask_array_type):
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
             # bottleneck doesn't allow min_count to be 0, although it should
             # work the same as if min_count = 1
             if self.min_periods is not None and self.min_periods == 0:
-                min_count = 1
+                min_count = self.min_periods + 1
             else:
                 min_count = self.min_periods
 
-            axis = self.obj.get_axis_num(self.dim)
+            values = func(self.obj.data, window=self.window,
+                          min_count=min_count,
+                          axis=self.obj.get_axis_num(self.dim))
+
+            result = DataArray(values, self.obj.coords)
+
+            if self.center:
+                result = self._center_result(result)
+
+            return result
+        return wrapped_func
+
+    @classmethod
+    def _bottleneck_reduce_without_min_count(cls, func):
+        """
+        Methods to return a wrapped function for `media` bottoleneck method.
+        bottleneck's median does not accept min_periods.
+        """
+        def wrapped_func(self, **kwargs):
+            from .dataarray import DataArray
+
+            if self.min_periods is not None:
+                raise ValueError('Rolling.median does not accept min_periods')
 
             if isinstance(self.obj.data, dask_array_type):
-                values = dask_rolling_wrapper(func, self.obj.data,
-                                              window=self.window,
-                                              min_count=min_count,
-                                              axis=axis)
-            else:
-                values = func(self.obj.data, window=self.window,
-                              min_count=min_count, axis=axis)
+                raise NotImplementedError(
+                    'Rolling window operation does not work with dask arrays')
+
+            values = func(self.obj.data, window=self.window,
+                          axis=self.obj.get_axis_num(self.dim))
 
             result = DataArray(values, self.obj.coords)
 
