@@ -479,19 +479,13 @@ class BaseDataObject(AttrAccessMixin):
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
         
-        >>> da = xr.DataArray(np.linspace(0,11,num=12), 
-                              coords=[pd.date_range('15/12/1999',
-                                      periods=12, freq=pd.DateOffset(months=1))], 
-                              dims='time')
+        >>> da = xr.DataArray(np.linspace(0,11,num=12),
+        ...                   coords=[pd.date_range('15/12/1999',
+        ...                           periods=12, freq=pd.DateOffset(months=1))], 
+        ...                   dims='time')
         >>> da
         <xarray.DataArray (time: 12)>
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da_avg = da.rolling(time=3).mean()
-        >>> da_avg
-        <xarray.DataArray (time: 12)>
-        array([ nan,  nan,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
         >>> da_avg = da.rolling(time=3).mean().dropna('time')
