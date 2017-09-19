@@ -165,6 +165,9 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
+    if 'wavelength_units' in riods.tags(1):
+        # Unit for the wavelengths (string)
+        attrs['wavelength_units'] = riods.tags(1)['wavelength_units']
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
