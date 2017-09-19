@@ -309,7 +309,7 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
     return arrays[0]._from_temp_dataset(ds, name)
 
 
-def _auto_concat(datasets, dim=None, data_vars="all"):
+def _auto_concat(datasets, dim=None, data_vars='all'):
     if len(datasets) == 1:
         return datasets[0]
     else:
@@ -339,7 +339,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def auto_combine(datasets,
                  concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts', data_vars="all"):
+                 compat='no_conflicts', data_vars='all'):
     """Attempt to auto-magically combine the given datasets into one.
 
     This method attempts to combine a list of datasets into a single entity by
