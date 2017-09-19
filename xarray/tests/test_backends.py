@@ -1267,6 +1267,19 @@ class OpenMFDatasetManyFilesTest(TestCase):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
 
+class OpenMFDatasetDataVarsKWTest(TestCase):
+    def create_files_with_common_coordinates_and_time(self):
+        # TODO: implement
+
+        pass
+
+    def test_common_coordinate_dimensions_should_not_change_when_datavars_all(self):
+        #TODO: implement
+        assert False
+        pass
+
+
+
 @requires_dask
 @requires_scipy
 @requires_netCDF4
