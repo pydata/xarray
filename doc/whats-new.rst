@@ -50,7 +50,7 @@ Enhancements
     In [8]: ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in paths], data_vars="minimal", dim="time")
     # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
 
-  By `Huziy Oleksandr <https://github.com/guziy>`_.
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
