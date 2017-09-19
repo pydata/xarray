@@ -131,6 +131,12 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         raise ValueError('Unknown dims')
     coords['band'] = np.asarray(riods.indexes)
 
+    # Get wavelengths
+    if 'wavelength' in riods.tags(1):
+        coords['radiation_wavelength'] = ('band', np.fromiter(
+                map(lambda b: riods.tags(b)['wavelength'], riods.indexes),
+                dtype=np.float))
+
     # Get geo coords
     nx, ny = riods.width, riods.height
     dx, dy = riods.res[0], -riods.res[1]
