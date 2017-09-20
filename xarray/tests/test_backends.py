@@ -1266,6 +1266,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
+
 @requires_scipy_or_netCDF4
 class OpenMFDatasetDataVarsKWTest(TestCase):
     coord_name = 'lon'
@@ -1307,9 +1308,11 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
 
+                files = [tmpfile1, tmpfile2]
                 for opt in ['all', 'minimal']:
-                    with open_mfdataset([tmpfile1, tmpfile2], data_vars=opt) as ds:
-                        ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t')
+                    with open_mfdataset(files, data_vars=opt) as ds:
+                        kwargs = dict(data_vars=opt, dim='t')
+                        ds_expect = xr.concat([ds1, ds2], **kwargs)
 
                         data = ds[self.var_name][:]
                         data_expect = ds_expect[self.var_name][:]
@@ -1329,8 +1332,9 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
 
+                files = [tmpfile1, tmpfile2]
                 # open the files with the default data_vars='all'
-                with open_mfdataset([tmpfile1, tmpfile2], data_vars='all') as ds:
+                with open_mfdataset(files, data_vars='all') as ds:
 
                     coord_shape = ds[self.coord_name].shape
                     coord_shape1 = ds1[self.coord_name].shape
@@ -1357,8 +1361,9 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
 
+                files = [tmpfile1, tmpfile2]
                 # open the files with the default data_vars='all'
-                with open_mfdataset([tmpfile1, tmpfile2], data_vars='minimal') as ds:
+                with open_mfdataset(files, data_vars='minimal') as ds:
 
                     coord_shape = ds[self.coord_name].shape
                     coord_shape1 = ds1[self.coord_name].shape
@@ -1384,7 +1389,8 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                     ds1.to_netcdf(tmpfile1)
                     ds2.to_netcdf(tmpfile2)
 
-                    with open_mfdataset([tmpfile1, tmpfile2], data_vars='minimum'):
+                    files = [tmpfile1, tmpfile2]
+                    with open_mfdataset(files, data_vars='minimum'):
                         pass
 
 
