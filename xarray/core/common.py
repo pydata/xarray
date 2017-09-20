@@ -519,6 +519,7 @@ class BaseDataObject(AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         from .dataarray import DataArray
+        from .resample import RESAMPLE_DIM
 
         if dim is not None:
             if how is None:
@@ -541,16 +542,15 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(dim, basestring):
             dim_name = dim
             dim = self[dim]
-            resample_dim = "resampled_" + dim_name
         else:
             raise TypeError("Dimension name should be a string; "
                             "was passed %r" % dim)
-        group = DataArray(dim, [(dim.dims, dim)], name=resample_dim)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=time_grouper,
-                                       resample_dim=resample_dim)
+                                       resample_dim=RESAMPLE_DIM)
 
         return resampler
 

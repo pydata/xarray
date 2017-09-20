@@ -1882,7 +1882,8 @@ class TestDataArray(TestCase):
     def test_resample_bad_resample_dim(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('__resample_dim__', times)])
-        self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension')
+        with self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension'):
+            array.resample(**{'__resample_dim__': '1D'}).first()
 
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
@@ -2078,6 +2079,24 @@ class TestDataArray(TestCase):
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
+
+    @requires_dask
+    def test_upsample_interpolate_dask(self):
+        import dask.array as da
+
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        xs = np.arange(6)
+        ys = np.arange(3)
+
+        z = np.arange(5)**2
+        data = da.from_array(np.tile(z, (6, 3, 1)), (1, 3, 1))
+        array = DataArray(data,
+                          {'time': times, 'x': xs, 'y': ys},
+                          ('x', 'y', 'time'))
+
+        with self.assertRaisesRegexp(TypeError,
+                                     "dask arrays are not yet supported"):
+            array.resample(time='1H').interpolate('linear')
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),

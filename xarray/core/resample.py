@@ -128,9 +128,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         self._resample_dim = kwargs.pop('resample_dim', None)
 
         if self._dim == self._resample_dim:
-            raise ValueError("Proxy resampling dimension ('{_resample_dim}') "
+            raise ValueError("Proxy resampling dimension ('{}') "
                              "cannot have the same name as actual dimension "
-                             "('{_dim}')! ".format(self))
+                             "('{}')! ".format(self._resample_dim, self._dim))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
     def apply(self, func, shortcut=False, **kwargs):
@@ -191,7 +191,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         if isinstance(self._obj.data, dask_array_type):
             raise TypeError(
                 "Up-sampling via interpolation was attempted on the the "
-                "variable '{}', but it is a dask array; dask arrays not "
+                "variable '{}', but it is a dask array; dask arrays are not "
                 "yet supported in resample.interpolate(). Load into "
                 "memory with Dataset.load() before resampling."
                 .format(self._obj.data.name)
@@ -238,9 +238,9 @@ class DatasetResample(DatasetGroupBy, Resample):
         self._resample_dim = kwargs.pop('resample_dim', None)
 
         if self._dim == self._resample_dim:
-            raise ValueError("Proxy resampling dimension ('{_resample_dim}') "
+            raise ValueError("Proxy resampling dimension ('{}') "
                              "cannot have the same name as actual dimension "
-                             "('{_dim}')! ".format(self))
+                             "('{}')! ".format(self._resample_dim, self._dim))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
     def apply(self, func, **kwargs):
@@ -328,7 +328,7 @@ class DatasetResample(DatasetGroupBy, Resample):
                     raise TypeError(
                         "Up-sampling via interpolation was attempted on the "
                         "variable '{}', but it is a dask array; dask arrays "
-                        "not yet supprted in resample.interpolate(). Load "
+                        "are not yet supprted in resample.interpolate(). Load "
                         "into memory with Dataset.load() before resampling."
                         .format(name)
                     )
