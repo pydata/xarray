@@ -1266,7 +1266,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
-
+@requires_scipy_or_netCDF4
 class OpenMFDatasetDataVarsKWTest(TestCase):
     coord_name = 'lon'
     var_name = 'v1'
