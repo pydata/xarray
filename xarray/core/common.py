@@ -489,8 +489,7 @@ class BaseDataObject(AttrAccessMixin):
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da_avg = da.rolling(time=3).mean().dropna('time')
-        >>> da_avg
+        >>> da.rolling(time=3).mean().dropna('time')
         <xarray.DataArray (time: 10)>
         array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
         Coordinates:
