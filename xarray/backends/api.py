@@ -528,13 +528,19 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
-    if concat_dim is _CONCAT_DIM_DEFAULT:
-        combined = auto_combine(datasets, compat=compat, data_vars=data_vars)
-    else:
-        combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat,
-                                data_vars=data_vars)
-    combined._file_obj = _MultiFileCloser(file_objs)
-    combined.attrs = datasets[0].attrs
+    # close datasets in case of a ValueError
+    try:
+        if concat_dim is _CONCAT_DIM_DEFAULT:
+            combined = auto_combine(datasets, compat=compat, data_vars=data_vars)
+        else:
+            combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat,
+                                    data_vars=data_vars)
+        combined._file_obj = _MultiFileCloser(file_objs)
+        combined.attrs = datasets[0].attrs
+    except ValueError as ve:
+        for ds in datasets:
+            ds.close()
+        raise ve
 
     return combined
 
