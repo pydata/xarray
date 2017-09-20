@@ -135,7 +135,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     if 'wavelength' in riods.tags(1):
         coords['radiation_wavelength'] = ('band', np.fromiter(
                 map(lambda b: riods.tags(b)['wavelength'], riods.indexes),
-                dtype=np.float))
+                dtype=np.float, count=riods.count))
 
     # Get geo coords
     nx, ny = riods.width, riods.height
