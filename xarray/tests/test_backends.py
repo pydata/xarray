@@ -1268,6 +1268,9 @@ class OpenMFDatasetManyFilesTest(TestCase):
 
 
 class OpenMFDatasetDataVarsKWTest(TestCase):
+    coord_name = 'lon'
+    var_name = 'v1'
+
     def gen_datasets_with_common_coord_and_time(self):
         # create coordinate data
         nx = 10
@@ -1279,13 +1282,15 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
         v1 = np.random.randn(nt, nx)
         v2 = np.random.randn(nt, nx)
 
-        ds1 = Dataset(data_vars={'v1': (['t', 'x'], v1), 'lon': ('x', 2 * x)},
+        ds1 = Dataset(data_vars={self.var_name: (['t', 'x'], v1),
+                                 self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t1),
                           'x': (['x', ], x)
                       })
 
-        ds2 = Dataset(data_vars={'v1': (['t', 'x'], v2), 'lon': ('x', 2 * x)},
+        ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
+                                 self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t2),
                           'x': (['x', ], x)
@@ -1306,8 +1311,14 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                     ds = open_mfdataset([tmpfile1, tmpfile2], data_vars=opt)
                     ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t')
 
-                    self.assertArrayEqual(ds['v1'][:], ds_expect['v1'][:])
-                    self.assertArrayEqual(ds['lon'][:], ds_expect['lon'][:])
+                    data = ds[self.var_name][:]
+                    data_expect = ds_expect[self.var_name][:]
+
+                    coord = ds[self.coord_name][:]
+                    coord_expect = ds_expect[self.coord_name][:]
+
+                    self.assertArrayEqual(data, data_expect)
+                    self.assertArrayEqual(coord, coord_expect)
 
                     ds.close()
 
@@ -1323,11 +1334,21 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 # open the files with the default data_vars='all'
                 ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='all')
 
-                self.assertNotEqual(ds1['lon'].shape, ds['lon'].shape)
-                self.assertNotEqual(ds2['lon'].shape, ds['lon'].shape)
-                self.assertEqual(ds['v1'].shape[0],
-                                 ds1['v1'].shape[0] + ds2['v1'].shape[0])
-                self.assertEqual(ds['v1'].shape, ds['lon'].shape)
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+                var_shape1 = ds1[self.var_name].shape
+                var_shape2 = ds2[self.var_name].shape
+
+                self.assertNotEqual(coord_shape1, coord_shape)
+                self.assertNotEqual(coord_shape2, coord_shape)
+
+                self.assertEqual(var_shape[0],
+                                 var_shape1[0] + var_shape2[0])
+
+                self.assertEqual(var_shape, coord_shape)
 
     def test_common_coord_dims_should_not_change_when_datavars_minimal(self):
         with create_tmp_file() as tmpfile1:
@@ -1341,10 +1362,19 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 # open the files with the default data_vars='all'
                 ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='minimal')
 
-                self.assertEqual(ds1['lon'].shape, ds['lon'].shape)
-                self.assertEqual(ds2['lon'].shape, ds['lon'].shape)
-                self.assertEqual(ds['v1'].shape[0],
-                                 ds1['v1'].shape[0] + ds2['v1'].shape[0])
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+                var_shape1 = ds1[self.var_name].shape
+                var_shape2 = ds2[self.var_name].shape
+
+                self.assertEqual(coord_shape1, coord_shape)
+
+                self.assertEqual(coord_shape2, coord_shape)
+                self.assertEqual(var_shape[0],
+                                 var_shape1[0] + var_shape2[0])
 
     def test_invalid_data_vars_value_should_fail(self):
         with self.assertRaises(ValueError):
