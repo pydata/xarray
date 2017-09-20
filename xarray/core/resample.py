@@ -192,9 +192,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             raise TypeError(
                 "Up-sampling via interpolation was attempted on the the "
                 "variable '{}', but it is a dask array; dask arrays not "
-                "yet supprted in resample.interpolate(). Load into "
+                "yet supported in resample.interpolate(). Load into "
                 "memory with Dataset.load() before resampling."
-                .format(name)
+                .format(self._obj.data.name)
             )
 
         x = self._obj[self._dim].astype('float')
@@ -222,6 +222,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                 coords[k] = v
         return DataArray(f(new_x), coords, dims, name=dummy.name,
                          attrs=dummy.attrs)
+
 
 ops.inject_reduce_methods(DataArrayResample)
 ops.inject_binary_ops(DataArrayResample)
@@ -286,8 +287,8 @@ class DatasetResample(DatasetGroupBy, Resample):
         ----------
         func : function
             Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
-            np.ndarray over an integer valued axis.
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing
+            an np.ndarray over an integer valued axis.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -325,10 +326,10 @@ class DatasetResample(DatasetGroupBy, Resample):
             else:
                 if isinstance(variable.data, dask_array_type):
                     raise TypeError(
-                        "Up-sampling via interpolation was attempted on the the "
-                        "variable '{}', but it is a dask array; dask arrays not "
-                        "yet supprted in resample.interpolate(). Load into "
-                        "memory with Dataset.load() before resampling."
+                        "Up-sampling via interpolation was attempted on the "
+                        "variable '{}', but it is a dask array; dask arrays "
+                        "not yet supprted in resample.interpolate(). Load "
+                        "into memory with Dataset.load() before resampling."
                         .format(name)
                     )
 

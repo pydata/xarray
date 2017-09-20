@@ -1882,7 +1882,6 @@ class TestDataArray(TestCase):
     def test_resample_bad_resample_dim(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('__resample_dim__', times)])
-        actual = array.resample('1D', dim='__resample_dim__', how='first')
         self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension')
 
     def test_resample_drop_nondim_coords(self):
@@ -1899,7 +1898,7 @@ class TestDataArray(TestCase):
         ycoord = DataArray(yy.T, {'x': xs, 'y': ys}, ('x', 'y'))
         tcoord = DataArray(tt, {'time': times}, ('time', ))
         ds = Dataset({'data': array, 'xc': xcoord,
-                         'yc': ycoord, 'tc': tcoord})
+                      'yc': ycoord, 'tc': tcoord})
         ds = ds.set_coords(['xc', 'yc', 'tc'])
 
         # Select the data now, with the auxiliary coordinates in place
@@ -1957,7 +1956,7 @@ class TestDataArray(TestCase):
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
             with pytest.warns(DeprecationWarning):
-             old_api = array.resample('1D', dim='time', how=method)
+                old_api = array.resample('1D', dim='time', how=method)
             self.assertDatasetIdentical(new_api, old_api)
         for method in [np.mean, np.sum, np.max, np.min]:
             new_api = resampler.reduce(method)
@@ -2776,6 +2775,7 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
@@ -2877,6 +2877,7 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
                                da_rolling.values[:-1])
     np.testing.assert_allclose(s_rolling.index,
                                da_rolling['index'])
+
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))

@@ -2262,7 +2262,7 @@ class TestDataset(TestCase):
         ycoord = DataArray(yy.T, {'x': xs, 'y': ys}, ('x', 'y'))
         tcoord = DataArray(tt, {'time': times}, ('time', ))
         ds = Dataset({'data': array, 'xc': xcoord,
-                         'yc': ycoord, 'tc': tcoord})
+                      'yc': ycoord, 'tc': tcoord})
         ds = ds.set_coords(['xc', 'yc', 'tc'])
 
         # Re-sample
@@ -3577,6 +3577,7 @@ def test_rolling_properties(ds):
     with pytest.raises(KeyError) as exception:
         ds.rolling(time2=2)
     assert 'time2' in str(exception)
+
 
 @pytest.mark.parametrize('name',
                          ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))

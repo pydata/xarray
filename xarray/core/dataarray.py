@@ -35,7 +35,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords) and
-                len(coords) != len(shape)):
+        len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))

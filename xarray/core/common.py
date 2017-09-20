@@ -549,8 +549,8 @@ class BaseDataObject(AttrAccessMixin):
         time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
                                       label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
-                                      grouper=time_grouper,
-                                      resample_dim=resample_dim)
+                                       grouper=time_grouper,
+                                       resample_dim=resample_dim)
 
         return resampler
 
@@ -569,7 +569,6 @@ class BaseDataObject(AttrAccessMixin):
                       ), DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):
-            dim_name = dim
             dim = self[dim]
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
@@ -587,7 +586,6 @@ class BaseDataObject(AttrAccessMixin):
             result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
-
 
     def where(self, cond, other=dtypes.NA, drop=False):
         """Filter elements from this object according to a condition.
