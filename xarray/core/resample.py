@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from scipy.interpolate import interp1d
-
 from . import ops
 from .groupby import DataArrayGroupBy, DatasetGroupBy
 from .pycompat import dask_array_type, OrderedDict
@@ -187,6 +185,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
     def _interpolate(self, kind='linear'):
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         from .dataarray import DataArray
+        from scipy.interpolate import interp1d
 
         if isinstance(self._obj.data, dask_array_type):
             raise TypeError(
@@ -309,6 +308,7 @@ class DatasetResample(DatasetGroupBy, Resample):
         """Apply scipy.interpolate.interp1d along resampling dimension."""
         from .dataset import Dataset
         from .variable import Variable
+        from scipy.interpolate import interp1d
 
         old_times = self._obj[self._dim].astype(float)
         new_times = self._full_index.values.astype(float)

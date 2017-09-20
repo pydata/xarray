@@ -19,7 +19,7 @@ from xarray.core.common import full_like
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
-    raises_regex)
+    raises_regex, requires_scipy)
 
 
 class TestDataArray(TestCase):
@@ -2050,6 +2050,7 @@ class TestDataArray(TestCase):
                              ('x', 'y', 'time'))
         self.assertDataArrayIdentical(expected, actual)
 
+    @requires_scipy 
     def test_upsample_interpolate(self):
         from scipy.interpolate import interp1d
         xs = np.arange(6)
