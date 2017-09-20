@@ -388,6 +388,38 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+Some servers require authentication before we can access the data. For this
+purpose we can explicitly create a :py:class:`~xarray.backends.PydapDataStore`
+and pass in a `Requests`__ session object. For example for 
+HTTP Basic authentication::
+
+    import xarray as xr
+    import requests
+
+    session = requests.Session()
+    session.auth = ('username', 'password')
+
+    store = xr.backends.PydapDataStore.open('http://example.com/data',
+                                            session=session)
+    ds = xr.open_dataset(store)
+
+`Pydap's cas module`__ has functions that generate custom sessions for 
+servers that use CAS single sign-on. For example, to connect to servers
+that require NASA's URS authentication::
+
+  import xarray as xr
+  from pydata.cas.urs import setup_session
+
+  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+  session = setup_session('username', 'password', check_url=ds_url)
+  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+
+  ds = xr.open_dataset(store)
+
+__ http://docs.python-requests.org
+__ http://pydap.readthedocs.io/en/latest/client.html#authentication
+
 .. _io.rasterio:
 
 Rasterio

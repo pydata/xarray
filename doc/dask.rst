@@ -13,7 +13,7 @@ dependency in a future version of xarray.
 For a full example of how to use xarray's dask integration, read the
 `blog post introducing xarray and dask`_.
 
-.. _blog post introducing xarray and dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xarray and dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
 
 What is a dask array?
 ---------------------
