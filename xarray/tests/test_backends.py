@@ -1304,10 +1304,10 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
 
                 for opt in ['all', 'minimal']:
                     ds = open_mfdataset([tmpfile1, tmpfile2], data_vars=opt)
-                    ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t")
+                    ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t')
 
-                    self.assertArrayEqual(ds["v1"][:], ds_expect["v1"][:])
-                    self.assertArrayEqual(ds["lon"][:], ds_expect["lon"][:])
+                    self.assertArrayEqual(ds['v1'][:], ds_expect['v1'][:])
+                    self.assertArrayEqual(ds['lon'][:], ds_expect['lon'][:])
 
                     ds.close()
 
