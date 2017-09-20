@@ -1308,19 +1308,17 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds2.to_netcdf(tmpfile2)
 
                 for opt in ['all', 'minimal']:
-                    ds = open_mfdataset([tmpfile1, tmpfile2], data_vars=opt)
-                    ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t')
+                    with open_mfdataset([tmpfile1, tmpfile2], data_vars=opt) as ds:
+                        ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim='t')
 
-                    data = ds[self.var_name][:]
-                    data_expect = ds_expect[self.var_name][:]
+                        data = ds[self.var_name][:]
+                        data_expect = ds_expect[self.var_name][:]
 
-                    coord = ds[self.coord_name][:]
-                    coord_expect = ds_expect[self.coord_name][:]
+                        coord = ds[self.coord_name][:]
+                        coord_expect = ds_expect[self.coord_name][:]
 
-                    self.assertArrayEqual(data, data_expect)
-                    self.assertArrayEqual(coord, coord_expect)
-
-                    ds.close()
+                        self.assertArrayEqual(data, data_expect)
+                        self.assertArrayEqual(coord, coord_expect)
 
     def test_common_coord_dims_should_change_when_datavars_all(self):
         with create_tmp_file() as tmpfile1:
@@ -1332,23 +1330,23 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds2.to_netcdf(tmpfile2)
 
                 # open the files with the default data_vars='all'
-                ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='all')
+                with open_mfdataset([tmpfile1, tmpfile2], data_vars='all') as ds:
 
-                coord_shape = ds[self.coord_name].shape
-                coord_shape1 = ds1[self.coord_name].shape
-                coord_shape2 = ds2[self.coord_name].shape
+                    coord_shape = ds[self.coord_name].shape
+                    coord_shape1 = ds1[self.coord_name].shape
+                    coord_shape2 = ds2[self.coord_name].shape
 
-                var_shape = ds[self.var_name].shape
-                var_shape1 = ds1[self.var_name].shape
-                var_shape2 = ds2[self.var_name].shape
+                    var_shape = ds[self.var_name].shape
+                    var_shape1 = ds1[self.var_name].shape
+                    var_shape2 = ds2[self.var_name].shape
 
-                self.assertNotEqual(coord_shape1, coord_shape)
-                self.assertNotEqual(coord_shape2, coord_shape)
+                    self.assertNotEqual(coord_shape1, coord_shape)
+                    self.assertNotEqual(coord_shape2, coord_shape)
 
-                self.assertEqual(var_shape[0],
-                                 var_shape1[0] + var_shape2[0])
+                    self.assertEqual(var_shape[0],
+                                     var_shape1[0] + var_shape2[0])
 
-                self.assertEqual(var_shape, coord_shape)
+                    self.assertEqual(var_shape, coord_shape)
 
     def test_common_coord_dims_should_not_change_when_datavars_minimal(self):
         with create_tmp_file() as tmpfile1:
@@ -1360,21 +1358,21 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds2.to_netcdf(tmpfile2)
 
                 # open the files with the default data_vars='all'
-                ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='minimal')
+                with open_mfdataset([tmpfile1, tmpfile2], data_vars='minimal') as ds:
 
-                coord_shape = ds[self.coord_name].shape
-                coord_shape1 = ds1[self.coord_name].shape
-                coord_shape2 = ds2[self.coord_name].shape
+                    coord_shape = ds[self.coord_name].shape
+                    coord_shape1 = ds1[self.coord_name].shape
+                    coord_shape2 = ds2[self.coord_name].shape
 
-                var_shape = ds[self.var_name].shape
-                var_shape1 = ds1[self.var_name].shape
-                var_shape2 = ds2[self.var_name].shape
+                    var_shape = ds[self.var_name].shape
+                    var_shape1 = ds1[self.var_name].shape
+                    var_shape2 = ds2[self.var_name].shape
 
-                self.assertEqual(coord_shape1, coord_shape)
+                    self.assertEqual(coord_shape1, coord_shape)
 
-                self.assertEqual(coord_shape2, coord_shape)
-                self.assertEqual(var_shape[0],
-                                 var_shape1[0] + var_shape2[0])
+                    self.assertEqual(coord_shape2, coord_shape)
+                    self.assertEqual(var_shape[0],
+                                     var_shape1[0] + var_shape2[0])
 
     def test_invalid_data_vars_value_should_fail(self):
         with self.assertRaises(ValueError):
@@ -1386,7 +1384,8 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                     ds1.to_netcdf(tmpfile1)
                     ds2.to_netcdf(tmpfile2)
 
-                    open_mfdataset([tmpfile1, tmpfile2], data_vars='minimum')
+                    with open_mfdataset([tmpfile1, tmpfile2], data_vars='minimum'):
+                        pass
 
 
 @requires_dask
