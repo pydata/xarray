@@ -39,7 +39,7 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 - Support for data_vars keyword added to
-  py:func:`~xarray.open_mfdataset`
+  :py:func:`~xarray.open_mfdataset`
   (:issue:`438`):
 
   .. ipython::
