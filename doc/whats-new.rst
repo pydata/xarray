@@ -45,7 +45,7 @@ Enhancements
   .. ipython::
     :verbatim:
     #allows to open multiple files as
-    ds = xarray.open_mfdataset(paths, chunks={"time": 100}, data_vars="minimal", dim="time")
+    ds = xarray.open_mfdataset(paths, chunks={"time": 100}, data_vars="minimal")
     #instead of
     ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in paths], data_vars="minimal", dim="time")
     # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
