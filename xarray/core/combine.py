@@ -397,7 +397,7 @@ def auto_combine(datasets,
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
         grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
                                     datasets).values()
-        concatenated = [_auto_concat(ds, dim=dim) for ds in grouped]
+        concatenated = [_auto_concat(ds, dim=dim, data_vars=data_vars) for ds in grouped]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
