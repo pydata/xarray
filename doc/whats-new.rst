@@ -39,15 +39,15 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 - Support for data_vars keyword added to
-  py:func:`~xarray.open_mfdataset`
-  (:issue:`438`):
+  py: func: `~xarray.open_mfdataset`
+  (:issue: `438`):
 
   .. ipython::
     :verbatim:
     #allows to open multiple files as
-    In [8]: ds = xarray.open_mfdataset(paths, chunks={"time": 100}, data_vars="minimal", dim="time")
+    ds = xarray.open_mfdataset(paths, chunks={"time": 100}, data_vars="minimal", dim="time")
     #instead of
-    In [8]: ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in paths], data_vars="minimal", dim="time")
+    ds = xarray.concat([xarray.open_dataset(p, chunks={"time": 100}) for p in paths], data_vars="minimal", dim="time")
     # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
 
   By `Oleksandr Huziy <https://github.com/guziy>`_.

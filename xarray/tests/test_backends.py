@@ -1268,16 +1268,95 @@ class OpenMFDatasetManyFilesTest(TestCase):
 
 
 class OpenMFDatasetDataVarsKWTest(TestCase):
-    def create_files_with_common_coordinates_and_time(self):
-        # TODO: implement
+    def gen_datasets_with_common_coord_and_time(self):
+        # create coordinate data
+        nx = 10
+        nt = 10
+        x = np.arange(nx)
+        t1 = np.arange(nt)
+        t2 = np.arange(nt, 2 * nt, 1)
 
-        pass
+        v1 = np.random.randn(nt, nx)
+        v2 = np.random.randn(nt, nx)
 
-    def test_common_coordinate_dimensions_should_not_change_when_datavars_all(self):
-        #TODO: implement
-        assert False
-        pass
+        ds1 = Dataset(data_vars={'v1': (['t', 'x'], v1), 'lon': ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t1),
+                          'x': (['x', ], x)
+                      })
 
+        ds2 = Dataset(data_vars={'v1': (['t', 'x'], v2), 'lon': ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t2),
+                          'x': (['x', ], x)
+                      })
+
+        return ds1, ds2
+
+    def test_open_mfdataset_does_same_as_concat(self):
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                for opt in ['all', 'minimal']:
+                    ds = open_mfdataset([tmpfile1, tmpfile2], data_vars=opt)
+                    ds_expect = xr.concat([ds1, ds2], data_vars=opt, dim="t")
+
+                    self.assertArrayEqual(ds["v1"][:], ds_expect["v1"][:])
+                    self.assertArrayEqual(ds["lon"][:], ds_expect["lon"][:])
+
+                    ds.close()
+
+    def test_common_coord_dims_should_change_when_datavars_all(self):
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                # open the files with the default data_vars='all'
+                ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='all')
+
+                self.assertNotEqual(ds1['lon'].shape, ds['lon'].shape)
+                self.assertNotEqual(ds2['lon'].shape, ds['lon'].shape)
+                self.assertEqual(ds['v1'].shape[0],
+                                 ds1['v1'].shape[0] + ds2['v1'].shape[0])
+                self.assertEqual(ds['v1'].shape, ds['lon'].shape)
+
+    def test_common_coord_dims_should_not_change_when_datavars_minimal(self):
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                # open the files with the default data_vars='all'
+                ds = open_mfdataset([tmpfile1, tmpfile2], data_vars='minimal')
+
+                self.assertEqual(ds1['lon'].shape, ds['lon'].shape)
+                self.assertEqual(ds2['lon'].shape, ds['lon'].shape)
+                self.assertEqual(ds['v1'].shape[0],
+                                 ds1['v1'].shape[0] + ds2['v1'].shape[0])
+
+    def test_invalid_data_vars_value_should_fail(self):
+        with self.assertRaises(ValueError):
+            with create_tmp_file() as tmpfile1:
+                with create_tmp_file() as tmpfile2:
+                    ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+
+                    # save data to the temporary files
+                    ds1.to_netcdf(tmpfile1)
+                    ds2.to_netcdf(tmpfile2)
+
+                    open_mfdataset([tmpfile1, tmpfile2], data_vars='minimum')
 
 
 @requires_dask
