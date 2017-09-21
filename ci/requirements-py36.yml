@@ -16,6 +16,7 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - bottleneck
   - pip:
     - coveralls
     - pytest-cov
