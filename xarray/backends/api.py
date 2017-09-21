@@ -536,12 +536,15 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         else:
             combined = auto_combine(datasets, concat_dim=concat_dim,
                                     compat=compat, data_vars=data_vars)
-        combined._file_obj = _MultiFileCloser(file_objs)
-        combined.attrs = datasets[0].attrs
-    except ValueError as ve:
+    except ValueError:
         for ds in datasets:
             ds.close()
-        raise ve
+        raise
+
+    combined._file_obj = _MultiFileCloser(file_objs)
+    combined.attrs = datasets[0].attrs
+
+
 
     return combined
 

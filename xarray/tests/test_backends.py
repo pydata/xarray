@@ -1313,17 +1313,9 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                     with open_mfdataset(files, data_vars=opt) as ds:
                         kwargs = dict(data_vars=opt, dim='t')
                         ds_expect = xr.concat([ds1, ds2], **kwargs)
+                        self.assertDatasetIdentical(ds, ds_expect)
 
-                        data = ds[self.var_name][:]
-                        data_expect = ds_expect[self.var_name][:]
-
-                        coord = ds[self.coord_name][:]
-                        coord_expect = ds_expect[self.coord_name][:]
-
-                        self.assertArrayEqual(data, data_expect)
-                        self.assertArrayEqual(coord, coord_expect)
-
-    def test_common_coord_dims_should_change_when_datavars_all(self):
+    def test_common_coord_when_datavars_passed(self):
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
                 ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
@@ -1333,63 +1325,38 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds2.to_netcdf(tmpfile2)
 
                 files = [tmpfile1, tmpfile2]
-                # open the files with the default data_vars='all'
-                with open_mfdataset(files, data_vars='all') as ds:
 
-                    coord_shape = ds[self.coord_name].shape
-                    coord_shape1 = ds1[self.coord_name].shape
-                    coord_shape2 = ds2[self.coord_name].shape
+                for opt in ['all', 'minimal']:
+                    # open the files with the default data_vars='all'
+                    with open_mfdataset(files, data_vars=opt) as ds:
 
-                    var_shape = ds[self.var_name].shape
-                    var_shape1 = ds1[self.var_name].shape
-                    var_shape2 = ds2[self.var_name].shape
+                        coord_shape = ds[self.coord_name].shape
+                        coord_shape1 = ds1[self.coord_name].shape
+                        coord_shape2 = ds2[self.coord_name].shape
 
-                    self.assertNotEqual(coord_shape1, coord_shape)
-                    self.assertNotEqual(coord_shape2, coord_shape)
+                        var_shape = ds[self.var_name].shape
 
-                    self.assertEqual(var_shape[0],
-                                     var_shape1[0] + var_shape2[0])
+                        if opt == 'all':
+                            self.assertEqual(var_shape, coord_shape)
+                            self.assertNotEqual(coord_shape1, coord_shape)
+                            self.assertNotEqual(coord_shape2, coord_shape)
 
-                    self.assertEqual(var_shape, coord_shape)
+                        if opt == 'minimal':
+                            self.assertEqual(coord_shape1, coord_shape)
+                            self.assertEqual(coord_shape2, coord_shape)
 
-    def test_common_coord_dims_should_not_change_when_datavars_minimal(self):
-        with create_tmp_file() as tmpfile1:
-            with create_tmp_file() as tmpfile2:
-                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
-
-                # save data to the temporary files
-                ds1.to_netcdf(tmpfile1)
-                ds2.to_netcdf(tmpfile2)
-
-                files = [tmpfile1, tmpfile2]
-                # open the files with the default data_vars='all'
-                with open_mfdataset(files, data_vars='minimal') as ds:
-
-                    coord_shape = ds[self.coord_name].shape
-                    coord_shape1 = ds1[self.coord_name].shape
-                    coord_shape2 = ds2[self.coord_name].shape
-
-                    var_shape = ds[self.var_name].shape
-                    var_shape1 = ds1[self.var_name].shape
-                    var_shape2 = ds2[self.var_name].shape
-
-                    self.assertEqual(coord_shape1, coord_shape)
-
-                    self.assertEqual(coord_shape2, coord_shape)
-                    self.assertEqual(var_shape[0],
-                                     var_shape1[0] + var_shape2[0])
 
     def test_invalid_data_vars_value_should_fail(self):
-        with self.assertRaises(ValueError):
-            with create_tmp_file() as tmpfile1:
-                with create_tmp_file() as tmpfile2:
-                    ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
 
-                    # save data to the temporary files
-                    ds1.to_netcdf(tmpfile1)
-                    ds2.to_netcdf(tmpfile2)
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
 
-                    files = [tmpfile1, tmpfile2]
+                files = [tmpfile1, tmpfile2]
+                with self.assertRaises(ValueError):
                     with open_mfdataset(files, data_vars='minimum'):
                         pass
 
