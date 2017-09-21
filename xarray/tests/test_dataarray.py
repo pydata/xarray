@@ -1885,6 +1885,7 @@ class TestDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension'):
             array.resample(**{'__resample_dim__': '1D'}).first()
 
+    @requires_scipy
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
@@ -2020,8 +2021,8 @@ class TestDataArray(TestCase):
 
         # Backward-fill
         actual = array.resample(time='3H').ffill()
-        expected_data = np.repeat(np.flip(data, axis=-1), 2, axis=-1)
-        expected_data = np.flip(expected_data, axis=-1)
+        expected_data = np.repeat(np.flipud(data.T).T, 2, axis=-1)
+        expected_data = np.flipud(expected_data.T).T
         expected_times = times.to_series().resample('3H').asfreq().index
         expected_data = expected_data[..., :len(expected_times)]
         expected = DataArray(expected_data,

@@ -31,7 +31,7 @@ from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
-                          assert_array_equal)
+                          assert_array_equal, requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -2248,6 +2248,7 @@ class TestDataset(TestCase):
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
 
+    @requires_scipy
     def test_resample_drop_nondim_coords(self):
         xs = np.arange(6)
         ys = np.arange(3)
