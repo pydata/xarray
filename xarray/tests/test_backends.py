@@ -1336,15 +1336,24 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
 
                         var_shape = ds[self.var_name].shape
 
+                        tests = []
+                        # shape pairs to be compared
+                        shape_pairs = [
+                            (var_shape, coord_shape),
+                            (coord_shape1, coord_shape),
+                            (coord_shape2, coord_shape)
+                        ]
+                        # tests to be applied to respective pairs
                         if opt == 'all':
-                            self.assertEqual(var_shape, coord_shape)
-                            self.assertNotEqual(coord_shape1, coord_shape)
-                            self.assertNotEqual(coord_shape2, coord_shape)
+                            tests = [self.assertEqual,
+                                     self.assertNotEqual, self.assertNotEqual]
 
                         if opt == 'minimal':
-                            self.assertEqual(coord_shape1, coord_shape)
-                            self.assertEqual(coord_shape2, coord_shape)
+                            tests = [self.assertNotEqual,
+                                     self.assertEqual, self.assertEqual]
 
+                        for a_test, a_shape_pair in zip(tests, shape_pairs):
+                            a_test(*a_shape_pair)
 
     def test_invalid_data_vars_value_should_fail(self):
         with create_tmp_file() as tmpfile1:
