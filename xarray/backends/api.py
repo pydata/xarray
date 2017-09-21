@@ -543,9 +543,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     combined._file_obj = _MultiFileCloser(file_objs)
     combined.attrs = datasets[0].attrs
-
-
-
     return combined
 
 
