@@ -209,8 +209,7 @@ def summarize_variable(name, var, col_width, show_values=True,
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
     elif isinstance(var.data, dask_array_type):
-        chunksize = tuple(c[0] for c in var.chunks)
-        values_str = 'dask.array<shape=%s, chunksize=%s>' % (var.shape, chunksize)
+        values_str = short_dask_repr(var, show_dtype=False)
     else:
         values_str = u'...'
 
@@ -364,6 +363,19 @@ def short_array_repr(array):
         return repr(array)
 
 
+def short_dask_repr(array, show_dtype=True):
+    """Similar to dask.array.DataArray.__repr__, but without
+    redundant information that's already printed by the repr
+    function of the xarray wrapper.
+    """
+    chunksize = tuple(c[0] for c in array.chunks)
+    if show_dtype:
+        return 'dask.array<shape=%s, dtype=%s, chunksize=%s>' % (
+            array.shape, array.dtype, chunksize)
+    else:
+        return 'dask.array<shape=%s, chunksize=%s>' % (array.shape, chunksize)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
@@ -375,10 +387,7 @@ def array_repr(arr):
                % (type(arr).__name__, name_str, dim_summary(arr))]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
-        chunksize = tuple(c[0] for c in arr.chunks)
-        arr_str = 'dask.array<shape=%s, dtype=%s, chunksize=%s>' % (
-            arr.shape, arr.dtype, chunksize)
-        summary.append(arr_str)
+        summary.append(short_dask_repr(arr))
     elif arr._in_memory or arr.size < 1e5:
         summary.append(short_array_repr(arr.values))
     else:
