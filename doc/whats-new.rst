@@ -38,7 +38,7 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
-- Support for data_vars and coords keywords added to
+- Support for ``data_vars`` and ``coords`` keywords added to
   :py:func:`~xarray.open_mfdataset`
   (:issue:`438`):
 
