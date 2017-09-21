@@ -76,7 +76,7 @@ except ImportError:
 
 try:
     import bottleneck
-    if LooseVersion(bottleneck.__version__) < LooseVersion('1.0'):
+    if LooseVersion(bottleneck.__version__) < LooseVersion('1.1'):
         raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:

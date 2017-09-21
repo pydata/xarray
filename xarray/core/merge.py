@@ -365,6 +365,20 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
+def assert_valid_explicit_coords(variables, dims, explicit_coords):
+    """Validate explicit coordinate names/dims.
+
+    Raise a MergeError if an explicit coord shares a name with a dimension
+    but is comprised of arbitrary dimensions.
+    """
+    for coord_name in explicit_coords:
+        if coord_name in dims and variables[coord_name].dims != (coord_name,):
+            raise MergeError(
+                'coordinate %s shares a name with a dataset dimension, but is '
+                'not a 1D variable along that dimension. This is disallowed '
+                'by the xarray data model.' % coord_name)
+
+
 def merge_core(objs,
                compat='broadcast_equals',
                join='outer',
@@ -414,14 +428,15 @@ def merge_core(objs,
 
     coord_names, noncoord_names = determine_coords(coerced)
 
-    if explicit_coords is not None:
-        coord_names.update(explicit_coords)
-
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
+
+    if explicit_coords is not None:
+        assert_valid_explicit_coords(variables, dims, explicit_coords)
+        coord_names.update(explicit_coords)
 
     for dim, size in dims.items():
         if dim in variables:

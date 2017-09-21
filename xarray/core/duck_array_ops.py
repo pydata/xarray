@@ -184,7 +184,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
             values = values.astype(object)
 
         if skipna or (skipna is None and values.dtype.kind in 'cf'):
-            if values.dtype.kind not in ['i', 'f', 'c']:
+            if values.dtype.kind not in ['u', 'i', 'f', 'c']:
                 raise NotImplementedError(
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
