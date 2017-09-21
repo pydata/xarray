@@ -27,6 +27,11 @@ Breaking changes
   (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
+  Datasets loaded with ``open_dataset`` won't automatically read coords from
+  disk when calling ``repr`` (:issue:`1522`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -153,7 +158,7 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+- xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
