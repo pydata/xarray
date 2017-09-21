@@ -494,7 +494,7 @@ class BaseDataObject(AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
 
-        Remove the nans using dropna
+        Remove the NaNs using ``dropna()``:
         
         >>> da.rolling(time=3).mean().dropna('time')
         <xarray.DataArray (time: 10)>
