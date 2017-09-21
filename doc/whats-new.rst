@@ -63,7 +63,7 @@ Enhancements
 
     Out[4]: (808, 782)
 
-    # I also noticed that my memory-intensive applications use much less memory and faster, when ``data_vars='minimal'`` is used.
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
 
   By `Oleksandr Huziy <https://github.com/guziy>`_.
 
