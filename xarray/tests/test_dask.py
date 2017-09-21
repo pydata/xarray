@@ -1,9 +1,12 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 import pickle
+from textwrap import dedent
 import numpy as np
 import pandas as pd
+import pytest
 
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
@@ -11,7 +14,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
 from . import TestCase, requires_dask
 
-from xarray.tests import unittest
+from xarray.tests import mock
 
 with suppress(ImportError):
     import dask
@@ -130,6 +133,25 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u + u, v + v)
         self.assertLazyAndIdentical(u[0] + u, v[0] + v)
 
+    def test_repr(self):
+        expected = dedent("""\
+        <xarray.Variable (x: 4, y: 6)>
+        dask.array<shape=(4, 6), dtype=float64, chunksize=(2, 2)>""")
+        self.assertEqual(expected, repr(self.lazy_var))
+
+    def test_pickle(self):
+        # Test that pickling/unpickling does not convert the dask
+        # backend to numpy
+        a1 = Variable(['x'], build_dask_array('x'))
+        a1.compute()
+        self.assertFalse(a1._in_memory)
+        self.assertEquals(kernel_call_count, 1)
+        a2 = pickle.loads(pickle.dumps(a1))
+        self.assertEquals(kernel_call_count, 1)
+        self.assertVariableIdentical(a1, a2)
+        self.assertFalse(a1._in_memory)
+        self.assertFalse(a2._in_memory)
+
     def test_reduce(self):
         u = self.eager_var
         v = self.lazy_var
@@ -175,7 +197,6 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
-    @unittest.skip('currently broken in dask, see GH1090')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -341,47 +362,103 @@ class TestDataArrayAndDataset(DaskTestCase):
         lazy = self.lazy_array.dot(self.lazy_array[0])
         self.assertLazyAndAllClose(eager, lazy)
 
-    def test_variable_pickle(self):
-        # Test that pickling/unpickling does not convert the dask
-        # backend to numpy
-        a1 = Variable(['x'], build_dask_array())
-        a1.compute()
-        self.assertFalse(a1._in_memory)
-        self.assertEquals(kernel_call_count, 1)
-        a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 1)
-        self.assertVariableIdentical(a1, a2)
-        self.assertFalse(a1._in_memory)
-        self.assertFalse(a2._in_memory)
+    def test_dataarray_repr(self):
+        # Test that __repr__ converts the dask backend to numpy
+        # in neither the data variable nor the non-index coords
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        a = DataArray(data, dims=['x'], coords={'y': ('x', nonindex_coord)})
+        expected = dedent("""\
+        <xarray.DataArray 'data' (x: 1)>
+        dask.array<shape=(1,), dtype=int64, chunksize=(1,)>
+        Coordinates:
+            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+        Dimensions without coordinates: x""")
+        self.assertEqual(expected, repr(a))
+        self.assertEquals(kernel_call_count, 0)
+
+    def test_dataset_repr(self):
+        # Test that pickling/unpickling converts the dask backend
+        # to numpy in neither the data variables nor the non-index coords
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        ds = Dataset(data_vars={'a': ('x', data)},
+                     coords={'y': ('x', nonindex_coord)})
+        expected = dedent("""\
+        <xarray.Dataset>
+        Dimensions:  (x: 1)
+        Coordinates:
+            y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
+        Dimensions without coordinates: x
+        Data variables:
+            a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>""")
+        self.assertEqual(expected, repr(ds))
+        self.assertEquals(kernel_call_count, 0)
 
     def test_dataarray_pickle(self):
-        # Test that pickling/unpickling does not convert the dask
-        # backend to numpy
-        a1 = DataArray(build_dask_array())
+        # Test that pickling/unpickling converts the dask backend
+        # to numpy in neither the data variable nor the non-index coords
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        a1 = DataArray(data, dims=['x'], coords={'y': ('x', nonindex_coord)})
         a1.compute()
         self.assertFalse(a1._in_memory)
-        self.assertEquals(kernel_call_count, 1)
+        self.assertFalse(a1.coords['y']._in_memory)
+        self.assertEquals(kernel_call_count, 2)
         a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 1)
+        self.assertEquals(kernel_call_count, 2)
         self.assertDataArrayIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
+        self.assertFalse(a1.coords['y']._in_memory)
+        self.assertFalse(a2.coords['y']._in_memory)
 
     def test_dataset_pickle(self):
-        ds1 = Dataset({'a': DataArray(build_dask_array())})
+        # Test that pickling/unpickling converts the dask backend
+        # to numpy in neither the data variables nor the non-index coords
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        ds1 = Dataset(data_vars={'a': ('x', data)},
+                      coords={'y': ('x', nonindex_coord)})
         ds1.compute()
         self.assertFalse(ds1['a']._in_memory)
-        self.assertEquals(kernel_call_count, 1)
+        self.assertFalse(ds1['y']._in_memory)
+        self.assertEquals(kernel_call_count, 2)
         ds2 = pickle.loads(pickle.dumps(ds1))
-        self.assertEquals(kernel_call_count, 1)
+        self.assertEquals(kernel_call_count, 2)
         self.assertDatasetIdentical(ds1, ds2)
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds2['a']._in_memory)
+        self.assertFalse(ds1['y']._in_memory)
+        self.assertFalse(ds2['y']._in_memory)
+
+    def test_dataarray_getattr(self):
+        # ipython/jupyter does a long list of getattr() calls to when trying to
+        # represent an object.
+        # Make sure we're not accidentally computing dask variables.
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        a = DataArray(data, dims=['x'],
+                      coords={'y': ('x', nonindex_coord)})
+        with suppress(AttributeError):
+            getattr(a, 'NOTEXIST')
+        self.assertEquals(kernel_call_count, 0)
+
+    def test_dataset_getattr(self):
+        # Test that pickling/unpickling converts the dask backend
+        # to numpy in neither the data variables nor the non-index coords
+        data = build_dask_array('data')
+        nonindex_coord = build_dask_array('coord')
+        ds = Dataset(data_vars={'a': ('x', data)},
+                     coords={'y': ('x', nonindex_coord)})
+        with suppress(AttributeError):
+            getattr(ds, 'NOTEXIST')
+        self.assertEquals(kernel_call_count, 0)
 
     def test_values(self):
         # Test that invoking the values property does not convert the dask
         # backend to numpy
-        a = DataArray([1,2]).chunk()
+        a = DataArray([1, 2]).chunk()
         self.assertFalse(a._in_memory)
         self.assertEquals(a.values.tolist(), [1, 2])
         self.assertFalse(a._in_memory)
@@ -394,18 +471,62 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute'])
+def test_dask_kwargs_variable(method):
+    x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
+    # args should be passed on to da.Array.compute()
+    with mock.patch.object(da.Array, 'compute',
+                           return_value=np.arange(3)) as mock_compute:
+        getattr(x, method)(foo='bar')
+    mock_compute.assert_called_with(foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataarray(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = DataArray(data)
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
+@requires_dask
+@pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+def test_dask_kwargs_dataset(method):
+    data = da.from_array(np.arange(3), chunks=(2,))
+    x = Dataset({'x': (('y'), data)})
+    if method in ['load', 'compute']:
+        dask_func = 'dask.array.compute'
+    else:
+        dask_func = 'dask.persist'
+    # args should be passed on to "dask_func"
+    with mock.patch(dask_func) as mock_func:
+        getattr(x, method)(foo='bar')
+    mock_func.assert_called_with(data, foo='bar')
+
+
 kernel_call_count = 0
+
+
 def kernel():
-    """Dask kernel to test pickling/unpickling.
+    """Dask kernel to test pickling/unpickling and __repr__.
     Must be global to make it pickleable.
     """
     global kernel_call_count
     kernel_call_count += 1
-    return np.ones(1)
+    return np.ones(1, dtype=np.int64)
 
-def build_dask_array():
+
+def build_dask_array(name):
     global kernel_call_count
     kernel_call_count = 0
     return dask.array.Array(
-        dask={('foo', 0): (kernel, )}, name='foo',
-        chunks=((1,),), dtype=int)
+        dask={(name, 0): (kernel, )}, name=name,
+        chunks=((1,),), dtype=np.int64)

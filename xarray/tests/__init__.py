@@ -21,6 +21,11 @@ except ImportError:
     import unittest
 
 try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+try:
     import scipy
     has_scipy = True
 except ImportError:
@@ -71,7 +76,7 @@ except ImportError:
 
 try:
     import bottleneck
-    if LooseVersion(bottleneck.__version__) < LooseVersion('1.0'):
+    if LooseVersion(bottleneck.__version__) < LooseVersion('1.1'):
         raise ImportError('Fall back to numpy')
     has_bottleneck = True
 except ImportError:

@@ -445,7 +445,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         return self.dims
 
-    def load(self):
+    def load(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return this dataset.
 
@@ -453,6 +453,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {k: v._data for k, v in self.variables.items()
@@ -461,7 +470,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             import dask.array as da
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = da.compute(*lazy_data.values())
+            evaluated_data = da.compute(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
@@ -473,7 +482,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return a new dataset. The original is
         left unaltered.
@@ -482,11 +491,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
-    def _persist_inplace(self):
+    def _persist_inplace(self, **kwargs):
         """ Persist all Dask arrays in memory """
         # access .data to coerce everything to numpy or dask arrays
         lazy_data = {k: v._data for k, v in self.variables.items()
@@ -495,14 +513,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             import dask
 
             # evaluate all the dask arrays simultaneously
-            evaluated_data = dask.persist(*lazy_data.values())
+            evaluated_data = dask.persist(*lazy_data.values(), **kwargs)
 
             for k, data in zip(lazy_data, evaluated_data):
                 self.variables[k].data = data
 
         return self
 
-    def persist(self):
+    def persist(self, **kwargs):
         """ Trigger computation, keeping data as dask arrays
 
         This operation can be used to trigger computation on underlying dask
@@ -510,9 +528,18 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         data as dask arrays.  This is particularly useful when using the
         dask.distributed scheduler and you want to load a large amount of data
         into distributed memory.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        See Also
+        --------
+        dask.persist
         """
         new = self.copy(deep=False)
-        return new._persist_inplace()
+        return new._persist_inplace(**kwargs)
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -627,8 +654,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         level_coords = OrderedDict()
         for cname in self._coord_names:
             var = self.variables[cname]
-            if var.ndim == 1:
-                level_names = var.to_index_variable().level_names
+            if var.ndim == 1 and isinstance(var, IndexVariable):
+                level_names = var.level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
@@ -1642,12 +1669,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for d in dim:
             if d in self.dims:
                 raise ValueError(
-                            'Dimension {dim} already exists.'.format(dim=d))
+                    'Dimension {dim} already exists.'.format(dim=d))
             if (d in self._variables and
                     not utils.is_scalar(self._variables[d])):
                 raise ValueError(
-                            '{dim} already exists as coordinate or'
-                            ' variable name.'.format(dim=d))
+                    '{dim} already exists as coordinate or'
+                    ' variable name.'.format(dim=d))
 
         if len(dim) != len(set(dim)):
             raise ValueError('dims should not contain duplicate values.')
@@ -1664,7 +1691,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                             raise IndexError(
                                 'Axis {a} is out of bounds of the expanded'
                                 ' dimension size {dim}.'.format(
-                                               a=a, v=k, dim=result_ndim))
+                                    a=a, v=k, dim=result_ndim))
 
                     axis_pos = [a if a >= 0 else result_ndim + a
                                 for a in axis]
@@ -2981,8 +3008,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for var_name, variable in self.data_vars.items():
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
-                if ((callable(pattern) and pattern(attr_value))
-                        or attr_value == pattern):
+                if ((callable(pattern) and pattern(attr_value)) or
+                        attr_value == pattern):
                     selection.append(var_name)
         return self[selection]
 

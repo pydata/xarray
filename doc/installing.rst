@@ -30,7 +30,7 @@ For accelerating xarray
 
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
-  (1.0 or later)
+  (1.1 or later)
 - `cyordereddict <https://github.com/shoyer/cyordereddict>`__: speeds up most
   internal operations with xarray data structures (for python versions < 3.5)
 
@@ -73,6 +73,12 @@ pandas) installed first. Then, install xarray with pip::
 
     $ pip install xarray
 
-To run the test suite after installing xarray, install
-`py.test <https://pytest.org>`__ (``pip install pytest``) and run
+Testing
+-------
+
+To run the test suite after installing xarray, first install (via pypi or conda)
+- `py.test <https://pytest.org>`__: Simple unit testing library
+- `mock <https://pypi.python.org/pypi/mock>`__: additional testing library required for python version 2
+
+and run
 ``py.test --pyargs xarray``.
