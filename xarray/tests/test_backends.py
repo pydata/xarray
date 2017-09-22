@@ -1268,7 +1268,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
 
 
 @requires_scipy_or_netCDF4
-class OpenMFDatasetDataVarsKWTest(TestCase):
+class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
     coord_name = 'lon'
     var_name = 'v1'
 
@@ -1309,9 +1309,16 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 ds2.to_netcdf(tmpfile2)
 
                 files = [tmpfile1, tmpfile2]
-                for opt in ['all', 'minimal']:
+
+                options = ['all', 'minimal', 'different', ]
+                for opt in options:
                     with open_mfdataset(files, data_vars=opt) as ds:
                         kwargs = dict(data_vars=opt, dim='t')
+                        ds_expect = xr.concat([ds1, ds2], **kwargs)
+                        self.assertDatasetIdentical(ds, ds_expect)
+
+                    with open_mfdataset(files, coords=opt) as ds:
+                        kwargs = dict(coords=opt, dim='t')
                         ds_expect = xr.concat([ds1, ds2], **kwargs)
                         self.assertDatasetIdentical(ds, ds_expect)
 
@@ -1367,6 +1374,11 @@ class OpenMFDatasetDataVarsKWTest(TestCase):
                 files = [tmpfile1, tmpfile2]
                 with self.assertRaises(ValueError):
                     with open_mfdataset(files, data_vars='minimum'):
+                        pass
+
+                # test invalid coord parameter
+                with self.assertRaises(ValueError):
+                    with open_mfdataset(files, coords='minimum'):
                         pass
 
 
