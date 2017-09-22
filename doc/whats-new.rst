@@ -54,9 +54,9 @@ Breaking changes
     [...]
 
   Note that both versions are currently supported, but using the old syntax will
-  produce a warning encouraging users to adopt the new syntax. 
+  produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
-  
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
@@ -189,10 +189,11 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- :py:func:`~xarray.concat` was computing multiple times coordinates that are
-  not index and not in memory (e.g. dask-based); :py:func:`~xarray.open_mfdataset`
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
   was loading them multiple times from disk. Now, both functions will instead
-  load them once and store them as numpy arrays (:issue:`1521`).
+  load them the bare minimum amount of times and, if they do, store them
+  in memory in the concatenated array/dataset (:issue:`1521`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
