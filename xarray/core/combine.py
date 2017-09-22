@@ -188,8 +188,7 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
             elif opt == 'minimal':
                 pass
             else:
-                raise ValueError("unexpected value for concat_%s: %s"
-                                 % (subset, opt))
+                raise ValueError("unexpected value for %s: %s" % (subset, opt))
         else:
             invalid_vars = [k for k in opt
                             if k not in getattr(datasets[0], subset)]

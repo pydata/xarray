@@ -192,8 +192,8 @@ Bug fixes
 - :py:func:`~xarray.concat` was computing variables that aren't in memory
   (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
   was loading them multiple times from disk. Now, both functions will instead
-  load them the bare minimum amount of times and, if they do, store them
-  in memory in the concatenated array/dataset (:issue:`1521`).
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
