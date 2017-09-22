@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import pandas as pd
+import warnings
 
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
 from . import dtypes
@@ -506,48 +507,23 @@ class BaseDataObject(AttrAccessMixin):
         return self._rolling_cls(self, min_periods=min_periods,
                                  center=center, **windows)
 
-    def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0, keep_attrs=False):
-        """Resample this object to a new temporal resolution.
+    def resample(self, freq=None, dim=None, how=None, skipna=None,
+                 closed=None, label=None, base=0, keep_attrs=False, **indexer):
+        """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. Upsampling with filling is
-        not yet supported; if any intervals contain no values in the original
+        not supported; if any intervals contain no values from the original
         object, they will be given the value ``NaN``.
 
         Parameters
         ----------
-        freq : str
-            String in the '#offset' to specify the step-size along the
-            resampled dimension, where '#' is an (optional) integer multipler
-            (default 1) and 'offset' is any pandas date offset alias. Examples
-            of valid offsets include:
-
-            * 'AS': year start
-            * 'QS-DEC': quarterly, starting on December 1
-            * 'MS': month start
-            * 'D': day
-            * 'H': hour
-            * 'Min': minute
-
-            The full list of these offset aliases is documented in pandas [1]_.
-        dim : str
-            Name of the dimension to resample along (e.g., 'time').
-        how : str or func, optional
-            Used for downsampling. If a string, ``how`` must be a valid
-            aggregation operation supported by xarray. Otherwise, ``how`` must be
-            a function that can be called like ``how(values, axis)`` to reduce
-            ndarray values along the given axis. Valid choices that can be
-            provided as a string include all the usual Dataset/DataArray
-            aggregations (``all``, ``any``, ``argmax``, ``argmin``, ``max``,
-            ``mean``, ``median``, ``min``, ``prod``, ``sum``, ``std`` and
-            ``var``), as well as ``first`` and ``last``.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
             Side of each interval to treat as closed.
         label : 'left or 'right', optional
             Side of each interval to use for labeling.
-        base : int, optionalt
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
@@ -555,6 +531,9 @@ class BaseDataObject(AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        **indexer : {dim: freq}
+            Dictionary with a key indicating the dimension name to resample
+            over and a value corresponding to the resampling frequency.
 
         Returns
         -------
@@ -567,11 +546,58 @@ class BaseDataObject(AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         from .dataarray import DataArray
+        from .resample import RESAMPLE_DIM
 
+        if dim is not None:
+            if how is None:
+                how = 'mean'
+            return self._resample_immediately(freq, dim, how, skipna, closed,
+                                              label, base, keep_attrs)
+
+        if (how is not None) and indexer:
+            raise TypeError("If passing an 'indexer' then 'dim' "
+                            "and 'how' should not be used")
+
+        # More than one indexer is ambiguous, but we do in fact need one if
+        # "dim" was not provided, until the old API is fully deprecated
+        if len(indexer) != 1:
+            raise ValueError(
+                "Resampling only supported along single dimensions."
+            )
+        dim, freq = indexer.popitem()
+
+        if isinstance(dim, basestring):
+            dim_name = dim
+            dim = self[dim]
+        else:
+            raise TypeError("Dimension name should be a string; "
+                            "was passed %r" % dim)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
+        time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
+                                      label=label, base=base)
+        resampler = self._resample_cls(self, group=group, dim=dim_name,
+                                       grouper=time_grouper,
+                                       resample_dim=RESAMPLE_DIM)
+
+        return resampler
+
+    def _resample_immediately(self, freq, dim, how, skipna,
+                              closed, label, base, keep_attrs):
+        """Implement the original version of .resample() which immediately
+        executes the desired resampling operation. """
+        from .dataarray import DataArray
         RESAMPLE_DIM = '__resample_dim__'
+
+        warnings.warn("\n.resample() has been modified to defer "
+                      "calculations. Instead of passing 'dim' and "
+                      "'how=\"{how}\", instead consider using "
+                      ".resample({dim}=\"{freq}\").{how}() ".format(
+                            dim=dim, freq=freq, how=how
+                      ), DeprecationWarning, stacklevel=3)
+
         if isinstance(dim, basestring):
             dim = self[dim]
-        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
         gb = self._groupby_cls(self, group, grouper=time_grouper)
@@ -579,6 +605,8 @@ class BaseDataObject(AttrAccessMixin):
             f = getattr(gb, how)
             if how in ['first', 'last']:
                 result = f(skipna=skipna, keep_attrs=keep_attrs)
+            elif how == 'count':
+                result = f(dim=dim.name, keep_attrs=keep_attrs)
             else:
                 result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:
