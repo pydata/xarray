@@ -1139,6 +1139,19 @@ class TestDataset(TestCase):
         expected = data.isel(dim2=[0, 1, 2])
         self.assertDatasetEqual(actual, expected)
 
+        # with conflicted coordinate (silently ignored)
+        ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'],
+                        coords={'new_dim': ['a', 'b', 'c'],
+                                'dim2': 3})
+        actual = data.sel(dim2=ind)
+        self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
+                                  ind['new_dim'].drop('dim2'))
+        expected = data.isel(dim2=[0, 1, 2])
+        expected['dim2'] = (('new_dim'), expected['dim2'].values)
+        self.assertDataArrayEqual(actual['dim2'].drop('new_dim'),
+                                  expected['dim2'])
+        assert actual['var1'].dims == ('dim1', 'new_dim')
+
         # with non-dimensional coordinate
         ind = DataArray([0.0, 0.5, 1.0], dims=['dim2'],
                         coords={'dim2': ['a', 'b', 'c'],
@@ -1154,6 +1167,13 @@ class TestDataset(TestCase):
                                           names=('one', 'two'))
         mds = xr.Dataset({'var': (('x', 'y'), np.random.rand(6, 3))},
                          coords={'x': midx, 'y': range(3)})
+
+        actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims='x'))
+        actual_sel = mds.sel(x=DataArray(mds.indexes['x'][:3], dims='x'))
+        assert actual_isel['x'].dims == ('x', )
+        assert actual_sel['x'].dims == ('x', )
+        self.assertDatasetIdentical(actual_isel, actual_sel)
+
         actual_isel = mds.isel(x=xr.DataArray(np.arange(3), dims='z'))
         actual_sel = mds.sel(x=Variable('z', mds.indexes['x'][:3]))
         assert actual_isel['x'].dims == ('z', )

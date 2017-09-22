@@ -1235,8 +1235,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                     if v.variable is cv.variable:
                         v = drop_coord(v, ck)
                 # rule 3
-                if mode == 'sel' and k in self._coord_names:
-                    v = drop_coord(v, k)
+                if mode == 'sel':
+                    coord_names = v._coords.keys()
+                    for cname in coord_names:
+                        if cname in self._coord_names:
+                            v = drop_coord(v, cname)
             new_indexers[k] = v
         return new_indexers
 
