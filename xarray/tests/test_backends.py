@@ -1272,6 +1272,18 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
     coord_name = 'lon'
     var_name = 'v1'
 
+    @contextlib.contextmanager
+    def setup_files_and_datasets(self):
+        ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                yield [tmpfile1, tmpfile2], [ds1, ds2]
+
     def gen_datasets_with_common_coord_and_time(self):
         # create coordinate data
         nx = 10
@@ -1300,86 +1312,83 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
         return ds1, ds2
 
     def test_open_mfdataset_does_same_as_concat(self):
-        with create_tmp_file() as tmpfile1:
-            with create_tmp_file() as tmpfile2:
-                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+        options = ['all', 'minimal', 'different', ]
 
-                # save data to the temporary files
-                ds1.to_netcdf(tmpfile1)
-                ds2.to_netcdf(tmpfile2)
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            for opt in options:
+                with open_mfdataset(files, data_vars=opt) as ds:
+                    kwargs = dict(data_vars=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
 
-                files = [tmpfile1, tmpfile2]
+                with open_mfdataset(files, coords=opt) as ds:
+                    kwargs = dict(coords=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
 
-                options = ['all', 'minimal', 'different', ]
-                for opt in options:
-                    with open_mfdataset(files, data_vars=opt) as ds:
-                        kwargs = dict(data_vars=opt, dim='t')
-                        ds_expect = xr.concat([ds1, ds2], **kwargs)
-                        self.assertDatasetIdentical(ds, ds_expect)
+    def test_common_coord_when_datavars_all(self):
+        opt = 'all'
 
-                    with open_mfdataset(files, coords=opt) as ds:
-                        kwargs = dict(coords=opt, dim='t')
-                        ds_expect = xr.concat([ds1, ds2], **kwargs)
-                        self.assertDatasetIdentical(ds, ds_expect)
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files with the data_var option
+            with open_mfdataset(files, data_vars=opt) as ds:
 
-    def test_common_coord_when_datavars_passed(self):
-        with create_tmp_file() as tmpfile1:
-            with create_tmp_file() as tmpfile2:
-                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
 
-                # save data to the temporary files
-                ds1.to_netcdf(tmpfile1)
-                ds2.to_netcdf(tmpfile2)
+                var_shape = ds[self.var_name].shape
 
-                files = [tmpfile1, tmpfile2]
+                # shape pairs to be compared
+                shape_pairs = [
+                    (var_shape, coord_shape),
+                    (coord_shape1, coord_shape),
+                    (coord_shape2, coord_shape)
+                ]
+                # tests to be applied to respective pairs
+                tests = [self.assertEqual,
+                         self.assertNotEqual, self.assertNotEqual]
 
-                for opt in ['all', 'minimal']:
-                    # open the files with the default data_vars='all'
-                    with open_mfdataset(files, data_vars=opt) as ds:
+                for a_test, a_shape_pair in zip(tests, shape_pairs):
+                    a_test(*a_shape_pair)
 
-                        coord_shape = ds[self.coord_name].shape
-                        coord_shape1 = ds1[self.coord_name].shape
-                        coord_shape2 = ds2[self.coord_name].shape
+    def test_common_coord_when_datavars_minimal(self):
+        opt = 'minimal'
 
-                        var_shape = ds[self.var_name].shape
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files using data_vars option
+            with open_mfdataset(files, data_vars=opt) as ds:
 
-                        tests = []
-                        # shape pairs to be compared
-                        shape_pairs = [
-                            (var_shape, coord_shape),
-                            (coord_shape1, coord_shape),
-                            (coord_shape2, coord_shape)
-                        ]
-                        # tests to be applied to respective pairs
-                        if opt == 'all':
-                            tests = [self.assertEqual,
-                                     self.assertNotEqual, self.assertNotEqual]
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
 
-                        if opt == 'minimal':
-                            tests = [self.assertNotEqual,
-                                     self.assertEqual, self.assertEqual]
+                var_shape = ds[self.var_name].shape
 
-                        for a_test, a_shape_pair in zip(tests, shape_pairs):
-                            a_test(*a_shape_pair)
+                # shape pairs to be compared
+                shape_pairs = [
+                    (var_shape, coord_shape),
+                    (coord_shape1, coord_shape),
+                    (coord_shape2, coord_shape)
+                ]
+                # tests to be applied to respective pairs
+                tests = [self.assertNotEqual,
+                         self.assertEqual, self.assertEqual]
+
+                for a_test, a_shape_pair in zip(tests, shape_pairs):
+                    a_test(*a_shape_pair)
 
     def test_invalid_data_vars_value_should_fail(self):
-        with create_tmp_file() as tmpfile1:
-            with create_tmp_file() as tmpfile2:
-                ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
 
-                # save data to the temporary files
-                ds1.to_netcdf(tmpfile1)
-                ds2.to_netcdf(tmpfile2)
+        with self.setup_files_and_datasets() as (files, _):
+            with self.assertRaises(ValueError):
+                with open_mfdataset(files, data_vars='minimum'):
+                    pass
 
-                files = [tmpfile1, tmpfile2]
-                with self.assertRaises(ValueError):
-                    with open_mfdataset(files, data_vars='minimum'):
-                        pass
-
-                # test invalid coord parameter
-                with self.assertRaises(ValueError):
-                    with open_mfdataset(files, coords='minimum'):
-                        pass
+            # test invalid coord parameter
+            with self.assertRaises(ValueError):
+                with open_mfdataset(files, coords='minimum'):
+                    pass
 
 
 @requires_dask
