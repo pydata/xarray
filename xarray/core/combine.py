@@ -170,14 +170,17 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                         # keeping the RAM footprint low.
                         v_lhs = datasets[0].variables[k].load()
                         # We'll need to know later on if variables are equal.
+                        computed = []
                         for ds_rhs in datasets[1:]:
                             v_rhs = ds_rhs.variables[k].compute()
+                            computed.append(v_rhs)
                             if not v_lhs.equals(v_rhs):
                                 concat_over.add(k)
                                 equals[k] = False
-                                # rhs variable is not to be discarded, therefore
-                                # avoid re-computing it in the future
-                                ds_rhs.variables[k].data = v_rhs.data
+                                # computed variables are not to be re-computed
+                                # again in the future
+                                for ds, v in zip(datasets[1:], computed):
+                                    ds.variables[k].data = v.data
                                 break
                         else:
                             equals[k] = True
