@@ -54,9 +54,9 @@ Breaking changes
     [...]
 
   Note that both versions are currently supported, but using the old syntax will
-  produce a warning encouraging users to adopt the new syntax. 
+  produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
-  
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
@@ -208,9 +208,9 @@ Bug fixes
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- :py:func:`Dataset.copy` would not preserve the encoding property
+- :py:func:`xarray.Dataset.copy` would not preserve the encoding property
   (:issue:`1586`).
-  By `Guido Imperiale <https://github.com/crusaderky>`_.  
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 .. _whats-new.0.9.6:
 
