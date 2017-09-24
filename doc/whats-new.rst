@@ -177,6 +177,10 @@ Bug fixes
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- :py:func:`xarray.concat` would eagerly load dask variables into memory if
+  the first argument was a numpy variable (:issue:`1588`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)

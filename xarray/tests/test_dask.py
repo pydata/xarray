@@ -178,6 +178,8 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndIdentical(u, Variable.concat([v[:2], v[2:]], 'x'))
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
+        self.assertLazyAndIdentical(u[:2], Variable.concat([u[0], v[1]], 'x'))
+        self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], u[1]], 'x'))
         self.assertLazyAndIdentical(
             u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', positions=[[0, 2], [1]]))
 
