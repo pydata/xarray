@@ -40,9 +40,11 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
     """Create a function that dispatches to dask for dask array inputs."""
     if has_dask:
         def f(*args, **kwargs):
-            dispatch_args = args[0] if list_of_args else args
-            if any(isinstance(a, da.Array)
-                   for a in dispatch_args[:n_array_args]):
+            if list_of_args:
+                dispatch_args = args[0]
+            else:
+                dispatch_args = args[:n_array_args]
+            if any(isinstance(a, da.Array) for a in dispatch_args):
                 module = da
             else:
                 module = eager_module
