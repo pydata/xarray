@@ -543,6 +543,9 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
     if output_dtypes is None:
         raise ValueError('output dtypes (output_dtypes) must be supplied to '
                          "apply_func when using dask='parallelized'")
+    if not isinstance(output_dtypes, list):
+        raise TypeError('output_dtypes must be a list of objects coercible to '
+                        'numpy dtypes, got {}'.format(output_dtypes))
     if len(output_dtypes) != signature.num_outputs:
         raise ValueError('apply_ufunc arguments output_dtypes and '
                          'output_core_dims must have the same length: {} vs {}'
@@ -564,12 +567,15 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
         if isinstance(data, dask_array_type):
             # core dimensions cannot span multiple chunks
             chunks = {axis: (data.shape[axis],)
-                      for axis, dim in enumerate(core_dims, -len(core_dims))}
+                  for axis, dim in enumerate(core_dims, -len(core_dims))}
             data = data.rechunk(chunks)
         args2.append(data)
 
     (out_ind,) = output_dims
-    atop_args = [ai for a in zip(args2, input_dims) for ai in a]
+    # skip leading dimensions that we did not insert with broadcast_compat_data
+    atop_args = [element
+                 for (arg, dims) in zip(args2, input_dims)
+                 for element in (arg, dims[-getattr(arg, 'ndim', 0):])]
     return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
                    new_axes=output_sizes)
 
@@ -635,8 +641,8 @@ def apply_ufunc(func, *args, **kwargs):
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : Sequence[Sequence], optional
         List of the same length as ``args`` giving the list of core dimensions
-        on each input argument that should be broadcast. By default, we assume
-        there are no core dimensions on any input arguments.
+        on each input argument that should not be broadcast. By default, we
+        assume there are no core dimensions on any input arguments.
 
         For example ,``input_core_dims=[[], ['time']]`` indicates that all
         dimensions on the first argument and all dimensions other than 'time'
