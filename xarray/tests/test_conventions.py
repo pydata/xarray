@@ -452,10 +452,9 @@ class TestDatetime(TestCase):
             (['NaT', '0s', '1s'], None, [np.nan, 0, 1]),
             (['30m', '60m'], 'hours', [0.5, 1.0]),
         ]
-        if pd.__version__ >= '0.16':
-            # not quite sure why, but these examples don't work on older pandas
-            examples.extend([(np.timedelta64('NaT', 'ns'), 'days', np.nan),
-                             (['NaT', 'NaT'], 'days', [np.nan, np.nan])])
+        # not quite sure why, but these examples don't work on older pandas
+        examples.extend([(np.timedelta64('NaT', 'ns'), 'days', np.nan),
+                         (['NaT', 'NaT'], 'days', [np.nan, np.nan])])
 
         for timedeltas, units, numbers in examples:
             timedeltas = pd.to_timedelta(timedeltas, box=False)
