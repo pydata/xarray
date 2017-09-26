@@ -54,9 +54,9 @@ Breaking changes
     [...]
 
   Note that both versions are currently supported, but using the old syntax will
-  produce a warning encouraging users to adopt the new syntax. 
+  produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
-  
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
@@ -134,6 +134,7 @@ Enhancements
 - Added :py:func:`~xarray.show_versions` function to aid in debugging
   (:issue:`1485`).
   By `Joe Hamman` <https://github.com/jhamman>`_.
+
 - Support using an existing, opened netCDF4 ``Dataset`` with
   :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
   :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
