@@ -1565,11 +1565,9 @@ class TestDataset(TestCase):
 
         # Should not warn
         ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
-        with pytest.warns(FutureWarning) as ws:
+        with pytest.warns(None) as ws:
             data.reindex(dim2=ind)
-            assert all(["Indexer has dimensions " not in
-                        str(w.message) for w in ws])
-            warnings.warn('dummy', FutureWarning, stacklevel=3)
+            assert len(ws) == 0   
 
     def test_reindex_variables_copied(self):
         data = create_test_data()
