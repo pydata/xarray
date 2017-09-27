@@ -199,6 +199,7 @@ Reshaping and reorganizing
    Dataset.transpose
    Dataset.stack
    Dataset.unstack
+   Dataset.to_stacked_array
    Dataset.shift
    Dataset.roll
    Dataset.sortby
@@ -370,6 +371,7 @@ Reshaping and reorganizing
    DataArray.transpose
    DataArray.stack
    DataArray.unstack
+   DataArray.to_unstacked_dataset
    DataArray.shift
    DataArray.roll
    DataArray.sortby

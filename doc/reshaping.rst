@@ -133,6 +133,36 @@ pandas, it does not automatically drop missing values. Compare:
 We departed from pandas's behavior here because predictable shapes for new
 array dimensions is necessary for :ref:`dask`.
 
+Stacking different variables together
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These stacking and unstacking operations are particularly useful for reshaping
+xarray objects for use in machine learning packages, such as `scikit-learn
+<http://scikit-learn.org/stable/>`_, that usually require two-dimensional numpy
+arrays as inputs. For datasets with only one variable, we only need ``stack``
+and ``unstack``, but combining multiple variables in a
+:py:class:`xarray.Dataset` is more complicated. If the variables in the dataset
+have matching numbers of dimensions, we can call
+:py:meth:`~xarray.Dataset.to_array` and then stack along the the new coordinate.
+But :py:meth:`~xarray.Dataset.to_array` will broadcast the dataarrays together,
+which will effectively tile the lower dimensional variable along the missing
+dimensions. The method :py:meth:`xarray.Dataset.to_stacked_array` allows
+combining variables of differing dimensions without this wasteful copying while
+:py:meth:`xarray.DataArray.to_unstacked_dataset` reverses this operation. These
+methods are used like this:
+
+.. ipython:: python
+
+        arr = xr.DataArray(np.arange(6).reshape(2, 3),
+                        coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        data = xr.Dataset({'a': arr, 'b': arr.isel(y=0)})
+        stacked = data.to_stacked_array("z", ['y'])
+        stacked
+        unstacked = stacked.to_unstacked_dataset("z")
+        unstacked
+
+In this example, ``stacked`` is a two dimensional array that we can easily pass to a scikit-learn or another generic numerical method.
+
 .. _reshape.set_index:
 
 Set and reset index

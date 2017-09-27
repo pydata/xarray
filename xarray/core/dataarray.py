@@ -1402,6 +1402,41 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
+    def to_unstacked_dataset(self, dim, level=0,
+                             variable_dim='variable'):
+        """Unstack DataArray expanding to Dataset along a given level of a
+        stacked coordinate.
+
+        Parameters
+        ----------
+        dim : str
+            Name of existing dimension to unstack
+        level : int
+            Index of level to expand to dataset along
+
+        Returns
+        -------
+        unstacked: Dataset
+
+        See Also
+        --------
+        Dataset.to_stacked_array
+
+        """
+
+        idx = self.indexes[dim]
+        if not isinstance(idx, pd.MultiIndex):
+            raise ValueError(dim, "is not a stacked coordinate")
+        variables = idx.levels[level]
+
+        # pull variables out of datarray
+        data_dict = OrderedDict()
+        for k in variables:
+            data_dict[k] = self.sel(**{variable_dim: k}).squeeze(drop=True)
+
+        # unstacked dataset
+        return Dataset(data_dict)
+
     def transpose(self, *dims):
         """Return a new DataArray object with transposed dimensions.
 

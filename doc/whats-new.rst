@@ -1349,6 +1349,9 @@ Enhancements
 - Experimental support for the Dask collection interface (:issue:`1674`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
+- New methods for reshaping Datasets of variables with different dimensions
+  (:issue:`1317`). By `Noah Brenowitz <https://github.com/nbren12>`_.
+
 Bug fixes
 ~~~~~~~~~
 
