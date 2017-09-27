@@ -40,9 +40,11 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
     """Create a function that dispatches to dask for dask array inputs."""
     if has_dask:
         def f(*args, **kwargs):
-            dispatch_args = args[0] if list_of_args else args
-            if any(isinstance(a, da.Array)
-                   for a in dispatch_args[:n_array_args]):
+            if list_of_args:
+                dispatch_args = args[0]
+            else:
+                dispatch_args = args[:n_array_args]
+            if any(isinstance(a, da.Array) for a in dispatch_args):
                 module = da
             else:
                 module = eager_module
@@ -184,7 +186,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
             values = values.astype(object)
 
         if skipna or (skipna is None and values.dtype.kind in 'cf'):
-            if values.dtype.kind not in ['i', 'f', 'c']:
+            if values.dtype.kind not in ['u', 'i', 'f', 'c']:
                 raise NotImplementedError(
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))

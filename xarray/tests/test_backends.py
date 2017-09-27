@@ -31,6 +31,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical)
 from .test_dataset import create_test_data
 
+from xarray.tests import mock
+
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -1379,6 +1381,13 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
 
+    def test_save_mfdataset_invalid_dataarray(self):
+        # regression test for GH1555
+        da = DataArray([1, 2])
+        with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
+            save_mfdataset([da], ['dataarray'])
+
+
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1501,6 +1510,14 @@ class PydapTest(TestCase):
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
+
+    def test_session(self):
+        from pydap.cas.urs import setup_session
+
+        session = setup_session('XarrayTestUser', 'Xarray2017')
+        with mock.patch('pydap.client.open_url') as mock_func:
+            xr.backends.PydapDataStore.open('http://test.url', session=session)
+        mock_func.assert_called_with('http://test.url', session=session)
 
     @requires_dask
     def test_dask(self):

@@ -296,7 +296,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _in_memory(self):
-        return (isinstance(self._data, (np.ndarray, PandasIndexAdapter)) or
+        return (isinstance(self._data, (np.ndarray, np.number, PandasIndexAdapter)) or
                 (isinstance(self._data, indexing.MemoryCachedArray) and
                  isinstance(self._data.array, np.ndarray)))
 
@@ -1386,6 +1386,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return self
         return func
 
+
 ops.inject_all_ops_and_reduce_methods(Variable)
 
 
@@ -1550,6 +1551,7 @@ class IndexVariable(Variable):
     @name.setter
     def name(self, value):
         raise AttributeError('cannot modify name of IndexVariable in-place')
+
 
 # for backwards compatibility
 Coordinate = utils.alias(IndexVariable, 'Coordinate')
