@@ -114,8 +114,8 @@ def as_variable(obj, name=None):
             raise MissingDimensionsError(
                 '%r has more than 1-dimension and the same name as one of its '
                 'dimensions %r. xarray disallows such variables because they '
-                'conflict with the coordinates used to label dimensions.'
-                % (name, obj.dims))
+                'conflict with the coordinates used to label '
+                'dimensions.' % (name, obj.dims))
         obj = obj.to_index_variable()
 
     return obj

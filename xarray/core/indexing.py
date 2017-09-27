@@ -287,7 +287,7 @@ class BasicIndexer(IndexerTuple):
 
 class OuterIndexer(IndexerTuple):
     """ Tuple for outer/orthogonal indexing.
-    All the item is one of integer, slice, and 1d-np.ndarray.
+    All the items are one of integer, slice, and 1d-np.ndarray.
     """
 
 

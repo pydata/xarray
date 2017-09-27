@@ -318,7 +318,7 @@ indexers' dimension:
     ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
     da[ind]
 
-In briefly, similar to how NumPy's `advanced indexing`_ works, vectorized
+Similar to how NumPy's `advanced indexing`_ works, vectorized
 indexing for xarray is based on our
 :ref:`broadcasting rules <compute.broadcasting>`.
 See :ref:`indexing.rules` for the complete specification.
@@ -330,12 +330,12 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
 .. ipython:: python
 
     ind = xr.DataArray([[0, 1], [0, 1]], dims=['a', 'b'])
-    da.isel(y=ind)  # same to da[:, ind]
+    da.isel(y=ind)  # same as da[:, ind]
 
     ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
-    da.loc[:, ind]  # same to da.sel(y=ind)
+    da.loc[:, ind]  # same as da.sel(y=ind)
 
-and also for ``Dataset``
+These methods may and also be applied to ``Dataset`` objects
 
 .. ipython:: python
 
@@ -380,7 +380,7 @@ Vectorized indexing can be used to assign values to xarray object.
     da[ind_x, ind_y] += 100  # increment is also possible
     da
 
-As like numpy ndarray, value assignment sometimes works differently from what one may expect.
+Like ``numpy.ndarray``, value assignment sometimes works differently from what one may expect.
 
 .. ipython:: python
 
@@ -398,7 +398,7 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
 
 
 .. note::
-  Dask backend does not yet support value assignment
+  Dask array does not support value assignment
   (see :ref:`dask` for the details).
 
 

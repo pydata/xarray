@@ -27,10 +27,13 @@ Backward Incompatible Changes
   indexing, as well as vectorized indexing.
   Due to this change, existing uses of xarray objects to index other xarray
   objects will break in some cases.
+  ``isel_points`` / ``sel_points`` methods are deprecated, since the same thing
+  can be done by the new ``isel`` / ``sel`` methods.
   See :ref:`vectorized_indexing` for the details
   (:issue:`1444`, :issue:`1436`, ).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
   `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
@@ -67,9 +70,9 @@ Breaking changes
     [...]
 
   Note that both versions are currently supported, but using the old syntax will
-  produce a warning encouraging users to adopt the new syntax. 
+  produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
-  
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).

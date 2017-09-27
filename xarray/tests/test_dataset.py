@@ -1391,9 +1391,8 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['a'].drop('x'), idx_x['a'])
         self.assertDataArrayIdentical(actual['b'].drop('y'), idx_y['b'])
 
-        if pd.__version__ >= '0.17':
-            with self.assertRaises(KeyError):
-                data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+        with self.assertRaises(KeyError):
+            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
@@ -1564,9 +1563,9 @@ class TestDataset(TestCase):
             assert any(["Indexer has dimensions " in
                         str(w.message) for w in ws])
 
+        # Should not warn
+        ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
         with pytest.warns(FutureWarning) as ws:
-            # Should not warn
-            ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
             data.reindex(dim2=ind)
             assert all(["Indexer has dimensions " not in
                         str(w.message) for w in ws])

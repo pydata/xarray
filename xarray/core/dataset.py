@@ -1158,7 +1158,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Returns an OrderedDict mapping from coordinate name to the
         coordinate variable.
 
-        Only coordinate with a name different from any of sef.variables will
+        Only coordinate with a name different from any of self.variables will
         be attached.
         """
         from .dataarray import DataArray
@@ -1261,7 +1261,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
-            indexer can be a integer, slice, array-like or even DataArray.
+            indexer can be a integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
 
@@ -1291,14 +1291,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             if not (drop and name in var_indexers):
                 variables[name] = new_var
 
-        coord_names = set(variables) & set(self._coord_names)
-        selected = self._replace_vars_and_dims(
-                        variables, coord_names=coord_names)
+        coord_names = set(variables).intersection(self._coord_names)
+        selected = self._replace_vars_and_dims(variables,
+                                               coord_names=coord_names)
 
         # Extract coordinates from indexers
         coord_vars = selected._get_indexers_coordinates(indexers)
         variables.update(coord_vars)
-        coord_names = set(variables) & set(self._coord_names) | set(coord_vars)
+        coord_names = set(variables).intersection(self._coord_names).union(
+                                                                coord_vars)
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
@@ -1373,7 +1374,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for k, v in indexers.items():
             if isinstance(v, Variable):
                 pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-            if isinstance(v, DataArray):
+            elif isinstance(v, DataArray):
                 pos_indexers[k] = DataArray(pos_indexers[k],
                                             coords=v.coords, dims=v.dims)
         result = self.isel(drop=drop, **pos_indexers)
