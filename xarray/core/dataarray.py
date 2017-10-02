@@ -12,6 +12,7 @@ from ..plot.plot import _PlotMethods
 from . import duck_array_ops
 from . import indexing
 from . import groupby
+from . import resample
 from . import rolling
 from . import ops
 from . import utils
@@ -34,7 +35,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords) and
-            len(coords) != len(shape)):
+        len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
@@ -115,6 +116,7 @@ class _ThisArray(object):
     """An instance of this object is used as the key corresponding to the
     variable when converting arbitrary DataArray objects to datasets
     """
+
     def __repr__(self):
         return '<this-array>'
 
@@ -159,6 +161,8 @@ class DataArray(AbstractArray, BaseDataObject):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _resample_cls = resample.DataArrayResample
+
     dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
@@ -447,8 +451,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         level_coords = OrderedDict()
         for cname, var in self._coords.items():
-            if var.ndim == 1:
-                level_names = var.to_index_variable().level_names
+            if var.ndim == 1 and isinstance(var, IndexVariable):
+                level_names = var.level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
@@ -1490,8 +1494,10 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
+
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
+
         return (utils.dict_equiv(self.coords, other.coords, compat=compat) and
                 compat(self, other))
 
@@ -1565,6 +1571,7 @@ class DataArray(AbstractArray, BaseDataObject):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
             return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+
         return func
 
     @staticmethod
@@ -1574,7 +1581,8 @@ class DataArray(AbstractArray, BaseDataObject):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                align_type = OPTIONS['arithmetic_join'] if join is None else join
+                align_type = (OPTIONS['arithmetic_join']
+                              if join is None else join)
                 self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
@@ -1586,6 +1594,7 @@ class DataArray(AbstractArray, BaseDataObject):
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
+
         return func
 
     @staticmethod
@@ -1604,6 +1613,7 @@ class DataArray(AbstractArray, BaseDataObject):
             with self.coords._merge_inplace(other_coords):
                 f(self.variable, other_variable)
             return self
+
         return func
 
     def _copy_attrs_from(self, other):

@@ -31,6 +31,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, mark_class)
 from .test_dataset import create_test_data
 
+from xarray.tests import mock
+
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -1508,6 +1510,14 @@ class PydapTest(TestCase):
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
+
+    def test_session(self):
+        from pydap.cas.urs import setup_session
+
+        session = setup_session('XarrayTestUser', 'Xarray2017')
+        with mock.patch('pydap.client.open_url') as mock_func:
+            xr.backends.PydapDataStore.open('http://test.url', session=session)
+        mock_func.assert_called_with('http://test.url', session=session)
 
     @requires_dask
     def test_dask(self):

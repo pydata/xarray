@@ -113,7 +113,7 @@ def merge_variables(
         list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
         priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
         compat='minimal',         # type: str
-        ):
+):
     # type: (...) -> OrderedDict[Any, Variable]
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -180,7 +180,7 @@ def expand_variable_dicts(list_of_variable_dicts):
     Parameters
     ----------
     list_of_variable_dicts : list of dict or Dataset objects
-        The each value for the mappings must be of the following types:
+        Each value for the mappings must be of the following types:
         - an xarray.Variable
         - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
           an xarray.Variable

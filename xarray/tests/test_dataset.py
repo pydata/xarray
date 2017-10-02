@@ -31,7 +31,7 @@ from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
-                          assert_array_equal)
+                          assert_array_equal, requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -1016,24 +1016,21 @@ class TestDataset(TestCase):
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
 
-        if pd.__version__ >= '0.17':
-            with self.assertRaises(KeyError):
-                data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+        with self.assertRaises(KeyError):
+            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
 
-        if pd.__version__ >= '0.16':
-            expected = data.sel(dim2=1)
-            actual = data.sel(dim2=0.95, method='nearest')
-            self.assertDatasetIdentical(expected, actual)
+        expected = data.sel(dim2=1)
+        actual = data.sel(dim2=0.95, method='nearest')
+        self.assertDatasetIdentical(expected, actual)
 
-        if pd.__version__ >= '0.17':
-            actual = data.sel(dim2=0.95, method='nearest', tolerance=1)
-            self.assertDatasetIdentical(expected, actual)
+        actual = data.sel(dim2=0.95, method='nearest', tolerance=1)
+        self.assertDatasetIdentical(expected, actual)
 
-            with self.assertRaises(KeyError):
-                actual = data.sel(dim2=np.pi, method='nearest', tolerance=0)
+        with self.assertRaises(KeyError):
+            actual = data.sel(dim2=np.pi, method='nearest', tolerance=0)
 
         expected = data.sel(dim2=[1.5])
         actual = data.sel(dim2=[1.45], method='backfill')
@@ -1194,13 +1191,9 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('y', [10, 20, np.nan]), 'y': y})
         self.assertDatasetIdentical(expected, actual)
 
-        if pd.__version__ >= '0.17':
-            actual = ds.reindex(y=y, method='backfill', tolerance=0.1)
-            expected = Dataset({'x': ('y', 3 * [np.nan]), 'y': y})
-            self.assertDatasetIdentical(expected, actual)
-        else:
-            with self.assertRaisesRegexp(TypeError, 'tolerance'):
-                ds.reindex(y=y, method='backfill', tolerance=0.1)
+        actual = ds.reindex(y=y, method='backfill', tolerance=0.1)
+        expected = Dataset({'x': ('y', 3 * [np.nan]), 'y': y})
+        self.assertDatasetIdentical(expected, actual)
 
         actual = ds.reindex(y=y, method='pad')
         expected = Dataset({'x': ('y', [np.nan, 10, 20]), 'y': y})
@@ -2192,16 +2185,21 @@ class TestDataset(TestCase):
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
 
-        actual = ds.resample('1D', dim='time', how='first', keep_attrs=True)
+        actual = ds.resample(time='1D').first(keep_attrs=True)
         expected = ds.isel(time=[0, 4, 8])
         self.assertDatasetIdentical(expected, actual)
 
         # upsampling
         expected_time = pd.date_range('2000-01-01', freq='3H', periods=19)
         expected = ds.reindex(time=expected_time)
-        for how in ['mean', 'sum', 'first', 'last', np.mean]:
-            actual = ds.resample('3H', 'time', how=how)
-            self.assertDatasetEqual(expected, actual)
+        actual = ds.resample(time='3H')
+        for how in ['mean', 'sum', 'first', 'last', ]:
+            method = getattr(actual, how)
+            result = method()
+            self.assertDatasetEqual(expected, result)
+        for method in [np.mean, ]:
+            result = actual.reduce(method)
+            self.assertDatasetEqual(expected, result)
 
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -2210,7 +2208,7 @@ class TestDataset(TestCase):
                       'time': times})
         ds.attrs['dsmeta'] = 'dsdata'
 
-        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=True)
+        resampled_ds = ds.resample(time='1D').mean(keep_attrs=True)
         actual = resampled_ds['bar'].attrs
         expected = ds['bar'].attrs
         self.assertEqual(expected, actual)
@@ -2226,7 +2224,7 @@ class TestDataset(TestCase):
                       'time': times})
         ds.attrs['dsmeta'] = 'dsdata'
 
-        resampled_ds = ds.resample('1D', dim='time', how='mean', keep_attrs=False)
+        resampled_ds = ds.resample(time='1D').mean(keep_attrs=False)
 
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
@@ -2238,10 +2236,57 @@ class TestDataset(TestCase):
                       'time': times})
         ds.attrs['dsmeta'] = 'dsdata'
 
-        resampled_ds = ds.resample('1D', dim='time', how='last', keep_attrs=False)
+        resampled_ds = ds.resample(time='1D').last(keep_attrs=False)
 
         assert resampled_ds['bar'].attrs == {}
         assert resampled_ds.attrs == {}
+
+    @requires_scipy
+    def test_resample_drop_nondim_coords(self):
+        xs = np.arange(6)
+        ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        data = np.tile(np.arange(5), (6, 3, 1))
+        xx, yy = np.meshgrid(xs*5, ys*2.5)
+        tt = np.arange(len(times), dtype=int)
+        array = DataArray(data,
+                          {'time': times, 'x': xs, 'y': ys},
+                          ('x', 'y', 'time'))
+        xcoord = DataArray(xx.T, {'x': xs, 'y': ys}, ('x', 'y'))
+        ycoord = DataArray(yy.T, {'x': xs, 'y': ys}, ('x', 'y'))
+        tcoord = DataArray(tt, {'time': times}, ('time', ))
+        ds = Dataset({'data': array, 'xc': xcoord,
+                      'yc': ycoord, 'tc': tcoord})
+        ds = ds.set_coords(['xc', 'yc', 'tc'])
+
+        # Re-sample
+        actual = ds.resample(time="12H").mean('time')
+        assert 'tc' not in actual.coords
+
+        # Up-sample - filling
+        actual = ds.resample(time="1H").ffill()
+        assert 'tc' not in actual.coords
+
+        # Up-sample - interpolation
+        actual = ds.resample(time="1H").interpolate('linear')
+        assert 'tc' not in actual.coords
+
+    def test_resample_old_vs_new_api(self):
+
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        for method in ['mean', 'sum', 'count', 'first', 'last']:
+            resampler = ds.resample(time='1D')
+            # Discard attributes on the call using the new api to match
+            # convention from old api
+            new_api = getattr(resampler, method)(keep_attrs=False)
+            with pytest.warns(DeprecationWarning):
+                old_api = ds.resample('1D', dim='time', how=method)
+            self.assertDatasetIdentical(new_api, old_api)
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
@@ -2352,10 +2397,6 @@ class TestDataset(TestCase):
         # we can't do perfectly, but we should be at least as faithful as
         # np.asarray
         expected = df.apply(np.asarray)
-        if pd.__version__ < '0.17':
-            # datetime with timezone dtype is not consistent on old pandas
-            roundtripped = roundtripped.drop(['h'], axis=1)
-            expected = expected.drop(['h'], axis=1)
         assert roundtripped.equals(expected)
 
     def test_to_and_from_dict(self):
@@ -2796,6 +2837,15 @@ class TestDataset(TestCase):
             self.assertItemsEqual(actual, expected)
 
         self.assertDatasetEqual(data.mean(dim=[]), data)
+
+        # uint support
+        data = xr.Dataset({'a': (('x', 'y'),
+                                 np.arange(6).reshape(3, 2).astype('uint')),
+                           'b': (('x', ), np.array([0.1, 0.2, np.nan]))})
+        actual = data.mean('x', skipna=True)
+        expected = xr.Dataset({'a': data['a'].mean('x'),
+                               'b': data['b'].mean('x', skipna=True)})
+        self.assertDatasetIdentical(actual, expected)
 
     def test_reduce_bad_dim(self):
         data = create_test_data()
@@ -3502,8 +3552,6 @@ def ds(request):
 
 
 def test_rolling_properties(ds):
-    pytest.importorskip('bottleneck', minversion='1.0')
-
     # catching invalid args
     with pytest.raises(ValueError) as exception:
         ds.rolling(time=7, x=2)
@@ -3518,18 +3566,14 @@ def test_rolling_properties(ds):
         ds.rolling(time2=2)
     assert 'time2' in str(exception)
 
+
 @pytest.mark.parametrize('name',
                          ('sum', 'mean', 'std', 'var', 'min', 'max', 'median'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
 @pytest.mark.parametrize('key', ('z1', 'z2'))
 def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
-    pytest.importorskip('bottleneck')
-    import bottleneck as bn
-
-    # skip if median and min_periods
-    if (min_periods == 1) and (name == 'median'):
-        pytest.skip()
+    bn = pytest.importorskip('bottleneck', minversion='1.1')
 
     # Test all bottleneck functions
     rolling_obj = ds.rolling(time=7, min_periods=min_periods)
@@ -3547,16 +3591,6 @@ def test_rolling_wrapped_bottleneck(ds, name, center, min_periods, key):
     rolling_obj = ds.rolling(time=7, center=center)
     actual = getattr(rolling_obj, name)()['time']
     assert_equal(actual, ds['time'])
-
-
-def test_rolling_invalid_args(ds):
-    pytest.importorskip('bottleneck', minversion="1.0")
-    import bottleneck as bn
-    if LooseVersion(bn.__version__) >= LooseVersion('1.1'):
-        pytest.skip('rolling median accepts min_periods for bottleneck 1.1')
-    with pytest.raises(ValueError) as exception:
-        da.rolling(time=7, min_periods=1).median()
-    assert 'Rolling.median does not' in str(exception)
 
 
 @pytest.mark.parametrize('center', (True, False))
@@ -3594,11 +3628,8 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
-    # std with window == 1 seems unstable in bottleneck
     if name == 'std' and window == 1:
-        window = 2
-    if name == 'median':
-        min_periods = None
+        pytest.skip('std with window == 1 is unstable in bottleneck')
 
     rolling_obj = ds.rolling(time=window, center=center,
                              min_periods=min_periods)
