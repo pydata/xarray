@@ -28,7 +28,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
                assert_allclose, flaky, network, requires_rasterio,
-               assert_identical, mark_class)
+               assert_identical)
 from .test_dataset import create_test_data
 
 from xarray.tests import mock
@@ -590,8 +590,8 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
         yield files
 
 
-@mark_class(requires_netCDF4)
 class BaseNetCDF4Test(CFEncodedDataTest):
+    @requires_netCDF4
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -617,6 +617,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             with self.assertRaisesRegexp(ValueError, 'must be a string'):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
+    @requires_netCDF4
     def test_open_subgroup(self):
         # Create a netCDF file with a dataset stored within a group within a group
         with create_tmp_file() as tmp_file:
@@ -638,6 +639,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 with open_dataset(tmp_file, group=group) as actual:
                     self.assertVariableEqual(actual['x'], expected['x'])
 
+    @requires_netCDF4
     def test_write_groups(self):
         data1 = create_test_data()
         data2 = data1 * 2
@@ -649,6 +651,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             with open_dataset(tmp_file, group='data/2') as actual2:
                 self.assertDatasetIdentical(data2, actual2)
 
+    @requires_netCDF4
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
             values = np.array([['a', 'b', 'c'], ['d', 'e', 'f']], dtype='S')
@@ -667,12 +670,14 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 with self.roundtrip(actual) as roundtripped:
                     self.assertDatasetIdentical(expected, roundtripped)
 
+    @requires_netCDF4
     def test_default_to_char_arrays(self):
         data = Dataset({'x': np.array(['foo', 'zzzz'], dtype='S')})
         with self.roundtrip(data) as actual:
             self.assertDatasetIdentical(data, actual)
             self.assertEqual(actual['x'].dtype, np.dtype('S4'))
 
+    @requires_netCDF4
     def test_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
@@ -698,6 +703,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                                        if k in expected['time'].encoding)
                 self.assertDictEqual(actual_encoding, expected['time'].encoding)
 
+    @requires_netCDF4
     def test_dump_encodings(self):
         # regression test for #709
         ds = Dataset({'x': ('y', np.arange(10.0))})
@@ -705,6 +711,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertTrue(actual.x.encoding['zlib'])
 
+    @requires_netCDF4
     def test_dump_and_open_encodings(self):
         # Create a netCDF file with explicit time units
         # and make sure it makes it into the encodings
@@ -724,6 +731,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                         self.assertEqual(ds.variables['time'].getncattr('units'), units)
                         self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
 
+    @requires_netCDF4
     def test_compression_encoding(self):
         data = create_test_data()
         data['var2'].encoding.update({'zlib': True,
@@ -739,6 +747,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
+    @requires_netCDF4
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
@@ -763,6 +772,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = create_masked_and_scaled_data()
                 self.assertDatasetIdentical(expected, ds)
 
+    @requires_netCDF4
     def test_0dimensional_variable(self):
         # This fix verifies our work-around to this netCDF4-python bug:
         # https://github.com/Unidata/netcdf4-python/pull/220
@@ -775,6 +785,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = Dataset({'x': ((), 123)})
                 self.assertDatasetIdentical(expected, ds)
 
+    @requires_netCDF4
     def test_already_open_dataset(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
@@ -787,6 +798,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     expected = Dataset({'x': ((), 42)})
                     self.assertDatasetIdentical(expected, ds)
 
+    @requires_netCDF4
     def test_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
@@ -802,7 +814,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     self.assertDatasetIdentical(expected, actual)
 
 
-@mark_class(requires_netCDF4)
 class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
     autoclose = False
 
@@ -813,6 +824,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                 yield store
 
     @contextlib.contextmanager
+    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -855,10 +867,10 @@ class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
     autoclose = True
 
 
-@mark_class(requires_netCDF4)
-@mark_class(requires_dask)
 class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     @contextlib.contextmanager
+    @requires_netCDF4
+    @requires_dask
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with NetCDF4DataTest.roundtrip(
@@ -880,7 +892,6 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
-@mark_class(requires_scipy)
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
@@ -888,6 +899,7 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
+    @requires_scipy
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         serialized = data.to_netcdf(**save_kwargs)
@@ -912,7 +924,6 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
     autoclose = True
 
 
-@mark_class(requires_scipy)
 class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
@@ -920,6 +931,7 @@ class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         yield backends.ScipyDataStore(fobj, 'w')
 
     @contextlib.contextmanager
+    @requires_scipy
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file() as tmp_file:
@@ -938,7 +950,6 @@ class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
 
-@mark_class(requires_scipy)
 class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
@@ -947,6 +958,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
+    @requires_scipy
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -992,7 +1004,6 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
     autoclose = True
 
 
-@mark_class(requires_netCDF4)
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
     def create_store(self):
@@ -1002,6 +1013,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                 yield store
 
     @contextlib.contextmanager
+    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -1017,7 +1029,6 @@ class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
     autoclose = True
 
 
-@mark_class(requires_netCDF4)
 class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
                                        TestCase):
     @contextlib.contextmanager
@@ -1028,6 +1039,7 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
                 yield store
 
     @contextlib.contextmanager
+    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -1044,7 +1056,6 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
     autoclose = True
 
 
-@mark_class(requires_scipy_or_netCDF4)
 class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
@@ -1054,6 +1065,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
+    @requires_scipy_or_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -1118,8 +1130,6 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
     autoclose = True
 
 
-@mark_class(requires_h5netcdf)
-@mark_class(requires_netCDF4)
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
     @contextlib.contextmanager
     def create_store(self):
@@ -1127,6 +1137,8 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     @contextlib.contextmanager
+    @requires_h5netcdf
+    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -1179,9 +1191,9 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
 
 # tests pending h5netcdf fix
-@pytest.mark.xfail
-class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
-    autoclose = True
+# @pytest.mark.xfail  @shoyer - is this still an issue?
+# class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
+#     autoclose = True
 
 
 class OpenMFDatasetManyFilesTest(TestCase):
@@ -1267,15 +1279,15 @@ class OpenMFDatasetManyFilesTest(TestCase):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
 
-@mark_class(requires_dask)
-@mark_class(requires_scipy)
-@mark_class(requires_netCDF4)
 class DaskTest(TestCase, DatasetIOTestCases):
     @contextlib.contextmanager
     def create_store(self):
         yield Dataset()
 
     @contextlib.contextmanager
+    @requires_dask
+    @requires_scipy
+    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         yield data.chunk()
@@ -1387,7 +1399,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
-
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1476,11 +1487,11 @@ class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
 
 
-@mark_class(network)
-@mark_class(requires_scipy_or_netCDF4)
-@mark_class(requires_pydap)
 class PydapTest(TestCase):
     @contextlib.contextmanager
+    @network
+    @requires_scipy_or_netCDF4
+    @requires_pydap
     def create_datasets(self, **kwargs):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
         actual = open_dataset(url, engine='pydap', **kwargs)
@@ -1511,6 +1522,7 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
 
+    @requires_pydap
     def test_session(self):
         from pydap.cas.urs import setup_session
 
@@ -1525,8 +1537,6 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual, expected)
 
 
-@mark_class(requires_scipy)
-@mark_class(requires_pynio)
 class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
@@ -1537,6 +1547,8 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
         pass
 
     @contextlib.contextmanager
+    @requires_scipy
+    @requires_pynio
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
@@ -1546,6 +1558,8 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
+    @requires_pynio
+    @requires_scipy
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})
         expected = example.rename({'foo': 'bar', 'x': 'y'})
@@ -1558,15 +1572,13 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
             self.assertDatasetIdentical(actual, expected)
 
 
-@mark_class(requires_scipy)
-@mark_class(requires_pynio)
 class TestPyNioAutocloseTrue(TestPyNio):
     autoclose = True
 
 
-@mark_class(requires_rasterio)
 class TestRasterio(TestCase):
 
+    @requires_rasterio
     def test_serialization_utm(self):
         import rasterio
         from rasterio.transform import from_origin
@@ -1612,6 +1624,7 @@ class TestRasterio(TestCase):
                     with xr.open_dataarray(tmp_nc_file) as ncds:
                         assert_identical(rioda, ncds)
 
+    @requires_rasterio
     def test_serialization_platecarree(self):
 
         import rasterio
@@ -1656,6 +1669,7 @@ class TestRasterio(TestCase):
                     with xr.open_dataarray(tmp_nc_file) as ncds:
                         assert_identical(rioda, ncds)
 
+    @requires_rasterio
     def test_indexing(self):
 
         import rasterio
@@ -1749,6 +1763,7 @@ class TestRasterio(TestCase):
                 ac = actual.isel(band=[0], x=slice(2, 5), y=[2])
                 assert_allclose(ac, ex)
 
+    @requires_rasterio
     def test_caching(self):
 
         import rasterio
@@ -1793,6 +1808,7 @@ class TestRasterio(TestCase):
                 assert_allclose(ac, ex)
 
     @requires_dask
+    @requires_rasterio
     def test_chunks(self):
 
         import rasterio
@@ -1860,7 +1876,7 @@ class MiscObject:
     pass
 
 
-@mark_class(requires_netCDF4)
+@requires_netCDF4
 class TestValidateAttrs(TestCase):
     def test_validating_attrs(self):
         def new_dataset():
@@ -1960,7 +1976,7 @@ class TestValidateAttrs(TestCase):
                 ds.to_netcdf(tmp_file)
 
 
-@mark_class(requires_scipy_or_netCDF4)
+@requires_scipy_or_netCDF4
 class TestDataArrayToNetCDF(TestCase):
 
     def test_dataarray_to_netcdf_no_name(self):
