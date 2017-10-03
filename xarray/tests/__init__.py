@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from distutils.version import LooseVersion
 import re
 import importlib
-import types
 
 import numpy as np
 from numpy.testing import assert_array_equal

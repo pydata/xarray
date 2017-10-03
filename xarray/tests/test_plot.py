@@ -65,7 +65,6 @@ def easy_array(shape, start=0, stop=1):
     return a.reshape(shape)
 
 
-@requires_matplotlib
 class PlotTestCase(TestCase):
 
     def tearDown(self):
@@ -91,6 +90,7 @@ class PlotTestCase(TestCase):
 
 class TestPlot(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
@@ -219,6 +219,7 @@ class TestPlot(PlotTestCase):
 
 class TestPlot1D(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         d = [0, 1.1, 0, 2]
         self.darray = DataArray(d, coords={'period': range(len(d))},
@@ -279,6 +280,7 @@ class TestPlot1D(PlotTestCase):
 
 class TestPlotHistogram(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
@@ -316,9 +318,9 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
 
 
-@requires_matplotlib
 class TestDetermineCmapParams(TestCase):
 
+    @requires_matplotlib
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
 
@@ -467,9 +469,9 @@ class TestDetermineCmapParams(TestCase):
         self.assertEqual(cmap_params['cmap'].name, "viridis")
 
 
-@requires_matplotlib
 class TestDiscreteColorMap(TestCase):
 
+    @requires_matplotlib
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
         y = np.arange(start=9, stop=-7, step=-3)
@@ -559,6 +561,7 @@ class Common2dMixin:
     Should have the same name as the method.
     """
 
+    @requires_matplotlib
     def setUp(self):
         da = DataArray(easy_array(
             (10, 15), start=-1), dims=['y', 'x'])
@@ -1019,6 +1022,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
 class TestFacetGrid(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         d = easy_array((10, 15, 3))
         self.darray = DataArray(d, dims=['y', 'x', 'z'],
@@ -1242,6 +1246,7 @@ class TestFacetGrid(PlotTestCase):
 
 class TestFacetGrid4d(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
         darray = DataArray(a, dims=['y', 'x', 'col', 'row'])
@@ -1270,6 +1275,7 @@ class TestFacetGrid4d(PlotTestCase):
 
 class TestDatetimePlot(PlotTestCase):
 
+    @requires_matplotlib
     def setUp(self):
         '''
         Create a DataArray with a time-axis that contains datetime objects.

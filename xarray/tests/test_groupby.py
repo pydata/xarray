@@ -14,7 +14,7 @@ def test_consolidate_slices():
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
     assert (_consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)])
-          == [slice(2, 6, 1)])
+            == [slice(2, 6, 1)])
 
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
@@ -70,5 +70,5 @@ def test_groupby_duplicate_coordinate_labels():
     actual = array.groupby('x').sum()
     assert expected.equals(actual)
 
-    
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

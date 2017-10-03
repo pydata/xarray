@@ -44,7 +44,6 @@ class DaskTestCase(TestCase):
             assert False
 
 
-@requires_dask
 class TestVariable(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
@@ -52,6 +51,7 @@ class TestVariable(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableAllClose)
 
+    @requires_dask
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -206,7 +206,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
 
-@requires_dask
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
@@ -217,6 +216,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayEqual)
 
+    @requires_dask
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))

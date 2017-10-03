@@ -1575,6 +1575,10 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 class TestPyNioAutocloseTrue(TestPyNio):
     autoclose = True
 
+    @requires_pynio
+    def setUp(self):
+        pass
+
 
 class TestRasterio(TestCase):
 
