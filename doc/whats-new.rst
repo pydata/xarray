@@ -212,10 +212,9 @@ Bug fixes
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-  - Fix bug when using ``pytest`` class decorators to skiping certain unittests.
-    The previous behavior unintentionally causing additional tests to be skipped.
-    A temporary work-around has been applied in :issue:`1531`.
-    By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+  The previous behavior unintentionally causing additional tests to be skipped
+  (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 
