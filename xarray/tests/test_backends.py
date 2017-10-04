@@ -1179,7 +1179,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
 
 # tests pending h5netcdf fix
-@pytest.mark.xfail
+@unittest.skip
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
