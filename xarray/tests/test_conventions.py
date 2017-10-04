@@ -527,8 +527,8 @@ class TestNativeEndiannessArray(TestCase):
         self.assertArrayEqual(a, expected)
 
 
+@requires_netCDF4
 class TestEncodeCFVariable(TestCase):
-    @requires_netCDF4
     def test_incompatible_attributes(self):
         invalid_vars = [
             Variable(['t'], pd.date_range('2000-01-01', periods=3),
@@ -541,7 +541,6 @@ class TestEncodeCFVariable(TestCase):
             with self.assertRaises(ValueError):
                 conventions.encode_cf_variable(var)
 
-    @requires_netCDF4
     def test_missing_fillvalue(self):
         v = Variable(['x'], np.array([np.nan, 1, 2, 3]))
         v.encoding = {'dtype': 'int16'}
@@ -549,8 +548,8 @@ class TestEncodeCFVariable(TestCase):
             conventions.encode_cf_variable(v)
 
 
+@requires_netCDF4
 class TestDecodeCF(TestCase):
-    @requires_netCDF4
     def test_dataset(self):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
@@ -563,30 +562,25 @@ class TestDecodeCF(TestCase):
         actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(expected, actual)
 
-    @requires_netCDF4
     def test_invalid_coordinates(self):
         # regression test for GH308
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'invalid'})})
         actual = conventions.decode_cf(original)
         self.assertDatasetIdentical(original, actual)
 
-    @requires_netCDF4
     def test_decode_coordinates(self):
-
         # regression test for GH610
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'x'}),
                             'x': ('t', [4, 5])})
         actual = conventions.decode_cf(original)
         self.assertEqual(actual.foo.encoding['coordinates'], 'x')
 
-    @requires_netCDF4
     def test_0d_int32_encoding(self):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
         expected = Variable((), np.int64(0))
         actual = conventions.maybe_encode_dtype(original)
         self.assertDatasetIdentical(expected, actual)
 
-    @requires_netCDF4
     def test_decode_cf_with_multiple_missing_values(self):
         original = Variable(['t'], [0, 1, 2],
                             {'missing_value': np.array([0, 1])})
@@ -596,7 +590,6 @@ class TestDecodeCF(TestCase):
             self.assertDatasetIdentical(expected, actual)
             self.assertIn('variable has multiple fill', str(w[0].message))
 
-    @requires_netCDF4
     def test_decode_cf_with_drop_variables(self):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
@@ -641,13 +634,13 @@ def null_wrap(ds):
     return InMemoryDataStore(variables=variables, attributes=ds.attrs)
 
 
+@requires_netCDF4
 class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()
 
     @contextlib.contextmanager
-    @requires_netCDF4
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         store = CFEncodedInMemoryStore()

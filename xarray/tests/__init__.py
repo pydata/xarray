@@ -16,6 +16,16 @@ from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
 
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 
 def _importorskip(modname, minversion=None):
     try:
@@ -26,19 +36,10 @@ def _importorskip(modname, minversion=None):
                 raise ImportError('Minimum version not satisfied')
     except ImportError:
         has = False
-    func = pytest.mark.skipif((not has), reason='requires {}'.format(modname))
+    # TODO: use pytest skip
+    func = unittest.skipUnless(has, reason='requires {}'.format(modname))
     return has, func
 
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
 has_scipy, requires_scipy = _importorskip('scipy')
@@ -53,8 +54,8 @@ has_pathlib, requires_pathlib = _importorskip('pathlib')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
-requires_scipy_or_netCDF4 = pytest.mark.skipif(
-    not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
+requires_scipy_or_netCDF4 = unittest.skipUnless(
+    has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 
