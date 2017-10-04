@@ -597,7 +597,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         data = self._indexable_data[index_tuple]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
-        assert getattr(data, 'ndim', 0) == len(dims), (data.ndim, len(dims))
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
