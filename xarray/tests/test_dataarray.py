@@ -2077,6 +2077,12 @@ class TestDataArray(TestCase):
             # done here due to floating point arithmetic
             self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
 
+    @requires_scipy
+    def test_upsample_interpolate_regression_1605(self):
+        ds = xr.tutorial.load_dataset('air_temperature')
+        array = ds['air']
+        array.resample(time='15d').interpolate(kind='linear')
+
     @requires_dask
     def test_upsample_interpolate_dask(self):
         import dask.array as da
