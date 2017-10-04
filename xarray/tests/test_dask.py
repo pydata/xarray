@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import pickle
 from textwrap import dedent
+
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 import pytest
@@ -252,6 +254,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndAllClose(u, actual)
 
     def test_groupby(self):
+        if LooseVersion(dask.__version__) == LooseVersion('0.15.3'):
+            pytest.xfail('upstream bug in dask: '
+                         'https://github.com/dask/dask/issues/2718')
+
         u = self.eager_array
         v = self.lazy_array
 
