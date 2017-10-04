@@ -2079,9 +2079,12 @@ class TestDataArray(TestCase):
 
     @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
-        ds = xr.tutorial.load_dataset('air_temperature')
-        array = ds['air']
-        array.resample(time='15d').interpolate(kind='linear')
+        dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
+        expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
+                                dims=('time', 'x', 'y'),
+                                coords={'time': dates})
+        actual = expected.resample(time='1D').interpolate('linear')
+        self.assertDataArrayAllClose(actual, expected, rtol=1e-16)
 
     @requires_dask
     def test_upsample_interpolate_dask(self):
