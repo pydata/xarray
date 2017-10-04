@@ -822,6 +822,24 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
+            for i, key in enumerate(data.variables):
+                mode = 'a' if i > 0 else 'w'
+                data[[key]].to_netcdf(tmp_file, mode=mode, **save_kwargs)
+            with open_dataset(tmp_file,
+                              autoclose=self.autoclose, **open_kwargs) as ds:
+                yield ds
+
+    def test_append_write(self):
+        # regression for GH1215
+        data = create_test_data()
+        with self.roundtrip_append(data) as actual:
+            self.assertDatasetIdentical(data, actual)
+
     def test_variable_order(self):
         # doesn't work with scipy or h5py :(
         ds = Dataset()

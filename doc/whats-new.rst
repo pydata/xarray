@@ -54,9 +54,9 @@ Breaking changes
     [...]
 
   Note that both versions are currently supported, but using the old syntax will
-  produce a warning encouraging users to adopt the new syntax. 
+  produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
-  
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
@@ -211,6 +211,10 @@ Bug fixes
 - :py:func:`xarray.concat` would eagerly load dask variables into memory if
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
+ (:issue:`1215`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 

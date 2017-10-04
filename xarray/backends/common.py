@@ -221,6 +221,8 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variables(self, variables, check_encoding_set,
                       unlimited_dims=None):
         for vn, v in iteritems(variables):
+            if self._mode == 'a' and vn in self.variables:
+                continue
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
