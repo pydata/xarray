@@ -861,7 +861,7 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 raise ValueError("Conflicting _FillValue and missing_value "
                                  "attributes on a variable: {} vs. {}\n\n"
                                  "Consider opening the offending dataset "
-                                 "using decode_cf=False, corrected the "
+                                 "using decode_cf=False, correcting the "
                                  "attributes and decoding explicitly using "
                                  "xarray.decode_cf()."
                                  .format(attributes['_FillValue'],
