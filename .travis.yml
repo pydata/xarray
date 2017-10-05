@@ -59,6 +59,8 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
