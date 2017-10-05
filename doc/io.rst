@@ -462,6 +462,17 @@ longitudes and latitudes.
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/jswhit/pyproj
 
+Zarr
+----
+
+`Zarr`_ is a Python package providing an implementation of chunked, compressed,
+N-dimensional arrays.
+
+TODO: fill in these docs
+
+.. _Zarr: http://zarr.readthedocs.io/
+
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -487,6 +498,7 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+
 
 
 Combining multiple files
