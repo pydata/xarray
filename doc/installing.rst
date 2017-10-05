@@ -24,6 +24,7 @@ For netCDF and IO
   reading and writing netCDF4 files that does not use the netCDF-C libraries
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
+- `zarr <http://zarr.readthedocs.io/`__: for chunked, compressed, N-dimensional arrays.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
