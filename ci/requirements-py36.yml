@@ -17,6 +17,7 @@ dependencies:
   - toolz
   - rasterio
   - bottleneck
+  - zarr
   - pip:
     - coveralls
     - pytest-cov
