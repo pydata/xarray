@@ -18,7 +18,7 @@ from . import TestCase
 
 from xarray.tests import mock
 
-dask = pytest.importerskip('dask')
+dask = pytest.importorskip('dask')
 import dask.array as da
 
 
