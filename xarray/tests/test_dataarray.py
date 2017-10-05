@@ -2084,7 +2084,7 @@ class TestDataArray(TestCase):
                                 dims=('time', 'x', 'y'),
                                 coords={'time': dates})
         actual = expected.resample(time='1D').interpolate('linear')
-        self.assertDataArrayAllClose(actual, expected, rtol=1e-16)
+        assert_allclose(actual, expected, rtol=1e-16)
 
     @requires_dask
     def test_upsample_interpolate_dask(self):
