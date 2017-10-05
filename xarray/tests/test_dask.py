@@ -479,8 +479,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute'])
+@requires_dask
 def test_dask_kwargs_variable(method):
     x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
     # args should be passed on to da.Array.compute()
@@ -490,8 +490,8 @@ def test_dask_kwargs_variable(method):
     mock_compute.assert_called_with(foo='bar')
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+@requires_dask
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = DataArray(data)
@@ -505,8 +505,8 @@ def test_dask_kwargs_dataarray(method):
     mock_func.assert_called_with(data, foo='bar')
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
+@requires_dask
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = Dataset({'x': (('y'), data)})
