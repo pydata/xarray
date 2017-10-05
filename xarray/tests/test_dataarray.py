@@ -2077,6 +2077,15 @@ class TestDataArray(TestCase):
             # done here due to floating point arithmetic
             self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
 
+    @requires_scipy
+    def test_upsample_interpolate_regression_1605(self):
+        dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
+        expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
+                                dims=('time', 'x', 'y'),
+                                coords={'time': dates})
+        actual = expected.resample(time='1D').interpolate('linear')
+        assert_allclose(actual, expected, rtol=1e-16)
+
     @requires_dask
     def test_upsample_interpolate_dask(self):
         import dask.array as da

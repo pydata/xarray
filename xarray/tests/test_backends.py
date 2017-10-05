@@ -729,6 +729,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         data['var2'].encoding.update({'zlib': True,
                                       'chunksizes': (5, 5),
                                       'fletcher32': True,
+                                      'shuffle': True,
                                       'original_shape': data.var2.shape})
         with self.roundtrip(data) as actual:
             for k, v in iteritems(data['var2'].encoding):
@@ -1845,6 +1846,11 @@ class TestEncodingInvalid(TestCase):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
         encoding = _extract_nc4_variable_encoding(var)
         self.assertEqual({}, encoding)
+
+        # regression test
+        var = xr.Variable(('x',), [1, 2, 3], {}, {'shuffle': True})
+        encoding = _extract_nc4_variable_encoding(var, raise_on_invalid=True)
+        self.assertEqual({'shuffle': True}, encoding)
 
     def test_extract_h5nc_encoding(self):
         # not supported with h5netcdf (yet)
