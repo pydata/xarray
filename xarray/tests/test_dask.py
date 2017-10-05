@@ -14,13 +14,12 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
-from . import TestCase, requires_dask
+from . import TestCase
 
 from xarray.tests import mock
 
-with suppress(ImportError):
-    import dask
-    import dask.array as da
+dask = pytest.importerskip('dask')
+import dask.array as da
 
 
 class DaskTestCase(TestCase):
@@ -46,7 +45,6 @@ class DaskTestCase(TestCase):
             assert False
 
 
-@requires_dask
 class TestVariable(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
@@ -208,7 +206,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
 
-@requires_dask
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
@@ -480,7 +477,6 @@ class TestDataArrayAndDataset(DaskTestCase):
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
-@requires_dask
 def test_dask_kwargs_variable(method):
     x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
     # args should be passed on to da.Array.compute()
@@ -491,7 +487,6 @@ def test_dask_kwargs_variable(method):
 
 
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
-@requires_dask
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = DataArray(data)
@@ -506,7 +501,6 @@ def test_dask_kwargs_dataarray(method):
 
 
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
-@requires_dask
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
     x = Dataset({'x': (('y'), data)})
