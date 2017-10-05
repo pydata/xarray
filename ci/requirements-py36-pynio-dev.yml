@@ -10,7 +10,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - pynio=dev python=3
+  - pynio=dev
   - pytest
   - numpy
   - pandas
