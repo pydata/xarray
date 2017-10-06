@@ -54,6 +54,7 @@ has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
+has_zarr, requires_zarr = _importorskip('zarr')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
