@@ -26,9 +26,9 @@ from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
-               assert_allclose, flaky, network, requires_rasterio,
-               assert_identical)
+               requires_pynio, requires_pathlib, requires_zarr,
+               requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
+               flaky, network, assert_identical)
 from .test_dataset import create_test_data
 
 from xarray.tests import mock
@@ -881,6 +881,7 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
+@requires_zarr
 class ZarrDataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):

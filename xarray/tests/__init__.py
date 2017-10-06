@@ -49,11 +49,12 @@ has_scipy, requires_scipy = _importorskip('scipy')
 has_pydap, requires_pydap = _importorskip('pydap.client')
 has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
 has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
-has_pynio, requires_pynio = _importorskip('pynio')
+has_pynio, requires_pynio = _importorskip('Nio')
 has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
+has_zarr, requires_zarr = _importorskip('zarr')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
