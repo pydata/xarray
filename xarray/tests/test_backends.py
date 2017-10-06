@@ -881,6 +881,21 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
+class ZarrDataTest(CFEncodedDataTest, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file(suffix='.zarr') as tmp:
+            yield backends.ZarrStore(store=tmp)
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(suffix='.zarr') as tmp:
+            zs = backends.ZarrStore(store=tmp)
+            data.dump_to_store(zs)
+            yield xr.open_zarr(tmp)
+
+
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     @contextlib.contextmanager
