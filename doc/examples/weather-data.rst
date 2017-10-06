@@ -68,7 +68,7 @@ Monthly averaging
 
 .. ipython:: python
 
-    monthly_avg = ds.resample('1MS', dim='time', how='mean')
+    monthly_avg = ds.resample(time='1MS').mean()
 
     @savefig examples_tmin_tmax_plot_mean.png
     monthly_avg.sel(location='IA').to_dataframe().plot(style='s-')

@@ -1,21 +1,25 @@
 name: test_env
 channels:
   - conda-forge
+  - ncar
 dependencies:
-  - python=2.7
+  - python=3.6
   - dask
   - distributed
   - h5py
   - h5netcdf
   - matplotlib
   - netcdf4
-  - pathlib2
+  - pynio=dev
   - pytest
-  - mock
   - numpy
   - pandas
   - scipy
   - seaborn
   - toolz
   - rasterio
-  - zarr
+  - bottleneck
+  - pip:
+    - coveralls
+    - pytest-cov
+    - pydap

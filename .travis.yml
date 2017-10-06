@@ -39,6 +39,8 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
   allow_failures:
   - python: 3.6
     env:
@@ -59,6 +61,8 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -76,11 +80,6 @@ before_install:
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
-  # scipy should not have been installed, but it's included in older versions of
-  # the conda pandas package
-  - if [[ "$CONDA_ENV" == "py27-min" ]]; then
-      conda remove scipy;
-    fi
   - python setup.py install
 
 script:

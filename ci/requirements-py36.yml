@@ -16,6 +16,7 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - bottleneck
   - zarr
   - pip:
     - coveralls

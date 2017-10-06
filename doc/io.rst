@@ -38,18 +38,22 @@ module:
 
     pickle.loads(pkl)
 
-Pickle support is important because it doesn't require any external libraries
+Pickling is important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are two important caveats:
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
 
-1. To simplify serialization, xarray's support for pickle currently loads all
-   array values into memory before dumping an object. This means it is not
-   suitable for serializing datasets too big to load into memory (e.g., from
-   netCDF or OPeNDAP).
-2. Pickle will only work as long as the internal data structure of xarray objects
-   remains unchanged. Because the internal design of xarray is still being
-   refined, we make no guarantees (at this point) that objects pickled with
-   this version of xarray will work in future versions.
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
+  or :py:meth:`~xarray.Dataset.compute`.
 
 .. _dictionary io:
 
@@ -383,6 +387,38 @@ over the network until we look at particular values:
     In [6]: tmax[0].plot()
 
 .. image:: _static/opendap-prism-tmax.png
+
+Some servers require authentication before we can access the data. For this
+purpose we can explicitly create a :py:class:`~xarray.backends.PydapDataStore`
+and pass in a `Requests`__ session object. For example for 
+HTTP Basic authentication::
+
+    import xarray as xr
+    import requests
+
+    session = requests.Session()
+    session.auth = ('username', 'password')
+
+    store = xr.backends.PydapDataStore.open('http://example.com/data',
+                                            session=session)
+    ds = xr.open_dataset(store)
+
+`Pydap's cas module`__ has functions that generate custom sessions for 
+servers that use CAS single sign-on. For example, to connect to servers
+that require NASA's URS authentication::
+
+  import xarray as xr
+  from pydata.cas.urs import setup_session
+
+  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+  session = setup_session('username', 'password', check_url=ds_url)
+  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+
+  ds = xr.open_dataset(store)
+
+__ http://docs.python-requests.org
+__ http://pydap.readthedocs.io/en/latest/client.html#authentication
 
 .. _io.rasterio:
 

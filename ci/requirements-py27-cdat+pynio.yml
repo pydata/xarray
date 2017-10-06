@@ -13,8 +13,10 @@ dependencies:
   - netcdf4
   - numpy
   - pandas
+  - pathlib2
   - pynio
   - pytest
+  - mock
   - scipy
   - seaborn
   - toolz
