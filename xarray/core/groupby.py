@@ -236,8 +236,8 @@ class GroupBy(object):
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
             first_items = s.groupby(grouper).first()
+            full_index = first_items.index
             if first_items.isnull().any():
-                full_index = first_items.index
                 first_items = first_items.dropna()
             sbins = first_items.values.astype(np.int64)
             group_indices = ([slice(i, j)

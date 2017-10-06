@@ -1036,10 +1036,6 @@ class TestFacetGrid(PlotTestCase):
         for ax in self.g.axes.flat:
             self.assertTrue(ax.has_data())
 
-            # default font size should be small
-            fontsize = ax.title.get_size()
-            self.assertLessEqual(fontsize, 12)
-
     @pytest.mark.slow
     def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'

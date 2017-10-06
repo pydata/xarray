@@ -537,13 +537,9 @@ class TestDataArray(TestCase):
         actual = data.sel(y=['ab', 'ba'], method='pad')
         self.assertDataArrayIdentical(expected, actual)
 
-        if pd.__version__ >= '0.17':
-            expected = data.sel(x=[1, 2])
-            actual = data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
-            self.assertDataArrayIdentical(expected, actual)
-        else:
-            with self.assertRaisesRegexp(TypeError, 'tolerance'):
-                data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
+        expected = data.sel(x=[1, 2])
+        actual = data.sel(x=[0.9, 1.9], method='backfill', tolerance=1)
+        self.assertDataArrayIdentical(expected, actual)
 
     def test_sel_drop(self):
         data = DataArray([1, 2, 3], [('x', [0, 1, 2])])
@@ -917,10 +913,9 @@ class TestDataArray(TestCase):
     def test_reindex_method(self):
         x = DataArray([10, 20], dims='y', coords={'y': [0, 1]})
         y = [-0.1, 0.5, 1.1]
-        if pd.__version__ >= '0.17':
-            actual = x.reindex(y=y, method='backfill', tolerance=0.2)
-            expected = DataArray([10, np.nan, np.nan], coords=[('y', y)])
-            self.assertDataArrayIdentical(expected, actual)
+        actual = x.reindex(y=y, method='backfill', tolerance=0.2)
+        expected = DataArray([10, np.nan, np.nan], coords=[('y', y)])
+        self.assertDataArrayIdentical(expected, actual)
 
         alt = Dataset({'y': y})
         actual = x.reindex_like(alt, method='backfill')
@@ -2051,7 +2046,7 @@ class TestDataArray(TestCase):
                              ('x', 'y', 'time'))
         self.assertDataArrayIdentical(expected, actual)
 
-    @requires_scipy 
+    @requires_scipy
     def test_upsample_interpolate(self):
         from scipy.interpolate import interp1d
         xs = np.arange(6)
@@ -2081,6 +2076,15 @@ class TestDataArray(TestCase):
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
             self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
+
+    @requires_scipy
+    def test_upsample_interpolate_regression_1605(self):
+        dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
+        expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
+                                dims=('time', 'x', 'y'),
+                                coords={'time': dates})
+        actual = expected.resample(time='1D').interpolate('linear')
+        assert_allclose(actual, expected, rtol=1e-16)
 
     @requires_dask
     def test_upsample_interpolate_dask(self):
@@ -2807,7 +2811,7 @@ def da_dask(seed=123):
     da['time'] = times
     return da
 
-  
+
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)

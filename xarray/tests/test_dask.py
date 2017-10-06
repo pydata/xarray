@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import pickle
 from textwrap import dedent
+
+from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,13 +14,12 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
-from . import TestCase, requires_dask
+from . import TestCase
 
 from xarray.tests import mock
 
-with suppress(ImportError):
-    import dask
-    import dask.array as da
+dask = pytest.importorskip('dask')
+import dask.array as da
 
 
 class DaskTestCase(TestCase):
@@ -44,7 +45,6 @@ class DaskTestCase(TestCase):
             assert False
 
 
-@requires_dask
 class TestVariable(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
@@ -178,6 +178,8 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndIdentical(u, Variable.concat([v[:2], v[2:]], 'x'))
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], v[1]], 'x'))
+        self.assertLazyAndIdentical(u[:2], Variable.concat([u[0], v[1]], 'x'))
+        self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], u[1]], 'x'))
         self.assertLazyAndIdentical(
             u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', positions=[[0, 2], [1]]))
 
@@ -204,7 +206,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
 
-@requires_dask
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
@@ -250,6 +251,10 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndAllClose(u, actual)
 
     def test_groupby(self):
+        if LooseVersion(dask.__version__) == LooseVersion('0.15.3'):
+            pytest.xfail('upstream bug in dask: '
+                         'https://github.com/dask/dask/issues/2718')
+
         u = self.eager_array
         v = self.lazy_array
 
@@ -471,7 +476,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute'])
 def test_dask_kwargs_variable(method):
     x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
@@ -482,7 +486,6 @@ def test_dask_kwargs_variable(method):
     mock_compute.assert_called_with(foo='bar')
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
@@ -497,7 +500,6 @@ def test_dask_kwargs_dataarray(method):
     mock_func.assert_called_with(data, foo='bar')
 
 
-@requires_dask
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
