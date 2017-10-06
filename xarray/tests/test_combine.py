@@ -5,7 +5,6 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from xarray import Dataset, DataArray, auto_combine, concat, Variable
 from xarray.core.pycompat import iteritems, OrderedDict
@@ -269,7 +268,6 @@ class TestConcatDataArray(TestCase):
         with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
             concat([foo, bar], dim='w', data_vars='minimal')
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/1586')
     def test_concat_encoding(self):
         # Regression test for GH1297
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
