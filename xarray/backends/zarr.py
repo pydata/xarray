@@ -70,7 +70,6 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
 
 
 class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
-#class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
     """Store for reading and writing data via zarr
     """
 

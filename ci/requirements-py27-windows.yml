@@ -18,3 +18,4 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - zarr
