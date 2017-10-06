@@ -203,6 +203,7 @@ Bug fixes
 - ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
   coordinate shares a name with a dimension but is comprised of arbitrary
   dimensions(:issue:`1120`).
+
 - :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
@@ -214,6 +215,21 @@ Bug fixes
 - Fix :py:func:`xarray.save_mfdataset` to properly raise an informative error
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`xarray.concat` would eagerly load dask variables into memory if
+  the first argument was a numpy variable (:issue:`1588`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
+  (:issue:`1606`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+  The previous behavior unintentionally causing additional tests to be skipped
+  (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix pynio backend for upcoming release of pynio with python3 support 
+  (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
 
