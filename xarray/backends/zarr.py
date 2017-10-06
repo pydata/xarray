@@ -14,8 +14,7 @@ from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 from .common import (WritableCFDataStore, AbstractWritableDataStore,
                      DataStorePickleMixin)
 
-
-
+from .. import conventions
 
 # most of the other stores have some kind of wrapper class like
 # class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
@@ -52,7 +51,7 @@ def _dask_chunks_to_zarr_chunks(chunks):
         return chunks
 
     all_chunks = product(*chunks)
-    first_chunk = all_chunks.next()
+    first_chunk = next(all_chunks)
     for this_chunk in all_chunks:
         if not (this_chunk == first_chunk):
             raise ValueError("zarr requires uniform chunk sizes, found %s" %
@@ -70,7 +69,8 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     return dimensions, attributes
 
 
-class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
+class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
+#class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
     """Store for reading and writing data via zarr
     """
 
@@ -170,3 +170,82 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
         return zarr_array, variable.data
 
     # sync() and close() methods should not be needed with zarr
+
+
+def open_zarr(store, decode_cf=True,
+                 mask_and_scale=True, decode_times=True, autoclose=False,
+                 concat_characters=True, decode_coords=True,
+                 cache=None, drop_variables=None):
+    """Load and decode a dataset from a file or file-like object.
+
+    Parameters
+    ----------
+    store : MutableMapping or str
+        Store or path to directory in file system.
+    decode_cf : bool, optional
+        Whether to decode these variables, assuming they were saved according
+        to CF conventions.
+    mask_and_scale : bool, optional
+        If True, replace array values equal to `_FillValue` with NA and scale
+        values according to the formula `original_values * scale_factor +
+        add_offset`, where `_FillValue`, `scale_factor` and `add_offset` are
+        taken from variable attributes (if they exist).  If the `_FillValue` or
+        `missing_value` attribute contains multiple values a warning will be
+        issued and all array values matching one of the multiple values will
+        be replaced by NA.
+    decode_times : bool, optional
+        If True, decode times encoded in the standard NetCDF datetime format
+        into datetime objects. Otherwise, leave them encoded as numbers.
+    autoclose : bool, optional
+        If True, automatically close files to avoid OS Error of too many files
+        being open.  However, this option doesn't work with streams, e.g.,
+        BytesIO.
+    concat_characters : bool, optional
+        If True, concatenate along the last dimension of character arrays to
+        form string arrays. Dimensions will only be concatenated over (and
+        removed) if they have no corresponding variable and if they are only
+        used as the last dimension of character arrays.
+    decode_coords : bool, optional
+        If True, decode the 'coordinates' attribute to identify coordinates in
+        the resulting dataset.
+    cache : bool, optional
+        If True, cache data loaded from the underlying datastore in memory as
+        NumPy arrays when accessed to avoid reading from the underlying data-
+        store multiple times. Defaults to True unless you specify the `chunks`
+        argument to use dask, in which case it defaults to False. Does not
+        change the behavior of coordinates corresponding to dimensions, which
+        always load their data from disk into a ``pandas.Index``.
+    drop_variables: string or iterable, optional
+        A variable or list of variables to exclude from being parsed from the
+        dataset. This may be useful to drop variables with problems or
+        inconsistent values.
+
+    Returns
+    -------
+    dataset : Dataset
+        The newly created dataset.
+
+    See Also
+    --------
+    open_dataset
+    """
+    if not decode_cf:
+        mask_and_scale = False
+        decode_times = False
+        concat_characters = False
+        decode_coords = False
+
+    def maybe_decode_store(store, lock=False):
+        ds = conventions.decode_cf(
+            store, mask_and_scale=mask_and_scale, decode_times=decode_times,
+            concat_characters=concat_characters, decode_coords=decode_coords,
+            drop_variables=drop_variables)
+
+        # this is how we would apply caching
+        # but do we want it for zarr stores?
+        #_protect_dataset_variables_inplace(ds, cache)
+
+        return ds
+
+    zarr_store = ZarrStore(store=store)
+    return maybe_decode_store(zarr_store)
