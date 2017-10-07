@@ -562,19 +562,25 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
                          'explicitly set sizes with ``output_sizes``: {}'
                          .format(new_dims))
 
-    args2 = []
-    for data, core_dims in zip(args, signature.input_core_dims):
+    for n, (data, core_dims) in enumerate(
+            zip(args, signature.input_core_dims)):
         if isinstance(data, dask_array_type):
             # core dimensions cannot span multiple chunks
-            chunks = {axis: (data.shape[axis],)
-                  for axis, dim in enumerate(core_dims, -len(core_dims))}
-            data = data.rechunk(chunks)
-        args2.append(data)
+            for axis, dim in enumerate(core_dims, start=-len(core_dims)):
+                if len(data.chunks[axis]) != 1:
+                    raise ValueError(
+                        'dimension {!r} on {}th function argument to '
+                        "apply_ufunc with dask='parallelized' consists of "
+                        'multiple chunks, but is also a core dimension. To '
+                        'fix, rechunk into a single dask array chunk along '
+                        'this dimension, i.e., ``.rechunk({})``, but beware '
+                        'that this may significantly increase memory usage.'
+                        .format(dim, n, {dim: -1}))
 
     (out_ind,) = output_dims
     # skip leading dimensions that we did not insert with broadcast_compat_data
     atop_args = [element
-                 for (arg, dims) in zip(args2, input_dims)
+                 for (arg, dims) in zip(args, input_dims)
                  for element in (arg, dims[-getattr(arg, 'ndim', 0):])]
     return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
                    new_axes=output_sizes)

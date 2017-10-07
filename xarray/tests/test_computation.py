@@ -585,15 +585,6 @@ def test_apply_dask_parallelized():
     assert actual.data.chunks == array.chunks
     assert_identical(data_array, actual)
 
-    # check rechunking of core dimensions
-    actual = apply_ufunc(identity, data_array, dask='parallelized',
-                         output_dtypes=[float],
-                         input_core_dims=[('y',)],
-                         output_core_dims=[('y',)])
-    assert isinstance(actual.data, da.Array)
-    assert actual.data.chunks == ((1, 1), (2,))
-    assert_identical(data_array, actual)
-
 
 @requires_dask
 def test_apply_dask_parallelized_errors():
@@ -619,6 +610,12 @@ def test_apply_dask_parallelized_errors():
     with raises_regex(ValueError, 'at least one input is an xarray object'):
         apply_ufunc(identity, array, dask='parallelized')
 
+    with raises_regex(ValueError, 'consists of multiple chunks'):
+        apply_ufunc(identity, data_array, dask='parallelized',
+                    output_dtypes=[float],
+                    input_core_dims=[('y',)],
+                    output_core_dims=[('y',)])
+
 
 @requires_dask
 def test_apply_dask_multiple_inputs():
@@ -629,8 +626,8 @@ def test_apply_dask_multiple_inputs():
                 * (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
 
     rs = np.random.RandomState(42)
-    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 2))
-    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 2))
+    array1 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
+    array2 = da.from_array(rs.randn(4, 4), chunks=(2, 4))
     data_array_1 = xr.DataArray(array1, dims=('x', 'z'))
     data_array_2 = xr.DataArray(array2, dims=('y', 'z'))
 
