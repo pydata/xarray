@@ -678,3 +678,30 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     finally:
         for store in stores:
             store.close()
+
+
+def to_zarr(dataset, store=None, mode='a', synchronizer=None, group=None,
+            encoding=None):
+    """This function creates an appropriate datastore for writing a dataset to
+    disk a zarr ztore
+
+    See `Dataset.to_zarr` for full API docs.
+    """
+    if isinstance(store, path_type):
+        store = str(store)
+    if encoding is None:
+        encoding = {}
+
+    # validate Dataset keys, DataArray names, and attr keys/values
+    _validate_dataset_names(dataset)
+    _validate_attrs(dataset)
+
+    store = backends.ZarrStore(store=store, mode=mode,
+                               synchronizer=synchronizer, group=group,
+                               writer=None)
+
+    # I think zarr stores should always be sync'd immediately
+    # TODO: figure out how to properly handle unlimited_dims
+    print("to_zarr encoding", encoding)
+    dataset.dump_to_store(store, sync=True, encoding=encoding)
+    return store
