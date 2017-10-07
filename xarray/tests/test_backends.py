@@ -135,6 +135,7 @@ class DatasetIOTestCases(object):
     def roundtrip(self, data, **kwargs):
         raise NotImplementedError
 
+    # note: zero dimensional arrays are not suppoerted by zarr backend
     def test_zero_dimensional_variable(self):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
@@ -539,6 +540,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            print("actual.x.encoding", actual.x.encoding)
             self.assertEqual(actual.x.encoding['_FillValue'],
                              np.nan)
         self.assertEqual(ds.x.encoding, {})
@@ -891,10 +893,10 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
-        with create_tmp_file(suffix='.zarr') as tmp:
-            zs = backends.ZarrStore(store=tmp)
-            data.dump_to_store(zs)
-            yield xr.open_zarr(tmp)
+        with create_tmp_file(suffix='.zarr',
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
+            data.to_zarr(store=tmp_file, **save_kwargs)
+            yield xr.open_zarr(tmp_file, **open_kwargs)
 
 
 @requires_scipy

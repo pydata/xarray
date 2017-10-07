@@ -1008,6 +1008,34 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
 
+    def to_zarr(self, store=None, mode='a', synchronizer=None, group=None,
+                encoding=None):
+        """Write dataset contents to a zarr group.
+
+        Parameters
+        ----------
+        store : MutableMapping or str, optional
+            Store or path to directory in file system.
+        mode : {‘r’, ‘r+’, ‘a’, ‘w’, ‘w-‘}
+            Persistence mode: ‘r’ means read only (must exist); ‘r+’ means
+            read/write (must exist); ‘a’ means read/write (create if doesn’t
+            exist); ‘w’ means create (overwrite if exists); ‘w-‘ means create
+            (fail if exists).
+        synchronizer : object, optional
+            Array synchronizer
+        group : str, obtional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        """
+        if encoding is None:
+            encoding = {}
+        from ..backends.api import to_zarr
+        return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
+                         group=group, encoding=encoding)
+
     def __unicode__(self):
         return formatting.dataset_repr(self)
 
