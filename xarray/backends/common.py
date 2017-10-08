@@ -241,15 +241,7 @@ class WritableCFDataStore(AbstractWritableDataStore):
     def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
-        #print('Raw variable encoding:',
-        #      {name: var.encoding for name, var in variables.items()})
-        #print('Raw variable attrs:',
-        #      {name: var.attrs for name, var in variables.items()})
         cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        #print('cf_variable encoding:',
-        #      {name: var.encoding for name, var in cf_variables.items()})
-        #print('cf_variable attrs:',
-        #      {name: var.attrs for name, var in cf_variables.items()})
         AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
                                         *args, **kwargs)
 

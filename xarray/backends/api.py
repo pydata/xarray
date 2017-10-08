@@ -702,6 +702,5 @@ def to_zarr(dataset, store=None, mode='a', synchronizer=None, group=None,
 
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
-    print("to_zarr encoding", encoding)
     dataset.dump_to_store(store, sync=True, encoding=encoding)
     return store
