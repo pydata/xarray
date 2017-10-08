@@ -898,6 +898,25 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
             data.to_zarr(store=tmp_file, **save_kwargs)
             yield xr.open_zarr(tmp_file, **open_kwargs)
 
+    def test_auto_chunk(self):
+        original = create_test_data ().chunk()
+
+        with self.roundtrip(original,
+                open_kwargs={'auto_chunk': False}) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                self.assertEqual(v._in_memory, k in actual.dims)
+                # there should be no chunks
+                self.assertEqual(v.chunks, None)
+
+        with self.roundtrip(original,
+                open_kwargs={'auto_chunk': True}) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                self.assertEqual(v._in_memory, k in actual.dims)
+                # chunk size should be the same as original
+                self.assertEqual(v.chunks, original[k].chunks)
+
 
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
