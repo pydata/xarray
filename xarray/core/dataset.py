@@ -634,7 +634,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                 for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
-                                      self._dims.copy(), self._attrs_copy())
+                                      self._dims.copy(), self._attrs_copy(),
+                                      encoding=self.encoding)
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
