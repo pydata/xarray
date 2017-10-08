@@ -496,8 +496,10 @@ class HiddenKeyDict(MutableMapping):
     Acts like a normal dictionary, but hides certain keys.
     '''
     # ``__init__`` method required to create instance from class.
-    def __init__(self, data, *hidden_keys):
+    def __init__(self, data, hidden_keys):
         self._data = data
+        if type(hidden_keys) is not list:
+            hidden_keys = [ hidden_keys ]
         self._hidden_keys = hidden_keys
 
     def _raise_if_hidden(self, key):
@@ -523,4 +525,5 @@ class HiddenKeyDict(MutableMapping):
                 yield k
 
     def __len__(self):
-        return len(list(self.__iter__()))
+        num_hidden = sum([k in self._hidden_keys for k in self._data])
+        return len(self._data) - num_hidden
