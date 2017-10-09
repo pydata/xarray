@@ -148,68 +148,85 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
     Determine which dataset variables need to be concatenated in the result,
     and which can simply be taken from the first dataset.
     """
-    def process_subset_opt(opt, subset):
-        if subset == 'coords':
-            subset_long_name = 'coordinates'
-        else:
-            subset_long_name = 'data variables'
+    # Return values
+    concat_over = set()
+    equals = {}
 
+    if dim in datasets[0]:
+        concat_over.add(dim)
+    for ds in datasets:
+        concat_over.update(k for k, v in ds.variables.items()
+                           if dim in v.dims)
+
+    def process_subset_opt(opt, subset):
         if isinstance(opt, basestring):
             if opt == 'different':
-                def differs(vname):
-                    # simple helper function which compares a variable
-                    # across all datasets and indicates whether that
-                    # variable differs or not.
-                    v = datasets[0].variables[vname]
-                    return any(not ds.variables[vname].equals(v)
-                               for ds in datasets[1:])
                 # all nonindexes that are not the same in each dataset
-                concat_new = set(k for k in getattr(datasets[0], subset)
-                                 if k not in concat_over and differs(k))
+                for k in getattr(datasets[0], subset):
+                    if k not in concat_over:
+                        # Compare the variable of all datasets vs. the one
+                        # of the first dataset. Perform the minimum amount of
+                        # loads in order to avoid multiple loads from disk while
+                        # keeping the RAM footprint low.
+                        v_lhs = datasets[0].variables[k].load()
+                        # We'll need to know later on if variables are equal.
+                        computed = []
+                        for ds_rhs in datasets[1:]:
+                            v_rhs = ds_rhs.variables[k].compute()
+                            computed.append(v_rhs)
+                            if not v_lhs.equals(v_rhs):
+                                concat_over.add(k)
+                                equals[k] = False
+                                # computed variables are not to be re-computed
+                                # again in the future
+                                for ds, v in zip(datasets[1:], computed):
+                                    ds.variables[k].data = v.data
+                                break
+                        else:
+                            equals[k] = True
+
             elif opt == 'all':
-                concat_new = (set(getattr(datasets[0], subset)) -
-                              set(datasets[0].dims))
+                concat_over.update(set(getattr(datasets[0], subset)) -
+                                   set(datasets[0].dims))
             elif opt == 'minimal':
-                concat_new = set()
+                pass
             else:
-                raise ValueError("unexpected value for concat_%s: %s"
-                                 % (subset, opt))
+                raise ValueError("unexpected value for %s: %s" % (subset, opt))
         else:
             invalid_vars = [k for k in opt
                             if k not in getattr(datasets[0], subset)]
             if invalid_vars:
-                raise ValueError('some variables in %s are not '
-                                 '%s on the first dataset: %s'
-                                 % (subset, subset_long_name, invalid_vars))
-            concat_new = set(opt)
-        return concat_new
+                if subset == 'coords':
+                    raise ValueError(
+                        'some variables in coords are not coordinates on '
+                        'the first dataset: %s' % invalid_vars)
+                else:
+                    raise ValueError(
+                        'some variables in data_vars are not data variables on '
+                        'the first dataset: %s' % invalid_vars)
+            concat_over.update(opt)
 
-    concat_over = set()
-    for ds in datasets:
-        concat_over.update(k for k, v in ds.variables.items()
-                           if dim in v.dims)
-    concat_over.update(process_subset_opt(data_vars, 'data_vars'))
-    concat_over.update(process_subset_opt(coords, 'coords'))
-    if dim in datasets[0]:
-        concat_over.add(dim)
-    return concat_over
+    process_subset_opt(data_vars, 'data_vars')
+    process_subset_opt(coords, 'coords')
+    return concat_over, equals
 
 
 def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
     """
     Concatenate a sequence of datasets along a new or existing dimension
     """
-    from .dataset import Dataset, as_dataset
+    from .dataset import Dataset
 
     if compat not in ['equals', 'identical']:
         raise ValueError("compat=%r invalid: must be 'equals' "
                          "or 'identical'" % compat)
 
     dim, coord = _calc_concat_dim_coord(dim)
-    datasets = [as_dataset(ds) for ds in datasets]
+    # Make sure we're working on a copy (we'll be loading variables)
+    datasets = [ds.copy() for ds in datasets]
     datasets = align(*datasets, join='outer', copy=False, exclude=[dim])
 
-    concat_over = _calc_concat_over(datasets, dim, data_vars, coords)
+    concat_over, equals = _calc_concat_over(datasets, dim, data_vars, coords)
 
     def insert_result_variable(k, v):
         assert isinstance(v, Variable)
@@ -239,11 +256,25 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
             elif (k in result_coord_names) != (k in ds.coords):
                 raise ValueError('%r is a coordinate in some datasets but not '
                                  'others' % k)
-            elif (k in result_vars and k != dim and
-                  not getattr(v, compat)(result_vars[k])):
-                verb = 'equal' if compat == 'equals' else compat
-                raise ValueError(
-                    'variable %r not %s across datasets' % (k, verb))
+            elif k in result_vars and k != dim:
+                # Don't use Variable.identical as it internally invokes
+                # Variable.equals, and we may already know the answer
+                if compat == 'identical' and not utils.dict_equiv(
+                        v.attrs, result_vars[k].attrs):
+                    raise ValueError(
+                        'variable %s not identical across datasets' % k)
+
+                # Proceed with equals()
+                try:
+                    # May be populated when using the "different" method
+                    is_equal = equals[k]
+                except KeyError:
+                    result_vars[k].load()
+                    is_equal = v.equals(result_vars[k])
+                if not is_equal:
+                    raise ValueError(
+                        'variable %s not equal across datasets' % k)
+
 
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables

@@ -57,7 +57,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     def get_variables(self):
         with self.ensure_open(autoclose=False):
             return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.iteritems())
+                                     for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         with self.ensure_open(autoclose=True):

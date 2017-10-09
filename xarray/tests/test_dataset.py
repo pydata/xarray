@@ -50,6 +50,7 @@ def create_test_data(seed=None):
         obj[v] = (dims, data, {'foo': 'variable'})
     obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
                                               dtype='int64'))
+    obj.encoding = {'foo': 'bar'}
     assert all(obj.data.flags.writeable for obj in obj.values())
     return obj
 
@@ -1434,6 +1435,7 @@ class TestDataset(TestCase):
 
         for copied in [data.copy(deep=False), copy(data)]:
             self.assertDatasetIdentical(data, copied)
+            self.assertEqual(data.encoding, copied.encoding)
             # Note: IndexVariable objects with string dtype are always
             # copied because of xarray.core.util.safe_cast_to_index.
             # Limiting the test to data variables.

@@ -189,6 +189,13 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
@@ -196,6 +203,7 @@ Bug fixes
 - ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
   coordinate shares a name with a dimension but is comprised of arbitrary
   dimensions(:issue:`1120`).
+
 - :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
@@ -208,6 +216,10 @@ Bug fixes
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- :py:func:`xarray.Dataset.copy` would not preserve the encoding property
+  (:issue:`1586`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 - :py:func:`xarray.concat` would eagerly load dask variables into memory if
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
@@ -215,6 +227,17 @@ Bug fixes
 - Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
  (:issue:`1215`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
+  (:issue:`1606`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+  The previous behavior unintentionally causing additional tests to be skipped
+  (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix pynio backend for upcoming release of pynio with python3 support 
+  (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
 
