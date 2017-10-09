@@ -17,7 +17,6 @@ from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
-import warnings
 import xarray as xr
 import pytest
 
@@ -996,16 +995,16 @@ class TestDataset(TestCase):
         # Conflict in the dimension coordinate
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3)})
-        with self.assertRaisesRegexp(IndexError, "Dimension coordinate dim2"):
+        with self.assertRaisesRegexp(
+                IndexError, "dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_da)
         # Also the case for DataArray
-        with self.assertRaisesRegexp(IndexError, "Dimension coordinate dim2"):
+        with self.assertRaisesRegexp(
+                IndexError, "dimension coordinate 'dim2'"):
             actual = data['var2'].isel(dim2=indexing_da)
-
-        # isel for the coordinate variable. Should not attach the coordinate
-        actual = data['dim2'].isel(dim2=indexing_da)
-        self.assertDataArrayIdentical(actual,
-                                      data['dim2'].isel(dim2=np.arange(1, 4)))
+        with self.assertRaisesRegexp(
+                IndexError, "dimension coordinate 'dim2'"):
+            data['dim2'].isel(dim2=indexing_da)
 
         # same name coordinate which does not conflict
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
@@ -1055,13 +1054,13 @@ class TestDataset(TestCase):
         actual = data.isel(dim2=indexing_da)
         assert 'station' in actual
         actual = data.isel(dim2=indexing_da['station'])
-        assert 'station' not in actual
+        assert 'station' in actual
 
         # indexer generated from coordinates
         indexing_ds = Dataset({}, coords={'dim2': [0, 1, 2]})
-        actual = data.isel(dim2=indexing_ds['dim2'])
-        expected = data.isel(dim2=[0, 1, 2])
-        self.assertDatasetIdentical(actual, expected)
+        with self.assertRaisesRegexp(
+                IndexError, "dimension coordinate 'dim2'"):
+            actual = data.isel(dim2=indexing_ds['dim2'])
 
     def test_sel(self):
         data = create_test_data()
@@ -1567,7 +1566,7 @@ class TestDataset(TestCase):
         ind = xr.DataArray([0.0, 1.0], dims=['dim2'], name='ind')
         with pytest.warns(None) as ws:
             data.reindex(dim2=ind)
-            assert len(ws) == 0   
+            assert len(ws) == 0
 
     def test_reindex_variables_copied(self):
         data = create_test_data()
