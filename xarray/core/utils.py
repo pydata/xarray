@@ -425,6 +425,16 @@ class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
         return '%s(array=%r)' % (type(self).__name__, self.array)
 
 
+class ReprObject(object):
+    """Object that prints as the given value, for use with sentinel values."""
+
+    def __init__(self, value):  # type: str
+        self._value = value
+
+    def __repr__(self):
+        return self._value
+
+
 @contextlib.contextmanager
 def close_on_error(f):
     """Context manager to ensure that a file opened by xarray is closed if an
