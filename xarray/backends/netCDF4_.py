@@ -184,7 +184,7 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
 
     try:
         ds = nc4.Dataset(filename, mode=mode, **kwargs)
-    except OSError as e:
+    except (OSError, IOError) as e:
         raise OSError("Error opening %r" % filename, e)
 
     with close_on_error(ds):
