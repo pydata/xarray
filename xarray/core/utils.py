@@ -13,7 +13,6 @@ from collections import Mapping, MutableMapping, Iterable
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops
 from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
@@ -98,6 +97,8 @@ def equivalent(first, second):
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray
     """
+    # TODO: refactor to avoid circular import
+    from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
     else:
