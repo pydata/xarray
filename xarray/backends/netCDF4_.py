@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 import operator
+import errno
 
 import numpy as np
 
@@ -184,8 +185,11 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
 
     try:
         ds = nc4.Dataset(filename, mode=mode, **kwargs)
-    except (OSError, IOError) as e:
-        raise OSError("Error opening %r" % filename, e)
+    except IOError as e:
+        message = e.args[0]
+        if 'No such file or directory' in message:
+            raise FileNotFoundError(errno.ENOENT, message, filename)
+        raise IOError(e.errno, message, filename)
 
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)
