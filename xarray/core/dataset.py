@@ -2437,7 +2437,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # ensure we are dealing with dask arrays with consistent chunks
         chunked = self.chunk(chunks=self.chunks)
 
-        data = [chunked._variables[k].set_dims(ordered_dims).data.reshape(-1) for k in columns]
+        data = [chunked._variables[k].set_dims(ordered_dims).data.reshape(-1)
+                for k in columns]
 
         df = dd.concat([dd.from_array(d, columns=c)
                         for d, c in zip(data, columns)], axis=1)
@@ -2445,7 +2446,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if set_index:
 
             if len(ordered_dims) != 1:
-                raise ValueError('set_index=True only is valid for one-dimensional datasets')
+                raise ValueError(
+                        'set_index=True only is valid for '
+                        'for one-dimensional datasets')
 
             # extract out first (and only) coordinate variable
             coord_dim = list(ordered_dims)[0]
@@ -2453,7 +2456,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             # when and if dask dataframe suppored multiindex, this
             # might be needed instead:
-            #index = self.coords.to_index(ordered_dims)
+            # index = self.coords.to_index(ordered_dims)
 
             chunks = data[0].chunks[0]
             chunked_index = da.from_array(index, chunks=chunks)
