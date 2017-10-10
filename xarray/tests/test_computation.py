@@ -497,11 +497,13 @@ def test_keep_attrs():
 
 
 def test_dataset_join():
-    import numpy as np
     ds0 = xr.Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
     ds1 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
 
-    with pytest.raises(TypeError):
+    # by default, cannot have different labels
+    with raises_regex(ValueError, 'indexes .* are not equal'):
+        apply_ufunc(operator.add, ds0, ds1)
+    with raises_regex(TypeError, 'must supply'):
         apply_ufunc(operator.add, ds0, ds1, dataset_join='outer')
 
     def add(a, b, join, dataset_join):
@@ -517,12 +519,15 @@ def test_dataset_join():
     actual = add(ds0, ds1, 'outer', 'outer')
     assert_identical(actual, expected)
 
-    # if variables don't match, join will perform add with np.nan
+    with raises_regex(ValueError, 'data variable names'):
+        apply_ufunc(operator.add, ds0, xr.Dataset({'b': 1}))
+
     ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
     actual = add(ds0, ds2, 'outer', 'inner')
     expected = xr.Dataset({'x': [0, 1, 2]})
     assert_identical(actual, expected)
 
+    # we used np.nan as the fill_value in add() above
     actual = add(ds0, ds2, 'outer', 'outer')
     expected = xr.Dataset({'a': ('x', [np.nan, np.nan, np.nan]),
                            'b': ('x', [np.nan, np.nan, np.nan]),
