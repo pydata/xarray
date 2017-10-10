@@ -75,6 +75,11 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 
+- New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
+  written to work on NumPy arrays to support labels on xarray objects.
+  ``apply_ufunc`` also support automatic parallelization for many functions
+  with dask. See :ref:`computation.wrapping-custom` for details.
+
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
   :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
@@ -232,7 +237,7 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support 
+- Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:

@@ -14,6 +14,7 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   apply_ufunc
    align
    broadcast
    concat
