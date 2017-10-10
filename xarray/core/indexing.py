@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from datetime import timedelta
-from collections import defaultdict
+from collections import defaultdict, Hashable
 import numpy as np
 import pandas as pd
 
@@ -136,8 +136,13 @@ def convert_label_indexer(index, label, index_name='', method=None,
         elif len(label) == index.nlevels and not is_nested_vals:
             indexer = index.get_loc(tuple((label[k] for k in index.names)))
         else:
-            indexer, new_index = index.get_loc_level(tuple(label.values()),
-                                                     level=tuple(label.keys()))
+            for k, v in label.items():
+                # index should be an item (i.e. Hashable) not an array-like
+                if not isinstance(v, Hashable):
+                    raise ValueError('Vectorized selection is not '
+                                     'available along level variable: ' + k)
+            indexer, new_index = index.get_loc_level(
+                        tuple(label.values()), level=tuple(label.keys()))
 
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
@@ -160,6 +165,9 @@ def convert_label_indexer(index, label, index_name='', method=None,
         elif label.dtype.kind == 'b':
             indexer = label
         else:
+            if isinstance(index, pd.MultiIndex) and label.ndim > 1:
+                raise ValueError('Vectorized selection is not available along '
+                                 'MultiIndex variable: ' + index_name)
             indexer = get_indexer_nd(index, label, method, tolerance)
             if np.any(indexer < 0):
                 raise KeyError('not all values found in index %r'

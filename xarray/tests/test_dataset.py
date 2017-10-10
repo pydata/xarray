@@ -1188,6 +1188,16 @@ class TestDataset(TestCase):
         assert actual_sel['x'].dims == ('z', )
         self.assertDatasetIdentical(actual_isel, actual_sel)
 
+        # Vectorized indexing with level-variables raises an error
+        with self.assertRaisesRegexp(ValueError, 'Vectorized selection is '):
+            mds.sel(one=['a', 'b'])
+
+        with self.assertRaisesRegexp(ValueError, 'Vectorized selection is '
+                                     'not available along MultiIndex variable:'
+                                     ' x'):
+            mds.sel(x=xr.DataArray([np.array(midx[:2]), np.array(midx[-2:])],
+                                   dims=['a', 'b']))
+
     def test_sel_drop(self):
         data = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         expected = Dataset({'foo': 1})
