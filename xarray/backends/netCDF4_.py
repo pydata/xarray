@@ -187,9 +187,10 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
         ds = nc4.Dataset(filename, mode=mode, **kwargs)
     except IOError as e:
         message = e.args[0]
+        err_num = e.errno
         if 'No such file or directory' in message:
-            raise FileNotFoundError(errno.ENOENT, message, filename)
-        raise IOError(e.errno, message, filename)
+            err_num = errno.ENOENT
+        raise IOError(err_num, message, filename)
 
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)
