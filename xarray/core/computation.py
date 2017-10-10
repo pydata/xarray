@@ -651,7 +651,7 @@ def apply_ufunc(func, *args, **kwargs):
         expected to vectorize (broadcast) over axes of positional arguments in
         the style of NumPy universal functions [1]_ (if this is not the case,
         set ``vectorize=True``). If this function returns multiple outputs, you
-        most set ``output_core_dims`` as well.
+        must set ``output_core_dims`` as well.
     *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : Sequence[Sequence], optional
