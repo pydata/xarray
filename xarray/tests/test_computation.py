@@ -522,12 +522,12 @@ def test_dataset_join():
     with raises_regex(ValueError, 'data variable names'):
         apply_ufunc(operator.add, ds0, xr.Dataset({'b': 1}))
 
-    # we use np.nan as a fill_value
     ds2 = xr.Dataset({'b': ('x', [99, 3]), 'x': [1, 2]})
     actual = add(ds0, ds2, 'outer', 'inner')
     expected = xr.Dataset({'x': [0, 1, 2]})
     assert_identical(actual, expected)
 
+    # we used np.nan as the fill_value in add() above
     actual = add(ds0, ds2, 'outer', 'outer')
     expected = xr.Dataset({'a': ('x', [np.nan, np.nan, np.nan]),
                            'b': ('x', [np.nan, np.nan, np.nan]),
