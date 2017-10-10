@@ -74,6 +74,34 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support for ``data_vars`` and ``coords`` keywords added to
+  :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
+    #instead of
+    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
+    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
+
+    # in case of 'minimal' does not add time dimension to spatial coordinates
+    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
+
+    In [2]: ds['lon'].shape
+
+    Out[2]: (13505, 808, 782)
+
+    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
+
+    In [4]: ds['lon'].shape
+
+    Out[4]: (808, 782)
+
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
+
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
