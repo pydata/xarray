@@ -112,13 +112,9 @@ class _LocIndexer(object):
         self.data_array[pos_indexers] = value
 
 
-class _ThisArray(object):
-    """An instance of this object is used as the key corresponding to the
-    variable when converting arbitrary DataArray objects to datasets
-    """
-
-    def __repr__(self):
-        return '<this-array>'
+# Used as the key corresponding to a DataArray's variable when converting
+# arbitrary DataArray objects to datasets
+_THIS_ARRAY = utils.ReprObject('<this-array>')
 
 
 class DataArray(AbstractArray, BaseDataObject):
@@ -279,14 +275,12 @@ class DataArray(AbstractArray, BaseDataObject):
             obj = obj.rename(dim_names)
         return obj
 
-    __this_array = _ThisArray()
-
     def _to_temp_dataset(self):
-        return self._to_dataset_whole(name=self.__this_array,
+        return self._to_dataset_whole(name=_THIS_ARRAY,
                                       shallow_copy=False)
 
     def _from_temp_dataset(self, dataset, name=__default):
-        variable = dataset._variables.pop(self.__this_array)
+        variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
         return self._replace(variable, coords, name)
 

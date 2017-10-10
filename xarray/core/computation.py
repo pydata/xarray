@@ -11,15 +11,16 @@ import re
 import numpy as np
 
 from . import duck_array_ops
+from . import utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, basestring, dask_array_type
+from .pycompat import OrderedDict, dask_array_type
 from .utils import is_dict_like
 
 
 _DEFAULT_FROZEN_SET = frozenset()
-_DEFAULT_FILL_VALUE = object()
-_DEFAULT_NAME = object()
+_NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')
+_DEFAULT_NAME = utils.ReprObject('<default-name>')
 _JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
@@ -315,7 +316,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
     if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
-            fill_value is _DEFAULT_FILL_VALUE):
+            fill_value is _NO_FILL_VALUE):
         raise TypeError('to apply an operation to datasets with different '
                         'data variables with apply_ufunc, you must supply the '
                         'dataset_fill_value argument.')
@@ -618,9 +619,9 @@ def apply_ufunc(func, *args, **kwargs):
                    input_core_dims : Optional[Sequence[Sequence]] = None,
                    output_core_dims : Optional[Sequence[Sequence]] = ((),),
                    exclude_dims : Collection = frozenset(),
-                   join : str = 'inner',
-                   dataset_join : str = 'inner',
-                   dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
+                   join : str = 'exact',
+                   dataset_join : str = 'exact',
+                   dataset_fill_value : Any = _NO_FILL_VALUE,
                    keep_attrs : bool = False,
                    kwargs : Mapping = None,
                    dask : str = 'forbidden',
@@ -671,7 +672,7 @@ def apply_ufunc(func, *args, **kwargs):
         broadcasting entirely. Any input coordinates along these dimensions
         will be dropped. Each excluded dimension must also appear in
         ``input_core_dims`` for at least one argument.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
         data variables:
@@ -681,17 +682,18 @@ def apply_ufunc(func, *args, **kwargs):
         - 'right': use indexes from the last object with each dimension
         - 'exact': raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
         - 'outer': take variables from both Dataset objects
         - 'inner': take only overlapped variables
         - 'left': take only variables from the first object
         - 'right': take only variables from the last object
+        - 'exact': data variables on all Dataset objects must match exactly
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
-        ``dataset_join != 'inner'``, otherwise ignored.
+        ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
     keep_attrs: boolean, Optional
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
@@ -780,11 +782,11 @@ def apply_ufunc(func, *args, **kwargs):
 
     input_core_dims = kwargs.pop('input_core_dims', None)
     output_core_dims = kwargs.pop('output_core_dims', ((),))
-    join = kwargs.pop('join', 'inner')
-    dataset_join = kwargs.pop('dataset_join', 'inner')
+    join = kwargs.pop('join', 'exact')
+    dataset_join = kwargs.pop('dataset_join', 'exact')
     keep_attrs = kwargs.pop('keep_attrs', False)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
-    dataset_fill_value = kwargs.pop('dataset_fill_value', _DEFAULT_FILL_VALUE)
+    dataset_fill_value = kwargs.pop('dataset_fill_value', _NO_FILL_VALUE)
     kwargs_ = kwargs.pop('kwargs', None)
     dask = kwargs.pop('dask', 'forbidden')
     output_dtypes = kwargs.pop('output_dtypes', None)

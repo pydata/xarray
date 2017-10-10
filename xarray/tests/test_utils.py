@@ -147,6 +147,11 @@ class TestDictionaries(TestCase):
         self.assertItemsEqual(['x', 'y', 'z'], m)
 
 
+def test_repr_object():
+    obj = utils.ReprObject('foo')
+    assert repr(obj) == 'foo'
+
+
 class Test_is_uniform_and_sorted(TestCase):
 
     def test_sorted_uniform(self):
