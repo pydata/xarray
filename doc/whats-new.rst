@@ -76,9 +76,11 @@ Enhancements
 ~~~~~~~~~~~~
 
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
-  written to work on NumPy arrays to support labels on xarray objects.
-  ``apply_ufunc`` also support automatic parallelization for many functions
-  with dask. See :ref:`computation.wrapping-custom` for details.
+  written to work on NumPy arrays to support labels on xarray objects
+  (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
+  many functions with dask. See :ref:`comput.wrapping-custom` and
+  :ref:`dask.automatic-parallelization` for details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,

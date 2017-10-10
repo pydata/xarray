@@ -303,7 +303,7 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-Unfortunately, we current do not support NUmPy ufuncs for datasets [1]_.
+Unfortunately, we currently do not support NumPy ufuncs for datasets [1]_.
 :py:meth:`~xarray.Dataset.apply` works around this
 limitation, by applying the given function to each variable in the dataset:
 
@@ -339,7 +339,7 @@ matching data variables.
        we should be able to support this by leveraging ``__array_ufunc__``
        (:issue:`1617`).
 
-.. computation.wrapping-custom:
+.. _comput.wrapping-custom:
 
 Wrapping custom computation
 ===========================
@@ -376,7 +376,7 @@ any additional arguments:
 
     squared_error = lambda x, y: (x - y) ** 2
     arr1 = xr.DataArray([0, 1, 2, 3], dims='x')
-    xr.apply_func(squared_error, arr1, 1)
+    xr.apply_ufunc(squared_error, arr1, 1)
 
 For using more complex operations that consider some array values collectively,
 it's important to understand the idea of "core dimensions" from NumPy's
@@ -417,10 +417,8 @@ nicely with tools for building vectorized functions, like
 needs, consider using Numba's `vectorize and guvectorize <http://numba.pydata.org/numba-doc/dev/user/vectorize.html>`_.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
-many functions when using dask by setting ``dask='parallelized'``. This is
-illustrated in a separate example.
-
-.. TODO: add link!
+many functions when using dask by setting ``dask='parallelized'``. See
+:ref:`dask.automatic-parallelization` for details.
 
 :py:func:`~xarray.apply_ufunc` also supports some advanced options for
 controlling alignment of variables and the form of the result. See the
