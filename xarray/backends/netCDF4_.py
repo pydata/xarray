@@ -182,7 +182,10 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     import netCDF4 as nc4
 
-    ds = nc4.Dataset(filename, mode=mode, **kwargs)
+    try:
+        ds = nc4.Dataset(filename, mode=mode, **kwargs)
+    except OSError as e:
+        raise OSError("Error opening %r" % filename, e)
 
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)
