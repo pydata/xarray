@@ -10,11 +10,11 @@ from __future__ import division
 from __future__ import print_function
 
 import operator
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
+from . import dtypes
 from . import duck_array_ops
 from .pycompat import PY3
 from .nputils import array_eq, array_ne
@@ -50,7 +50,8 @@ NAN_CUM_METHODS = ['cumsum', 'cumprod']
 BOTTLENECK_ROLLING_METHODS = {'move_sum': 'sum', 'move_mean': 'mean',
                               'move_std': 'std', 'move_min': 'min',
                               'move_max': 'max', 'move_var': 'var',
-                              'move_argmin': 'argmin', 'move_argmax': 'argmax'}
+                              'move_argmin': 'argmin', 'move_argmax': 'argmax',
+                              'move_median': 'median'}
 # TODO: wrap take, dot, sort
 
 
@@ -145,11 +146,37 @@ def fillna(data, other, join="left", dataset_join="left"):
     """
     from .computation import apply_ufunc
 
-    def _fillna(data, other):
-        return duck_array_ops.where(duck_array_ops.isnull(data), other, data)
-    return apply_ufunc(_fillna, data, other, join=join, dask_array="allowed",
+    return apply_ufunc(duck_array_ops.fillna, data, other,
+                       join=join,
+                       dask="allowed",
                        dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
+                       keep_attrs=True)
+
+
+def where_method(self, cond, other=dtypes.NA):
+    """Return elements from `self` or `other` depending on `cond`.
+
+    Parameters
+    ----------
+    cond : DataArray or Dataset with boolean dtype
+        Locations at which to preserve this objects values.
+    other : scalar, DataArray or Dataset, optional
+        Value to use for locations in this object where ``cond`` is False.
+        By default, inserts missing values.
+
+    Returns
+    -------
+    Same type as caller.
+    """
+    from .computation import apply_ufunc
+    # alignment for three arguments is complicated, so don't support it yet
+    join = 'inner' if other is dtypes.NA else 'exact'
+    return apply_ufunc(duck_array_ops.where_method,
+                       self, cond, other,
+                       join=join,
+                       dataset_join=join,
+                       dask='allowed',
                        keep_attrs=True)
 
 
@@ -216,6 +243,7 @@ def rolling_count(rolling):
 
     return rolling_count.where(enough_periods)
 
+
 def inject_reduce_methods(cls):
     methods = ([(name, getattr(duck_array_ops, 'array_%s' % name), False)
                 for name in REDUCE_METHODS] +
@@ -268,10 +296,6 @@ def inject_binary_ops(cls, inplace=False):
     for name, f in [('eq', array_eq), ('ne', array_ne)]:
         setattr(cls, op_str(name), cls._binary_op(f))
 
-    # patch in where
-    f = _func_slash_method_wrapper(duck_array_ops.where_method, 'where')
-    setattr(cls, '_where', cls._binary_op(f))
-
     for name in NUM_BINARY_OPS:
         # only numeric operations have in-place and reflexive variants
         setattr(cls, op_str('r' + name),
@@ -296,7 +320,7 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
     for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(pd, name))
+        f = _func_slash_method_wrapper(getattr(pd, name), name=name)
         setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name='round')
@@ -331,40 +355,16 @@ def inject_bottleneck_rolling_methods(cls):
     setattr(cls, 'count', func)
 
     # bottleneck rolling methods
-    if has_bottleneck:
-        # TODO: Bump the required version of bottlneck to 1.1 and remove all
-        # these version checks (see GH#1278)
-        bn_version = LooseVersion(bn.__version__)
-        bn_min_version = LooseVersion('1.0')
-        bn_version_1_1 = LooseVersion('1.1')
-        if bn_version < bn_min_version:
-            return
+    if not has_bottleneck:
+        return
 
-        for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
-            try:
-                f = getattr(bn, bn_name)
-                func = cls._bottleneck_reduce(f)
-                func.__name__ = method_name
-                func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
-                    name=func.__name__, da_or_ds='DataArray')
-                setattr(cls, method_name, func)
-            except AttributeError as e:
-                # skip functions not in Bottleneck 1.0
-                if ((bn_version < bn_version_1_1) and
-                        (bn_name not in ['move_var', 'move_argmin',
-                                         'move_argmax', 'move_rank'])):
-                    raise e
-
-        # bottleneck rolling methods without min_count (bn.__version__ < 1.1)
-        f = getattr(bn, 'move_median')
-        if bn_version >= bn_version_1_1:
-            func = cls._bottleneck_reduce(f)
-        else:
-            func = cls._bottleneck_reduce_without_min_count(f)
-        func.__name__ = 'median'
+    for bn_name, method_name in BOTTLENECK_ROLLING_METHODS.items():
+        f = getattr(bn, bn_name)
+        func = cls._bottleneck_reduce(f)
+        func.__name__ = method_name
         func.__doc__ = _ROLLING_REDUCE_DOCSTRING_TEMPLATE.format(
             name=func.__name__, da_or_ds='DataArray')
-        setattr(cls, 'median', func)
+        setattr(cls, method_name, func)
 
 
 def inject_datasetrolling_methods(cls):

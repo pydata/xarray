@@ -2,8 +2,9 @@ name: test_env
 dependencies:
   - python=2.7
   - pytest
-  - numpy==1.9.3
-  - pandas==0.15.0
+  - mock
+  - numpy==1.11
+  - pandas==0.18.0
   - pip:
     - coveralls
     - pytest-cov

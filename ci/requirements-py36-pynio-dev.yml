@@ -1,6 +1,7 @@
 name: test_env
 channels:
   - conda-forge
+  - ncar
 dependencies:
   - python=3.6
   - dask
@@ -9,6 +10,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
+  - pynio=dev
   - pytest
   - numpy
   - pandas

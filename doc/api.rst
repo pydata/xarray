@@ -18,6 +18,7 @@ Top-level functions
    broadcast
    concat
    merge
+   where
    set_options
    full_like
    zeros_like

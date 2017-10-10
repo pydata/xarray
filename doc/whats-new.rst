@@ -15,15 +15,119 @@ What's New
 
 .. _whats-new.0.9.7:
 
-v0.9.7 (unreleased)
+v0.10.0 (unreleased)
 -------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
+  also supplying an explicit ``dims`` argument is no longer supported. This
+  behavior was deprecated in version 0.9 but will now raise an error
+  (:issue:`727`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- A new resampling interface to match pandas' group-by-like API was added to
+  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`
+  (:issue:`1272`). :ref:`Timeseries resampling <resampling>` is
+  fully supported for data  with arbitrary dimensions as is both downsampling
+  and upsampling (including linear, quadratic, cubic, and spline interpolation).
+
+  Old syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample('24H', dim='time', how='max')
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  New syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample(time='24H').max()
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  Note that both versions are currently supported, but using the old syntax will
+  produce a warning encouraging users to adopt the new syntax.
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
+
+- ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
+  Datasets loaded with ``open_dataset`` won't automatically read coords from
+  disk when calling ``repr`` (:issue:`1522`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- The minimum supported version bottleneck has increased to 1.1
+  (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
+- Support for ``data_vars`` and ``coords`` keywords added to
+  :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
+    #instead of
+    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
+    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
+
+    # in case of 'minimal' does not add time dimension to spatial coordinates
+    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
+
+    In [2]: ds['lon'].shape
+
+    Out[2]: (13505, 808, 782)
+
+    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
+
+    In [4]: ds['lon'].shape
+
+    Out[4]: (808, 782)
+
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
+
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
+
+- Support for `pathlib.Path` objects added to
+  :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
+  :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
+  (:issue:`799`):
+
+  .. ipython::
+    :verbatim:
+
+    In [2]: from pathlib import Path  # In Python 2, use pathlib2!
+
+    In [3]: data_dir = Path("data/")
+
+    In [4]: one_file = data_dir / "dta_for_month_01.nc"
+
+    In [5]: xr.open_dataset(one_file)
+    Out[5]:
+    <xarray.Dataset>
+    [...]
+
+  By `Willi Rath <https://github.com/willirath>`_.
 
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
-  By `Greg Brener <https://github.com/gbrener>`_
+  By `Greg Brener <https://github.com/gbrener>`_.
+
 - Support for NetCDF files using an ``_Unsigned`` attribute to indicate that a
   a signed integer data type should be interpreted as unsigned bytes
   (:issue:`1444`).
@@ -32,8 +136,70 @@ Enhancements
 - Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
   By `Christian Chwala <https://github.com/cchwala>`_.
 
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support using an existing, opened netCDF4 ``Dataset`` with
+  :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
+  :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
+  other means (:issue:`1459`).
+  By `Ryan May <https://github.com/dopplershift>`_.
+
+- Support passing keyword arguments to ``load``, ``compute``, and ``persist``
+  methods. Any keyword arguments supplied to these methods are passed on to
+  the corresponding dask function (:issue:`1523`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Encoding attributes are now preserved when xarray objects are concatenated.
+  The encoding is copied from the first object  (:issue:`1297`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl>`_.
+
+- Changed :py:class:`~xarray.backends.PydapDataStore` to take a Pydap dataset.
+  This permits opening Opendap datasets that require authentication, by
+  instantiating a Pydap dataset with a session object. Also added
+  :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
+  object (:issue:`1068`).
+  By `Philip Graae <https://github.com/mrpgraae>`_.
+
+- Support applying rolling window operations using bottleneck's moving window
+  functions on data stored as dask arrays (:issue:`1279`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- Unsigned int support for reduce methods with skipna=True
+  (:issue:1562).
+  By `Keisuke Fujii` <https://github.com/fujiisoup>`_.
+
+- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+
+  - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
+  - :py:meth:`~xarray.DataArray.to_series` and
+    :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
+    for 1D data (:issue:`1548`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
   coordinates so that they are centered in each pixel.
@@ -49,7 +215,53 @@ Bug fixes
 
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
   ``rtol`` arguments when called on ``DataArray`` objects.
-  By `Stephan Hoyer <http://github.com/shoyer>`_.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+  objects with data stored as ``dask`` arrays (:issue:`1529`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
+  coordinate shares a name with a dimension but is comprised of arbitrary
+  dimensions(:issue:`1120`).
+
+- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
+  it is none.
+  By `Leevi Annala <https://github.com/leevei>`_.
+
+- Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
+  provided (:issue:`1410`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix :py:func:`xarray.save_mfdataset` to properly raise an informative error
+  when objects other than  ``Dataset`` are provided (:issue:`1555`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`xarray.Dataset.copy` would not preserve the encoding property
+  (:issue:`1586`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- :py:func:`xarray.concat` would eagerly load dask variables into memory if
+  the first argument was a numpy variable (:issue:`1588`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
+  (:issue:`1606`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+  The previous behavior unintentionally causing additional tests to be skipped
+  (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix pynio backend for upcoming release of pynio with python3 support 
+  (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
 
@@ -1335,7 +1547,7 @@ a collection of netCDF (using dask) as a single ``xray.Dataset`` object. For
 more on dask, read the `blog post introducing xray + dask`_ and the new
 documentation section :doc:`dask`.
 
-.. _blog post introducing xray + dask: http://continuum.io/blog/xray-dask
+.. _blog post introducing xray + dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
 
 Dask makes it possible to harness parallelism and manipulate gigantic datasets
 with xray. It is currently an optional dependency, but it may become required
