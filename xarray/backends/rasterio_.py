@@ -82,6 +82,38 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
             out = np.squeeze(out, axis=squeeze_axis)
         return out
 
+def _parse_envi(meta):
+    """Parse ENVI metadata into Python data structures.
+
+    See the link for information on the ENVI header file format:
+    http://www.harrisgeospatial.com/docs/enviheaderfiles.html
+
+    Parameters
+    ----------
+    meta : dict
+        Dictionary of keys and str values to parse, as returned by the rasterio
+        tags(ns='ENVI') call.
+
+    Returns
+    -------
+    parsed_meta : dict
+        Dictionary containing the original keys and the parsed values
+
+    """
+
+    def parsevec(s):
+        return np.fromstring(s.strip('{}'), dtype='float', sep=',')
+
+    def default(s):
+        return s.strip('{}')
+
+    parse = {
+        'wavelength' : parsevec,
+        'fwhm'       : parsevec,
+        }
+
+    parsed_meta = {k : parse.get(k, default)(v) for k, v in meta.items()}
+    return parsed_meta
 
 def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """Open a file with rasterio (experimental).
@@ -130,6 +162,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     if riods.count < 1:
         raise ValueError('Unknown dims')
     coords['band'] = np.asarray(riods.indexes)
+
 
     # Get wavelengths
     if 'wavelength' in riods.tags(1):
