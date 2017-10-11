@@ -164,12 +164,6 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     coords['band'] = np.asarray(riods.indexes)
 
 
-    # Get wavelengths
-    if 'wavelength' in riods.tags(1):
-        coords['radiation_wavelength'] = ('band', np.fromiter(
-                map(lambda b: riods.tags(b)['wavelength'], riods.indexes),
-                dtype=np.float, count=riods.count))
-
     # Get geo coords
     nx, ny = riods.width, riods.height
     dx, dy = riods.res[0], -riods.res[1]
@@ -198,9 +192,24 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
-    if 'wavelength_units' in riods.tags(1):
-        # Unit for the wavelengths (string)
-        attrs['wavelength_units'] = riods.tags(1)['wavelength_units']
+
+    # Parse extra metadata from tags, if supported
+    parsers = {
+            'ENVI' : _parse_envi,
+            }
+
+    driver = riods.driver
+    if driver in parsers:
+        meta = parsers[driver](riods.tags(ns=driver))
+
+        for k, v in meta.items():
+            # Add values as coordinates if they match the band count,
+            # as attributes otherwise
+            if isinstance(v, (list, np.ndarray)) and len(v) == riods.count:
+                coords[k] = ('band', np.asarray(v))
+            else:
+                attrs[k] = v
+
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
