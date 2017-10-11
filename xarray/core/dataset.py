@@ -2429,7 +2429,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
 
         import dask.dataframe as dd
-        import dask.array as da
 
         ordered_dims = self.dims
         coord_columns = [c for c in self if c in ordered_dims]
@@ -2440,9 +2439,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # ensure we are dealing with dask arrays with consistent chunks
         chunked = ds.chunk(chunks=self.chunks)
 
-        columns  = list(chunked)
-
         # order columns so that coordinates appear before data
+        columns = list(chunked)
         num_coords = len(coord_columns)
         columns = columns[-num_coords:] + columns[:-num_coords]
 
