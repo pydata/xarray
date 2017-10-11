@@ -100,6 +100,15 @@ Once you've manipulated a dask array, you can still write a dataset too big to
 fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
 
+A dataset can also be converted to a dask DataFrame using :py:meth:`~xarray.Dataset.to_dask_dataframe`.
+
+.. ipython:: python
+
+    df = ds.to_dask_dataframe()
+    df
+
+Dask DataFrames do not support multi-indexes so the coordinate variables from the dataset are included as columns in the dask DataFrame.
+
 Using dask with xarray
 ----------------------
 
