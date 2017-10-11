@@ -14,6 +14,7 @@ import pandas as pd
 from . import ops
 from . import utils
 from . import groupby
+from . import resample
 from . import rolling
 from . import indexing
 from . import alignment
@@ -305,6 +306,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     """
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
+    _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,
                  compat='broadcast_equals'):
@@ -632,7 +634,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                 for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
-                                      self._dims.copy(), self._attrs_copy())
+                                      self._dims.copy(), self._attrs_copy(),
+                                      encoding=self.encoding)
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -654,8 +657,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         level_coords = OrderedDict()
         for cname in self._coord_names:
             var = self.variables[cname]
-            if var.ndim == 1:
-                level_names = var.to_index_variable().level_names
+            if var.ndim == 1 and isinstance(var, IndexVariable):
+                level_names = var.level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
@@ -1669,12 +1672,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for d in dim:
             if d in self.dims:
                 raise ValueError(
-                            'Dimension {dim} already exists.'.format(dim=d))
+                    'Dimension {dim} already exists.'.format(dim=d))
             if (d in self._variables and
                     not utils.is_scalar(self._variables[d])):
                 raise ValueError(
-                            '{dim} already exists as coordinate or'
-                            ' variable name.'.format(dim=d))
+                    '{dim} already exists as coordinate or'
+                    ' variable name.'.format(dim=d))
 
         if len(dim) != len(set(dim)):
             raise ValueError('dims should not contain duplicate values.')
@@ -1691,7 +1694,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                             raise IndexError(
                                 'Axis {a} is out of bounds of the expanded'
                                 ' dimension size {dim}.'.format(
-                                               a=a, v=k, dim=result_ndim))
+                                    a=a, v=k, dim=result_ndim))
 
                     axis_pos = [a if a >= 0 else result_ndim + a
                                 for a in axis]
@@ -3008,8 +3011,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         for var_name, variable in self.data_vars.items():
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
-                if ((callable(pattern) and pattern(attr_value))
-                        or attr_value == pattern):
+                if ((callable(pattern) and pattern(attr_value)) or
+                        attr_value == pattern):
                     selection.append(var_name)
         return self[selection]
 

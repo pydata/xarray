@@ -27,6 +27,42 @@ Breaking changes
   (:issue:`727`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- A new resampling interface to match pandas' group-by-like API was added to
+  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`
+  (:issue:`1272`). :ref:`Timeseries resampling <resampling>` is
+  fully supported for data  with arbitrary dimensions as is both downsampling
+  and upsampling (including linear, quadratic, cubic, and spline interpolation).
+
+  Old syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample('24H', dim='time', how='max')
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  New syntax:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: ds.resample(time='24H').max()
+    Out[1]:
+    <xarray.Dataset>
+    [...]
+
+  Note that both versions are currently supported, but using the old syntax will
+  produce a warning encouraging users to adopt the new syntax.
+  By `Daniel Rothenberg <https://github.com/darothen>`_.
+
+- ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
+  Datasets loaded with ``open_dataset`` won't automatically read coords from
+  disk when calling ``repr`` (:issue:`1522`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -181,13 +217,21 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- Xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 - ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
   coordinate shares a name with a dimension but is comprised of arbitrary
   dimensions(:issue:`1120`).
+
 - :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
   it is none.
   By `Leevi Annala <https://github.com/leevei>`_.
@@ -199,6 +243,25 @@ Bug fixes
 - Fix :py:func:`xarray.save_mfdataset` to properly raise an informative error
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`xarray.Dataset.copy` would not preserve the encoding property
+  (:issue:`1586`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- :py:func:`xarray.concat` would eagerly load dask variables into memory if
+  the first argument was a numpy variable (:issue:`1588`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
+  (:issue:`1606`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix bug when using ``pytest`` class decorators to skiping certain unittests.
+  The previous behavior unintentionally causing additional tests to be skipped
+  (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix pynio backend for upcoming release of pynio with python3 support 
+  (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
 

@@ -858,12 +858,14 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
             if ('_FillValue' in attributes and
                 not utils.equivalent(attributes['_FillValue'],
                                      attributes['missing_value'])):
-                raise ValueError("Discovered conflicting _FillValue "
-                                 "and missing_value.  Considering "
-                                 "opening the offending dataset using "
-                                 "decode_cf=False, corrected the attributes",
-                                 "and decoding explicitly using "
-                                 "xarray.conventions.decode_cf(ds)")
+                raise ValueError("Conflicting _FillValue and missing_value "
+                                 "attributes on a variable: {} vs. {}\n\n"
+                                 "Consider opening the offending dataset "
+                                 "using decode_cf=False, correcting the "
+                                 "attributes and decoding explicitly using "
+                                 "xarray.decode_cf()."
+                                 .format(attributes['_FillValue'],
+                                         attributes['missing_value']))
             attributes['_FillValue'] = attributes.pop('missing_value')
         fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
         if fill_value.size > 1:
