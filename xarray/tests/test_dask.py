@@ -573,17 +573,19 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert expected.compute().equals(actual.compute()), (expected, actual)
 
         # test if no index is given
-        expected = dd.from_pandas(expected_pd.reset_index(drop=True),
+        expected = dd.from_pandas(expected_pd.reset_index(drop=False),
                                   chunksize=4)
+
         actual = ds.to_dask_dataframe(set_index=False)
+
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected.compute().equals(actual.compute()), (expected, actual)
 
         # test if 2-D dataset is supplied
         w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
         ds = Dataset({'w': (('x', 'y'), w)})
-        ds['y'] = ('y', list('abc'))
         ds['x'] = ('x', [0, 1])
+        ds['y'] = ('y', list('abc'))
 
         # dask dataframes do not (yet) support multiindex,
         # but when it does, this would be the expected index:
@@ -592,10 +594,11 @@ class TestDataArrayAndDataset(DaskTestCase):
             names=['x', 'y'])
         expected = pd.DataFrame({'w': w.reshape(-1)},
                                 index=exp_index)
-        # so for now, drop the index
-        expected = expected.reset_index(drop=True)
+        # so for now, reset the index
+        expected = expected.reset_index(drop=False)
 
         actual = ds.to_dask_dataframe(set_index=False)
+
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected.equals(actual.compute()), (expected, actual.compute())
 

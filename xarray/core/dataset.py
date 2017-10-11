@@ -2431,14 +2431,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         import dask.dataframe as dd
         import dask.array as da
 
-        columns = [k for k in self if k not in self.dims]
         ordered_dims = self.dims
+        coord_columns = [c for c in self if c in ordered_dims]
+
+        # convert all coordinates into data variables
+        ds = self.reset_index(coord_columns).reset_coords()
 
         # ensure we are dealing with dask arrays with consistent chunks
-        chunked = self.chunk(chunks=self.chunks)
+        chunked = ds.chunk(chunks=self.chunks)
+
+        columns  = list(chunked)
+
+        # order columns so that coordinates appear before data
+        num_coords = len(coord_columns)
+        columns = columns[-num_coords:] + columns[:-num_coords]
 
         data = [chunked._variables[k].set_dims(ordered_dims).data.reshape(-1)
                 for k in columns]
+
+        # restore names of columns that were also index names (e.g. x_ -> x)
+        columns = [c[:-1] if c[:-1] in ds.dims else c for c in columns]
 
         df = dd.concat([dd.from_array(d, columns=c)
                         for d, c in zip(data, columns)], axis=1)
@@ -2452,17 +2464,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             # extract out first (and only) coordinate variable
             coord_dim = list(ordered_dims)[0]
-            index = self.coords[coord_dim].data
 
-            # when and if dask dataframe suppored multiindex, this
-            # might be needed instead:
-            # index = self.coords.to_index(ordered_dims)
-
-            chunks = data[0].chunks[0]
-            chunked_index = da.from_array(index, chunks=chunks)
-            df_chunked_index = dd.from_array(chunked_index, columns=coord_dim)
-
-            df = dd.concat([df, df_chunked_index], axis=1)
             df = df.set_index(coord_dim)
 
         if isinstance(df, dd.Series):
