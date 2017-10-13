@@ -486,6 +486,11 @@ class DataArray(AbstractArray, BaseDataObject):
         """List of places to look-up items for attribute-style access"""
         return [self.coords, LevelCoordinatesSource(self), self.attrs]
 
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-completion"""
+        return [self.coords, self.dims, LevelCoordinatesSource(self)]
+
     def __contains__(self, key):
         return key in self._coords
 

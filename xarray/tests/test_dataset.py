@@ -3505,6 +3505,44 @@ class TestDataset(TestCase):
         actual = ds.sortby(['x', 'y'], ascending=False)
         self.assertDatasetEqual(actual, ds)
 
+    def test_ipython_key_completion(self):
+        ds = create_test_data(seed=1)
+        actual = ds._ipython_key_completions_()
+        expected = ['var1', 'var2', 'var3', 'time', 'dim1',
+                    'dim2', 'dim3', 'numbers']
+        for item in expected:
+            ds[item]
+        self.assertTrue(len(actual) == len(expected))
+        self.assertTrue(set(actual) == set(expected))
+
+        # for dataarray
+        actual = ds['var1']._ipython_key_completions_()
+        expected = ['dim1', 'dim2']
+        for item in expected:
+            ds['var1'][item]
+        self.assertTrue(len(actual) == len(expected))
+        self.assertTrue(set(actual) == set(expected))
+
+        actual = ds['var3']._ipython_key_completions_()
+        expected = ['dim3', 'dim1', 'numbers']
+        self.assertTrue(len(actual) == len(expected))
+        self.assertTrue(set(actual) == set(expected))
+
+        # drop variables
+        actual = ds.drop('var1')._ipython_key_completions_()
+        expected = ['var2', 'var3', 'time', 'dim1', 'dim2', 'dim3', 'numbers']
+        self.assertTrue(len(actual) == len(expected))
+        self.assertTrue(set(actual) == set(expected))
+
+        # MultiIndex
+        ds_midx = ds.stack(dim12=['dim1', 'dim2'])
+        actual = ds_midx._ipython_key_completions_()
+        expected = ['var1', 'var2', 'var3', 'time', 'dim1',
+                    'dim2', 'dim3', 'numbers', 'dim12']
+        for item in expected:
+            ds_midx[item]
+        self.assertTrue(len(actual) == len(expected))
+        self.assertTrue(set(actual) == set(expected))
 
 # Py.test tests
 

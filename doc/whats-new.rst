@@ -74,6 +74,11 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support `_ipython_key_completions_` to enable autocompletion for
+  dictionary access.
+  (:issue:`1628`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Support for ``data_vars`` and ``coords`` keywords added to
   :py:func:`~xarray.open_mfdataset`
   (:issue:`438`):
@@ -260,7 +265,7 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support 
+- Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
