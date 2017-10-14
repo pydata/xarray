@@ -7,6 +7,8 @@ from itertools import product
 from collections import MutableMapping
 import operator
 
+import numpy as np
+
 from .. import Variable
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, close_on_error, HiddenKeyDict,
@@ -29,6 +31,42 @@ from .. import conventions
 # NdimSizeLenMixing?
 
 # or maybe we don't need wrappers at all? probably not true
+
+# zarr attributes have to be serializable as json
+# many xarray datasets / variables have numpy arrays and values
+# these functions handle encoding / decoding of such items
+def _encode_zarr_attr_value(value):
+    # what is the most duck-type friendly way to do this check
+    print("encoding zarr attr value %r" % value)
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    # I don't know how to check generically if something is a numpy scalar
+    # i.e. np.float32 or np.int8, etc. without checking against each dtype
+    # manually. This was the best I could come up with
+    try:
+        # np.string_('X').item() returns a type `bytes`
+        # zarr still doesn't like that
+        # causes some fill_value encoding to fail
+        return value.item()
+    except AttributeError:
+        return value
+
+
+def _encode_zarr_attrs(attrs):
+    return OrderedDict([(k, _encode_zarr_attr_value(v))
+                        for k, v in attrs.items()])
+
+
+def _decode_zarr_attr_value(value):
+    # what happens if we just don't decode anything?
+    # does it matter that we don't convert back to numpy types?
+    return value
+
+
+def _decode_zarr_attrs(attrs):
+    return OrderedDict([(k, _decode_zarr_attr_value(v))
+                        for k, v in attrs.items()])
+
 
 class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
     def __init__(self, variable_name, datastore):
@@ -260,6 +298,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(
                                     zarr_array, self._DIMENSION_KEY)
+        attributes = _decode_zarr_attrs(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters,
@@ -289,8 +328,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             _, attributes = _get_zarr_dims_and_attrs(self.ds,
                                                      self._DIMENSION_KEY)
-            attrs = FrozenOrderedDict(attributes)
-            return attrs
+            return _decode_zarr_attrs(attributes)
 
     def get_dimensions(self):
         with self.ensure_open(autoclose=True):
@@ -306,7 +344,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             _, attributes = _get_zarr_dims_and_attrs(self.ds,
                                 self._DIMENSION_KEY)
-            attributes[key] = value
+            attributes[key] =  _encode_zarr_attr_value(value)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -323,7 +361,8 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # here we are basically duplicating zarr's own internal fill_value
         # in an attribute. This seems redundant and error prone. How can
         # we do better?
-        fill_value = attrs.get('_FillValue', None)
+        # Also, this needs to be encoded as a zarr attr
+        fill_value = _encode_zarr_attr_value(attrs.get('_FillValue', None))
         if fill_value in ['\x00']:
             fill_value = None
 
@@ -331,6 +370,9 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
+
+        print('preparing variable with attributes %r' % attrs)
+        print('preparing variable with encoding %r' % encoding)
         ### arguments for zarr.create
         # zarr.creation.create(shape, chunks=None, dtype=None, compressor='default',
         # fill_value=0, order='C', store=None, synchronizer=None, overwrite=False,
@@ -352,7 +394,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
                                                  self._DIMENSION_KEY)
 
         for k, v in iteritems(attrs):
-            attributes[k] = v
+            attributes[k] = _encode_zarr_attr_value(v)
 
         return zarr_array, variable.data
 
