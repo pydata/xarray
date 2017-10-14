@@ -3524,14 +3524,14 @@ class TestDataset(TestCase):
         actual = ds._ipython_key_completions_()
         expected = ['var1', 'var2', 'var3', 'time', 'dim1',
                     'dim2', 'dim3', 'numbers']
-        for item in expected:
+        for item in actual:
             ds[item]  # should not raise
         self.assertTrue(sorted(actual) == sorted(expected))
 
         # for dataarray
         actual = ds['var3']._ipython_key_completions_()
         expected = ['dim3', 'dim1', 'numbers']
-        for item in expected:
+        for item in actual:
             ds['var3'][item]  # should not raise
         self.assertTrue(sorted(actual) == sorted(expected))
 
@@ -3540,8 +3540,28 @@ class TestDataset(TestCase):
         actual = ds_midx._ipython_key_completions_()
         expected = ['var1', 'var2', 'var3', 'time', 'dim1',
                     'dim2', 'dim3', 'numbers', 'dim12']
-        for item in expected:
+        for item in actual:
             ds_midx[item]  # should not raise
+        self.assertTrue(sorted(actual) == sorted(expected))
+
+        # coords
+        actual = ds.coords._ipython_key_completions_()
+        expected = ['time', 'dim1', 'dim2', 'dim3', 'numbers']
+        for item in actual:
+            ds.coords[item]  # should not raise
+        self.assertTrue(sorted(actual) == sorted(expected))
+
+        actual = ds['var3'].coords._ipython_key_completions_()
+        expected = ['dim1', 'dim3', 'numbers']
+        for item in actual:
+            ds['var3'].coords[item]  # should not raise
+        self.assertTrue(sorted(actual) == sorted(expected))
+
+        # data_vars
+        actual = ds.data_vars._ipython_key_completions_()
+        expected = ['var1', 'var2', 'var3', 'dim1']
+        for item in actual:
+            ds.data_vars[item]  # should not raise
         self.assertTrue(sorted(actual) == sorted(expected))
 
 # Py.test tests

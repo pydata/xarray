@@ -279,6 +279,11 @@ class DataVariables(Mapping, formatting.ReprMixin):
         all_variables = self._dataset.variables
         return Frozen(OrderedDict((k, all_variables[k]) for k in self))
 
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return [key for key in self._dataset._ipython_key_completions_()
+                if key not in self._dataset._coord_names]
+
 
 class _LocIndexer(object):
     def __init__(self, dataset):

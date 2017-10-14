@@ -200,6 +200,10 @@ class AttrAccessMixin(object):
         return sorted(set(dir(type(self)) + extra_attrs))
 
     def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython.
+        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        For the details.
+        """
         item_lists = [item
                       for sublist in self._item_sources
                       for item in sublist
