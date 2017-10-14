@@ -75,7 +75,8 @@ Backward Incompatible Changes
 Enhancements
 ~~~~~~~~~~~~
 - Support `_ipython_key_completions_` to enable autocompletion for
-  dictionary access.
+  dictionary access with IPython.
+  e.g.  ``ds['tem`` + tab -> ``ds['temperature']``
   (:issue:`1628`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
