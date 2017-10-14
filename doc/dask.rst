@@ -223,10 +223,11 @@ use a function that isn't wrapped by xarray, one option is to extract dask
 arrays from xarray objects (``.data``) and use dask directly.
 
 Another option is to use xarray's :py:func:`~xarray.apply_ufunc`, which can
-automatically parallelize functions written for processing NumPy arrays when
-applied to dask arrays. It works similarly to :py:func:`dask.array.map_blocks`
-and :py:func:`dask.array.atop`, but without requiring an immediate layer of
-abstraction.
+automate `embarrassingly parallel <https://en.wikipedia.org/wiki/Embarrassingly_parallel>`__
+"map" type operations where a functions written for processing NumPy arrays
+should be repeatedly applied to xarray objects containing dask arrays. It works
+similarly to :py:func:`dask.array.map_blocks` and :py:func:`dask.array.atop`,
+but without requiring an intermediate layer of abstraction.
 
 For the best performance when using dask's multi-threaded scheduler, wrap a
 function that already releases the global interpreter lock, which fortunately
@@ -283,12 +284,33 @@ work as a streaming operation, when run on arrays loaded from disk:
     CPU times: user 21.6 s, sys: 2.84 s, total: 24.5 s
     Wall time: 24.9 s
 
+    In [8]: chunked1 = array1.chunk({'place': 10})
+
+    In [9]: chunked2 = array2.chunk({'place': 10})
+
     # using all my laptop's cores, with dask
-    In [63]: r = spearman_correlation(array1.chunk({'place': 10}), array2.chunk({'place': 10}), 'time')
+    In [63]: r = spearman_correlation(chunked1, chunked2, 'time').compute()
 
     In [64]: %time _ = r.compute()
     CPU times: user 30.9 s, sys: 1.74 s, total: 32.6 s
     Wall time: 4.59 s
+
+One limitation of ``apply_ufunc()`` is that it cannot be applied to arrays with
+multiple chunks along a core dimension:
+
+.. ipython::
+    :verbatim:
+
+    In [63]: spearman_correlation(chunked1, chunked2, 'place')
+    ValueError: dimension 'place' on 0th function argument to apply_ufunc with
+    dask='parallelized' consists of multiple chunks, but is also a core
+    dimension. To fix, rechunk into a single dask array chunk along this
+    dimension, i.e., ``.rechunk({'place': -1})``, but beware that this may
+    significantly increase memory usage.
+
+The reflects the nature of core dimensions, in contrast to broadcast
+(non-core) dimensions that allow operations to be split into arbitrary chunks
+for application.
 
 .. tip::
 
