@@ -352,8 +352,8 @@ It doesn't always make sense to do computation directly with xarray objects:
     than ~1e7 elements). Keeping track of labels and ensuring their consistency
     adds overhead, and array's core itself is not especially fast, because it's
     written in Python rather than a compiled language like C. Also, xarray's
-    high level label-based APIs remove low-level control over how operations are
-    implemented.
+    high level label-based APIs removes low-level control over how operations
+    are implemented.
   - Even if speed doesn't matter, it can be important to wrap existing code, or
     to support alternative interfaces that don't use xarray objects.
 
