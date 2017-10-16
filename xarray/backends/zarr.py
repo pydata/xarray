@@ -21,6 +21,9 @@ from .common import (WritableCFDataStore, AbstractWritableDataStore,
 
 from .. import conventions
 
+# this is a private method but we need it for open_zar
+from .api import _protect_dataset_variables_inplace
+
 # most of the other stores have some kind of wrapper class like
 # class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 # class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -430,7 +433,7 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
                 decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True,
-                 cache=None, drop_variables=None):
+                 cache=False, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -509,7 +512,7 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
 
         # this is how we would apply caching
         # but do we want it for zarr stores?
-        #_protect_dataset_variables_inplace(ds, cache)
+        _protect_dataset_variables_inplace(ds, cache)
 
         return ds
 
