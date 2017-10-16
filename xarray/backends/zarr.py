@@ -7,11 +7,8 @@ from itertools import product
 from collections import MutableMapping
 import operator
 
-<<<<<<< HEAD
-=======
 import numpy as np
 
->>>>>>> origin/zarr_backend
 from .. import Variable
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, close_on_error, HiddenKeyDict,
@@ -35,8 +32,6 @@ from .. import conventions
 
 # or maybe we don't need wrappers at all? probably not true
 
-<<<<<<< HEAD
-=======
 # zarr attributes have to be serializable as json
 # many xarray datasets / variables have numpy arrays and values
 # these functions handle encoding / decoding of such items
@@ -73,7 +68,6 @@ def _decode_zarr_attrs(attrs):
                         for k, v in attrs.items()])
 
 
->>>>>>> origin/zarr_backend
 class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -264,10 +258,6 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
 
 
 class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
-<<<<<<< HEAD
-#class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
-=======
->>>>>>> origin/zarr_backend
     """Store for reading and writing data via zarr
     """
 
@@ -308,10 +298,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(
                                     zarr_array, self._DIMENSION_KEY)
-<<<<<<< HEAD
-=======
         attributes = _decode_zarr_attrs(attributes)
->>>>>>> origin/zarr_backend
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters,
@@ -341,12 +328,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             _, attributes = _get_zarr_dims_and_attrs(self.ds,
                                                      self._DIMENSION_KEY)
-<<<<<<< HEAD
-            attrs = FrozenOrderedDict(attributes)
-            return attrs
-=======
             return _decode_zarr_attrs(attributes)
->>>>>>> origin/zarr_backend
 
     def get_dimensions(self):
         with self.ensure_open(autoclose=True):
@@ -362,11 +344,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             _, attributes = _get_zarr_dims_and_attrs(self.ds,
                                 self._DIMENSION_KEY)
-<<<<<<< HEAD
-            attributes[key] = value
-=======
             attributes[key] =  _encode_zarr_attr_value(value)
->>>>>>> origin/zarr_backend
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -383,12 +361,8 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # here we are basically duplicating zarr's own internal fill_value
         # in an attribute. This seems redundant and error prone. How can
         # we do better?
-<<<<<<< HEAD
-        fill_value = attrs.get('_FillValue', None)
-=======
         # Also, this needs to be encoded as a zarr attr
         fill_value = _encode_zarr_attr_value(attrs.get('_FillValue', None))
->>>>>>> origin/zarr_backend
         if fill_value in ['\x00']:
             fill_value = None
 
@@ -396,12 +370,9 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
-<<<<<<< HEAD
-=======
 
         print('preparing variable with attributes %r' % attrs)
         print('preparing variable with encoding %r' % encoding)
->>>>>>> origin/zarr_backend
         ### arguments for zarr.create
         # zarr.creation.create(shape, chunks=None, dtype=None, compressor='default',
         # fill_value=0, order='C', store=None, synchronizer=None, overwrite=False,
@@ -423,11 +394,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
                                                  self._DIMENSION_KEY)
 
         for k, v in iteritems(attrs):
-<<<<<<< HEAD
-            attributes[k] = v
-=======
             attributes[k] = _encode_zarr_attr_value(v)
->>>>>>> origin/zarr_backend
 
         return zarr_array, variable.data
 
