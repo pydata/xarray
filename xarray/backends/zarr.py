@@ -46,12 +46,21 @@ def _encode_zarr_attr_value(value):
     # I don't know how to check generically if something is a numpy scalar
     # i.e. np.float32 or np.int8, etc. without checking against each dtype
     # manually. This was the best I could come up with
-    try:
+    elif isinstance(value, np.generic):
         # np.string_('X').item() returns a type `bytes`
         # zarr still doesn't like that
         # causes some fill_value encoding to fail
         return value.item()
-    except AttributeError:
+    else:
+        return value
+
+
+def _ensure_valid_fill_value(value, dtype):
+    print('ensure_valid_fill_value (%r, %r)' % (value, dtype))
+    if dtype.type == np.string_ and type(value) == bytes:
+        print('decoding ascii')
+        return value.decode('ascii')
+    else:
         return value
 
 
@@ -367,9 +376,15 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # in an attribute. This seems redundant and error prone. How can
         # we do better?
         # Also, this needs to be encoded as a zarr attr
-        fill_value = _encode_zarr_attr_value(attrs.get('_FillValue', None))
+        fill_value = _ensure_valid_fill_value(
+                        _encode_zarr_attr_value(attrs.get('_FillValue', None)),
+                        dtype)
         if fill_value in ['\x00']:
             fill_value = None
+
+        # messy! fix
+        if fill_value is not None:
+            attrs['_FillValue'] = fill_value
 
         # TODO: figure out what encoding is needed for zarr
         encoding = _extract_zarr_variable_encoding(
