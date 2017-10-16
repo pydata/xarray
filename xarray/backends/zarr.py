@@ -119,12 +119,13 @@ class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
 # args for zarr.open_group
 # store=None, mode='a', synchronizer=None, path=None
 
-def _open_zarr_group(store, mode, synchronizer, group):
+def _open_zarr_group(store=None, overwrite=None, synchronizer=None,
+                     group=None, mode=None):
     import zarr
     #zarr_group = zarr.group(store=store, overwrite=overwrite,
     #        chunk_store=chunk_store, synchronizer=synchronizer, path=path)
-    zarr_group = zarr.open_group(store=store, mode=mode,
-                    synchronizer=synchronizer, path=group)
+    zarr_group = zarr.open_group(store=store,  mode=mode,
+                        synchronizer=synchronizer, path=group)
     return zarr_group
 
 
@@ -266,10 +267,6 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 
     def __init__(self, store=None, mode='a', synchronizer=None, group=None,
                     auto_chunk=True, writer=None, autoclose=None):
-        opener = functools.partial(_open_zarr_group, store, mode,
-                                   synchronizer, group)
-        self.ds = opener()
-
         self._mode = mode
         self._synchronizer = synchronizer
         self._group = group
@@ -282,7 +279,12 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
                                       'for the zarr backend')
         self._autoclose = False
         self._isopen = True
-        self._opener = None
+
+        opener = functools.partial(_open_zarr_group, store=store,
+                                   synchronizer=synchronizer, group=group)
+        self._opener = opener
+        self.ds = self._opener(mode=mode)
+
 
         # initialize hidden dimension attribute
         if self._DIMENSION_KEY not in self.ds.attrs:
