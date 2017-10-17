@@ -1171,12 +1171,14 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
         ds.encoding = {'unlimited_dims': ['y']}
-        with create_tmp_file() as tmp_file:
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf')
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
 
 
 # tests pending h5netcdf fix
@@ -1343,7 +1345,7 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
                 self.assertEqual(var_shape, coord_shape)
                 self.assertNotEqual(coord_shape1, coord_shape)
                 self.assertNotEqual(coord_shape2, coord_shape)
-      
+
     def test_common_coord_when_datavars_minimal(self):
         opt = 'minimal'
 
