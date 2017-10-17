@@ -1281,6 +1281,7 @@ class TestDatetimePlot(PlotTestCase):
         self.darray.plot.line()
 
 
+@requires_matplotlib
 def test_plot_seaborn_no_import_warning():
     # GH1633
     with pytest.warns(None) as record:

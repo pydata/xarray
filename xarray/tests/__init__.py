@@ -54,7 +54,7 @@ has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
-has_seaborn, requires_seaborn = _importorskip('matplotlib')
+has_seaborn, requires_seaborn = _importorskip('seaborn')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
