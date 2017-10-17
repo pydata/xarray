@@ -78,7 +78,7 @@ def _color_palette(cmap, n_colors):
                 warnings.filterwarnings('error')
                 try:
                     from seaborn.apionly import color_palette
-                except UserWarning:
+                except (UserWarning, ImportError):
                     from seaborn import color_palette
         except ImportError:
             # if that fails, use matplotlib

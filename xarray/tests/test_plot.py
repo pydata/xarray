@@ -635,7 +635,6 @@ class Common2dMixin:
             levels=2, cmap='husl').get_cmap().name
         self.assertEqual('husl', cmap_name)
 
-
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
         self.assertEqual('Blues', cmap_name)
