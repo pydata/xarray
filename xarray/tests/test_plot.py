@@ -27,7 +27,7 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
                                _color_palette)
 
-from . import TestCase, requires_matplotlib
+from . import TestCase, requires_matplotlib, requires_seaborn
 
 
 @pytest.mark.flaky
@@ -629,14 +629,12 @@ class Common2dMixin:
         cmap_name = self.plotfunc(abs(self.darray)).get_cmap().name
         self.assertEqual('viridis', cmap_name)
 
+    @requires_seaborn
     def test_seaborn_palette_as_cmap(self):
-        try:
-            import seaborn
-            cmap_name = self.plotmethod(
-                levels=2, cmap='husl').get_cmap().name
-            self.assertEqual('husl', cmap_name)
-        except ImportError:
-            pass
+        cmap_name = self.plotmethod(
+            levels=2, cmap='husl').get_cmap().name
+        self.assertEqual('husl', cmap_name)
+
 
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
@@ -1004,13 +1002,10 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(isinstance(artist, mpl.image.AxesImage))
 
     @pytest.mark.slow
+    @requires_seaborn
     def test_seaborn_palette_needs_levels(self):
-        try:
-            import seaborn  # noqa
-            with self.assertRaises(ValueError):
-                self.plotmethod(cmap='husl')
-        except ImportError:
-            pass
+        with self.assertRaises(ValueError):
+            self.plotmethod(cmap='husl')
 
     def test_2d_coord_names(self):
         with self.assertRaisesRegexp(ValueError, 'requires 1D coordinates'):
@@ -1285,3 +1280,10 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
+
+
+def test_plot_seaborn_no_import_warning():
+    # GH1633
+    with pytest.warns(None) as record:
+        _color_palette('Blues', 4)
+    assert len(record) == 0
