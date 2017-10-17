@@ -25,7 +25,7 @@ import xarray.plot as xplt
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
-                               _color_palette)
+                               _color_palette, import_seaborn)
 
 from . import TestCase, requires_matplotlib, requires_seaborn
 
@@ -1279,6 +1279,14 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
+
+
+@requires_seaborn
+def test_import_seaborn_no_warning():
+    # GH1633
+    with pytest.warns(None) as record:
+        import_seaborn()
+    assert len(record) == 0
 
 
 @requires_matplotlib

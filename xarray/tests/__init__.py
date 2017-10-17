@@ -15,6 +15,7 @@ import pytest
 from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
+from xarray.plot.utils import import_seaborn
 
 try:
     import unittest2 as unittest
@@ -54,7 +55,6 @@ has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
-has_seaborn, requires_seaborn = _importorskip('seaborn')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -62,10 +62,15 @@ requires_scipy_or_netCDF4 = unittest.skipUnless(
     has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
-
 if has_dask:
     import dask
     dask.set_options(get=dask.get)
+try:
+    import_seaborn()
+    has_seaborn = True
+except:
+    has_seaborn = False
+requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")

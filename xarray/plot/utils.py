@@ -24,6 +24,17 @@ def _load_default_cmap(fname='default_colormap.csv'):
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
+def import_seaborn():
+    '''import seaborn and handle deprecation of apionly module'''
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            import seaborn.apionly as sns
+        except (UserWarning, ImportError):
+            import seaborn as sns
+    return sns
+
+
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
@@ -73,20 +84,15 @@ def _color_palette(cmap, n_colors):
     if isinstance(cmap, (list, tuple)):
         # we have a list of colors
         try:
-            # first try to turn it into a palette with seaborn
-            with warnings.catch_warnings():
-                warnings.filterwarnings('error')
-                try:
-                    from seaborn.apionly import color_palette
-                except (UserWarning, ImportError):
-                    from seaborn import color_palette
+            sns = import_seaborn()
         except ImportError:
             # if that fails, use matplotlib
             # in this case, is there any difference between mpl and seaborn?
             cmap = ListedColormap(cmap, N=n_colors)
             pal = cmap(colors_i)
         else:
-            pal = color_palette(cmap, n_colors=n_colors)
+            # first try to turn it into a palette with seaborn
+            pal = sns.color_palette(cmap, n_colors=n_colors)
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
