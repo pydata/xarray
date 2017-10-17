@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import pkg_resources
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -73,13 +74,19 @@ def _color_palette(cmap, n_colors):
         # we have a list of colors
         try:
             # first try to turn it into a palette with seaborn
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                try:
+                    from seaborn.apionly import color_palette
+                except UserWarning:
+                    from seaborn import color_palette
         except ImportError:
             # if that fails, use matplotlib
             # in this case, is there any difference between mpl and seaborn?
             cmap = ListedColormap(cmap, N=n_colors)
             pal = cmap(colors_i)
+        else:
+            pal = color_palette(cmap, n_colors=n_colors)
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
