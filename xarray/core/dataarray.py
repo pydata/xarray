@@ -1214,6 +1214,54 @@ class DataArray(AbstractArray, BaseDataObject):
         out = ops.fillna(self, value)
         return out
 
+    def interpolate_na(self, dim=None, method='linear', inplace=False,
+                       limit=None, **kwargs):
+        """Interpolate values according to different methods.
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to interpolate.
+        method : {'linear', 'time', 'index', 'values', 'nearest'}
+            'linear': ignore the index and treat the values as equally
+                      spaced. default
+            'time': interpolation works on daily and higher resolution data to
+                    interpolate given length of interval
+            'index', 'values': use the actual numerical values of the index
+            'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'barycentric',
+            'polynomial' is passed to scipy.interpolate.interp1d with the
+            order given both 'polynomial' and 'spline' require that you also
+            specify and order (int) e.g. da.interpolate_na(method='polynomial',
+            order=4)
+        limit : limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0.
+
+        Returns
+        -------
+        DataArray
+        """
+        from .missing import interp_na
+        return interp_na(self, dim=dim, method=method, inplace=inplace,
+                         **kwargs)
+
+    def interpolate_at(self, dim, locs, method='linear', inplace=False,
+                       limit=None, **kwargs):
+        # this is just here so I remember the signature we discussed
+        # dim: the dimension along which to interpolate
+        # locs: a broadcastable boolean mask describing where interpolation
+        #       should happen
+        raise NotImplementedError()
+
+    def ffill(self, dim, limit=None):
+        '''TODO'''
+        from .missing import ffill
+        return ffill(self, dim, limit=limit)
+
+    def bfill(self, dim, limit=None):
+        '''TODO'''
+        from .missing import bfill
+        return bfill(self, dim, limit=limit)
+
     def combine_first(self, other):
         """Combine two DataArray objects, with union of coordinates.
 

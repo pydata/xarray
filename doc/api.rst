@@ -298,6 +298,9 @@ Computation
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
 :py:attr:`~DataArray.fillna`
+:py:attr:`~DataArray.ffill`
+:py:attr:`~DataArray.bfill`
+:py:attr:`~DataArray.interpolate_na`
 :py:attr:`~DataArray.where`
 
 **ndarray methods**:
