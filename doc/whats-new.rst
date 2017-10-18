@@ -186,7 +186,7 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Support writing unlimited dimensions with h5netcdf (:issue:`XXXX`).
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes

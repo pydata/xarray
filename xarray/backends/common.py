@@ -232,9 +232,8 @@ class AbstractWritableDataStore(AbstractDataStore):
             unlimited_dims = set()
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
-                if d in unlimited_dims:
-                    l = None
-                self.set_dimension(d, l)
+                is_unlimited = d in unlimited_dims
+                self.set_dimension(d, l, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
