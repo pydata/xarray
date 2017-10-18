@@ -186,6 +186,9 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -260,7 +263,7 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support 
+- Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:
