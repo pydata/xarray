@@ -1189,12 +1189,14 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
         ds.encoding = {'unlimited_dims': ['y']}
-        with create_tmp_file() as tmp_file:
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf')
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
 
 
 # tests pending h5netcdf fix
@@ -1284,6 +1286,112 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @pytest.mark.slow
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
+
+
+@requires_scipy_or_netCDF4
+class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
+    coord_name = 'lon'
+    var_name = 'v1'
+
+    @contextlib.contextmanager
+    def setup_files_and_datasets(self):
+        ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                yield [tmpfile1, tmpfile2], [ds1, ds2]
+
+    def gen_datasets_with_common_coord_and_time(self):
+        # create coordinate data
+        nx = 10
+        nt = 10
+        x = np.arange(nx)
+        t1 = np.arange(nt)
+        t2 = np.arange(nt, 2 * nt, 1)
+
+        v1 = np.random.randn(nt, nx)
+        v2 = np.random.randn(nt, nx)
+
+        ds1 = Dataset(data_vars={self.var_name: (['t', 'x'], v1),
+                                 self.coord_name: ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t1),
+                          'x': (['x', ], x)
+                      })
+
+        ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
+                                 self.coord_name: ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t2),
+                          'x': (['x', ], x)
+                      })
+
+        return ds1, ds2
+
+    def test_open_mfdataset_does_same_as_concat(self):
+        options = ['all', 'minimal', 'different', ]
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            for opt in options:
+                with open_mfdataset(files, data_vars=opt) as ds:
+                    kwargs = dict(data_vars=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
+
+                with open_mfdataset(files, coords=opt) as ds:
+                    kwargs = dict(coords=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
+
+    def test_common_coord_when_datavars_all(self):
+        opt = 'all'
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files with the data_var option
+            with open_mfdataset(files, data_vars=opt) as ds:
+
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+
+                self.assertEqual(var_shape, coord_shape)
+                self.assertNotEqual(coord_shape1, coord_shape)
+                self.assertNotEqual(coord_shape2, coord_shape)
+
+    def test_common_coord_when_datavars_minimal(self):
+        opt = 'minimal'
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files using data_vars option
+            with open_mfdataset(files, data_vars=opt) as ds:
+
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+
+                self.assertNotEqual(var_shape, coord_shape)
+                self.assertEqual(coord_shape1, coord_shape)
+                self.assertEqual(coord_shape2, coord_shape)
+
+    def test_invalid_data_vars_value_should_fail(self):
+
+        with self.setup_files_and_datasets() as (files, _):
+            with self.assertRaises(ValueError):
+                with open_mfdataset(files, data_vars='minimum'):
+                    pass
+
+            # test invalid coord parameter
+            with self.assertRaises(ValueError):
+                with open_mfdataset(files, coords='minimum'):
+                    pass
 
 
 @requires_dask

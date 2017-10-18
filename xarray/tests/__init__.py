@@ -147,8 +147,8 @@ def raises_regex(error, pattern):
     with pytest.raises(error) as excinfo:
         yield
     message = str(excinfo.value)
-    if not re.match(pattern, message):
-        raise AssertionError('exception %r did not match pattern %s'
+    if not re.search(pattern, message):
+        raise AssertionError('exception %r did not match pattern %r'
                              % (excinfo.value, pattern))
 
 

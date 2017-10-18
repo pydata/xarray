@@ -74,6 +74,34 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support for ``data_vars`` and ``coords`` keywords added to
+  :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
+    #instead of
+    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
+    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
+
+    # in case of 'minimal' does not add time dimension to spatial coordinates
+    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
+
+    In [2]: ds['lon'].shape
+
+    Out[2]: (13505, 808, 782)
+
+    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
+
+    In [4]: ds['lon'].shape
+
+    Out[4]: (808, 782)
+
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
+
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
@@ -158,6 +186,9 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -236,7 +267,7 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support 
+- Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:

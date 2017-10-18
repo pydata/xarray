@@ -1,8 +1,10 @@
 import numpy as np
 
+from . import utils
 
-class NA(object):
-    """Use as a sentinel value to indicate a dtype appropriate NA value."""
+
+# Use as a sentinel value to indicate a dtype appropriate NA value.
+NA = utils.ReprObject('<NA>')
 
 
 def maybe_promote(dtype):

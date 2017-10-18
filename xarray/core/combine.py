@@ -340,7 +340,7 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
     return arrays[0]._from_temp_dataset(ds, name)
 
 
-def _auto_concat(datasets, dim=None):
+def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
     if len(datasets) == 1:
         return datasets[0]
     else:
@@ -362,7 +362,7 @@ def _auto_concat(datasets, dim=None):
                                  'supply the ``concat_dim`` argument '
                                  'explicitly')
             dim, = concat_dims
-        return concat(datasets, dim=dim)
+        return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
 
 
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
@@ -370,7 +370,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def auto_combine(datasets,
                  concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts'):
+                 compat='no_conflicts',
+                 data_vars='all', coords='different'):
     """Attempt to auto-magically combine the given datasets into one.
 
     This method attempts to combine a list of datasets into a single entity by
@@ -411,6 +412,10 @@ def auto_combine(datasets,
         - 'no_conflicts': only values which are not null in both datasets
           must be equal. The returned dataset then contains the combination
           of all non-null values.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        Details are in the documentation of concat
+    coords : {'minimal', 'different', 'all' o list of str}, optional
+        Details are in the documentation of concat
 
     Returns
     -------
@@ -426,7 +431,9 @@ def auto_combine(datasets,
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
         grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
                                     datasets).values()
-        concatenated = [_auto_concat(ds, dim=dim) for ds in grouped]
+        concatenated = [_auto_concat(ds, dim=dim,
+                                     data_vars=data_vars, coords=coords)
+                        for ds in grouped]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
