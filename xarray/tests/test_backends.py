@@ -1171,12 +1171,14 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
         ds.encoding = {'unlimited_dims': ['y']}
-        with create_tmp_file() as tmp_file:
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf')
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
 
 
 # tests pending h5netcdf fix
@@ -1340,18 +1342,9 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
 
                 var_shape = ds[self.var_name].shape
 
-                # shape pairs to be compared
-                shape_pairs = [
-                    (var_shape, coord_shape),
-                    (coord_shape1, coord_shape),
-                    (coord_shape2, coord_shape)
-                ]
-                # tests to be applied to respective pairs
-                tests = [self.assertEqual,
-                         self.assertNotEqual, self.assertNotEqual]
-
-                for a_test, a_shape_pair in zip(tests, shape_pairs):
-                    a_test(*a_shape_pair)
+                self.assertEqual(var_shape, coord_shape)
+                self.assertNotEqual(coord_shape1, coord_shape)
+                self.assertNotEqual(coord_shape2, coord_shape)
 
     def test_common_coord_when_datavars_minimal(self):
         opt = 'minimal'
@@ -1366,18 +1359,9 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
 
                 var_shape = ds[self.var_name].shape
 
-                # shape pairs to be compared
-                shape_pairs = [
-                    (var_shape, coord_shape),
-                    (coord_shape1, coord_shape),
-                    (coord_shape2, coord_shape)
-                ]
-                # tests to be applied to respective pairs
-                tests = [self.assertNotEqual,
-                         self.assertEqual, self.assertEqual]
-
-                for a_test, a_shape_pair in zip(tests, shape_pairs):
-                    a_test(*a_shape_pair)
+                self.assertNotEqual(var_shape, coord_shape)
+                self.assertEqual(coord_shape1, coord_shape)
+                self.assertEqual(coord_shape2, coord_shape)
 
     def test_invalid_data_vars_value_should_fail(self):
 
