@@ -15,6 +15,7 @@ from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
 

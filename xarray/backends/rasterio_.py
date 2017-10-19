@@ -38,9 +38,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self._shape
 
     def __getitem__(self, key):
-
-        # make our job a bit easier
-        key = indexing.canonicalize_indexer(key, self._ndims)
+        key = indexing.to_tuple(key)
 
         # bands cannot be windowed but they can be listed
         band_key = key[0]
