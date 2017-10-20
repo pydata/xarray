@@ -2431,27 +2431,35 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         import dask.dataframe as dd
 
         ordered_dims = self.dims
-        coord_columns = [c for c in self if c in ordered_dims]
-
-        # convert all coordinates into data variables
-        ds = self.reset_index(coord_columns).reset_coords()
-
-        # ensure we are dealing with dask arrays with consistent chunks
-        chunked = ds.chunk(chunks=self.chunks)
+        chunks = self.chunks
 
         # order columns so that coordinates appear before data
-        columns = list(chunked)
-        num_coords = len(coord_columns)
-        columns = columns[-num_coords:] + columns[:-num_coords]
+        columns = list(self.coords) + list(self.data_vars)
 
-        data = [chunked._variables[k].set_dims(ordered_dims).data.reshape(-1)
-                for k in columns]
+        data = []
+        for k in columns:
+            v = self._variables[k]
 
-        # restore names of columns that were also index names (e.g. x_ -> x)
-        columns = [c[:-1] if c[:-1] in ds.dims else c for c in columns]
+            # consider coordinate variables as well as data varibles
+            if isinstance(v, xr.IndexVariable):
+                v = v.to_base_variable()
 
-        df = dd.concat([dd.from_array(d, columns=c)
-                        for d, c in zip(data, columns)], axis=1)
+            # ensure all variables span the same dimensions
+            v = v.set_dims(ordered_dims)
+
+            # ensure all variables have the same chunking structure
+            if v.chunks != chunks:
+                v = v.chunk(chunks)
+
+            # reshape variable contents as a 1d array
+            d = v.data.reshape(-1)
+
+            # convert to dask DataFrames
+            s = dd.from_array(d, columns=[k])
+
+            data.append(s)
+
+        df = dd.concat(data, axis=1)
 
         if set_index:
 
@@ -2463,10 +2471,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # extract out first (and only) coordinate variable
             coord_dim = list(ordered_dims)[0]
 
-            df = df.set_index(coord_dim)
-
-        if isinstance(df, dd.Series):
-            df = df.to_frame()
+            if coord_dim in df.columns:
+                df = df.set_index(coord_dim)
 
         return df
 
