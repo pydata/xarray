@@ -548,9 +548,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
     def test_to_dask_dataframe(self):
-        # adapted from TestDataset::test_to_and_from_dataframe()
-        # but with dask DataFrames instead of pandas DataFrames
-
+        # Test conversion of Datasets to dask DataFrames
         x = da.from_array(np.random.randn(10), chunks=4)
         y = np.arange(10, dtype='uint8')
         t = list('abcdefghij')
@@ -581,7 +579,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected.compute().equals(actual.compute()), (expected, actual)
 
-        # test if 2-D dataset is supplied
+    def test_to_dask_dataframe_2D(self):
+        # Test if 2-D dataset is supplied
         w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
         ds = Dataset({'w': (('x', 'y'), w)})
         ds['x'] = ('x', [0, 1])
@@ -602,7 +601,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected.equals(actual.compute()), (expected, actual.compute())
 
-        # test if coordinate is also a dask array
+    def test_to_dask_dataframe_coordinates(self):
+        # Test if coordinate is also a dask array
         x = da.from_array(np.random.randn(10), chunks=4)
         t = da.from_array(np.arange(10)*2, chunks=4)
 
@@ -616,7 +616,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected.compute().equals(actual.compute()), (expected, actual)
 
-        # test if DataArray is not a dask array
+    def test_to_dask_dataframe_not_daskarray(self):
+        # Test if DataArray is not a dask array
         x = np.random.randn(10)
         y = np.arange(10, dtype='uint8')
         t = list('abcdefghij')
@@ -633,12 +634,15 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected_pd.equals(actual.compute())
 
-        # test if Dataset has a dimension without coordinates
+
+    def test_to_dask_dataframe_no_coordinate(self):
+        # Test if Dataset has a dimension without coordinates
         x = da.from_array(np.random.randn(10), chunks=4)
         ds = Dataset({'x' : ('dim_0', x)})
         expected = pd.DataFrame({'x': x.compute()})
         actual = ds.to_dask_dataframe(set_index=True)
         assert expected.equals(actual.compute())
+
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
