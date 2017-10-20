@@ -2420,12 +2420,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         Convert this dataset into a dask.dataframe.DataFrame.
 
-        Both the data and coordinate variables in this dataset form the columns of the
-        DataFrame.
+        Both the coordinate and data variables in this dataset form
+        the columns of the DataFrame.
 
-        If set_index=True, the dask DataFrame is indexed by
-        this dataset's coordinate. Since dask DataFrames to not support
-        multi-indexes, set_index only works if there is one coordinate dimension.
+        If set_index=True, the dask DataFrame is indexed by this dataset's
+        coordinate.  Since dask DataFrames to not support multi-indexes,
+        set_index only works if there is one coordinate dimension.
         """
 
         import dask.dataframe as dd
