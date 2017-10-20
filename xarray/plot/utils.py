@@ -26,12 +26,16 @@ def _load_default_cmap(fname='default_colormap.csv'):
 
 def import_seaborn():
     '''import seaborn and handle deprecation of apionly module'''
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
         try:
             import seaborn.apionly as sns
-        except (UserWarning, ImportError):
+            if w and issubclass(w[-1].category, UserWarning):
+                raise ImportError
+        except ImportError:
             import seaborn as sns
+        finally:
+            warnings.resetwarnings()
     return sns
 
 
