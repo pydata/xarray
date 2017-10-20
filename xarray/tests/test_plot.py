@@ -5,9 +5,6 @@ from __future__ import print_function
 # import mpl and change the backend before other mpl imports
 try:
     import matplotlib as mpl
-    # Using a different backend makes Travis CI work
-    mpl.use('Agg')
-    # Order of imports is important here.
     import matplotlib.pyplot as plt
 except ImportError:
     pass

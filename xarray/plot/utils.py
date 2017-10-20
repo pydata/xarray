@@ -30,7 +30,8 @@ def import_seaborn():
         warnings.simplefilter("always")
         try:
             import seaborn.apionly as sns
-            if w and issubclass(w[-1].category, UserWarning):
+            if (w and issubclass(w[-1].category, UserWarning) and
+                    ("seaborn.apionly module" in str(w[-1].message))):
                 raise ImportError
         except ImportError:
             import seaborn as sns

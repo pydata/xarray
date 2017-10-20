@@ -27,6 +27,15 @@ try:
 except ImportError:
     import mock
 
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Order of imports is important here.
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+except ImportError:
+    pass
+
 
 def _importorskip(modname, minversion=None):
     try:
