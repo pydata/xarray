@@ -633,6 +633,13 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
         assert expected_pd.equals(actual.compute())
 
+        # test if Dataset has a dimension without coordinates
+        x = da.from_array(np.random.randn(10), chunks=4)
+        ds = Dataset({'x' : ('dim_0', x)})
+        expected = pd.DataFrame({'x': x.compute()})
+        actual = ds.to_dask_dataframe(set_index=True)
+        assert expected.equals(actual.compute())
+
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
 def test_dask_kwargs_variable(method):
