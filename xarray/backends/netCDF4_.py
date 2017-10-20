@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import functools
 import operator
+import errno
 
 import numpy as np
 
@@ -184,7 +185,14 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     import netCDF4 as nc4
 
-    ds = nc4.Dataset(filename, mode=mode, **kwargs)
+    try:
+        ds = nc4.Dataset(filename, mode=mode, **kwargs)
+    except IOError as e:
+        message = e.args[0]
+        err_num = e.errno
+        if 'No such file or directory' in message:
+            err_num = errno.ENOENT
+        raise IOError(err_num, message, filename)
 
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)

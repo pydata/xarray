@@ -851,6 +851,13 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             except IndexError as err:
                 self.assertIn('first by calling .load', str(err))
 
+    def test_informative_open_error(self):
+        with self.assertRaisesRegexp(IOError, 'not_a_file.nc'):
+            open_dataset('not_a_file.nc', engine='netcdf4')
+
+        with self.assertRaisesRegexp(IOError, 'not_a_file.nc'):
+            open_mfdataset(['not_a_file.nc'], engine='netcdf4')
+
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
     autoclose = True
