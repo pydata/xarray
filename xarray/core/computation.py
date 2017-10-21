@@ -120,6 +120,23 @@ def build_output_coords(
         signature,                 # type: _UFuncSignature
         exclude_dims=frozenset(),  # type: set
 ):
+    """Build output coordinates for an operation.
+
+    Parameters
+    ----------
+    args : list
+        List of raw operation arguments. Any valid types for xarray operations
+        are OK, e.g., scalars, Variable, DataArray, Dataset.
+    signature : _UfuncSignature
+        Core dimensions signature for the operation.
+    exclude_dims : optional set
+        Dimensions excluded from the operation. Coordinates along these
+        dimensions are dropped.
+
+    Returns
+    -------
+    OrderedDict of Variable objects with merged coordinates.
+    """
     # type: (...) -> List[OrderedDict[Any, Variable]]
     input_coords = _get_coord_variables(args)
 
@@ -676,6 +693,7 @@ def apply_ufunc(func, *args, **kwargs):
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
         data variables:
+
         - 'outer': use the union of object indexes
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
@@ -685,6 +703,7 @@ def apply_ufunc(func, *args, **kwargs):
     dataset_join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
+
         - 'outer': take variables from both Dataset objects
         - 'inner': take only overlapped variables
         - 'left': take only variables from the first object
@@ -701,6 +720,7 @@ def apply_ufunc(func, *args, **kwargs):
     dask: 'forbidden', 'allowed' or 'parallelized', optional
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
+
         - 'forbidden' (default): raise an error if a dask array is encountered.
         - 'allowed': pass dask arrays directly on to ``func``.
         - 'parallelized': automatically parallelize ``func`` if any of the
@@ -724,7 +744,7 @@ def apply_ufunc(func, *args, **kwargs):
     ``apply_ufunc`` to write functions to (very nearly) replicate existing
     xarray functionality:
 
-    Calculate the vector magnitude of two arguments:
+    Calculate the vector magnitude of two arguments::
 
         def magnitude(a, b):
             func = lambda x, y: np.sqrt(x ** 2 + y ** 2)

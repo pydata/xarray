@@ -27,6 +27,7 @@ class PydapArrayWrapper(NDArrayMixin):
             return np.dtype(t.typecode + str(t.size))
 
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
         if not isinstance(key, tuple):
             key = (key,)
         for k in key:

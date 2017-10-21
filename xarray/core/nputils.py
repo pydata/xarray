@@ -79,3 +79,56 @@ def array_ne(self, other):
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', r'elementwise comparison failed')
         return _ensure_bool_is_ndarray(self != other, self, other)
+
+
+def _is_contiguous(positions):
+    """Given a non-empty list, does it consist of contiguous integers?"""
+    previous = positions[0]
+    for current in positions[1:]:
+        if current != previous + 1:
+            return False
+        previous = current
+    return True
+
+
+def _advanced_indexer_subspaces(key):
+    """Indices of the advanced indexes subspaces for mixed indexing and vindex.
+    """
+    if not isinstance(key, tuple):
+        key = (key,)
+    advanced_index_positions = [i for i, k in enumerate(key)
+                                if not isinstance(k, slice)]
+
+    if (not advanced_index_positions or
+            not _is_contiguous(advanced_index_positions)):
+        # Nothing to reorder: dimensions on the indexing result are already
+        # ordered like vindex. See NumPy's rule for "Combining advanced and
+        # basic indexing":
+        # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        return (), ()
+
+    non_slices = [k for k in key if not isinstance(k, slice)]
+    ndim = len(np.broadcast(*non_slices).shape)
+    mixed_positions = advanced_index_positions[0] + np.arange(ndim)
+    vindex_positions = np.arange(ndim)
+    return mixed_positions, vindex_positions
+
+
+class NumpyVIndexAdapter(object):
+    """Object that implements indexing like vindex on a np.ndarray.
+
+    This is a pure Python implementation of (some of) the logic in this NumPy
+    proposal: https://github.com/numpy/numpy/pull/6256
+    """
+    def __init__(self, array):
+        self._array = array
+
+    def __getitem__(self, key):
+        mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
+        return np.moveaxis(self._array[key], mixed_positions, vindex_positions)
+
+    def __setitem__(self, key, value):
+        """Value must have dimensionality matching the key."""
+        mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
+        self._array[key] = np.moveaxis(value, vindex_positions,
+                                       mixed_positions)
