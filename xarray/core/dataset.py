@@ -2189,6 +2189,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def T(self):
+        warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
+                      '`.transpose()`. It will be removed in a future version '
+                      'of xarray.',
+                      FutureWarning, stacklevel=2)
         return self.transpose()
 
     def dropna(self, dim, how='any', thresh=None, subset=None):
