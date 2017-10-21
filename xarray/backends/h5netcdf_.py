@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
-import warnings
 
 from .. import Variable
 from ..core import indexing
@@ -16,6 +15,7 @@ from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
 
@@ -106,9 +106,20 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             return self.ds.dimensions
 
-    def set_dimension(self, name, length):
+    def get_encoding(self):
+        with self.ensure_open(autoclose=True):
+            encoding = {}
+            encoding['unlimited_dims'] = {
+                k for k, v in self.ds.dimensions.items() if v is None}
+        return encoding
+
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            self.ds.createDimension(name, size=length)
+            if is_unlimited:
+                self.ds.createDimension(name, size=None)
+                self.ds.resize_dimension(name, length)
+            else:
+                self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
@@ -123,10 +134,6 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         if dtype is str:
             dtype = h5py.special_dtype(vlen=unicode_type)
 
-        if unlimited_dims is not None:
-            warnings.warn('h5netcdf does not support unlimited dimensions, '
-                          'got: %s.' % unlimited_dims)
-            unlimited_dims = None
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
@@ -141,7 +148,6 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                     'chunksizes', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-
         nc4_var = self.ds.createVariable(name, dtype, variable.dims,
                                          fill_value=fill_value, **kwargs)
 

@@ -11,15 +11,16 @@ import re
 import numpy as np
 
 from . import duck_array_ops
+from . import utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, basestring, dask_array_type
+from .pycompat import OrderedDict, dask_array_type
 from .utils import is_dict_like
 
 
 _DEFAULT_FROZEN_SET = frozenset()
-_DEFAULT_FILL_VALUE = object()
-_DEFAULT_NAME = object()
+_NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')
+_DEFAULT_NAME = utils.ReprObject('<default-name>')
 _JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
 
 
@@ -126,6 +127,23 @@ def build_output_coords(
         signature,                 # type: _UFuncSignature
         exclude_dims=frozenset(),  # type: set
 ):
+    """Build output coordinates for an operation.
+
+    Parameters
+    ----------
+    args : list
+        List of raw operation arguments. Any valid types for xarray operations
+        are OK, e.g., scalars, Variable, DataArray, Dataset.
+    signature : _UfuncSignature
+        Core dimensions signature for the operation.
+    exclude_dims : optional set
+        Dimensions excluded from the operation. Coordinates along these
+        dimensions are dropped.
+
+    Returns
+    -------
+    OrderedDict of Variable objects with merged coordinates.
+    """
     # type: (...) -> List[OrderedDict[Any, Variable]]
     input_coords = _get_coord_variables(args)
 
@@ -322,7 +340,7 @@ def apply_dataset_ufunc(func, *args, **kwargs):
     first_obj = args[0]  # we'll copy attrs from this in case keep_attrs=True
 
     if (dataset_join not in _JOINS_WITHOUT_FILL_VALUES and
-            fill_value is _DEFAULT_FILL_VALUE):
+            fill_value is _NO_FILL_VALUE):
         raise TypeError('to apply an operation to datasets with different '
                         'data variables with apply_ufunc, you must supply the '
                         'dataset_fill_value argument.')
@@ -626,9 +644,9 @@ def apply_ufunc(func, *args, **kwargs):
                    output_core_dims : Optional[Sequence[Sequence]] = ((),),
                    exclude_dims : Collection = frozenset(),
                    vectorize : bool = False,
-                   join : str = 'inner',
-                   dataset_join : str = 'inner',
-                   dataset_fill_value : Any = _DEFAULT_FILL_VALUE,
+                   join : str = 'exact',
+                   dataset_join : str = 'exact',
+                   dataset_fill_value : Any = _NO_FILL_VALUE,
                    keep_attrs : bool = False,
                    kwargs : Mapping = None,
                    dask : str = 'forbidden',
@@ -686,27 +704,30 @@ def apply_ufunc(func, *args, **kwargs):
         :py:func:`numpy.vectorize`. This option exists for convenience, but is
         almost always slower than supplying a pre-vectorized function.
         Using this option requires NumPy version 1.12 or newer.
-    join : {'outer', 'inner', 'left', 'right'}, optional
+    join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
         data variables:
+
         - 'outer': use the union of object indexes
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension
         - 'right': use indexes from the last object with each dimension
         - 'exact': raise `ValueError` instead of aligning when indexes to be
           aligned are not equal
-    dataset_join : {'outer', 'inner', 'left', 'right'}, optional
+    dataset_join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining variables of Dataset objects with mismatched
         data variables.
+
         - 'outer': take variables from both Dataset objects
         - 'inner': take only overlapped variables
         - 'left': take only variables from the first object
         - 'right': take only variables from the last object
+        - 'exact': data variables on all Dataset objects must match exactly
     dataset_fill_value : optional
         Value used in place of missing variables on Dataset inputs when the
         datasets do not share the exact same ``data_vars``. Required if
-        ``dataset_join != 'inner'``, otherwise ignored.
+        ``dataset_join not in {'inner', 'exact'}``, otherwise ignored.
     keep_attrs: boolean, Optional
         Whether to copy attributes from the first argument to the output.
     kwargs: dict, optional
@@ -714,6 +735,7 @@ def apply_ufunc(func, *args, **kwargs):
     dask: 'forbidden', 'allowed' or 'parallelized', optional
         How to handle applying to objects containing lazy data in the form of
         dask arrays:
+
         - 'forbidden' (default): raise an error if a dask array is encountered.
         - 'allowed': pass dask arrays directly on to ``func``.
         - 'parallelized': automatically parallelize ``func`` if any of the
@@ -737,7 +759,7 @@ def apply_ufunc(func, *args, **kwargs):
     ``apply_ufunc`` to write functions to (very nearly) replicate existing
     xarray functionality:
 
-    Calculate the vector magnitude of two arguments:
+    Calculate the vector magnitude of two arguments::
 
         def magnitude(a, b):
             func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
@@ -796,11 +818,11 @@ def apply_ufunc(func, *args, **kwargs):
     input_core_dims = kwargs.pop('input_core_dims', None)
     output_core_dims = kwargs.pop('output_core_dims', ((),))
     vectorize = kwargs.pop('vectorize', False)
-    join = kwargs.pop('join', 'inner')
-    dataset_join = kwargs.pop('dataset_join', 'inner')
+    join = kwargs.pop('join', 'exact')
+    dataset_join = kwargs.pop('dataset_join', 'exact')
     keep_attrs = kwargs.pop('keep_attrs', False)
     exclude_dims = kwargs.pop('exclude_dims', frozenset())
-    dataset_fill_value = kwargs.pop('dataset_fill_value', _DEFAULT_FILL_VALUE)
+    dataset_fill_value = kwargs.pop('dataset_fill_value', _NO_FILL_VALUE)
     kwargs_ = kwargs.pop('kwargs', None)
     dask = kwargs.pop('dask', 'forbidden')
     output_dtypes = kwargs.pop('output_dtypes', None)

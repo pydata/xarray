@@ -16,7 +16,23 @@ What's New
 .. _whats-new.0.9.7:
 
 v0.10.0 (unreleased)
--------------------
+--------------------
+
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- xarray now supports vectorized indexing, where we consider the dimension of
+  indexer, e.g. ``array.sel(x=ind)`` with ``ind.dims == ('y', )`` .
+  This enables us more advanced indexing, including outer indexing, diagonal
+  indexing, as well as vectorized indexing.
+  Due to this change, existing uses of xarray objects to index other xarray
+  objects will break in some cases.
+  ``isel_points`` / ``sel_points`` methods are deprecated, since the same thing
+  can be done by the new ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details
+  (:issue:`1444`, :issue:`1436`, ).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -74,6 +90,41 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support for ``data_vars`` and ``coords`` keywords added to
+  :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
+    #instead of
+    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
+    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
+
+    # in case of 'minimal' does not add time dimension to spatial coordinates
+    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
+
+    In [2]: ds['lon'].shape
+
+    Out[2]: (13505, 808, 782)
+
+    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
+
+    In [4]: ds['lon'].shape
+
+    Out[4]: (808, 782)
+
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
+
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
+
+- New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
+  written to work on NumPy arrays to support labels on xarray objects
+  (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
+  many functions with dask. See :ref:`comput.wrapping-custom` and
+  :ref:`dask.automatic-parallelization` for details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
@@ -158,6 +209,9 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -200,6 +254,9 @@ Bug fixes
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Fix positional indexing to allow the use of unsigned integers (:issue:`1405`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
 - ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
   coordinate shares a name with a dimension but is comprised of arbitrary
   dimensions(:issue:`1120`).
@@ -232,7 +289,7 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support 
+- Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 .. _whats-new.0.9.6:

@@ -1,11 +1,14 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import itertools
+
 import numpy as np
 import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
+from xarray.core import nputils
 from . import TestCase, ReturnItem
 
 
@@ -28,47 +31,6 @@ class TestIndexers(TestCase):
                                   self.set_to_zero(x, j))
         with self.assertRaisesRegexp(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
-
-    def test_orthogonal_indexer(self):
-        x = np.random.randn(10, 11, 12, 13, 14)
-        y = np.arange(5)
-        I = ReturnItem()
-        # orthogonal and numpy indexing should be equivalent, because we only
-        # use at most one array and it never in between two slice objects
-        # (i.e., we try to avoid numpy's mind-boggling "partial indexing"
-        # http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html)
-        for i in [I[:], I[0], I[0, 0], I[:5], I[5:], I[2:5], I[3:-3], I[::-1],
-                  I[::-2], I[5::-2], I[:3:-2], I[2:5:-1], I[7:3:-2], I[:3, :4],
-                  I[:3, 0, :4], I[:3, 0, :4, 0], I[y], I[:, y], I[0, y],
-                  I[:2, :3, y], I[0, y, :, :4, 0]]:
-            j = indexing.orthogonal_indexer(i, x.shape)
-            self.assertArrayEqual(x[i], x[j])
-            self.assertArrayEqual(self.set_to_zero(x, i),
-                                  self.set_to_zero(x, j))
-        # for more complicated cases, check orthogonal indexing is still
-        # equivalent to slicing
-        z = np.arange(2, 8, 2)
-        for i, j, shape in [
-                (I[y, y], I[:5, :5], (5, 5, 12, 13, 14)),
-                (I[y, z], I[:5, 2:8:2], (5, 3, 12, 13, 14)),
-                (I[0, y, y], I[0, :5, :5], (5, 5, 13, 14)),
-                (I[y, 0, z], I[:5, 0, 2:8:2], (5, 3, 13, 14)),
-                (I[y, :, z], I[:5, :, 2:8:2], (5, 11, 3, 13, 14)),
-                (I[0, :, z], I[0, :, 2:8:2], (11, 3, 13, 14)),
-                (I[0, :2, y, y, 0], I[0, :2, :5, :5, 0], (2, 5, 5)),
-                (I[0, :, y, :, 0], I[0, :, :5, :, 0], (11, 5, 13)),
-                (I[:, :, y, :, 0], I[:, :, :5, :, 0], (10, 11, 5, 13)),
-                (I[:, :, y, z, :], I[:, :, :5, 2:8:2], (10, 11, 5, 3, 14))]:
-            k = indexing.orthogonal_indexer(i, x.shape)
-            self.assertEqual(shape, x[k].shape)
-            self.assertArrayEqual(x[j], x[k])
-            self.assertArrayEqual(self.set_to_zero(x, j),
-                                  self.set_to_zero(x, k))
-        # standard numpy (non-orthogonal) indexing doesn't work anymore
-        with self.assertRaisesRegexp(ValueError, 'only supports 1d'):
-            indexing.orthogonal_indexer(x > 0, x.shape)
-        with self.assertRaisesRegexp(ValueError, 'invalid subkey'):
-            print(indexing.orthogonal_indexer((1.5 * y, 1.5 * y), x.shape))
 
     def test_asarray_tuplesafe(self):
         res = indexing._asarray_tuplesafe(('a', 1))
@@ -180,28 +142,40 @@ class TestLazyArray(TestCase):
                 self.assertArrayEqual(expected, actual)
 
     def test_lazily_indexed_array(self):
-        x = indexing.NumpyIndexingAdapter(np.random.rand(10, 20, 30))
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        v = Variable(['i', 'j', 'k'], original)
         lazy = indexing.LazilyIndexedArray(x)
+        v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()
         # test orthogonally applied indexers
-        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], np.arange(10) < 5]
+        indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
         for i in indexers:
             for j in indexers:
                 for k in indexers:
-                    expected = np.asarray(x[i, j, k])
-                    for actual in [lazy[i, j, k],
-                                   lazy[:, j, k][i],
-                                   lazy[:, :, k][:, j][i]]:
+                    if isinstance(j, np.ndarray) and j.dtype.kind == 'b':
+                        j = np.arange(20) < 5
+                    if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
+                        k = np.arange(30) < 5
+                    expected = np.asarray(v[i, j, k])
+                    for actual in [v_lazy[i, j, k],
+                                   v_lazy[:, j, k][i],
+                                   v_lazy[:, :, k][:, j][i]]:
                         self.assertEqual(expected.shape, actual.shape)
                         self.assertArrayEqual(expected, actual)
+                        assert isinstance(actual._data,
+                                          indexing.LazilyIndexedArray)
         # test sequentially applied indexers
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
         for i, j in indexers:
-            expected = np.asarray(x[i][j])
-            actual = lazy[i][j]
+            expected = np.asarray(v[i][j])
+            actual = v_lazy[i][j]
             self.assertEqual(expected.shape, actual.shape)
             self.assertArrayEqual(expected, actual)
+            assert isinstance(actual._data, indexing.LazilyIndexedArray)
+            assert isinstance(actual._data.array,
+                              indexing.NumpyIndexingAdapter)
 
 
 class TestCopyOnWriteArray(TestCase):
@@ -254,3 +228,39 @@ class TestMemoryCachedArray(TestCase):
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(['foo', 'bar']))
         assert np.array(x[0][()]) == 'foo'
+
+
+class TestIndexerTuple(TestCase):
+    """ Make sure _outer_to_numpy_indexer gives similar result to
+    Variable._broadcast_indexes_vectorized
+    """
+    def test_outer_indexer(self):
+        def nonzero(x):
+            if isinstance(x, np.ndarray) and x.dtype.kind == 'b':
+                x = x.nonzero()[0]
+            return x
+        original = np.random.rand(10, 20, 30)
+        v = Variable(['i', 'j', 'k'], original)
+        I = ReturnItem()
+        # test orthogonally applied indexers
+        indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
+                    np.arange(10) < 5]
+        for i, j, k in itertools.product(indexers, repeat=3):
+
+            if isinstance(j, np.ndarray) and j.dtype.kind == 'b':  # match size
+                j = np.arange(20) < 4
+            if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
+                k = np.arange(30) < 8
+
+            _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
+            expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
+            if new_order:
+                old_order = range(len(new_order))
+                expected_data = np.moveaxis(expected_data, old_order,
+                                            new_order)
+
+            outer_index = indexing.OuterIndexer(
+                (nonzero(i), nonzero(j), nonzero(k)))
+            actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
+            actual_data = v.data[actual]
+            self.assertArrayEqual(actual_data, expected_data)

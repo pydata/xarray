@@ -50,6 +50,8 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
+
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:
@@ -294,9 +296,10 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                 k for k, v in self.ds.dimensions.items() if v.isunlimited()}
         return encoding
 
-    def set_dimension(self, name, length):
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            self.ds.createDimension(name, size=length)
+            dim_length = length if not is_unlimited else None
+            self.ds.createDimension(name, size=dim_length)
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
