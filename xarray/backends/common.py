@@ -223,11 +223,12 @@ class AbstractWritableDataStore(AbstractDataStore):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            if (vn not in self.variables or (getattr(self, '_mode', False) != 'a')):
+            if (vn not in self.variables or
+                    (getattr(self, '_mode', False) != 'a')):
                 target, source = self.prepare_variable(
                     name, v, check, unlimited_dims=unlimited_dims)
             else:
-                target, source = self.ds[name], v.data
+                target, source = self.ds.variables[name], v.data
 
             self.writer.add(source, target)
 
