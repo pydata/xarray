@@ -1006,7 +1006,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
         # regression for GH1215
         data = create_test_data()
         with self.roundtrip_append(data) as actual:
-            self.assertDatasetIdentical(data, actual)
+            assert_allclose(data, actual)
 
     def test_append_overwrite_values(self):
         data = create_test_data()
@@ -1017,7 +1017,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             data[['var2', 'var9']].to_netcdf(tmp_file, mode='a',
                                              engine='scipy')
             actual = open_dataset(tmp_file, engine='scipy')
-            assert_identical(data, actual)
+            assert_allclose(data, actual)
 
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
