@@ -93,6 +93,12 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support `_ipython_key_completions_` to enable autocompletion for
+  dictionary access with IPython.
+  e.g.  ``ds['tem`` + tab -> ``ds['temperature']``
+  (:issue:`1628`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Support for ``data_vars`` and ``coords`` keywords added to
   :py:func:`~xarray.open_mfdataset`
   (:issue:`438`):
