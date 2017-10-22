@@ -178,7 +178,7 @@ streaming computation.
 
 It is possible to append or overwrite netCDF variables using the ``mode='a'``
 argument. When using this option, all variables in the dataset will be written
-to the netCDF file, regardless if they exist in the original dataset.
+to the original netCDF file, regardless if they exist in the original dataset.
 
 .. _io.encoding:
 
