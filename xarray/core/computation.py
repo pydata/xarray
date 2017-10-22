@@ -794,15 +794,17 @@ def apply_ufunc(func, *args, **kwargs):
             result[dim] = new_coord
             return result
 
+    If your function is not vectorized but can be applied only to core
+    dimensions, you can use ``vectorize=True`` to turn a :
+
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
-    numpy.broadcast_arrays or numpy.vectorize helpful in writing your function.
-    `apply_ufunc` also works well with numba's vectorize and guvectorize.
+    numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
+    works well with numba's vectorize and guvectorize.
 
     See also
     --------
     numpy.broadcast_arrays
-    numpy.vectorize
     numba.vectorize
     numba.guvectorize
 
