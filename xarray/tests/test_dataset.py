@@ -3576,7 +3576,8 @@ class TestDataset(TestCase):
         expected = ds.apply(lambda x: x.transpose())
         self.assertDatasetIdentical(expected, actual)
 
-        actual = ds.T
+        with pytest.warns(FutureWarning):
+            actual = ds.T
         self.assertDatasetIdentical(expected, actual)
 
         actual = ds.transpose('x', 'y')

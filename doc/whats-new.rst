@@ -78,6 +78,9 @@ Breaking changes
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
+  (:issue:`1232`).
+
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
