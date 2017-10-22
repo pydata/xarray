@@ -456,7 +456,7 @@ class CharToStringArray(utils.NDArrayMixin):
     array('abc',
           dtype='|S3')
     """
-    def __init__(self, array):
+    def __init__(self, array, encoding=None):
         """
         Parameters
         ----------
@@ -464,10 +464,15 @@ class CharToStringArray(utils.NDArrayMixin):
             Original array of values to wrap.
         """
         self.array = array
+        self.encoding = encoding
 
     @property
     def dtype(self):
-        return np.dtype('S' + str(self.array.shape[-1]))
+        if self.encoding is None:
+            return np.dtype('S' + str(self.array.shape[-1]))
+        else:
+            # variable length string
+            return np.dtype(object)
 
     @property
     def shape(self):
@@ -475,24 +480,30 @@ class CharToStringArray(utils.NDArrayMixin):
 
     def __str__(self):
         if self.ndim == 0:
-            # always return a unicode str if it's a single item for py3 compat
-            return self[...].item().decode('utf-8')
+            return str(self[...].item())
         else:
             return repr(self)
 
     def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.array)
+        return ('%s(%r, encoding=encoding)'
+                % (type(self).__name__, self.array, self.encoding))
 
     def __getitem__(self, key):
-        if self.array.ndim == 0:
-            values = self.array[key]
+        # require slicing the last dimension completely
+        key = indexing.expanded_indexer(key, self.array.ndim)
+        if key[-1] != slice(None):
+            raise IndexError('too many indices')
+        bytes_array = char_to_bytes(self.array[key])
+        if self.encoding is not None:
+            return decode_bytes_as_object(bytes_array, self.encoding)
         else:
-            # require slicing the last dimension completely
-            key = indexing.expanded_indexer(key, self.array.ndim)
-            if key[-1] != slice(None):
-                raise IndexError('too many indices')
-            values = char_to_string(self.array[key])
-        return values
+            return bytes_array
+
+
+def decode_bytes_as_object(bytes_array, encoding='utf-8'):
+    # This is faster than using np.char.decode() or np.vectorize()
+    decoded = [x.decode('utf-8') for x in bytes_array.ravel()]
+    return np.array(decoded, dtype=object).reshape(bytes_array.shape)
 
 
 class NativeEndiannessArray(utils.NDArrayMixin):
@@ -580,26 +591,38 @@ class UnsignedIntTypeArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-def string_to_char(arr):
+def bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
     # ensure the array is contiguous
     arr = np.array(arr, copy=False, order='C')
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
-        raise ValueError('argument must be a string')
+        raise ValueError('argument must be a string array')
     return arr.reshape(arr.shape + (1,)).view(kind + '1')
 
 
-def char_to_string(arr):
+def char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible.
     """
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order='C')
+
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
-        raise ValueError('argument must be a string')
-    return arr.view(kind + str(arr.shape[-1]))[..., 0]
+        raise ValueError('argument must be a string array')
+
+    if not arr.ndim:
+        # no dimension to concatenate along
+        return arr
+
+    size = arr.shape[-1]
+    if not size:
+        # can't make an S0 dtype
+        return np.zeros(arr.shape[:-1], dtype=kind)
+
+    dtype = kind + str(size)
+    return arr.view(dtype).reshape(arr.shape[:-1])
 
 
 def safe_setitem(dest, key, value):
@@ -692,7 +715,7 @@ def maybe_encode_dtype(var, name=None):
                     data = data.astype(signed_dtype)
                     pop_to(encoding, attrs, '_Unsigned')
             if dtype == 'S1' and data.dtype != 'S1':
-                data = string_to_char(np.asarray(data, 'S'))
+                data = bytes_to_char(np.asarray(data, 'S'))
                 dims = dims + ('string%s' % data.shape[-1],)
             data = data.astype(dtype=dtype)
         var = Variable(dims, data, attrs, encoding)
