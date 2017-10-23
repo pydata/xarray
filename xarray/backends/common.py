@@ -237,6 +237,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
+
     def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

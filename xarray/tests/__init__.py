@@ -89,10 +89,12 @@ class TestCase(unittest.TestCase):
         # Python 3 assertCountEqual is roughly equivalent to Python 2
         # assertItemsEqual
         def assertItemsEqual(self, first, second, msg=None):
+            __tracebackhide__ = True  # noqa: F841
             return self.assertCountEqual(first, second, msg)
 
     @contextmanager
     def assertWarns(self, message):
+        __tracebackhide__ = True  # noqa: F841
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
@@ -100,50 +102,69 @@ class TestCase(unittest.TestCase):
         assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(v1, v2)
 
     def assertVariableIdentical(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
+        __tracebackhide__ = True  # noqa: F841
         assert_allclose(v1, v2, rtol=rtol, atol=atol)
 
     def assertVariableNotEqual(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
 
     def assertArrayEqual(self, a1, a2):
+        __tracebackhide__ = True  # noqa: F841
         assert_array_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
+        __tracebackhide__ = True  # noqa: F841
         assert a1 == a2 or (a1 != a1 and a2 != a2)
 
     def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
+        __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
     def assertDatasetEqual(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
     def assertDatasetIdentical(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(d1, d2)
 
-    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
-        assert_allclose(d1, d2, rtol=rtol, atol=atol)
+    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08,
+                              decode_bytes=True):
+        __tracebackhide__ = True  # noqa: F841
+        assert_allclose(d1, d2, rtol=rtol, atol=atol,
+                        decode_bytes=decode_bytes)
 
     def assertCoordinatesEqual(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
     def assertDataArrayEqual(self, ar1, ar2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(ar1, ar2)
 
     def assertDataArrayIdentical(self, ar1, ar2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(ar1, ar2)
 
-    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
-        assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
+    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08,
+                                decode_bytes=True):
+        __tracebackhide__ = True  # noqa: F841
+        assert_allclose(ar1, ar2, rtol=rtol, atol=atol,
+                        decode_bytes=decode_bytes)
 
 
 @contextmanager
 def raises_regex(error, pattern):
+    __tracebackhide__ = True  # noqa: F841
     with pytest.raises(error) as excinfo:
         yield
     message = str(excinfo.value)

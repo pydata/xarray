@@ -58,11 +58,11 @@ class TestMaskedAndScaledArray(TestCase):
         self.assertTrue(np.isnan(x[...]))
 
 
-class TestCharToStringArray(TestCase):
+class TestStackedBytesArray(TestCase):
     def test_wrapper_class(self):
-        array = np.array([list('abc'), list('cdf')], dtype='S')
-        actual = conventions.CharToStringArray(array)
-        expected = np.array(['abc', 'cdf'], dtype='S')
+        array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
+        actual = conventions.StackedBytesArray(array)
+        expected = np.array([b'abc', b'def'], dtype='S')
         self.assertEqual(actual.dtype, expected.dtype)
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(actual.size, expected.size)
@@ -73,19 +73,21 @@ class TestCharToStringArray(TestCase):
         with self.assertRaises(IndexError):
             actual[:, :2]
 
-    def test_encoding(self):
-        encoding = 'utf-8'
-        raw_array = conventions.bytes_to_char(
-            np.array([b'abc', u'ß∂µ∆'.encode(encoding)]))
-        actual = conventions.CharToStringArray(raw_array, encoding=encoding)
-        expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
+    def test_scalar(self):
+        array = np.array([b'a', b'b', b'c'], dtype='S')
+        actual = conventions.StackedBytesArray(array)
 
-        self.assertEqual(actual.dtype, expected.dtype)
-        self.assertEqual(actual.shape, expected.shape)
-        self.assertEqual(actual.size, expected.size)
-        self.assertEqual(actual.ndim, expected.ndim)
-        self.assertArrayEqual(expected, actual)
-        self.assertArrayEqual(expected[0], actual[0])
+        expected = np.array(b'abc')
+        assert actual.dtype == expected.dtype
+        assert actual.shape == expected.shape
+        assert actual.size == expected.size
+        assert actual.ndim == expected.ndim
+        with pytest.raises(TypeError):
+            len(actual)
+        np.testing.assert_array_equal(expected, actual)
+        with pytest.raises(IndexError):
+            actual[:2]
+        assert str(actual) == str(expected)
 
     def test_char_to_bytes(self):
         array = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
@@ -121,24 +123,35 @@ class TestCharToStringArray(TestCase):
         self.assertArrayEqual(actual, expected)
 
 
-@pytest.mark.parametrize('value,encoding,dtype',
-                         [(b'abc', None, 'S3'), (u'abc', 'utf-8', object)])
-def test_scalar(value, encoding, dtype):
-    array = np.array([b'a', b'b', b'c'], dtype='S')
-    actual = conventions.CharToStringArray(array, encoding)
-    assert actual.encoding == encoding
+class TestBytesToStringArray(TestCase):
 
-    expected = np.array(value, dtype)
-    assert actual.dtype == expected.dtype
-    assert actual.shape == expected.shape
-    assert actual.size == expected.size
-    assert actual.ndim == expected.ndim
-    with pytest.raises(TypeError):
-        len(actual)
-    np.testing.assert_array_equal(expected, actual)
-    with pytest.raises(IndexError):
-        actual[:2]
-    assert str(actual) == str(value)
+    def test_encoding(self):
+        encoding = 'utf-8'
+        raw_array = np.array([b'abc', u'ß∂µ∆'.encode(encoding)])
+        actual = conventions.BytesToStringArray(raw_array, encoding=encoding)
+        expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
+
+        self.assertEqual(actual.dtype, expected.dtype)
+        self.assertEqual(actual.shape, expected.shape)
+        self.assertEqual(actual.size, expected.size)
+        self.assertEqual(actual.ndim, expected.ndim)
+        self.assertArrayEqual(expected, actual)
+        self.assertArrayEqual(expected[0], actual[0])
+
+    def test_scalar(self):
+        expected = np.array(u'abc', dtype=object)
+        actual = conventions.BytesToStringArray(
+            np.array(b'abc'), encoding='utf-8')
+        assert actual.dtype == expected.dtype
+        assert actual.shape == expected.shape
+        assert actual.size == expected.size
+        assert actual.ndim == expected.ndim
+        with pytest.raises(TypeError):
+            len(actual)
+        np.testing.assert_array_equal(expected, actual)
+        with pytest.raises(IndexError):
+            actual[:2]
+        assert str(actual) == str(expected)
 
 
 class TestUnsignedIntTypeArray(TestCase):
@@ -611,7 +624,7 @@ class TestDecodeCF(TestCase):
     def test_0d_int32_encoding(self):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
         expected = Variable((), np.int64(0))
-        actual = conventions.maybe_encode_dtype(original)
+        actual = conventions.maybe_encode_nonstring_dtype(original)
         self.assertDatasetIdentical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self):

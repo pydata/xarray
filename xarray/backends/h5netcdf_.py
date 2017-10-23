@@ -131,14 +131,21 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         attrs = variable.attrs.copy()
         variable, dtype = _nc4_values_and_dtype(variable)
-        if dtype is str:
-            dtype = h5py.special_dtype(vlen=unicode_type)
 
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
-        if fill_value in ['\x00']:
-            fill_value = None
+        if dtype is str and fill_value is not None:
+            raise NotImplementedError(
+                'netCDF4 does not yet support setting a fill value for '
+                'variable-length strings '
+                '(https://github.com/Unidata/netcdf4-python/issues/730). '
+                "Either remove '_FillValue' from encoding on variable %r "
+                "or set {'dtype': 'S1'} in encoding to use the fixed width "
+                'NC_CHAR type.' % name)
+
+        if dtype is str:
+            dtype = h5py.special_dtype(vlen=unicode_type)
 
         encoding = _extract_h5nc_encoding(variable,
                                           raise_on_invalid=check_encoding)
