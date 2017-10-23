@@ -304,6 +304,8 @@ Bug fixes
 - Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
+  (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
 
 .. _whats-new.0.9.6:
 
