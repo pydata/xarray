@@ -4,6 +4,7 @@ __pycache__
 # temp files from docs build
 doc/auto_gallery
 doc/example.nc
+doc/savefig
 
 # C extensions
 *.so

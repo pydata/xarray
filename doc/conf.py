@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import sys
 import warnings
 import os
+import datetime
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
@@ -127,7 +128,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'xarray'
-copyright = '2014-2016, xarray Developers'
+copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -146,7 +147,7 @@ release = xarray.__version__
 # non-false value, then it is used:
 #today = ''
 # Else, today_fmt is used as the format for a strftime call.
-#today_fmt = '%B %d, %Y'
+today_fmt = '%Y-%m-%d'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -224,7 +225,7 @@ html_static_path = ['_static']
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
-# becomes obsolete when ipython 5.2 is out
+# becomes obsolete when we can pin ipython>=5.2; see doc/environment.yml
 ipython_savefig_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    '_build','html','_static')
 if not os.path.exists(ipython_savefig_dir):
@@ -237,7 +238,7 @@ if not os.path.exists(ipython_savefig_dir):
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = today_fmt
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -361,8 +362,9 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.5/', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
 }
