@@ -301,6 +301,10 @@ Bug fixes
 - Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
+- Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
+  ``apionly`` module was deprecated.
+  (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
