@@ -563,6 +563,35 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertEqual(actual.x.encoding['dtype'], 'f4')
         self.assertEqual(ds.x.encoding, {})
 
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
+            for i, key in enumerate(data.variables):
+                mode = 'a' if i > 0 else 'w'
+                data[[key]].to_netcdf(tmp_file, mode=mode, **save_kwargs)
+            with open_dataset(tmp_file,
+                              autoclose=self.autoclose, **open_kwargs) as ds:
+                yield ds
+
+    def test_append_write(self):
+        # regression for GH1215
+        data = create_test_data()
+        with self.roundtrip_append(data) as actual:
+            self.assertDatasetIdentical(data, actual)
+
+    def test_append_overwrite_values(self):
+        # regression for GH1215
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            data.to_netcdf(tmp_file, mode='w')
+            data['var2'][:] = -999
+            data['var9'] = data['var2'] * 3
+            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a')
+            with open_dataset(tmp_file, autoclose=self.autoclose) as actual:
+                assert_identical(data, actual)
+
 
 _counter = itertools.count()
 
@@ -823,37 +852,6 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
 
-    @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
-                         allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            for i, key in enumerate(data.variables):
-                mode = 'a' if i > 0 else 'w'
-                data[[key]].to_netcdf(tmp_file, mode=mode, engine='netcdf4',
-                                      **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
-    def test_append_write(self):
-        # regression for GH1215
-        data = create_test_data()
-        with self.roundtrip_append(data) as actual:
-            self.assertDatasetIdentical(data, actual)
-
-    def test_append_overwrite_values(self):
-        data = create_test_data()
-        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            data.to_netcdf(tmp_file, mode='w', engine='netcdf4')
-            data['var2'][:] = -999
-            data['var9'] = data['var2'] * 3
-            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a',
-                                             engine='netcdf4')
-            actual = open_dataset(tmp_file, autoclose=self.autoclose,
-                                  engine='netcdf4')
-            assert_identical(data, actual)
-
     def test_variable_order(self):
         # doesn't work with scipy or h5py :(
         ds = Dataset()
@@ -987,37 +985,6 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             with open_dataset(tmp_file, engine='scipy',
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
-
-    @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
-                         allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            for i, key in enumerate(data.variables):
-                mode = 'a' if i > 0 else 'w'
-                data[[key]].to_netcdf(tmp_file, mode=mode, engine='scipy',
-                                      **save_kwargs)
-                data.close()
-            with open_dataset(tmp_file,
-                              engine='scipy', **open_kwargs) as ds:
-                yield ds
-
-    def test_append_write(self):
-        # regression for GH1215
-        data = create_test_data()
-        with self.roundtrip_append(data) as actual:
-            assert_allclose(data, actual)
-
-    def test_append_overwrite_values(self):
-        data = create_test_data()
-        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            data.to_netcdf(tmp_file, mode='w', engine='scipy')
-            data['var2'][:] = -999
-            data['var9'] = data['var2'] * 3
-            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a',
-                                             engine='scipy')
-            actual = open_dataset(tmp_file, engine='scipy')
-            assert_allclose(data, actual)
 
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
@@ -1198,37 +1165,6 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             with open_dataset(tmp_file, engine='h5netcdf',
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
-
-    @contextlib.contextmanager
-    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
-                         allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            for i, key in enumerate(data.variables):
-                mode = 'a' if i > 0 else 'w'
-                data[[key]].to_netcdf(tmp_file, mode=mode, engine='h5netcdf',
-                                      **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
-    def test_append_write(self):
-        # regression for GH1215
-        data = create_test_data()
-        with self.roundtrip_append(data) as actual:
-            self.assertDatasetIdentical(data, actual)
-
-    def test_append_overwrite_values(self):
-        data = create_test_data()
-        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            data.to_netcdf(tmp_file, mode='w', engine='h5netcdf')
-            data['var2'][:] = -999
-            data['var9'] = data['var2'] * 3
-            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a',
-                                             engine='h5netcdf')
-            actual = open_dataset(tmp_file, autoclose=self.autoclose,
-                                  engine='h5netcdf')
-            assert_identical(data, actual)
 
     def test_orthogonal_indexing(self):
         # doesn't work for h5py (without using dask as an intermediate layer)
