@@ -628,6 +628,7 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
     engine = 'netcdf4'
+
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
