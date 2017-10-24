@@ -161,10 +161,11 @@ would certainly appreciate it. We recommend two citations.
            }
 
   2. You may also want to cite a specific version of the xarray package. We
-     provide a `Zenodo`__ citation and DOI for this purpose:
+     provide a `Zenodo citation and DOI <https://doi.org/10.5281/zenodo.598201>`_
+     for this purpose:
 
-        .. image:: https://zenodo.org/badge/13221727.svg
-           :target: https://zenodo.org/badge/latestdoi/13221727.
+        .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.598201.svg
+           :target: https://doi.org/10.5281/zenodo.598201
 
        An example BibTeX entry::
 
@@ -176,5 +177,3 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {http://dx.doi.org/10.5281/zenodo.59499}
                 }
-
-__ https://zenodo.org/badge/latestdoi/7766/pydata/xarray
