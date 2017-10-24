@@ -1652,6 +1652,9 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
                           **kwargs) as ds:
             yield ds
 
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine='scipy')
+
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})
         expected = example.rename({'foo': 'bar', 'x': 'y'})
