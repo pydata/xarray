@@ -16,66 +16,22 @@ from __future__ import division
 from __future__ import absolute_import
 
 import sys
-import warnings
 import os
 import datetime
+import importlib
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-try:
-    import numpy
-    print("numpy: %s, %s" % (numpy.__version__, numpy.__file__))
-except ImportError:
-    print("no numpy")
-try:
-    import scipy
-    print("scipy: %s, %s" % (scipy.__version__, scipy.__file__))
-except ImportError:
-    print("no scipy")
-try:
-    import pandas
-    print("pandas: %s, %s" % (pandas.__version__, pandas.__file__))
-except ImportError:
-    print("no pandas")
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    print("matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__))
-except ImportError:
-    print("no matplotlib")
-try:
-    import dask
-    print("dask: %s, %s" % (dask.__version__, dask.__file__))
-except ImportError:
-    print("no dask")
-try:
-    import IPython
-    print("ipython: %s, %s" % (IPython.__version__, IPython.__file__))
-except ImportError:
-    print("no ipython")
-try:
-    with warnings.catch_warnings():
-        # https://github.com/mwaskom/seaborn/issues/892
-        warnings.simplefilter("ignore")
-        import seaborn
-    print("seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__))
-except ImportError:
-    print("no seaborn")
-try:
-    import cartopy
-    print("cartopy: %s, %s" % (cartopy.__version__, cartopy.__file__))
-except ImportError:
-    print("no cartopy")
-try:
-    import netCDF4
-    print("netCDF4: %s, %s" % (netCDF4.__version__, netCDF4.__file__))
-except ImportError:
-    print("no netCDF4")
-try:
-    import rasterio
-    print("rasterio: %s, %s" % (rasterio.__version__, rasterio.__file__))
-except ImportError:
-    print("no rasterio")
+for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
+             'cartopy netCDF4 rasterio').split():
+    try:
+        module = importlib.import_module(name)
+        if name == 'matplotlib':
+            module.use('Agg')
+        fname = module.__file__.rstrip('__init__.py')
+        print("%s: %s, %s" % (name, module.__version__, fname))
+    except ImportError:
+        print("no %s" % name)
 
 import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
