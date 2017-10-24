@@ -156,17 +156,13 @@ class DatasetIOTestCases(object):
 
     # The save/open methods may be overwritten below
     def save(self, dataset, path, **kwargs):
-        if 'engine' not in kwargs:
-            kwargs['engine'] = self.engine
-        if 'format' not in kwargs:
-            kwargs['format'] = self.file_format
-        dataset.to_netcdf(path, **kwargs)
+        dataset.to_netcdf(path, engine=self.engine, format=self.file_format,
+                          **kwargs)
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        if 'engine' not in kwargs:
-            kwargs['engine'] = self.engine
-        with open_dataset(path, autoclose=self.autoclose, **kwargs) as ds:
+        with open_dataset(path, engine=self.engine, autoclose=self.autoclose,
+                          **kwargs) as ds:
             yield ds
 
     def test_zero_dimensional_variable(self):
@@ -600,9 +596,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_append_write(self):
         # regression for GH1215
         data = create_test_data()
-        kwargs = dict(save_kwargs={'engine': self.engine},
-                      open_kwargs={'engine': self.engine})
-        with self.roundtrip_append(data, **kwargs) as actual:
+        with self.roundtrip_append(data) as actual:
             assert_allclose(data, actual)
 
     def test_append_overwrite_values(self):
@@ -1648,12 +1642,11 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, autoclose=self.autoclose, engine='pynio',
-                          **kwargs) as ds:
+        with open_dataset(path, autoclose=self.autoclose, **kwargs) as ds:
             yield ds
 
     def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine='scipy')
+        dataset.to_netcdf(path, engine='scipy', **kwargs)
 
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})
