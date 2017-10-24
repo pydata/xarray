@@ -295,10 +295,13 @@ by setting the ``_Encoding`` field in ``encoding``. But
 
 .. warning::
 
-  By default, missing values in bytes or unicode string arrays (represented by
-  ``NaN`` in xarray) are currently written to disk as empty strings ``''``. Thus
+  Missing values in bytes or unicode string arrays (represented by ``NaN`` in
+  xarray) are currently written to disk as empty strings ``''``. This means
   missing values will not be restored when data is loaded from disk.
   This behavior is likely to change in the future (:issue:`1647`).
+  Unfortunately, explicitly setting a ``_FillValue`` for string arrays to handle
+  missing values doesn't work yet either, though we also hope to fix this in the
+  future.
 
 Chunk based compression
 .......................
