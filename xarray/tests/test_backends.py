@@ -571,7 +571,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             for i, key in enumerate(data.variables):
                 mode = 'a' if i > 0 else 'w'
-                data[[key]].to_netcdf(tmp_file, mode=mode, **save_kwargs)
+                data[[key]].to_netcdf(tmp_file, mode=mode,
+                                      **save_kwargs)
             with open_dataset(tmp_file,
                               autoclose=self.autoclose, **open_kwargs) as ds:
                 yield ds
@@ -579,7 +580,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_append_write(self):
         # regression for GH1215
         data = create_test_data()
-        with self.roundtrip_append(data) as actual:
+        kwargs = dict(save_kwargs={'engine': self.engine},
+                      open_kwargs={'engine': self.engine})
+        with self.roundtrip_append(data, **kwargs) as actual:
             assert_allclose(data, actual)
 
     def test_append_overwrite_values(self):
