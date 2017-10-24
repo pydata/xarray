@@ -736,11 +736,6 @@ def maybe_encode_fill_value(var, needs_copy=True):
     return var, needs_copy
 
 
-def _encode_value_matching_key(mapping, key, string_encoding):
-    if key in mapping:
-        mapping[key] = mapping[key].encode(string_encoding)
-
-
 def maybe_encode_as_char_array(var):
     if var.dtype.kind in {'S', 'U'}:
         dims, data, attrs, encoding = _var_as_tuple(var)
@@ -748,10 +743,6 @@ def maybe_encode_as_char_array(var):
             string_encoding = encoding.pop('_Encoding', 'utf-8')
             safe_setitem(attrs, '_Encoding', string_encoding)
             data = encode_string_array(data, string_encoding)
-
-            # ensure _FillValue stays in sync with array dtype
-            _encode_value_matching_key(encoding, '_FillValue', string_encoding)
-            _encode_value_matching_key(attrs, '_FillValue', string_encoding)
 
         if data.dtype.itemsize > 1:
             data = bytes_to_char(data)
@@ -894,7 +885,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     return var
 
 
-def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
+def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                        decode_times=True, decode_endianness=True,
                        stack_char_dim=True):
     """
@@ -907,6 +898,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     Parameters
     ----------
+    name: str
+        Name of the variable. Used for better error messages.
     var : Variable
         A variable holding potentially CF encoded information.
     concat_characters : bool
@@ -947,16 +940,14 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         string_encoding = pop_to(attributes, encoding, '_Encoding')
         if string_encoding is not None:
             data = BytesToStringArray(data, string_encoding)
-    else:
-        string_encoding = None
 
     unsigned = pop_to(attributes, encoding, '_Unsigned')
     if unsigned and mask_and_scale:
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
-            warnings.warn("variable has _Unsigned attribute but is not "
-                          "of integer type. Ignoring attribute.",
+            warnings.warn("variable %r has _Unsigned attribute but is not "
+                          "of integer type. Ignoring attribute." % name,
                           RuntimeWarning, stacklevel=3)
 
     if mask_and_scale:
@@ -967,19 +958,19 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 not utils.equivalent(attributes['_FillValue'],
                                      attributes['missing_value'])):
                 raise ValueError("Conflicting _FillValue and missing_value "
-                                 "attributes on a variable: {} vs. {}\n\n"
+                                 "attributes on a variable {}: {} vs. {}\n\n"
                                  "Consider opening the offending dataset "
                                  "using decode_cf=False, correcting the "
                                  "attributes and decoding explicitly using "
                                  "xarray.decode_cf()."
-                                 .format(attributes['_FillValue'],
+                                 .format(name, attributes['_FillValue'],
                                          attributes['missing_value']))
             attributes['_FillValue'] = attributes.pop('missing_value')
 
         fill_value = pop_to(attributes, encoding, '_FillValue')
         if isinstance(fill_value, np.ndarray) and fill_value.size > 1:
-            warnings.warn("variable has multiple fill values {0}, decoding "
-                          "all values to NaN.".format(str(fill_value)),
+            warnings.warn("variable {} has multiple fill values {}, decoding "
+                          "all values to NaN.".format(name, fill_value),
                           RuntimeWarning, stacklevel=3)
 
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
@@ -987,10 +978,12 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         has_fill = (fill_value is not None and
                     not np.any(pd.isnull(fill_value)))
         if (has_fill or scale_factor is not None or add_offset is not None):
-            if has_fill and np.array(fill_value).dtype.kind in ['U', 'S']:
+            if has_fill and np.array(fill_value).dtype.kind in ['U', 'S', 'O']:
                 if string_encoding is not None:
-                    fill_value = decode_bytes_array(
-                        np.array(fill_value), string_encoding)
+                    raise NotImplementedError(
+                        'variable %r has a _FillValue specified, but '
+                        '_FillValue is yet supported on unicode strings: '
+                        'https://github.com/pydata/xarray/issues/1647')
                 dtype = object
             else:
                 # According to the CF spec, the fill value is of the same
@@ -1022,7 +1015,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     if 'dtype' in encoding:
         if original_dtype != encoding['dtype']:
-            warnings.warn("CF decoding is overwriting dtype")
+            warnings.warn("CF decoding is overwriting dtype on variable {}"
+                          .format(name))
     else:
         encoding['dtype'] = original_dtype
 
@@ -1071,7 +1065,7 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         stack_char_dim = (concat_characters and v.dtype == 'S1' and
                           v.ndim > 0 and stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
-            v, concat_characters=concat_characters,
+            k, v, concat_characters=concat_characters,
             mask_and_scale=mask_and_scale, decode_times=decode_times,
             stack_char_dim=stack_char_dim)
         if decode_coords:

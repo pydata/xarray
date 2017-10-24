@@ -273,7 +273,7 @@ String encoding
 
 xarray can write unicode strings to netCDF files in two ways:
 
-- As variable lengths strings. This is only supported on netCDF4 (HDF5) files.
+- As variable length strings. This is only supported on netCDF4 (HDF5) files.
 - By encoding strings into bytes, and writing encoded bytes as a character
   array. The default encoding is UTF-8.
 

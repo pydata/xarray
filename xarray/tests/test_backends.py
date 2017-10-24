@@ -385,6 +385,17 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
+    def test_roundtrip_string_with_fill_value_nchar(self):
+        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        expected = Dataset({'x': ('t', values)})
+
+        encoding = {'dtype': 'S1', '_FillValue': b'X'}
+        original = Dataset({'x': ('t', values, {}, encoding)})
+        # Not supported yet.
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
+
     def test_unsigned_roundtrip_mask_and_scale(self):
         decoded = create_unsigned_masked_scaled_data()
         encoded = create_encoded_unsigned_masked_scaled_data()
@@ -646,32 +657,23 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             with open_dataset(tmp_file, group='data/2') as actual2:
                 self.assertDatasetIdentical(data2, actual2)
 
-    def test_roundtrip_string_with_fill_value(self):
+    def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
-        encoding = {'dtype': 'S1', '_FillValue': u'\x00'}
-        original = Dataset({'x': ('t', values, {}, encoding)})
-        with self.roundtrip(original) as actual:
-            self.assertDatasetIdentical(expected, actual)
-
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': u'X'})})
-        try:
+        # netCDF4-based backends don't support an explicit fillvalue
+        # for variable length strings yet.
+        # https://github.com/Unidata/netcdf4-python/issues/730
+        # https://github.com/shoyer/h5netcdf/issues/37
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
+        with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 self.assertDatasetIdentical(expected, actual)
-        except NotImplementedError:
-            # netCDF4-based backends don't support an explicit fillvalue
-            # for variable length strings yet.
-            # TODO: fix this once resolved upstream:
-            # https://github.com/Unidata/netcdf4-python/issues/730
-            pass
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
-        try:
+        with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 self.assertDatasetIdentical(expected, actual)
-        except NotImplementedError:
-            pass
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:

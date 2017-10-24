@@ -153,6 +153,13 @@ class TestBytesToStringArray(TestCase):
             actual[:2]
         assert str(actual) == str(expected)
 
+    def test_decode_bytes_array(self):
+        encoding = 'utf-8'
+        raw_array = np.array([b'abc', u'ß∂µ∆'.encode(encoding)])
+        expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
+        actual = conventions.decode_bytes_array(raw_array, encoding)
+        np.testing.assert_array_equal(actual, expected)
+
 
 class TestUnsignedIntTypeArray(TestCase):
     def test_unsignedinttype_array(self):
