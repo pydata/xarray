@@ -280,6 +280,11 @@ class DataVariables(Mapping, formatting.ReprMixin):
         all_variables = self._dataset.variables
         return Frozen(OrderedDict((k, all_variables[k]) for k in self))
 
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return [key for key in self._dataset._ipython_key_completions_()
+                if key not in self._dataset._coord_names]
+
 
 class _LocIndexer(object):
     def __init__(self, dataset):
@@ -715,7 +720,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, LevelCoordinatesSource(self), self.attrs]
+        return self._item_sources + [self.attrs]
+
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-completion"""
+        return [self, {d: self[d] for d in self.dims},
+                LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
@@ -2190,6 +2201,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def T(self):
+        warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
+                      '`.transpose()`. It will be removed in a future version '
+                      'of xarray.',
+                      FutureWarning, stacklevel=2)
         return self.transpose()
 
     def dropna(self, dim, how='any', thresh=None, subset=None):

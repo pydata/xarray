@@ -158,7 +158,6 @@ Computation
 :py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
-:py:attr:`~Dataset.T`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
 

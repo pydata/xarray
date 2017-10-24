@@ -78,6 +78,9 @@ Breaking changes
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
+  (:issue:`1232`).
+
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -90,6 +93,12 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support `_ipython_key_completions_` to enable autocompletion for
+  dictionary access with IPython.
+  e.g.  ``ds['tem`` + tab -> ``ds['temperature']``
+  (:issue:`1628`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Support for ``data_vars`` and ``coords`` keywords added to
   :py:func:`~xarray.open_mfdataset`
   (:issue:`438`):
@@ -295,6 +304,10 @@ Bug fixes
 
 - Fix pynio backend for upcoming release of pynio with python3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
+
+- Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
+  ``apionly`` module was deprecated.
+  (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.9.6:
 

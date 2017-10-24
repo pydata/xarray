@@ -15,6 +15,7 @@ import pytest
 from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.testing import assert_equal, assert_identical, assert_allclose
+from xarray.plot.utils import import_seaborn
 
 try:
     import unittest2 as unittest
@@ -25,6 +26,15 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Order of imports is important here.
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+except ImportError:
+    pass
 
 
 def _importorskip(modname, minversion=None):
@@ -61,10 +71,15 @@ requires_scipy_or_netCDF4 = unittest.skipUnless(
     has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
-
 if has_dask:
     import dask
     dask.set_options(get=dask.get)
+try:
+    import_seaborn()
+    has_seaborn = True
+except:
+    has_seaborn = False
+requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
