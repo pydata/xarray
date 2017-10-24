@@ -128,6 +128,7 @@ class Only32BitTypes(object):
 
 class DatasetIOTestCases(object):
     autoclose = False
+    engine = None
 
     def create_store(self):
         raise NotImplementedError
@@ -579,18 +580,20 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # regression for GH1215
         data = create_test_data()
         with self.roundtrip_append(data) as actual:
-            self.assertDatasetIdentical(data, actual)
+            assert_allclose(data, actual)
 
     def test_append_overwrite_values(self):
         # regression for GH1215
         data = create_test_data()
         with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            data.to_netcdf(tmp_file, mode='w')
+            data.to_netcdf(tmp_file, mode='w', engine=self.engine)
             data['var2'][:] = -999
             data['var9'] = data['var2'] * 3
-            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a')
-            with open_dataset(tmp_file, autoclose=self.autoclose) as actual:
-                assert_identical(data, actual)
+            data[['var2', 'var9']].to_netcdf(tmp_file, mode='a',
+                                             engine=self.engine)
+            with open_dataset(tmp_file, autoclose=self.autoclose,
+                              engine=self.engine) as actual:
+                assert_allclose(data, actual)
 
 
 _counter = itertools.count()
@@ -621,6 +624,7 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
 
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+    engine = 'netcdf4'
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -912,6 +916,8 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -1024,6 +1030,8 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
 
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+    engine = 'netcdf4'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -1050,6 +1058,8 @@ class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
 @requires_netCDF4
 class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
                                        TestCase):
+    engine = 'netcdf4'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -1151,6 +1161,8 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
 @requires_h5netcdf
 @requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+    engine = 'h5netcdf'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
