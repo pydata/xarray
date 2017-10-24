@@ -473,7 +473,7 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 
 We recommend installing PyNIO via conda::
 
-    conda install -c dbrown pynio
+    conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
