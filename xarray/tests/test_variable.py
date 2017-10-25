@@ -206,7 +206,7 @@ class VariableSubclassTestCases(object):
     def test_0d_time_data(self):
         # regression test for #105
         x = self.cls('time', pd.date_range('2000-01-01', periods=5))
-        expected = np.datetime64('2000-01-01T00Z', 'ns')
+        expected = np.datetime64('2000-01-01', 'ns')
         self.assertEqual(x[0].values, expected)
 
     def test_datetime64_conversion(self):
@@ -721,9 +721,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(2, v.searchsorted(2))
 
     def test_datetime64_conversion_scalar(self):
-        expected = np.datetime64('2000-01-01T00:00:00Z', 'ns')
+        expected = np.datetime64('2000-01-01', 'ns')
         for values in [
-                 np.datetime64('2000-01-01T00Z'),
+                 np.datetime64('2000-01-01'),
                  pd.Timestamp('2000-01-01T00'),
                  datetime(2000, 1, 1),
                 ]:
@@ -756,7 +756,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp('2000-01-01'))
         self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
-        self.assertEqual(v.values, np.datetime64('2000-01-01T00Z', 'ns'))
+        self.assertEqual(v.values, np.datetime64('2000-01-01', 'ns'))
 
     def test_0d_timedelta(self):
         for td in [pd.to_timedelta('1s'), np.timedelta64(1, 's')]:
@@ -1592,26 +1592,26 @@ class TestAsCompatibleData(TestCase):
         self.assertEqual(np.dtype(float), actual.dtype)
 
     def test_datetime(self):
-        expected = np.datetime64('2000-01-01T00Z')
+        expected = np.datetime64('2000-01-01')
         actual = as_compatible_data(expected)
         self.assertEqual(expected, actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
-        expected = np.array([np.datetime64('2000-01-01T00Z')])
+        expected = np.array([np.datetime64('2000-01-01')])
         actual = as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
 
-        expected = np.array([np.datetime64('2000-01-01T00Z', 'ns')])
+        expected = np.array([np.datetime64('2000-01-01', 'ns')])
         actual = as_compatible_data(expected)
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))
         self.assertEqual(np.dtype('datetime64[ns]'), actual.dtype)
         self.assertIs(expected, source_ndarray(np.asarray(actual)))
 
-        expected = np.datetime64('2000-01-01T00Z', 'ns')
+        expected = np.datetime64('2000-01-01', 'ns')
         actual = as_compatible_data(datetime(2000, 1, 1))
         self.assertEqual(np.asarray(expected), actual)
         self.assertEqual(np.ndarray, type(actual))

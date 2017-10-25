@@ -272,7 +272,7 @@ class TestDataset(TestCase):
 
         d = pd.Timestamp('2000-01-01T12')
         args = [True, None, 3.4, np.nan, 'hello', u'uni', b'raw',
-                np.datetime64('2000-01-01T00'), d, d.to_datetime(),
+                np.datetime64('2000-01-01'), d, d.to_pydatetime(),
                 Arbitrary()]
         for arg in args:
             print(arg)
@@ -684,7 +684,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         actual = other_coords.merge(orig_coords)
-        self.assertDatasetIdentical(expected.T, actual)
+        self.assertDatasetIdentical(expected.transpose(), actual)
 
         orig_coords = Dataset(coords={'a': ('x', [np.nan])}).coords
         other_coords = Dataset(coords={'a': np.nan}).coords
@@ -3279,7 +3279,7 @@ class TestDataset(TestCase):
         add_vars = {'var4': ['dim1', 'dim2']}
         for v, dims in sorted(add_vars.items()):
             size = tuple(data1.dims[d] for d in dims)
-            data = np.random.random_integers(0, 100, size=size).astype(np.str_)
+            data = np.random.randint(0, 100, size=size).astype(np.str_)
             data1[v] = (dims, data, {'foo': 'variable'})
 
         self.assertTrue('var4' not in data1.mean())
@@ -3562,7 +3562,7 @@ class TestDataset(TestCase):
         # verify we can rollback in-place operations if something goes wrong
         # nb. inplace datetime64 math actually will work with an integer array
         # but not floats thanks to numpy's inconsistent handling
-        other = DataArray(np.datetime64('2000-01-01T12'), coords={'c': 2})
+        other = DataArray(np.datetime64('2000-01-01'), coords={'c': 2})
         actual = ds.copy(deep=True)
         with pytest.raises(TypeError):
             actual += other

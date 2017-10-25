@@ -25,6 +25,7 @@ if PY3:  # pragma: no cover
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
+    from inspect import getfullargspec as getargspec
 else:  # pragma: no cover
     # Python 2
     basestring = basestring  # noqa
@@ -43,7 +44,7 @@ else:  # pragma: no cover
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
-
+    from inspect import getargspec
 try:
     from cyordereddict import OrderedDict
 except ImportError:  # pragma: no cover

@@ -165,7 +165,7 @@ class TestPlot(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'z'])
         d.coords['z'] = list('abcd')
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
-                   subplot_kws=dict(axisbg='r'))
+                   subplot_kws=dict(facecolor='r'))
         for ax in g.axes.flat:
             try:
                 # mpl V2
