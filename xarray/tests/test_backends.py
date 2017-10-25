@@ -1642,7 +1642,8 @@ class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, autoclose=self.autoclose, **kwargs) as ds:
+        with open_dataset(path, engine='pynio', autoclose=self.autoclose,
+                          **kwargs) as ds:
             yield ds
 
     def save(self, dataset, path, **kwargs):
