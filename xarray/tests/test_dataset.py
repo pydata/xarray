@@ -4106,3 +4106,9 @@ def test_rolling_reduce(ds, center, min_periods, window, name):
     # Make sure the dimension order is restored
     for key, src_var in ds.data_vars.items():
         assert src_var.dims == actual[key].dims
+
+
+def test_raise_no_warning_for_nan_in_binary_ops():
+    with pytest.warns(None) as record:
+        Dataset(data_vars={'x': ('y', [1, 2, np.NaN])}) > 0
+    assert len(record) == 0

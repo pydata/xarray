@@ -3120,3 +3120,9 @@ def test_rolling_count_correct():
     expected = DataArray(
         [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')
     assert_equal(result, expected)
+
+
+def test_raise_no_warning_for_nan_in_binary_ops():
+    with pytest.warns(None) as record:
+        xr.DataArray([1, 2, np.NaN]) > 0
+    assert len(record) == 0

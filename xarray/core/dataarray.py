@@ -1571,7 +1571,9 @@ class DataArray(AbstractArray, BaseDataObject):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            with np.errstate(all='ignore'):
+                return self.__array_wrap__(f(self.variable.data, *args,
+                                             **kwargs))
 
         return func
 
@@ -1588,9 +1590,10 @@ class DataArray(AbstractArray, BaseDataObject):
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
 
-            variable = (f(self.variable, other_variable)
-                        if not reflexive
-                        else f(other_variable, self.variable))
+            with np.errstate(all='ignore'):
+                variable = (f(self.variable, other_variable)
+                            if not reflexive
+                            else f(other_variable, self.variable))
             coords = self.coords._merge_raw(other_coords)
             name = self._result_name(other)
 
@@ -1612,7 +1615,8 @@ class DataArray(AbstractArray, BaseDataObject):
             other_coords = getattr(other, 'coords', None)
             other_variable = getattr(other, 'variable', other)
             with self.coords._merge_inplace(other_coords):
-                f(self.variable, other_variable)
+                with np.errstate(all='ignore'):
+                    f(self.variable, other_variable)
             return self
 
         return func
