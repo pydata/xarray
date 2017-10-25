@@ -86,7 +86,7 @@ def _validate_dataset_names(dataset):
             raise TypeError('DataArray.name or Dataset key must be either a '
                             'string or None for serialization to netCDF files')
 
-    for k in dataset:
+    for k in dataset.variables:
         check_name(k)
 
 
