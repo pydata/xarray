@@ -605,7 +605,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # regression for GH1215
         data = create_test_data()
         with self.roundtrip_append(data) as actual:
-            assert_allclose(data, actual)
+            self.assertDatasetIdentical(data, actual)
 
     def test_append_overwrite_values(self):
         # regression for GH1215
@@ -616,7 +616,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             data['var9'] = data['var2'] * 3
             self.save(data[['var2', 'var9']], tmp_file, mode='a')
             with self.open(tmp_file) as actual:
-                assert_allclose(data, actual)
+                self.assertDatasetIdentical(data, actual)
 
 
 _counter = itertools.count()
