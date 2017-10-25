@@ -78,8 +78,13 @@ Breaking changes
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
-  (:issue:`1232`).
+- Deprecations:
+
+  - ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
+    (:issue:`1232`).
+  - ``key in data_array`` currently checks for membership in
+    ``data_array.coords``. This is now deprecated: in the future, it will check
+    membership in ``data_array.values`` instead.
 
 
 Backward Incompatible Changes

@@ -496,6 +496,10 @@ class DataArray(AbstractArray, BaseDataObject):
                 LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
+        warnings.warn(
+            'xarray.DataArray.__contains__ currently checks membership in '
+            'DataArray.coords, but in xarray v0.11 will change to check '
+            'membership in array values.', FutureWarning, stacklevel=2)
         return key in self._coords
 
     @property
