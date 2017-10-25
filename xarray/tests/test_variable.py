@@ -19,7 +19,7 @@ from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 
-from . import TestCase, source_ndarray, requires_dask
+from . import TestCase, source_ndarray, requires_dask, raises_regex
 
 
 class VariableSubclassTestCases(object):
@@ -93,7 +93,7 @@ class VariableSubclassTestCases(object):
         v_new = v[[True, False, True]]
         self.assertVariableIdentical(v[[0, 2]], v_new)
 
-        with self.assertRaisesRegexp(IndexError, "Boolean indexer should"):
+        with raises_regex(IndexError, "Boolean indexer should"):
             ind = Variable(('a', ), [True, False, True])
             v[ind]
 
@@ -389,7 +389,7 @@ class VariableSubclassTestCases(object):
                                      Variable.concat((v, w), 'b'))
         self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b'))
-        with self.assertRaisesRegexp(ValueError, 'inconsistent dimensions'):
+        with raises_regex(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
         # test indexers
         actual = Variable.concat(
@@ -405,7 +405,7 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
         self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
-        with self.assertRaisesRegexp(ValueError, 'all input arrays must have'):
+        with raises_regex(ValueError, 'all input arrays must have'):
             Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
     def test_concat_attrs(self):
@@ -547,12 +547,12 @@ class VariableSubclassTestCases(object):
 
         # with boolean variable with wrong shape
         ind = np.array([True, False])
-        with self.assertRaisesRegexp(IndexError, 'Boolean array size 2 is '):
+        with raises_regex(IndexError, 'Boolean array size 2 is '):
             v[Variable(('a', 'b'), [[0, 1]]), ind]
 
         # boolean indexing with different dimension
         ind = Variable(['a'], [True, False, False])
-        with self.assertRaisesRegexp(IndexError, 'Boolean indexer should be'):
+        with raises_regex(IndexError, 'Boolean indexer should be'):
             v[dict(y=ind)]
 
     def test_getitem_uint_1d(self):
@@ -673,21 +673,21 @@ class VariableSubclassTestCases(object):
     def test_getitem_error(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
-        with self.assertRaisesRegexp(IndexError, "labeled multi-"):
+        with raises_regex(IndexError, "labeled multi-"):
             v[[[0, 1], [1, 2]]]
 
         ind_x = Variable(['a'], [0, 1, 1])
         ind_y = Variable(['a'], [0, 1])
-        with self.assertRaisesRegexp(IndexError, "Dimensions of indexers "):
+        with raises_regex(IndexError, "Dimensions of indexers "):
             v[ind_x, ind_y]
 
         ind = Variable(['a', 'b'], [[True, False], [False, True]])
-        with self.assertRaisesRegexp(IndexError, '2-dimensional boolean'):
+        with raises_regex(IndexError, '2-dimensional boolean'):
             v[dict(x=ind)]
 
         v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
         ind = Variable(['x'], [0, 1])
-        with self.assertRaisesRegexp(IndexError, 'Dimensions of indexers mis'):
+        with raises_regex(IndexError, 'Dimensions of indexers mis'):
             v[:, ind]
 
 
@@ -702,7 +702,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertArrayEqual(v.data, self.d)
         self.assertArrayEqual(v.values, self.d)
         self.assertIs(source_ndarray(v.values), self.d)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # wrong size
             v.values = np.random.random(5)
         d2 = np.random.random((10, 3))
@@ -861,9 +861,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
                         expected_extra.attrs, expected_extra.encoding)
         self.assertVariableIdentical(expected_extra, as_variable(xarray_tuple))
 
-        with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuples to convert'):
             as_variable(tuple(data))
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
 
@@ -876,10 +876,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         data = np.arange(9).reshape((3, 3))
         expected = Variable(('x', 'y'), data)
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'without explicit dimension names'):
             as_variable(data, name='x')
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'has more than 1-dimension'):
             as_variable(expected, name='x')
 
@@ -961,7 +961,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # test iteration
         for n, item in enumerate(v):
             self.assertVariableIdentical(Variable(['y'], data[n]), item)
-        with self.assertRaisesRegexp(TypeError, 'iteration over a 0-d'):
+        with raises_regex(TypeError, 'iteration over a 0-d'):
             iter(Variable([], 0))
         # test setting
         v.values[:] = 0
@@ -1000,7 +1000,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.isel(time=0), v[0])
         self.assertVariableIdentical(v.isel(time=slice(0, 3)), v[:3])
         self.assertVariableIdentical(v.isel(x=0), v[:, 0])
-        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+        with raises_regex(ValueError, 'do not exist'):
             v.isel(not_a_dim=0)
 
     def test_index_0d_numpy_string(self):
@@ -1036,7 +1036,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, v.shift(x=5))
         self.assertVariableIdentical(expected, v.shift(x=6))
 
-        with self.assertRaisesRegexp(ValueError, 'dimension'):
+        with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
 
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
@@ -1065,7 +1065,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(expected, v.roll(x=2))
         self.assertVariableIdentical(expected, v.roll(x=-3))
 
-        with self.assertRaisesRegexp(ValueError, 'dimension'):
+        with raises_regex(ValueError, 'dimension'):
             v.roll(z=0)
 
     def test_roll_consistency(self):
@@ -1115,7 +1115,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x', 'y'], [[1, 2]])
         self.assertVariableIdentical(Variable(['y'], [1, 2]), v.squeeze())
         self.assertVariableIdentical(Variable(['y'], [1, 2]), v.squeeze('x'))
-        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+        with raises_regex(ValueError, 'cannot select a dimension'):
             v.squeeze('y')
 
     def test_get_axis_num(self):
@@ -1124,7 +1124,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(v.get_axis_num(['x']), (0,))
         self.assertEqual(v.get_axis_num(['x', 'y']), (0, 1))
         self.assertEqual(v.get_axis_num(['z', 'y', 'x']), (2, 1, 0))
-        with self.assertRaisesRegexp(ValueError, 'not found in array dim'):
+        with raises_regex(ValueError, 'not found in array dim'):
             v.get_axis_num('foobar')
 
     def test_set_dims(self):
@@ -1145,7 +1145,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = v
         self.assertVariableIdentical(actual, expected)
 
-        with self.assertRaisesRegexp(ValueError, 'must be a superset'):
+        with raises_regex(ValueError, 'must be a superset'):
             v.set_dims(['z'])
 
     def test_set_dims_object_dtype(self):
@@ -1177,9 +1177,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_stack_errors(self):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
 
-        with self.assertRaisesRegexp(ValueError, 'invalid existing dim'):
+        with raises_regex(ValueError, 'invalid existing dim'):
             v.stack(z=('x1',))
-        with self.assertRaisesRegexp(ValueError, 'cannot create a new dim'):
+        with raises_regex(ValueError, 'cannot create a new dim'):
             v.stack(x=('x',))
 
     def test_unstack(self):
@@ -1198,11 +1198,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_unstack_errors(self):
         v = Variable('z', [0, 1, 2, 3])
-        with self.assertRaisesRegexp(ValueError, 'invalid existing dim'):
+        with raises_regex(ValueError, 'invalid existing dim'):
             v.unstack(foo={'x': 4})
-        with self.assertRaisesRegexp(ValueError, 'cannot create a new dim'):
+        with raises_regex(ValueError, 'cannot create a new dim'):
             v.stack(z=('z',))
-        with self.assertRaisesRegexp(ValueError, 'the product of the new dim'):
+        with raises_regex(ValueError, 'the product of the new dim'):
             v.unstack(z={'x': 5})
 
     def test_unstack_2d(self):
@@ -1254,9 +1254,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         a = Variable(['x'], np.arange(10))
         b = Variable(['x'], np.arange(5))
         c = Variable(['x', 'x'], np.arange(100).reshape(10, 10))
-        with self.assertRaisesRegexp(ValueError, 'mismatched lengths'):
+        with raises_regex(ValueError, 'mismatched lengths'):
             a + b
-        with self.assertRaisesRegexp(ValueError, 'duplicate dimensions'):
+        with raises_regex(ValueError, 'duplicate dimensions'):
             a + c
 
     def test_inplace_math(self):
@@ -1269,7 +1269,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertIs(source_ndarray(v.values), x)
         self.assertArrayEqual(v.values, np.arange(5) + 1)
 
-        with self.assertRaisesRegexp(ValueError, 'dimensions cannot change'):
+        with raises_regex(ValueError, 'dimensions cannot change'):
             v += Variable('y', np.arange(5))
 
     def test_reduce(self):
@@ -1287,7 +1287,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             Variable([], self.d.mean(axis=0).std()))
         self.assertVariableAllClose(v.mean('x'), v.reduce(np.mean, 'x'))
 
-        with self.assertRaisesRegexp(ValueError, 'cannot supply both'):
+        with raises_regex(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
 
     @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
@@ -1308,7 +1308,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # regression for GH1524
         v = Variable(['x', 'y'], self.d).chunk(2)
 
-        with self.assertRaisesRegexp(TypeError, 'arrays stored as dask'):
+        with raises_regex(TypeError, 'arrays stored as dask'):
             v.quantile(0.5, dim='x')
 
     def test_big_endian_reduce(self):
@@ -1333,7 +1333,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
 
         if LooseVersion(np.__version__) < '1.9':
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 v.median()
         else:
             self.assertVariableIdentical(v.median(), Variable([], 2))
@@ -1343,7 +1343,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         self.assertVariableIdentical(v.all(dim='x'), Variable([], False))
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             v.max(skipna=True)
         self.assertVariableIdentical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
@@ -1405,7 +1405,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x', 'y'], [[0, 0], [0, 0], [1, 1]])
         self.assertVariableIdentical(expected, v)
 
-        with self.assertRaisesRegexp(ValueError, "shape mismatch"):
+        with raises_regex(ValueError, "shape mismatch"):
             v[ind, ind] = np.zeros((1, 2, 1))
 
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
@@ -1466,7 +1466,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
 
     def test_init(self):
-        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+        with raises_regex(ValueError, 'must be 1-dimensional'):
             IndexVariable((), 0)
 
     def test_to_index(self):
@@ -1486,14 +1486,14 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         self.assertEqual(float, x.dtype)
         self.assertArrayEqual(np.arange(3), x)
         self.assertEqual(float, x.values.dtype)
-        with self.assertRaisesRegexp(TypeError, 'cannot be modified'):
+        with raises_regex(TypeError, 'cannot be modified'):
             x[:] = 0
 
     def test_name(self):
         coord = IndexVariable('x', [10.0])
         self.assertEqual(coord.name, 'x')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             coord.name = 'y'
 
     def test_level_names(self):
@@ -1511,7 +1511,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         level_1 = IndexVariable('x', midx.get_level_values('level_1'))
         self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
 
-        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+        with raises_regex(ValueError, 'has no MultiIndex'):
             IndexVariable('y', [10.0]).get_level_variable('level')
 
     def test_concat_periods(self):
@@ -1628,7 +1628,7 @@ class TestAsCompatibleData(TestCase):
 
         # override dtype
         expect.values = [[True, True], [True, True]]
-        self.assertEquals(expect.dtype, bool)
+        assert expect.dtype == bool
         self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
 
     @requires_dask

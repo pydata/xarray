@@ -233,13 +233,13 @@ class TestDataset(TestCase):
         x2 = ('x', np.arange(1000))
         z = (['x', 'y'], np.arange(1000).reshape(100, 10))
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+        with raises_regex(ValueError, 'conflicting sizes'):
             Dataset({'a': x1, 'b': x2})
-        with self.assertRaisesRegexp(ValueError, "disallows such variables"):
+        with raises_regex(ValueError, "disallows such variables"):
             Dataset({'a': x1, 'x': z})
-        with self.assertRaisesRegexp(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuples to convert'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
-        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+        with raises_regex(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
 
         # verify handling of DataArrays
@@ -249,7 +249,7 @@ class TestDataset(TestCase):
 
     def test_constructor_invalid_dims(self):
         # regression for GH1120
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             Dataset(data_vars=dict(v=('y', [1, 2, 3, 4])),
                     coords=dict(y=DataArray([.1, .2, .3, .4], dims='x')))
 
@@ -281,7 +281,7 @@ class TestDataset(TestCase):
             self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_deprecated(self):
-        with self.assertRaisesRegexp(ValueError, 'DataArray dimensions'):
+        with raises_regex(ValueError, 'DataArray dimensions'):
             DataArray([1, 2, 3], coords={'x': [0, 1, 2]})
 
     def test_constructor_auto_align(self):
@@ -311,7 +311,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected3, actual)
 
         e = ('x', [0, 0])
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+        with raises_regex(ValueError, 'conflicting sizes'):
             Dataset({'a': a, 'b': b, 'e': e})
 
     def test_constructor_pandas_sequence(self):
@@ -349,7 +349,7 @@ class TestDataset(TestCase):
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
                             ('y', ('z', [1, 1, 1]))])
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             Dataset(data, compat='equals')
         expected = Dataset({'x': 0}, {'y': ('z', [1, 1, 1])})
         actual = Dataset(data)
@@ -375,7 +375,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         data = {'x': DataArray(0, coords={'y': 3}), 'y': ('z', [1, 1, 1])}
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             Dataset(data)
 
         data = {'x': DataArray(0, coords={'y': 1}), 'y': [1, 1]}
@@ -384,7 +384,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
     def test_constructor_with_coords(self):
-        with self.assertRaisesRegexp(ValueError, 'found in both data_vars and'):
+        with raises_regex(ValueError, 'found in both data_vars and'):
             Dataset({'a': ('x', [1])}, {'a': ('x', [1])})
 
         ds = Dataset({}, {'a': ('x', [1])})
@@ -393,7 +393,7 @@ class TestDataset(TestCase):
 
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                             names=('level_1', 'level_2'))
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             Dataset({}, {'x': mindex, 'y': mindex})
             Dataset({}, {'x': mindex, 'level_1': range(4)})
 
@@ -442,7 +442,7 @@ class TestDataset(TestCase):
                      coords={'x': ['a', 'b']})
         assert ds.get_index('x').equals(pd.Index(['a', 'b']))
         assert ds.get_index('y').equals(pd.Index([0, 1, 2]))
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             ds.get_index('z')
 
     def test_attr_access(self):
@@ -473,7 +473,7 @@ class TestDataset(TestCase):
         self.assertEqual(list(a), ['foo', 'bar'])
         self.assertArrayEqual(a['foo'].values, d)
         # try to add variable with dim (10,3) with data that's (3,10)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
 
     def test_modify_inplace(self):
@@ -491,14 +491,14 @@ class TestDataset(TestCase):
         # this should work
         a['x'] = ('x', vec[:5])
         a['z'] = ('x', np.arange(5))
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # now it shouldn't, since there is a conflicting length
             a['x'] = ('x', vec[:4])
         arr = np.random.random((10, 1,))
         scal = np.array(0)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             a['y'] = ('y', arr)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             a['y'] = ('y', scal)
         self.assertTrue('y' not in a.dims)
 
@@ -525,9 +525,9 @@ class TestDataset(TestCase):
         self.assertNotIn(0, data.coords)
         self.assertNotIn('foo', data.coords)
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data.coords['foo']
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data.coords[0]
 
         expected = dedent("""\
@@ -556,7 +556,7 @@ class TestDataset(TestCase):
         self.assertArrayEqual(actual['z'], ['a', 'b'])
 
         actual = data.copy(deep=True)
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+        with raises_regex(ValueError, 'conflicting sizes'):
             actual.coords['x'] = ('x', [-1])
         self.assertDatasetIdentical(actual, data)  # should not be modified
 
@@ -565,10 +565,10 @@ class TestDataset(TestCase):
         expected = data.reset_coords('b', drop=True)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             del data.coords['not_found']
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             del data.coords['foo']
 
         actual = data.copy(deep=True)
@@ -584,7 +584,7 @@ class TestDataset(TestCase):
 
     def test_coords_setitem_multiindex(self):
         data = create_test_multiindex()
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             data.coords['level_1'] = range(4)
 
     def test_coords_set(self):
@@ -621,7 +621,7 @@ class TestDataset(TestCase):
         actual = all_coords.reset_coords('zzz')
         self.assertDatasetIdentical(two_coords, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot remove index'):
+        with raises_regex(ValueError, 'cannot remove index'):
             one_coord.reset_coords('x')
 
         actual = all_coords.reset_coords('zzz', drop=True)
@@ -649,13 +649,13 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         other_coords = Dataset(coords={'x': ('x', ['a'])}).coords
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b'])}).coords
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             orig_coords.merge(other_coords)
         other_coords = Dataset(coords={'x': ('x', ['a', 'b', 'c'])}).coords
-        with self.assertRaises(MergeError):
+        with pytest.raises(MergeError):
             orig_coords.merge(other_coords)
 
         other_coords = Dataset(coords={'a': ('x', [8, 9])}).coords
@@ -780,7 +780,7 @@ class TestDataset(TestCase):
         self.assertEqual(reblocked.chunks, expected_chunks)
         self.assertDatasetIdentical(reblocked, data)
 
-        with self.assertRaisesRegexp(ValueError, 'some chunks'):
+        with raises_regex(ValueError, 'some chunks'):
             data.chunk({'foo': 10})
 
     @requires_dask
@@ -789,9 +789,9 @@ class TestDataset(TestCase):
         create_test_data().dump_to_store(store)
         ds = open_dataset(store).chunk()
 
-        with self.assertRaises(UnexpectedDataAccess):
+        with pytest.raises(UnexpectedDataAccess):
             ds.load()
-        with self.assertRaises(UnexpectedDataAccess):
+        with pytest.raises(UnexpectedDataAccess):
             ds['var1'].values
 
         # these should not raise UnexpectedDataAccess:
@@ -832,7 +832,7 @@ class TestDataset(TestCase):
             actual = ret[v].values
             np.testing.assert_array_equal(expected, actual)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             data.isel(not_a_dim=slice(0, 2))
 
         ret = data.isel(dim1=0)
@@ -924,11 +924,11 @@ class TestDataset(TestCase):
                                     data.isel(dim2=(('points', ), pdim2),
                                               dim1=(('points', ), pdim1)))
         # make sure we're raising errors in the right places
-        with self.assertRaisesRegexp(IndexError,
+        with raises_regex(IndexError,
                                      'Dimensions of indexers mismatch'):
             data.isel(dim1=(('points', ), [1, 2]),
                       dim2=(('points', ), [1, 2, 3]))
-        with self.assertRaisesRegexp(TypeError, 'cannot use a Dataset'):
+        with raises_regex(TypeError, 'cannot use a Dataset'):
             data.isel(dim1=Dataset({'points': [1, 2]}))
 
         # test to be sure we keep around variables that were not indexed
@@ -949,7 +949,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['station'].drop(['dim2']),
                                       stations['station'])
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting values for '):
+        with raises_regex(ValueError, 'conflicting values for '):
             data.isel(dim1=DataArray([0, 1, 2], dims='station',
                                      coords={'station': [0, 1, 2]}),
                       dim2=DataArray([0, 1, 2], dims='station',
@@ -996,14 +996,14 @@ class TestDataset(TestCase):
         # Conflict in the dimension coordinate
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3)})
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 IndexError, "dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_da)
         # Also the case for DataArray
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 IndexError, "dimension coordinate 'dim2'"):
             actual = data['var2'].isel(dim2=indexing_da)
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 IndexError, "dimension coordinate 'dim2'"):
             data['dim2'].isel(dim2=indexing_da)
 
@@ -1059,7 +1059,7 @@ class TestDataset(TestCase):
 
         # indexer generated from coordinates
         indexing_ds = Dataset({}, coords={'dim2': [0, 1, 2]})
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 IndexError, "dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_ds['dim2'])
 
@@ -1190,10 +1190,10 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(actual_isel, actual_sel)
 
         # Vectorized indexing with level-variables raises an error
-        with self.assertRaisesRegexp(ValueError, 'Vectorized selection is '):
+        with raises_regex(ValueError, 'Vectorized selection is '):
             mds.sel(one=['a', 'b'])
 
-        with self.assertRaisesRegexp(ValueError, 'Vectorized selection is '
+        with raises_regex(ValueError, 'Vectorized selection is '
                                      'not available along MultiIndex variable:'
                                      ' x'):
             mds.sel(x=xr.DataArray([np.array(midx[:2]), np.array(midx[-2:])],
@@ -1246,20 +1246,20 @@ class TestDataset(TestCase):
                                     data.isel_points(dim2=pdim2, dim1=pdim1))
 
         # make sure we're raising errors in the right places
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'All indexers must be the same length'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'dimension bad_key does not exist'):
             data.isel_points(bad_key=[1, 2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+        with raises_regex(TypeError, 'Indexers must be integers'):
             data.isel_points(dim1=[1.5, 2.2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+        with raises_regex(TypeError, 'Indexers must be integers'):
             data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'Indexers must be 1 dimensional'):
             data.isel_points(dim1=1, dim2=2)
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'Existing dimension names are not valid'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
 
@@ -1327,7 +1327,7 @@ class TestDataset(TestCase):
                                  method='pad')
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_fancy(self):
@@ -1401,7 +1401,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['a'].drop('x'), idx_x['a'])
         self.assertDataArrayIdentical(actual['b'].drop('y'), idx_y['b'])
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
@@ -1414,22 +1414,22 @@ class TestDataset(TestCase):
         actual = data.sel(dim2=0.95, method='nearest', tolerance=1)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             actual = data.sel(dim2=np.pi, method='nearest', tolerance=0)
 
         expected = data.sel(dim2=[1.5])
         actual = data.sel(dim2=[1.45], method='backfill')
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(NotImplementedError, 'slice objects'):
+        with raises_regex(NotImplementedError, 'slice objects'):
             data.sel(dim2=slice(1, 3), method='ffill')
 
-        with self.assertRaisesRegexp(TypeError, '``method``'):
+        with raises_regex(TypeError, '``method``'):
             # this should not pass silently
             data.sel(data)
 
         # cannot pass method if there is no associated coordinate
-        with self.assertRaisesRegexp(ValueError, 'cannot supply'):
+        with raises_regex(ValueError, 'cannot supply'):
             data.sel(dim1=0, method='nearest')
 
     def test_loc(self):
@@ -1437,9 +1437,9 @@ class TestDataset(TestCase):
         expected = data.sel(dim3='a')
         actual = data.loc[dict(dim3='a')]
         self.assertDatasetIdentical(expected, actual)
-        with self.assertRaisesRegexp(TypeError, 'can only lookup dict'):
+        with raises_regex(TypeError, 'can only lookup dict'):
             data.loc['a']
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             data.loc[dict(dim3='a')] = 0
 
     def test_selection_multiindex(self):
@@ -1521,7 +1521,7 @@ class TestDataset(TestCase):
         actual = data.reindex(dim1=data['dim1'].to_index())
         self.assertDatasetIdentical(actual, expected)
 
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'cannot reindex or align along dimension'):
             data.reindex(dim1=data['dim1'][:5])
 
@@ -1533,13 +1533,13 @@ class TestDataset(TestCase):
         actual = data.reindex({'dim2': data['dim2']})
         expected = data
         self.assertDatasetIdentical(actual, expected)
-        with self.assertRaisesRegexp(ValueError, 'cannot specify both'):
+        with raises_regex(ValueError, 'cannot specify both'):
             data.reindex({'x': 0}, x=0)
-        with self.assertRaisesRegexp(ValueError, 'dictionary'):
+        with raises_regex(ValueError, 'dictionary'):
             data.reindex('foo')
 
         # invalid dimension
-        with self.assertRaisesRegexp(ValueError, 'invalid reindex dim'):
+        with raises_regex(ValueError, 'invalid reindex dim'):
             data.reindex(invalid=0)
 
         # out of order
@@ -1642,9 +1642,9 @@ class TestDataset(TestCase):
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
 
-        with self.assertRaisesRegexp(ValueError, 'invalid value for join'):
+        with raises_regex(ValueError, 'invalid value for join'):
             align(left, right, join='foobar')
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             align(left, right, foo='bar')
 
     def test_align_exact(self):
@@ -1655,7 +1655,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left1, left)
         self.assertDatasetIdentical(left2, left)
 
-        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+        with raises_regex(ValueError, 'indexes .* not equal'):
             xr.align(left, right, join='exact')
 
     def test_align_exclude(self):
@@ -1707,7 +1707,7 @@ class TestDataset(TestCase):
         assert x1.identical(x) and x2.identical(x)
 
         y = Dataset({'bar': ('x', [6, 7]), 'x': [0, 1]})
-        with self.assertRaisesRegexp(ValueError, 'cannot reindex or align'):
+        with raises_regex(ValueError, 'cannot reindex or align'):
             align(x, y)
 
     def test_broadcast(self):
@@ -1807,7 +1807,7 @@ class TestDataset(TestCase):
         actual = data.drop(['time'])
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+        with raises_regex(ValueError, 'cannot be found'):
             data.drop('not_found_here')
 
     def test_drop_index_labels(self):
@@ -1822,11 +1822,11 @@ class TestDataset(TestCase):
         expected = data.isel(x=slice(0, 0))
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # not contained in axis
             data.drop(['c'], dim='x')
 
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'does not have coordinate labels'):
             data.drop(1, 'y')
 
@@ -1876,24 +1876,24 @@ class TestDataset(TestCase):
         self.assertTrue('var1' not in renamed)
         self.assertTrue('dim2' not in renamed)
 
-        with self.assertRaisesRegexp(ValueError, "cannot rename 'not_a_var'"):
+        with raises_regex(ValueError, "cannot rename 'not_a_var'"):
             data.rename({'not_a_var': 'nada'})
 
-        with self.assertRaisesRegexp(ValueError, "'var1' conflicts"):
+        with raises_regex(ValueError, "'var1' conflicts"):
             data.rename({'var2': 'var1'})
 
         # verify that we can rename a variable without accessing the data
         var1 = data['var1']
         data['var1'] = (var1.dims, InaccessibleArray(var1.values))
         renamed = data.rename(newnames)
-        with self.assertRaises(UnexpectedDataAccess):
+        with pytest.raises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
 
     def test_rename_old_name(self):
         # regtest for GH1477
         data = create_test_data()
 
-        with self.assertRaisesRegexp(ValueError, "'samecol' conflicts"):
+        with raises_regex(ValueError, "'samecol' conflicts"):
             data.rename({'var1': 'samecol', 'var2': 'samecol'})
 
         # This shouldn't cause any problems.
@@ -1913,7 +1913,7 @@ class TestDataset(TestCase):
         data.rename({'x': 'y'}, inplace=True)
         self.assertDatasetIdentical(data, renamed)
         self.assertFalse(data.equals(copied))
-        self.assertEquals(data.dims, {'y': 3, 't': 3})
+        assert data.dims == {'y': 3, 't': 3}
         # check virtual variables
         self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
 
@@ -1932,9 +1932,9 @@ class TestDataset(TestCase):
         actual.swap_dims({'x': 'y'}, inplace=True)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot swap'):
+        with raises_regex(ValueError, 'cannot swap'):
             original.swap_dims({'y': 'x'})
-        with self.assertRaisesRegexp(ValueError, 'replacement dimension'):
+        with raises_regex(ValueError, 'replacement dimension'):
             original.swap_dims({'x': 'z'})
 
     def test_expand_dims_error(self):
@@ -1946,13 +1946,13 @@ class TestDataset(TestCase):
                                    'c': np.linspace(0, 1, 5)},
                            attrs={'key': 'entry'})
 
-        with self.assertRaisesRegexp(ValueError, 'already exists'):
+        with raises_regex(ValueError, 'already exists'):
             original.expand_dims(dim=['x'])
 
         # Make sure it raises true error also for non-dimensional coordinates
         # which has dimension.
         original.set_coords('z', inplace=True)
-        with self.assertRaisesRegexp(ValueError, 'already exists'):
+        with raises_regex(ValueError, 'already exists'):
             original.expand_dims(dim=['z'])
 
     def test_expand_dims(self):
@@ -2027,7 +2027,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(ds, expected)
 
         ds = Dataset({}, coords={'x': [1, 2]})
-        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+        with raises_regex(ValueError, 'has no MultiIndex'):
             ds.reorder_levels(x=['level_1', 'level_2'])
 
     def test_stack(self):
@@ -2063,9 +2063,9 @@ class TestDataset(TestCase):
 
     def test_unstack_errors(self):
         ds = Dataset({'x': [1, 2, 3]})
-        with self.assertRaisesRegexp(ValueError, 'invalid dimension'):
+        with raises_regex(ValueError, 'invalid dimension'):
             ds.unstack('foo')
-        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+        with raises_regex(ValueError, 'does not have a MultiIndex'):
             ds.unstack('x')
 
     def test_stack_unstack(self):
@@ -2109,7 +2109,7 @@ class TestDataset(TestCase):
                            {'t': [0, 1]})
         actual = ds.copy()
         other = {'y': ('t', [5]), 't': [1]}
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes'):
+        with raises_regex(ValueError, 'conflicting sizes'):
             actual.update(other)
         actual.update(Dataset(other))
         self.assertDatasetIdentical(expected, actual)
@@ -2125,9 +2125,9 @@ class TestDataset(TestCase):
         data = create_test_data()
         self.assertIsInstance(data['var1'], DataArray)
         self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data['notfound']
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             data[['var1', 'notfound']]
 
         actual = data[['var1', 'var2']]
@@ -2151,7 +2151,7 @@ class TestDataset(TestCase):
         expected = data['var1'] + 1
         expected.name = (3, 4)
         self.assertDataArrayIdentical(expected, data[(3, 4)])
-        with self.assertRaisesRegexp(KeyError, "('var1', 'var2')"):
+        with raises_regex(KeyError, "('var1', 'var2')"):
             data[('var1', 'var2')]
 
     def test_virtual_variables_default_coords(self):
@@ -2238,7 +2238,7 @@ class TestDataset(TestCase):
         data2['B'] = dv
         self.assertDatasetIdentical(data1, data2)
         # can't assign an ND array without dimensions
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'without explicit dimension names'):
             data2['C'] = var.values.reshape(2, 4)
         # but can assign a 1D array
@@ -2250,16 +2250,16 @@ class TestDataset(TestCase):
         data2['scalar'] = ([], 0)
         self.assertDatasetIdentical(data1, data2)
         # can't use the same dimension name as a scalar var
-        with self.assertRaisesRegexp(ValueError, 'already exists as a scalar'):
+        with raises_regex(ValueError, 'already exists as a scalar'):
             data1['newvar'] = ('scalar', [3, 4, 5])
         # can't resize a used dimension
-        with self.assertRaisesRegexp(ValueError, 'arguments without labels'):
+        with raises_regex(ValueError, 'arguments without labels'):
             data1['dim1'] = data1['dim1'][:5]
         # override an existing value
         data1['A'] = 3 * data2['A']
         self.assertVariableEqual(data1['A'], 3 * data2['A'])
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             data1[{'x': 0}] = 0
 
     def test_setitem_pandas(self):
@@ -2345,7 +2345,7 @@ class TestDataset(TestCase):
 
     def test_assign_multiindex_level(self):
         data = create_test_multiindex()
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
 
@@ -2380,7 +2380,7 @@ class TestDataset(TestCase):
 
     def test_setitem_multiindex_level(self):
         data = create_test_multiindex()
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             data['level_1'] = range(4)
 
     def test_delitem(self):
@@ -2403,7 +2403,7 @@ class TestDataset(TestCase):
             expected.set_coords(data.coords, inplace=True)
             self.assertDatasetIdentical(expected, data.squeeze(*args))
         # invalid squeeze
-        with self.assertRaisesRegexp(ValueError, 'cannot select a dimension'):
+        with raises_regex(ValueError, 'cannot select a dimension'):
             data.squeeze('y')
 
     def test_squeeze_drop(self):
@@ -2471,11 +2471,11 @@ class TestDataset(TestCase):
 
     def test_groupby_errors(self):
         data = create_test_data()
-        with self.assertRaisesRegexp(TypeError, '`group` must be'):
+        with raises_regex(TypeError, '`group` must be'):
             data.groupby(np.arange(10))
-        with self.assertRaisesRegexp(ValueError, 'length does not match'):
+        with raises_regex(ValueError, 'length does not match'):
             data.groupby(data['dim1'][:3])
-        with self.assertRaisesRegexp(TypeError, "`group` must be"):
+        with raises_regex(TypeError, "`group` must be"):
             data.groupby(data.coords['dim1'].to_index())
 
     def test_groupby_reduce(self):
@@ -2533,20 +2533,20 @@ class TestDataset(TestCase):
         actual = zeros + grouped
         self.assertDatasetEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
+        with raises_regex(ValueError, 'incompat.* grouped binary'):
             grouped + ds
-        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
+        with raises_regex(ValueError, 'incompat.* grouped binary'):
             ds + grouped
-        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
+        with raises_regex(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
+        with raises_regex(TypeError, 'only support binary ops'):
             grouped + grouped
-        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+        with raises_regex(TypeError, 'in-place operations'):
             ds += grouped
 
         ds = Dataset({'x': ('time', np.arange(100)),
                       'time': pd.date_range('2000-01-01', periods=100)})
-        with self.assertRaisesRegexp(ValueError, 'incompat.* grouped binary'):
+        with raises_regex(ValueError, 'incompat.* grouped binary'):
             ds + ds.groupby('time.month')
 
     def test_groupby_math_virtual(self):
@@ -2778,7 +2778,7 @@ class TestDataset(TestCase):
         # regression test for GH449
         df = pd.DataFrame(np.zeros((2, 2)))
         df.columns = ['foo', 'foo']
-        with self.assertRaisesRegexp(ValueError, 'non-unique columns'):
+        with raises_regex(ValueError, 'non-unique columns'):
             Dataset.from_dataframe(df)
 
     def test_convert_dataframe_with_many_types_and_multiindex(self):
@@ -2861,7 +2861,7 @@ class TestDataset(TestCase):
         d = {'a': {'data': x},
              't': {'data': t, 'dims': 't'},
              'b': {'dims': 't', 'data': y}}
-        with self.assertRaisesRegexp(ValueError, "cannot convert dict "
+        with raises_regex(ValueError, "cannot convert dict "
                                      "without the key 'dims'"):
             Dataset.from_dict(d)
 
@@ -2924,9 +2924,9 @@ class TestDataset(TestCase):
 
         for decode_cf in [True, False]:
             ds = open_dataset(store, decode_cf=decode_cf)
-            with self.assertRaises(UnexpectedDataAccess):
+            with pytest.raises(UnexpectedDataAccess):
                 ds.load()
-            with self.assertRaises(UnexpectedDataAccess):
+            with pytest.raises(UnexpectedDataAccess):
                 ds['var1'].values
 
             # these should not raise UnexpectedDataAccess:
@@ -2986,11 +2986,11 @@ class TestDataset(TestCase):
         expected = ds.isel(a=[1, 3])
         self.assertDatasetIdentical(actual, ds)
 
-        with self.assertRaisesRegexp(ValueError, 'a single dataset dimension'):
+        with raises_regex(ValueError, 'a single dataset dimension'):
             ds.dropna('foo')
-        with self.assertRaisesRegexp(ValueError, 'invalid how'):
+        with raises_regex(ValueError, 'invalid how'):
             ds.dropna('a', how='somehow')
-        with self.assertRaisesRegexp(TypeError, 'must specify how or thresh'):
+        with raises_regex(TypeError, 'must specify how or thresh'):
             ds.dropna('a', how=None)
 
     def test_fillna(self):
@@ -3035,7 +3035,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # but new data variables is not okay
-        with self.assertRaisesRegexp(ValueError, 'must be contained'):
+        with raises_regex(ValueError, 'must be contained'):
             ds.fillna({'x': 0})
 
         # empty argument should be OK
@@ -3165,7 +3165,7 @@ class TestDataset(TestCase):
         actual = ds.where(ds.a > 1, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(TypeError, 'must be a'):
+        with raises_regex(TypeError, 'must be a'):
             ds.where(np.arange(5) > 1, drop=True)
 
         # 1d with odd coordinates
@@ -3251,17 +3251,17 @@ class TestDataset(TestCase):
 
     def test_reduce_bad_dim(self):
         data = create_test_data()
-        with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+        with raises_regex(ValueError, 'Dataset does not contain'):
             ds = data.mean(dim='bad_dim')
 
     def test_reduce_cumsum_test_dims(self):
         data = create_test_data()
         for cumfunc in ['cumsum', 'cumprod']:
-            with self.assertRaisesRegexp(ValueError, "must supply either single 'dim' or 'axis'"):
+            with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
                 ds = getattr(data, cumfunc)()
-            with self.assertRaisesRegexp(ValueError, "must supply either single 'dim' or 'axis'"):
+            with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
                 ds = getattr(data, cumfunc)(dim=['dim1', 'dim2'])
-            with self.assertRaisesRegexp(ValueError, 'Dataset does not contain'):
+            with raises_regex(ValueError, 'Dataset does not contain'):
                 ds = getattr(data, cumfunc)(dim='bad_dim')
 
             # ensure dimensions are correct
@@ -3377,10 +3377,10 @@ class TestDataset(TestCase):
         actual = ds.reduce(mean_only_one_axis, 'y')
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
+        with raises_regex(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis)
 
-        with self.assertRaisesRegexp(TypeError, 'non-integer axis'):
+        with raises_regex(TypeError, 'non-integer axis'):
             ds.reduce(mean_only_one_axis, ['x', 'y'])
 
     def test_quantile(self):
@@ -3467,9 +3467,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(ds.isnull(), ~ds.notnull())
 
         # don't actually patch these methods in
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             ds.item
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             ds.searchsorted
 
     def test_dataset_array_math(self):
@@ -3552,11 +3552,11 @@ class TestDataset(TestCase):
     def test_dataset_math_errors(self):
         ds = self.make_example_math_dataset()
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             ds['foo'] += ds
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             ds['foo'].variable += ds
-        with self.assertRaisesRegexp(ValueError, 'must have the same'):
+        with raises_regex(ValueError, 'must have the same'):
             ds += ds[['bar']]
 
         # verify we can rollback in-place operations if something goes wrong
@@ -3564,7 +3564,7 @@ class TestDataset(TestCase):
         # but not floats thanks to numpy's inconsistent handling
         other = DataArray(np.datetime64('2000-01-01T12'), coords={'c': 2})
         actual = ds.copy(deep=True)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             actual += other
         self.assertDatasetIdentical(actual, ds)
 
@@ -3595,9 +3595,9 @@ class TestDataset(TestCase):
             expected_dims = tuple(d for d in new_order if d in ds[k].dims)
             self.assertEqual(actual[k].dims, expected_dims)
 
-        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+        with raises_regex(ValueError, 'arguments to transpose'):
             ds.transpose('dim1', 'dim2', 'dim3')
-        with self.assertRaisesRegexp(ValueError, 'arguments to transpose'):
+        with raises_regex(ValueError, 'arguments to transpose'):
             ds.transpose('dim1', 'dim2', 'dim3', 'time', 'extra_dim')
 
     def test_dataset_retains_period_index_on_transpose(self):
@@ -3657,12 +3657,12 @@ class TestDataset(TestCase):
 
     def test_dataset_diff_exception_n_neg(self):
         ds = create_test_data(seed=1)
-        with self.assertRaisesRegexp(ValueError, 'must be non-negative'):
+        with raises_regex(ValueError, 'must be non-negative'):
             ds.diff('dim2', n=-1)
 
     def test_dataset_diff_exception_label_str(self):
         ds = create_test_data(seed=1)
-        with self.assertRaisesRegexp(ValueError, '\'label\' argument has to'):
+        with raises_regex(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
     def test_shift(self):
@@ -3673,7 +3673,7 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('x', [np.nan, 1, 2])}, coords, attrs)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'dimensions'):
+        with raises_regex(ValueError, 'dimensions'):
             ds.shift(foo=123)
 
     def test_roll(self):
@@ -3686,7 +3686,7 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'dimensions'):
+        with raises_regex(ValueError, 'dimensions'):
             ds.roll(foo=123)
 
     def test_real_and_imag(self):
@@ -3701,11 +3701,11 @@ class TestDataset(TestCase):
 
     def test_setattr_raises(self):
         ds = Dataset({}, coords={'scalar': 1}, attrs={'foo': 'bar'})
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             ds.scalar = 2
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             ds.foo = 2
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             ds.other = 2
 
     def test_filter_by_attrs(self):

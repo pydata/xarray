@@ -3,13 +3,15 @@ from __future__ import division
 from __future__ import print_function
 import itertools
 
+import pytest
+
 import numpy as np
 import pandas as pd
 
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from xarray.core import nputils
-from . import TestCase, ReturnItem
+from . import TestCase, ReturnItem, raises_regex
 
 
 class TestIndexers(TestCase):
@@ -29,7 +31,7 @@ class TestIndexers(TestCase):
             self.assertArrayEqual(x[i], x[j])
             self.assertArrayEqual(self.set_to_zero(x, i),
                                   self.set_to_zero(x, j))
-        with self.assertRaisesRegexp(IndexError, 'too many indices'):
+        with raises_regex(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
 
     def test_asarray_tuplesafe(self):
@@ -46,27 +48,27 @@ class TestIndexers(TestCase):
     def test_convert_label_indexer(self):
         # TODO: add tests that aren't just for edge cases
         index = pd.Index([1, 2, 3])
-        with self.assertRaisesRegexp(KeyError, 'not all values found'):
+        with raises_regex(KeyError, 'not all values found'):
             indexing.convert_label_indexer(index, [0])
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             indexing.convert_label_indexer(index, 0)
-        with self.assertRaisesRegexp(ValueError, 'does not have a MultiIndex'):
+        with raises_regex(ValueError, 'does not have a MultiIndex'):
             indexing.convert_label_indexer(index, {'one': 0})
 
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                             names=('one', 'two'))
-        with self.assertRaisesRegexp(KeyError, 'not all values found'):
+        with raises_regex(KeyError, 'not all values found'):
             indexing.convert_label_indexer(mindex, [0])
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             indexing.convert_label_indexer(mindex, 0)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             indexing.convert_label_indexer(index, {'three': 0})
-        with self.assertRaisesRegexp(KeyError, 'index to be fully lexsorted'):
+        with raises_regex(KeyError, 'index to be fully lexsorted'):
             indexing.convert_label_indexer(mindex, (slice(None), 1, 'no_level'))
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             # pandas will try to convert this into an array indexer. We should
             # raise instead, so we can be sure the result of indexing with a
             # slice is always a view.
@@ -80,13 +82,13 @@ class TestIndexers(TestCase):
         dim_indexers = indexing.get_dim_indexers(mdata, {'one': 'a', 'two': 1})
         self.assertEqual(dim_indexers, {'x': {'one': 'a', 'two': 1}})
 
-        with self.assertRaisesRegexp(ValueError, 'cannot combine'):
+        with raises_regex(ValueError, 'cannot combine'):
             indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
 
-        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+        with raises_regex(ValueError, 'do not exist'):
             indexing.get_dim_indexers(mdata, {'y': 'a'})
 
-        with self.assertRaisesRegexp(ValueError, 'do not exist'):
+        with raises_regex(ValueError, 'do not exist'):
             indexing.get_dim_indexers(mdata, {'four': 1})
 
     def test_remap_label_indexers(self):

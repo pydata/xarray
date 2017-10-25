@@ -28,7 +28,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
                assert_allclose, flaky, network, requires_rasterio,
-               assert_identical)
+               assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
 from xarray.tests import mock
@@ -113,7 +113,7 @@ class TestCommon(TestCase):
                 return self.array[key]
 
         array = UnreliableArray([0])
-        with self.assertRaises(UnreliableArrayFailure):
+        with pytest.raises(UnreliableArrayFailure):
             array[0]
         self.assertEqual(array[0], 0)
 
@@ -188,7 +188,7 @@ class DatasetIOTestCases(object):
                         self.assertTrue(v._in_memory)
                 self.assertDatasetAllClose(expected, actual)
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             # make sure the contextmanager works!
             with assert_loads() as ds:
                 pass
@@ -303,8 +303,7 @@ class DatasetIOTestCases(object):
         kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
         with self.roundtrip(expected, save_kwargs=kwds) as actual:
             self.assertDatasetIdentical(expected, actual)
-            self.assertEquals(actual.t0.encoding['units'],
-                              'days since 1950-01-01')
+            assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -490,7 +489,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
 
         if type(self) is NetCDF4DataTest:
             ds['z'].encoding['endian'] = 'big'
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 with self.roundtrip(ds) as actual:
                     pass
 
@@ -501,7 +500,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         da = xr.DataArray(data)
         for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
             ds = Dataset({name: da})
-            with self.assertRaisesRegexp(*e):
+            with raises_regex(*e):
                 with self.roundtrip(ds) as actual:
                     pass
 
@@ -513,17 +512,17 @@ class CFEncodedDataTest(DatasetIOTestCases):
         self.assertEqual(ds.x.encoding, {})
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
         kwargs = dict(encoding={'x': 'foo'})
-        with self.assertRaisesRegexp(ValueError, 'must be castable'):
+        with raises_regex(ValueError, 'must be castable'):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
         kwargs = dict(encoding={'invalid': {}})
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
@@ -612,9 +611,9 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     self.assertVariableEqual(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
-            with self.assertRaises(IOError):
+            with pytest.raises(IOError):
                 open_dataset(tmp_file, group='bar')
-            with self.assertRaisesRegexp(ValueError, 'must be a string'):
+            with raises_regex(ValueError, 'must be a string'):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
@@ -959,13 +958,13 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
-        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+        with raises_regex(ValueError, 'must be 1-dimensional'):
             with self.roundtrip(ds) as roundtripped:
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):
         if sys.version_info[:2] < (2, 7):
-            with self.assertRaisesRegexp(ValueError,
+            with raises_regex(ValueError,
                                          'gzipped netCDF not supported'):
                 open_example_dataset('example_1.nc.gz')
         else:
@@ -985,7 +984,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
             with nc4.Dataset(tmp_file, 'w', format='NETCDF4') as rootgrp:
                 rootgrp.createGroup('foo')
 
-            with self.assertRaisesRegexp(TypeError, 'pip install netcdf4'):
+            with raises_regex(TypeError, 'pip install netcdf4'):
                 open_dataset(tmp_file, engine='scipy')
 
 
@@ -1066,18 +1065,18 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
     def test_engine(self):
         data = create_test_data()
-        with self.assertRaisesRegexp(ValueError, 'unrecognized engine'):
+        with raises_regex(ValueError, 'unrecognized engine'):
             data.to_netcdf('foo.nc', engine='foobar')
-        with self.assertRaisesRegexp(ValueError, 'invalid engine'):
+        with raises_regex(ValueError, 'invalid engine'):
             data.to_netcdf(engine='netcdf4')
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
-            with self.assertRaisesRegexp(ValueError, 'unrecognized engine'):
+            with raises_regex(ValueError, 'unrecognized engine'):
                 open_dataset(tmp_file, engine='foobar')
 
         netcdf_bytes = data.to_netcdf()
-        with self.assertRaisesRegexp(ValueError, 'can only read'):
+        with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -1366,12 +1365,12 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
     def test_invalid_data_vars_value_should_fail(self):
 
         with self.setup_files_and_datasets() as (files, _):
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars='minimum'):
                     pass
 
             # test invalid coord parameter
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 with open_mfdataset(files, coords='minimum'):
                     pass
 
@@ -1424,7 +1423,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                     self.assertEqual(actual.foo.variable.data.chunks,
                                      ((3, 2, 3, 2),))
 
-        with self.assertRaisesRegexp(IOError, 'no files to open'):
+        with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
     @requires_pathlib
@@ -1455,7 +1454,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                     # first dataset loaded
                     self.assertEqual(actual.test1, ds1.test1)
                     # attributes from ds2 are not retained, e.g.,
-                    with self.assertRaisesRegexp(AttributeError,
+                    with raises_regex(AttributeError,
                                                  'no attribute'):
                         actual.test2
 
@@ -1485,15 +1484,15 @@ class DaskTest(TestCase, DatasetIOTestCases):
 
     def test_save_mfdataset_invalid(self):
         ds = Dataset()
-        with self.assertRaisesRegexp(ValueError, 'cannot use mode'):
+        with raises_regex(ValueError, 'cannot use mode'):
             save_mfdataset([ds, ds], ['same', 'same'])
-        with self.assertRaisesRegexp(ValueError, 'same length'):
+        with raises_regex(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
 
     def test_save_mfdataset_invalid_dataarray(self):
         # regression test for GH1555
         da = DataArray([1, 2])
-        with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
+        with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
 
@@ -1818,11 +1817,11 @@ class TestRasterio(TestCase):
                 # but on x and y only windowed operations are allowed, more
                 # exotic slicing should raise an error
                 err_msg = 'not valid on rasterio'
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[2, 4], y=[1, 3]).values
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[4, 2]).values
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=slice(5, 2, -1)).values
 
                 # Integer indexing
@@ -1888,7 +1887,7 @@ class TestRasterio(TestCase):
 
                 # Without cache an error is raised
                 err_msg = 'not valid on rasterio'
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[2, 4]).values
 
                 # This should cache everything
@@ -1948,7 +1947,7 @@ class TestEncodingInvalid(TestCase):
 
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
         var = xr.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
@@ -1964,7 +1963,7 @@ class TestEncodingInvalid(TestCase):
         # not supported with h5netcdf (yet)
         var = xr.Variable(('x',), [1, 2, 3], {},
                           {'least_sigificant_digit': 2})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
 
@@ -1997,17 +1996,17 @@ class TestValidateAttrs(TestCase):
             ds, attrs = new_dataset_and_attrs()
 
             attrs[123] = 'test'
-            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            with raises_regex(TypeError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs[MiscObject()] = 'test'
-            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            with raises_regex(TypeError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs[''] = 'test'
-            with self.assertRaisesRegexp(ValueError, 'Invalid name for attr'):
+            with raises_regex(ValueError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             # This one should work
@@ -2018,12 +2017,12 @@ class TestValidateAttrs(TestCase):
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = {'a': 5}
-            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            with raises_regex(TypeError, 'Invalid value for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = MiscObject()
-            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            with raises_regex(TypeError, 'Invalid value for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()

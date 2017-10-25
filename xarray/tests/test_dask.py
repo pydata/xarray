@@ -14,7 +14,7 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress
-from . import TestCase
+from . import TestCase, raises_regex
 
 from xarray.tests import mock
 
@@ -86,7 +86,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[0], v[0])
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
-        with self.assertRaisesRegexp(TypeError, 'stored in a dask array'):
+        with raises_regex(TypeError, 'stored in a dask array'):
             v[:1] = 0
 
     def test_squeeze(self):
@@ -145,9 +145,9 @@ class TestVariable(DaskTestCase):
         a1 = Variable(['x'], build_dask_array('x'))
         a1.compute()
         self.assertFalse(a1._in_memory)
-        self.assertEquals(kernel_call_count, 1)
+        assert kernel_call_count == 1
         a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 1)
+        assert kernel_call_count == 1
         self.assertVariableIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
@@ -160,7 +160,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.argmax(dim='x'), v.argmax(dim='x'))
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all('x'), (v < 1).all('x'))
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        with raises_regex(NotImplementedError, 'dask'):
             v.median()
 
     def test_missing_values(self):
@@ -339,7 +339,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         for coords in [u.coords, v.coords]:
             coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        with raises_regex(NotImplementedError, 'dask'):
             v.groupby('ab').first()
         expected = u.groupby('ab').first()
         actual = v.groupby('ab').first(skipna=False)
@@ -451,7 +451,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
         Dimensions without coordinates: x""")
         self.assertEqual(expected, repr(a))
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataset_repr(self):
         # Test that pickling/unpickling converts the dask backend
@@ -469,7 +469,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         Data variables:
             a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>""")
         self.assertEqual(expected, repr(ds))
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataarray_pickle(self):
         # Test that pickling/unpickling converts the dask backend
@@ -480,9 +480,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         a1.compute()
         self.assertFalse(a1._in_memory)
         self.assertFalse(a1.coords['y']._in_memory)
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         self.assertDataArrayIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
@@ -499,9 +499,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds1.compute()
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds1['y']._in_memory)
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         ds2 = pickle.loads(pickle.dumps(ds1))
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         self.assertDatasetIdentical(ds1, ds2)
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds2['a']._in_memory)
@@ -518,7 +518,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(a, 'NOTEXIST')
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
         # Test that pickling/unpickling converts the dask backend
@@ -529,14 +529,14 @@ class TestDataArrayAndDataset(DaskTestCase):
                      coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(ds, 'NOTEXIST')
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_values(self):
         # Test that invoking the values property does not convert the dask
         # backend to numpy
         a = DataArray([1, 2]).chunk()
         self.assertFalse(a._in_memory)
-        self.assertEquals(a.values.tolist(), [1, 2])
+        assert a.values.tolist() == [1, 2]
         self.assertFalse(a._in_memory)
 
     def test_from_dask_variable(self):

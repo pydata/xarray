@@ -83,7 +83,8 @@ install:
   - python setup.py install
 
 script:
-  - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
+  # temporary mod while cleaning up warnings
+  - py.test -W error xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
 
 after_success:
   - coveralls
