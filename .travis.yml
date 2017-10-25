@@ -84,6 +84,7 @@ before_install:
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
+  - conda list
   - python setup.py install
 
 script:
