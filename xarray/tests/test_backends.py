@@ -128,12 +128,42 @@ class NetCDF3Only(object):
 
 class DatasetIOTestCases(object):
     autoclose = False
+    engine = None
+    file_format = None
 
     def create_store(self):
         raise NotImplementedError
 
-    def roundtrip(self, data, **kwargs):
-        raise NotImplementedError
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            self.save(data, path, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            for i, key in enumerate(data.variables):
+                mode = 'a' if i > 0 else 'w'
+                self.save(data[[key]], path, mode=mode, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    # The save/open methods may be overwritten below
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine=self.engine, format=self.file_format,
+                          **kwargs)
+
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_dataset(path, engine=self.engine, autoclose=self.autoclose,
+                          **kwargs) as ds:
+            yield ds
 
     def test_zero_dimensional_variable(self):
         expected = create_test_data()
@@ -571,6 +601,23 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertEqual(actual.x.encoding['dtype'], 'f4')
         self.assertEqual(ds.x.encoding, {})
 
+    def test_append_write(self):
+        # regression for GH1215
+        data = create_test_data()
+        with self.roundtrip_append(data) as actual:
+            assert_allclose(data, actual)
+
+    def test_append_overwrite_values(self):
+        # regression for GH1215
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            self.save(data, tmp_file, mode='w')
+            data['var2'][:] = -999
+            data['var9'] = data['var2'] * 3
+            self.save(data[['var2', 'var9']], tmp_file, mode='a')
+            with self.open(tmp_file) as actual:
+                assert_allclose(data, actual)
+
 
 _counter = itertools.count()
 
@@ -600,6 +647,9 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
 
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+
+    engine = 'netcdf4'
+
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -839,16 +889,6 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             with backends.NetCDF4DataStore.open(tmp_file, mode='w') as store:
                 yield store
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
     def test_variable_order(self):
         # doesn't work with scipy or h5py :(
         ds = Dataset()
@@ -907,20 +947,13 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
-@requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, 'w')
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        serialized = data.to_netcdf(**save_kwargs)
-        with open_dataset(serialized, engine='scipy',
-                          autoclose=self.autoclose, **open_kwargs) as ds:
-            yield ds
 
     def test_to_netcdf_explicit_engine(self):
         # regression test for GH1321
@@ -941,6 +974,8 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 @requires_scipy
 class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -951,9 +986,9 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                   allow_cleanup_failure=False):
         with create_tmp_file() as tmp_file:
             with open(tmp_file, 'wb') as f:
-                data.to_netcdf(f, **save_kwargs)
+                self.save(data, f, **save_kwargs)
             with open(tmp_file, 'rb') as f:
-                with open_dataset(f, engine='scipy', **open_kwargs) as ds:
+                with self.open(f, **open_kwargs) as ds:
                     yield ds
 
     @pytest.mark.skip(reason='cannot pickle file objects')
@@ -967,21 +1002,13 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 @requires_scipy
 class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             with backends.ScipyDataStore(tmp_file, mode='w') as store:
                 yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='scipy',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
@@ -1016,23 +1043,15 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
 
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'netcdf4'
+    file_format = 'NETCDF3_CLASSIC'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
-                           engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
 
 class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
@@ -1042,23 +1061,15 @@ class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
 @requires_netCDF4
 class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
                                        TestCase):
+    engine = 'netcdf4'
+    file_format = 'NETCDF4_CLASSIC'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF4_CLASSIC') as store:
                 yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
-                           engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
 
 class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
@@ -1070,20 +1081,11 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
 class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
+    file_format = 'netcdf3_64bit'
 
     def test_write_store(self):
         # there's no specific store to test here
         pass
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
     def test_engine(self):
         data = create_test_data()
@@ -1143,20 +1145,12 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
 @requires_h5netcdf
 @requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+    engine = 'h5netcdf'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
-            with open_dataset(tmp_file, engine='h5netcdf',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
     def test_orthogonal_indexing(self):
         # doesn't work for h5py (without using dask as an intermediate layer)
@@ -1673,14 +1667,13 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='pynio',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
+    def open(self, path, **kwargs):
+        with open_dataset(path, engine='pynio', autoclose=self.autoclose,
+                          **kwargs) as ds:
+            yield ds
+
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine='scipy', **kwargs)
 
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})

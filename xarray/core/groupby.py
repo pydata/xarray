@@ -205,7 +205,7 @@ class GroupBy(object):
                 raise TypeError('`group` must be an xarray.DataArray or the '
                                 'name of an xarray variable or dimension')
             group = obj[group]
-            if group.name not in obj and group.name in obj.dims:
+            if group.name not in obj.coords and group.name in obj.dims:
                 # DummyGroups should not appear on groupby results
                 group = _DummyGroup(obj, group.name, group.coords)
 

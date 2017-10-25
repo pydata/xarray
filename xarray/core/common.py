@@ -160,6 +160,11 @@ class AttrAccessMixin(object):
         """List of places to look-up items for attribute-style access"""
         return []
 
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-autocompletion """
+        return []
+
     def __getattr__(self, name):
         if name != '__setstate__':
             # this avoids an infinite loop when pickle looks for the
@@ -188,10 +193,22 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [
-            item for sublist in self._attr_sources for item in sublist
-            if isinstance(item, basestring)]
+        extra_attrs = [item
+                       for sublist in self._attr_sources
+                       for item in sublist
+                       if isinstance(item, basestring)]
         return sorted(set(dir(type(self)) + extra_attrs))
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython.
+        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        For the details.
+        """
+        item_lists = [item
+                      for sublist in self._item_sources
+                      for item in sublist
+                      if isinstance(item, basestring)]
+        return list(set(item_lists))
 
 
 def get_squeeze_dims(xarray_obj, dim):
@@ -475,14 +492,14 @@ class BaseDataObject(AttrAccessMixin):
         Returns
         -------
         rolling : type of input argument
-        
+
         Examples
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
-        
+
         >>> da = xr.DataArray(np.linspace(0,11,num=12),
         ...                   coords=[pd.date_range('15/12/1999',
-        ...                           periods=12, freq=pd.DateOffset(months=1))], 
+        ...                           periods=12, freq=pd.DateOffset(months=1))],
         ...                   dims='time')
         >>> da
         <xarray.DataArray (time: 12)>
@@ -496,7 +513,7 @@ class BaseDataObject(AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
 
         Remove the NaNs using ``dropna()``:
-        
+
         >>> da.rolling(time=3).mean().dropna('time')
         <xarray.DataArray (time: 10)>
         array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])

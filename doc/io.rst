@@ -176,6 +176,10 @@ for dealing with datasets too big to fit into memory. Instead, xarray integrates
 with dask.array (see :ref:`dask`), which provides a fully featured engine for
 streaming computation.
 
+It is possible to append or overwrite netCDF variables using the ``mode='a'``
+argument. When using this option, all variables in the dataset will be written
+to the original netCDF file, regardless if they exist in the original dataset.
+
 .. _io.encoding:
 
 Reading encoded data
@@ -509,7 +513,7 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 
 We recommend installing PyNIO via conda::
 
-    conda install -c dbrown pynio
+    conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 

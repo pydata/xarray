@@ -174,7 +174,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
         # dimension we used.
-        if self._dim in combined:
+        if self._dim in combined.coords:
             combined = combined.drop(self._dim)
 
         if self._resample_dim in combined.dims:
