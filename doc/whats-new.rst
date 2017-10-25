@@ -295,6 +295,10 @@ Bug fixes
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
+ (:issue:`1215`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
   (:issue:`1606`).
   By `Joe Hamman <https://github.com/jhamman>`_.

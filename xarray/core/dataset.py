@@ -974,7 +974,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
-            this location will be overwritten.
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
         format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 

@@ -176,6 +176,10 @@ for dealing with datasets too big to fit into memory. Instead, xarray integrates
 with dask.array (see :ref:`dask`), which provides a fully featured engine for
 streaming computation.
 
+It is possible to append or overwrite netCDF variables using the ``mode='a'``
+argument. When using this option, all variables in the dataset will be written
+to the original netCDF file, regardless if they exist in the original dataset.
+
 .. _io.encoding:
 
 Reading encoded data
@@ -390,7 +394,7 @@ over the network until we look at particular values:
 
 Some servers require authentication before we can access the data. For this
 purpose we can explicitly create a :py:class:`~xarray.backends.PydapDataStore`
-and pass in a `Requests`__ session object. For example for 
+and pass in a `Requests`__ session object. For example for
 HTTP Basic authentication::
 
     import xarray as xr
@@ -403,7 +407,7 @@ HTTP Basic authentication::
                                             session=session)
     ds = xr.open_dataset(store)
 
-`Pydap's cas module`__ has functions that generate custom sessions for 
+`Pydap's cas module`__ has functions that generate custom sessions for
 servers that use CAS single sign-on. For example, to connect to servers
 that require NASA's URS authentication::
 
