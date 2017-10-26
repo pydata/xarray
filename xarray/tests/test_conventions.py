@@ -321,21 +321,22 @@ class TestDatetime(TestCase):
                        {'units': 'foobar',
                         'missing_value': 0,
                         '_FillValue': 1})
-        self.assertRaisesRegexp(ValueError, "_FillValue and missing_value",
-                                lambda: conventions.decode_cf_variable(var))
+        with self.assertRaisesRegexp(
+                ValueError, "_FillValue and missing_value"):
+            conventions.decode_cf_variable('t', var)
 
         var = Variable(['t'], np.arange(10),
                        {'units': 'foobar',
                         'missing_value': np.nan,
                         '_FillValue': np.nan})
-        var = conventions.decode_cf_variable(var)
+        var = conventions.decode_cf_variable('t', var)
         self.assertIsNotNone(var)
 
         var = Variable(['t'], np.arange(10),
                                {'units': 'foobar',
                                 'missing_value': np.float32(np.nan),
                                 '_FillValue': np.float32(np.nan)})
-        var = conventions.decode_cf_variable(var)
+        var = conventions.decode_cf_variable('t', var)
         self.assertIsNotNone(var)
 
     @requires_netCDF4
@@ -639,9 +640,9 @@ class TestDecodeCF(TestCase):
                             {'missing_value': np.array([0, 1])})
         expected = Variable(['t'], [np.nan, np.nan, 2], {})
         with warnings.catch_warnings(record=True) as w:
-            actual = conventions.decode_cf_variable(original)
+            actual = conventions.decode_cf_variable('t', original)
             self.assertDatasetIdentical(expected, actual)
-            self.assertIn('variable has multiple fill', str(w[0].message))
+            self.assertIn('has multiple fill', str(w[0].message))
 
     def test_decode_cf_with_drop_variables(self):
         original = Dataset({
