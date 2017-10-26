@@ -95,6 +95,21 @@ class _UFuncSignature(object):
                        for dims in self.output_core_dims)
         return '{}->{}'.format(lhs, rhs)
 
+    def to_gufunc_string(self):
+        """Create an equivalent signature string for a NumPy gufunc.
+
+        Unlike __str__, handles dimensions that don't map to Python
+        identifiers.
+        """
+        all_dims = self.all_core_dims
+        dims_map = dict(zip(sorted(all_dims), range(len(all_dims))))
+        input_core_dims = [['dim%d' % dims_map[dim] for dim in core_dims]
+                           for core_dims in self.input_core_dims]
+        output_core_dims = [['dim%d' % dims_map[dim] for dim in core_dims]
+                            for core_dims in self.output_core_dims]
+        alt_signature = type(self)(input_core_dims, output_core_dims)
+        return str(alt_signature)
+
 
 def result_name(objects):
     # type: List[object] -> Any
@@ -795,7 +810,21 @@ def apply_ufunc(func, *args, **kwargs):
             return result
 
     If your function is not vectorized but can be applied only to core
-    dimensions, you can use ``vectorize=True`` to turn a :
+    dimensions, you can use ``vectorize=True`` to turn into a vectorized
+    function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
+    terribly fast. Here we'll use it to calculate the distance between
+    empirical samples from two probability distributions, using a scipy
+    function that needs to be applied to vectors:
+
+        import scipy.stats
+
+        def earth_mover_distance(first_samples,
+                                 second_samples,
+                                 dim='ensemble'):
+            return apply_ufunc(scipy.stats.wasserstein_distance,
+                               first_samples, second_samples,
+                               input_core_dims=[[dim], [dim]],
+                               vectorize=True)
 
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
@@ -848,7 +877,7 @@ def apply_ufunc(func, *args, **kwargs):
     if vectorize:
         func = np.vectorize(func,
                             otypes=output_dtypes,
-                            signature=str(signature),
+                            signature=signature.to_gufunc_string(),
                             excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,

@@ -35,6 +35,7 @@ def test_signature_properties():
     assert sig.num_inputs == 2
     assert sig.num_outputs == 1
     assert str(sig) == '(x),(x,y)->(z)'
+    assert sig.to_gufunc_string() == '(dim0),(dim0,dim1)->(dim2)'
     # dimension names matter
     assert _UFuncSignature([['x']]) != _UFuncSignature([['y']])
 
