@@ -38,6 +38,7 @@ install:
   # install xarray and dependencies
   - "conda env create --file ./ci/requirements-%CONDA_ENV%.yml"
   - "activate test_env"
+  - "conda list"
   - "python setup.py install"
 
 build: false

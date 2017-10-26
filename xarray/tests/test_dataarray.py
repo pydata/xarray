@@ -508,6 +508,11 @@ class TestDataArray(TestCase):
             expected[t] = 1
             self.assertArrayEqual(orig.values, expected)
 
+    def test_contains(self):
+        data_array = DataArray(1, coords={'x': 2})
+        with pytest.warns(FutureWarning):
+            assert 'x' in data_array
+
     def test_attr_sources_multiindex(self):
         # make sure attr-style access for multi-index levels
         # returns DataArray objects
