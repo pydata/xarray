@@ -355,11 +355,10 @@ tab-complete these variable names with tools like IPython.
 
 .. warning::
 
-  We are changing the behavior of iterating over a Dataset (including
-  ``ds.keys()``) the next major release of xarray, to only include data
-  variables instead of both data variables and coordinates. In the meantime,
-  please prefer iterating over keys in ``ds.data_vars`` or ``ds.coords``, or
-  ``ds.variables`` if you need both at once.
+  We are changing the behavior of iterating over a Dataset the next major
+  release of xarray, to only include data variables instead of both data
+  variables and coordinates. In the meantime, prefer iterating over
+  ``ds.data_vars`` or ``ds.coords``.
 
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
