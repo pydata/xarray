@@ -953,6 +953,7 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
+@requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     engine = 'scipy'
 
