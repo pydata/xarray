@@ -594,6 +594,12 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
+    def test_explicitly_omit_fill_value(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])})
+        ds.x.encoding['_FillValue'] = None
+        with self.roundtrip(ds) as actual:
+            assert '_FillValue' not in actual.x.encoding
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})

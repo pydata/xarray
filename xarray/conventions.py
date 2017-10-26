@@ -727,7 +727,7 @@ def maybe_encode_offset_and_scale(var, needs_copy=True, name=None):
 
 def maybe_encode_fill_value(var, needs_copy=True, name=None):
     # replace NaN with the fill value
-    if '_FillValue' in var.encoding:
+    if var.encoding.get('_FillValue') is not None:
         dims, data, attrs, encoding = _var_as_tuple(var)
         fill_value = pop_to(encoding, attrs, '_FillValue', name=name)
         if not pd.isnull(fill_value):
@@ -790,6 +790,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
 def maybe_default_fill_value(var):
     # make NaN the fill value for float types:
     if ('_FillValue' not in var.attrs and
+            '_FillValue' not in var.encoding and
             np.issubdtype(var.dtype, np.floating)):
         var.attrs['_FillValue'] = var.dtype.type(np.nan)
     return var

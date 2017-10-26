@@ -259,7 +259,7 @@ These encoding options work on any version of the netCDF file format:
   saved on disk. This is important when converting floating point with missing values
   to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
-  output file.
+  output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
   ``decoded = scale_factor * encoded + add_offset``.

@@ -168,6 +168,11 @@ Enhancements
 
   By `Willi Rath <https://github.com/willirath>`_.
 
+- You can now explicitly disable any default ``_FillValue`` (``NaN`` for
+  floating point values) by passing the enconding ``{'_FillValue': None}``
+  (:issue:`1598`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
   By `Greg Brener <https://github.com/gbrener>`_.
