@@ -814,7 +814,7 @@ def apply_ufunc(func, *args, **kwargs):
     function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
     terribly fast. Here we'll use it to calculate the distance between
     empirical samples from two probability distributions, using a scipy
-    function that needs to be applied to vectors:
+    function that needs to be applied to vectors::
 
         import scipy.stats
 
