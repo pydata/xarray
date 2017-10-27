@@ -1844,7 +1844,7 @@ class DataArray(AbstractArray, BaseDataObject):
         new_dims = ([d for d in self.dims if d not in dims] +
                     [d for d in other.dims if d not in dims])
 
-        return type(self)(new_data, new_coords, new_dims)
+        return type(self)(new_data, new_coords.variables, new_dims)
 
     def sortby(self, variables, ascending=True):
         """

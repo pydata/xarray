@@ -132,7 +132,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
             assert allclose, '{}\n{}'.format(a.coords[v].values,
                                              b.coords[v].values)
     elif isinstance(a, xr.Dataset):
-        assert set(a) == set(b)
+        assert set(a.data_vars) == set(b.data_vars)
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
             assert_allclose(a[k], b[k], **kwargs)

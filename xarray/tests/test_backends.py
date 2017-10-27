@@ -182,7 +182,7 @@ class DatasetIOTestCases(object):
                 self.assertDatasetAllClose(expected, actual)
 
     def check_dtypes_roundtripped(self, expected, actual):
-        for k in expected:
+        for k in expected.variables:
             expected_dtype = expected.variables[k].dtype
             if (isinstance(self, Only32BitTypes) and
                     expected_dtype == 'int64'):
@@ -878,7 +878,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         ds.coords['c'] = 4
 
         with self.roundtrip(ds) as actual:
-            self.assertEqual(list(ds), list(actual))
+            self.assertEqual(list(ds.variables), list(actual.variables))
 
     def test_unsorted_index_raises(self):
         # should be fixed in netcdf4 v1.2.1
@@ -1010,7 +1010,7 @@ class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
     def test_netcdf3_endianness(self):
         # regression test for GH416
         expected = open_example_dataset('bears.nc', engine='scipy')
-        for var in expected.values():
+        for var in expected.variables.values():
             self.assertTrue(var.dtype.isnative)
 
     @requires_netCDF4
@@ -1106,11 +1106,12 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
                             # hack to allow test to work:
-                            # coord comes back as DataArray rather than coord, and so
-                            # need to loop through here rather than in the test
-                            # function (or we get recursion)
-                            [assert_allclose(data[k].variable, actual[k].variable)
-                             for k in data]
+                            # coord comes back as DataArray rather than coord,
+                            # and so need to loop through here rather than in
+                            # the test function (or we get recursion)
+                            [assert_allclose(data[k].variable,
+                                             actual[k].variable)
+                             for k in data.variables]
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})

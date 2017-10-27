@@ -78,14 +78,23 @@ Breaking changes
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- Deprecations:
+- Several existing features have been deprecated and will change to new
+  behavior in xarray v0.11. If you use any of them with xarray v0.10, you
+  should see a ``FutureWarning`` that describes how to update your code:
 
   - ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
-    (:issue:`1232`).
-  - ``key in data_array`` currently checks for membership in
-    ``data_array.coords``. This is now deprecated: in the future, it will check
-    membership in ``data_array.values`` instead.
-
+    (:issue:`1232`). In the next major version of xarray, it will provide short-
+    cut lookup for variables or attributes with name ``'T'``.
+  - ``DataArray.__contains__`` (e.g., ``key in data_array``) currently checks
+    for membership in ``DataArray.coords``. In the next major version of
+    xarray, it will check membership in the array data found in
+    ``DataArray.values`` instead (:issue:`1267`).
+  - Direct iteration over and counting a ``Dataset`` (e.g., ``[k for k in ds]``,
+    ``ds.keys()``, ``ds.values()``, ``len(ds)`` and ``if ds``) currently
+    includes all variables, both data and coordinates. For improved usability
+    and consistency with pandas, in the next major version of xarray these will
+    change to only include data variables (:issue:`884`). Use ``ds.variables``,
+    ``ds.data_vars`` or `ds.coords`` as alternatives.
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
