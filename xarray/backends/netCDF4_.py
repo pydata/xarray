@@ -6,18 +6,18 @@ import operator
 
 import numpy as np
 
+from .. import conventions
 from .. import Variable
 from ..conventions import pop_to
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
                           DunderArrayMixin, close_on_error,
                           is_remote_uri)
-from ..core.pycompat import iteritems, basestring, OrderedDict, PY3
+from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
 
 from .common import (WritableCFDataStore, robust_getitem,
                      DataStorePickleMixin, find_root)
-from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable,
-                      maybe_convert_to_char_array)
+from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -50,6 +50,8 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
+
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:
@@ -70,25 +72,16 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                     msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
                 raise IndexError(msg)
 
-        if self.ndim == 0:
-            # work around for netCDF4-python's broken handling of 0-d
-            # arrays (slicing them always returns a 1-dimensional array):
-            # https://github.com/Unidata/netcdf4-python/pull/220
-            data = np.asscalar(data)
         return data
 
 
 def _nc4_values_and_dtype(var):
     if var.dtype.kind == 'U':
-        # this entire clause should not be necessary with netCDF4>=1.0.9
-        if len(var) > 0:
-            var = var.astype('O')
         dtype = str
     elif var.dtype.kind == 'S':
         # use character arrays instead of unicode, because unicode support in
         # netCDF4 is still rather buggy
-        data, dims = maybe_convert_to_char_array(var.data, var.dims)
-        var = Variable(dims, data, var.attrs, var.encoding)
+        var = conventions.maybe_encode_as_char_array(var)
         dtype = var.dtype
     elif var.dtype.kind in ['i', 'u', 'f', 'c']:
         dtype = var.dtype
@@ -187,15 +180,27 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     with close_on_error(ds):
         ds = _nc4_group(ds, group, mode)
 
-    _disable_mask_and_scale(ds)
+    _disable_auto_decode_group(ds)
 
     return ds
 
 
-def _disable_mask_and_scale(ds):
+def _disable_auto_decode_variable(var):
+    """Disable automatic decoding on a netCDF4.Variable.
+
+    We handle these types of decoding ourselves.
+    """
+    var.set_auto_maskandscale(False)
+
+    # only added in netCDF4-python v1.2.8
+    with suppress(AttributeError):
+        var.set_auto_chartostring(False)
+
+
+def _disable_auto_decode_group(ds):
+    """Disable automatic decoding on all variables in a netCDF4.Group."""
     for var in ds.variables.values():
-        # we handle masking and scaling ourselves
-        var.set_auto_maskandscale(False)
+        _disable_auto_decode_variable(var)
 
 
 class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
@@ -209,7 +214,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         if autoclose and opener is None:
             raise ValueError('autoclose requires an opener')
 
-        _disable_mask_and_scale(netcdf4_dataset)
+        _disable_auto_decode_group(netcdf4_dataset)
 
         self.ds = netcdf4_dataset
         self._autoclose = autoclose
@@ -294,9 +299,10 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                 k for k, v in self.ds.dimensions.items() if v.isunlimited()}
         return encoding
 
-    def set_dimension(self, name, length):
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            self.ds.createDimension(name, size=length)
+            dim_length = length if not is_unlimited else None
+            self.ds.createDimension(name, size=dim_length)
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
@@ -310,8 +316,6 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
-        attrs = variable.attrs.copy()
-
         variable = _force_native_endianness(variable)
 
         if self.format == 'NETCDF4':
@@ -322,11 +326,18 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
+        attrs = variable.attrs.copy()
+
         fill_value = attrs.pop('_FillValue', None)
-        if fill_value in ['', '\x00']:
-            # these are equivalent to the default FillValue, but netCDF4
-            # doesn't like setting fill_value to an empty string
-            fill_value = None
+
+        if datatype is str and fill_value is not None:
+            raise NotImplementedError(
+                'netCDF4 does not yet support setting a fill value for '
+                'variable-length strings '
+                '(https://github.com/Unidata/netcdf4-python/issues/730). '
+                "Either remove '_FillValue' from encoding on variable %r "
+                "or set {'dtype': 'S1'} in encoding to use the fixed width "
+                'NC_CHAR type.' % name)
 
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding)
@@ -343,7 +354,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             endian='native',
             least_significant_digit=encoding.get('least_significant_digit'),
             fill_value=fill_value)
-        nc4_var.set_auto_maskandscale(False)
+        _disable_auto_decode_variable(nc4_var)
 
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle

@@ -223,8 +223,12 @@ class AbstractWritableDataStore(AbstractDataStore):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            target, source = self.prepare_variable(
-                name, v, check, unlimited_dims=unlimited_dims)
+            if vn not in self.variables:
+                target, source = self.prepare_variable(
+                    name, v, check, unlimited_dims=unlimited_dims)
+            else:
+                target, source = self.ds.variables[name], v.data
+
             self.writer.add(source, target)
 
     def set_necessary_dimensions(self, variable, unlimited_dims=None):
@@ -232,12 +236,12 @@ class AbstractWritableDataStore(AbstractDataStore):
             unlimited_dims = set()
         for d, l in zip(variable.dims, variable.shape):
             if d not in self.dimensions:
-                if d in unlimited_dims:
-                    l = None
-                self.set_dimension(d, l)
+                is_unlimited = d in unlimited_dims
+                self.set_dimension(d, l, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
+
     def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

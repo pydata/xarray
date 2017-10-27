@@ -469,6 +469,50 @@ class TestDataArray(TestCase):
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_getitem_dataarray(self):
+        # It should not conflict
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
+        ind = DataArray([[0, 1], [0, 1]], dims=['x', 'z'])
+        actual = da[ind]
+        self.assertArrayEqual(actual, da.values[[[0, 1], [0, 1]], :])
+
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                       coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+        ind = xr.DataArray([[0, 1], [0, 1]], dims=['X', 'Y'])
+        actual = da[ind]
+        expected = da.values[[[0, 1], [0, 1]], :]
+        self.assertArrayEqual(actual, expected)
+        assert actual.dims == ('X', 'Y', 'y')
+
+        # boolean indexing
+        ind = xr.DataArray([True, True, False], dims=['x'])
+        self.assertDataArrayEqual(da[ind], da[[0, 1], :])
+        self.assertDataArrayEqual(da[ind], da[[0, 1]])
+        self.assertDataArrayEqual(da[ind], da[ind.values])
+
+    def test_setitem(self):
+        # basic indexing should work as numpy's indexing
+        tuples = [(0, 0), (0, slice(None, None)),
+                  (slice(None, None), slice(None, None)),
+                  (slice(None, None), 0),
+                  ([1, 0], slice(None, None)),
+                  (slice(None, None), [1, 0])]
+        for t in tuples:
+            expected = np.arange(6).reshape(3, 2)
+            orig = DataArray(np.arange(6).reshape(3, 2),
+                             {'x': [1, 2, 3], 'y': ['a', 'b'], 'z': 4,
+                              'x2': ('x', ['a', 'b', 'c']),
+                              'y2': ('y', ['d', 'e'])},
+                             dims=['x', 'y'])
+            orig[t] = 1
+            expected[t] = 1
+            self.assertArrayEqual(orig.values, expected)
+
+    def test_contains(self):
+        data_array = DataArray(1, coords={'x': 2})
+        with pytest.warns(FutureWarning):
+            assert 'x' in data_array
+
     def test_attr_sources_multiindex(self):
         # make sure attr-style access for multi-index levels
         # returns DataArray objects
@@ -508,6 +552,94 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.dv[:3, :5],
                                       self.dv.isel(x=slice(3), y=slice(5)))
 
+    def test_isel_types(self):
+        # regression test for #1405
+        da = DataArray([1, 2, 3], dims='x')
+        # uint64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint64")),
+                                      da.isel(x=np.array([0])))
+        # uint32
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint32")),
+                                      da.isel(x=np.array([0])))
+        # int64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="int64")),
+                                      da.isel(x=np.array([0])))
+
+    def test_isel_fancy(self):
+        shape = (10, 7, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'],
+                       coords={'time': np.arange(0, 100, 10)})
+        y = [1, 3]
+        x = [3, 0]
+
+        expected = da.values[:, y, x]
+
+        actual = da.isel(y=(('test_coord', ), y), x=(('test_coord', ), x))
+        assert actual.coords['test_coord'].shape == (len(y), )
+        assert list(actual.coords) == ['time']
+        assert actual.dims == ('time', 'test_coord')
+
+        np.testing.assert_equal(actual, expected)
+
+        # a few corner cases
+        da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
+                y=(('points',), [3, 4]))
+        np.testing.assert_allclose(
+            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            np_array[1, 4, 2].squeeze())
+        da.isel(time=(('points', ), [1, 2]))
+        y = [-1, 0]
+        x = [-2, 2]
+        expected = da.values[:, y, x]
+        actual = da.isel(x=(('points', ), x), y=(('points', ), y)).values
+        np.testing.assert_equal(actual, expected)
+
+        # test that the order of the indexers doesn't matter
+        self.assertDataArrayIdentical(
+            da.isel(y=(('points', ), y), x=(('points', ), x)),
+            da.isel(x=(('points', ), x), y=(('points', ), y)))
+
+        # make sure we're raising errors in the right places
+        with self.assertRaisesRegexp(IndexError,
+                                     'Dimensions of indexers mismatch'):
+            da.isel(y=(('points', ), [1, 2]), x=(('points', ), [1, 2, 3]))
+
+        # tests using index or DataArray as indexers
+        stations = Dataset()
+        stations['station'] = (('station', ), ['A', 'B', 'C'])
+        stations['dim1s'] = (('station', ), [1, 2, 3])
+        stations['dim2s'] = (('station', ), [4, 5, 1])
+
+        actual = da.isel(x=stations['dim1s'], y=stations['dim2s'])
+        assert 'station' in actual.coords
+        assert 'station' in actual.dims
+        self.assertDataArrayIdentical(actual['station'], stations['station'])
+
+        with self.assertRaisesRegexp(ValueError, 'conflicting values for '):
+            da.isel(x=DataArray([0, 1, 2], dims='station',
+                                coords={'station': [0, 1, 2]}),
+                    y=DataArray([0, 1, 2], dims='station',
+                                coords={'station': [0, 1, 3]}))
+
+        # multi-dimensional selection
+        stations = Dataset()
+        stations['a'] = (('a', ), ['A', 'B', 'C'])
+        stations['b'] = (('b', ), [0, 1])
+        stations['dim1s'] = (('a', 'b'), [[1, 2], [2, 3], [3, 4]])
+        stations['dim2s'] = (('a', ), [4, 5, 1])
+
+        actual = da.isel(x=stations['dim1s'], y=stations['dim2s'])
+        assert 'a' in actual.coords
+        assert 'a' in actual.dims
+        assert 'b' in actual.coords
+        assert 'b' in actual.dims
+        self.assertDataArrayIdentical(actual['a'], stations['a'])
+        self.assertDataArrayIdentical(actual['b'], stations['b'])
+        expected = da.variable[:, stations['dim2s'].variable,
+                               stations['dim1s'].variable]
+        self.assertArrayEqual(actual, expected)
+
     def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']
@@ -520,6 +652,31 @@ class TestDataArray(TestCase):
         b = DataArray('b')
         self.assertDataArrayIdentical(da[1], da.sel(x=b))
         self.assertDataArrayIdentical(da[[1]], da.sel(x=slice(b, b)))
+
+    def test_sel_dataarray(self):
+        # indexing with DataArray
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+
+        ind = DataArray(['a', 'b', 'c'], dims=['x'])
+        actual = da.sel(x=ind)
+        self.assertDataArrayIdentical(actual, da.isel(x=[0, 1, 2]))
+
+        # along new dimension
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'])
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+
+        # with coordinate
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'],
+                        coords={'new_dim': [0, 1, 2]})
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+        assert 'new_dim' in actual.coords
+        self.assertDataArrayEqual(actual['new_dim'].drop('x'),
+                                  ind['new_dim'])
 
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
@@ -638,10 +795,29 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
         self.assertDataArrayIdentical(da[:, :4], da.loc[:, self.ds['y'] < 4])
+
+    def test_loc_assign(self):
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+        # assignment
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
         da.loc[{'x': slice('a', 'j')}] = 2
         self.assertTrue(np.all(da.values == 2))
+
+        da.loc[{'x': slice('a', 'j')}] = 2
+        self.assertTrue(np.all(da.values == 2))
+
+        # Multi dimensional case
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0, 0] = 0
+        assert da.values[0, 0] == 0
+        assert da.values[0, 1] != 0
+
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0] = 0
+        self.assertTrue(np.all(da.values[0] == np.zeros(4)))
+        assert da.values[1, 0] != 0
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])

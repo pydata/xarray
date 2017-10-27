@@ -86,7 +86,7 @@ def _validate_dataset_names(dataset):
             raise TypeError('DataArray.name or Dataset key must be either a '
                             'string or None for serialization to netCDF files')
 
-    for k in dataset:
+    for k in dataset.variables:
         check_name(k)
 
 
@@ -431,7 +431,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, **kwargs):
+                   lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed.  Attributes from the first dataset file
@@ -487,6 +487,32 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         default, a per-variable lock is used when reading data from netCDF
         files with the netcdf4 and h5netcdf engines to avoid issues with
         concurrent access when using dask's multithreaded backend.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        These data variables will be concatenated together:
+          * 'minimal': Only data variables in which the dimension already
+            appears are included.
+          * 'different': Data variables which are not equal (ignoring
+            attributes) across all datasets are also concatenated (as well as
+            all for which dimension already appears). Beware: this option may
+            load the data payload of data variables into memory if they are not
+            already loaded.
+          * 'all': All data variables will be concatenated.
+          * list of str: The listed data variables will be concatenated, in
+            addition to the 'minimal' data variables.
+    coords : {'minimal', 'different', 'all' o list of str}, optional
+        These coordinate variables will be concatenated together:
+          * 'minimal': Only coordinates in which the dimension already appears
+            are included.
+          * 'different': Coordinates which are not equal (ignoring attributes)
+            across all datasets are also concatenated (as well as all for which
+            dimension already appears). Beware: this option may load the data
+            payload of coordinate variables into memory if they are not already
+            loaded.
+          * 'all': All coordinate variables will be concatenated, except
+            those corresponding to other dimensions.
+          * list of str: The listed coordinate variables will be concatenated,
+            in addition the 'minimal' coordinates.
+
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -516,13 +542,22 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
-    if concat_dim is _CONCAT_DIM_DEFAULT:
-        combined = auto_combine(datasets, compat=compat)
-    else:
-        combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat)
+    # close datasets in case of a ValueError
+    try:
+        if concat_dim is _CONCAT_DIM_DEFAULT:
+            combined = auto_combine(datasets, compat=compat,
+                                    data_vars=data_vars, coords=coords)
+        else:
+            combined = auto_combine(datasets, concat_dim=concat_dim,
+                                    compat=compat,
+                                    data_vars=data_vars, coords=coords)
+    except ValueError:
+        for ds in datasets:
+            ds.close()
+        raise
+
     combined._file_obj = _MultiFileCloser(file_objs)
     combined.attrs = datasets[0].attrs
-
     return combined
 
 

@@ -5,6 +5,7 @@ import functools
 from collections import Mapping, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
+import warnings
 
 import sys
 
@@ -26,7 +27,7 @@ from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
-                    merge_data_and_coords)
+                    merge_data_and_coords, merge_variables)
 from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
                     decode_numpy_dict_values, ensure_us_time_resolution)
 from .variable import (Variable, as_variable, IndexVariable,
@@ -279,6 +280,11 @@ class DataVariables(Mapping, formatting.ReprMixin):
         all_variables = self._dataset.variables
         return Frozen(OrderedDict((k, all_variables[k]) for k in self))
 
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return [key for key in self._dataset._ipython_key_completions_()
+                if key not in self._dataset._coord_names]
+
 
 class _LocIndexer(object):
     def __init__(self, dataset):
@@ -366,6 +372,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if both_data_and_coords:
             raise ValueError('variables %r are found in both data_vars and '
                              'coords' % both_data_and_coords)
+
+        if isinstance(coords, Dataset):
+            coords = coords.variables
 
         variables, coord_names, dims = merge_data_and_coords(
             data_vars, coords, compat=compat)
@@ -634,7 +643,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                 for k, v in iteritems(self._variables))
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
-                                      self._dims.copy(), self._attrs_copy())
+                                      self._dims.copy(), self._attrs_copy(),
+                                      encoding=self.encoding)
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -713,7 +723,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self, LevelCoordinatesSource(self), self.attrs]
+        return self._item_sources + [self.attrs]
+
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-completion"""
+        return [self.data_vars, self.coords, {d: self[d] for d in self.dims},
+                LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
@@ -722,9 +738,31 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return key in self._variables
 
     def __len__(self):
+        warnings.warn('calling len() on an xarray.Dataset will change in '
+                      'xarray v0.11 to only include data variables, not '
+                      'coordinates. Call len() on the Dataset.variables '
+                      'property instead, like ``len(ds.variables)``, to '
+                      'preserve existing behavior in a forwards compatible '
+                      'manner.',
+                      FutureWarning, stacklevel=2)
         return len(self._variables)
 
+    def __bool__(self):
+        warnings.warn('casting an xarray.Dataset to a boolean will change in '
+                      'xarray v0.11 to only include data variables, not '
+                      'coordinates. Cast the Dataset.variables property '
+                      'instead to preserve existing behavior in a forwards '
+                      'compatible manner.',
+                      FutureWarning, stacklevel=2)
+        return bool(self._variables)
+
     def __iter__(self):
+        warnings.warn('iteration over an xarray.Dataset will change in xarray '
+                      'v0.11 to only include data variables, not coordinates. '
+                      'Iterate over the Dataset.variables property instead to '
+                      'preserve existing behavior in a forwards compatible '
+                      'manner.',
+                      FutureWarning, stacklevel=2)
         return iter(self._variables)
 
     @property
@@ -961,7 +999,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
-            this location will be overwritten.
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
         format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
@@ -1125,6 +1164,78 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                                  for k, v in self.variables.items()])
         return self._replace_vars_and_dims(variables)
 
+    def _validate_indexers(self, indexers):
+        """ Here we make sure
+        + indexer has a valid keys
+        + indexer is in a valid data type
+        """
+        from .dataarray import DataArray
+
+        invalid = [k for k in indexers if k not in self.dims]
+        if invalid:
+            raise ValueError("dimensions %r do not exist" % invalid)
+
+        # all indexers should be int, slice, np.ndarrays, or Variable
+        indexers_list = []
+        for k, v in iteritems(indexers):
+            if isinstance(v, integer_types + (slice, Variable)):
+                pass
+            elif isinstance(v, DataArray):
+                v = v.variable
+            elif isinstance(v, tuple):
+                v = as_variable(v)
+            elif isinstance(v, Dataset):
+                raise TypeError('cannot use a Dataset as an indexer')
+            else:
+                v = np.asarray(v)
+            indexers_list.append((k, v))
+        return indexers_list
+
+    def _get_indexers_coordinates(self, indexers):
+        """  Extract coordinates from indexers.
+        Returns an OrderedDict mapping from coordinate name to the
+        coordinate variable.
+
+        Only coordinate with a name different from any of self.variables will
+        be attached.
+        """
+        from .dataarray import DataArray
+
+        coord_list = []
+        for k, v in indexers.items():
+            if isinstance(v, DataArray):
+                v_coords = v.coords
+                if v.dtype.kind == 'b':
+                    if v.ndim != 1:  # we only support 1-d boolean array
+                        raise ValueError(
+                            '{:d}d-boolean array is used for indexing along '
+                            'dimension {!r}, but only 1d boolean arrays are '
+                            'supported.'.format(v.ndim, k))
+                    # Make sure in case of boolean DataArray, its
+                    # coordinate also should be indexed.
+                    v_coords = v[v.values.nonzero()[0]].coords
+
+                coord_list.append({d: v_coords[d].variable for d in v.coords})
+
+        # we don't need to call align() explicitly, because merge_variables
+        # already checks for exact alignment between dimension coordinates
+        coords = merge_variables(coord_list)
+
+        for k in self.dims:
+            # make sure there are not conflict in dimension coordinates
+            if (k in coords and k in self._variables and
+                    not coords[k].equals(self._variables[k])):
+                raise IndexError(
+                    'dimension coordinate {!r} conflicts between '
+                    'indexed and indexing objects:\n{}\nvs.\n{}'
+                    .format(k, self._variables[k], coords[k]))
+
+        attached_coords = OrderedDict()
+        for k, v in coords.items():  # silently drop the conflicted variables.
+            if k not in self._variables:
+                attached_coords[k] = v
+        return attached_coords
+
     def isel(self, drop=False, **indexers):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
@@ -1141,40 +1252,45 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         **indexers : {dim: indexer, ...}
             Keyword arguments with names matching dimensions and values given
             by integers, slice objects or arrays.
+            indexer can be a integer, slice, array-like or DataArray.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
 
         Returns
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            array and dimension is indexed by the appropriate indexers. In
-            general, each array's data will be a view of the array's data
-            in this dataset, unless numpy fancy indexing was triggered by using
+            array and dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
 
         See Also
         --------
         Dataset.sel
-        Dataset.sel_points
-        Dataset.isel_points
         DataArray.isel
         """
-        invalid = [k for k in indexers if k not in self.dims]
-        if invalid:
-            raise ValueError("dimensions %r do not exist" % invalid)
-
-        # all indexers should be int, slice or np.ndarrays
-        indexers = [(k, (np.asarray(v)
-                         if not isinstance(v, integer_types + (slice,))
-                         else v))
-                    for k, v in iteritems(indexers)]
+        indexers_list = self._validate_indexers(indexers)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
-            var_indexers = dict((k, v) for k, v in indexers if k in var.dims)
+            var_indexers = {k: v for k, v in indexers_list if k in var.dims}
             new_var = var.isel(**var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
-        coord_names = set(self._coord_names) & set(variables)
+
+        coord_names = set(variables).intersection(self._coord_names)
+        selected = self._replace_vars_and_dims(variables,
+                                               coord_names=coord_names)
+
+        # Extract coordinates from indexers
+        coord_vars = selected._get_indexers_coordinates(indexers)
+        variables.update(coord_vars)
+        coord_names = (set(variables)
+                       .intersection(self._coord_names)
+                       .union(coord_vars))
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
@@ -1216,26 +1332,45 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             by scalars, slices or arrays of tick labels. For dimensions with
             multi-index, the indexer may also be a dict-like object with keys
             matching index level names.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
 
         Returns
         -------
         obj : Dataset
             A new Dataset with the same contents as this dataset, except each
-            variable and dimension is indexed by the appropriate indexers. In
-            general, each variable's data will be a view of the variable's data
-            in this dataset, unless numpy fancy indexing was triggered by using
+            variable and dimension is indexed by the appropriate indexers.
+            If indexer DataArrays have coordinates that do not conflict with
+            this object, then these coordinates will be attached.
+            In general, each array's data will be a view of the array's data
+            in this dataset, unless vectorized indexing was triggered by using
             an array indexer, in which case the data will be a copy.
+
 
         See Also
         --------
         Dataset.isel
-        Dataset.sel_points
-        Dataset.isel_points
         DataArray.sel
         """
+        from .dataarray import DataArray
+
+        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
+                      for k, v in indexers.items()}
+
         pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
+            self, v_indexers, method=method, tolerance=tolerance
         )
+        # attach indexer's coordinate to pos_indexers
+        for k, v in indexers.items():
+            if isinstance(v, Variable):
+                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
+            elif isinstance(v, DataArray):
+                # drop coordinates found in indexers since .sel() already
+                # ensures alignments
+                coords = OrderedDict((k, v) for k, v in v._coords.items()
+                                     if k not in indexers)
+                pos_indexers[k] = DataArray(pos_indexers[k],
+                                            coords=coords, dims=v.dims)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 
@@ -1277,6 +1412,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.sel_points
         DataArray.isel_points
         """
+        warnings.warn('Dataset.isel_points is deprecated: use Dataset.isel()'
+                      'instead.', DeprecationWarning, stacklevel=2)
 
         indexer_dims = set(indexers)
 
@@ -1423,6 +1560,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel_points
         DataArray.sel_points
         """
+        warnings.warn('Dataset.sel_points is deprecated: use Dataset.sel()'
+                      'instead.', DeprecationWarning, stacklevel=2)
+
         pos_indexers, _ = indexing.remap_label_indexers(
             self, indexers, method=method, tolerance=tolerance
         )
@@ -2086,6 +2226,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def T(self):
+        warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
+                      '`.transpose()`. It will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         return self.transpose()
 
     def dropna(self, dim, how='any', thresh=None, subset=None):
@@ -2281,6 +2424,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         applied : Dataset
             Resulting dataset from applying ``func`` over each data variable.
+            
+        Examples
+        --------
+        >>> da = xr.DataArray(np.random.randn(2, 3))
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 -0.3751 -1.951 -1.945 0.2948 0.711 -0.3948
+            bar      (x) int64 -1 2
+        >>> ds.apply(np.fabs)
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
+            bar      (x) float64 1.0 2.0            
         """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
@@ -2357,7 +2519,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return DataArray(data, coords, dims, attrs=self.attrs, name=name)
 
     def _to_dataframe(self, ordered_dims):
-        columns = [k for k in self if k not in self.dims]
+        columns = [k for k in self.variables if k not in self.dims]
         data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)

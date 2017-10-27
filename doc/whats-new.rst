@@ -16,7 +16,23 @@ What's New
 .. _whats-new.0.9.7:
 
 v0.10.0 (unreleased)
--------------------
+--------------------
+
+Backward Incompatible Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- xarray now supports vectorized indexing, where we consider the dimension of
+  indexer, e.g. ``array.sel(x=ind)`` with ``ind.dims == ('y', )`` .
+  This enables us more advanced indexing, including outer indexing, diagonal
+  indexing, as well as vectorized indexing.
+  Due to this change, existing uses of xarray objects to index other xarray
+  objects will break in some cases.
+  ``isel_points`` / ``sel_points`` methods are deprecated, since the same thing
+  can be done by the new ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details
+  (:issue:`1444`, :issue:`1436`, ).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -57,11 +73,35 @@ Breaking changes
   produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
+- Unicode strings (``str`` on Python 3) are now round-tripped successfully even
+  when written as character arrays (e.g., as netCDF3 files or when using
+  ``engine='scipy'``) (:issue:`1638`). This is controlled by the ``_Encoding``
+  attribute convention, which is also understood directly by the netCDF4-Python
+  interface. See :ref:`io.string-encoding` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Several existing features have been deprecated and will change to new
+  behavior in xarray v0.11. If you use any of them with xarray v0.10, you
+  should see a ``FutureWarning`` that describes how to update your code:
+
+  - ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
+    (:issue:`1232`). In the next major version of xarray, it will provide short-
+    cut lookup for variables or attributes with name ``'T'``.
+  - ``DataArray.__contains__`` (e.g., ``key in data_array``) currently checks
+    for membership in ``DataArray.coords``. In the next major version of
+    xarray, it will check membership in the array data found in
+    ``DataArray.values`` instead (:issue:`1267`).
+  - Direct iteration over and counting a ``Dataset`` (e.g., ``[k for k in ds]``,
+    ``ds.keys()``, ``ds.values()``, ``len(ds)`` and ``if ds``) currently
+    includes all variables, both data and coordinates. For improved usability
+    and consistency with pandas, in the next major version of xarray these will
+    change to only include data variables (:issue:`884`). Use ``ds.variables``,
+    ``ds.data_vars`` or `ds.coords`` as alternatives.
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,6 +114,47 @@ Backward Incompatible Changes
 
 Enhancements
 ~~~~~~~~~~~~
+- Support `_ipython_key_completions_` to enable autocompletion for
+  dictionary access with IPython.
+  e.g.  ``ds['tem`` + tab -> ``ds['temperature']``
+  (:issue:`1628`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Support for ``data_vars`` and ``coords`` keywords added to
+  :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`):
+
+  .. ipython::
+    :verbatim:
+    #allows to open multiple files as
+    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
+    #instead of
+    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
+    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
+
+    # in case of 'minimal' does not add time dimension to spatial coordinates
+    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
+
+    In [2]: ds['lon'].shape
+
+    Out[2]: (13505, 808, 782)
+
+    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
+
+    In [4]: ds['lon'].shape
+
+    Out[4]: (808, 782)
+
+    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
+
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
+
+- New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
+  written to work on NumPy arrays to support labels on xarray objects
+  (:issue:`770`). ``apply_ufunc`` also support automatic parallelization for
+  many functions with dask. See :ref:`comput.wrapping-custom` and
+  :ref:`dask.automatic-parallelization` for details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Support for `pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
@@ -95,6 +176,11 @@ Enhancements
     [...]
 
   By `Willi Rath <https://github.com/willirath>`_.
+
+- You can now explicitly disable any default ``_FillValue`` (``NaN`` for
+  floating point values) by passing the enconding ``{'_FillValue': None}``
+  (:issue:`1598`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
@@ -162,6 +248,9 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -193,10 +282,20 @@ Bug fixes
   ``rtol`` arguments when called on ``DataArray`` objects.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Fix positional indexing to allow the use of unsigned integers (:issue:`1405`).
+  By `Joe Hamman <https://github.com/jhamman>`_ and
+  `Gerrit Holl <https://github.com/gerritholl`_.
 - ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
   coordinate shares a name with a dimension but is comprised of arbitrary
   dimensions(:issue:`1120`).
@@ -213,9 +312,17 @@ Bug fixes
   when objects other than  ``Dataset`` are provided (:issue:`1555`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- :py:func:`xarray.Dataset.copy` would not preserve the encoding property
+  (:issue:`1586`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 - :py:func:`xarray.concat` would eagerly load dask variables into memory if
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
+ (:issue:`1215`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
   (:issue:`1606`).
@@ -224,6 +331,15 @@ Bug fixes
 - Fix bug when using ``pytest`` class decorators to skiping certain unittests.
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix pynio backend for upcoming release of pynio with python3 support
+  (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
+
+- Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
+  ``apionly`` module was deprecated.
+  (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
+  (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
 
 .. _whats-new.0.9.6:
 

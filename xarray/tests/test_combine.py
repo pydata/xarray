@@ -19,7 +19,7 @@ class TestConcatDataset(TestCase):
 
         # drop the third dimension to keep things relatively understandable
         data = create_test_data()
-        for k in list(data):
+        for k in list(data.variables):
             if 'dim3' in data[k].dims:
                 del data[k]
 

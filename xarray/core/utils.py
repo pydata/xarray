@@ -8,12 +8,11 @@ import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping, Iterable
+from collections import Mapping, MutableMapping, MutableSet, Iterable
 
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops
 from .pycompat import iteritems, OrderedDict, basestring, bytes_type
 
 
@@ -98,6 +97,8 @@ def equivalent(first, second):
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray
     """
+    # TODO: refactor to avoid circular import
+    from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
     else:
@@ -378,6 +379,43 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
         raise len(iter(self))
 
 
+class OrderedSet(MutableSet):
+    """A simple ordered set.
+
+    The API matches the builtin set, but it preserves insertion order of
+    elements, like an OrderedDict.
+    """
+    def __init__(self, values=None):
+        self._ordered_dict = OrderedDict()
+        if values is not None:
+            self |= values
+
+    # Required methods for MutableSet
+
+    def __contains__(self, value):
+        return value in self._ordered_dict
+
+    def __iter__(self):
+        return iter(self._ordered_dict)
+
+    def __len__(self):
+        return len(self._ordered_dict)
+
+    def add(self, value):
+        self._ordered_dict[value] = None
+
+    def discard(self, value):
+        del self._ordered_dict[value]
+
+    # Additional methods
+
+    def update(self, values):
+        self |= values
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, list(self))
+
+
 class NdimSizeLenMixin(object):
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
@@ -423,6 +461,16 @@ class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
 
     def __repr__(self):
         return '%s(array=%r)' % (type(self).__name__, self.array)
+
+
+class ReprObject(object):
+    """Object that prints as the given value, for use with sentinel values."""
+
+    def __init__(self, value):  # type: str
+        self._value = value
+
+    def __repr__(self):
+        return self._value
 
 
 @contextlib.contextmanager

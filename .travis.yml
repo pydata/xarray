@@ -39,6 +39,10 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-rasterio1.0alpha
   allow_failures:
   - python: 3.6
     env:
@@ -59,6 +63,10 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-rasterio1.0alpha
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -76,11 +84,12 @@ before_install:
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
+  - conda list
   - python setup.py install
   - python xarray/util/print_versions.py
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS
+  - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
   - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
 
 after_success:
