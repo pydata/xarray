@@ -16,65 +16,22 @@ from __future__ import division
 from __future__ import absolute_import
 
 import sys
-import warnings
 import os
+import datetime
+import importlib
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
-try:
-    import numpy
-    print("numpy: %s, %s" % (numpy.__version__, numpy.__file__))
-except ImportError:
-    print("no numpy")
-try:
-    import scipy
-    print("scipy: %s, %s" % (scipy.__version__, scipy.__file__))
-except ImportError:
-    print("no scipy")
-try:
-    import pandas
-    print("pandas: %s, %s" % (pandas.__version__, pandas.__file__))
-except ImportError:
-    print("no pandas")
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-    print("matplotlib: %s, %s" % (matplotlib.__version__, matplotlib.__file__))
-except ImportError:
-    print("no matplotlib")
-try:
-    import dask
-    print("dask: %s, %s" % (dask.__version__, dask.__file__))
-except ImportError:
-    print("no dask")
-try:
-    import IPython
-    print("ipython: %s, %s" % (IPython.__version__, IPython.__file__))
-except ImportError:
-    print("no ipython")
-try:
-    with warnings.catch_warnings():
-        # https://github.com/mwaskom/seaborn/issues/892
-        warnings.simplefilter("ignore")
-        import seaborn
-    print("seaborn: %s, %s" % (seaborn.__version__, seaborn.__file__))
-except ImportError:
-    print("no seaborn")
-try:
-    import cartopy
-    print("cartopy: %s, %s" % (cartopy.__version__, cartopy.__file__))
-except ImportError:
-    print("no cartopy")
-try:
-    import netCDF4
-    print("netCDF4: %s, %s" % (netCDF4.__version__, netCDF4.__file__))
-except ImportError:
-    print("no netCDF4")
-try:
-    import rasterio
-    print("rasterio: %s, %s" % (rasterio.__version__, rasterio.__file__))
-except ImportError:
-    print("no rasterio")
+for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
+             'cartopy netCDF4 rasterio').split():
+    try:
+        module = importlib.import_module(name)
+        if name == 'matplotlib':
+            module.use('Agg')
+        fname = module.__file__.rstrip('__init__.py')
+        print("%s: %s, %s" % (name, module.__version__, fname))
+    except ImportError:
+        print("no %s" % name)
 
 import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
@@ -127,7 +84,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'xarray'
-copyright = '2014-2016, xarray Developers'
+copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -146,7 +103,7 @@ release = xarray.__version__
 # non-false value, then it is used:
 #today = ''
 # Else, today_fmt is used as the format for a strftime call.
-#today_fmt = '%B %d, %Y'
+today_fmt = '%Y-%m-%d'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -224,7 +181,7 @@ html_static_path = ['_static']
 
 # Sometimes the savefig directory doesn't exist and needs to be created
 # https://github.com/ipython/ipython/issues/8733
-# becomes obsolete when ipython 5.2 is out
+# becomes obsolete when we can pin ipython>=5.2; see doc/environment.yml
 ipython_savefig_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    '_build','html','_static')
 if not os.path.exists(ipython_savefig_dir):
@@ -237,7 +194,7 @@ if not os.path.exists(ipython_savefig_dir):
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = today_fmt
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -361,8 +318,9 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.5/', None),
-    'pandas': ('http://pandas.pydata.org/pandas-docs/stable/', None),
+    'python': ('https://docs.python.org/3/', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None),
     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
-    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+    'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
 }

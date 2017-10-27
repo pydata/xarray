@@ -4,46 +4,31 @@ Frequently Asked Questions
 Why is pandas not enough?
 -------------------------
 
-pandas, thanks to its unrivaled speed and flexibility, has emerged
-as the premier python package for working with labeled arrays. So why are we
-contributing to further fragmentation__ in the ecosystem for
-working with data arrays in Python?
-
-__ http://wesmckinney.com/blog/a-roadmap-for-rich-scientific-data-structures-in-python/
-
-Sometimes, we really want to work with collections of higher dimensional arrays
+pandas is a fantastic library for analysis of low-dimensional labelled data -
+if it can be sensibly described as "rows and columns", pandas is probably the
+right choice.  However, sometimes we want to use higher dimensional arrays
 (`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
 rows) shouldn't really matter. For example, climate and weather data is often
 natively expressed in 4 or more dimensions: time, x, y and z.
 
-Pandas does support `N-dimensional panels`__, but the implementation
-is very limited:
+Pandas has historically supported N-dimensional panels, but deprecated them in
+version 0.20 in favor of Xarray data structures.  There are now built-in methods
+on both sides to convert between pandas and Xarray, allowing for more focussed
+development effort.  Xarray objects have a much richer model of dimensionality -
+if you were using Panels:
 
-__ http://pandas.pydata.org/pandas-docs/stable/dsintro.html#panelnd-experimental
+- You need to create a new factory type for each dimensionality.
+- You can't do math between NDPanels with different dimensionality.
+- Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
+  'major_axis', etc.) but the dimension names refer to order, not their
+  meaning. You can't specify an operation as to be applied along the "time"
+  axis.
+- You often have to manually convert collections of pandas arrays
+  (Series, DataFrames, etc) to have the same number of dimensions.
+  In contrast, this sort of data structure fits very naturally in an
+  xarray ``Dataset``.
 
-  - You need to create a new factory type for each dimensionality.
-  - You can't do math between NDPanels with different dimensionality.
-  - Each dimension in a NDPanel has a name (e.g., 'labels', 'items',
-    'major_axis', etc.) but the dimension names refer to order, not their
-    meaning. You can't specify an operation as to be applied along the "time"
-    axis.
-
-Fundamentally, the N-dimensional panel is limited by its context in pandas's
-tabular model, which treats a 2D ``DataFrame`` as a collections of 1D
-``Series``, a 3D ``Panel`` as a collection of 2D ``DataFrame``, and so on. In
-my experience, it usually easier to work with a DataFrame with a hierarchical
-index rather than to use higher dimensional (*N > 3*) data structures in
-pandas.
-
-Another use case is handling collections of arrays with different numbers of
-dimensions. For example, suppose you have a 2D array and a handful of
-associated 1D arrays that share one of the same axes. Storing these in one
-pandas object is possible but awkward -- you can either upcast all the 1D
-arrays to 2D and store everything in a ``Panel``, or put everything in a
-``DataFrame``, where the first few columns have a different meaning than the
-other columns. In contrast, this sort of data structure fits very naturally in
-an xarray ``Dataset``.
-
+You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
 Pandas gets a lot of things right, but scientific users need fully multi-
 dimensional data structures.
 
@@ -70,8 +55,7 @@ multi-dimensional data-structures.
 
 That said, you should only bother with xarray if some aspect of data is
 fundamentally multi-dimensional. If your data is unstructured or
-one-dimensional, stick with pandas, which is a more developed toolkit for doing
-data analysis in Python.
+one-dimensional, stick with pandas.
 
 
 .. _approach to metadata:
@@ -161,10 +145,11 @@ would certainly appreciate it. We recommend two citations.
            }
 
   2. You may also want to cite a specific version of the xarray package. We
-     provide a `Zenodo`__ citation and DOI for this purpose:
+     provide a `Zenodo citation and DOI <https://doi.org/10.5281/zenodo.598201>`_
+     for this purpose:
 
-        .. image:: https://zenodo.org/badge/13221727.svg
-           :target: https://zenodo.org/badge/latestdoi/13221727.
+        .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.598201.svg
+           :target: https://doi.org/10.5281/zenodo.598201
 
        An example BibTeX entry::
 
@@ -176,5 +161,3 @@ would certainly appreciate it. We recommend two citations.
                  doi    = {10.5281/zenodo.59499},
                  url    = {http://dx.doi.org/10.5281/zenodo.59499}
                 }
-
-__ https://zenodo.org/badge/latestdoi/7766/pydata/xarray

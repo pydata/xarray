@@ -411,7 +411,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(_get_col_items(ds))
+    col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))

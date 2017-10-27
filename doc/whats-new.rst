@@ -73,14 +73,35 @@ Breaking changes
   produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
+- Unicode strings (``str`` on Python 3) are now round-tripped successfully even
+  when written as character arrays (e.g., as netCDF3 files or when using
+  ``engine='scipy'``) (:issue:`1638`). This is controlled by the ``_Encoding``
+  attribute convention, which is also understood directly by the netCDF4-Python
+  interface. See :ref:`io.string-encoding` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
-  (:issue:`1232`).
+- Several existing features have been deprecated and will change to new
+  behavior in xarray v0.11. If you use any of them with xarray v0.10, you
+  should see a ``FutureWarning`` that describes how to update your code:
 
+  - ``Dataset.T`` has been deprecated an alias for ``Dataset.transpose()``
+    (:issue:`1232`). In the next major version of xarray, it will provide short-
+    cut lookup for variables or attributes with name ``'T'``.
+  - ``DataArray.__contains__`` (e.g., ``key in data_array``) currently checks
+    for membership in ``DataArray.coords``. In the next major version of
+    xarray, it will check membership in the array data found in
+    ``DataArray.values`` instead (:issue:`1267`).
+  - Direct iteration over and counting a ``Dataset`` (e.g., ``[k for k in ds]``,
+    ``ds.keys()``, ``ds.values()``, ``len(ds)`` and ``if ds``) currently
+    includes all variables, both data and coordinates. For improved usability
+    and consistency with pandas, in the next major version of xarray these will
+    change to only include data variables (:issue:`884`). Use ``ds.variables``,
+    ``ds.data_vars`` or `ds.coords`` as alternatives.
 
 Backward Incompatible Changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -155,6 +176,11 @@ Enhancements
     [...]
 
   By `Willi Rath <https://github.com/willirath>`_.
+
+- You can now explicitly disable any default ``_FillValue`` (``NaN`` for
+  floating point values) by passing the enconding ``{'_FillValue': None}``
+  (:issue:`1598`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - More attributes available in :py:attr:`~xarray.Dataset.attrs` dictionary when
   raster files are opened with :py:func:`~xarray.open_rasterio`.
@@ -290,6 +316,10 @@ Bug fixes
   the first argument was a numpy variable (:issue:`1588`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
+ (:issue:`1215`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
   (:issue:`1606`).
   By `Joe Hamman <https://github.com/jhamman>`_.
@@ -304,6 +334,8 @@ Bug fixes
 - Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
+  (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
 
 .. _whats-new.0.9.6:
 

@@ -74,7 +74,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
                     raise IndexError(_ERROR_MSG)
             window.append((start, stop))
 
-        out = self.rasterio_ds.read(band_key, window=window)
+        out = self.rasterio_ds.read(band_key, window=tuple(window))
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
         return out

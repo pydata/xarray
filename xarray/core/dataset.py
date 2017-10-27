@@ -373,6 +373,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             raise ValueError('variables %r are found in both data_vars and '
                              'coords' % both_data_and_coords)
 
+        if isinstance(coords, Dataset):
+            coords = coords.variables
+
         variables, coord_names, dims = merge_data_and_coords(
             data_vars, coords, compat=compat)
 
@@ -725,7 +728,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def _item_sources(self):
         """List of places to look-up items for key-completion"""
-        return [self, {d: self[d] for d in self.dims},
+        return [self.data_vars, self.coords, {d: self[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
@@ -735,9 +738,31 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return key in self._variables
 
     def __len__(self):
+        warnings.warn('calling len() on an xarray.Dataset will change in '
+                      'xarray v0.11 to only include data variables, not '
+                      'coordinates. Call len() on the Dataset.variables '
+                      'property instead, like ``len(ds.variables)``, to '
+                      'preserve existing behavior in a forwards compatible '
+                      'manner.',
+                      FutureWarning, stacklevel=2)
         return len(self._variables)
 
+    def __bool__(self):
+        warnings.warn('casting an xarray.Dataset to a boolean will change in '
+                      'xarray v0.11 to only include data variables, not '
+                      'coordinates. Cast the Dataset.variables property '
+                      'instead to preserve existing behavior in a forwards '
+                      'compatible manner.',
+                      FutureWarning, stacklevel=2)
+        return bool(self._variables)
+
     def __iter__(self):
+        warnings.warn('iteration over an xarray.Dataset will change in xarray '
+                      'v0.11 to only include data variables, not coordinates. '
+                      'Iterate over the Dataset.variables property instead to '
+                      'preserve existing behavior in a forwards compatible '
+                      'manner.',
+                      FutureWarning, stacklevel=2)
         return iter(self._variables)
 
     @property
@@ -974,7 +999,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             default format becomes NETCDF3_64BIT).
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
-            this location will be overwritten.
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
         format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
@@ -2201,8 +2227,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @property
     def T(self):
         warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
-                      '`.transpose()`. It will be removed in a future version '
-                      'of xarray.',
+                      '`.transpose()`. It will be removed in xarray v0.11.',
                       FutureWarning, stacklevel=2)
         return self.transpose()
 
@@ -2399,6 +2424,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         applied : Dataset
             Resulting dataset from applying ``func`` over each data variable.
+            
+        Examples
+        --------
+        >>> da = xr.DataArray(np.random.randn(2, 3))
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 -0.3751 -1.951 -1.945 0.2948 0.711 -0.3948
+            bar      (x) int64 -1 2
+        >>> ds.apply(np.fabs)
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
+            bar      (x) float64 1.0 2.0            
         """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
@@ -2475,7 +2519,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return DataArray(data, coords, dims, attrs=self.attrs, name=name)
 
     def _to_dataframe(self, ordered_dims):
-        columns = [k for k in self if k not in self.dims]
+        columns = [k for k in self.variables if k not in self.dims]
         data = [self._variables[k].set_dims(ordered_dims).values.reshape(-1)
                 for k in columns]
         index = self.coords.to_index(ordered_dims)
