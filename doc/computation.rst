@@ -416,7 +416,7 @@ to set ``axis=-1``. As an example, here is how we would wrap
 Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
 nicely with tools for building vectorized functions, like
 :func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
-needs, consider using Numba's `vectorize and guvectorize <http://numba.pydata.org/numba-doc/dev/user/vectorize.html>`_.
+needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
 
 In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
 many functions when using dask by setting ``dask='parallelized'``. See

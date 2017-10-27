@@ -205,7 +205,10 @@ class DataArrayRolling(Rolling):
                    for _, window in self]
 
         # Find valid windows based on count
-        concat_dim = self.window_labels if self.dim in self.obj else self.dim
+        if self.dim in self.obj.coords:
+            concat_dim = self.window_labels
+        else:
+            concat_dim = self.dim
         counts = concat([window.count(dim=self.dim) for _, window in self],
                         dim=concat_dim)
         result = concat(windows, dim=concat_dim)
