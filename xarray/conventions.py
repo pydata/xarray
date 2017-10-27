@@ -447,12 +447,11 @@ class DecodedCFTimedeltaArray(utils.NDArrayMixin):
         return decode_cf_timedelta(self.array[key], units=self.units)
 
 
-class CharToStringArray(utils.NDArrayMixin):
+class StackedBytesArray(utils.NDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
-    values, when accessed, are automatically concatenated along the last
-    dimension.
+    values, when accessed, are automatically stacked along the last dimension.
 
-    >>> CharToStringArray(np.array(['a', 'b', 'c']))[:]
+    >>> StackedBytesArray(np.array(['a', 'b', 'c']))[:]
     array('abc',
           dtype='|S3')
     """
@@ -463,6 +462,9 @@ class CharToStringArray(utils.NDArrayMixin):
         array : array-like
             Original array of values to wrap.
         """
+        if array.dtype != 'S1':
+            raise ValueError(
+                "can only use StackedBytesArray if argument has dtype='S1'")
         self.array = array
 
     @property
@@ -474,25 +476,60 @@ class CharToStringArray(utils.NDArrayMixin):
         return self.array.shape[:-1]
 
     def __str__(self):
+        # TODO(shoyer): figure out why we need this special case?
         if self.ndim == 0:
-            # always return a unicode str if it's a single item for py3 compat
-            return self[...].item().decode('utf-8')
+            return str(self[...].item())
         else:
             return repr(self)
 
     def __repr__(self):
-        return '%s(%r)' % (type(self).__name__, self.array)
+        return ('%s(%r)' % (type(self).__name__, self.array))
 
     def __getitem__(self, key):
-        if self.array.ndim == 0:
-            values = self.array[key]
+        # require slicing the last dimension completely
+        key = indexing.expanded_indexer(key, self.array.ndim)
+        if key[-1] != slice(None):
+            raise IndexError('too many indices')
+        return char_to_bytes(self.array[key])
+
+
+class BytesToStringArray(utils.NDArrayMixin):
+    """Wrapper that decodes bytes to unicode when values are read.
+
+    >>> BytesToStringArray(np.array([b'abc']))[:]
+    array(['abc'],
+          dtype=object)
+    """
+    def __init__(self, array, encoding='utf-8'):
+        """
+        Parameters
+        ----------
+        array : array-like
+            Original array of values to wrap.
+        encoding : str
+            String encoding to use.
+        """
+        self.array = array
+        self.encoding = encoding
+
+    @property
+    def dtype(self):
+        # variable length string
+        return np.dtype(object)
+
+    def __str__(self):
+        # TODO(shoyer): figure out why we need this special case?
+        if self.ndim == 0:
+            return str(self[...].item())
         else:
-            # require slicing the last dimension completely
-            key = indexing.expanded_indexer(key, self.array.ndim)
-            if key[-1] != slice(None):
-                raise IndexError('too many indices')
-            values = char_to_string(self.array[key])
-        return values
+            return repr(self)
+
+    def __repr__(self):
+        return ('%s(%r, encoding=%r)'
+                % (type(self).__name__, self.array, self.encoding))
+
+    def __getitem__(self, key):
+        return decode_bytes_array(self.array[key], self.encoding)
 
 
 class NativeEndiannessArray(utils.NDArrayMixin):
@@ -580,35 +617,65 @@ class UnsignedIntTypeArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-def string_to_char(arr):
+def bytes_to_char(arr):
     """Like netCDF4.stringtochar, but faster and more flexible.
     """
     # ensure the array is contiguous
     arr = np.array(arr, copy=False, order='C')
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
-        raise ValueError('argument must be a string')
+        raise ValueError('argument must be a string array')
     return arr.reshape(arr.shape + (1,)).view(kind + '1')
 
 
-def char_to_string(arr):
+def char_to_bytes(arr):
     """Like netCDF4.chartostring, but faster and more flexible.
     """
     # based on: http://stackoverflow.com/a/10984878/809705
     arr = np.array(arr, copy=False, order='C')
+
     kind = arr.dtype.kind
     if kind not in ['U', 'S']:
-        raise ValueError('argument must be a string')
-    return arr.view(kind + str(arr.shape[-1]))[..., 0]
+        raise ValueError('argument must be a string array')
+
+    if not arr.ndim:
+        # no dimension to concatenate along
+        return arr
+
+    size = arr.shape[-1]
+    if not size:
+        # can't make an S0 dtype
+        return np.zeros(arr.shape[:-1], dtype=kind)
+
+    dtype = kind + str(size)
+    return arr.view(dtype).reshape(arr.shape[:-1])
 
 
-def safe_setitem(dest, key, value):
+def decode_bytes_array(bytes_array, encoding='utf-8'):
+    # This is faster than using np.char.decode() or np.vectorize()
+    bytes_array = np.asarray(bytes_array)
+    decoded = [x.decode(encoding) for x in bytes_array.ravel()]
+    return np.array(decoded, dtype=object).reshape(bytes_array.shape)
+
+
+def encode_string_array(string_array, encoding='utf-8'):
+    string_array = np.asarray(string_array)
+    encoded = [x.encode(encoding) for x in string_array.ravel()]
+    return np.array(encoded, dtype=bytes).reshape(string_array.shape)
+
+
+def safe_setitem(dest, key, value, name=None):
     if key in dest:
-        raise ValueError('Failed hard to prevent overwriting key %r' % key)
+        var_str = ' on variable {!r}'.format(name) if name else ''
+        raise ValueError(
+            'failed to prevent overwriting existing key {} in attrs{}. '
+            'This is probably an encoding field used by xarray to describe '
+            'how a variable is serialized. To proceed, remove this key from '
+            "the variable's attributes manually.".format(key, var_str))
     dest[key] = value
 
 
-def pop_to(source, dest, key, default=None):
+def pop_to(source, dest, key, name=None):
     """
     A convenience function which pops a key k from source to dest.
     None values are not passed on.  If k already exists in dest an
@@ -616,7 +683,7 @@ def pop_to(source, dest, key, default=None):
     """
     value = source.pop(key, None)
     if value is not None:
-        safe_setitem(dest, key, value)
+        safe_setitem(dest, key, value, name=name)
     return value
 
 
@@ -624,45 +691,45 @@ def _var_as_tuple(var):
     return var.dims, var.data, var.attrs.copy(), var.encoding.copy()
 
 
-def maybe_encode_datetime(var):
+def maybe_encode_datetime(var, name=None):
     if np.issubdtype(var.dtype, np.datetime64):
         dims, data, attrs, encoding = _var_as_tuple(var)
         (data, units, calendar) = encode_cf_datetime(
             data, encoding.pop('units', None), encoding.pop('calendar', None))
-        safe_setitem(attrs, 'units', units)
-        safe_setitem(attrs, 'calendar', calendar)
+        safe_setitem(attrs, 'units', units, name=name)
+        safe_setitem(attrs, 'calendar', calendar, name=name)
         var = Variable(dims, data, attrs, encoding)
     return var
 
 
-def maybe_encode_timedelta(var):
+def maybe_encode_timedelta(var, name=None):
     if np.issubdtype(var.dtype, np.timedelta64):
         dims, data, attrs, encoding = _var_as_tuple(var)
         data, units = encode_cf_timedelta(
             data, encoding.pop('units', None))
-        safe_setitem(attrs, 'units', units)
+        safe_setitem(attrs, 'units', units, name=name)
         var = Variable(dims, data, attrs, encoding)
     return var
 
 
-def maybe_encode_offset_and_scale(var, needs_copy=True):
+def maybe_encode_offset_and_scale(var, needs_copy=True, name=None):
     if any(k in var.encoding for k in ['add_offset', 'scale_factor']):
         dims, data, attrs, encoding = _var_as_tuple(var)
         data = data.astype(dtype=float, copy=needs_copy)
         needs_copy = False
         if 'add_offset' in encoding:
-            data -= pop_to(encoding, attrs, 'add_offset')
+            data -= pop_to(encoding, attrs, 'add_offset', name=name)
         if 'scale_factor' in encoding:
-            data /= pop_to(encoding, attrs, 'scale_factor')
+            data /= pop_to(encoding, attrs, 'scale_factor', name=name)
         var = Variable(dims, data, attrs, encoding)
     return var, needs_copy
 
 
-def maybe_encode_fill_value(var, needs_copy=True):
+def maybe_encode_fill_value(var, needs_copy=True, name=None):
     # replace NaN with the fill value
     if var.encoding.get('_FillValue') is not None:
         dims, data, attrs, encoding = _var_as_tuple(var)
-        fill_value = pop_to(encoding, attrs, '_FillValue')
+        fill_value = pop_to(encoding, attrs, '_FillValue', name=name)
         if not pd.isnull(fill_value):
             data = ops.fillna(data, fill_value)
             needs_copy = False
@@ -670,8 +737,33 @@ def maybe_encode_fill_value(var, needs_copy=True):
     return var, needs_copy
 
 
-def maybe_encode_dtype(var, name=None):
-    if 'dtype' in var.encoding:
+def maybe_encode_as_char_array(var, name=None):
+    if var.dtype.kind in {'S', 'U'}:
+        dims, data, attrs, encoding = _var_as_tuple(var)
+        if data.dtype.kind == 'U':
+            string_encoding = encoding.pop('_Encoding', 'utf-8')
+            safe_setitem(attrs, '_Encoding', string_encoding, name=name)
+            data = encode_string_array(data, string_encoding)
+
+        if data.dtype.itemsize > 1:
+            data = bytes_to_char(data)
+            dims = dims + ('string%s' % data.shape[-1],)
+
+        var = Variable(dims, data, attrs, encoding)
+    return var
+
+
+def maybe_encode_string_dtype(var, name=None):
+    # need to apply after ensure_dtype_not_object()
+    if 'dtype' in var.encoding and var.encoding['dtype'] == 'S1':
+        assert var.dtype.kind in {'S', 'U'}
+        var = maybe_encode_as_char_array(var, name=name)
+        del var.encoding['dtype']
+    return var
+
+
+def maybe_encode_nonstring_dtype(var, name=None):
+    if 'dtype' in var.encoding and var.encoding['dtype'] != 'S1':
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype:
@@ -684,16 +776,12 @@ def maybe_encode_dtype(var, name=None):
                                   RuntimeWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if encoding.get('_Unsigned', False):
-                    signed_dtype = 'i%s' % dtype.itemsize
+                    signed_dtype = np.dtype('i%s' % dtype.itemsize)
                     if '_FillValue' in var.attrs:
-                        old_fill = np.asarray(attrs['_FillValue'])
-                        new_fill = old_fill.astype(signed_dtype)
+                        new_fill = signed_dtype.type(attrs['_FillValue'])
                         attrs['_FillValue'] = new_fill
                     data = data.astype(signed_dtype)
                     pop_to(encoding, attrs, '_Unsigned')
-            if dtype == 'S1' and data.dtype != 'S1':
-                data = string_to_char(np.asarray(data, 'S'))
-                dims = dims + ('string%s' % data.shape[-1],)
             data = data.astype(dtype=dtype)
         var = Variable(dims, data, attrs, encoding)
     return var
@@ -704,7 +792,7 @@ def maybe_default_fill_value(var):
     if ('_FillValue' not in var.attrs and
             '_FillValue' not in var.encoding and
             np.issubdtype(var.dtype, np.floating)):
-        var.attrs['_FillValue'] = np.nan
+        var.attrs['_FillValue'] = var.dtype.type(np.nan)
     return var
 
 
@@ -718,7 +806,7 @@ def maybe_encode_bools(var):
     return var
 
 
-def _infer_dtype(array):
+def _infer_dtype(array, name=None):
     """Given an object array with no missing values, infer its dtype from its
     first element
     """
@@ -731,12 +819,13 @@ def _infer_dtype(array):
             # the length of their first element
             dtype = np.dtype(dtype.kind)
         elif dtype.kind == 'O':
-            raise ValueError('unable to infer dtype; xarray cannot '
-                             'serialize arbitrary Python objects')
+            raise ValueError('unable to infer dtype on variable {!r}; xarray '
+                             'cannot serialize arbitrary Python objects'
+                             .format(name))
     return dtype
 
 
-def ensure_dtype_not_object(var):
+def ensure_dtype_not_object(var, name=None):
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == 'O':
         dims, data, attrs, encoding = _var_as_tuple(var)
@@ -744,24 +833,25 @@ def ensure_dtype_not_object(var):
         if missing.any():
             # nb. this will fail for dask.array data
             non_missing_values = data[~missing]
-            inferred_dtype = _infer_dtype(non_missing_values)
+            inferred_dtype = _infer_dtype(non_missing_values, name)
 
-            if inferred_dtype.kind in ['S', 'U']:
-                # There is no safe bit-pattern for NA in typical binary string
-                # formats, we so can't set a fill_value. Unfortunately, this
-                # means we won't be able to restore string arrays with missing
-                # values.
-                fill_value = ''
+            # There is no safe bit-pattern for NA in typical binary string
+            # formats, we so can't set a fill_value. Unfortunately, this means
+            # we can't distinguish between missing values and empty strings.
+            if inferred_dtype.kind == 'S':
+                fill_value = b''
+            elif inferred_dtype.kind == 'U':
+                fill_value = u''
             else:
                 # insist on using float for numeric values
                 if not np.issubdtype(inferred_dtype, float):
                     inferred_dtype = np.dtype(float)
-                fill_value = np.nan
+                fill_value = inferred_dtype.type(np.nan)
 
             data = np.array(data, dtype=inferred_dtype, copy=True)
             data[missing] = fill_value
         else:
-            data = data.astype(dtype=_infer_dtype(data))
+            data = data.astype(dtype=_infer_dtype(data, name))
         var = Variable(dims, data, attrs, encoding)
     return var
 
@@ -786,19 +876,21 @@ def encode_cf_variable(var, needs_copy=True, name=None):
     out : xarray.Variable
         A variable which has been encoded as described above.
     """
-    var = maybe_encode_datetime(var)
-    var = maybe_encode_timedelta(var)
-    var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy)
-    var, needs_copy = maybe_encode_fill_value(var, needs_copy)
-    var = maybe_encode_dtype(var, name)
+    var = maybe_encode_datetime(var, name=name)
+    var = maybe_encode_timedelta(var, name=name)
+    var, needs_copy = maybe_encode_offset_and_scale(var, needs_copy, name=name)
+    var, needs_copy = maybe_encode_fill_value(var, needs_copy, name=name)
+    var = maybe_encode_nonstring_dtype(var, name=name)
     var = maybe_default_fill_value(var)
     var = maybe_encode_bools(var)
-    var = ensure_dtype_not_object(var)
+    var = ensure_dtype_not_object(var, name=name)
+    var = maybe_encode_string_dtype(var, name=name)
     return var
 
 
-def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
-                       decode_times=True, decode_endianness=True):
+def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
+                       decode_times=True, decode_endianness=True,
+                       stack_char_dim=True):
     """
     Decodes a variable which may hold CF encoded information.
 
@@ -809,6 +901,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     Parameters
     ----------
+    name: str
+        Name of the variable. Used for better error messages.
     var : Variable
         A variable holding potentially CF encoded information.
     concat_characters : bool
@@ -822,11 +916,15 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
         Decode cf times ('hours since 2000-01-01') to np.datetime64.
     decode_endianness : bool
         Decode arrays from non-native to native endianness.
+    stack_char_dim : bool
+        Whether to stack characters into bytes along the last dimension of this
+        array. Passed as an argument because we need to look at the full
+        dataset to figure out if this is appropriate.
 
     Returns
     -------
     out : Variable
-        A variable holding the decoded equivalent of var
+        A variable holding the decoded equivalent of var.
     """
     # use _data instead of data so as not to trigger loading data
     var = as_variable(var)
@@ -837,19 +935,22 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     original_dtype = data.dtype
 
-    if concat_characters:
-        if data.dtype.kind == 'S' and data.dtype.itemsize == 1:
+    if concat_characters and data.dtype.kind == 'S':
+        if stack_char_dim:
             dimensions = dimensions[:-1]
-            data = CharToStringArray(data)
+            data = StackedBytesArray(data)
 
-    pop_to(attributes, encoding, '_Unsigned')
-    is_unsigned = encoding.get('_Unsigned', False)
-    if is_unsigned and mask_and_scale:
+        string_encoding = pop_to(attributes, encoding, '_Encoding')
+        if string_encoding is not None:
+            data = BytesToStringArray(data, string_encoding)
+
+    unsigned = pop_to(attributes, encoding, '_Unsigned')
+    if unsigned and mask_and_scale:
         if data.dtype.kind == 'i':
             data = UnsignedIntTypeArray(data)
         else:
-            warnings.warn("variable has _Unsigned attribute but is not "
-                          "of integer type. Ignoring attribute.",
+            warnings.warn("variable %r has _Unsigned attribute but is not "
+                          "of integer type. Ignoring attribute." % name,
                           RuntimeWarning, stacklevel=3)
 
     if mask_and_scale:
@@ -860,34 +961,43 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
                 not utils.equivalent(attributes['_FillValue'],
                                      attributes['missing_value'])):
                 raise ValueError("Conflicting _FillValue and missing_value "
-                                 "attributes on a variable: {} vs. {}\n\n"
+                                 "attributes on a variable {!r}: {} vs. {}\n\n"
                                  "Consider opening the offending dataset "
                                  "using decode_cf=False, correcting the "
                                  "attributes and decoding explicitly using "
                                  "xarray.decode_cf()."
-                                 .format(attributes['_FillValue'],
+                                 .format(name, attributes['_FillValue'],
                                          attributes['missing_value']))
             attributes['_FillValue'] = attributes.pop('missing_value')
-        fill_value = np.array(pop_to(attributes, encoding, '_FillValue'))
-        if fill_value.size > 1:
-            warnings.warn("variable has multiple fill values {0}, decoding "
-                          "all values to NaN.".format(str(fill_value)),
+
+        fill_value = pop_to(attributes, encoding, '_FillValue')
+        if isinstance(fill_value, np.ndarray) and fill_value.size > 1:
+            warnings.warn("variable {!r} has multiple fill values {}, "
+                          "decoding all values to NaN."
+                          .format(name, fill_value),
                           RuntimeWarning, stacklevel=3)
+
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
         has_fill = (fill_value is not None and
                     not np.any(pd.isnull(fill_value)))
         if (has_fill or scale_factor is not None or add_offset is not None):
-            if fill_value.dtype.kind in ['U', 'S']:
+            if has_fill and np.array(fill_value).dtype.kind in ['U', 'S', 'O']:
+                if string_encoding is not None:
+                    raise NotImplementedError(
+                        'variable %r has a _FillValue specified, but '
+                        '_FillValue is yet supported on unicode strings: '
+                        'https://github.com/pydata/xarray/issues/1647')
                 dtype = object
             else:
+                # According to the CF spec, the fill value is of the same
+                # type as its variable, i.e. its storage format on disk.
+                # This handles the case where the fill_value also needs to be
+                # converted to its unsigned value.
+                if has_fill:
+                    fill_value = data.dtype.type(fill_value)
                 dtype = float
-            # According to the CF spec, the fill value is of the same
-            # type as its variable, i.e. its storage format on disk.
-            # This handles the case where the fill_value also needs to be
-            # converted to its unsigned value.
-            if has_fill:
-                fill_value = np.asarray(fill_value, dtype=data.dtype)
+
             data = MaskedAndScaledArray(data, fill_value, scale_factor,
                                         add_offset, dtype)
 
@@ -909,7 +1019,8 @@ def decode_cf_variable(var, concat_characters=True, mask_and_scale=True,
 
     if 'dtype' in encoding:
         if original_dtype != encoding['dtype']:
-            warnings.warn("CF decoding is overwriting dtype")
+            warnings.warn("CF decoding is overwriting dtype on variable {!r}"
+                          .format(name))
     else:
         encoding['dtype'] = original_dtype
 
@@ -955,11 +1066,12 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
     for k, v in iteritems(variables):
         if k in drop_variables:
             continue
-        concat = (concat_characters and v.dtype.kind == 'S' and v.ndim > 0 and
-                  stackable(v.dims[-1]))
+        stack_char_dim = (concat_characters and v.dtype == 'S1' and
+                          v.ndim > 0 and stackable(v.dims[-1]))
         new_vars[k] = decode_cf_variable(
-            v, concat_characters=concat, mask_and_scale=mask_and_scale,
-            decode_times=decode_times)
+            k, v, concat_characters=concat_characters,
+            mask_and_scale=mask_and_scale, decode_times=decode_times,
+            stack_char_dim=stack_char_dim)
         if decode_coords:
             var_attrs = new_vars[k].attrs
             if 'coordinates' in var_attrs:

@@ -270,6 +270,42 @@ converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
 
+.. _io.string-encoding:
+
+String encoding
+...............
+
+xarray can write unicode strings to netCDF files in two ways:
+
+- As variable length strings. This is only supported on netCDF4 (HDF5) files.
+- By encoding strings into bytes, and writing encoded bytes as a character
+  array. The default encoding is UTF-8.
+
+By default, we use variable length strings for compatible files and fall-back
+to using encoded character arrays. Character arrays can be selected even for
+netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
+(corresponding to NumPy's single-character bytes dtype).
+
+If character arrays are used, the string encoding that was used is stored on
+disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+At the time of this writing (October 2017), a standard convention for indicating
+string encoding for character arrays in netCDF files was
+`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+Technically, you can use
+`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+by setting the ``_Encoding`` field in ``encoding``. But
+`we don't recommend it<http://utf8everywhere.org/>`_.
+
+.. warning::
+
+  Missing values in bytes or unicode string arrays (represented by ``NaN`` in
+  xarray) are currently written to disk as empty strings ``''``. This means
+  missing values will not be restored when data is loaded from disk.
+  This behavior is likely to change in the future (:issue:`1647`).
+  Unfortunately, explicitly setting a ``_FillValue`` for string arrays to handle
+  missing values doesn't work yet either, though we also hope to fix this in the
+  future.
 
 Chunk based compression
 .......................
