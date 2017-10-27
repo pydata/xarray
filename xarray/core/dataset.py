@@ -2431,6 +2431,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
+        Examples
+        --------
+        >>> da = xr.DataArray(np.random.randn(2, 3))
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])})
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 -0.3751 -1.951 -1.945 0.2948 0.711 -0.3948
+            bar      (x) int64 -1 2
+        >>> ds.apply(np.fabs)
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Dimensions without coordinates: dim_0, dim_1, x
+        Data variables:
+            foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
+            bar      (x) float64 1.0 2.0
+
     def assign(self, **kwargs):
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
