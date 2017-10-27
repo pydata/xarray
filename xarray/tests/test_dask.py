@@ -14,7 +14,7 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress, OrderedDict
-from . import TestCase
+from . import TestCase, assert_frame_equal
 
 from xarray.tests import mock
 
@@ -568,7 +568,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertIsInstance(actual, dd.DataFrame)
 
         # use the .equals from pandas to check dataframes are equivalent
-        assert expected.compute().equals(actual.compute()), (expected, actual)
+        assert_frame_equal(expected.compute(), actual.compute())
 
         # test if no index is given
         expected = dd.from_pandas(expected_pd.reset_index(drop=False),
@@ -577,7 +577,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = ds.to_dask_dataframe(set_index=False)
 
         self.assertIsInstance(actual, dd.DataFrame)
-        assert expected.compute().equals(actual.compute()), (expected, actual)
+        assert_frame_equal(expected.compute(), actual.compute())
 
     def test_to_dask_dataframe_2D(self):
         # Test if 2-D dataset is supplied
@@ -599,7 +599,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = ds.to_dask_dataframe(set_index=False)
 
         self.assertIsInstance(actual, dd.DataFrame)
-        assert expected.equals(actual.compute()), (expected, actual.compute())
+        assert_frame_equal(expected, actual.compute())
 
     def test_to_dask_dataframe_coordinates(self):
         # Test if coordinate is also a dask array
@@ -614,7 +614,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         expected = dd.from_pandas(expected_pd, chunksize=4)
         actual = ds.to_dask_dataframe(set_index=True)
         self.assertIsInstance(actual, dd.DataFrame)
-        assert expected.compute().equals(actual.compute()), (expected, actual)
+        assert_frame_equal(expected.compute(), actual.compute())
 
     def test_to_dask_dataframe_not_daskarray(self):
         # Test if DataArray is not a dask array
@@ -626,13 +626,12 @@ class TestDataArrayAndDataset(DaskTestCase):
                                   ('b', ('t', y)),
                                   ('t', ('t', t))]))
 
-        expected_pd = pd.DataFrame({'a': x,
-                                    'b': y},
-                                   index=pd.Index(t, name='t'))
+        expected = pd.DataFrame({'a': x, 'b': y},
+                                index=pd.Index(t, name='t'))
 
         actual = ds.to_dask_dataframe(set_index=True)
         self.assertIsInstance(actual, dd.DataFrame)
-        assert expected_pd.equals(actual.compute())
+        assert_frame_equal(expected, actual.compute())
 
     def test_to_dask_dataframe_no_coordinate(self):
         # Test if Dataset has a dimension without coordinates
@@ -640,7 +639,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds = Dataset({'x': ('dim_0', x)})
         expected = pd.DataFrame({'x': x.compute()})
         actual = ds.to_dask_dataframe(set_index=True)
-        assert expected.equals(actual.compute())
+        assert_frame_equal(expected, actual.compute())
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
