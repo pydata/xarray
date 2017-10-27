@@ -2,8 +2,10 @@ import functools
 import operator
 from collections import OrderedDict
 
+from distutils.version import LooseVersion
 import numpy as np
 from numpy.testing import assert_array_equal
+import pandas as pd
 
 import pytest
 
@@ -32,6 +34,8 @@ def test_signature_properties():
     assert sig.all_output_core_dims == frozenset(['z'])
     assert sig.num_inputs == 2
     assert sig.num_outputs == 1
+    assert str(sig) == '(x),(x,y)->(z)'
+    assert sig.to_gufunc_string() == '(dim0),(dim0,dim1)->(dim2)'
     # dimension names matter
     assert _UFuncSignature([['x']]) != _UFuncSignature([['y']])
 
@@ -672,6 +676,37 @@ def test_apply_dask_new_output_dimension():
     assert actual.dims == ('x', 'y', 'sign')
     assert actual.shape == (2, 2, 2)
     assert isinstance(actual.data, da.Array)
+    assert_identical(expected, actual)
+
+
+def pandas_median(x):
+    return pd.Series(x).median()
+
+
+def test_vectorize():
+    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
+        pytest.skip('numpy 1.12 or later to support vectorize=True.')
+
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
+    expected = xr.DataArray([1, 2], dims=['x'])
+    actual = apply_ufunc(pandas_median, data_array,
+                         input_core_dims=[['y']],
+                         vectorize=True)
+    assert_identical(expected, actual)
+
+
+@requires_dask
+def test_vectorize_dask():
+    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
+        pytest.skip('numpy 1.12 or later to support vectorize=True.')
+
+    data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
+    expected = xr.DataArray([1, 2], dims=['x'])
+    actual = apply_ufunc(pandas_median, data_array.chunk({'x': 1}),
+                         input_core_dims=[['y']],
+                         vectorize=True,
+                         dask='parallelized',
+                         output_dtypes=[float])
     assert_identical(expected, actual)
 
 
