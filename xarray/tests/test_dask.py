@@ -583,7 +583,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         # Test if 2-D dataset is supplied
         w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
         ds = Dataset({'w': (('x', 'y'), w)})
-        ds['x'] = ('x', [0, 1])
+        ds['x'] = ('x', np.array([0, 1], np.int64))
         ds['y'] = ('y', list('abc'))
 
         # dask dataframes do not (yet) support multiindex,
