@@ -2424,13 +2424,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         applied : Dataset
             Resulting dataset from applying ``func`` over each data variable.
-        """
-        variables = OrderedDict(
-            (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
-            for k, v in iteritems(self.data_vars))
-        attrs = self.attrs if keep_attrs else None
-        return type(self)(variables, attrs=attrs)
-
+            
         Examples
         --------
         >>> da = xr.DataArray(np.random.randn(2, 3))
@@ -2448,7 +2442,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
-            bar      (x) float64 1.0 2.0
+            bar      (x) float64 1.0 2.0            
+        """
+        variables = OrderedDict(
+            (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
+            for k, v in iteritems(self.data_vars))
+        attrs = self.attrs if keep_attrs else None
+        return type(self)(variables, attrs=attrs)
 
     def assign(self, **kwargs):
         """Assign new data variables to a Dataset, returning a new object
