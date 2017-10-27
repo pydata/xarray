@@ -73,6 +73,13 @@ Breaking changes
   produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
+- Unicode strings (``str`` on Python 3) are now round-tripped successfully even
+  when written as character arrays (e.g., as netCDF3 files or when using
+  ``engine='scipy'``) (:issue:`1638`). This is controlled by the ``_Encoding``
+  attribute convention, which is also understood directly by the netCDF4-Python
+  interface. See :ref:`io.string-encoding` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
   Datasets loaded with ``open_dataset`` won't automatically read coords from
   disk when calling ``repr`` (:issue:`1522`).

@@ -24,15 +24,16 @@ _reserved_names = set(['byte', 'char', 'short', 'ushort', 'int', 'uint',
 # coerced instead as indicated by the "coerce_nc3_dtype" function
 _nc3_dtype_coercions = {'int64': 'int32', 'bool': 'int8'}
 
+# encode all strings as UTF-8
+STRING_ENCODING = 'utf-8'
+
 
 def coerce_nc3_dtype(arr):
     """Coerce an array to a data type that can be stored in a netCDF-3 file
 
     This function performs the following dtype conversions:
         int64 -> int32
-        float64 -> float32
         bool -> int8
-        unicode -> string
 
     Data is checked for equality, or equivalence (non-NaN values) with
     `np.allclose` with the default keyword arguments.
@@ -42,29 +43,18 @@ def coerce_nc3_dtype(arr):
         new_dtype = _nc3_dtype_coercions[dtype]
         # TODO: raise a warning whenever casting the data-type instead?
         cast_arr = arr.astype(new_dtype)
-        if ((('int' in dtype or 'U' in dtype) and
-                not (cast_arr == arr).all()) or
-                ('float' in dtype and
-                    not duck_array_ops.allclose_or_equiv(cast_arr, arr))):
+        if not (cast_arr == arr).all():
             raise ValueError('could not safely cast array from dtype %s to %s'
                              % (dtype, new_dtype))
         arr = cast_arr
-    elif arr.dtype.kind == 'U':
-        arr = np.core.defchararray.encode(arr, 'utf-8')
     return arr
 
 
-def maybe_convert_to_char_array(data, dims):
-    if data.dtype.kind == 'S' and data.dtype.itemsize > 1:
-        data = conventions.string_to_char(data)
-        dims = dims + ('string%s' % data.shape[-1],)
-    return data, dims
-
-
 def encode_nc3_attr_value(value):
-    if isinstance(value, basestring):
-        if not isinstance(value, unicode_type):
-            value = value.decode('utf-8')
+    if isinstance(value, bytes):
+        pass
+    elif isinstance(value, unicode_type):
+        value = value.encode(STRING_ENCODING)
     else:
         value = coerce_nc3_dtype(np.atleast_1d(value))
         if value.ndim > 1:
@@ -78,10 +68,10 @@ def encode_nc3_attrs(attrs):
 
 
 def encode_nc3_variable(var):
+    var = conventions.maybe_encode_as_char_array(var)
     data = coerce_nc3_dtype(var.data)
-    data, dims = maybe_convert_to_char_array(data, var.dims)
     attrs = encode_nc3_attrs(var.attrs)
-    return Variable(dims, data, attrs, var.encoding)
+    return Variable(var.dims, data, attrs, var.encoding)
 
 
 def _isalnumMUTF8(c):
