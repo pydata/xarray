@@ -13,13 +13,14 @@ import pytest
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
-from xarray.core.pycompat import suppress
-from . import TestCase, raises_regex
+from xarray.core.pycompat import suppress, OrderedDict
+from . import TestCase, assert_frame_equal, raises_regex
 
 from xarray.tests import mock
 
 dask = pytest.importorskip('dask')
 import dask.array as da
+import dask.dataframe as dd
 
 
 class DaskTestCase(TestCase):
@@ -29,9 +30,9 @@ class DaskTestCase(TestCase):
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
-                    self.assertIsInstance(var.data, np.ndarray)
+                    self.assertIsInstance(v.data, np.ndarray)
                 else:
-                    self.assertIsInstance(var.data, da.Array)
+                    self.assertIsInstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             self.assertIsInstance(actual.data, da.Array)
             for k, v in actual.coords.items():
@@ -545,6 +546,100 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable,
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
+
+    def test_to_dask_dataframe(self):
+        # Test conversion of Datasets to dask DataFrames
+        x = da.from_array(np.random.randn(10), chunks=4)
+        y = np.arange(10, dtype='uint8')
+        t = list('abcdefghij')
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+
+        expected_pd = pd.DataFrame({'a': x,
+                                    'b': y},
+                                   index=pd.Index(t, name='t'))
+
+        # test if 1-D index is correctly set up
+        expected = dd.from_pandas(expected_pd, chunksize=4)
+        actual = ds.to_dask_dataframe(set_index=True)
+        # test if we have dask dataframes
+        self.assertIsInstance(actual, dd.DataFrame)
+
+        # use the .equals from pandas to check dataframes are equivalent
+        assert_frame_equal(expected.compute(), actual.compute())
+
+        # test if no index is given
+        expected = dd.from_pandas(expected_pd.reset_index(drop=False),
+                                  chunksize=4)
+
+        actual = ds.to_dask_dataframe(set_index=False)
+
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected.compute(), actual.compute())
+
+    def test_to_dask_dataframe_2D(self):
+        # Test if 2-D dataset is supplied
+        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['x'] = ('x', np.array([0, 1], np.int64))
+        ds['y'] = ('y', list('abc'))
+
+        # dask dataframes do not (yet) support multiindex,
+        # but when it does, this would be the expected index:
+        exp_index = pd.MultiIndex.from_arrays(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            names=['x', 'y'])
+        expected = pd.DataFrame({'w': w.reshape(-1)},
+                                index=exp_index)
+        # so for now, reset the index
+        expected = expected.reset_index(drop=False)
+
+        actual = ds.to_dask_dataframe(set_index=False)
+
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_coordinates(self):
+        # Test if coordinate is also a dask array
+        x = da.from_array(np.random.randn(10), chunks=4)
+        t = da.from_array(np.arange(10)*2, chunks=4)
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('t', ('t', t))]))
+
+        expected_pd = pd.DataFrame({'a': x},
+                                   index=pd.Index(t, name='t'))
+        expected = dd.from_pandas(expected_pd, chunksize=4)
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected.compute(), actual.compute())
+
+    def test_to_dask_dataframe_not_daskarray(self):
+        # Test if DataArray is not a dask array
+        x = np.random.randn(10)
+        y = np.arange(10, dtype='uint8')
+        t = list('abcdefghij')
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+
+        expected = pd.DataFrame({'a': x, 'b': y},
+                                index=pd.Index(t, name='t'))
+
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_no_coordinate(self):
+        # Test if Dataset has a dimension without coordinates
+        x = da.from_array(np.random.randn(10), chunks=4)
+        ds = Dataset({'x': ('dim_0', x)})
+        expected = pd.DataFrame({'x': x.compute()})
+        actual = ds.to_dask_dataframe(set_index=True)
+        assert_frame_equal(expected, actual.compute())
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
