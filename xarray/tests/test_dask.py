@@ -663,7 +663,8 @@ class TestToDaskDataFrame(TestCase):
         assert_frame_equal(expected, actual.compute())
 
     def test_to_dask_dataframe_dim_order(self):
-        ds = Dataset({'w': (('x', 'y'), [[1, 2], [3, 4]])}).chunk(1)
+        values = np.array([[1, 2], [3, 4]], dtype=np.int64)
+        ds = Dataset({'w': (('x', 'y'), values)}).chunk(1)
 
         expected = ds['w'].to_series().reset_index()
         actual = ds.to_dask_dataframe(dim_order=['x', 'y'])
