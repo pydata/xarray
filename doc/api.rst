@@ -419,6 +419,7 @@ Dataset methods
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dask_dataframe
    Dataset.to_dict
    Dataset.from_dataframe
    Dataset.from_dict
