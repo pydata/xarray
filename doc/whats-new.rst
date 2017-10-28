@@ -85,6 +85,11 @@ Breaking changes
   disk when calling ``repr`` (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
+- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
+  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
+  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Several existing features have been deprecated and will change to new
   behavior in xarray v0.11. If you use any of them with xarray v0.10, you
   should see a ``FutureWarning`` that describes how to update your code:
