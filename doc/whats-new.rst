@@ -244,6 +244,11 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Added new method :py:meth:`~Dataset.to_dask_dataframe` to
+  ``Dataset``, convert a dataset into a dask dataframe.
+  This allows lazy loading of data from a dataset containing dask arrays (:issue:`1462`).
+  By `James Munroe <https://github.com/jmunroe>`_.
+
 - Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
