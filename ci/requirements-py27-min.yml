@@ -2,6 +2,7 @@ name: test_env
 dependencies:
   - python=2.7
   - pytest
+  - flake8
   - mock
   - numpy==1.11
   - pandas==0.18.0

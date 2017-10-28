@@ -2577,6 +2577,66 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             obj[name] = (dims, data)
         return obj
 
+    def to_dask_dataframe(self, set_index=False):
+        """
+        Convert this dataset into a dask.dataframe.DataFrame.
+
+        Both the coordinate and data variables in this dataset form
+        the columns of the DataFrame.
+
+        If set_index=True, the dask DataFrame is indexed by this dataset's
+        coordinate.  Since dask DataFrames to not support multi-indexes,
+        set_index only works if there is one coordinate dimension.
+        """
+
+        import dask.dataframe as dd
+
+        ordered_dims = self.dims
+        chunks = self.chunks
+
+        # order columns so that coordinates appear before data
+        columns = list(self.coords) + list(self.data_vars)
+
+        data = []
+        for k in columns:
+            v = self._variables[k]
+
+            # consider coordinate variables as well as data varibles
+            if isinstance(v, xr.IndexVariable):
+                v = v.to_base_variable()
+
+            # ensure all variables span the same dimensions
+            v = v.set_dims(ordered_dims)
+
+            # ensure all variables have the same chunking structure
+            if v.chunks != chunks:
+                v = v.chunk(chunks)
+
+            # reshape variable contents as a 1d array
+            d = v.data.reshape(-1)
+
+            # convert to dask DataFrames
+            s = dd.from_array(d, columns=[k])
+
+            data.append(s)
+
+        df = dd.concat(data, axis=1)
+
+        if set_index:
+
+            if len(ordered_dims) != 1:
+                raise ValueError(
+                        'set_index=True only is valid for '
+                        'for one-dimensional datasets')
+
+            # extract out first (and only) coordinate variable
+            coord_dim = list(ordered_dims)[0]
+
+            if coord_dim in df.columns:
+                df = df.set_index(coord_dim)
+
+        return df
+
     def to_dict(self):
         """
         Convert this dataset to a dictionary following xarray naming

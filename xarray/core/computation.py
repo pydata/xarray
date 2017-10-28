@@ -88,6 +88,28 @@ class _UFuncSignature(object):
                    list(self.input_core_dims),
                    list(self.output_core_dims)))
 
+    def __str__(self):
+        lhs = ','.join('({})'.format(','.join(dims))
+                       for dims in self.input_core_dims)
+        rhs = ','.join('({})'.format(','.join(dims))
+                       for dims in self.output_core_dims)
+        return '{}->{}'.format(lhs, rhs)
+
+    def to_gufunc_string(self):
+        """Create an equivalent signature string for a NumPy gufunc.
+
+        Unlike __str__, handles dimensions that don't map to Python
+        identifiers.
+        """
+        all_dims = self.all_core_dims
+        dims_map = dict(zip(sorted(all_dims), range(len(all_dims))))
+        input_core_dims = [['dim%d' % dims_map[dim] for dim in core_dims]
+                           for core_dims in self.input_core_dims]
+        output_core_dims = [['dim%d' % dims_map[dim] for dim in core_dims]
+                            for core_dims in self.output_core_dims]
+        alt_signature = type(self)(input_core_dims, output_core_dims)
+        return str(alt_signature)
+
 
 def result_name(objects):
     # type: List[object] -> Any
@@ -636,6 +658,7 @@ def apply_ufunc(func, *args, **kwargs):
                    input_core_dims : Optional[Sequence[Sequence]] = None,
                    output_core_dims : Optional[Sequence[Sequence]] = ((),),
                    exclude_dims : Collection = frozenset(),
+                   vectorize : bool = False,
                    join : str = 'exact',
                    dataset_join : str = 'exact',
                    dataset_fill_value : Any = _NO_FILL_VALUE,
@@ -659,8 +682,9 @@ def apply_ufunc(func, *args, **kwargs):
         (``.data``) that returns an array or tuple of arrays. If multiple
         arguments with non-matching dimensions are supplied, this function is
         expected to vectorize (broadcast) over axes of positional arguments in
-        the style of NumPy universal functions [1]_. If this function returns
-        multiple outputs, you most set ``output_core_dims`` as well.
+        the style of NumPy universal functions [1]_ (if this is not the case,
+        set ``vectorize=True``). If this function returns multiple outputs, you
+        must set ``output_core_dims`` as well.
     *args : Dataset, DataArray, GroupBy, Variable, numpy/dask arrays or scalars
         Mix of labeled and/or unlabeled arrays to which to apply the function.
     input_core_dims : Sequence[Sequence], optional
@@ -689,6 +713,12 @@ def apply_ufunc(func, *args, **kwargs):
         broadcasting entirely. Any input coordinates along these dimensions
         will be dropped. Each excluded dimension must also appear in
         ``input_core_dims`` for at least one argument.
+    vectorize : bool, optional
+        If True, then assume ``func`` only takes arrays defined over core
+        dimensions as input and vectorize it automatically with
+        :py:func:`numpy.vectorize`. This option exists for convenience, but is
+        almost always slower than supplying a pre-vectorized function.
+        Using this option requires NumPy version 1.12 or newer.
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension, and the variables of Dataset objects with mismatched
@@ -779,15 +809,31 @@ def apply_ufunc(func, *args, **kwargs):
             result[dim] = new_coord
             return result
 
+    If your function is not vectorized but can be applied only to core
+    dimensions, you can use ``vectorize=True`` to turn into a vectorized
+    function. This wraps :py:func:`numpy.vectorize`, so the operation isn't
+    terribly fast. Here we'll use it to calculate the distance between
+    empirical samples from two probability distributions, using a scipy
+    function that needs to be applied to vectors::
+
+        import scipy.stats
+
+        def earth_mover_distance(first_samples,
+                                 second_samples,
+                                 dim='ensemble'):
+            return apply_ufunc(scipy.stats.wasserstein_distance,
+                               first_samples, second_samples,
+                               input_core_dims=[[dim], [dim]],
+                               vectorize=True)
+
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
-    numpy.broadcast_arrays or numpy.vectorize helpful in writing your function.
-    `apply_ufunc` also works well with numba's vectorize and guvectorize.
+    numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
+    works well with numba's vectorize and guvectorize.
 
     See also
     --------
     numpy.broadcast_arrays
-    numpy.vectorize
     numba.vectorize
     numba.guvectorize
 
@@ -802,6 +848,7 @@ def apply_ufunc(func, *args, **kwargs):
 
     input_core_dims = kwargs.pop('input_core_dims', None)
     output_core_dims = kwargs.pop('output_core_dims', ((),))
+    vectorize = kwargs.pop('vectorize', False)
     join = kwargs.pop('join', 'exact')
     dataset_join = kwargs.pop('dataset_join', 'exact')
     keep_attrs = kwargs.pop('keep_attrs', False)
@@ -826,6 +873,12 @@ def apply_ufunc(func, *args, **kwargs):
 
     if kwargs_:
         func = functools.partial(func, **kwargs_)
+
+    if vectorize:
+        func = np.vectorize(func,
+                            otypes=output_dtypes,
+                            signature=signature.to_gufunc_string(),
+                            excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,

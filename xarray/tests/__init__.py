@@ -18,6 +18,12 @@ from xarray.testing import assert_equal, assert_identical, assert_allclose
 from xarray.plot.utils import import_seaborn
 
 try:
+    from pandas.testing import assert_frame_equal
+except ImportError:
+    # old location, for pandas < 0.20
+    from pandas.util.testing import assert_frame_equal
+
+try:
     import unittest2 as unittest
 except ImportError:
     import unittest
