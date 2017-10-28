@@ -86,9 +86,11 @@ install:
   - source activate test_env
   - conda list
   - python setup.py install
+  - python xarray/util/print_versions.py
 
 script:
   - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
+  - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
 
 after_success:
   - coveralls

@@ -3,6 +3,7 @@ dependencies:
   - python=3.4
   - bottleneck
   - pytest
+  - flake8
   - pandas
   - pip:
     - coveralls
