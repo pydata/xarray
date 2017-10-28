@@ -2424,7 +2424,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         applied : Dataset
             Resulting dataset from applying ``func`` over each data variable.
-            
+
         Examples
         --------
         >>> da = xr.DataArray(np.random.randn(2, 3))
@@ -2442,7 +2442,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
-            bar      (x) float64 1.0 2.0            
+            bar      (x) float64 1.0 2.0
         """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
@@ -2577,63 +2577,76 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             obj[name] = (dims, data)
         return obj
 
-    def to_dask_dataframe(self, set_index=False):
+    def to_dask_dataframe(self, dim_order=None, set_index=False):
         """
         Convert this dataset into a dask.dataframe.DataFrame.
 
-        Both the coordinate and data variables in this dataset form
+        The dimensions, coordinates and data variables in this dataset form
         the columns of the DataFrame.
 
-        If set_index=True, the dask DataFrame is indexed by this dataset's
-        coordinate.  Since dask DataFrames to not support multi-indexes,
-        set_index only works if there is one coordinate dimension.
+        Arguments
+        ---------
+        dim_order : list, optional
+            Hierarchical dimension order for the resulting dataframe. All
+            arrays are transposed to this order and then written out as flat
+            vectors in contiguous order, so the last dimension in this list
+            will be contiguous in the resulting DataFrame. This has a major
+            influence on which operations are efficient on the resulting dask
+            dataframe.
+
+            If provided, must include all dimensions on this dataset. By
+            default, dimensions are sorted alphabetically.
+        set_index : bool, optional
+            If set_index=True, the dask DataFrame is indexed by this dataset's
+            coordinate. Since dask DataFrames to not support multi-indexes,
+            set_index only works if the dataset only contains one dimension.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame
         """
 
         import dask.dataframe as dd
 
-        ordered_dims = self.dims
-        chunks = self.chunks
+        if dim_order is None:
+            dim_order = list(self.dims)
+        elif set(dim_order) != set(self.dims):
+            raise ValueError(
+                'dim_order {} does not match the set of dimensions on this '
+                'Dataset: {}'.format(dim_order, list(self.dims)))
 
-        # order columns so that coordinates appear before data
-        columns = list(self.coords) + list(self.data_vars)
+        ordered_dims = OrderedDict((k, self.dims[k]) for k in dim_order)
+
+        columns = list(ordered_dims)
+        columns.extend(k for k in self.coords if k not in self.dims)
+        columns.extend(self.data_vars)
 
         data = []
-        for k in columns:
-            v = self._variables[k]
+        for name in columns:
+            try:
+                var = self.variables[name]
+            except KeyError:
+                # dimension without a matching coordinate
+                var = Variable((name,), np.arange(self.dims[name]))
 
-            # consider coordinate variables as well as data varibles
-            if isinstance(v, xr.IndexVariable):
-                v = v.to_base_variable()
+            # IndexVariable objects have a dummy .chunk() method
+            if isinstance(var, IndexVariable):
+                var = var.to_base_variable()
 
-            # ensure all variables span the same dimensions
-            v = v.set_dims(ordered_dims)
-
-            # ensure all variables have the same chunking structure
-            if v.chunks != chunks:
-                v = v.chunk(chunks)
-
-            # reshape variable contents as a 1d array
-            d = v.data.reshape(-1)
-
-            # convert to dask DataFrames
-            s = dd.from_array(d, columns=[k])
-
-            data.append(s)
+            dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
+            series = dd.from_array(dask_array.reshape(-1), columns=[name])
+            data.append(series)
 
         df = dd.concat(data, axis=1)
 
         if set_index:
-
-            if len(ordered_dims) != 1:
-                raise ValueError(
-                        'set_index=True only is valid for '
-                        'for one-dimensional datasets')
-
-            # extract out first (and only) coordinate variable
-            coord_dim = list(ordered_dims)[0]
-
-            if coord_dim in df.columns:
-                df = df.set_index(coord_dim)
+            if len(dim_order) == 1:
+                (dim,) = dim_order
+                df = df.set_index(dim)
+            else:
+                # triggers an error about multi-indexes, even if only one
+                # dimension is passed
+                df = df.set_index(dim_order)
 
         return df
 
