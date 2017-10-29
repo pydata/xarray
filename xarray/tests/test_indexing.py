@@ -63,8 +63,10 @@ class TestIndexers(TestCase):
             indexing.convert_label_indexer(mindex, 0)
         with pytest.raises(ValueError):
             indexing.convert_label_indexer(index, {'three': 0})
-        with raises_regex(KeyError, 'index to be fully lexsorted'):
-            indexing.convert_label_indexer(mindex, (slice(None), 1, 'no_level'))
+        with pytest.raises((KeyError, IndexError)):
+            # pandas 0.21 changed this from KeyError to IndexError
+            indexing.convert_label_indexer(
+                mindex, (slice(None), 1, 'no_level'))
 
     def test_convert_unsorted_datetime_index_raises(self):
         index = pd.to_datetime(['2001', '2000', '2002'])
