@@ -1023,13 +1023,9 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):
-        if sys.version_info[:2] < (2, 7):
-            with raises_regex(ValueError, 'gzipped netCDF not supported'):
-                open_example_dataset('example_1.nc.gz')
-        else:
-            with open_example_dataset('example_1.nc.gz') as expected:
-                with open_example_dataset('example_1.nc') as actual:
-                    self.assertDatasetIdentical(expected, actual)
+        with open_example_dataset('example_1.nc.gz') as expected:
+            with open_example_dataset('example_1.nc') as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_netcdf3_endianness(self):
         # regression test for GH416
