@@ -1039,7 +1039,7 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     @requires_netCDF4
     def test_nc4_scipy(self):
-        with create_tmp_file() as tmp_file:
+        with create_tmp_file(allow_cleanup_failure=True) as tmp_file:
             with nc4.Dataset(tmp_file, 'w', format='NETCDF4') as rootgrp:
                 rootgrp.createGroup('foo')
 
