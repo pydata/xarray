@@ -8,7 +8,7 @@ from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
 
-from . import TestCase
+from . import TestCase, raises_regex
 
 
 class TestOps(TestCase):
@@ -42,7 +42,7 @@ class TestOps(TestCase):
         actual = first(self.x, axis=-1, skipna=False)
         self.assertArrayEqual(expected, actual)
 
-        with self.assertRaisesRegexp(IndexError, 'out of bounds'):
+        with raises_regex(IndexError, 'out of bounds'):
             first(self.x, 3)
 
     def test_last(self):
@@ -66,7 +66,7 @@ class TestOps(TestCase):
         actual = last(self.x, axis=-1, skipna=False)
         self.assertArrayEqual(expected, actual)
 
-        with self.assertRaisesRegexp(IndexError, 'out of bounds'):
+        with raises_regex(IndexError, 'out of bounds'):
             last(self.x, 3)
 
     def test_count(self):
