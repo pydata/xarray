@@ -8,7 +8,7 @@ import pandas as pd
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
 
-from . import TestCase
+from . import TestCase, raises_regex
 
 
 class TestFormatting(TestCase):
@@ -37,7 +37,7 @@ class TestFormatting(TestCase):
             expected = array.flat[:n]
             self.assertItemsEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'at least one item'):
+        with raises_regex(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
