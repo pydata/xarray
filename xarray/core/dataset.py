@@ -2627,7 +2627,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 var = self.variables[name]
             except KeyError:
                 # dimension without a matching coordinate
-                var = Variable((name,), np.arange(self.dims[name], np.int64))
+                values = np.arange(self.dims[name], dtype=np.int64)
+                var = Variable((name,), values)
 
             # IndexVariable objects have a dummy .chunk() method
             if isinstance(var, IndexVariable):
