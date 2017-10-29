@@ -217,6 +217,10 @@ Enhancements
   (:issue:`576`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Added :py:func:`~xarray.show_versions` function to aid in debugging
+  (:issue:`1485`).
+  By `Joe Hamman` <https://github.com/jhamman>`_.
+
 - Support using an existing, opened netCDF4 ``Dataset`` with
   :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
   :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
@@ -341,6 +345,10 @@ Bug fixes
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
+
+- Fix plotting with datetime64 axis labels under pandas 0.21 and newer
+  (:issue:`1661`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 
