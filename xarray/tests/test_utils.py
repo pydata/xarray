@@ -81,7 +81,7 @@ class TestDictionaries(TestCase):
         utils.update_safety_check(self.x, self.y)
 
     def test_unsafe(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
@@ -116,11 +116,11 @@ class TestDictionaries(TestCase):
 
     def test_frozen(self):
         x = utils.Frozen(self.x)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             x['foo'] = 'bar'
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             del x['a']
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             x.update(self.y)
         self.assertEqual(x.mapping, self.x)
         self.assertIn(repr(x), ("Frozen({'a': 'A', 'b': 'B'})",

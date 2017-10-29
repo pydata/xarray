@@ -6,7 +6,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
-from . import TestCase, requires_dask
+from . import TestCase, requires_dask, raises_regex
 
 
 class TestDatetimeAccessor(TestCase):
@@ -45,7 +45,7 @@ class TestDatetimeAccessor(TestCase):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype('int8')
         nontime_data['time'].values = int_data
-        with self.assertRaisesRegexp(TypeError, 'dt'):
+        with raises_regex(TypeError, 'dt'):
             nontime_data.time.dt
 
     @requires_dask

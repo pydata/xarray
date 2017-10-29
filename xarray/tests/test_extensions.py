@@ -8,7 +8,7 @@ except ImportError:
 
 import xarray as xr
 
-from . import TestCase
+from . import TestCase, raises_regex
 
 
 @xr.register_dataset_accessor('example_accessor')
@@ -86,5 +86,5 @@ class TestAccessor(TestCase):
             def __init__(self, xarray_obj):
                 raise AttributeError('broken')
 
-        with self.assertRaisesRegexp(RuntimeError, 'error initializing'):
+        with raises_regex(RuntimeError, 'error initializing'):
             xr.Dataset().stupid_accessor

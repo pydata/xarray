@@ -8,9 +8,11 @@ import pandas as pd
 import pytest
 import warnings
 
+import pytest
+
 from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
-from . import TestCase, requires_netCDF4, unittest
+from . import TestCase, requires_netCDF4, unittest, raises_regex
 from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
@@ -70,7 +72,7 @@ class TestStackedBytesArray(TestCase):
         self.assertEqual(len(actual), len(expected))
         self.assertArrayEqual(expected, actual)
         self.assertArrayEqual(expected[:1], actual[:1])
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             actual[:, :2]
 
     def test_scalar(self):
@@ -272,7 +274,7 @@ class TestDatetime(TestCase):
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime
-        ds = Dataset(coords={'time' : [0, 266 * 365]})
+        ds = Dataset(coords={'time': [0, 266 * 365]})
         units = 'days since 2000-01-01 00:00:00'
         ds.time.attrs = dict(units=units)
         ds_decoded = conventions.decode_cf(ds)
@@ -321,8 +323,7 @@ class TestDatetime(TestCase):
                        {'units': 'foobar',
                         'missing_value': 0,
                         '_FillValue': 1})
-        with self.assertRaisesRegexp(
-                ValueError, "_FillValue and missing_value"):
+        with raises_regex(ValueError, "_FillValue and missing_value"):
             conventions.decode_cf_variable('t', var)
 
         var = Variable(['t'], np.arange(10),
@@ -333,9 +334,9 @@ class TestDatetime(TestCase):
         self.assertIsNotNone(var)
 
         var = Variable(['t'], np.arange(10),
-                               {'units': 'foobar',
-                                'missing_value': np.float32(np.nan),
-                                '_FillValue': np.float32(np.nan)})
+                       {'units': 'foobar',
+                        'missing_value': np.float32(np.nan),
+                        '_FillValue': np.float32(np.nan)})
         var = conventions.decode_cf_variable('t', var)
         self.assertIsNotNone(var)
 
@@ -548,7 +549,7 @@ class TestDatetime(TestCase):
 
     def test_invalid_units_raises_eagerly(self):
         ds = Dataset({'time': ('time', [0, 1], {'units': 'foobar since 123'})})
-        with self.assertRaisesRegexp(ValueError, 'unable to decode time'):
+        with raises_regex(ValueError, 'unable to decode time'):
             decode_cf(ds)
 
     @requires_netCDF4
@@ -592,7 +593,7 @@ class TestEncodeCFVariable(TestCase):
             Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
             ]
         for var in invalid_vars:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 conventions.encode_cf_variable(var)
 
     def test_missing_fillvalue(self):

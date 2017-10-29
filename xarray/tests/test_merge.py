@@ -4,7 +4,9 @@ from __future__ import print_function
 import numpy as np
 import xarray as xr
 
-from . import TestCase
+import pytest
+
+from . import TestCase, raises_regex
 from .test_dataset import create_test_data
 
 from xarray.core import merge
@@ -20,7 +22,7 @@ class TestMergeInternals(TestCase):
             [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2, 1])])
         assert actual == {'x': 1, 'y': 2}
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             actual = merge.broadcast_dimension_size(
                 [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2])])
 
@@ -44,7 +46,7 @@ class TestMergeFunction(TestCase):
 
     def test_merge_dataarray_unnamed(self):
         data = xr.DataArray([1, 2], dims='x')
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'without providing an explicit name'):
             xr.merge([data])
 
@@ -60,13 +62,13 @@ class TestMergeFunction(TestCase):
 
     def test_merge_error(self):
         ds = xr.Dataset({'x': 0})
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             xr.merge([ds, ds + 1])
 
     def test_merge_alignment_error(self):
         ds = xr.Dataset(coords={'x': [1, 2]})
         other = xr.Dataset(coords={'x': [2, 3]})
-        with self.assertRaisesRegexp(ValueError, 'indexes .* not equal'):
+        with raises_regex(ValueError, 'indexes .* not equal'):
             xr.merge([ds, other], join='exact')
 
     def test_merge_no_conflicts_single_var(self):
@@ -88,11 +90,11 @@ class TestMergeFunction(TestCase):
                                            compat='no_conflicts',
                                            join='inner'))
 
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
             xr.merge([ds1, ds3], compat='no_conflicts')
 
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({'a': ('y', [2, 3]), 'y': [1, 2]})
             xr.merge([ds1, ds3], compat='no_conflicts')
 
@@ -150,12 +152,12 @@ class TestMergeMethod(TestCase):
         actual = data.merge(data.reset_coords(drop=True))
         assert data.identical(actual)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ds1.merge(ds2.rename({'var3': 'var1'}))
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'should be coordinates or not'):
             data.reset_coords().merge(data)
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'should be coordinates or not'):
             data.merge(data.reset_coords())
 
@@ -182,20 +184,20 @@ class TestMergeMethod(TestCase):
         ds2 = xr.Dataset({'x': 1})
         for compat in ['broadcast_equals', 'equals', 'identical',
                        'no_conflicts']:
-            with self.assertRaises(xr.MergeError):
+            with pytest.raises(xr.MergeError):
                 ds1.merge(ds2, compat=compat)
 
         ds2 = xr.Dataset({'x': [0, 0]})
         for compat in ['equals', 'identical']:
-            with self.assertRaisesRegexp(
+            with raises_regex(
                     ValueError, 'should be coordinates or not'):
                 ds1.merge(ds2, compat=compat)
 
         ds2 = xr.Dataset({'x': ((), 0, {'foo': 'bar'})})
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat='identical')
 
-        with self.assertRaisesRegexp(ValueError, 'compat=\S+ invalid'):
+        with raises_regex(ValueError, 'compat=\S+ invalid'):
             ds1.merge(ds2, compat='foobar')
 
     def test_merge_auto_align(self):
@@ -233,10 +235,10 @@ class TestMergeMethod(TestCase):
         assert expected2.identical(ds1.merge(ds2, compat='no_conflicts',
                                              join='inner'))
 
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({'a': ('x', [99, 3]), 'x': [1, 2]})
             ds1.merge(ds3, compat='no_conflicts')
 
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             ds3 = xr.Dataset({'a': ('y', [2, 3]), 'y': [1, 2]})
             ds1.merge(ds3, compat='no_conflicts')

@@ -85,6 +85,9 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but will now raise an error
   (:issue:`727`).
+- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
+  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
+  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Several existing features have been deprecated and will change to new
