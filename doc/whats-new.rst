@@ -346,6 +346,10 @@ Bug fixes
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
 
+- Fix plotting with datetime64 axis labels under pandas 0.21 and newer
+  (:issue:`1661`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.9.6:
 
 v0.9.6 (8 June 2017)
