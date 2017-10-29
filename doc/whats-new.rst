@@ -254,12 +254,14 @@ Bug fixes
   (:issue:`1562`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+- Fixes to ensure xarray works properly with pandas 0.21:
 
   - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
   - :py:meth:`~xarray.DataArray.to_series` and
     :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
     for 1D data (:issue:`1548`).
+  - Fix plotting with datetime64 axis labels (:issue:`1661`).
+
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
@@ -338,10 +340,6 @@ Bug fixes
 
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
-
-- Fix plotting with datetime64 axis labels under pandas 0.21 and newer
-  (:issue:`1661`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 
