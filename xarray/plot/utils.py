@@ -40,6 +40,25 @@ def import_seaborn():
     return sns
 
 
+_registered = False
+
+
+def register_pandas_datetime_converter_if_needed():
+    # based on https://github.com/pandas-dev/pandas/pull/17710
+    global _registered
+    if not _registered:
+        from pandas.tseries import converter
+        converter.register()
+        _registered = True
+
+
+def import_matplotlib_pyplot():
+    """Import pyplot as register appropriate converters."""
+    register_pandas_datetime_converter_if_needed()
+    import matplotlib.pyplot as plt
+    return plt
+
+
 def _determine_extend(calc_data, vmin, vmax):
     extend_min = calc_data.min() < vmin
     extend_max = calc_data.max() > vmax
