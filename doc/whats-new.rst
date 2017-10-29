@@ -26,6 +26,7 @@ backwards incompatible changes. Highlights include:
 - :py:meth:`~DataArray.resample` has a new groupby-like API like pandas.
 - :py:func:`~xarray.apply_ufunc` facilitates wrapping and parallelizing
   functions written for NumPy arrays.
+- Performance improvements, particularly for dask and :py:func:`open_mfdataset`.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -85,10 +86,6 @@ Breaking changes
   also supplying an explicit ``dims`` argument is no longer supported. This
   behavior was deprecated in version 0.9 but will now raise an error
   (:issue:`727`).
-- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
-  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
-  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Several existing features have been deprecated and will change to new
   behavior in xarray v0.11. If you use any of them with xarray v0.10, you
@@ -160,6 +157,18 @@ Enhancements
   (:issue:`1485`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+**Performance improvements**:
+
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
 **IO related improvements**:
 
 - Unicode strings (``str`` on Python 3) are now round-tripped successfully even
@@ -210,9 +219,6 @@ Enhancements
   (:issue:`1444`).
   By `Eric Bruning <https://github.com/deeplycloudy>`_.
 
-- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
-  By `Christian Chwala <https://github.com/cchwala>`_.
-
 - Support using an existing, opened netCDF4 ``Dataset`` with
   :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
   :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
@@ -253,6 +259,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
+  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
+  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Unsigned int support for reduce methods with ``skipna=True``
   (:issue:`1562`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -281,13 +292,6 @@ Bug fixes
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
   ``rtol`` arguments when called on ``DataArray`` objects (:issue:`1488`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- :py:func:`~xarray.concat` was computing variables that aren't in memory
-  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
-  was loading them multiple times from disk. Now, both functions will instead
-  load them at most once and, if they do, store them in memory in the
-  concatenated array/dataset (:issue:`1521`).
-  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
