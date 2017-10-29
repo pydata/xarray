@@ -1575,7 +1575,9 @@ class DataArray(AbstractArray, BaseDataObject):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            with np.errstate(all='ignore'):
+                return self.__array_wrap__(f(self.variable.data, *args,
+                                             **kwargs))
 
         return func
 

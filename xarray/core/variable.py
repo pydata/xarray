@@ -1354,7 +1354,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.data, *args, **kwargs))
+            with np.errstate(all='ignore'):
+                return self.__array_wrap__(f(self.data, *args, **kwargs))
         return func
 
     @staticmethod
@@ -1364,9 +1365,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if isinstance(other, (xr.DataArray, xr.Dataset)):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_compat_data(self, other)
-            new_data = (f(self_data, other_data)
-                        if not reflexive
-                        else f(other_data, self_data))
+            with np.errstate(all='ignore'):
+                new_data = (f(self_data, other_data)
+                            if not reflexive
+                            else f(other_data, self_data))
             result = Variable(dims, new_data)
             return result
         return func
@@ -1381,7 +1383,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if dims != self.dims:
                 raise ValueError('dimensions cannot change for in-place '
                                  'operations')
-            self.values = f(self_data, other_data)
+            with np.errstate(all='ignore'):
+                self.values = f(self_data, other_data)
             return self
         return func
 
