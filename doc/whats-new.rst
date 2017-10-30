@@ -18,33 +18,37 @@ What's New
 v0.10.0 (unreleased)
 --------------------
 
-Backward Incompatible Changes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This is a major release that includes bug fixes, new features and a few
+backwards incompatible changes. Highlights include:
 
-- xarray now supports vectorized indexing, where we consider the dimension of
-  indexer, e.g. ``array.sel(x=ind)`` with ``ind.dims == ('y', )`` .
-  This enables us more advanced indexing, including outer indexing, diagonal
-  indexing, as well as vectorized indexing.
-  Due to this change, existing uses of xarray objects to index other xarray
-  objects will break in some cases.
-  ``isel_points`` / ``sel_points`` methods are deprecated, since the same thing
-  can be done by the new ``isel`` / ``sel`` methods.
-  See :ref:`vectorized_indexing` for the details
-  (:issue:`1444`, :issue:`1436`, ).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
-  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Indexing now supports broadcasting over dimensions, similar to NumPy's
+  vectorized indexing (but better!).
+- :py:meth:`~DataArray.resample` has a new groupby-like API like pandas.
+- :py:func:`~xarray.apply_ufunc` facilitates wrapping and parallelizing
+  functions written for NumPy arrays.
+- Performance improvements, particularly for dask and :py:func:`open_mfdataset`.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
-  also supplying an explicit ``dims`` argument is no longer supported. This
-  behavior was deprecated in version 0.9 but will now raise an error
-  (:issue:`727`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
+- xarray now supports a form of vectorized indexing with broadcasting, where
+  the result of indexing depends on dimensions of indexers,
+  e.g., ``array.sel(x=ind)`` with ``ind.dims == ('y',)``. Alignment between
+  coordinates on indexed and indexing objects is also now enforced.
+  Due to these changes, existing uses of xarray objects to index other xarray
+  objects will break in some cases.
 
-- A new resampling interface to match pandas' group-by-like API was added to
-  :py:meth:`~xarray.Dataset.resample` and :py:meth:`~xarray.DataArray.resample`
+  The new indexing API is much more powerful, supporting outer, diagonal and
+  vectorized indexing in a single interface.
+  The ``isel_points`` and ``sel_points`` methods are deprecated, since they are
+  now redundant with the ``isel`` / ``sel`` methods.
+  See :ref:`vectorized_indexing` for the details (:issue:`1444`,
+  :issue:`1436`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_ and
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- A new resampling interface to match pandas' groupby-like API was added to
+  :py:meth:`Dataset.resample` and :py:meth:`DataArray.resample`
   (:issue:`1272`). :ref:`Timeseries resampling <resampling>` is
   fully supported for data  with arbitrary dimensions as is both downsampling
   and upsampling (including linear, quadratic, cubic, and spline interpolation).
@@ -73,22 +77,15 @@ Breaking changes
   produce a warning encouraging users to adopt the new syntax.
   By `Daniel Rothenberg <https://github.com/darothen>`_.
 
-- Unicode strings (``str`` on Python 3) are now round-tripped successfully even
-  when written as character arrays (e.g., as netCDF3 files or when using
-  ``engine='scipy'``) (:issue:`1638`). This is controlled by the ``_Encoding``
-  attribute convention, which is also understood directly by the netCDF4-Python
-  interface. See :ref:`io.string-encoding` for full details.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- ``repr`` and the Jupyter Notebook won't automatically compute dask variables.
-  Datasets loaded with ``open_dataset`` won't automatically read coords from
-  disk when calling ``repr`` (:issue:`1522`).
+- Calling ``repr()`` or printing xarray objects at the command line or in a
+  Jupyter Notebook will not longer automatically compute dask variables or
+  load data on arrays lazily loaded from disk (:issue:`1522`).
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
-- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
-  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
-  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
+- Supplying ``coords`` as a dictionary to the ``DataArray`` constructor without
+  also supplying an explicit ``dims`` argument is no longer supported. This
+  behavior was deprecated in version 0.9 but will now raise an error
+  (:issue:`727`).
 
 - Several existing features have been deprecated and will change to new
   behavior in xarray v0.11. If you use any of them with xarray v0.10, you
@@ -106,53 +103,20 @@ Breaking changes
     includes all variables, both data and coordinates. For improved usability
     and consistency with pandas, in the next major version of xarray these will
     change to only include data variables (:issue:`884`). Use ``ds.variables``,
-    ``ds.data_vars`` or `ds.coords`` as alternatives.
+    ``ds.data_vars`` or ``ds.coords`` as alternatives.
 
-Backward Incompatible Changes
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Changes to minimum versions of dependencies:
 
-- Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- The minimum supported version bottleneck has increased to 1.1
-  (:issue:`1279`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
+  - Old numpy < 1.11 and pandas < 0.18 are no longer supported (:issue:`1512`).
+    By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  - The minimum supported version bottleneck has increased to 1.1
+    (:issue:`1279`).
+    By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
-- Support `_ipython_key_completions_` to enable autocompletion for
-  dictionary access with IPython.
-  e.g.  ``ds['tem`` + tab -> ``ds['temperature']``
-  (:issue:`1628`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- Support for ``data_vars`` and ``coords`` keywords added to
-  :py:func:`~xarray.open_mfdataset`
-  (:issue:`438`):
-
-  .. ipython::
-    :verbatim:
-    #allows to open multiple files as
-    ds = xarray.open_mfdataset(paths, chunks={'time': 100}, data_vars='minimal')
-    #instead of
-    ds = xarray.concat([xarray.open_dataset(p, chunks={'time': 100}) for p in paths], data_vars='minimal', dim='time')
-    # in the cases when they contain the same coordinate variables that should not be concantenated (i.e lon, lat)
-
-    # in case of 'minimal' does not add time dimension to spatial coordinates
-    In [1]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='all')
-
-    In [2]: ds['lon'].shape
-
-    Out[2]: (13505, 808, 782)
-
-    In [3]: ds = xarray.open_mfdataset('daymet_v3_tmin_*', data_vars='minimal')
-
-    In [4]: ds['lon'].shape
-
-    Out[4]: (808, 782)
-
-    # I also noticed that my memory-intensive applications use much less memory and run faster, when ``data_vars='minimal'`` is used.
-
-  By `Oleksandr Huziy <https://github.com/guziy>`_.
+**New functions/methods**:
 
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
   written to work on NumPy arrays to support labels on xarray objects
@@ -161,7 +125,66 @@ Enhancements
   :ref:`dask.automatic-parallelization` for details.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
-- Support for `pathlib.Path` objects added to
+- Added new method :py:meth:`Dataset.to_dask_dataframe`, convert a dataset into
+  a dask dataframe.
+  This allows lazy loading of data from a dataset containing dask arrays (:issue:`1462`).
+  By `James Munroe <https://github.com/jmunroe>`_.
+
+- New function :py:func:`~xarray.where` for conditionally switching between
+  values in xarray objects, like :py:func:`numpy.where`:
+
+  .. ipython::
+    :verbatim:
+
+    In [1]: import xarray as xr
+
+    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
+
+    In [3]: xr.where(arr % 2, 'even', 'odd')
+    Out[3]:
+    <xarray.DataArray (x: 2, y: 3)>
+    array([['even', 'odd', 'even'],
+           ['odd', 'even', 'odd']],
+          dtype='<U4')
+    Dimensions without coordinates: x, y
+
+  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
+  the ``other`` argument, for filling with a value other than ``NaN``
+  (:issue:`576`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Added :py:func:`~xarray.show_versions` function to aid in debugging
+  (:issue:`1485`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+**Performance improvements**:
+
+- :py:func:`~xarray.concat` was computing variables that aren't in memory
+  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
+  was loading them multiple times from disk. Now, both functions will instead
+  load them at most once and, if they do, store them in memory in the
+  concatenated array/dataset (:issue:`1521`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
+
+- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
+  By `Christian Chwala <https://github.com/cchwala>`_.
+
+**IO related improvements**:
+
+- Unicode strings (``str`` on Python 3) are now round-tripped successfully even
+  when written as character arrays (e.g., as netCDF3 files or when using
+  ``engine='scipy'``) (:issue:`1638`). This is controlled by the ``_Encoding``
+  attribute convention, which is also understood directly by the netCDF4-Python
+  interface. See :ref:`io.string-encoding` for full details.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Support for ``data_vars`` and ``coords`` keywords from
+  :py:func:`~xarray.concat` added to :py:func:`~xarray.open_mfdataset`
+  (:issue:`438`). Using these keyword arguments can significantly reduce
+  memory usage and increase speed.
+  By `Oleksandr Huziy <https://github.com/guziy>`_.
+
+- Support for :py:class:`pathlib.Path` objects added to
   :py:func:`~xarray.open_dataset`, :py:func:`~xarray.open_mfdataset`,
   :py:func:`~xarray.to_netcdf`, and :py:func:`~xarray.save_mfdataset`
   (:issue:`799`):
@@ -196,41 +219,28 @@ Enhancements
   (:issue:`1444`).
   By `Eric Bruning <https://github.com/deeplycloudy>`_.
 
-- Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
-  By `Christian Chwala <https://github.com/cchwala>`_.
-
-- New function :py:func:`~xarray.where` for conditionally switching between
-  values in xarray objects, like :py:func:`numpy.where`:
-
-  .. ipython::
-    :verbatim:
-
-    In [1]: import xarray as xr
-
-    In [2]: arr = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=('x', 'y'))
-
-    In [3]: xr.where(arr % 2, 'even', 'odd')
-    Out[3]:
-    <xarray.DataArray (x: 2, y: 3)>
-    array([['even', 'odd', 'even'],
-           ['odd', 'even', 'odd']],
-          dtype='<U4')
-    Dimensions without coordinates: x, y
-
-  Equivalently, the :py:meth:`~xarray.Dataset.where` method also now supports
-  the ``other`` argument, for filling with a value other than ``NaN``
-  (:issue:`576`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Added :py:func:`~xarray.show_versions` function to aid in debugging
-  (:issue:`1485`).
-  By `Joe Hamman` <https://github.com/jhamman>`_.
-
 - Support using an existing, opened netCDF4 ``Dataset`` with
   :py:class:`~xarray.backends.NetCDF4DataStore`. This permits creating an
   :py:class:`~xarray.Dataset` from a netCDF4 ``Dataset`` that has been opened using
   other means (:issue:`1459`).
   By `Ryan May <https://github.com/dopplershift>`_.
+
+- Changed :py:class:`~xarray.backends.PydapDataStore` to take a Pydap dataset.
+  This permits opening Opendap datasets that require authentication, by
+  instantiating a Pydap dataset with a session object. Also added
+  :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
+  object (:issue:`1068`).
+  By `Philip Graae <https://github.com/mrpgraae>`_.
+
+- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+**Other improvements**:
+
+- Added ``_ipython_key_completions_`` to xarray objects, to enable
+  autocompletion for dictionary-like access in IPython, e.g.,
+  ``ds['tem`` + tab -> ``ds['temperature']`` (:issue:`1628`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Support passing keyword arguments to ``load``, ``compute``, and ``persist``
   methods. Any keyword arguments supplied to these methods are passed on to
@@ -242,62 +252,46 @@ Enhancements
   By `Joe Hamman <https://github.com/jhamman>`_ and
   `Gerrit Holl <https://github.com/gerritholl>`_.
 
-- Changed :py:class:`~xarray.backends.PydapDataStore` to take a Pydap dataset.
-  This permits opening Opendap datasets that require authentication, by
-  instantiating a Pydap dataset with a session object. Also added
-  :py:meth:`xarray.backends.PydapDataStore.open` which takes a url and session
-  object (:issue:`1068`).
-  By `Philip Graae <https://github.com/mrpgraae>`_.
-
 - Support applying rolling window operations using bottleneck's moving window
   functions on data stored as dask arrays (:issue:`1279`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
-
-- Added new method :py:meth:`~Dataset.to_dask_dataframe` to
-  ``Dataset``, convert a dataset into a dask dataframe.
-  This allows lazy loading of data from a dataset containing dask arrays (:issue:`1462`).
-  By `James Munroe <https://github.com/jmunroe>`_.
-
-- Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- Unsigned int support for reduce methods with skipna=True
-  (:issue:1562).
-  By `Keisuke Fujii` <https://github.com/fujiisoup>`_.
+- Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
+  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
+  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fixes to ensure xarray works properly with the upcoming pandas 0.21 release:
+- Unsigned int support for reduce methods with ``skipna=True``
+  (:issue:`1562`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fixes to ensure xarray works properly with pandas 0.21:
 
   - Fix :py:meth:`~xarray.DataArray.isnull` method (:issue:`1549`).
   - :py:meth:`~xarray.DataArray.to_series` and
     :py:meth:`~xarray.Dataset.to_dataframe` should not return a ``pandas.MultiIndex``
     for 1D data (:issue:`1548`).
+  - Fix plotting with datetime64 axis labels (:issue:`1661`).
+
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - :py:func:`~xarray.open_rasterio` method now shifts the rasterio
-  coordinates so that they are centered in each pixel.
+  coordinates so that they are centered in each pixel (:issue:`1468`).
   By `Greg Brener <https://github.com/gbrener>`_.
 
 - :py:meth:`~xarray.Dataset.rename` method now doesn't throw errors
   if some ``Variable`` is renamed to the same name as another ``Variable``
-  as long as that other ``Variable`` is also renamed. This method now
-  does throw when two ``Variables`` would end up with the same name
-  after the rename (since one of them would get overwritten in this
-  case). See (:issue:`1477`) for details.
+  as long as that other ``Variable`` is also renamed (:issue:`1477`). This
+  method now does throw when two ``Variables`` would end up with the same name
+  after the rename (since one of them would get overwritten in this case).
   By `Prakhar Goel <https://github.com/newt0311>`_.
 
 - Fix :py:func:`xarray.testing.assert_allclose` to actually use ``atol`` and
-  ``rtol`` arguments when called on ``DataArray`` objects.
+  ``rtol`` arguments when called on ``DataArray`` objects (:issue:`1488`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- :py:func:`~xarray.concat` was computing variables that aren't in memory
-  (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
-  was loading them multiple times from disk. Now, both functions will instead
-  load them at most once and, if they do, store them in memory in the
-  concatenated array/dataset (:issue:`1521`).
-  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - xarray ``quantile`` methods now properly raise a ``TypeError`` when applied to
   objects with data stored as ``dask`` arrays (:issue:`1529`).
@@ -305,13 +299,15 @@ Bug fixes
 
 - Fix positional indexing to allow the use of unsigned integers (:issue:`1405`).
   By `Joe Hamman <https://github.com/jhamman>`_ and
-  `Gerrit Holl <https://github.com/gerritholl`_.
-- ``:py:meth:`~xarray.Dataset.__init__` raises a ``MergeError`` if an
-  coordinate shares a name with a dimension but is comprised of arbitrary
-  dimensions(:issue:`1120`).
+  `Gerrit Holl <https://github.com/gerritholl>`_.
 
-- :py:func:`~xarray.open_rasterio` method now skips rasterio.crs -attribute if
-  it is none.
+- Creating a :py:class:`Dataset` now raises ``MergeError`` if a coordinate
+  shares a name with a dimension but is comprised of arbitrary dimensions
+  (:issue:`1120`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- :py:func:`~xarray.open_rasterio` method now skips rasterio's ``crs``
+  attribute if its value is ``None`` (:issue:`1520`).
   By `Leevi Annala <https://github.com/leevei>`_.
 
 - Fix :py:func:`xarray.DataArray.to_netcdf` to return bytes when no path is
@@ -331,7 +327,7 @@ Bug fixes
   By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 - Fix bug in :py:meth:`~xarray.Dataset.to_netcdf` when writing in append mode
- (:issue:`1215`).
+  (:issue:`1215`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Fix ``netCDF4`` backend to properly roundtrip the ``shuffle`` encoding option
@@ -342,18 +338,15 @@ Bug fixes
   The previous behavior unintentionally causing additional tests to be skipped
   (:issue:`1531`). By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Fix pynio backend for upcoming release of pynio with python3 support
+- Fix pynio backend for upcoming release of pynio with Python 3 support
   (:issue:`1611`). By `Ben Hillman <https://github/brhillman>`_.
 
 - Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
-
-- Fix plotting with datetime64 axis labels under pandas 0.21 and newer
-  (:issue:`1661`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.9.6:
 
