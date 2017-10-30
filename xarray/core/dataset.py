@@ -2606,6 +2606,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         dask.dataframe.DataFrame
         """
 
+        import dask.array as da
         import dask.dataframe as dd
 
         if dim_order is None:
@@ -2621,14 +2622,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         columns.extend(k for k in self.coords if k not in self.dims)
         columns.extend(self.data_vars)
 
-        data = []
+        series_list = []
         for name in columns:
             try:
                 var = self.variables[name]
             except KeyError:
                 # dimension without a matching coordinate
-                values = np.arange(self.dims[name], dtype=np.int64)
-                var = Variable((name,), values)
+                size = self.dims[name]
+                data = da.arange(size, chunks=size, dtype=np.int64)
+                var = Variable((name,), data)
 
             # IndexVariable objects have a dummy .chunk() method
             if isinstance(var, IndexVariable):
@@ -2636,9 +2638,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
             dask_array = var.set_dims(ordered_dims).chunk(self.chunks).data
             series = dd.from_array(dask_array.reshape(-1), columns=[name])
-            data.append(series)
+            series_list.append(series)
 
-        df = dd.concat(data, axis=1)
+        df = dd.concat(series_list, axis=1)
 
         if set_index:
             if len(dim_order) == 1:
