@@ -303,7 +303,11 @@ class VectorizedIndexer(IndexerTuple):
     """ Tuple for vectorized indexing """
 
 
-class LazilyIndexedArray(utils.NDArrayMixin):
+class NDArrayIndexable(utils.NDArrayMixin):
+    """ A base array wrapper to support vectorized indexing """
+
+
+class LazilyIndexedArray(NDArrayIndexable):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
     """
     def __init__(self, array, key=None):
@@ -356,7 +360,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         return tuple(shape)
 
     def __array__(self, dtype=None):
-        array = xarray_indexable(self.array)
+        array = as_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, key):
@@ -379,9 +383,9 @@ def _wrap_numpy_scalars(array):
         return array
 
 
-class CopyOnWriteArray(utils.NDArrayMixin):
+class CopyOnWriteArray(NDArrayIndexable):
     def __init__(self, array):
-        self.array = array
+        self.array = as_indexable(array)
         self._copied = False
 
     def _ensure_copied(self):
@@ -400,9 +404,9 @@ class CopyOnWriteArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-class MemoryCachedArray(utils.NDArrayMixin):
+class MemoryCachedArray(NDArrayIndexable):
     def __init__(self, array):
-        self.array = _wrap_numpy_scalars(array)
+        self.array = _wrap_numpy_scalars(as_indexable(array))
 
     def _ensure_cached(self):
         if not isinstance(self.array, np.ndarray):
@@ -419,14 +423,21 @@ class MemoryCachedArray(utils.NDArrayMixin):
         self.array[key] = value
 
 
-def xarray_indexable(array):
+def as_indexable(array):
+    """
+    This function always returns a NDArrayIndexable subclass,
+    so that the vectorized indexing is always possible with the returned
+    object.
+    """
+    if isinstance(array, NDArrayIndexable):
+        return array
     if isinstance(array, np.ndarray):
         return NumpyIndexingAdapter(array)
     if isinstance(array, pd.Index):
         return PandasIndexAdapter(array)
     if isinstance(array, dask_array_type):
         return DaskIndexingAdapter(array)
-    return array
+    raise TypeError('Invalid array type: {}'.format(type(array)))
 
 
 def _outer_to_numpy_indexer(key, shape):
@@ -467,10 +478,14 @@ def _outer_to_numpy_indexer(key, shape):
     return tuple(new_key)
 
 
-class NumpyIndexingAdapter(utils.NDArrayMixin):
+class NumpyIndexingAdapter(NDArrayIndexable):
     """Wrap a NumPy array to use broadcasted indexing
     """
     def __init__(self, array):
+        # In NumpyIndexingAdapter we only allow to store bare np.ndarray
+        if not isinstance(array, np.ndarray):
+            raise TypeError('NumpyIndexingAdapter only wraps np.ndarray. '
+                            'Trying to wrap {}'.format(type(array)))
         self.array = array
 
     def _ensure_ndarray(self, value):
@@ -502,7 +517,7 @@ class NumpyIndexingAdapter(utils.NDArrayMixin):
         array[key] = value
 
 
-class DaskIndexingAdapter(utils.NDArrayMixin):
+class DaskIndexingAdapter(NDArrayIndexable):
     """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
@@ -543,7 +558,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
                         'method or accessing its .values attribute.')
 
 
-class PandasIndexAdapter(utils.NDArrayMixin):
+class PandasIndexAdapter(NDArrayIndexable):
     """Wrap a pandas.Index to be better about preserving dtypes and to handle
     indexing by length 1 tuples like numpy
     """

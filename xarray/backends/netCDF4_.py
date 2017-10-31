@@ -10,9 +10,7 @@ from .. import conventions
 from .. import Variable
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
-                          DunderArrayMixin, close_on_error,
-                          is_remote_uri)
+from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
 
 from .common import (WritableCFDataStore, robust_getitem,
@@ -27,13 +25,13 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
+class BaseNetCDF4Array(indexing.NDArrayIndexable):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
 
         array = self.get_array()
-        self.shape = array.shape
+        self._shape = array.shape
 
         dtype = array.dtype
         if dtype is str:
@@ -41,7 +39,15 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
             # represent variable length strings; it also prevents automatic
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
-        self.dtype = dtype
+        self._dtype = dtype
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def dtype(self):
+        return self._dtype
 
     def get_array(self):
         self.datastore.assert_open()

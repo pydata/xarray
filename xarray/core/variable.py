@@ -19,7 +19,7 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
+from .indexing import (PandasIndexAdapter, as_indexable, BasicIndexer,
                        OuterIndexer, VectorizedIndexer)
 from .utils import OrderedSet
 
@@ -317,7 +317,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _indexable_data(self):
-        return xarray_indexable(self._data)
+        return as_indexable(self._data)
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
