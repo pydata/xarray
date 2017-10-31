@@ -75,14 +75,13 @@ See also
 Get in touch
 ------------
 
-- Ask usage questions on `StackOverflow`_.
+- Ask usage questions ("How do I?") on `StackOverflow`_.
 - Report bugs, suggest features or view the source code `on GitHub`_.
-- For less well defined questions or ideas, use the `mailing list`_.
-- You can also try our chatroom `on Gitter`_.
+- For less well defined questions or ideas, or to announce other projects of
+  interest to xarray users, use the `mailing list`_.
 
 .. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on Gitter: https://gitter.im/pydata/xarray
 .. _on GitHub: http://github.com/pydata/xarray
 
 License
