@@ -576,6 +576,38 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
+    def visualize(self, **kwargs):
+        import dask
+        return dask.visualize(self, **kwargs)
+
+    def __dask_graph__(self):
+        return self._variable.__dask_graph__()
+        # These fully describe a DataArray
+
+    def __dask_keys__(self):
+        return self._variable.__dask_keys__()
+
+    @property
+    def __dask_optimize__(self):
+        return self._variable.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        return self._variable.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        variable_func, variable_args = self._variable.__dask_postcompute__()
+        return self._dask_finalize, (variable_func, variable_args, self._coords, self._name)
+
+    def __dask_postpersist__(self):
+        variable_func, variable_args = self._variable.__dask_postpersist__()
+        return self._dask_finalize, (variable_func, variable_args, self._coords, self._name)
+
+    @staticmethod
+    def _dask_finalize(results, variable_func, variable_args, coords, name):
+        var = variable_func(results, *variable_args)
+        return DataArray(var, coords=coords, name=name)
+
     def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
