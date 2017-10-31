@@ -13,10 +13,19 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.9.7:
+.. _whats-new.0.10.0:
 
-v0.10.0 (unreleased)
---------------------
+v0.10.0 rc1 (30 October 2017)
+-----------------------------
+
+.. caution::
+
+  You're reached the documentation for the **pre-release version of xarray.**
+  Please test out this release candidate and report any issues on GitHub. If
+  all goes well, the final v0.10.0 release will come out in about a week. To
+  install, use::
+
+    pip install --pre --upgrade --upgrade-strategy=only-if-needed xarray
 
 This is a major release that includes bug fixes, new features and a few
 backwards incompatible changes. Highlights include:
@@ -116,7 +125,7 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-**New functions/methods**:
+**New functions/methods**
 
 - New helper function :py:func:`~xarray.apply_ufunc` for wrapping functions
   written to work on NumPy arrays to support labels on xarray objects
@@ -157,7 +166,7 @@ Enhancements
   (:issue:`1485`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-**Performance improvements**:
+**Performance improvements**
 
 - :py:func:`~xarray.concat` was computing variables that aren't in memory
   (e.g. dask-based) multiple times; :py:func:`~xarray.open_mfdataset`
@@ -169,7 +178,7 @@ Enhancements
 - Speed-up (x 100) of :py:func:`~xarray.conventions.decode_cf_datetime`.
   By `Christian Chwala <https://github.com/cchwala>`_.
 
-**IO related improvements**:
+**IO related improvements**
 
 - Unicode strings (``str`` on Python 3) are now round-tripped successfully even
   when written as character arrays (e.g., as netCDF3 files or when using
@@ -235,7 +244,7 @@ Enhancements
 - Support reading and writing unlimited dimensions with h5netcdf (:issue:`1636`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-**Other improvements**:
+**Other improvements**
 
 - Added ``_ipython_key_completions_`` to xarray objects, to enable
   autocompletion for dictionary-like access in IPython, e.g.,
@@ -260,8 +269,8 @@ Bug fixes
 ~~~~~~~~~
 
 - Suppress ``RuntimeWarning`` issued by ``numpy`` for "invalid value comparisons"
-  (e.g. NaNs). Xarray now behaves similarly to Pandas in its treatment of
-  binary and unary operations on objects with ``NaN``s (:issue:`1657`).
+  (e.g. ``NaN``). Xarray now behaves similarly to Pandas in its treatment of
+  binary and unary operations on objects with NaNs (:issue:`1657`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Unsigned int support for reduce methods with ``skipna=True``

@@ -123,7 +123,7 @@ limitations under the License.
 
 xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
 under a "3-clause BSD" license:
-- pandas: setup.py
+- pandas: setup.py, xarray/util/print_versions.py
 - NumPy: xarray/core/npcompat.py
 - Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
 
