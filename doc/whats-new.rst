@@ -15,6 +15,14 @@ What's New
 
 .. _whats-new.0.10.0:
 
+Bug fixes
+~~~~~~~~~
+
+- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
+  Also made some internal cleanups around array wrappers (:issue:`1429`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
+
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
 
