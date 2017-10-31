@@ -10,8 +10,7 @@ import warnings
 from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
 from ..core.utils import Frozen, FrozenOrderedDict
-from ..core.indexing import (NumpyIndexingAdapter, NDArrayIndexable,
-                             as_indexable)
+from ..core.indexing import NumpyIndexingAdapter, NDArrayIndexable
 
 from .common import WritableCFDataStore, DataStorePickleMixin
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,

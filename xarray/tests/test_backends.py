@@ -410,8 +410,8 @@ class DatasetIOTestCases(object):
             try:
                 actual = on_disk.isel(**indexers)
                 self.assertDatasetIdentical(expected, actual)
-                # do it twice, to make sure we're switched from orthogonal -> numpy
-                # when we cached the values
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
                 actual = on_disk.isel(**indexers)
                 self.assertDatasetIdentical(expected, actual)
             except NotImplementedError:

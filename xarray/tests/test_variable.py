@@ -1691,7 +1691,8 @@ class TestBackendIndexing(TestCase):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
     def check_orthogonal_indexing(self, v):
-        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]), self.d[[8, 3]][:, [2, 1]])
+        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]),
+                           self.d[[8, 3]][:, [2, 1]])
 
     def check_vectorized_indexing(self, v):
         ind_x = Variable('z', [0, 2])
@@ -1733,15 +1734,14 @@ class TestBackendIndexing(TestCase):
             self.check_vectorized_indexing(v)
 
     def test_MemoryCachedArray(self):
-        v = Variable(dims=('x', 'y'), data=CopyOnWriteArray(self.d))
+        v = Variable(dims=('x', 'y'), data=MemoryCachedArray(self.d))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(dims=('x', 'y'),
-                     data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
+                     data=CopyOnWriteArray(MemoryCachedArray(self.d)))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
 
     @requires_dask
     def test_DaskIndexingAdapter(self):
