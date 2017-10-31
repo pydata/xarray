@@ -576,10 +576,6 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
-    def visualize(self, **kwargs):
-        import dask
-        return dask.visualize(self, **kwargs)
-
     def __dask_graph__(self):
         return self._variable.__dask_graph__()
 

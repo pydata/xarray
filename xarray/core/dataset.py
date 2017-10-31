@@ -493,10 +493,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self
 
-    def visualize(self, **kwargs):
-        import dask
-        return dask.visualize(self, **kwargs)
-
     def __dask_graph__(self):
         graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
         graphs = {k: v for k, v in graphs.items() if v is not None}

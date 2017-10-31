@@ -364,10 +364,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         (result,) = dask.compute(self, **kwargs)
         return result
 
-    def visualize(self, **kwargs):
-        import dask
-        return dask.visualize(self, **kwargs)
-
     def __dask_graph__(self):
         if isinstance(self._data, dask_array_type):
             return self._data.__dask_graph__()
