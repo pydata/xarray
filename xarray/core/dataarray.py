@@ -582,7 +582,6 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def __dask_graph__(self):
         return self._variable.__dask_graph__()
-        # These fully describe a DataArray
 
     def __dask_keys__(self):
         return self._variable.__dask_keys__()
@@ -651,8 +650,9 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         dask.array.compute
         """
-        new = self.copy(deep=False)
-        return new.load(**kwargs)
+        import dask
+        (result,) = dask.compute(self, **kwargs)
+        return result
 
     def persist(self, **kwargs):
         """ Trigger computation in constituent dask arrays
@@ -670,8 +670,9 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         dask.persist
         """
-        ds = self._to_temp_dataset().persist(**kwargs)
-        return self._from_temp_dataset(ds)
+        import dask
+        (result,) = dask.persist(self, **kwargs)
+        return result
 
     def copy(self, deep=True):
         """Returns a copy of this array.

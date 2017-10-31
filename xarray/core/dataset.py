@@ -493,6 +493,79 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         return self
 
+    def visualize(self, **kwargs):
+        import dask
+        return dask.visualize(self, **kwargs)
+
+    def __dask_graph__(self):
+        graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
+        graphs = {k: v for k, v in graphs.items() if v is not None}
+        if not graphs:
+            return None
+        else:
+            from dask import sharedict
+            return sharedict.merge(*graphs.values())
+
+    def __dask_keys__(self):
+        import dask
+        return [v.__dask_keys__() for v in self.variables.values()
+                if dask.is_dask_collection(v)]
+
+    @property
+    def __dask_optimize__(self):
+        import dask.array as da
+        return da.Array.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        import dask.array as da
+        return da.Array.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        import dask
+        info = [(True, k, v.__dask_postcompute__())
+                if dask.is_dask_collection(v) else
+                (False, k, v) for k, v in self._variables.items()]
+        return self._dask_postcompute, (info, self._coord_names, self._dims,
+                                     self._attrs, self._file_obj, self._encoding)
+
+    def __dask_postpersist__(self):
+        import dask
+        info = [(True, k, v.__dask_postpersist__())
+                if dask.is_dask_collection(v) else
+                (False, k, v) for k, v in self._variables.items()]
+        return self._dask_postpersist, (info, self._coord_names, self._dims,
+                                     self._attrs, self._file_obj, self._encoding)
+
+    @staticmethod
+    def _dask_postcompute(results, info, *args):
+        variables = OrderedDict()
+        results2 = results[::-1]
+        for is_dask, k, v in info:
+            if is_dask:
+                func, args2 = v
+                r = results2.pop()
+                result = func(r, *args2)
+            else:
+                result = v
+            variables[k] = result
+
+        final = Dataset._construct_direct(variables, *args)
+        return final
+
+    @staticmethod
+    def _dask_postpersist(dsk, info, *args):
+        variables = OrderedDict()
+        for is_dask, k, v in info:
+            if is_dask:
+                func, args2 = v
+                result = func(dsk, *args2)
+            else:
+                result = v
+            variables[k] = result
+
+        return Dataset._construct_direct(variables, *args)
+
     def compute(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a
         remote source into memory and return a new dataset. The original is
@@ -549,8 +622,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         dask.persist
         """
-        new = self.copy(deep=False)
-        return new._persist_inplace(**kwargs)
+        import dask
+        (result,) = dask.persist(self, **kwargs)
+        return result
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
@@ -558,6 +632,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
+        assert not callable(coord_names), (cls, variables, coord_names, dims, attrs)
         obj = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
@@ -2424,7 +2499,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         -------
         applied : Dataset
             Resulting dataset from applying ``func`` over each data variable.
-            
+
         Examples
         --------
         >>> da = xr.DataArray(np.random.randn(2, 3))
@@ -2442,7 +2517,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dimensions without coordinates: dim_0, dim_1, x
         Data variables:
             foo      (dim_0, dim_1) float64 0.3751 1.951 1.945 0.2948 0.711 0.3948
-            bar      (x) float64 1.0 2.0            
+            bar      (x) float64 1.0 2.0
         """
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))

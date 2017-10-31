@@ -395,6 +395,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @staticmethod
     def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
+        if isinstance(results, dict):  # persist case
+            name = array_args[0]
+            results = {k: v for k, v in results.items() if k[0] == name}  # cull
         data = array_func(results, *array_args)
         return Variable(dims, data, attrs=attrs, encoding=encoding)
 
