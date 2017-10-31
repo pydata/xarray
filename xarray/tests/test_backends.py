@@ -31,7 +31,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -393,11 +393,11 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
 
     def test_vectorized_indexing(self):
         # Make sure vectorized_indexing works or at leaset raises
@@ -409,11 +409,11 @@ class DatasetIOTestCases(object):
             expected = in_memory.isel(**indexers)
             try:
                 actual = on_disk.isel(**indexers)
-                self.assertDatasetIdentical(expected, actual)
+                assert_identical(expected, actual)
                 # do it twice, to make sure we're switched from
                 # orthogonal -> numpy when we cached the values
                 actual = on_disk.isel(**indexers)
-                self.assertDatasetIdentical(expected, actual)
+                assert_identical(expected, actual)
             except NotImplementedError:
                 pass
 
