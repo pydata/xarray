@@ -206,6 +206,30 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
+    def test_compute(self):
+        u = self.eager_var
+        v = self.lazy_var
+
+        assert dask.is_dask_collection(v)
+        (v2,) = dask.compute(v + 1)
+        assert not dask.is_dask_collection(v2)
+
+        assert ((u + 1).data == v2.data).all()
+
+    def test_persist(self):
+        u = self.eager_var
+        v = self.lazy_var + 1
+
+        (v2,) = dask.persist(v)
+        assert v is not v2
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert v2.__dask_keys__() == v.__dask_keys__()
+        assert dask.is_dask_collection(v)
+        assert dask.is_dask_collection(v2)
+
+        self.assertLazyAndAllClose(u + 1, v)
+        self.assertLazyAndAllClose(u + 1, v2)
+
 
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
