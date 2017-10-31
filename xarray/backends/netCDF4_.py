@@ -56,6 +56,9 @@ class BaseNetCDF4Array(indexing.NDArrayIndexable):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError('{} does not support vectorized '
+                                      'indexing'.format(self.__class__))
         key = indexing.to_tuple(key)
 
         if self.datastore.is_remote:  # pragma: no cover

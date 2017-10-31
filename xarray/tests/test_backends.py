@@ -399,6 +399,24 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             self.assertDatasetIdentical(expected, actual)
 
+    def test_vectorized_indexing(self):
+        # Make sure vectorized_indexing works or at leaset raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            try:
+                actual = on_disk.isel(**indexers)
+                self.assertDatasetIdentical(expected, actual)
+                # do it twice, to make sure we're switched from orthogonal -> numpy
+                # when we cached the values
+                actual = on_disk.isel(**indexers)
+                self.assertDatasetIdentical(expected, actual)
+            except NotImplementedError:
+                pass
+
 
 class CFEncodedDataTest(DatasetIOTestCases):
 

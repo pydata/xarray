@@ -27,6 +27,9 @@ class PydapArrayWrapper(NDArrayMixin):
             return np.dtype(t.typecode + str(t.size))
 
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError('{} does not support vectorized '
+                                      'indexing'.format(self.__class__))
         key = indexing.to_tuple(key)
         if not isinstance(key, tuple):
             key = (key,)

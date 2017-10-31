@@ -537,6 +537,8 @@ class DaskIndexingAdapter(NDArrayIndexable):
             return self.array[to_int_tuple(key)]
         elif isinstance(key, VectorizedIndexer):
             return self.array.vindex[to_int_tuple(tuple(key))]
+        elif key is Ellipsis:
+            return self.array
         else:
             assert isinstance(key, OuterIndexer)
             key = to_int_tuple(tuple(key))

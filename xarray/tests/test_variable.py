@@ -17,7 +17,7 @@ from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
 from xarray.core.indexing import (PandasIndexAdapter, LazilyIndexedArray,
                                   NumpyIndexingAdapter, CopyOnWriteArray,
-                                  MemoryCachedArray)
+                                  MemoryCachedArray, DaskIndexingAdapter)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 
@@ -1745,5 +1745,13 @@ class TestBackendIndexing(TestCase):
 
     @requires_dask
     def test_DaskIndexingAdapter(self):
-        # TODO add da.array test
-        pass
+        import dask.array as da
+        da = da.asarray(self.d)
+        v = Variable(dims=('x', 'y'), data=DaskIndexingAdapter(da))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+        # doubly wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=CopyOnWriteArray(DaskIndexingAdapter(da)))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
