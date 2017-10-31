@@ -15,6 +15,14 @@ What's New
 
 .. _whats-new.0.10.0:
 
+Bug fixes
+~~~~~~~~~
+
+- Suppress warning in Ipython autocompletion, related to the deprecation
+  of ``.T`` attributes. (:issue:`1675`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
+
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
 

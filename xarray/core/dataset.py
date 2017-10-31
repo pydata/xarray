@@ -731,6 +731,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return [self.data_vars, self.coords, {d: self[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
+    def __dir__(self):
+        # In order to suppress a deprecatin warning in Ipython autocompletion
+        # .T is explicitly removed from __dir__. GH: issue 1675
+        d = super(Dataset, self).__dir__()
+        d.remove('T')
+        return d
+
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
         'key' is an array in the dataset or not.

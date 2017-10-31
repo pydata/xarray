@@ -3971,6 +3971,10 @@ class TestDataset(TestCase):
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
 
+    def test_dir(self):
+        ds = create_test_data(seed=1)
+        assert 'T' not in dir(ds)
+
 # Py.test tests
 
 
