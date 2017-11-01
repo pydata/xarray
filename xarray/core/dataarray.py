@@ -646,9 +646,8 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         dask.array.compute
         """
-        import dask
-        (result,) = dask.compute(self, **kwargs)
-        return result
+        new = self.copy(deep=False)
+        return new.load(**kwargs)
 
     def persist(self, **kwargs):
         """ Trigger computation in constituent dask arrays
@@ -666,9 +665,8 @@ class DataArray(AbstractArray, BaseDataObject):
         --------
         dask.persist
         """
-        import dask
-        (result,) = dask.persist(self, **kwargs)
-        return result
+        ds = self._to_temp_dataset().persist(**kwargs)
+        return self._from_temp_dataset(ds)
 
     def copy(self, deep=True):
         """Returns a copy of this array.

@@ -36,6 +36,8 @@ def test_dask_distributed_integration_test(loop, engine):
                     assert_allclose(original, computed)
 
 
+@pytest.mark.skipif(distributed.__version__ <= '1.19.3',
+                    reason='Need recent distributed version to clean up get')
 @gen_cluster(client=True, timeout=None)
 def test_async(c, s, a, b):
     x = create_test_data()
@@ -62,6 +64,5 @@ def test_async(c, s, a, b):
     w = yield future
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
-
 
     assert s.task_state

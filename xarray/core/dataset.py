@@ -618,9 +618,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         --------
         dask.persist
         """
-        import dask
-        (result,) = dask.persist(self, **kwargs)
-        return result
+        new = self.copy(deep=False)
+        return new._persist_inplace(**kwargs)
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
