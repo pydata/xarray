@@ -15,13 +15,18 @@ What's New
 
 .. _whats-new.0.10.0:
 
+Changes since v0.10.0 rc1 (Unreleased)
+--------------------------------------
+
 Bug fixes
 ~~~~~~~~~
 
-- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
-  Also made some internal cleanups around array wrappers (:issue:`1429`).
+- Suppress warning in Ipython autocompletion, related to the deprecation
+  of ``.T`` attributes. (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
+  Also made some internal cleanups around array wrappers (:issue:`1429`).
 
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
