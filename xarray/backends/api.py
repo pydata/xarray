@@ -40,9 +40,14 @@ def _get_default_engine(path, allow_remote=False):
             try:
                 import scipy.io.netcdf
                 engine = 'scipy'
-            except ImportError:
-                raise ValueError('cannot read or write netCDF files without '
-                                 'netCDF4-python or scipy installed')
+            except ImportError:  # pragma: no cover
+                try:
+                    import h5netcdf
+                    engine = 'h5netcdf'
+                except ImportError:
+                    raise ValueError(
+                        'cannot read or write netCDF files without '
+                        'netCDF4-python, h5netcdf, or scipy installed')
     return engine
 
 
