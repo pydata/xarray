@@ -37,8 +37,9 @@ class NioArrayWrapper(indexing.NDArrayIndexable):
 
     def __getitem__(self, key):
         if isinstance(key, indexing.VectorizedIndexer):
-            raise NotImplementedError('{} does not support vectorized '
-                                      'indexing'.format(self.__class__))
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
         key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
