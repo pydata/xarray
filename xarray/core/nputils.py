@@ -5,15 +5,20 @@ import numpy as np
 import pandas as pd
 import warnings
 
-
-def _validate_axis(data, axis):
-    ndim = data.ndim
-    if not -ndim <= axis < ndim:
-        raise IndexError('axis %r out of bounds [-%r, %r)'
-                         % (axis, ndim, ndim))
-    if axis < 0:
-        axis += ndim
-    return axis
+# Numpy has a function for this as of 1.13
+_normalize_axis_index = getattr(np.core.multiarray, 'normalize_axis_index', None)
+if _normalize_axis_index is not None:
+    def _validate_axis(data, axis):
+        return _normalize_axis_index(axis, data.ndim)
+else:
+    def _validate_axis(data, axis):
+        ndim = data.ndim
+        if not -ndim <= axis < ndim:
+            raise IndexError('axis %r out of bounds [-%r, %r)'
+                             % (axis, ndim, ndim))
+        if axis < 0:
+            axis += ndim
+        return axis
 
 
 def _select_along_axis(values, idx, axis):
