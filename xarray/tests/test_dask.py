@@ -676,7 +676,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert_frame_equal(expected, actual.compute())
 
 
-@pytest.mark.xfail(reason="mock no longer targets the right method")
 @pytest.mark.parametrize("method", ['load', 'compute'])
 def test_dask_kwargs_variable(method):
     x = Variable('y', da.from_array(np.arange(3), chunks=(2,)))
@@ -687,7 +686,6 @@ def test_dask_kwargs_variable(method):
     mock_compute.assert_called_with(foo='bar')
 
 
-@pytest.mark.xfail(reason="mock no longer targets the right method")
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataarray(method):
     data = da.from_array(np.arange(3), chunks=(2,))
@@ -702,7 +700,6 @@ def test_dask_kwargs_dataarray(method):
     mock_func.assert_called_with(data, foo='bar')
 
 
-@pytest.mark.xfail(reason="mock no longer targets the right method")
 @pytest.mark.parametrize("method", ['load', 'compute', 'persist'])
 def test_dask_kwargs_dataset(method):
     data = da.from_array(np.arange(3), chunks=(2,))
@@ -738,10 +735,12 @@ def build_dask_array(name):
         chunks=((1,),), dtype=np.int64)
 
 
-@pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
-                    reason='Need dask 0.16+ for new interface')
-@pytest.mark.parametrize('persist', [lambda x: x.persist(),
-                                     lambda x: dask.persist(x)[0]])
+@pytest.mark.parametrize('persist', [
+    lambda x: x.persist(),
+    pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
+                       lambda x: dask.persist(x)[0],
+                       reason='Need Dask 0.16+')
+])
 def test_persist_Dataset(persist):
     ds = Dataset({'foo': ('x', range(5)),
                   'bar': ('x', range(5))}).chunk()

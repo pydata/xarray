@@ -627,7 +627,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
-        assert not callable(coord_names), (cls, variables, coord_names, dims, attrs)
         obj = object.__new__(cls)
         obj._variables = variables
         obj._coord_names = coord_names
