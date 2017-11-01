@@ -3606,6 +3606,8 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'arguments to transpose'):
             ds.transpose('dim1', 'dim2', 'dim3', 'time', 'extra_dim')
 
+        assert 'T' not in dir(ds)
+
     def test_dataset_retains_period_index_on_transpose(self):
 
         ds = create_test_data()
@@ -3970,10 +3972,6 @@ class TestDataset(TestCase):
         for item in actual:
             ds.data_vars[item]  # should not raise
         assert sorted(actual) == sorted(expected)
-
-    def test_dir(self):
-        ds = create_test_data(seed=1)
-        assert 'T' not in dir(ds)
 
 # Py.test tests
 

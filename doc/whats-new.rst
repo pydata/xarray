@@ -15,6 +15,9 @@ What's New
 
 .. _whats-new.0.10.0:
 
+Changes since v0.10.0 rc1 (Unreleased)
+--------------------------------------
+
 Bug fixes
 ~~~~~~~~~
 

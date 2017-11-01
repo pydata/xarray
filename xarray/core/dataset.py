@@ -732,7 +732,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 LevelCoordinatesSource(self)]
 
     def __dir__(self):
-        # In order to suppress a deprecatin warning in Ipython autocompletion
+        # In order to suppress a deprecation warning in Ipython autocompletion
         # .T is explicitly removed from __dir__. GH: issue 1675
         d = super(Dataset, self).__dir__()
         d.remove('T')
