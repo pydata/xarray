@@ -333,7 +333,7 @@ def encode_cf_timedelta(timedeltas, units=None):
     return (num, units)
 
 
-class MaskedAndScaledArray(indexing.NDArrayIndexable):
+class MaskedAndScaledArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
@@ -391,7 +391,7 @@ class MaskedAndScaledArray(indexing.NDArrayIndexable):
                  self.scale_factor, self.add_offset, self._dtype))
 
 
-class DecodedCFDatetimeArray(indexing.NDArrayIndexable):
+class DecodedCFDatetimeArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into datetime objects
     using decode_cf_datetime.
@@ -430,7 +430,7 @@ class DecodedCFDatetimeArray(indexing.NDArrayIndexable):
                                   calendar=self.calendar)
 
 
-class DecodedCFTimedeltaArray(indexing.NDArrayIndexable):
+class DecodedCFTimedeltaArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into timedelta objects
     using decode_cf_timedelta.
@@ -447,7 +447,7 @@ class DecodedCFTimedeltaArray(indexing.NDArrayIndexable):
         return decode_cf_timedelta(self.array[key], units=self.units)
 
 
-class StackedBytesArray(indexing.NDArrayIndexable):
+class StackedBytesArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
@@ -493,7 +493,7 @@ class StackedBytesArray(indexing.NDArrayIndexable):
         return char_to_bytes(self.array[key])
 
 
-class BytesToStringArray(indexing.NDArrayIndexable):
+class BytesToStringArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Wrapper that decodes bytes to unicode when values are read.
 
     >>> BytesToStringArray(np.array([b'abc']))[:]
@@ -532,7 +532,7 @@ class BytesToStringArray(indexing.NDArrayIndexable):
         return decode_bytes_array(self.array[key], self.encoding)
 
 
-class NativeEndiannessArray(indexing.NDArrayIndexable):
+class NativeEndiannessArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Decode arrays on the fly from non-native to native endianness
 
     This is useful for decoding arrays from netCDF3 files (which are all
@@ -561,7 +561,7 @@ class NativeEndiannessArray(indexing.NDArrayIndexable):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class BoolTypeArray(indexing.NDArrayIndexable):
+class BoolTypeArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Decode arrays on the fly from integer to boolean datatype
 
     This is useful for decoding boolean arrays from integer typed netCDF
@@ -589,7 +589,7 @@ class BoolTypeArray(indexing.NDArrayIndexable):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class UnsignedIntTypeArray(indexing.NDArrayIndexable):
+class UnsignedIntTypeArray(utils.NDArrayMixin, indexing.NDArrayIndexable):
     """Decode arrays on the fly from signed integer to unsigned
     integer. Typically used when _Unsigned is set at as a netCDF
     attribute on a signed integer variable.

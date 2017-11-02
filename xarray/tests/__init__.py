@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal
 from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
+from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.core.indexing import NDArrayIndexable
 from xarray.testing import assert_equal, assert_identical, assert_allclose
@@ -198,7 +199,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(NDArrayIndexable):
+class InaccessibleArray(utils.NDArrayMixin, NDArrayIndexable):
 
     def __init__(self, array):
         self.array = array

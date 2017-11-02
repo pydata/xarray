@@ -303,11 +303,11 @@ class VectorizedIndexer(IndexerTuple):
     """ Tuple for vectorized indexing """
 
 
-class NDArrayIndexable(utils.NDArrayMixin):
-    """ A base array wrapper to support vectorized indexing """
+class NDArrayIndexable(object):
+    """ Mixin to mark support for IndexerTuple subclasses in indexing."""
 
 
-class LazilyIndexedArray(NDArrayIndexable):
+class LazilyIndexedArray(utils.NDArrayMixin, NDArrayIndexable):
     """Wrap an array that handles orthogonal indexing to make indexing lazy
     """
     def __init__(self, array, key=None):
@@ -383,7 +383,7 @@ def _wrap_numpy_scalars(array):
         return array
 
 
-class CopyOnWriteArray(NDArrayIndexable):
+class CopyOnWriteArray(utils.NDArrayMixin, NDArrayIndexable):
     def __init__(self, array):
         self.array = as_indexable(array)
         self._copied = False
@@ -404,7 +404,7 @@ class CopyOnWriteArray(NDArrayIndexable):
         self.array[key] = value
 
 
-class MemoryCachedArray(NDArrayIndexable):
+class MemoryCachedArray(utils.NDArrayMixin, NDArrayIndexable):
     def __init__(self, array):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
@@ -478,7 +478,7 @@ def _outer_to_numpy_indexer(key, shape):
     return tuple(new_key)
 
 
-class NumpyIndexingAdapter(NDArrayIndexable):
+class NumpyIndexingAdapter(utils.NDArrayMixin, NDArrayIndexable):
     """Wrap a NumPy array to use broadcasted indexing
     """
     def __init__(self, array):
@@ -517,7 +517,7 @@ class NumpyIndexingAdapter(NDArrayIndexable):
         array[key] = value
 
 
-class DaskIndexingAdapter(NDArrayIndexable):
+class DaskIndexingAdapter(utils.NDArrayMixin, NDArrayIndexable):
     """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
@@ -560,7 +560,7 @@ class DaskIndexingAdapter(NDArrayIndexable):
                         'method or accessing its .values attribute.')
 
 
-class PandasIndexAdapter(NDArrayIndexable):
+class PandasIndexAdapter(utils.NDArrayMixin, NDArrayIndexable):
     """Wrap a pandas.Index to be better about preserving dtypes and to handle
     indexing by length 1 tuples like numpy
     """

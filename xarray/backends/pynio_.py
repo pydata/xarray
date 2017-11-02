@@ -14,22 +14,15 @@ from ..core import indexing
 from .common import AbstractDataStore, DataStorePickleMixin
 
 
-class NioArrayWrapper(indexing.NDArrayIndexable):
+class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                      indexing.NDArrayIndexable):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
         array = self.get_array()
-        self._shape = array.shape
-        self._dtype = np.dtype(array.typecode())
-
-    @property
-    def shape(self):
-        return self._shape
-
-    @property
-    def dtype(self):
-        return self._dtype
+        self.shape = array.shape
+        self.dtype = np.dtype(array.typecode())
 
     def get_array(self):
         self.datastore.assert_open()

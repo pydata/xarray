@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import is_scalar
+from ..core.utils import DunderArrayMixin, NdimSizeLenMixin, is_scalar
 from ..core import indexing
 try:
     from dask.utils import SerializableLock as Lock
@@ -17,7 +17,8 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'first.')
 
 
-class RasterioArrayWrapper(indexing.NDArrayIndexable):
+class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                           indexing.NDArrayIndexable):
     """A wrapper around rasterio dataset objects"""
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds

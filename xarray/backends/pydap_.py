@@ -11,7 +11,7 @@ from ..core.pycompat import integer_types
 from .common import AbstractDataStore, robust_getitem
 
 
-class PydapArrayWrapper(NDArrayMixin):
+class PydapArrayWrapper(NDArrayMixin, indexing.NDArrayIndexable):
     def __init__(self, array):
         self.array = array
 
