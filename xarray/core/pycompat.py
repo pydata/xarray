@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 import sys
 
+import numpy as np
+
 PY2 = sys.version_info[0] < 3
 PY3 = sys.version_info[0] >= 3
 
@@ -10,6 +12,7 @@ if PY3:  # pragma: no cover
     basestring = str
     unicode_type = str
     bytes_type = bytes
+    integer_types = (int, np.integer)
 
     def iteritems(d):
         return iter(d.items())
@@ -22,11 +25,13 @@ if PY3:  # pragma: no cover
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
+    from inspect import getfullargspec as getargspec
 else:  # pragma: no cover
     # Python 2
-    basestring = basestring
-    unicode_type = unicode
+    basestring = basestring  # noqa
+    unicode_type = unicode  # noqa
     bytes_type = str
+    integer_types = (int, long, np.integer)  # noqa
 
     def iteritems(d):
         return d.iteritems()
@@ -39,7 +44,7 @@ else:  # pragma: no cover
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
-
+    from inspect import getargspec
 try:
     from cyordereddict import OrderedDict
 except ImportError:  # pragma: no cover
@@ -54,6 +59,16 @@ try:
     dask_array_type = (dask.array.Array,)
 except ImportError:  # pragma: no cover
     dask_array_type = ()
+
+try:
+    try:
+        from pathlib import Path
+    except ImportError as e:
+        from pathlib2 import Path
+    path_type = (Path, )
+except ImportError as e:
+    path_type = ()
+
 
 try:
     from contextlib import suppress
@@ -184,7 +199,7 @@ except ImportError:
             # We manipulate the exception state so it behaves as though
             # we were actually nesting multiple with statements
             frame_exc = sys.exc_info()[1]
-            
+
             def _fix_exception_context(new_exc, old_exc):
                 # Context may not be correct, so find the end of the chain
                 while 1:

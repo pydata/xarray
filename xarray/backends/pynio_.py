@@ -28,6 +28,7 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
+        key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
             if key == () and self.ndim == 0:
@@ -42,6 +43,9 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         import Nio
         opener = functools.partial(Nio.open_file, filename, mode=mode)
         self.ds = opener()
+        # xarray provides its own support for FillValue,
+        # so turn off PyNIO's support for the same.
+        self.ds.set_option('MaskedArrayMode', 'MaskedNever')
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
@@ -54,7 +58,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     def get_variables(self):
         with self.ensure_open(autoclose=False):
             return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.iteritems())
+                                     for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         with self.ensure_open(autoclose=True):

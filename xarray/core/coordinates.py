@@ -50,12 +50,36 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
         return self._data.dims
 
     def to_index(self, ordered_dims=None):
-        """Convert all index coordinates into a :py:class:`pandas.MultiIndex`
+        """Convert all index coordinates into a :py:class:`pandas.Index`.
+
+        Parameters
+        ----------
+        ordered_dims : sequence, optional
+            Possibly reordered version of this object's dimensions indicating
+            the order in which dimensions should appear on the result.
+
+        Returns
+        -------
+        pandas.Index
+            Index subclass corresponding to the outer-product of all dimension
+            coordinates. This will be a MultiIndex if this object is has more
+            than more dimension.
         """
         if ordered_dims is None:
             ordered_dims = self.dims
-        indexes = [self._data.get_index(k) for k in ordered_dims]
-        return pd.MultiIndex.from_product(indexes, names=list(ordered_dims))
+        elif set(ordered_dims) != set(self.dims):
+            raise ValueError('ordered_dims must match dims, but does not: '
+                             '{} vs {}'.format(ordered_dims, self.dims))
+
+        if len(ordered_dims) == 0:
+            raise ValueError('no valid index for a 0-dimensional object')
+        elif len(ordered_dims) == 1:
+            (dim,) = ordered_dims
+            return self._data.get_index(dim)
+        else:
+            indexes = [self._data.get_index(k) for k in ordered_dims]
+            names = list(ordered_dims)
+            return pd.MultiIndex.from_product(indexes, names=names)
 
     def update(self, other):
         other_vars = getattr(other, 'variables', other)
@@ -173,6 +197,11 @@ class DatasetCoordinates(AbstractCoordinates):
         else:
             raise KeyError(key)
 
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return [key for key in self._data._ipython_key_completions_()
+                if key not in self._data.data_vars]
+
 
 class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
@@ -214,6 +243,10 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     def __delitem__(self, key):
         del self._data._coords[key]
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return self._data._ipython_key_completions_()
 
 
 class LevelCoordinatesSource(object):

@@ -7,7 +7,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from xarray.core import ops, utils
+from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
 from . import TestCase
 
@@ -53,11 +53,12 @@ class TestArrayEquiv(TestCase):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
-        self.assertTrue(ops.array_equiv(0, np.array(0, dtype=object)))
         self.assertTrue(
-            ops.array_equiv(np.nan, np.array(np.nan, dtype=object)))
+            duck_array_ops.array_equiv(0, np.array(0, dtype=object)))
+        self.assertTrue(
+            duck_array_ops.array_equiv(np.nan, np.array(np.nan, dtype=object)))
         self.assertFalse(
-            ops.array_equiv(0, np.array(1, dtype=object)))
+            duck_array_ops.array_equiv(0, np.array(1, dtype=object)))
 
 
 class TestDictionaries(TestCase):
@@ -80,7 +81,7 @@ class TestDictionaries(TestCase):
         utils.update_safety_check(self.x, self.y)
 
     def test_unsafe(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
@@ -115,11 +116,11 @@ class TestDictionaries(TestCase):
 
     def test_frozen(self):
         x = utils.Frozen(self.x)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             x['foo'] = 'bar'
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             del x['a']
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             x.update(self.y)
         self.assertEqual(x.mapping, self.x)
         self.assertIn(repr(x), ("Frozen({'a': 'A', 'b': 'B'})",
@@ -144,6 +145,11 @@ class TestDictionaries(TestCase):
         self.assertEqual(m['x'], 100)
         self.assertEqual(m.maps[0]['x'], 100)
         self.assertItemsEqual(['x', 'y', 'z'], m)
+
+
+def test_repr_object():
+    obj = utils.ReprObject('foo')
+    assert repr(obj) == 'foo'
 
 
 class Test_is_uniform_and_sorted(TestCase):

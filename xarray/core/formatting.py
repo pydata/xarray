@@ -13,10 +13,15 @@ import functools
 
 import numpy as np
 import pandas as pd
-from pandas.tslib import OutOfBoundsDatetime
+try:
+    from pandas.errors import OutOfBoundsDatetime
+except ImportError:
+    # pandas < 0.20
+    from pandas.tslib import OutOfBoundsDatetime
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
+from .indexing import BasicIndexer
 
 
 def pretty_print(x, numchars):
@@ -64,8 +69,8 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), ) +
-               (slice(None), ) * n_steps)
+    indexer = BasicIndexer((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), )
+                           + (slice(None), ) * n_steps)
     return indexer
 
 
@@ -192,8 +197,8 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def _summarize_var_or_coord(name, var, col_width, show_values=True,
-                            marker=' ', max_width=None):
+def summarize_variable(name, var, col_width, show_values=True,
+                       marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
     first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
@@ -204,6 +209,8 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     front_str = u'%s%s%s ' % (first_col, dims_str, var.dtype)
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
+    elif isinstance(var.data, dask_array_type):
+        values_str = short_dask_repr(var, show_dtype=False)
     else:
         values_str = u'...'
 
@@ -218,30 +225,20 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
     relevant_coord = coord[:30]
     return u'\n'.join(
-        [_summarize_var_or_coord(lname,
-                                 relevant_coord.get_level_variable(lname),
-                                 col_width, marker=marker)
+        [summarize_variable(lname,
+                            relevant_coord.get_level_variable(lname),
+                            col_width, marker=marker)
          for lname in coord.level_names])
 
 
-def _not_remote(var):
-    """Helper function to identify if array is positively identifiable as
-    coming from a remote source.
-    """
-    source = var.encoding.get('source')
-    if source and source.startswith('http') and not var._in_memory:
-        return False
-    return True
-
-
-def summarize_var(name, var, col_width):
-    show_values = _not_remote(var)
-    return _summarize_var_or_coord(name, var, col_width, show_values)
+def summarize_datavar(name, var, col_width):
+    show_values = var._in_memory
+    return summarize_variable(name, var.variable, col_width, show_values)
 
 
 def summarize_coord(name, var, col_width):
     is_index = name in var.dims
-    show_values = is_index or _not_remote(var)
+    show_values = var._in_memory
     marker = u'*' if is_index else u' '
     if is_index:
         coord = var.variable.to_index_variable()
@@ -249,12 +246,20 @@ def summarize_coord(name, var, col_width):
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),
                  _summarize_coord_levels(coord, col_width)])
-    return _summarize_var_or_coord(name, var, col_width, show_values, marker)
+    return summarize_variable(
+        name, var.variable, col_width, show_values, marker)
 
 
 def summarize_attr(key, value, col_width=None):
-    # ignore col_width for now to more clearly distinguish attributes
-    return u'    %s: %s' % (key, maybe_truncate(value))
+    """Summary for __repr__ - use ``X.attrs[key]`` for full value."""
+    # Indent key and add ':', then right-pad if col_width is not None
+    k_str = u'    %s:' % key
+    if col_width is not None:
+        k_str = pretty_print(k_str, col_width)
+    # Replace tabs and newlines, so we print on one line in known width
+    v_str = unicode_type(value).replace(u'\t', u'\\t').replace(u'\n', u'\\n')
+    # Finally, truncate to the desired display width
+    return maybe_truncate(u'%s %s' % (k_str, v_str), OPTIONS['display_width'])
 
 
 EMPTY_REPR = u'    *empty*'
@@ -296,7 +301,7 @@ def _mapping_repr(mapping, title, summarizer, col_width=None):
 
 
 data_vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
-                                   summarizer=summarize_var)
+                                   summarizer=summarize_datavar)
 
 
 attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
@@ -359,6 +364,19 @@ def short_array_repr(array):
         return repr(array)
 
 
+def short_dask_repr(array, show_dtype=True):
+    """Similar to dask.array.DataArray.__repr__, but without
+    redundant information that's already printed by the repr
+    function of the xarray wrapper.
+    """
+    chunksize = tuple(c[0] for c in array.chunks)
+    if show_dtype:
+        return 'dask.array<shape=%s, dtype=%s, chunksize=%s>' % (
+            array.shape, array.dtype, chunksize)
+    else:
+        return 'dask.array<shape=%s, chunksize=%s>' % (array.shape, chunksize)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
@@ -370,7 +388,7 @@ def array_repr(arr):
                % (type(arr).__name__, name_str, dim_summary(arr))]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
-        summary.append(repr(arr.data))
+        summary.append(short_dask_repr(arr))
     elif arr._in_memory or arr.size < 1e5:
         summary.append(short_array_repr(arr.values))
     else:
@@ -393,7 +411,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(_get_col_items(ds))
+    col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))

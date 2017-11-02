@@ -42,15 +42,9 @@ Examine a dataset with pandas_ and seaborn_
     @savefig examples_tmin_tmax_plot.png
     ds.mean(dim='location').to_dataframe().plot()
 
-.. ipython::
-    :verbatim:
 
-    In [6]: sns.pairplot(df.reset_index(), vars=ds.data_vars)
-    Out[6]: <seaborn.axisgrid.PairGrid at 0x7f0fd2368a10>
+.. ipython:: python
 
-.. image:: examples_pairplot.png
-
-.. .. ipython:: python
     @savefig examples_pairplot.png
     sns.pairplot(df.reset_index(), vars=ds.data_vars)
 
@@ -74,7 +68,7 @@ Monthly averaging
 
 .. ipython:: python
 
-    monthly_avg = ds.resample('1MS', dim='time', how='mean')
+    monthly_avg = ds.resample(time='1MS').mean()
 
     @savefig examples_tmin_tmax_plot_mean.png
     monthly_avg.sel(location='IA').to_dataframe().plot(style='s-')

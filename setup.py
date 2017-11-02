@@ -8,11 +8,11 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 9
-MICRO = 1
+MINOR = 10
+MICRO = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = ''
+QUALIFIER = 'rc1'
 
 
 DISTNAME = 'xarray'
@@ -35,8 +35,10 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
+INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
+if sys.version_info[0] < 3:
+    TESTS_REQUIRE.append('mock')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """

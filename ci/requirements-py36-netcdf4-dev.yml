@@ -7,12 +7,15 @@ dependencies:
   - dask
   - distributed
   - h5py
+  - h5netcdf
+  - matplotlib
   - pytest
+  - flake8
   - numpy
   - pandas
   - scipy
+  - toolz
   - pip:
     - coveralls
     - pytest-cov
-    - h5netcdf
     - git+https://github.com/Unidata/netcdf4-python.git

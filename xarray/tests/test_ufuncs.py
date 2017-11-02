@@ -8,7 +8,7 @@ import numpy as np
 import xarray.ufuncs as xu
 import xarray as xr
 
-from . import TestCase
+from . import TestCase, raises_regex
 
 
 class TestOps(TestCase):
@@ -59,7 +59,7 @@ class TestOps(TestCase):
         self.assertIdentical(ds.a, xu.maximum(arr_grouped, group_mean.a))
         self.assertIdentical(ds.a, xu.maximum(group_mean.a, arr_grouped))
 
-        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
+        with raises_regex(TypeError, 'only support binary ops'):
             xu.maximum(ds.a.variable, ds_grouped)
 
     def test_pickle(self):

@@ -14,10 +14,12 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   apply_ufunc
    align
    broadcast
    concat
    merge
+   where
    set_options
    full_like
    zeros_like
@@ -80,6 +82,7 @@ Dataset contents
    Dataset.merge
    Dataset.rename
    Dataset.swap_dims
+   Dataset.expand_dims
    Dataset.drop
    Dataset.set_coords
    Dataset.reset_coords
@@ -103,8 +106,6 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
-   Dataset.isel_points
-   Dataset.sel_points
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
@@ -122,6 +123,7 @@ Computation
    Dataset.reduce
    Dataset.groupby
    Dataset.groupby_bins
+   Dataset.rolling
    Dataset.resample
    Dataset.diff
    Dataset.quantile
@@ -156,7 +158,6 @@ Computation
 :py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
-:py:attr:`~Dataset.T`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
 
@@ -179,6 +180,7 @@ Reshaping and reorganizing
    Dataset.unstack
    Dataset.shift
    Dataset.roll
+   Dataset.sortby
 
 DataArray
 =========
@@ -222,6 +224,7 @@ DataArray contents
    DataArray.pipe
    DataArray.rename
    DataArray.swap_dims
+   DataArray.expand_dims
    DataArray.drop
    DataArray.reset_coords
    DataArray.copy
@@ -242,8 +245,6 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   DataArray.isel_points
-   DataArray.sel_points
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
@@ -331,6 +332,7 @@ Reshaping and reorganizing
    DataArray.unstack
    DataArray.shift
    DataArray.roll
+   DataArray.sortby
 
 .. _api.ufuncs:
 
@@ -412,15 +414,18 @@ Dataset methods
 
    open_dataset
    open_mfdataset
+   open_rasterio
    Dataset.to_netcdf
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dask_dataframe
    Dataset.to_dict
    Dataset.from_dataframe
    Dataset.from_dict
    Dataset.close
    Dataset.compute
+   Dataset.persist
    Dataset.load
    Dataset.chunk
    Dataset.filter_by_attrs
@@ -446,6 +451,7 @@ DataArray methods
    DataArray.from_cdms2
    DataArray.from_dict
    DataArray.compute
+   DataArray.persist
    DataArray.load
    DataArray.chunk
 
@@ -474,6 +480,14 @@ Testing
    testing.assert_identical
    testing.assert_allclose
 
+Exceptions
+==========
+
+.. autosummary::
+   :toctree: generated/
+
+   MergeError
+
 Advanced API
 ============
 
@@ -482,6 +496,7 @@ Advanced API
 
    Variable
    IndexVariable
+   as_variable
    register_dataset_accessor
    register_dataarray_accessor
 

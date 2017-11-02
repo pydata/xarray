@@ -3,9 +3,12 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import pandas as pd
+import warnings
 
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
+from . import dtypes
 from . import formatting
+from . import ops
 from .utils import SortedKeysDict, not_implemented, Frozen
 
 
@@ -67,63 +70,6 @@ class ImplementsDatasetReduce(object):
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied."""
-
-
-class ImplementsRollingArrayReduce(object):
-    @classmethod
-    def _reduce_method(cls, func):
-        def wrapped_func(self, **kwargs):
-            return self.reduce(func, **kwargs)
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            # bottleneck doesn't allow min_count to be 0, although it should
-            # work the same as if min_count = 1
-            if self.min_periods is not None and self.min_periods == 0:
-                min_count = self.min_periods + 1
-            else:
-                min_count = self.min_periods
-
-            values = func(self.obj.data, window=self.window,
-                          min_count=min_count, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
-
-    @classmethod
-    def _bottleneck_reduce_without_min_count(cls, func):
-        def wrapped_func(self, **kwargs):
-            from .dataarray import DataArray
-
-            if self.min_periods is not None:
-                raise ValueError('Rolling.median does not accept min_periods')
-
-            if isinstance(self.obj.data, dask_array_type):
-                raise NotImplementedError(
-                    'Rolling window operation does not work with dask arrays')
-
-            values = func(self.obj.data, window=self.window, axis=self._axis_num)
-
-            result = DataArray(values, self.obj.coords)
-
-            if self.center:
-                result = self._center_result(result)
-
-            return result
-        return wrapped_func
 
 
 class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
@@ -214,6 +160,11 @@ class AttrAccessMixin(object):
         """List of places to look-up items for attribute-style access"""
         return []
 
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-autocompletion """
+        return []
+
     def __getattr__(self, name):
         if name != '__setstate__':
             # this avoids an infinite loop when pickle looks for the
@@ -242,10 +193,22 @@ class AttrAccessMixin(object):
         """Provide method name lookup and completion. Only provide 'public'
         methods.
         """
-        extra_attrs = [
-            item for sublist in self._attr_sources for item in sublist
-            if isinstance(item, basestring)]
+        extra_attrs = [item
+                       for sublist in self._attr_sources
+                       for item in sublist
+                       if isinstance(item, basestring)]
         return sorted(set(dir(type(self)) + extra_attrs))
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython.
+        See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
+        For the details.
+        """
+        item_lists = [item
+                      for sublist in self._item_sources
+                      for item in sublist
+                      if isinstance(item, basestring)]
+        return list(set(item_lists))
 
 
 def get_squeeze_dims(xarray_obj, dim):
@@ -300,7 +263,8 @@ class BaseDataObject(AttrAccessMixin):
         try:
             return self.indexes[key]
         except KeyError:
-            return pd.Index(range(self.sizes[key]), name=key)
+            # need to ensure dtype=int64 in case range is empty on Python 2
+            return pd.Index(range(self.sizes[key]), name=key, dtype=np.int64)
 
     def _calc_assign_results(self, kwargs):
         results = SortedKeysDict()
@@ -449,7 +413,7 @@ class BaseDataObject(AttrAccessMixin):
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
         """
-        return self.groupby_cls(self, group, squeeze=squeeze)
+        return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
                      include_lowest=False, squeeze=True):
@@ -498,10 +462,10 @@ class BaseDataObject(AttrAccessMixin):
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
         """
-        return self.groupby_cls(self, group, squeeze=squeeze, bins=bins,
-                                cut_kwargs={'right': right, 'labels': labels,
-                                            'precision': precision,
-                                            'include_lowest': include_lowest})
+        return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
+                                 cut_kwargs={'right': right, 'labels': labels,
+                                             'precision': precision,
+                                             'include_lowest': include_lowest})
 
     def rolling(self, min_periods=None, center=False, **windows):
         """
@@ -528,53 +492,55 @@ class BaseDataObject(AttrAccessMixin):
         Returns
         -------
         rolling : type of input argument
+
+        Examples
+        --------
+        Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
+
+        >>> da = xr.DataArray(np.linspace(0,11,num=12),
+        ...                   coords=[pd.date_range('15/12/1999',
+        ...                           periods=12, freq=pd.DateOffset(months=1))],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da.rolling(time=3).mean()
+        <xarray.DataArray (time: 12)>
+        array([ nan,  nan,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+
+        Remove the NaNs using ``dropna()``:
+
+        >>> da.rolling(time=3).mean().dropna('time')
+        <xarray.DataArray (time: 10)>
+        array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
         """
 
-        return self.rolling_cls(self, min_periods=min_periods,
-                                center=center, **windows)
+        return self._rolling_cls(self, min_periods=min_periods,
+                                 center=center, **windows)
 
-    def resample(self, freq, dim, how='mean', skipna=None, closed=None,
-                 label=None, base=0, keep_attrs=False):
-        """Resample this object to a new temporal resolution.
+    def resample(self, freq=None, dim=None, how=None, skipna=None,
+                 closed=None, label=None, base=0, keep_attrs=False, **indexer):
+        """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. Upsampling with filling is
-        not yet supported; if any intervals contain no values in the original
+        not supported; if any intervals contain no values from the original
         object, they will be given the value ``NaN``.
 
         Parameters
         ----------
-        freq : str
-            String in the '#offset' to specify the step-size along the
-            resampled dimension, where '#' is an (optional) integer multipler
-            (default 1) and 'offset' is any pandas date offset alias. Examples
-            of valid offsets include:
-
-            * 'AS': year start
-            * 'QS-DEC': quarterly, starting on December 1
-            * 'MS': month start
-            * 'D': day
-            * 'H': hour
-            * 'Min': minute
-
-            The full list of these offset aliases is documented in pandas [1]_.
-        dim : str
-            Name of the dimension to resample along (e.g., 'time').
-        how : str or func, optional
-            Used for downsampling. If a string, ``how`` must be a valid
-            aggregation operation supported by xarray. Otherwise, ``how`` must be
-            a function that can be called like ``how(values, axis)`` to reduce
-            ndarray values along the given axis. Valid choices that can be
-            provided as a string include all the usual Dataset/DataArray
-            aggregations (``all``, ``any``, ``argmax``, ``argmin``, ``max``,
-            ``mean``, ``median``, ``min``, ``prod``, ``sum``, ``std`` and
-            ``var``), as well as ``first`` and ``last``.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
             Side of each interval to treat as closed.
         label : 'left or 'right', optional
             Side of each interval to use for labeling.
-        base : int, optionalt
+        base : int, optional
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
@@ -582,6 +548,9 @@ class BaseDataObject(AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
+        **indexer : {dim: freq}
+            Dictionary with a key indicating the dimension name to resample
+            over and a value corresponding to the resampling frequency.
 
         Returns
         -------
@@ -594,18 +563,67 @@ class BaseDataObject(AttrAccessMixin):
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
         from .dataarray import DataArray
+        from .resample import RESAMPLE_DIM
 
+        if dim is not None:
+            if how is None:
+                how = 'mean'
+            return self._resample_immediately(freq, dim, how, skipna, closed,
+                                              label, base, keep_attrs)
+
+        if (how is not None) and indexer:
+            raise TypeError("If passing an 'indexer' then 'dim' "
+                            "and 'how' should not be used")
+
+        # More than one indexer is ambiguous, but we do in fact need one if
+        # "dim" was not provided, until the old API is fully deprecated
+        if len(indexer) != 1:
+            raise ValueError(
+                "Resampling only supported along single dimensions."
+            )
+        dim, freq = indexer.popitem()
+
+        if isinstance(dim, basestring):
+            dim_name = dim
+            dim = self[dim]
+        else:
+            raise TypeError("Dimension name should be a string; "
+                            "was passed %r" % dim)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
+        time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
+                                      label=label, base=base)
+        resampler = self._resample_cls(self, group=group, dim=dim_name,
+                                       grouper=time_grouper,
+                                       resample_dim=RESAMPLE_DIM)
+
+        return resampler
+
+    def _resample_immediately(self, freq, dim, how, skipna,
+                              closed, label, base, keep_attrs):
+        """Implement the original version of .resample() which immediately
+        executes the desired resampling operation. """
+        from .dataarray import DataArray
         RESAMPLE_DIM = '__resample_dim__'
+
+        warnings.warn("\n.resample() has been modified to defer "
+                      "calculations. Instead of passing 'dim' and "
+                      "'how=\"{how}\", instead consider using "
+                      ".resample({dim}=\"{freq}\").{how}() ".format(
+                            dim=dim, freq=freq, how=how
+                      ), DeprecationWarning, stacklevel=3)
+
         if isinstance(dim, basestring):
             dim = self[dim]
-        group = DataArray(dim, [(RESAMPLE_DIM, dim)], name=RESAMPLE_DIM)
+        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
                                       label=label, base=base)
-        gb = self.groupby_cls(self, group, grouper=time_grouper)
+        gb = self._groupby_cls(self, group, grouper=time_grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:
                 result = f(skipna=skipna, keep_attrs=keep_attrs)
+            elif how == 'count':
+                result = f(dim=dim.name, keep_attrs=keep_attrs)
             else:
                 result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
         else:
@@ -613,82 +631,91 @@ class BaseDataObject(AttrAccessMixin):
         result = result.rename({RESAMPLE_DIM: dim.name})
         return result
 
-    def where(self, cond, other=None, drop=False):
-        """Return an object of the same shape with all entries where cond is
-        True and all other entries masked.
+    def where(self, cond, other=dtypes.NA, drop=False):
+        """Filter elements from this object according to a condition.
 
         This operation follows the normal broadcasting and alignment rules that
         xarray uses for binary arithmetic.
 
         Parameters
         ----------
-        cond : boolean DataArray or Dataset
-        other : unimplemented, optional
-            Unimplemented placeholder for compatibility with future
-            numpy / pandas versions
+        cond : DataArray or Dataset with boolean dtype
+            Locations at which to preserve this object's values.
+        other : scalar, DataArray or Dataset, optional
+            Value to use for locations in this object where ``cond`` is False.
+            By default, these locations filled with NA.
         drop : boolean, optional
-            Coordinate labels that only correspond to NA values should be
-            dropped
+            If True, coordinate labels that only correspond to False values of
+            the condition are dropped from the result. Mutually exclusive with
+            ``other``.
 
         Returns
         -------
-        same type as caller or if drop=True same type as caller with dimensions
-        reduced for dim element where mask is True
+        Same type as caller.
 
         Examples
         --------
 
         >>> import numpy as np
         >>> a = xr.DataArray(np.arange(25).reshape(5, 5), dims=('x', 'y'))
-        >>> a.where((a > 6) & (a < 18))
+        >>> a.where(a.x + a.y < 4)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,  nan,  nan,  nan],
-               [ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
+        array([[  0.,   1.,   2.,   3.,  nan],
+               [  5.,   6.,   7.,  nan,  nan],
+               [ 10.,  11.,  nan,  nan,  nan],
+               [ 15.,  nan,  nan,  nan,  nan],
                [ nan,  nan,  nan,  nan,  nan]])
-        Coordinates:
-          * y        (y) int64 0 1 2 3 4
-          * x        (x) int64 0 1 2 3 4
-        >>> a.where((a > 6) & (a < 18), drop=True)
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 5, -1)
         <xarray.DataArray (x: 5, y: 5)>
-        array([[ nan,  nan,   7.,   8.,   9.],
-               [ 10.,  11.,  12.,  13.,  14.],
-               [ 15.,  16.,  17.,  nan,  nan],
-        Coordinates:
-          * x        (x) int64 1 2 3
-          * y        (y) int64 0 1 2 3 4
+        array([[ 0,  1,  2,  3,  4],
+               [ 5,  6,  7,  8, -1],
+               [10, 11, 12, -1, -1],
+               [15, 16, -1, -1, -1],
+               [20, -1, -1, -1, -1]])
+        Dimensions without coordinates: x, y
+        >>> a.where(a.x + a.y < 4, drop=True)
+        <xarray.DataArray (x: 4, y: 4)>
+        array([[  0.,   1.,   2.,   3.],
+               [  5.,   6.,   7.,  nan],
+               [ 10.,  11.,  nan,  nan],
+               [ 15.,  nan,  nan,  nan]])
+        Dimensions without coordinates: x, y
+
+        See also
+        --------
+        numpy.where : corresponding numpy function
+        where : equivalent function
         """
-        if other is not None:
-            raise NotImplementedError("The optional argument 'other' has not "
-                                      "yet been implemented")
+        from .alignment import align
+        from .dataarray import DataArray
+        from .dataset import Dataset
 
         if drop:
-            from .dataarray import DataArray
-            from .dataset import Dataset
+            if other is not dtypes.NA:
+                raise ValueError('cannot set `other` if drop=True')
+
+            if not isinstance(cond, (Dataset, DataArray)):
+                raise TypeError("cond argument is %r but must be a %r or %r" %
+                                (cond, Dataset, DataArray))
+
+            # align so we can use integer indexing
+            self, cond = align(self, cond)
+
             # get cond with the minimal size needed for the Dataset
             if isinstance(cond, Dataset):
                 clipcond = cond.to_array().any('variable')
-            elif isinstance(cond, DataArray):
-                clipcond = cond
             else:
-                raise TypeError("Cond argument is %r but must be a %r or %r" %
-                                (cond, Dataset, DataArray))
+                clipcond = cond
 
             # clip the data corresponding to coordinate dims that are not used
-            clip = dict(zip(clipcond.dims, [np.unique(adim)
-                                            for adim in np.nonzero(clipcond.values)]))
-            outcond = cond.isel(**clip)
-            indexers = {dim: outcond.get_index(dim) for dim in outcond.dims}
-            outobj = self.sel(**indexers)
-        else:
-            outobj = self
-            outcond = cond
+            nonzeros = zip(clipcond.dims, np.nonzero(clipcond.values))
+            indexers = {k: np.unique(v) for k, v in nonzeros}
 
-        # preserve attributes
-        out = outobj._where(outcond)
-        out._copy_attrs_from(self)
-        return out
+            self = self.isel(**indexers)
+            cond = cond.isel(**indexers)
+
+        return ops.where_method(self, cond, other)
 
     def close(self):
         """Close any files linked to this object
@@ -708,42 +735,6 @@ class BaseDataObject(AttrAccessMixin):
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
         __or__ = __div__ = __eq__ = __ne__ = not_implemented
-
-
-def _maybe_promote(dtype):
-    """Simpler equivalent of pandas.core.common._maybe_promote"""
-    # N.B. these casting rules should match pandas
-    if np.issubdtype(dtype, float):
-        fill_value = np.nan
-    elif np.issubdtype(dtype, int):
-        # convert to floating point so NaN is valid
-        dtype = float
-        fill_value = np.nan
-    elif np.issubdtype(dtype, complex):
-        fill_value = np.nan + np.nan * 1j
-    elif np.issubdtype(dtype, np.datetime64):
-        fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
-    else:
-        dtype = object
-        fill_value = np.nan
-    return np.dtype(dtype), fill_value
-
-
-def _possibly_convert_objects(values):
-    """Convert arrays of datetime.datetime and datetime.timedelta objects into
-    datetime64 and timedelta64, according to the pandas convention.
-    """
-    return np.asarray(pd.Series(values.ravel())).reshape(values.shape)
-
-
-def _get_fill_value(dtype):
-    """Return a fill value that appropriately promotes types when used with
-    np.concatenate
-    """
-    _, fill_value = _maybe_promote(dtype)
-    return fill_value
 
 
 def full_like(other, fill_value, dtype=None):

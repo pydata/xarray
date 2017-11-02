@@ -38,18 +38,22 @@ module:
 
     pickle.loads(pkl)
 
-Pickle support is important because it doesn't require any external libraries
+Pickling is important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are two important caveats:
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
 
-1. To simplify serialization, xarray's support for pickle currently loads all
-   array values into memory before dumping an object. This means it is not
-   suitable for serializing datasets too big to load into memory (e.g., from
-   netCDF or OPeNDAP).
-2. Pickle will only work as long as the internal data structure of xarray objects
-   remains unchanged. Because the internal design of xarray is still being
-   refined, we make no guarantees (at this point) that objects pickled with
-   this version of xarray will work in future versions.
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
+  or :py:meth:`~xarray.Dataset.compute`.
 
 .. _dictionary io:
 
@@ -172,6 +176,10 @@ for dealing with datasets too big to fit into memory. Instead, xarray integrates
 with dask.array (see :ref:`dask`), which provides a fully featured engine for
 streaming computation.
 
+It is possible to append or overwrite netCDF variables using the ``mode='a'``
+argument. When using this option, all variables in the dataset will be written
+to the original netCDF file, regardless if they exist in the original dataset.
+
 .. _io.encoding:
 
 Reading encoded data
@@ -251,7 +259,7 @@ These encoding options work on any version of the netCDF file format:
   saved on disk. This is important when converting floating point with missing values
   to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
-  output file.
+  output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
   ``decoded = scale_factor * encoded + add_offset``.
@@ -262,6 +270,42 @@ converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
 
+.. _io.string-encoding:
+
+String encoding
+...............
+
+xarray can write unicode strings to netCDF files in two ways:
+
+- As variable length strings. This is only supported on netCDF4 (HDF5) files.
+- By encoding strings into bytes, and writing encoded bytes as a character
+  array. The default encoding is UTF-8.
+
+By default, we use variable length strings for compatible files and fall-back
+to using encoded character arrays. Character arrays can be selected even for
+netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
+(corresponding to NumPy's single-character bytes dtype).
+
+If character arrays are used, the string encoding that was used is stored on
+disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+At the time of this writing (October 2017), a standard convention for indicating
+string encoding for character arrays in netCDF files was
+`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+Technically, you can use
+`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+by setting the ``_Encoding`` field in ``encoding``. But
+`we don't recommend it<http://utf8everywhere.org/>`_.
+
+.. warning::
+
+  Missing values in bytes or unicode string arrays (represented by ``NaN`` in
+  xarray) are currently written to disk as empty strings ``''``. This means
+  missing values will not be restored when data is loaded from disk.
+  This behavior is likely to change in the future (:issue:`1647`).
+  Unfortunately, explicitly setting a ``_FillValue`` for string arrays to handle
+  missing values doesn't work yet either, though we also hope to fix this in the
+  future.
 
 Chunk based compression
 .......................
@@ -384,6 +428,80 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+Some servers require authentication before we can access the data. For this
+purpose we can explicitly create a :py:class:`~xarray.backends.PydapDataStore`
+and pass in a `Requests`__ session object. For example for
+HTTP Basic authentication::
+
+    import xarray as xr
+    import requests
+
+    session = requests.Session()
+    session.auth = ('username', 'password')
+
+    store = xr.backends.PydapDataStore.open('http://example.com/data',
+                                            session=session)
+    ds = xr.open_dataset(store)
+
+`Pydap's cas module`__ has functions that generate custom sessions for
+servers that use CAS single sign-on. For example, to connect to servers
+that require NASA's URS authentication::
+
+  import xarray as xr
+  from pydata.cas.urs import setup_session
+
+  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+  session = setup_session('username', 'password', check_url=ds_url)
+  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+
+  ds = xr.open_dataset(store)
+
+__ http://docs.python-requests.org
+__ http://pydap.readthedocs.io/en/latest/client.html#authentication
+
+.. _io.rasterio:
+
+Rasterio
+--------
+
+GeoTIFFs and other gridded raster datasets can be opened using `rasterio`_, if
+rasterio is installed. Here is an example of how to use
+:py:func:`~xarray.open_rasterio` to read one of rasterio's `test files`_:
+
+.. ipython::
+    :verbatim:
+
+    In [7]: rio = xr.open_rasterio('RGB.byte.tif')
+
+    In [8]: rio
+    Out[8]:
+    <xarray.DataArray (band: 3, y: 718, x: 791)>
+    [1703814 values with dtype=uint8]
+    Coordinates:
+      * band     (band) int64 1 2 3
+      * y        (y) float64 2.827e+06 2.827e+06 2.826e+06 2.826e+06 2.826e+06 ...
+      * x        (x) float64 1.02e+05 1.023e+05 1.026e+05 1.029e+05 1.032e+05 ...
+    Attributes:
+        crs:      +init=epsg:32618
+
+The ``x`` and ``y`` coordinates are generated out of the file's metadata
+(``bounds``, ``width``, ``height``), and they can be understood as cartesian
+coordinates defined in the file's projection provided by the ``crs`` attribute.
+``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
+See :ref:`recipes.rasterio` for an example of how to convert these to
+longitudes and latitudes.
+
+.. warning::
+
+    This feature has been added in xarray v0.9.6 and should still be
+    considered as being experimental. Please report any bug you may find
+    on xarray's github repository.
+
+.. _rasterio: https://mapbox.github.io/rasterio/
+.. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
+.. _pyproj: https://github.com/jswhit/pyproj
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -395,7 +513,7 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 
 We recommend installing PyNIO via conda::
 
-    conda install -c dbrown pynio
+    conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 

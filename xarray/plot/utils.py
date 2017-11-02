@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import pkg_resources
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,41 @@ def _load_default_cmap(fname='default_colormap.csv'):
     cm_data = pd.read_csv(f, header=None).values
 
     return LinearSegmentedColormap.from_list('viridis', cm_data)
+
+
+def import_seaborn():
+    '''import seaborn and handle deprecation of apionly module'''
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        try:
+            import seaborn.apionly as sns
+            if (w and issubclass(w[-1].category, UserWarning) and
+                    ("seaborn.apionly module" in str(w[-1].message))):
+                raise ImportError
+        except ImportError:
+            import seaborn as sns
+        finally:
+            warnings.resetwarnings()
+    return sns
+
+
+_registered = False
+
+
+def register_pandas_datetime_converter_if_needed():
+    # based on https://github.com/pandas-dev/pandas/pull/17710
+    global _registered
+    if not _registered:
+        from pandas.tseries import converter
+        converter.register()
+        _registered = True
+
+
+def import_matplotlib_pyplot():
+    """Import pyplot as register appropriate converters."""
+    register_pandas_datetime_converter_if_needed()
+    import matplotlib.pyplot as plt
+    return plt
 
 
 def _determine_extend(calc_data, vmin, vmax):
@@ -72,14 +108,15 @@ def _color_palette(cmap, n_colors):
     if isinstance(cmap, (list, tuple)):
         # we have a list of colors
         try:
-            # first try to turn it into a palette with seaborn
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
+            sns = import_seaborn()
         except ImportError:
             # if that fails, use matplotlib
             # in this case, is there any difference between mpl and seaborn?
             cmap = ListedColormap(cmap, N=n_colors)
             pal = cmap(colors_i)
+        else:
+            # first try to turn it into a palette with seaborn
+            pal = sns.color_palette(cmap, n_colors=n_colors)
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:

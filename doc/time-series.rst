@@ -15,6 +15,7 @@ core functionality.
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -88,7 +89,22 @@ For more details, read the pandas documentation.
 Datetime components
 -------------------
 
-xarray supports a notion of "virtual" or "derived" coordinates for
+Similar `to pandas`_, the components of datetime objects contained in a
+given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
+
+.. _to pandas: http://pandas.pydata.org/pandas-docs/stable/basics.html#basics-dt-accessors
+
+.. ipython:: python
+
+    time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
+    ds = xr.Dataset({'foo': ('time', np.arange(365 * 4)), 'time': time})
+    ds.time.dt.hour
+    ds.time.dt.dayofweek
+
+The ``.dt`` accessor works on both coordinate dimensions as well as
+multi-dimensional data.
+
+xarray also supports a notion of "virtual" or "derived" coordinates for
 `datetime components`__ implemented by pandas, including "year", "month",
 "day", "hour", "minute", "second", "dayofyear", "week", "dayofweek", "weekday"
 and "quarter":
@@ -100,16 +116,20 @@ __ http://pandas.pydata.org/pandas-docs/stable/api.html#time-date-components
     ds['time.month']
     ds['time.dayofyear']
 
-xarray adds ``'season'`` to the list of datetime components supported by pandas:
+For use as a derived coordinate, xarray adds ``'season'`` to the list of
+datetime components supported by pandas:
 
 .. ipython:: python
 
     ds['time.season']
+    ds['time'].dt.season
 
 The set of valid seasons consists of 'DJF', 'MAM', 'JJA' and 'SON', labeled by
 the first letters of the corresponding months.
 
 You can use these shortcuts with both Datasets and DataArray coordinates.
+
+.. _resampling:
 
 Resampling and grouped operations
 ---------------------------------
@@ -124,7 +144,7 @@ calculate the mean by time of day:
 
 For upsampling or downsampling temporal resolutions, xarray offers a
 :py:meth:`~xarray.Dataset.resample` method building on the core functionality
-offered by the pandas method of the same name. Resample uses essentialy the
+offered by the pandas method of the same name. Resample uses essentially the
 same api as ``resample`` `in pandas`_.
 
 .. _in pandas: http://pandas.pydata.org/pandas-docs/stable/timeseries.html#up-and-downsampling
@@ -133,17 +153,38 @@ For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
 
-    ds.resample('6H', dim='time', how='mean')
+    ds.resample(time='6H')
 
-Resample also works for upsampling, in which case intervals without any
-values are marked by ``NaN``:
+This will create a specialized ``Resample`` object which saves information
+necessary for resampling. All of the reduction methods which work with
+``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
 
-    ds.resample('30Min', 'time')
+   ds.resample(time='6H').mean()
 
-Of course, all of these resampling and groupby operation work on both Dataset
-and DataArray objects with any number of additional dimensions.
+You can also supply an arbitrary reduction function to aggregate over each
+resampling group:
+
+.. ipython:: python
+
+   ds.resample(time='6H').reduce(np.mean)
+
+For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
+and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
+supports all of its schemes. All of these resampling operations work on both
+Dataset and DataArray objects with an arbitrary number of dimensions.
+
+.. note::
+
+   The ``resample`` api was updated in version 0.10.0 to reflect similar
+   updates in pandas ``resample`` api to be more groupby-like. Older style
+   calls to ``resample`` will still be supported for a short period:
+
+   .. ipython:: python
+
+    ds.resample('6H', dim='time', how='mean')
+
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.

@@ -4,10 +4,15 @@ channels:
 dependencies:
   - python=3.6
   - dask
+  - distributed
+  - h5py
+  - h5netcdf
   - matplotlib
-  - netCDF4
+  - netcdf4
+  - pytest
   - numpy
   - pandas
-  - pip
-  - pytest
   - scipy
+  - seaborn
+  - toolz
+  - rasterio

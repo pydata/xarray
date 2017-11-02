@@ -25,7 +25,7 @@ from .core.dataarray import DataArray as _DataArray
 from .core.groupby import GroupBy as _GroupBy
 
 from .core.pycompat import dask_array_type as _dask_array_type
-from .core.ops import _dask_or_eager_func
+from .core.duck_array_ops import _dask_or_eager_func
 
 
 _xarray_types = (_Variable, _DataArray, _Dataset, _GroupBy)

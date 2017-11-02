@@ -8,7 +8,7 @@ import pandas as pd
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
 
-from . import TestCase
+from . import TestCase, raises_regex
 
 
 class TestFormatting(TestCase):
@@ -37,7 +37,7 @@ class TestFormatting(TestCase):
             expected = array.flat[:n]
             self.assertItemsEqual(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'at least one item'):
+        with raises_regex(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)
 
     def test_last_item(self):
@@ -130,6 +130,17 @@ class TestFormatting(TestCase):
         expected = '2300-12-01'
         result = formatting.format_timestamp(date)
         self.assertEqual(result, expected)
+
+    def test_attribute_repr(self):
+        short = formatting.summarize_attr(u'key', u'Short string')
+        long = formatting.summarize_attr(u'key', 100 * u'Very long string ')
+        newlines = formatting.summarize_attr(u'key', u'\n\n\n')
+        tabs = formatting.summarize_attr(u'key', u'\t\t\t')
+        self.assertEqual(short, '    key: Short string')
+        self.assertLessEqual(len(long), 80)
+        self.assertTrue(long.endswith(u'...'))
+        self.assertNotIn(u'\n', newlines)
+        self.assertNotIn(u'\t', tabs)
 
 
 def test_set_numpy_options():

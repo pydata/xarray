@@ -46,9 +46,11 @@ The :py:class:`~xarray.DataArray` constructor takes:
 
 - ``data``: a multi-dimensional array of values (e.g., a numpy ndarray,
   :py:class:`~pandas.Series`, :py:class:`~pandas.DataFrame` or :py:class:`~pandas.Panel`)
-- ``coords``: a list or dictionary of coordinates
-- ``dims``: a list of dimension names. If omitted, dimension names are
-  taken from ``coords`` if possible.
+- ``coords``: a list or dictionary of coordinates. If a list, it should be a
+  list of tuples where the first element is the dimension name and the second
+  element is the corresponding coordinate array_like object.
+- ``dims``: a list of dimension names. If omitted and ``coords`` is a list of
+  tuples, dimension names are taken from ``coords``.
 - ``attrs``: a dictionary of attributes to add to the instance
 - ``name``: a string that names the instance
 
@@ -308,18 +310,15 @@ You can also create an dataset from:
 Dataset contents
 ~~~~~~~~~~~~~~~~
 
-:py:class:`~xarray.Dataset` implements the Python dictionary interface, with
+:py:class:`~xarray.Dataset` implements the Python mapping interface, with
 values given by :py:class:`xarray.DataArray` objects:
 
 .. ipython:: python
 
     'temperature' in ds
-
-    ds.keys()
-
     ds['temperature']
 
-The valid keys include each listed coordinate and data variable.
+Valid keys include each listed coordinate and data variable.
 
 Data and coordinate variables are also contained separately in the
 :py:attr:`~xarray.Dataset.data_vars` and :py:attr:`~xarray.Dataset.coords`
@@ -353,6 +352,13 @@ setting) variables and attributes:
 
 This is particularly useful in an exploratory context, because you can
 tab-complete these variable names with tools like IPython.
+
+.. warning::
+
+  We are changing the behavior of iterating over a Dataset the next major
+  release of xarray, to only include data variables instead of both data
+  variables and coordinates. In the meantime, prefer iterating over
+  ``ds.data_vars`` or ``ds.coords``.
 
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~
