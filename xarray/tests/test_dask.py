@@ -735,6 +735,8 @@ def build_dask_array(name):
         chunks=((1,),), dtype=np.int64)
 
 
+# test both the perist method and the dask.persist function
+# the dask.persist function requires a new version of dask
 @pytest.mark.parametrize('persist', [
     lambda x: x.persist(),
     pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
@@ -751,6 +753,7 @@ def test_persist_Dataset(persist):
 
     assert len(ds2.foo.data.dask) == 1
     assert len(ds.foo.data.dask) == n  # doesn't mutate in place
+
 
 @pytest.mark.parametrize('persist', [
     lambda x: x.persist(),

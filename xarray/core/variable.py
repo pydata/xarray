@@ -382,11 +382,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     def __dask_postcompute__(self):
         array_func, array_args = self._data.__dask_postcompute__()
-        return self._dask_finalize, (array_func, array_args, self._dims, self._attrs, self._encoding)
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
 
     def __dask_postpersist__(self):
         array_func, array_args = self._data.__dask_postpersist__()
-        return self._dask_finalize, (array_func, array_args, self._dims, self._attrs, self._encoding)
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
 
     @staticmethod
     def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):

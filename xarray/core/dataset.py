@@ -523,7 +523,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if dask.is_dask_collection(v) else
                 (False, k, v) for k, v in self._variables.items()]
         return self._dask_postcompute, (info, self._coord_names, self._dims,
-                                     self._attrs, self._file_obj, self._encoding)
+                                        self._attrs, self._file_obj,
+                                        self._encoding)
 
     def __dask_postpersist__(self):
         import dask
@@ -531,7 +532,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 if dask.is_dask_collection(v) else
                 (False, k, v) for k, v in self._variables.items()]
         return self._dask_postpersist, (info, self._coord_names, self._dims,
-                                     self._attrs, self._file_obj, self._encoding)
+                                        self._attrs, self._file_obj,
+                                        self._encoding)
 
     @staticmethod
     def _dask_postcompute(results, info, *args):

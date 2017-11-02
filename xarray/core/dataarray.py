@@ -592,11 +592,13 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def __dask_postcompute__(self):
         variable_func, variable_args = self._variable.__dask_postcompute__()
-        return self._dask_finalize, (variable_func, variable_args, self._coords, self._name)
+        return self._dask_finalize, (variable_func, variable_args,
+                                     self._coords, self._name)
 
     def __dask_postpersist__(self):
         variable_func, variable_args = self._variable.__dask_postpersist__()
-        return self._dask_finalize, (variable_func, variable_args, self._coords, self._name)
+        return self._dask_finalize, (variable_func, variable_args,
+                                     self._coords, self._name)
 
     @staticmethod
     def _dask_finalize(results, variable_func, variable_args, coords, name):

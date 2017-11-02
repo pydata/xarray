@@ -46,7 +46,6 @@ def test_async(c, s, a, b):
     assert dask.is_dask_collection(y)
     assert dask.is_dask_collection(y.var1)
     assert dask.is_dask_collection(y.var2)
-    # assert not dask.is_dask_collection(y.var3)  # TODO: avoid chunking unnecessarily in dataset.py::maybe_chunk
 
     z = y.persist()
     assert str(z)
