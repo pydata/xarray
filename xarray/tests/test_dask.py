@@ -206,8 +206,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
-                        reason='Need dask 0.16+ for new interface')
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_var
         v = self.lazy_var
@@ -218,8 +218,8 @@ class TestVariable(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
-                        reason='Need dask 0.16+ for new interface')
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_var
         v = self.lazy_var + 1
@@ -279,8 +279,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
-                        reason='Need dask 0.16+ for new interface')
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_array
         v = self.lazy_array
@@ -291,8 +291,8 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
-                        reason='Need dask 0.16+ for new interface')
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_array
         v = self.lazy_array + 1
@@ -739,9 +739,9 @@ def build_dask_array(name):
 # the dask.persist function requires a new version of dask
 @pytest.mark.parametrize('persist', [
     lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
                        lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16+')
+                       reason='Need Dask 0.16')
 ])
 def test_persist_Dataset(persist):
     ds = Dataset({'foo': ('x', range(5)),
@@ -757,9 +757,9 @@ def test_persist_Dataset(persist):
 
 @pytest.mark.parametrize('persist', [
     lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) < '0.16',
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
                        lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16+')
+                       reason='Need Dask 0.16')
 ])
 def test_persist_DataArray(persist):
     x = da.arange(10, chunks=(5,))
