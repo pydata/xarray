@@ -15,12 +15,16 @@ from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, path_type
+from ..core.options import OPTIONS
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
 def _get_default_engine(path, allow_remote=False):
+    if OPTIONS['engine'] is not None:
+        return OPTIONS['engine']
+
     if allow_remote and is_remote_uri(path):  # pragma: no cover
         try:
             import netCDF4
@@ -53,7 +57,7 @@ def _normalize_path(path):
         return os.path.abspath(os.path.expanduser(path))
 
 
-def _default_lock(filename, engine):
+def _default_lock(filename, engine=OPTIONS['engine']):
     if filename.endswith('.gz'):
         lock = False
     else:
@@ -133,8 +137,9 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
-                 concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, cache=None, drop_variables=None):
+                 concat_characters=True, decode_coords=True,
+                 engine=OPTIONS['engine'], chunks=None, lock=None, cache=None,
+                 drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -430,8 +435,9 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
-                   compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different', **kwargs):
+                   compat='no_conflicts', preprocess=None,
+                   engine=OPTIONS['engine'], lock=None, data_vars='all',
+                   coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed.  Attributes from the first dataset file
@@ -567,7 +573,8 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None):
+              engine=OPTIONS['engine'], writer=None, encoding=None,
+              unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -627,7 +634,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=None):
+                   engine=OPTIONS['engine']):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array

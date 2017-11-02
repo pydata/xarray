@@ -993,7 +993,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             store.sync()
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None):
+                  engine=OPTIONS['engine'], encoding=None,
+                  unlimited_dims=None):
         """Write dataset contents to a netCDF file.
 
         Parameters
