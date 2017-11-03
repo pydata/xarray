@@ -31,6 +31,7 @@ except ImportError:
     pass
 
 
+SUPPORT_ARRAY_TYPES = (indexing.NDArrayIndexable, np.ndarray, pd.Series)
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -177,14 +178,6 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not isinstance(data.dtype, np.dtype) or
-            not hasattr(data, 'shape') or
-            isinstance(data, (np.string_, np.unicode_,
-                              np.datetime64, np.timedelta64))):
-        # data must be ndarray-like
-        # don't allow non-numpy dtypes (e.g., categories)
-        data = np.asarray(data)
-
     # we don't want nested self-described arrays
     data = getattr(data, 'values', data)
 
@@ -196,6 +189,10 @@ def as_compatible_data(data, fastpath=False):
             data[mask] = fill_value
         else:
             data = np.asarray(data)
+
+    # validate whether the data is valid data types
+    if not isinstance(data, SUPPORT_ARRAY_TYPES):
+        data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':

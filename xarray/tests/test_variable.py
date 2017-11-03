@@ -20,6 +20,7 @@ from xarray.core.indexing import (PandasIndexAdapter, LazilyIndexedArray,
                                   MemoryCachedArray, DaskIndexingAdapter)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
+from xarray.core.utils import NDArrayMixin
 
 from . import TestCase, source_ndarray, requires_dask, raises_regex
 
@@ -1677,6 +1678,23 @@ class TestAsCompatibleData(TestCase):
                                      full_like(orig, 1))
         self.assertVariableIdentical(ones_like(orig, dtype=int),
                                      full_like(orig, 1, dtype=int))
+
+    def test_unsupported_type(self):
+        # Non indexable type
+        class CustomArray(NDArrayMixin):
+            def __init__(self, array):
+                self.array = array
+
+        class CustomIndexable(CustomArray, indexing.NDArrayIndexable):
+            pass
+
+        array = CustomArray(np.arange(3))
+        orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
+        assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
+
+        array = CustomIndexable(np.arange(3))
+        orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
+        assert isinstance(orig._data, CustomIndexable)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
