@@ -6,7 +6,7 @@ from __future__ import print_function
 OPTIONS = {
     'display_width': 80,
     'arithmetic_join': 'inner',
-    'engine': None,
+    'io_engine': None,
 }
 
 
@@ -19,7 +19,7 @@ class set_options(object):
       Default: ``80``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
-    - ``engine``: backend data engine. Default: ``None``.
+    - ``io_engine``: backend data I/O engine. Default: ``None``.
 
     You can use ``set_options`` either as a context manager:
 

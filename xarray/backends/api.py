@@ -22,8 +22,8 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
 def _get_default_engine(path, allow_remote=False):
-    if OPTIONS['engine'] is not None:
-        return OPTIONS['engine']
+    if OPTIONS['io_engine'] is not None:
+        return OPTIONS['io_engine']
 
     if allow_remote and is_remote_uri(path):  # pragma: no cover
         try:
@@ -57,7 +57,7 @@ def _normalize_path(path):
         return os.path.abspath(os.path.expanduser(path))
 
 
-def _default_lock(filename, engine=OPTIONS['engine']):
+def _default_lock(filename, engine):
     if filename.endswith('.gz'):
         lock = False
     else:
@@ -137,9 +137,8 @@ def _protect_dataset_variables_inplace(dataset, cache):
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
-                 concat_characters=True, decode_coords=True,
-                 engine=OPTIONS['engine'], chunks=None, lock=None, cache=None,
-                 drop_variables=None):
+                 concat_characters=True, decode_coords=True, engine=None,
+                 chunks=None, lock=None, cache=None, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -222,6 +221,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
+
+    engine = engine or OPTIONS['io_engine']
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -435,9 +436,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
-                   compat='no_conflicts', preprocess=None,
-                   engine=OPTIONS['engine'], lock=None, data_vars='all',
-                   coords='different', **kwargs):
+                   compat='no_conflicts', preprocess=None, engine=None,
+                   lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed.  Attributes from the first dataset file
@@ -539,6 +539,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
+    engine = engine or OPTIONS['io_engine']
+
     if lock is None:
         lock = _default_lock(paths[0], engine)
     datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
@@ -573,8 +575,7 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=OPTIONS['engine'], writer=None, encoding=None,
-              unlimited_dims=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -586,6 +587,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
+    engine = engine or OPTIONS['io_engine']
     if path_or_file is None:
         if engine is None:
             engine = 'scipy'
@@ -634,7 +636,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=OPTIONS['engine']):
+                   engine=None):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
@@ -709,6 +711,8 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         raise ValueError('must supply lists of the same length for the '
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
+
+    engine = engine or OPTIONS['io_engine']
 
     writer = ArrayWriter()
     stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
