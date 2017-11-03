@@ -189,7 +189,7 @@ def is_scalar(value):
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (basestring, bytes_type)) or not
-        isinstance(value, (Iterable, dask_array_type)))
+        isinstance(value, (Iterable, ) + dask_array_type))
 
 
 def is_valid_numpy_dtype(dtype):
