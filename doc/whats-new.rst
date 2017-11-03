@@ -25,6 +25,11 @@ Bug fixes
   of ``.T`` attributes. (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+Testing
+~~~~~~~
+
+- Add coordinate names to failure printout for :py:func:`assert_allclose`.
+  By `Matti Eskelinen <https://github.com/maaleske>`_
 
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
