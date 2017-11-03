@@ -13,7 +13,8 @@ from collections import Mapping, MutableMapping, MutableSet, Iterable
 import numpy as np
 import pandas as pd
 
-from .pycompat import iteritems, OrderedDict, basestring, bytes_type
+from .pycompat import (iteritems, OrderedDict, basestring, bytes_type,
+                       dask_array_type)
 
 
 def alias_message(old_name, new_name):
@@ -188,7 +189,7 @@ def is_scalar(value):
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (basestring, bytes_type)) or not
-        isinstance(value, Iterable))
+        isinstance(value, (Iterable, dask_array_type)))
 
 
 def is_valid_numpy_dtype(dtype):

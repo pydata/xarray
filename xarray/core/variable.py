@@ -94,7 +94,8 @@ def as_variable(obj, name=None):
                             '{}'.format(obj))
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
-    elif getattr(obj, 'name', None) is not None:
+    elif (getattr(obj, 'name', None) is not None and not
+          isinstance(obj, dask_array_type)):
         obj = Variable(obj.name, obj)
     elif name is not None:
         data = as_compatible_data(obj)
