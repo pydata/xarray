@@ -538,7 +538,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     @staticmethod
     def _dask_postcompute(results, info, *args):
         variables = OrderedDict()
-        results2 = results[::-1]
+        results2 = list(results[::-1])
         for is_dask, k, v in info:
             if is_dask:
                 func, args2 = v

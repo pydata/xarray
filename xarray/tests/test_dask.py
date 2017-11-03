@@ -771,3 +771,24 @@ def test_persist_DataArray(persist):
 
     assert len(z.data.dask) == n
     assert len(zz.data.dask) == zz.data.npartitions
+
+
+@pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                    reason='Need dask 0.16 for new interface')
+def test_dataarray_with_dask_coords():
+    import toolz
+    x = xr.Variable('x', da.arange(8, chunks=(4,)))
+    y = xr.Variable('y', da.arange(8, chunks=(4,)) * 2)
+    data = da.random.random((8, 8), chunks=(4, 4)) + 1
+    array = xr.DataArray(data, dims=['x', 'y'])
+    array.coords['xx'] = x
+    array.coords['yy'] = y
+
+    assert dict(array.__dask_graph__()) == toolz.merge(data.__dask_graph__(),
+                                                       x.__dask_graph__(),
+                                                       y.__dask_graph__())
+
+    (array2,) = dask.compute(array)
+    assert not dask.is_dask_collection(array2)
+
+    assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())

@@ -577,33 +577,33 @@ class DataArray(AbstractArray, BaseDataObject):
             return dataset
 
     def __dask_graph__(self):
-        return self._variable.__dask_graph__()
+        return self._to_temp_dataset().__dask_graph__()
 
     def __dask_keys__(self):
-        return self._variable.__dask_keys__()
+        return self._to_temp_dataset().__dask_keys__()
 
     @property
     def __dask_optimize__(self):
-        return self._variable.__dask_optimize__
+        return self._to_temp_dataset().__dask_optimize__
 
     @property
     def __dask_scheduler__(self):
-        return self._variable.__dask_scheduler__
+        return self._to_temp_dataset().__dask_optimize__
 
     def __dask_postcompute__(self):
-        variable_func, variable_args = self._variable.__dask_postcompute__()
-        return self._dask_finalize, (variable_func, variable_args,
-                                     self._coords, self._name)
+        func, args = self._to_temp_dataset().__dask_postcompute__()
+        return self._dask_finalize, (func, args, self.name)
 
     def __dask_postpersist__(self):
-        variable_func, variable_args = self._variable.__dask_postpersist__()
-        return self._dask_finalize, (variable_func, variable_args,
-                                     self._coords, self._name)
+        func, args = self._to_temp_dataset().__dask_postpersist__()
+        return self._dask_finalize, (func, args, self.name)
 
     @staticmethod
-    def _dask_finalize(results, variable_func, variable_args, coords, name):
-        var = variable_func(results, *variable_args)
-        return DataArray(var, coords=coords, name=name)
+    def _dask_finalize(results, func, args, name):
+        ds = func(results, *args)
+        variable = ds._variables.pop(_THIS_ARRAY)
+        coords = ds._variables
+        return DataArray(variable, coords, name=name, fastpath=True)
 
     def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
