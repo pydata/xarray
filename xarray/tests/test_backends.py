@@ -1740,12 +1740,6 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
-
     def test_serialization_platecarree(self):
 
         import rasterio
@@ -1783,12 +1777,6 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
-
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
 
     def test_indexing(self):
 
