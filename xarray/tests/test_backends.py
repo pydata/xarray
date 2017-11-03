@@ -1701,7 +1701,7 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 class TestRasterio(TestCase):
 
-    def test_serialization_utm(self):
+    def test_utm(self):
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1740,7 +1740,7 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
-    def test_serialization_platecarree(self):
+    def test_platecarree(self):
 
         import rasterio
         from rasterio.transform import from_origin
@@ -1839,7 +1839,6 @@ class TestRasterio(TestCase):
                     actual.isel(x=[4, 2]).values
                 with raises_regex(IndexError, err_msg):
                     actual.isel(x=slice(5, 2, -1)).values
-
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)
