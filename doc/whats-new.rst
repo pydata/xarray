@@ -25,6 +25,11 @@ Bug fixes
   of ``.T`` attributes. (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+Testing
+~~~~~~~
+
+- Remove netCDF dependency from rasterio backend tests.
+  By `Matti Eskelinen <https://github.com/maaleske>`_
 
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
