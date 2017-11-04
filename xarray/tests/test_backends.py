@@ -1681,6 +1681,10 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
         # pynio also does not support list-like indexing
         pass
 
+    def test_orthogonal_isel(self):
+        # pynio also does not support list-like indexing
+        pass
+
     @contextlib.contextmanager
     def open(self, path, **kwargs):
         with open_dataset(path, engine='pynio', autoclose=self.autoclose,
