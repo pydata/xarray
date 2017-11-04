@@ -27,6 +27,7 @@ backwards incompatible changes. Highlights include:
 - :py:func:`~xarray.apply_ufunc` facilitates wrapping and parallelizing
   functions written for NumPy arrays.
 - Performance improvements, particularly for dask and :py:func:`open_mfdataset`.
+- Support Dask collection interface
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
