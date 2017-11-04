@@ -1002,9 +1002,6 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             unpickled = pickle.loads(pickle.dumps(ds))
             self.assertDatasetIdentical(unpickled, data)
 
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
-
 
 class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
     autoclose = True
