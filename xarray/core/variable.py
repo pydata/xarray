@@ -31,7 +31,7 @@ except ImportError:
     pass
 
 
-SUPPORT_ARRAY_TYPES = (indexing.NDArrayIndexable, np.ndarray, pd.Series)
+SUPPORT_ARRAY_TYPES = (indexing.NDArrayIndexable, pd.Index) + dask_array_type
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -160,12 +160,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, Variable):
         return data.data
 
-    # add a custom fast-path for dask.array to avoid expensive checks for the
-    # dtype attribute
-    if isinstance(data, dask_array_type):
-        return data
-
-    if isinstance(data, pd.Index):
+    if isinstance(data, SUPPORT_ARRAY_TYPES):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -191,8 +186,7 @@ def as_compatible_data(data, fastpath=False):
             data = np.asarray(data)
 
     # validate whether the data is valid data types
-    if not isinstance(data, SUPPORT_ARRAY_TYPES):
-        data = np.asarray(data)
+    data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':

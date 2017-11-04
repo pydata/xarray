@@ -1721,7 +1721,7 @@ class TestBackendIndexing(TestCase):
         v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(self.d))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
-        # could not doublly wrapping
+        # could not doubly wrapping
         with raises_regex(TypeError, 'NumpyIndexingAdapter only wraps '):
             v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(
                                             NumpyIndexingAdapter(self.d)))

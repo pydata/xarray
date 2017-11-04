@@ -400,7 +400,7 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
 
     def _test_vectorized_indexing(self, vindex_support=True):
-        # Make sure vectorized_indexing works or at leaset raises
+        # Make sure vectorized_indexing works or at least raises
         # NotImplementedError
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -1001,6 +1001,9 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         with open_dataset(fobj, autoclose=self.autoclose) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             self.assertDatasetIdentical(unpickled, data)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
