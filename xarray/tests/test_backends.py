@@ -399,6 +399,14 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             self.assertDatasetIdentical(expected, actual)
 
+    def test_orthogonal_isel(self):
+        # Make sure isel works lazily. GH:issue:1688
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(dim2=in_memory['dim2'] < 3)
+            actual = on_disk.isel(dim2=on_disk['dim2'] < 3)
+            self.assertDatasetIdentical(expected, actual)
+
 
 class CFEncodedDataTest(DatasetIOTestCases):
 
