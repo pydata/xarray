@@ -15,7 +15,9 @@ import pandas as pd
 from xarray import Variable, IndexVariable, Coordinate, Dataset
 from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
-from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
+from xarray.core.indexing import (PandasIndexAdapter, LazilyIndexedArray,
+                                  BasicIndexer, OuterIndexer,
+                                  VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 
@@ -937,6 +939,39 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         vind = Variable(('a', 'b'), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) == indexing.VectorizedIndexer
+
+    def test_indexer_type(self):
+        # GH:issue:1688. Wrong indexer type induces NotImplementedError
+        data = np.random.random((10, 11))
+        v = Variable(['x', 'y'], data)
+
+        def assert_indexer_type(key, object_type):
+            dims, index_tuple, new_order = v._broadcast_indexes(key)
+            assert isinstance(index_tuple, object_type)
+
+        # should return BasicIndexer
+        assert_indexer_type((0, 1), BasicIndexer)
+        assert_indexer_type((0, slice(None, None)), BasicIndexer)
+        assert_indexer_type((Variable([], 3), slice(None, None)), BasicIndexer)
+        assert_indexer_type((Variable([], 3), (Variable([], 6))), BasicIndexer)
+
+        # should return OuterIndexer
+        assert_indexer_type(([0, 1], 1), OuterIndexer)
+        assert_indexer_type(([0, 1], [1, 2]), OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), 1), OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), slice(None, None)),
+                            OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), Variable(('y'), [0, 1])),
+                            OuterIndexer)
+
+        # should return VectorizedIndexer
+        assert_indexer_type((Variable(('y'), [0, 1]), [0, 1]),
+                            VectorizedIndexer)
+        assert_indexer_type((Variable(('z'), [0, 1]), Variable(('z'), [0, 1])),
+                            VectorizedIndexer)
+        assert_indexer_type((Variable(('a', 'b'), [[0, 1], [1, 2]]),
+                             Variable(('a', 'b'), [[0, 1], [1, 2]])),
+                            VectorizedIndexer)
 
     def test_items(self):
         data = np.random.random((10, 11))
