@@ -53,7 +53,6 @@ def test_async(c, s, a, b):
     assert dask.is_dask_collection(z)
     assert dask.is_dask_collection(z.var1)
     assert dask.is_dask_collection(z.var2)
-    # assert not dask.is_dask_collection(z.var3)
     assert len(y.__dask_graph__()) > len(z.__dask_graph__())
 
     assert not futures_of(y)
