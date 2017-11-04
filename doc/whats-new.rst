@@ -25,6 +25,9 @@ Bug fixes
   of ``.T`` attributes. (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- Fix a bug in lazily-indexing netCDF array. (:issue:`1688`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
 
 v0.10.0 rc1 (30 October 2017)
 -----------------------------

@@ -461,9 +461,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 if len(k.dims) > 1:
                     return self._broadcast_indexes_vectorized(key)
                 dims.append(k.dims[0])
-            if not isinstance(k, integer_types):
+            elif not isinstance(k, integer_types):
                 dims.append(d)
-
         if len(set(dims)) == len(dims):
             return self._broadcast_indexes_outer(key)
 
