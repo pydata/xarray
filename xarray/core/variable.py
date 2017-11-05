@@ -31,7 +31,8 @@ except ImportError:
     pass
 
 
-SUPPORT_ARRAY_TYPES = (indexing.NDArrayIndexable, pd.Index) + dask_array_type
+NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
+    indexing.NDArrayIndexable, pd.Index) + dask_array_type
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -160,7 +161,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, Variable):
         return data.data
 
-    if isinstance(data, SUPPORT_ARRAY_TYPES):
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
