@@ -22,12 +22,21 @@ Bug fixes
 ~~~~~~~~~
 
 - Suppress warning in Ipython autocompletion, related to the deprecation
-  of ``.T`` attributes. (:issue:`1675`).
+  of ``.T`` attributes (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
 - Fix a bug in lazily-indexing netCDF array. (:issue:`1688`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- Fix two bugs that were preventing dask arrays from being specified as
+  coordinates in the DataArray constructor (:issue:`1684`).
+  By `Joe Hamman <https://github.com/jhamman>`_
+
+Testing
+~~~~~~~
+
+- Remove netCDF dependency from rasterio backend tests.
+  By `Matti Eskelinen <https://github.com/maaleske>`_
 
 v0.10.0 rc1 (30 October 2017)
 -----------------------------
