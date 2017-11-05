@@ -399,7 +399,7 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             self.assertDatasetIdentical(expected, actual)
 
-    def test_orthogonal_isel(self):
+    def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
@@ -1679,11 +1679,12 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
-        pass
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_orthogonal_indexing()
 
-    def test_orthogonal_isel(self):
-        # pynio also does not support list-like indexing
-        pass
+    def test_isel_dataarray(self):
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_isel_dataarray()
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
