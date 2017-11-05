@@ -94,7 +94,7 @@ def as_variable(obj, name=None):
                             '{}'.format(obj))
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
-    elif getattr(obj, 'name', None) is not None:
+    elif (isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None):
         obj = Variable(obj.name, obj)
     elif name is not None:
         data = as_compatible_data(obj)

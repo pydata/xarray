@@ -348,6 +348,21 @@ class TestDataArray(TestCase):
         actual = DataArray(0)
         self.assertDataArrayIdentical(expected, actual)
 
+    @requires_dask
+    def test_constructor_dask_coords(self):
+        # regression test for GH1684
+        import dask.array as da
+
+        coord = da.arange(8, chunks=(4,))
+        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        actual = DataArray(data, coords={'x': coord, 'y': coord},
+                           dims=['x', 'y'])
+
+        ecoord = np.arange(8)
+        expected = DataArray(data, coords={'x': ecoord, 'y': ecoord},
+                             dims=['x', 'y'])
+        assert_equal(actual, expected)
+
     def test_equals_and_identical(self):
         orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')
 
