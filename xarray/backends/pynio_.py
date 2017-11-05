@@ -29,16 +29,11 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        if isinstance(key, indexing.VectorizedIndexer):
+        if isinstance(key, (indexing.VectorizedIndexer,
+                            indexing.OuerIndexer)):
             raise NotImplementedError(
-                'Nio backend does not support vectorized indexing. Load your '
-                'data first with .load() or .compute(). Given {}'.format(key))
-        # Nio only supports slice indexing, not an array
-        if (isinstance(key, indexing.OuterIndexer) and
-                not all(isinstance(k, (integer_types, slice)) for k in key)):
-            raise NotImplementedError(
-                'Nio backend does not support indexing with array keys. Load '
-                'your data first with .load() or .compute(). '
+                'Nio backend does not support vectorized / outer indexing. '
+                'Load your data first with .load() or .compute(). '
                 'Given {}'.format(key))
         key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
