@@ -22,8 +22,12 @@ Bug fixes
 ~~~~~~~~~
 
 - Suppress warning in Ipython autocompletion, related to the deprecation
-  of ``.T`` attributes. (:issue:`1675`).
+  of ``.T`` attributes (:issue:`1675`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
+- Fix two bugs that were preventing dask arrays from being specified as
+  coordinates in the DataArray constructor (:issue:`1684`).
+  By `Joe Hamman <https://github.com/jhamman>`_
 
 Testing
 ~~~~~~~
