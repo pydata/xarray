@@ -22,7 +22,8 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
+from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
+                                  dask_array_type)
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -31,7 +32,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -393,11 +394,34 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
+
+    def _test_vectorized_indexing(self, vindex_support=True):
+        # Make sure vectorized_indexing works or at least raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            if vindex_support:
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+            else:
+                with raises_regex(NotImplementedError, 'Vectorized indexing '):
+                    actual = on_disk.isel(**indexers)
+
+    def test_vectorized_indexing(self):
+        # This test should be overwritten if vindex is supported
+        self._test_vectorized_indexing(vindex_support=False)
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
@@ -406,6 +430,39 @@ class DatasetIOTestCases(object):
             expected = in_memory.isel(dim2=in_memory['dim2'] < 3)
             actual = on_disk.isel(dim2=on_disk['dim2'] < 3)
             self.assertDatasetIdentical(expected, actual)
+
+    def validate_array_type(self, ds):
+        # Make sure the array type is an NDArrayIndexable or np.ndarray,
+        # pd.Index, dask_array_type
+        def find_and_validate_array(obj):
+            if hasattr(obj, 'array'):
+                if isinstance(obj.array, indexing.NDArrayIndexable):
+                    find_and_validate_array(obj.array)
+                else:
+                    if isinstance(obj.array, np.ndarray):
+                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                    elif isinstance(obj.array, dask_array_type):
+                        assert isinstance(obj, indexing.DaskIndexingAdapter)
+                    elif isinstance(obj.array, pd.Index):
+                        assert isinstance(obj, indexing.PandasIndexAdapter)
+        for k, v in ds.variables.items():
+            find_and_validate_array(v._data)
+
+    def test_array_type_after_indexing(self):
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
+                        'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -630,6 +687,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.save(data[['var2', 'var9']], tmp_file, mode='a')
             with self.open(tmp_file) as actual:
                 self.assertDatasetIdentical(data, actual)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=False)
 
 
 _counter = itertools.count()
@@ -955,6 +1015,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -1169,6 +1232,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_orthogonal_indexing(self):
         # doesn't work for h5py (without using dask as an intermediate layer)
+        pass
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
         pass
 
     def test_complex(self):
@@ -1531,7 +1598,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
-
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1616,6 +1682,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
 
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
 
 class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
@@ -1685,6 +1754,10 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_isel_dataarray(self):
         with raises_regex(NotImplementedError, 'Nio backend does not '):
             super(TestPyNio, self).test_isel_dataarray()
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
+        pass
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):

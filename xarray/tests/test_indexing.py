@@ -222,7 +222,7 @@ class TestMemoryCachedArray(TestCase):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         self.assertArrayEqual(wrapped, np.arange(10))
-        self.assertIsInstance(wrapped.array, np.ndarray)
+        self.assertIsInstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
         original = indexing.LazilyIndexedArray(np.arange(10))
@@ -230,7 +230,7 @@ class TestMemoryCachedArray(TestCase):
         child = wrapped[:5]
         self.assertIsInstance(child, indexing.MemoryCachedArray)
         self.assertArrayEqual(child, np.arange(5))
-        self.assertIsInstance(child.array, np.ndarray)
+        self.assertIsInstance(child.array, indexing.NumpyIndexingAdapter)
         self.assertIsInstance(wrapped.array, indexing.LazilyIndexedArray)
 
     def test_setitem(self):

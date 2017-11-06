@@ -28,6 +28,14 @@ Bug fixes
 - Fix a bug in lazily-indexing netCDF array. (:issue:`1688`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
+  Also made some internal cleanups around array wrappers (:issue:`1429`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
+- (Internal bug) MemoryCachedArray now always wraps ``np.ndarray`` by
+  ``NumpyIndexingAdapter``. (:issue:`1694`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
 - Fix two bugs that were preventing dask arrays from being specified as
   coordinates in the DataArray constructor (:issue:`1684`).
   By `Joe Hamman <https://github.com/jhamman>`_
