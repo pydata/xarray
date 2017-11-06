@@ -326,7 +326,7 @@ class LazilyIndexedArray(utils.NDArrayMixin):
         else:
             if key is None:
                 key = (slice(None),) * array.ndim
-                key = OuterIndexer(key)
+                key = BasicIndexer(key)
             self.array = array
             self.key = key
 
@@ -343,6 +343,8 @@ class LazilyIndexedArray(utils.NDArrayMixin):
                 key.append(k)
             else:
                 key.append(_index_indexer_1d(k, next(new_key), size))
+        if all(isinstance(k, integer_types + (slice, )) for k in key):
+            return BasicIndexer(key)
         return OuterIndexer(key)
 
     @property
@@ -506,8 +508,8 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
     """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
-        """ This adapter is usually called in Variable.__getitem__ with
-        array=Variable._broadcast_indexes
+        """ This adapter is created in Variable.__getitem__ in
+        Variable._broadcast_indexes.
         """
         self.array = array
 
@@ -516,7 +518,8 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
             # workaround for uint64 indexer (GH:1406)
             # TODO remove here after next dask release (0.15.3)
             return tuple([k.astype(int) if isinstance(k, np.ndarray)
-                          else k for k in key])
+                          else int(k) if isinstance(k, np.int) else k
+                          for k in key])
 
         if isinstance(key, BasicIndexer):
             return self.array[to_int_tuple(key)]

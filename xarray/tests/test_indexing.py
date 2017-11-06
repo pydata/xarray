@@ -11,6 +11,7 @@ import pandas as pd
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from xarray.core import nputils
+from xarray.core.pycompat import integer_types
 from . import TestCase, ReturnItem, raises_regex
 
 
@@ -169,6 +170,16 @@ class TestLazyArray(TestCase):
                         self.assertArrayEqual(expected, actual)
                         assert isinstance(actual._data,
                                           indexing.LazilyIndexedArray)
+
+                        # make sure actual.key is appropriate type
+                        if all(isinstance(k, integer_types + (slice, ))
+                               for k in v_lazy._data.key):
+                            assert isinstance(v_lazy._data.key,
+                                              indexing.BasicIndexer)
+                        else:
+                            assert isinstance(v_lazy._data.key,
+                                              indexing.OuterIndexer)
+
         # test sequentially applied indexers
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
