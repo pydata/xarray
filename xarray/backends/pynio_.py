@@ -15,7 +15,8 @@ from ..core.pycompat import integer_types
 from .common import AbstractDataStore, DataStorePickleMixin
 
 
-class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                      indexing.NDArrayIndexable):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore

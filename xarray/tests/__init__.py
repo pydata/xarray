@@ -14,6 +14,7 @@ import pytest
 
 from xarray.core import utils
 from xarray.core.pycompat import PY3
+from xarray.core.indexing import NDArrayIndexable
 from xarray.testing import assert_equal, assert_identical, assert_allclose
 from xarray.plot.utils import import_seaborn
 
@@ -198,7 +199,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(utils.NDArrayMixin):
+class InaccessibleArray(utils.NDArrayMixin, NDArrayIndexable):
 
     def __init__(self, array):
         self.array = array

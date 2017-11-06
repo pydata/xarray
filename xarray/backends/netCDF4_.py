@@ -27,7 +27,8 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
+class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin,
+                       indexing.NDArrayIndexable):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -50,6 +51,11 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
+
         key = indexing.to_tuple(key)
 
         if self.datastore.is_remote:  # pragma: no cover
