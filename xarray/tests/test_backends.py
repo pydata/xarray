@@ -31,7 +31,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -393,11 +393,34 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
+
+    def _test_vectorized_indexing(self, vindex_support=True):
+        # Make sure vectorized_indexing works or at least raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            if vindex_support:
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+            else:
+                with raises_regex(NotImplementedError, 'Vectorized indexing '):
+                    actual = on_disk.isel(**indexers)
+
+    def test_vectorized_indexing(self):
+        # This test should be overwritten if vindex is supported
+        self._test_vectorized_indexing(vindex_support=False)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -622,6 +645,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.save(data[['var2', 'var9']], tmp_file, mode='a')
             with self.open(tmp_file) as actual:
                 self.assertDatasetIdentical(data, actual)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=False)
 
 
 _counter = itertools.count()
@@ -946,6 +972,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
@@ -1523,7 +1552,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
-
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1607,6 +1635,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class DaskTestAutocloseTrue(DaskTest):

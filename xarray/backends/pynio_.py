@@ -14,7 +14,8 @@ from ..core import indexing
 from .common import AbstractDataStore, DataStorePickleMixin
 
 
-class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                      indexing.NDArrayIndexable):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -28,6 +29,10 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
         key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()

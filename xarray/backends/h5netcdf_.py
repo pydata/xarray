@@ -15,6 +15,10 @@ from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+                 'Vectorized indexing for {} is not implemented. Load your '
+                 'data first with .load() or .compute().'.format(type(self)))
         key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
