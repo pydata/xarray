@@ -27,7 +27,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
             arr1, arr2, rtol=rtol, atol=atol)
 
 
-def assert_equal(a, b):
+def assert_equal(a, b, name=''):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -42,6 +42,8 @@ def assert_equal(a, b):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
+    name : str, optional
+        Descriptive name to be shown in test failures.
 
     See also
     --------
@@ -52,13 +54,14 @@ def assert_equal(a, b):
     __tracebackhide__ = True  # noqa: F841
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
-        assert a.equals(b), '{}\n{}'.format(a, b)
+        assert a.equals(b), \
+               '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
 
 
-def assert_identical(a, b):
+def assert_identical(a, b, name=''):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -70,6 +73,8 @@ def assert_identical(a, b):
         The first object to compare.
     b : xarray.Dataset, xarray.DataArray or xarray.Variable
         The second object to compare.
+    name : str, optional
+        Descriptive name to be shown in test failures.
 
     See also
     --------
@@ -80,15 +85,16 @@ def assert_identical(a, b):
     assert type(a) == type(b)
     if isinstance(a, xr.DataArray):
         assert a.name == b.name
-        assert_identical(a._to_temp_dataset(), b._to_temp_dataset())
+        assert_identical(a._to_temp_dataset(), b._to_temp_dataset(), name=name)
     elif isinstance(a, (xr.Dataset, xr.Variable)):
-        assert a.identical(b), '{}\n{}'.format(a, b)
+        assert a.identical(b), \
+               '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
 
 
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
+def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, name=''):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal up to desired
@@ -108,6 +114,8 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         Whether byte dtypes should be decoded to strings as UTF-8 or not.
         This is useful for testing serialization methods on Python 3 that
         return saved strings as bytes.
+    name : str, optional
+        Descriptive name to be shown in test failures.
 
     See also
     --------
@@ -120,7 +128,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
-        assert allclose, '{}\n{}'.format(a.values, b.values)
+        assert allclose, '{}:{}\n{}'.format(name, a.values, b.values)
     elif isinstance(a, xr.DataArray):
         assert_allclose(a.variable, b.variable, **kwargs)
         assert set(a.coords) == set(b.coords)
@@ -129,13 +137,15 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
             # DataArray, so call into _data_allclose_or_equiv directly
             allclose = _data_allclose_or_equiv(a.coords[v].values,
                                                b.coords[v].values, **kwargs)
-            assert allclose, 'coord {}:{}\n{}'.format(a.coords[v].name,
-                                                      a.coords[v].values,
-                                                      b.coords[v].values)
+            assert allclose, '{}:{}\n{}'.format(
+                                     '{} in {}'.format(v, name) if name else v,
+                                     a.coords[v].values,
+                                     b.coords[v].values)
     elif isinstance(a, xr.Dataset):
         assert set(a.data_vars) == set(b.data_vars)
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
+            kwargs['name'] = '{} in {}'.format(k, name) if name else k
             assert_allclose(a[k], b[k], **kwargs)
 
     else:
