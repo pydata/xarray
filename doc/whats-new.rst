@@ -28,8 +28,10 @@ Bug fixes
 Testing
 ~~~~~~~
 
-- Add coordinate names to failure printout for
-  :py:func:`xarray.testing.assert_allclose`.
+- Add name parameter and extra formatting to
+  :py:func:`xarray.testing.assert_allclose`,
+  :py:func:`xarray.testing.assert_identical` and
+  :py:func:`xarray.testing.assert_equal` for nicer failure printouts.
   By `Matti Eskelinen <https://github.com/maaleske>`_
 
 v0.10.0 rc1 (30 October 2017)
