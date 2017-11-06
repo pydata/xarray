@@ -19,7 +19,7 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
+from .indexing import (PandasIndexAdapter, as_indexable, BasicIndexer,
                        OuterIndexer, VectorizedIndexer)
 from .utils import OrderedSet
 
@@ -31,6 +31,8 @@ except ImportError:
     pass
 
 
+NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
+    indexing.NDArrayIndexable, pd.Index) + dask_array_type
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -159,12 +161,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, Variable):
         return data.data
 
-    # add a custom fast-path for dask.array to avoid expensive checks for the
-    # dtype attribute
-    if isinstance(data, dask_array_type):
-        return data
-
-    if isinstance(data, pd.Index):
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -177,14 +174,6 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not isinstance(data.dtype, np.dtype) or
-            not hasattr(data, 'shape') or
-            isinstance(data, (np.string_, np.unicode_,
-                              np.datetime64, np.timedelta64))):
-        # data must be ndarray-like
-        # don't allow non-numpy dtypes (e.g., categories)
-        data = np.asarray(data)
-
     # we don't want nested self-described arrays
     data = getattr(data, 'values', data)
 
@@ -196,6 +185,9 @@ def as_compatible_data(data, fastpath=False):
             data[mask] = fill_value
         else:
             data = np.asarray(data)
+
+    # validate whether the data is valid data types
+    data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
@@ -317,7 +309,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _indexable_data(self):
-        return xarray_indexable(self._data)
+        return as_indexable(self._data)
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a

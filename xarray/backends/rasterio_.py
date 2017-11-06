@@ -1,6 +1,5 @@
 import os
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import numpy as np
 
 from .. import DataArray
@@ -18,7 +17,8 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'first.')
 
 
-class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                           indexing.NDArrayIndexable):
     """A wrapper around rasterio dataset objects"""
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds
@@ -38,8 +38,11 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self._shape
 
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
         key = indexing.to_tuple(key)
-
         # bands cannot be windowed but they can be listed
         band_key = key[0]
         n_bands = self.shape[0]
