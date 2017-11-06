@@ -577,6 +577,9 @@ class VariableSubclassTestCases(object):
         v_new = v[np.array([0], dtype="uint64")]
         self.assertArrayEqual(v_new, v_data[[0], :])
 
+        v_new = v[np.uint64(0)]
+        self.assertArrayEqual(v_new, v_data[0, :])
+
     def test_getitem_0d_array(self):
         # make sure 0d-np.array can be used as an indexer
         v = self.cls(['x'], [0, 1, 2])

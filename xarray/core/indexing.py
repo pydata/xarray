@@ -518,7 +518,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin):
             # workaround for uint64 indexer (GH:1406)
             # TODO remove here after next dask release (0.15.3)
             return tuple([k.astype(int) if isinstance(k, np.ndarray)
-                          else int(k) if isinstance(k, np.int) else k
+                          else int(k) if isinstance(k, np.integer) else k
                           for k in key])
 
         if isinstance(key, BasicIndexer):
