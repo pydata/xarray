@@ -55,7 +55,7 @@ def assert_equal(a, b, name=''):
     assert type(a) == type(b)
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), \
-               '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
+            '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
@@ -88,7 +88,7 @@ def assert_identical(a, b, name=''):
         assert_identical(a._to_temp_dataset(), b._to_temp_dataset(), name=name)
     elif isinstance(a, (xr.Dataset, xr.Variable)):
         assert a.identical(b), \
-               '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
+            '{}:{}\n{}'.format(name, a, b) if name else '{}\n{}'.format(a, b)
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
