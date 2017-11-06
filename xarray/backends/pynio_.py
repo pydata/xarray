@@ -30,7 +30,7 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
 
     def __getitem__(self, key):
         if isinstance(key, (indexing.VectorizedIndexer,
-                            indexing.OuerIndexer)):
+                            indexing.OuterIndexer)):
             raise NotImplementedError(
                 'Nio backend does not support vectorized / outer indexing. '
                 'Load your data first with .load() or .compute(). '
