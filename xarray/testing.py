@@ -130,7 +130,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, name=''):
         allclose = _data_allclose_or_equiv(a.values, b.values, **kwargs)
         assert allclose, '{}:{}\n{}'.format(name, a.values, b.values)
     elif isinstance(a, xr.DataArray):
-        assert_allclose(a.variable, b.variable, **kwargs)
+        assert_allclose(a.variable, b.variable, name=name, **kwargs)
         assert set(a.coords) == set(b.coords)
         for v in a.coords.variables:
             # can't recurse with this function as coord is sometimes a
