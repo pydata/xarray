@@ -22,7 +22,8 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
+from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
+                                  dask_array_type)
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -421,6 +422,51 @@ class DatasetIOTestCases(object):
     def test_vectorized_indexing(self):
         # This test should be overwritten if vindex is supported
         self._test_vectorized_indexing(vindex_support=False)
+
+    def test_isel_dataarray(self):
+        # Make sure isel works lazily. GH:issue:1688
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(dim2=in_memory['dim2'] < 3)
+            actual = on_disk.isel(dim2=on_disk['dim2'] < 3)
+            self.assertDatasetIdentical(expected, actual)
+
+    def validate_array_type(self, ds):
+        # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
+        def find_and_validate_array(obj):
+            # recursively called function. obj: array or array wrapper.
+            if hasattr(obj, 'array'):
+                if isinstance(obj.array, indexing.NDArrayIndexable):
+                    find_and_validate_array(obj.array)
+                else:
+                    if isinstance(obj.array, np.ndarray):
+                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                    elif isinstance(obj.array, dask_array_type):
+                        assert isinstance(obj, indexing.DaskIndexingAdapter)
+                    elif isinstance(obj.array, pd.Index):
+                        assert isinstance(obj, indexing.PandasIndexAdapter)
+                    else:
+                        raise TypeError('{} is wrapped by {}'.format(
+                                            type(obj.array), type(obj)))
+
+        for k, v in ds.variables.items():
+            find_and_validate_array(v._data)
+
+    def test_array_type_after_indexing(self):
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
+                        'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -1192,6 +1238,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # doesn't work for h5py (without using dask as an intermediate layer)
         pass
 
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
+        pass
+
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -1701,6 +1751,15 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
         pass
 
     def test_orthogonal_indexing(self):
+        # pynio also does not support list-like indexing
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_orthogonal_indexing()
+
+    def test_isel_dataarray(self):
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_isel_dataarray()
+
+    def test_array_type_after_indexing(self):
         # pynio also does not support list-like indexing
         pass
 
