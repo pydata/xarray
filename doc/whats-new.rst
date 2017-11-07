@@ -15,8 +15,15 @@ What's New
 
 .. _whats-new.0.10.0:
 
+
+v0.10.0 (unreleased)
+--------------------
+
 Changes since v0.10.0 rc1 (Unreleased)
 --------------------------------------
+
+- Experimental support for the Dask collection interface (:issue:`1674`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
 Bug fixes
 ~~~~~~~~~

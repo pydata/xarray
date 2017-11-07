@@ -576,6 +576,35 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
+    def __dask_graph__(self):
+        return self._to_temp_dataset().__dask_graph__()
+
+    def __dask_keys__(self):
+        return self._to_temp_dataset().__dask_keys__()
+
+    @property
+    def __dask_optimize__(self):
+        return self._to_temp_dataset().__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        return self._to_temp_dataset().__dask_optimize__
+
+    def __dask_postcompute__(self):
+        func, args = self._to_temp_dataset().__dask_postcompute__()
+        return self._dask_finalize, (func, args, self.name)
+
+    def __dask_postpersist__(self):
+        func, args = self._to_temp_dataset().__dask_postpersist__()
+        return self._dask_finalize, (func, args, self.name)
+
+    @staticmethod
+    def _dask_finalize(results, func, args, name):
+        ds = func(results, *args)
+        variable = ds._variables.pop(_THIS_ARRAY)
+        coords = ds._variables
+        return DataArray(variable, coords, name=name, fastpath=True)
+
     def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
