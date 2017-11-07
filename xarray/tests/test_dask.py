@@ -206,6 +206,34 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_compute(self):
+        u = self.eager_var
+        v = self.lazy_var
+
+        assert dask.is_dask_collection(v)
+        (v2,) = dask.compute(v + 1)
+        assert not dask.is_dask_collection(v2)
+
+        assert ((u + 1).data == v2.data).all()
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_persist(self):
+        u = self.eager_var
+        v = self.lazy_var + 1
+
+        (v2,) = dask.persist(v)
+        assert v is not v2
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert v2.__dask_keys__() == v.__dask_keys__()
+        assert dask.is_dask_collection(v)
+        assert dask.is_dask_collection(v2)
+
+        self.assertLazyAndAllClose(u + 1, v)
+        self.assertLazyAndAllClose(u + 1, v2)
+
 
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
@@ -250,6 +278,34 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_compute(self):
+        u = self.eager_array
+        v = self.lazy_array
+
+        assert dask.is_dask_collection(v)
+        (v2,) = dask.compute(v + 1)
+        assert not dask.is_dask_collection(v2)
+
+        assert ((u + 1).data == v2.data).all()
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_persist(self):
+        u = self.eager_array
+        v = self.lazy_array + 1
+
+        (v2,) = dask.persist(v)
+        assert v is not v2
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert v2.__dask_keys__() == v.__dask_keys__()
+        assert dask.is_dask_collection(v)
+        assert dask.is_dask_collection(v2)
+
+        self.assertLazyAndAllClose(u + 1, v)
+        self.assertLazyAndAllClose(u + 1, v2)
 
     def test_concat_loads_variables(self):
         # Test that concat() computes not-in-memory variables at most once
@@ -401,28 +457,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         with dask.set_options(get=counting_get):
             ds.load()
         self.assertEqual(count[0], 1)
-
-    def test_persist_Dataset(self):
-        ds = Dataset({'foo': ('x', range(5)),
-                      'bar': ('x', range(5))}).chunk()
-        ds = ds + 1
-        n = len(ds.foo.data.dask)
-
-        ds2 = ds.persist()
-
-        assert len(ds2.foo.data.dask) == 1
-        assert len(ds.foo.data.dask) == n  # doesn't mutate in place
-
-    def test_persist_DataArray(self):
-        x = da.arange(10, chunks=(5,))
-        y = DataArray(x)
-        z = y + 1
-        n = len(z.data.dask)
-
-        zz = z.persist()
-
-        assert len(z.data.dask) == n
-        assert len(zz.data.dask) == zz.data.npartitions
 
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
@@ -737,3 +771,62 @@ def build_dask_array(name):
     return dask.array.Array(
         dask={(name, 0): (kernel, name)}, name=name,
         chunks=((1,),), dtype=np.int64)
+
+
+# test both the perist method and the dask.persist function
+# the dask.persist function requires a new version of dask
+@pytest.mark.parametrize('persist', [
+    lambda x: x.persist(),
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                       lambda x: dask.persist(x)[0],
+                       reason='Need Dask 0.16')
+])
+def test_persist_Dataset(persist):
+    ds = Dataset({'foo': ('x', range(5)),
+                  'bar': ('x', range(5))}).chunk()
+    ds = ds + 1
+    n = len(ds.foo.data.dask)
+
+    ds2 = persist(ds)
+
+    assert len(ds2.foo.data.dask) == 1
+    assert len(ds.foo.data.dask) == n  # doesn't mutate in place
+
+
+@pytest.mark.parametrize('persist', [
+    lambda x: x.persist(),
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                       lambda x: dask.persist(x)[0],
+                       reason='Need Dask 0.16')
+])
+def test_persist_DataArray(persist):
+    x = da.arange(10, chunks=(5,))
+    y = DataArray(x)
+    z = y + 1
+    n = len(z.data.dask)
+
+    zz = persist(z)
+
+    assert len(z.data.dask) == n
+    assert len(zz.data.dask) == zz.data.npartitions
+
+
+@pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                    reason='Need dask 0.16 for new interface')
+def test_dataarray_with_dask_coords():
+    import toolz
+    x = xr.Variable('x', da.arange(8, chunks=(4,)))
+    y = xr.Variable('y', da.arange(8, chunks=(4,)) * 2)
+    data = da.random.random((8, 8), chunks=(4, 4)) + 1
+    array = xr.DataArray(data, dims=['x', 'y'])
+    array.coords['xx'] = x
+    array.coords['yy'] = y
+
+    assert dict(array.__dask_graph__()) == toolz.merge(data.__dask_graph__(),
+                                                       x.__dask_graph__(),
+                                                       y.__dask_graph__())
+
+    (array2,) = dask.compute(array)
+    assert not dask.is_dask_collection(array2)
+
+    assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())

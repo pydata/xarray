@@ -355,6 +355,41 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         new = self.copy(deep=False)
         return new.load(**kwargs)
 
+    def __dask_graph__(self):
+        if isinstance(self._data, dask_array_type):
+            return self._data.__dask_graph__()
+        else:
+            return None
+
+    def __dask_keys__(self):
+        return self._data.__dask_keys__()
+
+    @property
+    def __dask_optimize__(self):
+        return self._data.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        return self._data.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        array_func, array_args = self._data.__dask_postcompute__()
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
+
+    def __dask_postpersist__(self):
+        array_func, array_args = self._data.__dask_postpersist__()
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
+
+    @staticmethod
+    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
+        if isinstance(results, dict):  # persist case
+            name = array_args[0]
+            results = {k: v for k, v in results.items() if k[0] == name}  # cull
+        data = array_func(results, *array_args)
+        return Variable(dims, data, attrs=attrs, encoding=encoding)
+
     @property
     def values(self):
         """The variable's data as a numpy.ndarray"""
