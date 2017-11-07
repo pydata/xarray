@@ -322,7 +322,7 @@ class LazilyIndexedArray(utils.NDArrayMixin, NDArrayIndexable):
         """
         # We need to avoid doubly wrapping.
         if isinstance(array, type(self)):
-            self.array = array.array
+            self.array = as_indexable(array.array)
             self.key = array.key
             if key is not None:
                 self.key = self._updated_key(key)
@@ -330,8 +330,8 @@ class LazilyIndexedArray(utils.NDArrayMixin, NDArrayIndexable):
         else:
             if key is None:
                 key = (slice(None),) * array.ndim
-                key = OuterIndexer(key)
-            self.array = array
+                key = BasicIndexer(key)
+            self.array = as_indexable(array)
             self.key = key
 
     def _updated_key(self, new_key):
@@ -347,6 +347,8 @@ class LazilyIndexedArray(utils.NDArrayMixin, NDArrayIndexable):
                 key.append(k)
             else:
                 key.append(_index_indexer_1d(k, next(new_key), size))
+        if all(isinstance(k, integer_types + (slice, )) for k in key):
+            return BasicIndexer(key)
         return OuterIndexer(key)
 
     @property
@@ -390,7 +392,7 @@ class CopyOnWriteArray(utils.NDArrayMixin, NDArrayIndexable):
 
     def _ensure_copied(self):
         if not self._copied:
-            self.array = np.array(self.array)
+            self.array = as_indexable(np.array(self.array))
             self._copied = True
 
     def __array__(self, dtype=None):
@@ -409,8 +411,8 @@ class MemoryCachedArray(utils.NDArrayMixin, NDArrayIndexable):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
     def _ensure_cached(self):
-        if not isinstance(self.array, np.ndarray):
-            self.array = np.asarray(self.array)
+        if not isinstance(self.array, NumpyIndexingAdapter):
+            self.array = NumpyIndexingAdapter(np.asarray(self.array))
 
     def __array__(self, dtype=None):
         self._ensure_cached()
@@ -521,8 +523,8 @@ class DaskIndexingAdapter(utils.NDArrayMixin, NDArrayIndexable):
     """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
-        """ This adapter is usually called in Variable.__getitem__ with
-        array=Variable._broadcast_indexes
+        """ This adapter is created in Variable.__getitem__ in
+        Variable._broadcast_indexes.
         """
         self.array = array
 
@@ -531,7 +533,8 @@ class DaskIndexingAdapter(utils.NDArrayMixin, NDArrayIndexable):
             # workaround for uint64 indexer (GH:1406)
             # TODO remove here after next dask release (0.15.3)
             return tuple([k.astype(int) if isinstance(k, np.ndarray)
-                          else k for k in key])
+                          else int(k) if isinstance(k, np.integer) else k
+                          for k in key])
 
         if isinstance(key, BasicIndexer):
             return self.array[to_int_tuple(key)]

@@ -10,6 +10,7 @@ from .. import Variable
 from ..core.utils import (FrozenOrderedDict, Frozen,
                           NdimSizeLenMixin, DunderArrayMixin)
 from ..core import indexing
+from ..core.pycompat import integer_types
 
 from .common import AbstractDataStore, DataStorePickleMixin
 
@@ -29,10 +30,12 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        if isinstance(key, indexing.VectorizedIndexer):
+        if isinstance(key, (indexing.VectorizedIndexer,
+                            indexing.OuterIndexer)):
             raise NotImplementedError(
-             'Vectorized indexing for {} is not implemented. Load your '
-             'data first with .load() or .compute().'.format(type(self)))
+                'Nio backend does not support vectorized / outer indexing. '
+                'Load your data first with .load() or .compute(). '
+                'Given {}'.format(key))
         key = indexing.to_tuple(key)
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
