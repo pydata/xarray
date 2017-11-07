@@ -432,8 +432,8 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def validate_array_type(self, ds):
-        # Make sure the array type is an NDArrayIndexable or np.ndarray,
-        # pd.Index, dask_array_type
+        # Make sure that only NDArrayIndexable stores a bare np.ndarray.
+        # Same tests for pd.Index, dask_array_type
         def find_and_validate_array(obj):
             if hasattr(obj, 'array'):
                 if isinstance(obj.array, indexing.NDArrayIndexable):
