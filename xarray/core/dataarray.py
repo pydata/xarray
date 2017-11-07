@@ -1214,6 +1214,9 @@ class DataArray(AbstractArray, BaseDataObject):
         out = ops.fillna(self, value)
         return out
 
+    def ffill(self, dim, limit=None):
+        return ops.ffill(self, dim, limit)
+
     def combine_first(self, other):
         """Combine two DataArray objects, with union of coordinates.
 

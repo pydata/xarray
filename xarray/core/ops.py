@@ -153,6 +153,22 @@ def fillna(data, other, join="left", dataset_join="left"):
                        dataset_fill_value=np.nan,
                        keep_attrs=True)
 
+def ffill(data, dim, limit=None):
+    axis_num = data.get_axis_num(dim)
+
+    if not has_bottleneck:
+        raise ImportError('ffill requires bottleneck to be installed')
+
+    data = data.copy()
+
+    if limit is None:
+        # bottleneck raises an error if you pass `None`
+        data.values = bn.push(data.values, axis=axis_num)
+    else:
+        data.values = bn.push(data.values, axis=axis_num, n=limit)
+
+    return data
+
 
 def where_method(self, cond, other=dtypes.NA):
     """Return elements from `self` or `other` depending on `cond`.
