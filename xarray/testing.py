@@ -27,7 +27,7 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
             arr1, arr2, rtol=rtol, atol=atol)
 
 
-def assert_equal(a, b, name=''):
+def assert_equal(a, b, name=None):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
 
@@ -61,7 +61,7 @@ def assert_equal(a, b, name=''):
                         .format(type(a)))
 
 
-def assert_identical(a, b, name=''):
+def assert_identical(a, b, name=None):
     """Like :py:func:`xarray.testing.assert_equal`, but also matches the
     objects' names and attributes.
 
@@ -94,7 +94,7 @@ def assert_identical(a, b, name=''):
                         .format(type(a)))
 
 
-def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, name=''):
+def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True, name=None):
     """Like :py:func:`numpy.testing.assert_allclose`, but for xarray objects.
 
     Raises an AssertionError if two objects are not equal up to desired
