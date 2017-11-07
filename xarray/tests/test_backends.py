@@ -31,7 +31,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -393,11 +393,34 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
+
+    def _test_vectorized_indexing(self, vindex_support=True):
+        # Make sure vectorized_indexing works or at least raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            if vindex_support:
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+            else:
+                with raises_regex(NotImplementedError, 'Vectorized indexing '):
+                    actual = on_disk.isel(**indexers)
+
+    def test_vectorized_indexing(self):
+        # This test should be overwritten if vindex is supported
+        self._test_vectorized_indexing(vindex_support=False)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -622,6 +645,9 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.save(data[['var2', 'var9']], tmp_file, mode='a')
             with self.open(tmp_file) as actual:
                 self.assertDatasetIdentical(data, actual)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=False)
 
 
 _counter = itertools.count()
@@ -946,6 +972,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
@@ -1523,7 +1552,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
-
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1607,6 +1635,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class DaskTestAutocloseTrue(DaskTest):
@@ -1701,7 +1732,35 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 class TestRasterio(TestCase):
 
-    def test_serialization_utm(self):
+    @requires_scipy_or_netCDF4
+    def test_serialization(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in utm proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Write it to a netcdf and read again (roundtrip)
+            with xr.open_rasterio(tmp_file) as rioda:
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
+
+    def test_utm(self):
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1740,13 +1799,7 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
-
-    def test_serialization_platecarree(self):
+    def test_platecarree(self):
 
         import rasterio
         from rasterio.transform import from_origin
@@ -1783,12 +1836,6 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
-
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
 
     def test_indexing(self):
 
@@ -1851,7 +1898,6 @@ class TestRasterio(TestCase):
                     actual.isel(x=[4, 2]).values
                 with raises_regex(IndexError, err_msg):
                     actual.isel(x=slice(5, 2, -1)).values
-
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)

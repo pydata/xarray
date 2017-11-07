@@ -9,8 +9,6 @@ xarray: N-D labeled arrays and datasets
    :target: https://coveralls.io/r/pydata/xarray
 .. image:: https://img.shields.io/pypi/v/xarray.svg
    :target: https://pypi.python.org/pypi/xarray/
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-   :target: https://gitter.im/pydata/xarray
 .. image:: https://zenodo.org/badge/13221727.svg
   :target: https://zenodo.org/badge/latestdoi/13221727
 
@@ -87,14 +85,13 @@ The official documentation is hosted on ReadTheDocs at http://xarray.pydata.org/
 Get in touch
 ------------
 
-- Ask usage questions on `StackOverflow`_.
+- Ask usage questions ("How do I?") on `StackOverflow`_.
 - Report bugs, suggest features or view the source code `on GitHub`_.
-- For less well defined questions or ideas, use the `mailing list`_.
-- You can also try our chatroom `on Gitter`_.
+- For less well defined questions or ideas, or to announce other projects of
+  interest to xarray users, use the `mailing list`_.
 
 .. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
-.. _on Gitter: https://gitter.im/pydata/xarray
 .. _on GitHub: http://github.com/pydata/xarray
 
 History
@@ -126,7 +123,7 @@ limitations under the License.
 
 xarray bundles portions of pandas, NumPy and Seaborn, all of which are available
 under a "3-clause BSD" license:
-- pandas: setup.py
+- pandas: setup.py, xarray/util/print_versions.py
 - NumPy: xarray/core/npcompat.py
 - Seaborn: _determine_cmap_params in xarray/core/plot/utils.py
 

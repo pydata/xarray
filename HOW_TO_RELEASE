@@ -18,7 +18,6 @@ Time required: about an hour.
       python setup.py bdist_wheel sdist
  8. Use twine to register and upload the release on pypi. Be careful, you can't
     take this back!
-      twine register dist/xarray-0.X.Y-py2.py3-none-any.whl
       twine upload dist/xarray-0.X.Y*
     You will need to be listed as a package owner at
     https://pypi.python.org/pypi/xarray for this to work.

@@ -581,6 +581,9 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
 
+
+class TestToDaskDataFrame(TestCase):
+
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
         x = da.from_array(np.random.randn(10), chunks=4)
@@ -629,9 +632,21 @@ class TestDataArrayAndDataset(DaskTestCase):
                                 index=exp_index)
         # so for now, reset the index
         expected = expected.reset_index(drop=False)
-
         actual = ds.to_dask_dataframe(set_index=False)
 
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    @pytest.mark.xfail(raises=NotImplementedError)
+    def test_to_dask_dataframe_2D_set_index(self):
+        # This will fail until dask implements MultiIndex support
+        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['x'] = ('x', np.array([0, 1], np.int64))
+        ds['y'] = ('y', list('abc'))
+
+        expected = ds.compute().to_dataframe()
+        actual = ds.to_dask_dataframe(set_index=True)
         self.assertIsInstance(actual, dd.DataFrame)
         assert_frame_equal(expected, actual.compute())
 
@@ -668,12 +683,35 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert_frame_equal(expected, actual.compute())
 
     def test_to_dask_dataframe_no_coordinate(self):
-        # Test if Dataset has a dimension without coordinates
         x = da.from_array(np.random.randn(10), chunks=4)
         ds = Dataset({'x': ('dim_0', x)})
-        expected = pd.DataFrame({'x': x.compute()})
-        actual = ds.to_dask_dataframe(set_index=True)
+
+        expected = ds.compute().to_dataframe().reset_index()
+        actual = ds.to_dask_dataframe()
+        self.assertIsInstance(actual, dd.DataFrame)
         assert_frame_equal(expected, actual.compute())
+
+        expected = ds.compute().to_dataframe()
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_dim_order(self):
+        values = np.array([[1, 2], [3, 4]], dtype=np.int64)
+        ds = Dataset({'w': (('x', 'y'), values)}).chunk(1)
+
+        expected = ds['w'].to_series().reset_index()
+        actual = ds.to_dask_dataframe(dim_order=['x', 'y'])
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+        expected = ds['w'].T.to_series().reset_index()
+        actual = ds.to_dask_dataframe(dim_order=['y', 'x'])
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+        with raises_regex(ValueError, 'does not match the set of dimensions'):
+            ds.to_dask_dataframe(dim_order=['x'])
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])

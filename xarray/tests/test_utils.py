@@ -9,7 +9,7 @@ import pandas as pd
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
-from . import TestCase
+from . import TestCase, requires_dask
 
 
 class TestAlias(TestCase):
@@ -180,3 +180,12 @@ class Test_hashable(TestCase):
             self.assertTrue(utils.hashable(v))
         for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
             self.assertFalse(utils.hashable(v))
+
+
+@requires_dask
+def test_dask_array_is_scalar():
+    # regression test for GH1684
+    import dask.array as da
+
+    y = da.arange(8, chunks=4)
+    assert not utils.is_scalar(y)
