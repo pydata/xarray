@@ -445,6 +445,9 @@ class DatasetIOTestCases(object):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexAdapter)
+                    else:
+                        raise TypeError('{} is wrapped by {}'.format(
+                                            type(obj.array), type(obj)))
 
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)
