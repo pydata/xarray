@@ -18,20 +18,33 @@ What's New
 Changes since v0.10.0 rc1 (Unreleased)
 --------------------------------------
 
-Bug fixes
-~~~~~~~~~
-
-- Suppress warning in Ipython autocompletion, related to the deprecation
-  of ``.T`` attributes. (:issue:`1675`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_
-
-Testing
-~~~~~~~
+Enhancements
+~~~~~~~~~~~~
 
 - Add name parameter and extra formatting to
   :py:func:`xarray.testing.assert_allclose`,
   :py:func:`xarray.testing.assert_identical` and
   :py:func:`xarray.testing.assert_equal` for nicer failure printouts.
+  By `Matti Eskelinen <https://github.com/maaleske>`_
+
+Bug fixes
+~~~~~~~~~
+
+- Suppress warning in Ipython autocompletion, related to the deprecation
+  of ``.T`` attributes (:issue:`1675`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+
+- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
+  Also made some internal cleanups around array wrappers (:issue:`1429`).
+
+- Fix two bugs that were preventing dask arrays from being specified as
+  coordinates in the DataArray constructor (:issue:`1684`).
+  By `Joe Hamman <https://github.com/jhamman>`_
+
+Testing
+~~~~~~~
+
+- Remove netCDF dependency from rasterio backend tests.
   By `Matti Eskelinen <https://github.com/maaleske>`_
 
 v0.10.0 rc1 (30 October 2017)
