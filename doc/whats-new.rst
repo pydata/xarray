@@ -15,6 +15,9 @@ What's New
 
 .. _whats-new.0.9.7:
 
+- Experimental support for the Dask collection interface (:issue:`1674`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
 v0.10.0 (unreleased)
 --------------------
 
@@ -27,7 +30,6 @@ backwards incompatible changes. Highlights include:
 - :py:func:`~xarray.apply_ufunc` facilitates wrapping and parallelizing
   functions written for NumPy arrays.
 - Performance improvements, particularly for dask and :py:func:`open_mfdataset`.
-- Support Dask collection interface
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
