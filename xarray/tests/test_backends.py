@@ -432,9 +432,9 @@ class DatasetIOTestCases(object):
             self.assertDatasetIdentical(expected, actual)
 
     def validate_array_type(self, ds):
-        # Make sure that only NDArrayIndexable stores a bare np.ndarray.
-        # Same tests for pd.Index, dask_array_type
+        # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
         def find_and_validate_array(obj):
+            # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
                 if isinstance(obj.array, indexing.NDArrayIndexable):
                     find_and_validate_array(obj.array)
@@ -445,6 +445,7 @@ class DatasetIOTestCases(object):
                         assert isinstance(obj, indexing.DaskIndexingAdapter)
                     elif isinstance(obj.array, pd.Index):
                         assert isinstance(obj, indexing.PandasIndexAdapter)
+
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)
 
