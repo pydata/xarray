@@ -549,8 +549,8 @@ def apply_variable_ufunc(func, *args, **kwargs):
                              'or load your data into memory first with '
                              '``.load()`` or ``.compute()``')
         elif dask == 'parallelized':
-            input_dims = [broadcast_dims + input_dims
-                          for input_dims in signature.input_core_dims]
+            input_dims = [broadcast_dims + dims
+                          for dims in signature.input_core_dims]
             numpy_func = func
             func = lambda *arrays: _apply_with_dask_atop(
                 numpy_func, arrays, input_dims, output_dims, signature,
@@ -619,9 +619,10 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
 
     (out_ind,) = output_dims
     # skip leading dimensions that we did not insert with broadcast_compat_data
-    atop_args = [element
-                 for (arg, dims) in zip(args, input_dims)
-                 for element in (arg, dims[-getattr(arg, 'ndim', 0):])]
+    atop_args = [
+        element
+        for (arg, dims) in zip(args, input_dims)
+        for element in (arg, dims[-getattr(arg, 'ndim', 0) or len(dims):])]
     return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
                    new_axes=output_sizes)
 
