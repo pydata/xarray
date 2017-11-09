@@ -474,6 +474,10 @@ class DatasetIOTestCases(object):
         a[1, 1] = np.NaN
         in_memory = xr.Dataset({'a': (('y', 'x'), a)},
                                coords={'y': np.arange(4), 'x': np.arange(3)})
+
+        assert_identical(in_memory.dropna(dim='x'),
+                         in_memory.isel(x=slice(None, None, 2)))
+
         with self.roundtrip(in_memory) as on_disk:
             self.validate_array_type(on_disk)
             expected = in_memory.dropna(dim='x')
