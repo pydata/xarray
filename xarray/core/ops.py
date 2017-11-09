@@ -42,6 +42,8 @@ NUMPY_SAME_METHODS = ['item', 'searchsorted']
 # wrapped in an Variable/DataArray
 NUMPY_UNARY_METHODS = ['astype', 'argsort', 'clip', 'conj', 'conjugate']
 PANDAS_UNARY_FUNCTIONS = ['isnull', 'notnull']
+if pd.__version__ >= "0.21":
+    PANDAS_UNARY_FUNCTIONS.extend(['isna', 'notna'])
 # methods which remove an axis
 REDUCE_METHODS = ['all', 'any']
 NAN_REDUCE_METHODS = ['argmax', 'argmin', 'max', 'min', 'mean', 'prod', 'sum',
