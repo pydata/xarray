@@ -350,7 +350,7 @@ It doesn't always make sense to do computation directly with xarray objects:
     considerable overhead compared to using NumPy or native Python types.
     This is particularly true when working with scalars or small arrays (less
     than ~1e6 elements). Keeping track of labels and ensuring their consistency
-    adds overhead, and array's core itself is not especially fast, because it's
+    adds overhead, and xarray's core itself is not especially fast, because it's
     written in Python rather than a compiled language like C. Also, xarray's
     high level label-based APIs removes low-level control over how operations
     are implemented.
