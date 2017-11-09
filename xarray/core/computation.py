@@ -618,11 +618,14 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
                         .format(dim, n, {dim: -1}))
 
     (out_ind,) = output_dims
-    # skip leading dimensions that we did not insert with broadcast_compat_data
-    atop_args = [
-        element
-        for (arg, dims) in zip(args, input_dims)
-        for element in (arg, dims[-getattr(arg, 'ndim', 0) or len(dims):])]
+
+    atop_args = []
+    for arg, dims in zip(args, input_dims):
+        # skip leading dimensions that are implicitly added by broadcasting
+        ndim = getattr(arg, 'ndim', 0)
+        trimmed_dims = dims[-ndim:] if ndim else ()
+        atop_args.extend([arg, trimmed_dims])
+
     return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
                    new_axes=output_sizes)
 
