@@ -468,6 +468,22 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             self.validate_array_type(actual)
 
+    def test_dropna(self):
+        # regression test for GH:issue:1694
+        a = np.random.randn(4, 3)
+        a[1, 1] = np.NaN
+        in_memory = xr.Dataset({'a': (('y', 'x'), a)},
+                               coords={'y': np.arange(4), 'x': np.arange(3)})
+
+        assert_identical(in_memory.dropna(dim='x'),
+                         in_memory.isel(x=slice(None, None, 2)))
+
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            expected = in_memory.dropna(dim='x')
+            actual = on_disk.dropna(dim='x')
+            assert_identical(expected, actual)
+
 
 class CFEncodedDataTest(DatasetIOTestCases):
 
