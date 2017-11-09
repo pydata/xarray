@@ -1723,7 +1723,7 @@ class TestAsCompatibleData(TestCase):
             def __init__(self, array):
                 self.array = array
 
-        class CustomIndexable(CustomArray, indexing.NDArrayIndexable):
+        class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
             pass
 
         array = CustomArray(np.arange(3))

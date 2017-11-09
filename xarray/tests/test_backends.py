@@ -436,7 +436,7 @@ class DatasetIOTestCases(object):
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
-                if isinstance(obj.array, indexing.NDArrayIndexable):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
                 else:
                     if isinstance(obj.array, np.ndarray):

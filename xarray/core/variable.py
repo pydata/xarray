@@ -32,7 +32,7 @@ except ImportError:
 
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
-    indexing.NDArrayIndexable, pd.Index) + dask_array_type
+    indexing.ExplicitlyIndexed, pd.Index) + dask_array_type
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -766,6 +766,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
+            data = indexing.BasicToExplicitArray(indexing.as_indexable(data))
             data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,
@@ -1261,7 +1262,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return (self.dims == other.dims and
                     (self._data is other._data or
                      equiv(self.data, other.data)))
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError) as e:
             return False
 
     def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):

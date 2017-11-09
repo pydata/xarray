@@ -10,7 +10,8 @@ from collections import Mapping
 from distutils.version import LooseVersion
 
 from ..conventions import cf_encoder
-from ..core.utils import FrozenOrderedDict
+from ..core import indexing
+from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
 
 try:
@@ -74,6 +75,13 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
                    (next_delay, max_retries - n, traceback.format_exc()))
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
+
+
+class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+
+    def __array__(self, dtype=None):
+        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        return np.asarray(self[key], dtype=dtype)
 
 
 class AbstractDataStore(Mapping):

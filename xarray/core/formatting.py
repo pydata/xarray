@@ -99,7 +99,7 @@ def last_item(x):
         # work around for https://github.com/numpy/numpy/issues/5195
         return []
 
-    indexer = (slice(-1, None),) * x.ndim
+    indexer = BasicIndexer((slice(-1, None),) * x.ndim)
     return np.ravel(x[indexer]).tolist()
 
 
