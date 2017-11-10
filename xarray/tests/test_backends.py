@@ -2154,7 +2154,6 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['samples'], basestring)
 
 
-
 class TestEncodingInvalid(TestCase):
 
     def test_extract_nc4_variable_encoding(self):

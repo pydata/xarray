@@ -82,6 +82,7 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
             out = np.squeeze(out, axis=squeeze_axis)
         return out
 
+
 def _parse_envi(meta):
     """Parse ENVI metadata into Python data structures.
 
@@ -108,12 +109,12 @@ def _parse_envi(meta):
         return s.strip('{}')
 
     parse = {
-        'wavelength' : parsevec,
-        'fwhm'       : parsevec,
+        'wavelength': parsevec,
+        'fwhm': parsevec,
         }
-
-    parsed_meta = {k : parse.get(k, default)(v) for k, v in meta.items()}
+    parsed_meta = {k: parse.get(k, default)(v) for k, v in meta.items()}
     return parsed_meta
+
 
 def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """Open a file with rasterio (experimental).
@@ -163,7 +164,6 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         raise ValueError('Unknown dims')
     coords['band'] = np.asarray(riods.indexes)
 
-
     # Get geo coords
     nx, ny = riods.width, riods.height
     dx, dy = riods.res[0], -riods.res[1]
@@ -195,7 +195,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
 
     # Parse extra metadata from tags, if supported
     parsers = {
-            'ENVI' : _parse_envi,
+            'ENVI': _parse_envi,
             }
 
     driver = riods.driver
@@ -209,7 +209,6 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
                 coords[k] = ('band', np.asarray(v))
             else:
                 attrs[k] = v
-
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
