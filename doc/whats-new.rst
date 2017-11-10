@@ -47,6 +47,10 @@ Bug fixes
   coordinates in the DataArray constructor (:issue:`1684`).
   By `Joe Hamman <https://github.com/jhamman>`_
 
+- Fixed ``apply_ufunc`` with ``dask='parallelized'`` for scalar arguments
+  (:issue:`1697`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Testing
 ~~~~~~~
 
