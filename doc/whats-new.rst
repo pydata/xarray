@@ -25,6 +25,10 @@ Changes since v0.10.0 rc1 (Unreleased)
 - Experimental support for the Dask collection interface (:issue:`1674`).
   By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
+- Experimental support for parsing ENVI metadata to coordinates and attributes
+  in :py:func:`xarray.open_rasterio`.
+  By `Matti Eskelinen <https://github.com/maaleske>`
+
 Bug fixes
 ~~~~~~~~~
 
