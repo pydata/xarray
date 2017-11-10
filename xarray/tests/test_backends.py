@@ -2092,7 +2092,7 @@ class TestRasterio(TestCase):
                 assert_allclose(ac, ex)
 
     def test_ENVI_tags(self):
-        import rasterio
+        rasterio = pytest.importorskip('rasterio', minversion='1.0a')
         from rasterio.transform import from_origin
 
         # Create an ENVI file with some tags in the ENVI namespace
