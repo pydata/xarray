@@ -582,17 +582,52 @@ def test_apply_dask():
 
 
 @requires_dask
-def test_apply_dask_parallelized():
+def test_apply_dask_parallelized_one_arg():
     import dask.array as da
 
     array = da.ones((2, 2), chunks=(1, 1))
     data_array = xr.DataArray(array, dims=('x', 'y'))
 
-    actual = apply_ufunc(identity, data_array, dask='parallelized',
-                         output_dtypes=[float])
+    def parallel_identity(x):
+        return apply_ufunc(identity, x, dask='parallelized',
+                           output_dtypes=[x.dtype])
+
+    actual = parallel_identity(data_array)
     assert isinstance(actual.data, da.Array)
     assert actual.data.chunks == array.chunks
     assert_identical(data_array, actual)
+
+    computed = data_array.compute()
+    actual = parallel_identity(computed)
+    assert_identical(computed, actual)
+
+
+@requires_dask
+def test_apply_dask_parallelized_two_args():
+    import dask.array as da
+
+    array = da.ones((2, 2), chunks=(1, 1), dtype=np.int64)
+    data_array = xr.DataArray(array, dims=('x', 'y'))
+    data_array.name = None
+
+    def parallel_add(x, y):
+        return apply_ufunc(operator.add, x, y,
+                           dask='parallelized',
+                           output_dtypes=[np.int64])
+
+    def check(x, y):
+        actual = parallel_add(x, y)
+        assert isinstance(actual.data, da.Array)
+        assert actual.data.chunks == array.chunks
+        assert_identical(data_array, actual)
+
+    check(data_array, 0),
+    check(0, data_array)
+    check(data_array, xr.DataArray(0))
+    check(data_array, 0 * data_array)
+    check(data_array, 0 * data_array[0])
+    check(data_array[:, 0], 0 * data_array[0])
+    check(data_array, 0 * data_array.compute())
 
 
 @requires_dask
