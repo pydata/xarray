@@ -253,43 +253,28 @@ def ffill(arr, dim=None, limit=None):
 
     axis = arr.get_axis_num(dim)
 
-    if limit is not None:
-        valids = _get_valid_fill_mask(arr, dim, limit)
-
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
-    new = apply_ufunc(bn.push, arr,
-                      dask='parallelized',
-                      keep_attrs=True,
-                      output_dtypes=[arr.dtype],
-                      kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
-
-    if limit is not None:
-        new = new.where(valids)
-
-    return new
+    return apply_ufunc(bn.push, arr,
+                       dask='parallelized',
+                       keep_attrs=True,
+                       output_dtypes=[arr.dtype],
+                       kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
 
 def bfill(arr, dim=None, limit=None):
     '''backfill missing values'''
     axis = arr.get_axis_num(dim)
 
-    if limit is not None:
-        valids = _get_valid_fill_mask(arr, dim, limit)
-
     # work around for bottleneck 178
     _limit = limit if limit is not None else arr.shape[axis]
 
-    new = apply_ufunc(_bfill, arr,
-                      dask='parallelized',
-                      keep_attrs=True,
-                      output_dtypes=[arr.dtype],
-                      kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
-    if limit is not None:
-        new = new.where(valids)
-
-    return new
+    return apply_ufunc(_bfill, arr,
+                       dask='parallelized',
+                       keep_attrs=True,
+                       output_dtypes=[arr.dtype],
+                       kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
 
 def _get_interpolator(method, **kwargs):
