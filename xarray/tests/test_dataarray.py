@@ -3146,3 +3146,21 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+@pytest.mark.parametrize('da', (1, 2), indirect=True)
+def test_ffill_functions(da):
+    result = da.ffill('time')
+    assert result.isnull().sum() == 0
+
+def test_ffill_limit(da):
+    da = DataArray(
+        [0, np.nan, np.nan, np.nan, np.nan, 3, 4, 5, np.nan, 6, 7],
+        dims='time')
+    result = da.ffill('time')
+    expected = DataArray([0, 0, 0, 0, 0, 3, 4, 5, 5, 6, 7], dims='time')
+    assert_array_equal(result, expected)
+
+    result = da.ffill('time', limit=1)
+    expected = DataArray(
+        [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims='time')
