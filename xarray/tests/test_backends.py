@@ -909,6 +909,21 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
+    def test_encoding_chunksizes_unlimited(self):
+        # regression test for GH1225
+        ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
+        ds.variables['x'].encoding = {
+            'zlib': False,
+            'shuffle': False,
+            'complevel': 0,
+            'fletcher32': False,
+            'contiguous': False,
+            'chunksizes': (2 ** 20,),
+            'original_shape': (3,),
+        }
+        with self.roundtrip(ds) as actual:
+            self.assertDatasetEqual(ds, actual)
+
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
@@ -1230,6 +1245,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             self.assertDatasetEqual(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))

@@ -156,10 +156,12 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 
-    if (encoding.get('chunksizes') is not None and
-            (encoding.get('original_shape', variable.shape) !=
-                variable.shape) and not raise_on_invalid):
-        del encoding['chunksizes']
+    if not raise_on_invalid and 'chunksizes' in encoding:
+        chunks_too_big = any(
+            c > d for c, d in zip(encoding['chunksizes'], variable.shape))
+        changed_shape = encoding.get('original_shape') != variable.shape
+        if chunks_too_big or changed_shape:
+            del encoding['chunksizes']
 
     for k in safe_to_drop:
         if k in encoding:
