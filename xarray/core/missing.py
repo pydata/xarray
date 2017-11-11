@@ -33,6 +33,12 @@ class BaseInterpolator(object):
 
 
 class NumpyInterpolator(BaseInterpolator):
+    '''One-dimensional linear interpolation.
+
+    See Also
+    --------
+    numpy.interp
+    '''
     def __init__(self, xi, yi, kind='linear', fill_value=None, **kwargs):
         self.kind = kind
         self.f = np.interp
@@ -64,6 +70,12 @@ class NumpyInterpolator(BaseInterpolator):
 
 
 class ScipyInterpolator(BaseInterpolator):
+    '''Interpolate a 1-D function using Scipy interp1d
+
+    See Also
+    --------
+    scipy.interpolate.interp1d
+    '''
     def __init__(self, xi, yi, kind=None, fill_value=None, assume_sorted=True,
                  copy=False, bounds_error=False, **kwargs):
         from scipy.interpolate import interp1d
@@ -83,7 +95,7 @@ class ScipyInterpolator(BaseInterpolator):
 
         if fill_value is None and kind == 'linear':
             fill_value = kwargs.pop('fill_value', (np.nan, yi[-1]))
-        else:
+        elif fill_value is None:
             fill_value = np.nan
 
         self.f = interp1d(xi, yi, kind=self.kind, fill_value=fill_value,
@@ -91,6 +103,12 @@ class ScipyInterpolator(BaseInterpolator):
 
 
 class FromDerivativesInterpolator(BaseInterpolator):
+    '''Piecewise polynomial in terms of coefficients and breakpoints.
+
+    See Also
+    --------
+    scipy.interpolate.BPoly
+    '''
     def __init__(self, xi, yi, kind=None, fill_value=None, **kwargs):
         from scipy.interpolate import BPoly
 
@@ -107,6 +125,12 @@ class FromDerivativesInterpolator(BaseInterpolator):
 
 
 class SplineInterpolator(BaseInterpolator):
+    '''One-dimensional smoothing spline fit to a given set of data points.
+
+    See Also
+    --------
+    scipy.interpolate.UnivariateSpline
+    '''
     def __init__(self, xi, yi, kind=None, fill_value=None, order=3, **kwargs):
         from scipy.interpolate import UnivariateSpline
 
@@ -125,7 +149,14 @@ class SplineInterpolator(BaseInterpolator):
 
 
 def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
-    '''get index to use for x values in interpolation
+    '''get index to use for x values in interpolation.
+
+    If use_coordinate is True, the coordinate that shares the name of the
+    dimension along which interpolation is being performed will be used as the
+    x values.
+
+    If use_coordinate is False, the x values are set as an equally spaced
+    sequence.
     '''
 
     if use_coordinate:
@@ -148,6 +179,7 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
               inplace=False, **kwargs):
     '''Interpolate values according to different methods.'''
 
+    # this may not be possible with apply_ufunc
     arr = self if inplace else self.copy()
 
     if dim is None:
@@ -166,6 +198,8 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     arr = apply_ufunc(interpolator, index, arr,
                       input_core_dims=[[dim], [dim]],
                       output_core_dims=[[dim]],
+                      output_dtypes=[arr.dtype],
+                      output_sizes=dict(zip(arr.dims, arr.shape)),
                       dask='parallelized',
                       vectorize=True,
                       keep_attrs=True).transpose(*arr.dims)
@@ -183,6 +217,10 @@ def wrap_interpolator(interpolator, x, y, **kwargs):
         raise AssertionError("x and y shapes do not match "
                              "%s != %s" % (x.shape, y.shape))
 
+    # it would be nice if this wasn't necessary, works around:
+    # "ValueError: assignment destination is read-only" in assignment below
+    out = y.copy()
+
     nans = pd.isnull(y)
     nonans = ~nans
 
@@ -192,7 +230,8 @@ def wrap_interpolator(interpolator, x, y, **kwargs):
         return y
 
     f = interpolator(x[nonans], y[nonans], **kwargs)
-    return f(x[nans])
+    out[nans] = f(x[nans])
+    return out
 
 
 def _bfill(arr, n=None, axis=-1):
@@ -209,7 +248,7 @@ def _bfill(arr, n=None, axis=-1):
 
 
 def ffill(arr, dim=None, limit=None):
-    ''' '''
+    '''forward fill missing values'''
     import bottleneck as bn
 
     axis = arr.get_axis_num(dim)
@@ -223,6 +262,7 @@ def ffill(arr, dim=None, limit=None):
     new = apply_ufunc(bn.push, arr,
                       dask='parallelized',
                       keep_attrs=True,
+                      output_dtypes=[arr.dtype],
                       kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
     if limit is not None:
@@ -232,7 +272,7 @@ def ffill(arr, dim=None, limit=None):
 
 
 def bfill(arr, dim=None, limit=None):
-    ''' '''
+    '''backfill missing values'''
     axis = arr.get_axis_num(dim)
 
     if limit is not None:
@@ -244,6 +284,7 @@ def bfill(arr, dim=None, limit=None):
     new = apply_ufunc(_bfill, arr,
                       dask='parallelized',
                       keep_attrs=True,
+                      output_dtypes=[arr.dtype],
                       kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
     if limit is not None:
         new = new.where(valids)
@@ -252,6 +293,10 @@ def bfill(arr, dim=None, limit=None):
 
 
 def _get_interpolator(method, **kwargs):
+    '''helper function to select the appropriate interpolator class
+
+    returns a partial of wrap_interpolator
+    '''
     interp1d_methods = ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                         'cubic', 'polynomial']
     valid_methods = interp1d_methods + ['piecewise_polynomial', 'barycentric',
@@ -287,5 +332,7 @@ def _get_interpolator(method, **kwargs):
 
 
 def _get_valid_fill_mask(arr, dim, limit):
+    '''helper function to determine values that can be filled when limit is not
+    None'''
     kw = {dim: limit + 1}
     return arr.isnull().rolling(min_periods=1, **kw).sum() <= limit
