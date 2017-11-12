@@ -47,7 +47,7 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Saving a netCDF file with a coordinates with a spaces in its names now raises
-  an appropriate warnings (:issue:`1689`).
+  an appropriate warning (:issue:`1689`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fix two bugs that were preventing dask arrays from being specified as
