@@ -156,7 +156,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 
-    if not raise_on_invalid and 'chunksizes' in encoding:
+    if not raise_on_invalid and encoding.get('chunksizes') is not None:
         chunks_too_big = any(
             c > d for c, d in zip(encoding['chunksizes'], variable.shape))
         changed_shape = encoding.get('original_shape') != variable.shape
