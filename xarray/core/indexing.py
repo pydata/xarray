@@ -406,7 +406,7 @@ class ExplicitlyIndexed(object):
     """Mixin to mark support for Indexer subclasses in indexing."""
 
 
-class ExplicitNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
+class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
 
     def __array__(self, dtype=None):
         key = BasicIndexer((slice(None),) * self.ndim)
@@ -430,11 +430,9 @@ def unwrap_explicit_indexer(key, target, allow):
     return key.tuple
 
 
-class WrapImplicitIndexing(utils.NDArrayMixin):
-    """Wrap an array, converting tuples into the indicated explicit indexer.
+class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
+    """Wrap an array, converting tuples into the indicated explicit indexer."""
 
-    We use this for wrapping xarray's array types with dask.
-    """
     def __init__(self, array, indexer_cls=BasicIndexer):
         self.array = as_indexable(array)
         self.indexer_cls = indexer_cls
@@ -447,7 +445,7 @@ class WrapImplicitIndexing(utils.NDArrayMixin):
         return self.array[self.indexer_cls(key)]
 
 
-class LazilyIndexedArray(ExplicitNDArrayMixin):
+class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and orthogonal indexing lazy.
     """
     def __init__(self, array, key=None):
@@ -526,7 +524,7 @@ def _wrap_numpy_scalars(array):
         return array
 
 
-class CopyOnWriteArray(ExplicitNDArrayMixin):
+class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array):
         self.array = as_indexable(array)
         self._copied = False
@@ -547,7 +545,7 @@ class CopyOnWriteArray(ExplicitNDArrayMixin):
         self.array[key] = value
 
 
-class MemoryCachedArray(ExplicitNDArrayMixin):
+class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
     def __init__(self, array):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
@@ -621,9 +619,9 @@ def _outer_to_numpy_indexer(key, shape):
     return tuple(new_key)
 
 
-class NumpyIndexingAdapter(ExplicitNDArrayMixin):
-    """Wrap a NumPy array to use broadcasted indexing
-    """
+class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap a NumPy array to use explicit indexing."""
+
     def __init__(self, array):
         # In NumpyIndexingAdapter we only allow to store bare np.ndarray
         if not isinstance(array, np.ndarray):
@@ -664,9 +662,9 @@ class NumpyIndexingAdapter(ExplicitNDArrayMixin):
         array[key] = value
 
 
-class DaskIndexingAdapter(ExplicitNDArrayMixin):
-    """Wrap a dask array to support xarray-style indexing.
-    """
+class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap a dask array to support explicit indexing."""
+
     def __init__(self, array):
         """ This adapter is created in Variable.__getitem__ in
         Variable._broadcast_indexes.
@@ -699,10 +697,9 @@ class DaskIndexingAdapter(ExplicitNDArrayMixin):
                         'method or accessing its .values attribute.')
 
 
-class PandasIndexAdapter(ExplicitNDArrayMixin):
-    """Wrap a pandas.Index to be better about preserving dtypes and to handle
-    indexing by length 1 tuples like numpy
-    """
+class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
+    """Wrap a pandas.Index to preserve dtypes and handle explicit indexing."""
+
     def __init__(self, array, dtype=None):
         self.array = utils.safe_cast_to_index(array)
         if dtype is None:

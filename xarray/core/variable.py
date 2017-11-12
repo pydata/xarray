@@ -769,7 +769,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
-            data = indexing.WrapImplicitIndexing(data, indexing.OuterIndexer)
+            # da.from_array works by using lazily indexing with a tuple of
+            # slices. Using OuterIndexer is a pragmatic choice: dask does not
+            # yet handle different indexing types in an explicit way:
+            # https://github.com/dask/dask/issues/2883
+            data = indexing.ImplicitToExplicitIndexingAdapter(
+                data, indexing.OuterIndexer)
             data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,

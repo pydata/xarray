@@ -347,9 +347,9 @@ def test_unwrap_explicit_indexer():
             indexer.tuple, target, allow=indexing.OuterIndexer)
 
 
-def test_wrap_implicit_indexing():
+def test_implicit_indexing_adapter():
     array = np.arange(10)
-    implicit = indexing.WrapImplicitIndexing(
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
         indexing.NumpyIndexingAdapter(array), indexing.BasicIndexer)
     np.testing.assert_array_equal(array, np.asarray(implicit))
     np.testing.assert_array_equal(array, implicit[:])
