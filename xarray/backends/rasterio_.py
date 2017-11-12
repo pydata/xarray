@@ -1,5 +1,6 @@
 import os
 from collections import OrderedDict
+from distutils.version import LooseVersion
 import numpy as np
 
 from .. import DataArray
@@ -133,7 +134,11 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     coords['band'] = np.asarray(riods.indexes)
 
     # Get geo coords
-    transfo = riods.transform * Affine.translation(0.5, 0.5)
+    if LooseVersion(rasterio.__version__) < '1.0':
+        transfo = riods.affine * Affine.translation(0.5, 0.5)
+    else:
+        transfo = riods.transform * Affine.translation(0.5, 0.5)
+
     nx, ny = riods.width, riods.height
     x, _ = (np.arange(nx), np.zeros(nx)) * transfo
     _, y = (np.zeros(ny), np.arange(ny)) * transfo

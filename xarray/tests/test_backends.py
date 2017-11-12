@@ -1927,12 +1927,11 @@ class TestRasterio(TestCase):
         # regression test for https://github.com/pydata/xarray/issues/1686
         import rasterio
         import warnings
-        from rasterio.errors import NotGeoreferencedWarning
 
         # Create a geotiff file
         with warnings.catch_warnings():
             # This warning is expected
-            warnings.filterwarnings('ignore', category=NotGeoreferencedWarning)
+            warnings.filterwarnings('ignore', category=UserWarning)
             with create_tmp_file(suffix='.tif') as tmp_file:
                 # data
                 nx, ny, nz = 4, 3, 3
