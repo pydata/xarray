@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 from datetime import timedelta
 from collections import defaultdict, Hashable
+import operator
 import numpy as np
 import pandas as pd
 
@@ -300,6 +301,17 @@ class ExplicitIndexer(object):
         return '{}({})'.format(type(self).__name__, self.tuple)
 
 
+def as_integer_or_none(value):
+    return None if value is None else operator.index(value)
+
+
+def as_integer_slice(value):
+    start = as_integer_or_none(value.start)
+    stop = as_integer_or_none(value.stop)
+    step = as_integer_or_none(value.step)
+    return slice(start, stop, step)
+
+
 class BasicIndexer(ExplicitIndexer):
     """Tuple for basic indexing.
 
@@ -307,6 +319,22 @@ class BasicIndexer(ExplicitIndexer):
     rules for basic indexing: each axis is independently sliced and axes
     indexed with an integer are dropped from the result.
     """
+    def __init__(self, key):
+        if not isinstance(key, tuple):
+            raise TypeError('key must be a tuple: {!r}'.format(key))
+
+        new_key = []
+        for k in key:
+            if isinstance(k, integer_types):
+                k = int(k)
+            elif isinstance(k, slice):
+                k = as_integer_slice(k)
+            else:
+                raise TypeError('unexpected indexer type for {}: {!r}'
+                                .format(type(self).__name__, k))
+            new_key.append(k)
+
+        super(BasicIndexer, self).__init__(new_key)
 
 
 class OuterIndexer(ExplicitIndexer):
@@ -317,6 +345,31 @@ class OuterIndexer(ExplicitIndexer):
     axes indexed with an integer are dropped from the result. This type of
     indexing works like MATLAB/Fortran.
     """
+    def __init__(self, key):
+        if not isinstance(key, tuple):
+            raise TypeError('key must be a tuple: {!r}'.format(key))
+
+        new_key = []
+        for k in key:
+            if isinstance(k, integer_types):
+                k = int(k)
+            elif isinstance(k, slice):
+                k = as_integer_slice(k)
+            elif isinstance(k, np.ndarray):
+                if not np.issubdtype(k.dtype, np.integer):
+                    raise TypeError('invalid indexer array, does not have '
+                                    'integer dtype: {!r}'.format(k))
+                if k.ndim != 1:
+                    raise TypeError('invalid indexer array for {}, must have '
+                                    'exactly 1 dimension: '
+                                    .format(type(self).__name__, k))
+                k = np.asarray(k, dtype=np.int64)
+            else:
+                raise TypeError('unexpected indexer type for {}: {!r}'
+                                .format(type(self).__name__, k))
+            new_key.append(k)
+
+        super(OuterIndexer, self).__init__(new_key)
 
 
 class VectorizedIndexer(ExplicitIndexer):
@@ -328,14 +381,42 @@ class VectorizedIndexer(ExplicitIndexer):
     sliced axes are always moved to the end:
     https://github.com/numpy/numpy/pull/6256
     """
+    def __init__(self, key):
+        if not isinstance(key, tuple):
+            raise TypeError('key must be a tuple: {!r}'.format(key))
+
+        new_key = []
+        for k in key:
+            if isinstance(k, slice):
+                k = as_integer_slice(k)
+            elif isinstance(k, np.ndarray):
+                if not np.issubdtype(k.dtype, np.integer):
+                    raise TypeError('invalid indexer array, does not have '
+                                    'integer dtype: {!r}'.format(k))
+                k = np.asarray(k, dtype=np.int64)
+            else:
+                raise TypeError('unexpected indexer type for {}: {!r}'
+                                .format(type(self).__name__, k))
+            new_key.append(k)
+
+        super(VectorizedIndexer, self).__init__(new_key)
 
 
 class ExplicitlyIndexed(object):
     """Mixin to mark support for Indexer subclasses in indexing."""
 
 
+class ExplicitNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
+
+    def __array__(self, dtype=None):
+        key = BasicIndexer((slice(None),) * self.ndim)
+        return np.asarray(self[key], dtype=dtype)
+
+
 def unwrap_explicit_indexer(key, target, allow):
     """Unwrap an explicit key into a tuple."""
+    if not isinstance(key, ExplicitIndexer):
+        raise TypeError('unexpected key type: {}'.format(key))
     if not isinstance(key, allow):
         key_type_name = {
             BasicIndexer: 'Basic',
@@ -346,21 +427,27 @@ def unwrap_explicit_indexer(key, target, allow):
             '{} indexing for {} is not implemented. Load your data first with '
             '.load(), .compute() or .persist(), or disable caching by setting '
             'cache=False in open_dataset.'.format(key_type_name, type(target)))
-    if not isinstance(key, ExplicitIndexer):
-        raise TypeError('unexpected key type: {}'.format(key))
     return key.tuple
 
 
-class BasicToExplicitArray(utils.NDArrayMixin, ExplicitlyIndexed):
+class WrapImplicitIndexing(utils.NDArrayMixin):
+    """Wrap an array, converting tuples into the indicated explicit indexer.
 
-    def __init__(self, array):
-        self.array = array
+    We use this for wrapping xarray's array types with dask.
+    """
+    def __init__(self, array, indexer_cls=BasicIndexer):
+        self.array = as_indexable(array)
+        self.indexer_cls = indexer_cls
+
+    def __array__(self, dtype=None):
+        return np.asarray(self.array, dtype=dtype)
 
     def __getitem__(self, key):
-        return self.array[BasicIndexer(key)]
+        key = expanded_indexer(key, self.ndim)
+        return self.array[self.indexer_cls(key)]
 
 
-class LazilyIndexedArray(utils.NDArrayMixin, ExplicitlyIndexed):
+class LazilyIndexedArray(ExplicitNDArrayMixin):
     """Wrap an array to make basic and orthogonal indexing lazy.
     """
     def __init__(self, array, key=None):
@@ -393,15 +480,17 @@ class LazilyIndexedArray(utils.NDArrayMixin, ExplicitlyIndexed):
                 'setting cache=False in open_dataset.'.format(type(self)))
 
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
-        key = []
+        full_key = []
         for size, k in zip(self.array.shape, self.key.tuple):
             if isinstance(k, integer_types):
-                key.append(k)
+                full_key.append(k)
             else:
-                key.append(_index_indexer_1d(k, next(iter_new_key), size))
-        if all(isinstance(k, integer_types + (slice, )) for k in key):
-            return BasicIndexer(key)
-        return OuterIndexer(key)
+                full_key.append(_index_indexer_1d(k, next(iter_new_key), size))
+        full_key = tuple(full_key)
+
+        if all(isinstance(k, integer_types + (slice, )) for k in full_key):
+            return BasicIndexer(full_key)
+        return OuterIndexer(full_key)
 
     @property
     def shape(self):
@@ -421,8 +510,8 @@ class LazilyIndexedArray(utils.NDArrayMixin, ExplicitlyIndexed):
         return type(self)(self.array, self._updated_key(indexer))
 
     def __setitem__(self, key, value):
-        key = self._updated_key(key)
-        self.array[key] = value
+        full_key = self._updated_key(key)
+        self.array[full_key] = value
 
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
@@ -437,7 +526,7 @@ def _wrap_numpy_scalars(array):
         return array
 
 
-class CopyOnWriteArray(utils.NDArrayMixin, ExplicitlyIndexed):
+class CopyOnWriteArray(ExplicitNDArrayMixin):
     def __init__(self, array):
         self.array = as_indexable(array)
         self._copied = False
@@ -458,7 +547,7 @@ class CopyOnWriteArray(utils.NDArrayMixin, ExplicitlyIndexed):
         self.array[key] = value
 
 
-class MemoryCachedArray(utils.NDArrayMixin, ExplicitlyIndexed):
+class MemoryCachedArray(ExplicitNDArrayMixin):
     def __init__(self, array):
         self.array = _wrap_numpy_scalars(as_indexable(array))
 
@@ -494,12 +583,12 @@ def as_indexable(array):
     raise TypeError('Invalid array type: {}'.format(type(array)))
 
 
-def _outer_to_numpy_indexer(indexer, shape):
+def _outer_to_numpy_indexer(key, shape):
     """Convert an OuterIndexer into an indexer for NumPy.
 
     Parameters
     ----------
-    indexer : OuterIndexer
+    key : tuple
         Outer indexing tuple to convert.
     shape : tuple
         Shape of the array subject to the indexing.
@@ -509,8 +598,6 @@ def _outer_to_numpy_indexer(indexer, shape):
     tuple
         Base tuple suitable for use to index a NumPy array.
     """
-    key = indexer.tuple
-
     if len([k for k in key if not isinstance(k, slice)]) <= 1:
         # If there is only one vector and all others are slice,
         # it can be safely used in mixed basic/advanced indexing.
@@ -534,7 +621,7 @@ def _outer_to_numpy_indexer(indexer, shape):
     return tuple(new_key)
 
 
-class NumpyIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
+class NumpyIndexingAdapter(ExplicitNDArrayMixin):
     """Wrap a NumPy array to use broadcasted indexing
     """
     def __init__(self, array):
@@ -556,13 +643,15 @@ class NumpyIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
     def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
             array = self.array
-            key = _outer_to_numpy_indexer(key, self.array.shape)
+            key = _outer_to_numpy_indexer(key.tuple, self.array.shape)
         elif isinstance(key, VectorizedIndexer):
             array = nputils.NumpyVIndexAdapter(self.array)
             key = key.tuple
-        else:
+        elif isinstance(key, BasicIndexer):
             array = self.array
             key = key.tuple
+        else:
+            raise TypeError('unexpected key type: {}'.format(type(key)))
 
         return array, key
 
@@ -575,7 +664,7 @@ class NumpyIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
         array[key] = value
 
 
-class DaskIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
+class DaskIndexingAdapter(ExplicitNDArrayMixin):
     """Wrap a dask array to support xarray-style indexing.
     """
     def __init__(self, array):
@@ -585,22 +674,13 @@ class DaskIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
         self.array = array
 
     def __getitem__(self, key):
-        def to_int_tuple(key):
-            # workaround for uint64 indexer (GH:1406)
-            # TODO remove here after next dask release (0.15.3)
-            return tuple([k.astype(int) if isinstance(k, np.ndarray)
-                          else int(k) if isinstance(k, np.integer) else k
-                          for k in key])
-
         if isinstance(key, BasicIndexer):
-            return self.array[to_int_tuple(key.tuple)]
+            return self.array[key.tuple]
         elif isinstance(key, VectorizedIndexer):
-            return self.array.vindex[to_int_tuple(key.tuple)]
-        elif key is Ellipsis:
-            return self.array
+            return self.array.vindex[key.tuple]
         else:
             assert isinstance(key, OuterIndexer)
-            key = to_int_tuple(key.tuple)
+            key = key.tuple
             try:
                 return self.array[key]
             except NotImplementedError:
@@ -619,7 +699,7 @@ class DaskIndexingAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
                         'method or accessing its .values attribute.')
 
 
-class PandasIndexAdapter(utils.NDArrayMixin, ExplicitlyIndexed):
+class PandasIndexAdapter(ExplicitNDArrayMixin):
     """Wrap a pandas.Index to be better about preserving dtypes and to handle
     indexing by length 1 tuples like numpy
     """

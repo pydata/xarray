@@ -59,28 +59,29 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(expected, actual)
 
     def test_getitem_1d(self):
-        v = self.cls(['x'], [0, 1, 2])
+        data = np.array([0, 1, 2])
+        v = self.cls(['x'], data)
 
         v_new = v[dict(x=[0, 1])]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data[[0, 1]])
+        self.assertArrayEqual(v_new, data[[0, 1]])
 
         v_new = v[dict(x=slice(None))]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data)
+        self.assertArrayEqual(v_new, data)
 
         v_new = v[dict(x=Variable('a', [0, 1]))]
         assert v_new.dims == ('a', )
-        self.assertArrayEqual(v_new, v._data[[0, 1]])
+        self.assertArrayEqual(v_new, data[[0, 1]])
 
         v_new = v[dict(x=1)]
         assert v_new.dims == ()
-        self.assertArrayEqual(v_new, v._data[1])
+        self.assertArrayEqual(v_new, data[1])
 
         # tuple argument
         v_new = v[slice(None)]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data)
+        self.assertArrayEqual(v_new, data)
 
     def test_getitem_1d_fancy(self):
         v = self.cls(['x'], [0, 1, 2])

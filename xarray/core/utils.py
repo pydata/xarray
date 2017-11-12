@@ -455,9 +455,6 @@ class NDArrayMixin(NdimSizeLenMixin):
     def __getitem__(self, key):
         return self.array[key]
 
-    def __array__(self, dtype=None):
-        return np.asarray(self.array, dtype=dtype)
-
     def __repr__(self):
         return '%s(array=%r)' % (type(self).__name__, self.array)
 

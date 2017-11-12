@@ -468,8 +468,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
         # Convert a scalar Variable as an integer
-        key = tuple([(k.data.item() if isinstance(k, Variable) and k.ndim == 0
-                      else k) for k in key])
+        key = tuple(
+            k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k
+            for k in key)
+
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
 
@@ -532,17 +534,18 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
                      for k, dim in zip(key, self.dims)
                      if not isinstance(k, integer_types))
-        indexer = []
+
+        new_key = []
         for k in key:
             if isinstance(k, Variable):
                 k = k.data
-
-            if isinstance(k, BASIC_INDEXING_TYPES):
-                indexer.append(k)
-            else:
+            if not isinstance(k, BASIC_INDEXING_TYPES):
                 k = np.asarray(k)
-                indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
-        return dims, OuterIndexer(indexer), None
+                if k.dtype.kind == 'b':
+                    (k,) = np.nonzero(k)
+            new_key.append(k)
+
+        return dims, OuterIndexer(tuple(new_key)), None
 
     def _nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
@@ -604,7 +607,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             new_order = None
 
-        return out_dims, VectorizedIndexer(out_key), new_order
+        return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -766,7 +769,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
-            data = indexing.BasicToExplicitArray(indexing.as_indexable(data))
+            data = indexing.WrapImplicitIndexing(data, indexing.OuterIndexer)
             data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,

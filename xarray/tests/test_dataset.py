@@ -1556,7 +1556,8 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('time', np.random.randn(5))},
                            {'time': range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
-        actual = expected.reindex(time=time2)
+        with pytest.warns(FutureWarning):
+            actual = expected.reindex(time=time2)
         self.assertDatasetIdentical(actual, expected)
 
         # another regression test

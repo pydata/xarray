@@ -12,12 +12,17 @@ import pytest
 
 from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
-from . import TestCase, requires_netCDF4, unittest, raises_regex
+from . import TestCase, requires_netCDF4, unittest, raises_regex, IndexerMaker
 from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
 from xarray.backends.common import WritableCFDataStore
 from xarray.conventions import decode_cf
+
+
+B = IndexerMaker(indexing.BasicIndexer)
+O = IndexerMaker(indexing.OuterIndexer)
+V = IndexerMaker(indexing.VectorizedIndexer)
 
 
 class TestMaskedAndScaledArray(TestCase):
@@ -44,10 +49,10 @@ class TestMaskedAndScaledArray(TestCase):
     def test_0d(self):
         x = conventions.MaskedAndScaledArray(np.array(0), fill_value=0)
         self.assertTrue(np.isnan(x))
-        self.assertTrue(np.isnan(x[...]))
+        self.assertTrue(np.isnan(x[B[()]]))
 
         x = conventions.MaskedAndScaledArray(np.array(0), fill_value=10)
-        self.assertEqual(0, x[...])
+        self.assertEqual(0, x[B[()]])
 
     def test_multiple_fill_value(self):
         x = conventions.MaskedAndScaledArray(
@@ -57,7 +62,7 @@ class TestMaskedAndScaledArray(TestCase):
         x = conventions.MaskedAndScaledArray(
             np.array(0), fill_value=np.array([0, 1]))
         self.assertTrue(np.isnan(x))
-        self.assertTrue(np.isnan(x[...]))
+        self.assertTrue(np.isnan(x[B[()]]))
 
 
 class TestStackedBytesArray(TestCase):
@@ -71,9 +76,9 @@ class TestStackedBytesArray(TestCase):
         self.assertEqual(actual.ndim, expected.ndim)
         self.assertEqual(len(actual), len(expected))
         self.assertArrayEqual(expected, actual)
-        self.assertArrayEqual(expected[:1], actual[:1])
+        self.assertArrayEqual(expected[:1], actual[B[:1]])
         with pytest.raises(IndexError):
-            actual[:, :2]
+            actual[B[:, :2]]
 
     def test_scalar(self):
         array = np.array([b'a', b'b', b'c'], dtype='S')
@@ -88,7 +93,7 @@ class TestStackedBytesArray(TestCase):
             len(actual)
         np.testing.assert_array_equal(expected, actual)
         with pytest.raises(IndexError):
-            actual[:2]
+            actual[B[:2]]
         assert str(actual) == str(expected)
 
     def test_char_to_bytes(self):
@@ -124,6 +129,14 @@ class TestStackedBytesArray(TestCase):
         actual = conventions.bytes_to_char(array.T)
         self.assertArrayEqual(actual, expected)
 
+    def test_vectorized_indexing(self):
+        array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
+        stacked = conventions.StackedBytesArray(array)
+        expected = np.array([[b'abc', b'def'], [b'def', b'abc']])
+        indexer = V[np.array([[0, 1], [1, 0]])]
+        actual = stacked[indexer]
+        self.assertArrayEqual(actual, expected)
+
 
 class TestBytesToStringArray(TestCase):
 
@@ -138,7 +151,7 @@ class TestBytesToStringArray(TestCase):
         self.assertEqual(actual.size, expected.size)
         self.assertEqual(actual.ndim, expected.ndim)
         self.assertArrayEqual(expected, actual)
-        self.assertArrayEqual(expected[0], actual[0])
+        self.assertArrayEqual(expected[0], actual[B[0]])
 
     def test_scalar(self):
         expected = np.array(u'abc', dtype=object)
@@ -152,7 +165,7 @@ class TestBytesToStringArray(TestCase):
             len(actual)
         np.testing.assert_array_equal(expected, actual)
         with pytest.raises(IndexError):
-            actual[:2]
+            actual[B[:2]]
         assert str(actual) == str(expected)
 
     def test_decode_bytes_array(self):
@@ -302,13 +315,13 @@ class TestDatetime(TestCase):
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
-        self.assertArrayEqual(actual[slice(0, 2)], expected[slice(0, 2)])
+        self.assertArrayEqual(actual[B[0:2]], expected[slice(0, 2)])
 
         actual = conventions.DecodedCFDatetimeArray(
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
-        self.assertArrayEqual(actual[[0, 2]], expected[[0, 2]])
+        self.assertArrayEqual(actual[O[np.array([0, 2]),]], expected[[0, 2]])
 
     def test_decode_cf_datetime_non_standard_units(self):
         expected = pd.date_range(periods=100, start='1970-01-01', freq='h')

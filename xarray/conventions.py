@@ -333,7 +333,7 @@ def encode_cf_timedelta(timedeltas, units=None):
     return (num, units)
 
 
-class MaskedAndScaledArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class MaskedAndScaledArray(indexing.ExplicitNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
@@ -391,7 +391,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
                  self.scale_factor, self.add_offset, self._dtype))
 
 
-class DecodedCFDatetimeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class DecodedCFDatetimeArray(indexing.ExplicitNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into datetime objects
     using decode_cf_datetime.
@@ -404,8 +404,9 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         # Verify that at least the first and last date can be decoded
         # successfully. Otherwise, tracebacks end up swallowed by
         # Dataset.__repr__ when users try to view their lazily decoded array.
-        example_value = np.concatenate([first_n_items(array, 1) or [0],
-                                        last_item(array) or [0]])
+        values = indexing.WrapImplicitIndexing(self.array)
+        example_value = np.concatenate([first_n_items(values, 1) or [0],
+                                        last_item(values) or [0]])
 
         try:
             result = decode_cf_datetime(example_value, units, calendar)
@@ -430,7 +431,7 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
                                   calendar=self.calendar)
 
 
-class DecodedCFTimedeltaArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class DecodedCFTimedeltaArray(indexing.ExplicitNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into timedelta objects
     using decode_cf_timedelta.
@@ -447,7 +448,7 @@ class DecodedCFTimedeltaArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         return decode_cf_timedelta(self.array[key], units=self.units)
 
 
-class StackedBytesArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class StackedBytesArray(indexing.ExplicitNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
@@ -493,7 +494,7 @@ class StackedBytesArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         return char_to_bytes(self.array[key])
 
 
-class BytesToStringArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class BytesToStringArray(indexing.ExplicitNDArrayMixin):
     """Wrapper that decodes bytes to unicode when values are read.
 
     >>> BytesToStringArray(np.array([b'abc']))[:]
@@ -532,7 +533,7 @@ class BytesToStringArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         return decode_bytes_array(self.array[key], self.encoding)
 
 
-class NativeEndiannessArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class NativeEndiannessArray(indexing.ExplicitNDArrayMixin):
     """Decode arrays on the fly from non-native to native endianness
 
     This is useful for decoding arrays from netCDF3 files (which are all
@@ -561,7 +562,7 @@ class NativeEndiannessArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class BoolTypeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class BoolTypeArray(indexing.ExplicitNDArrayMixin):
     """Decode arrays on the fly from integer to boolean datatype
 
     This is useful for decoding boolean arrays from integer typed netCDF
@@ -589,7 +590,7 @@ class BoolTypeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class UnsignedIntTypeArray(utils.NDArrayMixin, indexing.ExplicitlyIndexed):
+class UnsignedIntTypeArray(indexing.ExplicitNDArrayMixin):
     """Decode arrays on the fly from signed integer to unsigned
     integer. Typically used when _Unsigned is set at as a netCDF
     attribute on a signed integer variable.
