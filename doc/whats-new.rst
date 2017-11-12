@@ -58,6 +58,10 @@ Bug fixes
   (:issue:`1697`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Validate the shape of coordinates with names matching dimensions in the
+  DataArray constructor (:issue:`1709`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Testing
 ~~~~~~~
 
