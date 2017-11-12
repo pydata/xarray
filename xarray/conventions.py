@@ -32,6 +32,10 @@ _NS_PER_TIME_DELTA = {'us': 1e3,
                       'D': 1e9 * 60 * 60 * 24}
 
 
+class SerializationWarning(RuntimeWarning):
+    """Warnings about encoding/decoding issues in serialization."""
+
+
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
                    dtype=float):
     """Scale and mask array values according to CF conventions for packed and
@@ -113,7 +117,7 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
         warnings.warn('Unable to decode time axis into full '
                       'numpy.datetime64 objects, continuing using dummy '
                       'netCDF4.datetime objects instead, reason: dates out'
-                      ' of range', RuntimeWarning, stacklevel=3)
+                      ' of range', SerializationWarning, stacklevel=3)
     else:
         try:
             dates = nctime_to_nptime(dates)
@@ -121,7 +125,7 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
             warnings.warn('Unable to decode time axis into full '
                           'numpy.datetime64 objects, continuing using '
                           'dummy netCDF4.datetime objects instead, reason:'
-                          '{0}'.format(e), RuntimeWarning, stacklevel=3)
+                          '{0}'.format(e), SerializationWarning, stacklevel=3)
     return dates
 
 
@@ -773,7 +777,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
-                                  RuntimeWarning, stacklevel=3)
+                                  SerializationWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if encoding.get('_Unsigned', False):
                     signed_dtype = np.dtype('i%s' % dtype.itemsize)
@@ -951,7 +955,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         else:
             warnings.warn("variable %r has _Unsigned attribute but is not "
                           "of integer type. Ignoring attribute." % name,
-                          RuntimeWarning, stacklevel=3)
+                          SerializationWarning, stacklevel=3)
 
     if mask_and_scale:
         if 'missing_value' in attributes:
@@ -975,7 +979,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
             warnings.warn("variable {!r} has multiple fill values {}, "
                           "decoding all values to NaN."
                           .format(name, fill_value),
-                          RuntimeWarning, stacklevel=3)
+                          SerializationWarning, stacklevel=3)
 
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
@@ -1185,6 +1189,16 @@ def cf_decoder(variables, attributes,
 def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
+
+    for name in list(non_dim_coord_names):
+        if isinstance(name, basestring) and ' ' in name:
+            warnings.warn(
+                'coordinate {!r} has a space in its name, which means it '
+                'cannot be marked as a coordinate on disk and will be '
+                'saved as a data variable instead'.format(name),
+                SerializationWarning, stacklevel=6)
+            non_dim_coord_names.discard(name)
+
     global_coordinates = non_dim_coord_names.copy()
     variable_coordinates = defaultdict(set)
     for coord_name in non_dim_coord_names:
