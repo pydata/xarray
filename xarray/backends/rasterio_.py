@@ -9,7 +9,6 @@ try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
     from threading import Lock
-from affine import Affine
 
 RASTERIO_LOCK = Lock()
 
@@ -120,6 +119,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """
 
     import rasterio
+    from rasterio.transform import Affine
     riods = rasterio.open(filename, mode='r')
 
     if cache is None:

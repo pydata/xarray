@@ -1923,6 +1923,43 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
+    def test_notransform(self):
+        # regression test for https://github.com/pydata/xarray/issues/1686
+        import rasterio
+        import warnings
+        from rasterio.errors import NotGeoreferencedWarning
+
+        # Create a geotiff file
+        with warnings.catch_warnings():
+            # This warning is expected
+            warnings.filterwarnings('ignore', category=NotGeoreferencedWarning)
+            with create_tmp_file(suffix='.tif') as tmp_file:
+                # data
+                nx, ny, nz = 4, 3, 3
+                data = np.arange(nx*ny*nz,
+                                 dtype=rasterio.float32).reshape(nz, ny, nx)
+                with rasterio.open(
+                        tmp_file, 'w',
+                        driver='GTiff', height=ny, width=nx, count=nz,
+                        dtype=rasterio.float32) as s:
+                    s.write(data)
+
+                # Tests
+                expected = DataArray(data,
+                                     dims=('band', 'y', 'x'),
+                                     coords={'band': [1, 2, 3],
+                                             'y': [0.5, 1.5, 2.5],
+                                             'x': [0.5, 1.5, 2.5, 3.5],
+                                             })
+                with xr.open_rasterio(tmp_file) as rioda:
+                    assert_allclose(rioda, expected)
+                    assert 'res' in rioda.attrs
+                    assert isinstance(rioda.attrs['res'], tuple)
+                    assert 'is_tiled' in rioda.attrs
+                    assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                    assert 'transform' in rioda.attrs
+                    assert isinstance(rioda.attrs['transform'], tuple)
+
     def test_indexing(self):
 
         import rasterio
