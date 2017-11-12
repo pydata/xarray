@@ -58,6 +58,9 @@ Bug fixes
   (:issue:`1697`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Fixed wrong y-coordinates for some rasterio files (:issue:`1686`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Testing
 ~~~~~~~
 

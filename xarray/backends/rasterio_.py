@@ -133,15 +133,16 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         raise ValueError('Unknown dims')
     coords['band'] = np.asarray(riods.indexes)
 
-    # Get geo coords
+    # Get coordinates
     if LooseVersion(rasterio.__version__) < '1.0':
-        transfo = riods.affine * Affine.translation(0.5, 0.5)
+        transform = riods.affine
     else:
-        transfo = riods.transform * Affine.translation(0.5, 0.5)
-
+        transform = riods.transform
+    # Xarray's convention is pixel centered
+    transform = transform * Affine.translation(0.5, 0.5)
     nx, ny = riods.width, riods.height
-    x, _ = (np.arange(nx), np.zeros(nx)) * transfo
-    _, y = (np.zeros(ny), np.arange(ny)) * transfo
+    x, _ = (np.arange(nx), np.zeros(nx)) * transform
+    _, y = (np.zeros(ny), np.arange(ny)) * transform
     coords['y'] = y
     coords['x'] = x
 
