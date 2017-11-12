@@ -1214,8 +1214,9 @@ class DataArray(AbstractArray, BaseDataObject):
         out = ops.fillna(self, value)
         return out
 
-    def interpolate_na(self, dim=None, method='linear', inplace=False,
-                       limit=None, **kwargs):
+    def interpolate_na(self, dim=None, method='linear', limit=None,
+                       use_coordinate=True,
+                       **kwargs):
         """Interpolate values according to different methods.
 
         Parameters
@@ -1233,6 +1234,7 @@ class DataArray(AbstractArray, BaseDataObject):
             order given both 'polynomial' and 'spline' require that you also
             specify and order (int) e.g. da.interpolate_na(method='polynomial',
             order=4)
+        use_coordinate : boolean, default True
         limit : limit : int, default None
             Maximum number of consecutive NaNs to fill. Must be greater than 0.
 
@@ -1241,8 +1243,8 @@ class DataArray(AbstractArray, BaseDataObject):
         DataArray
         """
         from .missing import interp_na
-        return interp_na(self, dim=dim, method=method, inplace=inplace,
-                         **kwargs)
+        return interp_na(self, dim=dim, method=method, limit=limit,
+                         use_coordinate=use_coordinate, **kwargs)
 
     def interpolate_at(self, dim, locs, method='linear', inplace=False,
                        limit=None, **kwargs):

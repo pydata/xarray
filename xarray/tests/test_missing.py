@@ -7,6 +7,10 @@ import pytest
 
 from xarray import DataArray
 
+from xarray.core.missing import (NumpyInterpolator, ScipyInterpolator,
+                                 FromDerivativesInterpolator,
+                                 SplineInterpolator)
+
 from xarray.tests import (
     assert_identical, assert_equal, raises_regex, requires_scipy,
     requires_bottleneck, assert_array_equal)
@@ -79,12 +83,25 @@ def test_interpolate_pd_compat(shape, frac_nan, method):
 @requires_scipy
 @pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1)])
 @pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
-@pytest.mark.parametrize('method', ['linear', 'nearest', 'zero', 'slinear',
+@pytest.mark.parametrize('method', ['time', 'index', 'values', 'linear',
+                                    'nearest', 'zero', 'slinear',
                                     'quadratic', 'cubic'])
 def test_interpolate_pd_compat_non_uniform_index(shape, frac_nan, method):
+    # translate pandas syntax to xarray equivalent
+    xmethod = method
+    use_coordinate = False
+    if method in ['time', 'index', 'values']:
+        use_coordinate = True
+        xmethod = 'linear'
+    elif method in ['nearest', 'slinear', 'quadratic', 'cubic']:
+        use_coordinate = True
+
     da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
     for dim in ['time', 'x']:
-        actual = da.interpolate_na(method=method, dim=dim)
+        if method == 'time' and dim != 'time':
+            continue
+        actual = da.interpolate_na(method=xmethod, dim=dim,
+                                   use_coordinate=use_coordinate)
         expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
         np.testing.assert_allclose(actual.values, expected.values)
 
@@ -97,7 +114,8 @@ def test_interpolate_pd_compat_polynomial(shape, frac_nan, order):
     da, df = make_interpolate_example_data(shape, frac_nan)
 
     for dim in ['time', 'x']:
-        actual = da.interpolate_na(method='polynomial', order=order, dim=dim)
+        actual = da.interpolate_na(method='polynomial', order=order, dim=dim,
+                                   use_coordinate=False)
         expected = df.interpolate(method='polynomial', order=order,
                                   axis=da.get_axis_num(dim))
         np.testing.assert_allclose(actual.values, expected.values)
@@ -109,17 +127,6 @@ def test_interpolate_unsorted_index_raises():
     expected = DataArray(vals, dims=('x'), coords={'x': [2, 1, 3]})
     with raises_regex(ValueError, 'must be monotonicly increasing'):
         expected.interpolate_na(dim='x', method='index')
-
-
-@requires_scipy
-def test_interpolate_inplace():
-    original = DataArray(np.array([1, 2, 3, np.nan, 5], dtype=np.float64),
-                         dims=('x'))
-    expected = DataArray(np.array([1, 2, 3, 4, 5], dtype=np.float64),
-                         dims=('x'))
-    new = original.interpolate_na(inplace=True, dim='x')
-    assert_identical(original, expected)
-    assert_identical(original, new)
 
 
 @requires_scipy
@@ -174,7 +181,31 @@ def test_interpolate_allnans():
 
 
 def test_interpolate_limits():
-    raise NotImplementedError()
+    da = DataArray(np.array([1, 2, np.nan, np.nan, np.nan, 6],
+                            dtype=np.float64), dims=('x'))
+
+    actual = da.interpolate_na(dim='x', limit=None)
+    assert actual.isnull().sum() == 0
+
+    actual = da.interpolate_na(dim='x', limit=2)
+    expected = DataArray(np.array([1, 2, 3, 4, np.nan, 6],
+                                  dtype=np.float64), dims=('x'))
+
+    assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    'kind, interpolator',
+    [('linear', NumpyInterpolator), ('linear', ScipyInterpolator),
+     ('spline', SplineInterpolator)])
+def test_interpolators(kind, interpolator):
+    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+    yi = np.array([-10, 0, 10, 20, 50], dtype=np.float64)
+    x = np.array([3, 4], dtype=np.float64)
+
+    f = interpolator(xi, yi, kind=kind)
+    out = f(x)
+    assert pd.isnull(out).sum() == 0
 
 
 @requires_bottleneck

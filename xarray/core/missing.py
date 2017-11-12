@@ -176,35 +176,33 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
 
 
 def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
-              inplace=False, **kwargs):
+              **kwargs):
     '''Interpolate values according to different methods.'''
-
-    # this may not be possible with apply_ufunc
-    arr = self if inplace else self.copy()
 
     if dim is None:
         raise NotImplementedError('dim is a required argument')
 
     if limit is not None:
-        valids = _get_valid_fill_mask(arr, dim, limit)
+        valids = _get_valid_fill_mask(self, dim, limit)
 
     # method
-    index = get_clean_interp_index(arr, dim, use_coordinate=use_coordinate,
+    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate,
                                    **kwargs)
     kwargs.update(kind=method)
 
     interpolator = _get_interpolator(method, **kwargs)
 
-    arr = apply_ufunc(interpolator, index, arr,
+    arr = apply_ufunc(interpolator, index, self,
                       input_core_dims=[[dim], [dim]],
                       output_core_dims=[[dim]],
-                      output_dtypes=[arr.dtype],
-                      output_sizes=dict(zip(arr.dims, arr.shape)),
+                      output_dtypes=[self.dtype],
+                      output_sizes=dict(zip(self.dims, self.shape)),
                       dask='parallelized',
                       vectorize=True,
-                      keep_attrs=True).transpose(*arr.dims)
+                      keep_attrs=True).transpose(*self.dims)
 
     if limit is not None:
+        print(valids)
         arr = arr.where(valids)
 
     return arr
@@ -299,7 +297,9 @@ def _get_interpolator(method, **kwargs):
         if method in interp1d_methods:
             interp_class = ScipyInterpolator
         elif method == 'piecewise_polynomial':
-            interp_class = FromDerivativesInterpolator
+            raise NotImplementedError(
+                '%s has not been fully implemented' % method)
+            # interp_class = FromDerivativesInterpolator
         elif method == 'barycentric':
             interp_class = interpolate.BarycentricInterpolator
         elif method == 'krog':
