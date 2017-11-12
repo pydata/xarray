@@ -376,9 +376,17 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(original, actual)
 
-        expected = original.drop('foo')
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetIdentical(expected, actual)
+    def test_roundtrip_global_coordinates(self):
+        original = Dataset({'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={'x': 0, 'y z': 1})
+        expected = Dataset({'y z': 1}, {'x': 0})
+        with pytest.warns(xr.SerializationWarning):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -1506,8 +1514,11 @@ class DaskTest(TestCase, DatasetIOTestCases):
                   allow_cleanup_failure=False):
         yield data.chunk()
 
+    # Override methods in DatasetIOTestCases - not applicable to dask
     def test_roundtrip_string_encoded_characters(self):
-        # Override method in DatasetIOTestCases - not applicable to dask
+        pass
+
+    def test_roundtrip_coordinates_with_space(self):
         pass
 
     def test_roundtrip_datetime_data(self):
