@@ -9,6 +9,7 @@ try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
     from threading import Lock
+from affine import Affine
 
 RASTERIO_LOCK = Lock()
 
@@ -132,14 +133,12 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     coords['band'] = np.asarray(riods.indexes)
 
     # Get geo coords
+    transfo = riods.transform * Affine.translation(0.5, 0.5)
     nx, ny = riods.width, riods.height
-    dx, dy = riods.res[0], -riods.res[1]
-    x0 = riods.bounds.right if dx < 0 else riods.bounds.left
-    y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    coords['y'] = np.linspace(start=y0 + dy/2, num=ny,
-                              stop=(y0 + (ny - 1) * dy) + dy/2)
-    coords['x'] = np.linspace(start=x0 + dx/2, num=nx,
-                              stop=(x0 + (nx - 1) * dx) + dx/2)
+    x, _ = (np.arange(nx), np.zeros(nx)) * transfo
+    _, y = (np.zeros(ny), np.arange(ny)) * transfo
+    coords['y'] = y
+    coords['x'] = x
 
     # Attributes
     attrs = {}
