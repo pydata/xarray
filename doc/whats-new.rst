@@ -43,6 +43,9 @@ Bug fixes
   ``NumpyIndexingAdapter``. (:issue:`1694`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- Fix importing xarray when running Python with ``-OO`` (:issue:`1706`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fix two bugs that were preventing dask arrays from being specified as
   coordinates in the DataArray constructor (:issue:`1684`).
   By `Joe Hamman <https://github.com/jhamman>`_

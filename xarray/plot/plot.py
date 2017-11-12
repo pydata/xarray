@@ -402,7 +402,7 @@ def _plot2d(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
+    plotfunc.__doc__ = '%s\n%s' % (plotfunc.__doc__, commondoc)
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
