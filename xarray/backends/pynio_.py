@@ -9,7 +9,6 @@ import numpy as np
 from .. import Variable
 from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
-from ..core.pycompat import integer_types
 
 from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
 

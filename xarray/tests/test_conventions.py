@@ -321,7 +321,7 @@ class TestDatetime(TestCase):
             np.array([0, 1, 2]), 'days since 1900-01-01', 'standard')
         expected = pd.date_range('1900-01-01', periods=3).values
         self.assertEqual(actual.dtype, np.dtype('datetime64[ns]'))
-        self.assertArrayEqual(actual[O[np.array([0, 2]),]], expected[[0, 2]])
+        self.assertArrayEqual(actual[O[np.array([0, 2])]], expected[[0, 2]])
 
     def test_decode_cf_datetime_non_standard_units(self):
         expected = pd.date_range(periods=100, start='1970-01-01', freq='h')
