@@ -298,6 +298,9 @@ class TestDataArray(TestCase):
             DataArray(np.random.rand(4, 4),
                       [('x', self.mindex), ('level_1', range(4))])
 
+        with raises_regex(ValueError, 'matching the dimension size'):
+            DataArray(data, coords={'x': 0}, dims=['x', 'y'])
+
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
