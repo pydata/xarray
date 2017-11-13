@@ -62,6 +62,10 @@ Bug fixes
   DataArray constructor (:issue:`1709`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
+- Raise ``NotImplementedError`` when attempting to save a MultiIndex to a
+  netCDF file (:issue:`1547`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 Testing
 ~~~~~~~
 
