@@ -302,7 +302,7 @@ class ExplicitIndexer(object):
 
 
 def as_integer_or_none(value):
-    return None if value is None operator.index(value)
+    return None if value is None else operator.index(value)
 
 
 def as_integer_slice(value):
