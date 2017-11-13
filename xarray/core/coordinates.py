@@ -197,6 +197,11 @@ class DatasetCoordinates(AbstractCoordinates):
         else:
             raise KeyError(key)
 
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return [key for key in self._data._ipython_key_completions_()
+                if key not in self._data.data_vars]
+
 
 class DataArrayCoordinates(AbstractCoordinates):
     """Dictionary like container for DataArray coordinates.
@@ -238,6 +243,10 @@ class DataArrayCoordinates(AbstractCoordinates):
 
     def __delitem__(self, key):
         del self._data._coords[key]
+
+    def _ipython_key_completions_(self):
+        """Provide method for the key-autocompletions in IPython. """
+        return self._data._ipython_key_completions_()
 
 
 class LevelCoordinatesSource(object):

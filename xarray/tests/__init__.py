@@ -14,7 +14,15 @@ import pytest
 
 from xarray.core import utils
 from xarray.core.pycompat import PY3
+from xarray.core.indexing import NDArrayIndexable
 from xarray.testing import assert_equal, assert_identical, assert_allclose
+from xarray.plot.utils import import_seaborn
+
+try:
+    from pandas.testing import assert_frame_equal
+except ImportError:
+    # old location, for pandas < 0.20
+    from pandas.util.testing import assert_frame_equal
 
 try:
     import unittest2 as unittest
@@ -25,6 +33,15 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+
+# import mpl and change the backend before other mpl imports
+try:
+    import matplotlib as mpl
+    # Order of imports is important here.
+    # Using a different backend makes Travis CI work
+    mpl.use('Agg')
+except ImportError:
+    pass
 
 
 def _importorskip(modname, minversion=None):
@@ -62,10 +79,15 @@ requires_scipy_or_netCDF4 = unittest.skipUnless(
     has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
-
 if has_dask:
     import dask
     dask.set_options(get=dask.get)
+try:
+    import_seaborn()
+    has_seaborn = True
+except:
+    has_seaborn = False
+requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
@@ -90,10 +112,12 @@ class TestCase(unittest.TestCase):
         # Python 3 assertCountEqual is roughly equivalent to Python 2
         # assertItemsEqual
         def assertItemsEqual(self, first, second, msg=None):
+            __tracebackhide__ = True  # noqa: F841
             return self.assertCountEqual(first, second, msg)
 
     @contextmanager
     def assertWarns(self, message):
+        __tracebackhide__ = True  # noqa: F841
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings('always', message)
             yield
@@ -101,55 +125,74 @@ class TestCase(unittest.TestCase):
         assert any(message in str(wi.message) for wi in w)
 
     def assertVariableEqual(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(v1, v2)
 
     def assertVariableIdentical(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(v1, v2)
 
     def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
+        __tracebackhide__ = True  # noqa: F841
         assert_allclose(v1, v2, rtol=rtol, atol=atol)
 
     def assertVariableNotEqual(self, v1, v2):
+        __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
 
     def assertArrayEqual(self, a1, a2):
+        __tracebackhide__ = True  # noqa: F841
         assert_array_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
+        __tracebackhide__ = True  # noqa: F841
         assert a1 == a2 or (a1 != a1 and a2 != a2)
 
     def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
+        __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
     def assertDatasetEqual(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
     def assertDatasetIdentical(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(d1, d2)
 
-    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08):
-        assert_allclose(d1, d2, rtol=rtol, atol=atol)
+    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08,
+                              decode_bytes=True):
+        __tracebackhide__ = True  # noqa: F841
+        assert_allclose(d1, d2, rtol=rtol, atol=atol,
+                        decode_bytes=decode_bytes)
 
     def assertCoordinatesEqual(self, d1, d2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
     def assertDataArrayEqual(self, ar1, ar2):
+        __tracebackhide__ = True  # noqa: F841
         assert_equal(ar1, ar2)
 
     def assertDataArrayIdentical(self, ar1, ar2):
+        __tracebackhide__ = True  # noqa: F841
         assert_identical(ar1, ar2)
 
-    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08):
-        assert_allclose(ar1, ar2, rtol=rtol, atol=atol)
+    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08,
+                                decode_bytes=True):
+        __tracebackhide__ = True  # noqa: F841
+        assert_allclose(ar1, ar2, rtol=rtol, atol=atol,
+                        decode_bytes=decode_bytes)
 
 
 @contextmanager
 def raises_regex(error, pattern):
+    __tracebackhide__ = True  # noqa: F841
     with pytest.raises(error) as excinfo:
         yield
     message = str(excinfo.value)
-    if not re.match(pattern, message):
-        raise AssertionError('exception %r did not match pattern %s'
+    if not re.search(pattern, message):
+        raise AssertionError('exception %r did not match pattern %r'
                              % (excinfo.value, pattern))
 
 
@@ -157,7 +200,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(utils.NDArrayMixin):
+class InaccessibleArray(utils.NDArrayMixin, NDArrayIndexable):
 
     def __init__(self, array):
         self.array = array

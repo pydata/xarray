@@ -9,7 +9,7 @@ import pandas as pd
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
-from . import TestCase
+from . import TestCase, requires_dask
 
 
 class TestAlias(TestCase):
@@ -81,7 +81,7 @@ class TestDictionaries(TestCase):
         utils.update_safety_check(self.x, self.y)
 
     def test_unsafe(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
@@ -116,11 +116,11 @@ class TestDictionaries(TestCase):
 
     def test_frozen(self):
         x = utils.Frozen(self.x)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             x['foo'] = 'bar'
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             del x['a']
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             x.update(self.y)
         self.assertEqual(x.mapping, self.x)
         self.assertIn(repr(x), ("Frozen({'a': 'A', 'b': 'B'})",
@@ -145,6 +145,11 @@ class TestDictionaries(TestCase):
         self.assertEqual(m['x'], 100)
         self.assertEqual(m.maps[0]['x'], 100)
         self.assertItemsEqual(['x', 'y', 'z'], m)
+
+
+def test_repr_object():
+    obj = utils.ReprObject('foo')
+    assert repr(obj) == 'foo'
 
 
 class Test_is_uniform_and_sorted(TestCase):
@@ -175,3 +180,12 @@ class Test_hashable(TestCase):
             self.assertTrue(utils.hashable(v))
         for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
             self.assertFalse(utils.hashable(v))
+
+
+@requires_dask
+def test_dask_array_is_scalar():
+    # regression test for GH1684
+    import dask.array as da
+
+    y = da.arange(8, chunks=4)
+    assert not utils.is_scalar(y)

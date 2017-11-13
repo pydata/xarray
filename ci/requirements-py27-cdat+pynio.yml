@@ -16,6 +16,7 @@ dependencies:
   - pathlib2
   - pynio
   - pytest
+  - flake8
   - mock
   - scipy
   - seaborn

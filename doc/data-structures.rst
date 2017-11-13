@@ -310,18 +310,15 @@ You can also create an dataset from:
 Dataset contents
 ~~~~~~~~~~~~~~~~
 
-:py:class:`~xarray.Dataset` implements the Python dictionary interface, with
+:py:class:`~xarray.Dataset` implements the Python mapping interface, with
 values given by :py:class:`xarray.DataArray` objects:
 
 .. ipython:: python
 
     'temperature' in ds
-
-    ds.keys()
-
     ds['temperature']
 
-The valid keys include each listed coordinate and data variable.
+Valid keys include each listed coordinate and data variable.
 
 Data and coordinate variables are also contained separately in the
 :py:attr:`~xarray.Dataset.data_vars` and :py:attr:`~xarray.Dataset.coords`
@@ -355,6 +352,13 @@ setting) variables and attributes:
 
 This is particularly useful in an exploratory context, because you can
 tab-complete these variable names with tools like IPython.
+
+.. warning::
+
+  We are changing the behavior of iterating over a Dataset the next major
+  release of xarray, to only include data variables instead of both data
+  variables and coordinates. In the meantime, prefer iterating over
+  ``ds.data_vars`` or ``ds.coords``.
 
 Dictionary like methods
 ~~~~~~~~~~~~~~~~~~~~~~~

@@ -3,13 +3,15 @@ from __future__ import division
 from __future__ import print_function
 from copy import deepcopy
 
+import pytest
+
 import numpy as np
 import pandas as pd
 
 from xarray import Dataset, DataArray, auto_combine, concat, Variable
 from xarray.core.pycompat import iteritems, OrderedDict
 
-from . import TestCase, InaccessibleArray, requires_dask
+from . import TestCase, InaccessibleArray, requires_dask, raises_regex
 from .test_dataset import create_test_data
 
 
@@ -19,7 +21,7 @@ class TestConcatDataset(TestCase):
 
         # drop the third dimension to keep things relatively understandable
         data = create_test_data()
-        for k in list(data):
+        for k in list(data.variables):
             if 'dim3' in data[k].dims:
                 del data[k]
 
@@ -91,7 +93,7 @@ class TestConcatDataset(TestCase):
             actual = concat(objs, dim='x', coords=coords)
             self.assertDatasetIdentical(expected, actual)
         for coords in ['minimal', []]:
-            with self.assertRaisesRegexp(ValueError, 'not equal across'):
+            with raises_regex(ValueError, 'not equal across'):
                 concat(objs, dim='x', coords=coords)
 
     def test_concat_constant_index(self):
@@ -102,7 +104,7 @@ class TestConcatDataset(TestCase):
         for mode in ['different', 'all', ['foo']]:
             actual = concat([ds1, ds2], 'y', data_vars=mode)
             self.assertDatasetIdentical(expected, actual)
-        with self.assertRaisesRegexp(ValueError, 'not equal across datasets'):
+        with raises_regex(ValueError, 'not equal across datasets'):
             concat([ds1, ds2], 'y', data_vars='minimal')
 
     def test_concat_size0(self):
@@ -128,41 +130,41 @@ class TestConcatDataset(TestCase):
         split_data = [data.isel(dim1=slice(3)),
                       data.isel(dim1=slice(3, None))]
 
-        with self.assertRaisesRegexp(ValueError, 'must supply at least one'):
+        with raises_regex(ValueError, 'must supply at least one'):
             concat([], 'dim1')
 
-        with self.assertRaisesRegexp(ValueError, 'are not coordinates'):
+        with raises_regex(ValueError, 'are not coordinates'):
             concat([data, data], 'new_dim', coords=['not_found'])
 
-        with self.assertRaisesRegexp(ValueError, 'global attributes not'):
+        with raises_regex(ValueError, 'global attributes not'):
             data0, data1 = deepcopy(split_data)
             data1.attrs['foo'] = 'bar'
             concat([data0, data1], 'dim1', compat='identical')
         self.assertDatasetIdentical(
             data, concat([data0, data1], 'dim1', compat='equals'))
 
-        with self.assertRaisesRegexp(ValueError, 'encountered unexpected'):
+        with raises_regex(ValueError, 'encountered unexpected'):
             data0, data1 = deepcopy(split_data)
             data1['foo'] = ('bar', np.random.randn(10))
             concat([data0, data1], 'dim1')
 
-        with self.assertRaisesRegexp(ValueError, 'compat.* invalid'):
+        with raises_regex(ValueError, 'compat.* invalid'):
             concat(split_data, 'dim1', compat='foobar')
 
-        with self.assertRaisesRegexp(ValueError, 'unexpected value for'):
+        with raises_regex(ValueError, 'unexpected value for'):
             concat([data, data], 'new_dim', coords='foobar')
 
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'coordinate in some datasets but not others'):
             concat([Dataset({'x': 0}), Dataset({'x': [1]})], dim='z')
 
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'coordinate in some datasets but not others'):
             concat([Dataset({'x': 0}), Dataset({}, {'x': 1})], dim='z')
 
-        with self.assertRaisesRegexp(ValueError, 'no longer a valid'):
+        with raises_regex(ValueError, 'no longer a valid'):
             concat([data, data], 'new_dim', mode='different')
-        with self.assertRaisesRegexp(ValueError, 'no longer a valid'):
+        with raises_regex(ValueError, 'no longer a valid'):
             concat([data, data], 'new_dim', concat_over='different')
 
     def test_concat_promote_shape(self):
@@ -214,7 +216,7 @@ class TestConcatDataset(TestCase):
 
         objs = [Dataset({'y': ('t', [1])}, {'x': 1, 't': [0]}),
                 Dataset({'y': ('t', [2])}, {'x': 2, 't': [0]})]
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             concat(objs, 't', coords='minimal')
 
     def test_concat_dim_is_variable(self):
@@ -262,10 +264,10 @@ class TestConcatDataArray(TestCase):
         expected = foo[:2].rename({'x': 'concat_dim'})
         self.assertDataArrayIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'not identical'):
+        with raises_regex(ValueError, 'not identical'):
             concat([foo, bar], dim='w', compat='identical')
 
-        with self.assertRaisesRegexp(ValueError, 'not a valid argument'):
+        with raises_regex(ValueError, 'not a valid argument'):
             concat([foo, bar], dim='w', data_vars='minimal')
 
     def test_concat_encoding(self):
@@ -317,15 +319,15 @@ class TestAutoCombine(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        with self.assertRaisesRegexp(ValueError, 'too many .* dimensions'):
+        with raises_regex(ValueError, 'too many .* dimensions'):
             auto_combine(objs)
 
         objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        with self.assertRaisesRegexp(ValueError, 'cannot infer dimension'):
+        with raises_regex(ValueError, 'cannot infer dimension'):
             auto_combine(objs)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             auto_combine(objs)
 
     @requires_dask  # only for toolz
@@ -356,7 +358,7 @@ class TestAutoCombine(TestCase):
         # https://github.com/pydata/xarray/issues/508
         datasets = [Dataset({'x': 0}, {'y': 0}),
                     Dataset({'x': 1}, {'y': 1, 'z': 1})]
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             auto_combine(datasets, 'y')
 
     @requires_dask  # only for toolz

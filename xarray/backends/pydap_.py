@@ -11,7 +11,7 @@ from ..core.pycompat import integer_types
 from .common import AbstractDataStore, robust_getitem
 
 
-class PydapArrayWrapper(NDArrayMixin):
+class PydapArrayWrapper(NDArrayMixin, indexing.NDArrayIndexable):
     def __init__(self, array):
         self.array = array
 
@@ -27,6 +27,11 @@ class PydapArrayWrapper(NDArrayMixin):
             return np.dtype(t.typecode + str(t.size))
 
     def __getitem__(self, key):
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
+        key = indexing.to_tuple(key)
         if not isinstance(key, tuple):
             key = (key,)
         for k in key:

@@ -11,7 +11,7 @@ from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
 from ..core.utils import (Frozen, FrozenOrderedDict, NdimSizeLenMixin,
                           DunderArrayMixin)
-from ..core.indexing import NumpyIndexingAdapter
+from ..core.indexing import NumpyIndexingAdapter, NDArrayIndexable
 
 from .common import WritableCFDataStore, DataStorePickleMixin
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
@@ -31,7 +31,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin, NDArrayIndexable):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -164,12 +164,13 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             k for k, v in self.ds.dimensions.items() if v is None}
         return encoding
 
-    def set_dimension(self, name, length):
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
             if name in self.dimensions:
                 raise ValueError('%s does not support modifying dimensions'
                                  % type(self).__name__)
-            self.ds.createDimension(name, length)
+            dim_length = length if not is_unlimited else None
+            self.ds.createDimension(name, dim_length)
 
     def _validate_attr_key(self, key):
         if not is_valid_nc3_name(key):

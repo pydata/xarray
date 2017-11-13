@@ -14,6 +14,7 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   apply_ufunc
    align
    broadcast
    concat
@@ -105,8 +106,6 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
-   Dataset.isel_points
-   Dataset.sel_points
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
@@ -159,7 +158,6 @@ Computation
 :py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
-:py:attr:`~Dataset.T`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
 
@@ -247,8 +245,6 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   DataArray.isel_points
-   DataArray.sel_points
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
@@ -425,6 +421,7 @@ Dataset methods
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dask_dataframe
    Dataset.to_dict
    Dataset.from_dataframe
    Dataset.from_dict
@@ -492,6 +489,7 @@ Exceptions
    :toctree: generated/
 
    MergeError
+   SerializationWarning
 
 Advanced API
 ============

@@ -13,13 +13,14 @@ import pytest
 import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
-from xarray.core.pycompat import suppress
-from . import TestCase
+from xarray.core.pycompat import suppress, OrderedDict
+from . import TestCase, assert_frame_equal, raises_regex
 
 from xarray.tests import mock
 
 dask = pytest.importorskip('dask')
 import dask.array as da
+import dask.dataframe as dd
 
 
 class DaskTestCase(TestCase):
@@ -29,9 +30,9 @@ class DaskTestCase(TestCase):
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
-                    self.assertIsInstance(var.data, np.ndarray)
+                    self.assertIsInstance(v.data, np.ndarray)
                 else:
-                    self.assertIsInstance(var.data, da.Array)
+                    self.assertIsInstance(v.data, da.Array)
         elif isinstance(actual, DataArray):
             self.assertIsInstance(actual.data, da.Array)
             for k, v in actual.coords.items():
@@ -86,7 +87,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[0], v[0])
         self.assertLazyAndIdentical(u[:1], v[:1])
         self.assertLazyAndIdentical(u[[0, 1], [0, 1, 2]], v[[0, 1], [0, 1, 2]])
-        with self.assertRaisesRegexp(TypeError, 'stored in a dask array'):
+        with raises_regex(TypeError, 'stored in a dask array'):
             v[:1] = 0
 
     def test_squeeze(self):
@@ -145,9 +146,9 @@ class TestVariable(DaskTestCase):
         a1 = Variable(['x'], build_dask_array('x'))
         a1.compute()
         self.assertFalse(a1._in_memory)
-        self.assertEquals(kernel_call_count, 1)
+        assert kernel_call_count == 1
         a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 1)
+        assert kernel_call_count == 1
         self.assertVariableIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
@@ -160,7 +161,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(u.argmax(dim='x'), v.argmax(dim='x'))
         self.assertLazyAndAllClose((u > 1).any(), (v > 1).any())
         self.assertLazyAndAllClose((u < 1).all('x'), (v < 1).all('x'))
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        with raises_regex(NotImplementedError, 'dask'):
             v.median()
 
     def test_missing_values(self):
@@ -204,6 +205,34 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_compute(self):
+        u = self.eager_var
+        v = self.lazy_var
+
+        assert dask.is_dask_collection(v)
+        (v2,) = dask.compute(v + 1)
+        assert not dask.is_dask_collection(v2)
+
+        assert ((u + 1).data == v2.data).all()
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_persist(self):
+        u = self.eager_var
+        v = self.lazy_var + 1
+
+        (v2,) = dask.persist(v)
+        assert v is not v2
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert v2.__dask_keys__() == v.__dask_keys__()
+        assert dask.is_dask_collection(v)
+        assert dask.is_dask_collection(v2)
+
+        self.assertLazyAndAllClose(u + 1, v)
+        self.assertLazyAndAllClose(u + 1, v2)
 
 
 class TestDataArrayAndDataset(DaskTestCase):
@@ -250,6 +279,105 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_compute(self):
+        u = self.eager_array
+        v = self.lazy_array
+
+        assert dask.is_dask_collection(v)
+        (v2,) = dask.compute(v + 1)
+        assert not dask.is_dask_collection(v2)
+
+        assert ((u + 1).data == v2.data).all()
+
+    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                        reason='Need dask 0.16 for new interface')
+    def test_persist(self):
+        u = self.eager_array
+        v = self.lazy_array + 1
+
+        (v2,) = dask.persist(v)
+        assert v is not v2
+        assert len(v2.__dask_graph__()) < len(v.__dask_graph__())
+        assert v2.__dask_keys__() == v.__dask_keys__()
+        assert dask.is_dask_collection(v)
+        assert dask.is_dask_collection(v2)
+
+        self.assertLazyAndAllClose(u + 1, v)
+        self.assertLazyAndAllClose(u + 1, v2)
+
+    def test_concat_loads_variables(self):
+        # Test that concat() computes not-in-memory variables at most once
+        # and loads them in the output, while leaving the input unaltered.
+        d1 = build_dask_array('d1')
+        c1 = build_dask_array('c1')
+        d2 = build_dask_array('d2')
+        c2 = build_dask_array('c2')
+        d3 = build_dask_array('d3')
+        c3 = build_dask_array('c3')
+        # Note: c is a non-index coord.
+        # Index coords are loaded by IndexVariable.__init__.
+        ds1 = Dataset(data_vars={'d': ('x', d1)}, coords={'c': ('x', c1)})
+        ds2 = Dataset(data_vars={'d': ('x', d2)}, coords={'c': ('x', c2)})
+        ds3 = Dataset(data_vars={'d': ('x', d3)}, coords={'c': ('x', c3)})
+
+        assert kernel_call_count == 0
+        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars='different',
+                        coords='different')
+        # each kernel is computed exactly once
+        assert kernel_call_count == 6
+        # variables are loaded in the output
+        assert isinstance(out['d'].data, np.ndarray)
+        assert isinstance(out['c'].data, np.ndarray)
+
+        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars='all', coords='all')
+        # no extra kernel calls
+        assert kernel_call_count == 6
+        assert isinstance(out['d'].data, dask.array.Array)
+        assert isinstance(out['c'].data, dask.array.Array)
+
+        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars=['d'], coords=['c'])
+        # no extra kernel calls
+        assert kernel_call_count == 6
+        assert isinstance(out['d'].data, dask.array.Array)
+        assert isinstance(out['c'].data, dask.array.Array)
+
+        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars=[], coords=[])
+        # variables are loaded once as we are validing that they're identical
+        assert kernel_call_count == 12
+        assert isinstance(out['d'].data, np.ndarray)
+        assert isinstance(out['c'].data, np.ndarray)
+
+        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars='different',
+                        coords='different', compat='identical')
+        # compat=identical doesn't do any more kernel calls than compat=equals
+        assert kernel_call_count == 18
+        assert isinstance(out['d'].data, np.ndarray)
+        assert isinstance(out['c'].data, np.ndarray)
+
+        # When the test for different turns true halfway through,
+        # stop computing variables as it would not have any benefit
+        ds4 = Dataset(data_vars={'d': ('x', [2.0])}, coords={'c': ('x', [2.0])})
+        out = xr.concat([ds1, ds2, ds4, ds3], dim='n', data_vars='different',
+                        coords='different')
+        # the variables of ds1 and ds2 were computed, but those of ds3 didn't
+        assert kernel_call_count == 22
+        assert isinstance(out['d'].data, dask.array.Array)
+        assert isinstance(out['c'].data, dask.array.Array)
+        # the data of ds1 and ds2 was loaded into numpy and then
+        # concatenated to the data of ds3. Thus, only ds3 is computed now.
+        out.compute()
+        assert kernel_call_count == 24
+
+        # Finally, test that riginals are unaltered
+        assert ds1['d'].data is d1
+        assert ds1['c'].data is c1
+        assert ds2['d'].data is d2
+        assert ds2['c'].data is c2
+        assert ds3['d'].data is d3
+        assert ds3['c'].data is c3
+
     def test_groupby(self):
         if LooseVersion(dask.__version__) == LooseVersion('0.15.3'):
             pytest.xfail('upstream bug in dask: '
@@ -268,7 +396,7 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         for coords in [u.coords, v.coords]:
             coords['ab'] = ('x', ['a', 'a', 'b', 'b'])
-        with self.assertRaisesRegexp(NotImplementedError, 'dask'):
+        with raises_regex(NotImplementedError, 'dask'):
             v.groupby('ab').first()
         expected = u.groupby('ab').first()
         actual = v.groupby('ab').first(skipna=False)
@@ -330,28 +458,6 @@ class TestDataArrayAndDataset(DaskTestCase):
             ds.load()
         self.assertEqual(count[0], 1)
 
-    def test_persist_Dataset(self):
-        ds = Dataset({'foo': ('x', range(5)),
-                      'bar': ('x', range(5))}).chunk()
-        ds = ds + 1
-        n = len(ds.foo.data.dask)
-
-        ds2 = ds.persist()
-
-        assert len(ds2.foo.data.dask) == 1
-        assert len(ds.foo.data.dask) == n  # doesn't mutate in place
-
-    def test_persist_DataArray(self):
-        x = da.arange(10, chunks=(5,))
-        y = DataArray(x)
-        z = y + 1
-        n = len(z.data.dask)
-
-        zz = z.persist()
-
-        assert len(z.data.dask) == n
-        assert len(zz.data.dask) == zz.data.npartitions
-
     def test_stack(self):
         data = da.random.normal(size=(2, 3, 4), chunks=(1, 3, 4))
         arr = DataArray(data, dims=('w', 'x', 'y'))
@@ -380,7 +486,7 @@ class TestDataArrayAndDataset(DaskTestCase):
             y        (x) int64 dask.array<shape=(1,), chunksize=(1,)>
         Dimensions without coordinates: x""")
         self.assertEqual(expected, repr(a))
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataset_repr(self):
         # Test that pickling/unpickling converts the dask backend
@@ -398,7 +504,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         Data variables:
             a        (x) int64 dask.array<shape=(1,), chunksize=(1,)>""")
         self.assertEqual(expected, repr(ds))
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataarray_pickle(self):
         # Test that pickling/unpickling converts the dask backend
@@ -409,9 +515,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         a1.compute()
         self.assertFalse(a1._in_memory)
         self.assertFalse(a1.coords['y']._in_memory)
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         a2 = pickle.loads(pickle.dumps(a1))
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         self.assertDataArrayIdentical(a1, a2)
         self.assertFalse(a1._in_memory)
         self.assertFalse(a2._in_memory)
@@ -428,9 +534,9 @@ class TestDataArrayAndDataset(DaskTestCase):
         ds1.compute()
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds1['y']._in_memory)
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         ds2 = pickle.loads(pickle.dumps(ds1))
-        self.assertEquals(kernel_call_count, 2)
+        assert kernel_call_count == 2
         self.assertDatasetIdentical(ds1, ds2)
         self.assertFalse(ds1['a']._in_memory)
         self.assertFalse(ds2['a']._in_memory)
@@ -447,7 +553,7 @@ class TestDataArrayAndDataset(DaskTestCase):
                       coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(a, 'NOTEXIST')
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_dataset_getattr(self):
         # Test that pickling/unpickling converts the dask backend
@@ -458,14 +564,14 @@ class TestDataArrayAndDataset(DaskTestCase):
                      coords={'y': ('x', nonindex_coord)})
         with suppress(AttributeError):
             getattr(ds, 'NOTEXIST')
-        self.assertEquals(kernel_call_count, 0)
+        assert kernel_call_count == 0
 
     def test_values(self):
         # Test that invoking the values property does not convert the dask
         # backend to numpy
         a = DataArray([1, 2]).chunk()
         self.assertFalse(a._in_memory)
-        self.assertEquals(a.values.tolist(), [1, 2])
+        assert a.values.tolist() == [1, 2]
         self.assertFalse(a._in_memory)
 
     def test_from_dask_variable(self):
@@ -474,6 +580,138 @@ class TestDataArrayAndDataset(DaskTestCase):
         a = DataArray(self.lazy_array.variable,
                       coords={'x': range(4)}, name='foo')
         self.assertLazyAndIdentical(self.lazy_array, a)
+
+
+class TestToDaskDataFrame(TestCase):
+
+    def test_to_dask_dataframe(self):
+        # Test conversion of Datasets to dask DataFrames
+        x = da.from_array(np.random.randn(10), chunks=4)
+        y = np.arange(10, dtype='uint8')
+        t = list('abcdefghij')
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+
+        expected_pd = pd.DataFrame({'a': x,
+                                    'b': y},
+                                   index=pd.Index(t, name='t'))
+
+        # test if 1-D index is correctly set up
+        expected = dd.from_pandas(expected_pd, chunksize=4)
+        actual = ds.to_dask_dataframe(set_index=True)
+        # test if we have dask dataframes
+        self.assertIsInstance(actual, dd.DataFrame)
+
+        # use the .equals from pandas to check dataframes are equivalent
+        assert_frame_equal(expected.compute(), actual.compute())
+
+        # test if no index is given
+        expected = dd.from_pandas(expected_pd.reset_index(drop=False),
+                                  chunksize=4)
+
+        actual = ds.to_dask_dataframe(set_index=False)
+
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected.compute(), actual.compute())
+
+    def test_to_dask_dataframe_2D(self):
+        # Test if 2-D dataset is supplied
+        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['x'] = ('x', np.array([0, 1], np.int64))
+        ds['y'] = ('y', list('abc'))
+
+        # dask dataframes do not (yet) support multiindex,
+        # but when it does, this would be the expected index:
+        exp_index = pd.MultiIndex.from_arrays(
+            [[0, 0, 0, 1, 1, 1], ['a', 'b', 'c', 'a', 'b', 'c']],
+            names=['x', 'y'])
+        expected = pd.DataFrame({'w': w.reshape(-1)},
+                                index=exp_index)
+        # so for now, reset the index
+        expected = expected.reset_index(drop=False)
+        actual = ds.to_dask_dataframe(set_index=False)
+
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    @pytest.mark.xfail(raises=NotImplementedError)
+    def test_to_dask_dataframe_2D_set_index(self):
+        # This will fail until dask implements MultiIndex support
+        w = da.from_array(np.random.randn(2, 3), chunks=(1, 2))
+        ds = Dataset({'w': (('x', 'y'), w)})
+        ds['x'] = ('x', np.array([0, 1], np.int64))
+        ds['y'] = ('y', list('abc'))
+
+        expected = ds.compute().to_dataframe()
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_coordinates(self):
+        # Test if coordinate is also a dask array
+        x = da.from_array(np.random.randn(10), chunks=4)
+        t = da.from_array(np.arange(10)*2, chunks=4)
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('t', ('t', t))]))
+
+        expected_pd = pd.DataFrame({'a': x},
+                                   index=pd.Index(t, name='t'))
+        expected = dd.from_pandas(expected_pd, chunksize=4)
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected.compute(), actual.compute())
+
+    def test_to_dask_dataframe_not_daskarray(self):
+        # Test if DataArray is not a dask array
+        x = np.random.randn(10)
+        y = np.arange(10, dtype='uint8')
+        t = list('abcdefghij')
+
+        ds = Dataset(OrderedDict([('a', ('t', x)),
+                                  ('b', ('t', y)),
+                                  ('t', ('t', t))]))
+
+        expected = pd.DataFrame({'a': x, 'b': y},
+                                index=pd.Index(t, name='t'))
+
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_no_coordinate(self):
+        x = da.from_array(np.random.randn(10), chunks=4)
+        ds = Dataset({'x': ('dim_0', x)})
+
+        expected = ds.compute().to_dataframe().reset_index()
+        actual = ds.to_dask_dataframe()
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+        expected = ds.compute().to_dataframe()
+        actual = ds.to_dask_dataframe(set_index=True)
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+    def test_to_dask_dataframe_dim_order(self):
+        values = np.array([[1, 2], [3, 4]], dtype=np.int64)
+        ds = Dataset({'w': (('x', 'y'), values)}).chunk(1)
+
+        expected = ds['w'].to_series().reset_index()
+        actual = ds.to_dask_dataframe(dim_order=['x', 'y'])
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+        expected = ds['w'].T.to_series().reset_index()
+        actual = ds.to_dask_dataframe(dim_order=['y', 'x'])
+        self.assertIsInstance(actual, dd.DataFrame)
+        assert_frame_equal(expected, actual.compute())
+
+        with raises_regex(ValueError, 'does not match the set of dimensions'):
+            ds.to_dask_dataframe(dim_order=['x'])
 
 
 @pytest.mark.parametrize("method", ['load', 'compute'])
@@ -517,10 +755,11 @@ def test_dask_kwargs_dataset(method):
 kernel_call_count = 0
 
 
-def kernel():
+def kernel(name):
     """Dask kernel to test pickling/unpickling and __repr__.
     Must be global to make it pickleable.
     """
+    print("kernel(%s)" % name)
     global kernel_call_count
     kernel_call_count += 1
     return np.ones(1, dtype=np.int64)
@@ -530,5 +769,64 @@ def build_dask_array(name):
     global kernel_call_count
     kernel_call_count = 0
     return dask.array.Array(
-        dask={(name, 0): (kernel, )}, name=name,
+        dask={(name, 0): (kernel, name)}, name=name,
         chunks=((1,),), dtype=np.int64)
+
+
+# test both the perist method and the dask.persist function
+# the dask.persist function requires a new version of dask
+@pytest.mark.parametrize('persist', [
+    lambda x: x.persist(),
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                       lambda x: dask.persist(x)[0],
+                       reason='Need Dask 0.16')
+])
+def test_persist_Dataset(persist):
+    ds = Dataset({'foo': ('x', range(5)),
+                  'bar': ('x', range(5))}).chunk()
+    ds = ds + 1
+    n = len(ds.foo.data.dask)
+
+    ds2 = persist(ds)
+
+    assert len(ds2.foo.data.dask) == 1
+    assert len(ds.foo.data.dask) == n  # doesn't mutate in place
+
+
+@pytest.mark.parametrize('persist', [
+    lambda x: x.persist(),
+    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                       lambda x: dask.persist(x)[0],
+                       reason='Need Dask 0.16')
+])
+def test_persist_DataArray(persist):
+    x = da.arange(10, chunks=(5,))
+    y = DataArray(x)
+    z = y + 1
+    n = len(z.data.dask)
+
+    zz = persist(z)
+
+    assert len(z.data.dask) == n
+    assert len(zz.data.dask) == zz.data.npartitions
+
+
+@pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
+                    reason='Need dask 0.16 for new interface')
+def test_dataarray_with_dask_coords():
+    import toolz
+    x = xr.Variable('x', da.arange(8, chunks=(4,)))
+    y = xr.Variable('y', da.arange(8, chunks=(4,)) * 2)
+    data = da.random.random((8, 8), chunks=(4, 4)) + 1
+    array = xr.DataArray(data, dims=['x', 'y'])
+    array.coords['xx'] = x
+    array.coords['yy'] = y
+
+    assert dict(array.__dask_graph__()) == toolz.merge(data.__dask_graph__(),
+                                                       x.__dask_graph__(),
+                                                       y.__dask_graph__())
+
+    (array2,) = dask.compute(array)
+    assert not dask.is_dask_collection(array2)
+
+    assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())

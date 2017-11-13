@@ -303,14 +303,20 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-Unfortunately, a limitation of the current version of numpy means that we
-cannot override ufuncs for datasets, because datasets cannot be written as
-a single array [1]_. :py:meth:`~xarray.Dataset.apply` works around this
+Unfortunately, we currently do not support NumPy ufuncs for datasets [1]_.
+:py:meth:`~xarray.Dataset.apply` works around this
 limitation, by applying the given function to each variable in the dataset:
 
 .. ipython:: python
 
     ds.apply(np.sin)
+
+You can also use the wrapped functions in the ``xarray.ufuncs`` module:
+
+.. ipython:: python
+
+    import xarray.ufuncs as xu
+    xu.sin(ds)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
@@ -329,5 +335,93 @@ Arithmetic between two datasets matches data variables of the same name:
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
 
-.. [1] In some future version of NumPy, we should be able to override ufuncs for
-       datasets by making use of ``__numpy_ufunc__``.
+.. [1] This was previously due to a limitation of NumPy, but with NumPy 1.13
+       we should be able to support this by leveraging ``__array_ufunc__``
+       (:issue:`1617`).
+
+.. _comput.wrapping-custom:
+
+Wrapping custom computation
+===========================
+
+It doesn't always make sense to do computation directly with xarray objects:
+
+  - In the inner loop of performance limited code, using xarray can add
+    considerable overhead compared to using NumPy or native Python types.
+    This is particularly true when working with scalars or small arrays (less
+    than ~1e6 elements). Keeping track of labels and ensuring their consistency
+    adds overhead, and xarray's core itself is not especially fast, because it's
+    written in Python rather than a compiled language like C. Also, xarray's
+    high level label-based APIs removes low-level control over how operations
+    are implemented.
+  - Even if speed doesn't matter, it can be important to wrap existing code, or
+    to support alternative interfaces that don't use xarray objects.
+
+For these reasons, it is often well-advised to write low-level routines that
+work with NumPy arrays, and to wrap these routines to work with xarray objects.
+However, adding support for labels on both :py:class:`~xarray.Dataset` and
+:py:class:`~xarray.DataArray` can be a bit of a chore.
+
+To make this easier, xarray supplies the :py:func:`~xarray.apply_ufunc` helper
+function, designed for wrapping functions that support broadcasting and
+vectorization on unlabeled arrays in the style of a NumPy
+`universal function <https://docs.scipy.org/doc/numpy-1.13.0/reference/ufuncs.html>`_ ("ufunc" for short).
+``apply_ufunc`` takes care of everything needed for an idiomatic xarray wrapper,
+including alignment, broadcasting, looping over ``Dataset`` variables (if
+needed), and merging of coordinates. In fact, many internal xarray
+functions/methods are written using ``apply_ufunc``.
+
+Simple functions that act independently on each value should work without
+any additional arguments:
+
+.. ipython:: python
+
+    squared_error = lambda x, y: (x - y) ** 2
+    arr1 = xr.DataArray([0, 1, 2, 3], dims='x')
+    xr.apply_ufunc(squared_error, arr1, 1)
+
+For using more complex operations that consider some array values collectively,
+it's important to understand the idea of "core dimensions" from NumPy's
+`generalized ufuncs <http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html>`_. Core dimensions are defined as dimensions
+that should *not* be broadcast over. Usually, they correspond to the fundamental
+dimensions over which an operation is defined, e.g., the summed axis in
+``np.sum``. A good clue that core dimensions are needed is the presence of an
+``axis`` argument on the corresponding NumPy function.
+
+With ``apply_ufunc``, core dimensions are recognized by name, and then moved to
+the last dimension of any input arguments before applying the given function.
+This means that for functions that accept an ``axis`` argument, you usually need
+to set ``axis=-1``. As an example, here is how we would wrap
+:py:func:`numpy.linalg.norm` to calculate the vector norm:
+
+.. code-block:: python
+
+    def vector_norm(x, dim, ord=None):
+        return xr.apply_ufunc(np.linalg.norm, x,
+                              input_core_dims=[[dim]],
+                              kwargs={'ord': ord, 'axis': -1})
+
+.. ipython:: python
+   :suppress:
+
+    def vector_norm(x, dim, ord=None):
+        return xr.apply_ufunc(np.linalg.norm, x,
+                              input_core_dims=[[dim]],
+                              kwargs={'ord': ord, 'axis': -1})
+
+.. ipython:: python
+
+    vector_norm(arr1, dim='x')
+
+Because ``apply_ufunc`` follows a standard convention for ufuncs, it plays
+nicely with tools for building vectorized functions, like
+:func:`numpy.broadcast_arrays` and :func:`numpy.vectorize`. For high performance
+needs, consider using Numba's :doc:`vectorize and guvectorize <numba:user/vectorize>`.
+
+In addition to wrapping functions, ``apply_ufunc`` can automatically parallelize
+many functions when using dask by setting ``dask='parallelized'``. See
+:ref:`dask.automatic-parallelization` for details.
+
+:py:func:`~xarray.apply_ufunc` also supports some advanced options for
+controlling alignment of variables and the form of the result. See the
+docstring for full details and more examples.

@@ -21,6 +21,7 @@ except ImportError:
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
+from .indexing import BasicIndexer
 
 
 def pretty_print(x, numchars):
@@ -68,8 +69,8 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), ) +
-               (slice(None), ) * n_steps)
+    indexer = BasicIndexer((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), )
+                           + (slice(None), ) * n_steps)
     return indexer
 
 
@@ -410,7 +411,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(_get_col_items(ds))
+    col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))

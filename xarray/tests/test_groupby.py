@@ -53,7 +53,7 @@ def test_groupby_da_datetime():
     times = pd.date_range('2000-01-01', periods=4)
     foo = xr.DataArray([1,2,3,4], coords=dict(time=times), dims='time')
     # create test index
-    dd = times.to_datetime()
+    dd = times.to_pydatetime()
     reference_dates = [dd[0], dd[2]]
     labels = reference_dates[0:1]*2 + reference_dates[1:2]*2
     ind = xr.DataArray(labels, coords=dict(time=times), dims='time', name='reference_date')
@@ -70,5 +70,5 @@ def test_groupby_duplicate_coordinate_labels():
     actual = array.groupby('x').sum()
     assert expected.equals(actual)
 
-    
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

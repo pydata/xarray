@@ -1,10 +1,10 @@
 .. _dask:
 
-Out of core computation with dask
-=================================
+Parallel computing with dask
+============================
 
-xarray integrates with `dask <http://dask.pydata.org/>`__ to support streaming
-computation on datasets that don't fit into memory.
+xarray integrates with `dask <http://dask.pydata.org/>`__ to support parallel
+computations and streaming computation on datasets that don't fit into memory.
 
 Currently, dask is an entirely optional feature for xarray. However, the
 benefits of using dask are sufficiently strong that dask may become a required
@@ -33,7 +33,7 @@ to your screen or write to disk). At that point, data is loaded into memory
 and computation proceeds in a streaming fashion, block-by-block.
 
 The actual computation is controlled by a multi-processing or thread pool,
-which allows dask to take full advantage of multiple processers available on
+which allows dask to take full advantage of multiple processors available on
 most modern computers.
 
 For more details on dask, read `its documentation <http://dask.pydata.org/>`__.
@@ -100,6 +100,15 @@ Once you've manipulated a dask array, you can still write a dataset too big to
 fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
 
+A dataset can also be converted to a dask DataFrame using :py:meth:`~xarray.Dataset.to_dask_dataframe`.
+
+.. ipython:: python
+
+    df = ds.to_dask_dataframe()
+    df
+
+Dask DataFrames do not support multi-indexes so the coordinate variables from the dataset are included as columns in the dask DataFrame.
+
 Using dask with xarray
 ----------------------
 
@@ -145,7 +154,7 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
             ...
 
 Alternatively you can load the data into memory but keep the arrays as
-dask arrays using the `~xarray.Dataset.persist` method:
+dask arrays using the :py:meth:`~xarray.Dataset.persist` method:
 
 .. ipython::
 
@@ -213,6 +222,115 @@ loaded into dask or not:
     In the future, we may extend ``.data`` to support other "computable" array
     backends beyond dask and numpy (e.g., to support sparse arrays).
 
+.. _dask.automatic-parallelization:
+
+Automatic parallelization
+-------------------------
+
+Almost all of xarray's built-in operations work on dask arrays. If you want to
+use a function that isn't wrapped by xarray, one option is to extract dask
+arrays from xarray objects (``.data``) and use dask directly.
+
+Another option is to use xarray's :py:func:`~xarray.apply_ufunc`, which can
+automate `embarrassingly parallel <https://en.wikipedia.org/wiki/Embarrassingly_parallel>`__
+"map" type operations where a functions written for processing NumPy arrays
+should be repeatedly applied to xarray objects containing dask arrays. It works
+similarly to :py:func:`dask.array.map_blocks` and :py:func:`dask.array.atop`,
+but without requiring an intermediate layer of abstraction.
+
+For the best performance when using dask's multi-threaded scheduler, wrap a
+function that already releases the global interpreter lock, which fortunately
+already includes most NumPy and Scipy functions. Here we show an example
+using NumPy operations and a fast function from
+`bottleneck <https://github.com/kwgoodman/bottleneck>`__, which
+we use to calculate `Spearman's rank-correlation coefficient <https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient>`__:
+
+.. code-block:: python
+
+    import numpy as np
+    import xarray as xr
+    import bottleneck
+
+    def covariance_gufunc(x, y):
+        return ((x - x.mean(axis=-1, keepdims=True))
+                * (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
+
+    def pearson_correlation_gufunc(x, y):
+        return covariance_gufunc(x, y) / (x.std(axis=-1) * y.std(axis=-1))
+
+    def spearman_correlation_gufunc(x, y):
+        x_ranks = bottleneck.rankdata(x, axis=-1)
+        y_ranks = bottleneck.rankdata(y, axis=-1)
+        return pearson_correlation_gufunc(x_ranks, y_ranks)
+
+    def spearman_correlation(x, y, dim):
+        return xr.apply_ufunc(
+            spearman_correlation_gufunc, x, y,
+            input_core_dims=[[dim], [dim]],
+            dask='parallelized',
+            output_dtypes=[float])
+
+The only aspect of this example that is different from standard usage of
+``apply_ufunc()`` is that we needed to supply the ``output_dtypes`` arguments.
+(Read up on :ref:`comput.wrapping-custom` for an explanation of the
+"core dimensions" listed in ``input_core_dims``.)
+
+Our new ``spearman_correlation()`` function achieves near linear speedup
+when run on large arrays across the four cores on my laptop. It would also
+work as a streaming operation, when run on arrays loaded from disk:
+
+.. ipython::
+    :verbatim:
+
+    In [56]: rs = np.random.RandomState(0)
+
+    In [57]: array1 = xr.DataArray(rs.randn(1000, 100000), dims=['place', 'time'])  # 800MB
+
+    In [58]: array2 = array1 + 0.5 * rs.randn(1000, 100000)
+
+    # using one core, on numpy arrays
+    In [61]: %time _ = spearman_correlation(array1, array2, 'time')
+    CPU times: user 21.6 s, sys: 2.84 s, total: 24.5 s
+    Wall time: 24.9 s
+
+    In [8]: chunked1 = array1.chunk({'place': 10})
+
+    In [9]: chunked2 = array2.chunk({'place': 10})
+
+    # using all my laptop's cores, with dask
+    In [63]: r = spearman_correlation(chunked1, chunked2, 'time').compute()
+
+    In [64]: %time _ = r.compute()
+    CPU times: user 30.9 s, sys: 1.74 s, total: 32.6 s
+    Wall time: 4.59 s
+
+One limitation of ``apply_ufunc()`` is that it cannot be applied to arrays with
+multiple chunks along a core dimension:
+
+.. ipython::
+    :verbatim:
+
+    In [63]: spearman_correlation(chunked1, chunked2, 'place')
+    ValueError: dimension 'place' on 0th function argument to apply_ufunc with
+    dask='parallelized' consists of multiple chunks, but is also a core
+    dimension. To fix, rechunk into a single dask array chunk along this
+    dimension, i.e., ``.rechunk({'place': -1})``, but beware that this may
+    significantly increase memory usage.
+
+The reflects the nature of core dimensions, in contrast to broadcast
+(non-core) dimensions that allow operations to be split into arbitrary chunks
+for application.
+
+.. tip::
+
+    For the majority of NumPy functions that are already wrapped by dask, it's
+    usually a better idea to use the pre-existing ``dask.array`` function, by
+    using either a pre-existing xarray methods or
+    :py:func:`~xarray.apply_ufunc()` with ``dask='allowed'``. Dask can often
+    have a more efficient implementation that makes use of the specialized
+    structure of a problem, unlike the generic speedups offered by
+    ``dask='parallelized'``.
+
 Chunking and performance
 ------------------------
 
@@ -236,7 +354,6 @@ larger chunksizes.
 
     import os
     os.remove('example-data.nc')
-
 
 Optimization Tips
 -----------------

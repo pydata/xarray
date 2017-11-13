@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from .utils import _determine_cmap_params, _infer_xy_labels, get_axis
+from .utils import (_determine_cmap_params, _infer_xy_labels, get_axis,
+                    import_matplotlib_pyplot)
 from .facetgrid import FacetGrid
 from xarray.core.pycompat import basestring
 
@@ -179,7 +180,7 @@ def line(darray, *args, **kwargs):
         Additional arguments to matplotlib.pyplot.plot
 
     """
-    import matplotlib.pyplot as plt
+    plt = import_matplotlib_pyplot()
 
     ndims = len(darray.dims)
     if ndims != 1:
@@ -401,7 +402,7 @@ def _plot2d(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
+    plotfunc.__doc__ = '%s\n%s' % (plotfunc.__doc__, commondoc)
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
@@ -429,7 +430,7 @@ def _plot2d(plotfunc):
 
             return _easy_facetgrid(**allargs)
 
-        import matplotlib.pyplot as plt
+        plt = import_matplotlib_pyplot()
 
         # colors is mutually exclusive with cmap
         if cmap and colors:

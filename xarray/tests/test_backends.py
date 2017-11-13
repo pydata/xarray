@@ -22,16 +22,18 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
+from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
+                                  dask_array_type)
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, requires_zarr,
                requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, assert_identical)
+               flaky, network, assert_identical, raises_regex)
+            
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -113,7 +115,7 @@ class TestCommon(TestCase):
                 return self.array[key]
 
         array = UnreliableArray([0])
-        with self.assertRaises(UnreliableArrayFailure):
+        with pytest.raises(UnreliableArrayFailure):
             array[0]
         self.assertEqual(array[0], 0)
 
@@ -122,26 +124,57 @@ class TestCommon(TestCase):
         self.assertEqual(actual, 0)
 
 
-class Only32BitTypes(object):
+class NetCDF3Only(object):
     pass
 
 
 class DatasetIOTestCases(object):
     autoclose = False
+    engine = None
+    file_format = None
 
     def create_store(self):
         raise NotImplementedError
 
-    def roundtrip(self, data, **kwargs):
-        raise NotImplementedError
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            self.save(data, path, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            for i, key in enumerate(data.variables):
+                mode = 'a' if i > 0 else 'w'
+                self.save(data[[key]], path, mode=mode, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    # The save/open methods may be overwritten below
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine=self.engine, format=self.file_format,
+                          **kwargs)
+
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_dataset(path, engine=self.engine, autoclose=self.autoclose,
+                          **kwargs) as ds:
+            yield ds
 
     # note: zero dimensional arrays are not suppoerted by zarr backend
     def test_zero_dimensional_variable(self):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
-        expected['string_var'] = ([], np.array('foobar', dtype='S'))
+        expected['bytes_var'] = ([], b'foobar')
+        expected['string_var'] = ([], u'foobar')
         with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_write_store(self):
         expected = create_test_data()
@@ -153,10 +186,9 @@ class DatasetIOTestCases(object):
                 self.assertDatasetAllClose(expected, actual)
 
     def check_dtypes_roundtripped(self, expected, actual):
-        for k in expected:
+        for k in expected.variables:
             expected_dtype = expected.variables[k].dtype
-            if (isinstance(self, Only32BitTypes) and
-                    expected_dtype == 'int64'):
+            if (isinstance(self, NetCDF3Only) and expected_dtype == 'int64'):
                 # downcast
                 expected_dtype = np.dtype('int32')
             actual_dtype = actual.variables[k].dtype
@@ -170,7 +202,7 @@ class DatasetIOTestCases(object):
         expected = create_test_data()
         with self.roundtrip(expected) as actual:
             self.check_dtypes_roundtripped(expected, actual)
-            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_load(self):
         expected = create_test_data()
@@ -187,9 +219,9 @@ class DatasetIOTestCases(object):
                 for k, v in actual.variables.items():
                     if k in vars:
                         self.assertTrue(v._in_memory)
-                self.assertDatasetAllClose(expected, actual)
+                self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             # make sure the contextmanager works!
             with assert_loads() as ds:
                 pass
@@ -203,7 +235,7 @@ class DatasetIOTestCases(object):
         # verify we can read data even after closing the file
         with self.roundtrip(expected) as ds:
             actual = ds.load()
-        self.assertDatasetAllClose(expected, actual)
+        self.assertDatasetIdentical(expected, actual)
 
     def test_dataset_compute(self):
         expected = create_test_data()
@@ -221,8 +253,8 @@ class DatasetIOTestCases(object):
             for v in computed.variables.values():
                 self.assertTrue(v._in_memory)
 
-            self.assertDatasetAllClose(expected, actual)
-            self.assertDatasetAllClose(expected, computed)
+            self.assertDatasetIdentical(expected, actual)
+            self.assertDatasetIdentical(expected, computed)
 
     def test_pickle(self):
         expected = Dataset({'foo': ('x', [42])})
@@ -260,43 +292,55 @@ class DatasetIOTestCases(object):
     def test_roundtrip_None_variable(self):
         expected = Dataset({None: (('x', 'y'), [[0, 1], [2, 3]])})
         with self.roundtrip(expected) as actual:
-            self.assertDatasetAllClose(expected, actual)
+            self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_object_dtype(self):
         floats = np.array([0.0, 0.0, 1.0, 2.0, 3.0], dtype=object)
         floats_nans = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
-        letters = np.array(['ab', 'cdef', 'g'], dtype=object)
-        letters_nans = np.array(['ab', 'cdef', np.nan], dtype=object)
+        bytes_ = np.array([b'ab', b'cdef', b'g'], dtype=object)
+        bytes_nans = np.array([b'ab', b'cdef', np.nan], dtype=object)
+        strings = np.array([u'ab', u'cdef', u'g'], dtype=object)
+        strings_nans = np.array([u'ab', u'cdef', np.nan], dtype=object)
         all_nans = np.array([np.nan, np.nan], dtype=object)
         original = Dataset({'floats': ('a', floats),
                             'floats_nans': ('a', floats_nans),
-                            'letters': ('b', letters),
-                            'letters_nans': ('b', letters_nans),
+                            'bytes': ('b', bytes_),
+                            'bytes_nans': ('b', bytes_nans),
+                            'strings': ('b', strings),
+                            'strings_nans': ('b', strings_nans),
                             'all_nans': ('c', all_nans),
                             'nan': ([], np.nan)})
         expected = original.copy(deep=True)
-        if isinstance(self, Only32BitTypes):
-            # for netCDF3 tests, expect the results to come back as characters
-            expected['letters_nans'] = expected['letters_nans'].astype('S')
-            expected['letters'] = expected['letters'].astype('S')
         with self.roundtrip(original) as actual:
             try:
                 self.assertDatasetIdentical(expected, actual)
             except AssertionError:
-                # Most stores use '' for nans in strings, but some don't
-                # first try the ideal case (where the store returns exactly)
+                # Most stores use '' for nans in strings, but some don't.
+                # First try the ideal case (where the store returns exactly)
                 # the original Dataset), then try a more realistic case.
-                # ScipyDataTest, NetCDF3ViaNetCDF4DataTest and NetCDF4DataTest
-                # all end up using this case.
-                expected['letters_nans'][-1] = ''
+                # This currently includes all netCDF files when encoding is not
+                # explicitly set.
+                # https://github.com/pydata/xarray/issues/1647
+                expected['bytes_nans'][-1] = b''
+                expected['strings_nans'][-1] = u''
                 self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_string_data(self):
         expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         with self.roundtrip(expected) as actual:
-            if isinstance(self, Only32BitTypes):
-                expected['x'] = expected['x'].astype('S')
             self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_string_encoded_characters(self):
+        expected = Dataset({'x': ('t', [u'ab', u'cdef'])})
+        expected['x'].encoding['dtype'] = 'S1'
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+            self.assertEqual(actual['x'].encoding['_Encoding'], 'utf-8')
+
+        expected['x'].encoding['_Encoding'] = 'ascii'
+        with self.roundtrip(expected) as actual:
+            self.assertDatasetIdentical(expected, actual)
+            self.assertEqual(actual['x'].encoding['_Encoding'], 'ascii')
 
     def test_roundtrip_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
@@ -304,8 +348,7 @@ class DatasetIOTestCases(object):
         kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
         with self.roundtrip(expected, save_kwargs=kwds) as actual:
             self.assertDatasetIdentical(expected, actual)
-            self.assertEquals(actual.t0.encoding['units'],
-                              'days since 1950-01-01')
+            assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -335,9 +378,17 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(original, actual)
 
-        expected = original.drop('foo')
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetIdentical(expected, actual)
+    def test_roundtrip_global_coordinates(self):
+        original = Dataset({'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={'x': 0, 'y z': 1})
+        expected = Dataset({'y z': 1}, {'x': 0})
+        with pytest.warns(xr.SerializationWarning):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -349,46 +400,125 @@ class DatasetIOTestCases(object):
     def test_orthogonal_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
-            indexers = {'dim1': np.arange(3), 'dim2': np.arange(4),
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetAllClose(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
-            self.assertDatasetAllClose(expected, actual)
+            assert_identical(expected, actual)
+
+    def _test_vectorized_indexing(self, vindex_support=True):
+        # Make sure vectorized_indexing works or at least raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            if vindex_support:
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+            else:
+                with raises_regex(NotImplementedError, 'Vectorized indexing '):
+                    actual = on_disk.isel(**indexers)
+
+    def test_vectorized_indexing(self):
+        # This test should be overwritten if vindex is supported
+        self._test_vectorized_indexing(vindex_support=False)
+
+    def test_isel_dataarray(self):
+        # Make sure isel works lazily. GH:issue:1688
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(dim2=in_memory['dim2'] < 3)
+            actual = on_disk.isel(dim2=on_disk['dim2'] < 3)
+            self.assertDatasetIdentical(expected, actual)
+
+    def validate_array_type(self, ds):
+        # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
+        def find_and_validate_array(obj):
+            # recursively called function. obj: array or array wrapper.
+            if hasattr(obj, 'array'):
+                if isinstance(obj.array, indexing.NDArrayIndexable):
+                    find_and_validate_array(obj.array)
+                else:
+                    if isinstance(obj.array, np.ndarray):
+                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                    elif isinstance(obj.array, dask_array_type):
+                        assert isinstance(obj, indexing.DaskIndexingAdapter)
+                    elif isinstance(obj.array, pd.Index):
+                        assert isinstance(obj, indexing.PandasIndexAdapter)
+                    else:
+                        raise TypeError('{} is wrapped by {}'.format(
+                                            type(obj.array), type(obj)))
+
+        for k, v in ds.variables.items():
+            find_and_validate_array(v._data)
+
+    def test_array_type_after_indexing(self):
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
+                        'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+
+    def test_dropna(self):
+        # regression test for GH:issue:1694
+        a = np.random.randn(4, 3)
+        a[1, 1] = np.NaN
+        in_memory = xr.Dataset({'a': (('y', 'x'), a)},
+                               coords={'y': np.arange(4), 'x': np.arange(3)})
+
+        assert_identical(in_memory.dropna(dim='x'),
+                         in_memory.isel(x=slice(None, None, 2)))
+
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            expected = in_memory.dropna(dim='x')
+            actual = on_disk.dropna(dim='x')
+            assert_identical(expected, actual)
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
 
-    def test_roundtrip_strings_with_fill_value(self):
-        values = np.array(['ab', 'cdef', np.nan], dtype=object)
-        encoding = {'_FillValue': np.string_('X'), 'dtype': np.dtype('S1')}
+    def test_roundtrip_bytes_with_fill_value(self):
+        values = np.array([b'ab', b'cdef', np.nan], dtype=object)
+        encoding = {'_FillValue': b'X', 'dtype': 'S1'}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
-        expected['x'][:2] = values[:2].astype('S')
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': '\x00'})})
-        if not isinstance(self, Only32BitTypes):
-            # these stores can save unicode strings
-            expected = original.copy(deep=True)
-        if isinstance(self, BaseNetCDF4Test):
-            # netCDF4 can't keep track of an empty _FillValue for VLEN
-            # variables
-            expected['x'][-1] = ''
-        elif (isinstance(self, (NetCDF3ViaNetCDF4DataTest,
-                                NetCDF4ClassicViaNetCDF4DataTest))
-              or (has_netCDF4 and
-                  (type(self) is GenericNetCDFDataTest or
-                   type(self) is GenericNetCDFDataTestAutocloseTrue))):
-            # netCDF4 can't keep track of an empty _FillValue for nc3, either:
-            # https://github.com/Unidata/netcdf4-python/issues/273
-            expected['x'][-1] = np.string_('')
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': b''})})
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
+
+    def test_roundtrip_string_with_fill_value_nchar(self):
+        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        expected = Dataset({'x': ('t', values)})
+
+        encoding = {'dtype': 'S1', '_FillValue': b'X'}
+        original = Dataset({'x': ('t', values, {}, encoding)})
+        # Not supported yet.
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_unsigned_roundtrip_mask_and_scale(self):
         decoded = create_unsigned_masked_scaled_data()
@@ -397,57 +527,58 @@ class CFEncodedDataTest(DatasetIOTestCases):
             for k in decoded.variables:
                 self.assertEqual(decoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(decoded, actual)
+            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        self.assertDatasetIdentical(
+        self.assertDatasetAllClose(
             encoded, create_encoded_unsigned_masked_scaled_data())
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
                 self.assertEqual(decoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(decoded, actual)
+            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
-            self.assertDatasetAllClose(decoded, actual)
+            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        self.assertDatasetIdentical(encoded,
-                                    create_encoded_masked_and_scaled_data())
+        self.assertDatasetAllClose(encoded,
+                                   create_encoded_masked_and_scaled_data(),
+                                   decode_bytes=False)
         with self.roundtrip(encoded) as actual:
-            self.assertDatasetAllClose(decoded, actual)
+            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
-            self.assertDatasetAllClose(encoded, actual)
+            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
@@ -491,7 +622,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
 
         if type(self) is NetCDF4DataTest:
             ds['z'].encoding['endian'] = 'big'
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 with self.roundtrip(ds) as actual:
                     pass
 
@@ -502,7 +633,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         da = xr.DataArray(data)
         for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
             ds = Dataset({name: da})
-            with self.assertRaisesRegexp(*e):
+            with raises_regex(*e):
                 with self.roundtrip(ds) as actual:
                     pass
 
@@ -514,17 +645,17 @@ class CFEncodedDataTest(DatasetIOTestCases):
         self.assertEqual(ds.x.encoding, {})
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
         kwargs = dict(encoding={'x': 'foo'})
-        with self.assertRaisesRegexp(ValueError, 'must be castable'):
+        with raises_regex(ValueError, 'must be castable'):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
         kwargs = dict(encoding={'invalid': {}})
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
@@ -558,12 +689,45 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
+    def test_explicitly_omit_fill_value(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])})
+        ds.x.encoding['_FillValue'] = None
+        with self.roundtrip(ds) as actual:
+            assert '_FillValue' not in actual.x.encoding
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.x.encoding['dtype'], 'f4')
         self.assertEqual(ds.x.encoding, {})
+
+    def test_append_write(self):
+        # regression for GH1215
+        data = create_test_data()
+        with self.roundtrip_append(data) as actual:
+            self.assertDatasetIdentical(data, actual)
+
+    def test_append_overwrite_values(self):
+        # regression for GH1215
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            self.save(data, tmp_file, mode='w')
+            data['var2'][:] = -999
+            data['var9'] = data['var2'] * 3
+            self.save(data[['var2', 'var9']], tmp_file, mode='a')
+            with self.open(tmp_file) as actual:
+                self.assertDatasetIdentical(data, actual)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=False)
+
+    def test_multiindex_not_implemented(self):
+        ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
+              .set_index(x=['y', 'z']))
+        with raises_regex(NotImplementedError, 'MultiIndex'):
+            with self.roundtrip(ds):
+                pass
 
 
 _counter = itertools.count()
@@ -594,6 +758,9 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
 
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+
+    engine = 'netcdf4'
+
     def test_open_group(self):
         # Create a netCDF file with a dataset stored within a group
         with create_tmp_file() as tmp_file:
@@ -614,9 +781,9 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     self.assertVariableEqual(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
-            with self.assertRaises(IOError):
+            with pytest.raises(IOError):
                 open_dataset(tmp_file, group='bar')
-            with self.assertRaisesRegexp(ValueError, 'must be a string'):
+            with raises_regex(ValueError, 'must be a string'):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
@@ -650,6 +817,24 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 self.assertDatasetIdentical(data1, actual1)
             with open_dataset(tmp_file, group='data/2') as actual2:
                 self.assertDatasetIdentical(data2, actual2)
+
+    def test_roundtrip_string_with_fill_value_vlen(self):
+        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        expected = Dataset({'x': ('t', values)})
+
+        # netCDF4-based backends don't support an explicit fillvalue
+        # for variable length strings yet.
+        # https://github.com/Unidata/netcdf4-python/issues/730
+        # https://github.com/shoyer/h5netcdf/issues/37
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
+
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
@@ -742,6 +927,21 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
+    def test_encoding_chunksizes_unlimited(self):
+        # regression test for GH1225
+        ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
+        ds.variables['x'].encoding = {
+            'zlib': False,
+            'shuffle': False,
+            'complevel': 0,
+            'fletcher32': False,
+            'contiguous': False,
+            'chunksizes': (2 ** 20,),
+            'original_shape': (3,),
+        }
+        with self.roundtrip(ds) as actual:
+            self.assertDatasetEqual(ds, actual)
+
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
@@ -815,16 +1015,6 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             with backends.NetCDF4DataStore.open(tmp_file, mode='w') as store:
                 yield store
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
     def test_variable_order(self):
         # doesn't work with scipy or h5py :(
         ds = Dataset()
@@ -834,7 +1024,7 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         ds.coords['c'] = 4
 
         with self.roundtrip(ds) as actual:
-            self.assertEqual(list(ds), list(actual))
+            self.assertEqual(list(ds.variables), list(actual.variables))
 
     def test_unsorted_index_raises(self):
         # should be fixed in netcdf4 v1.2.1
@@ -878,6 +1068,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -919,19 +1112,13 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
         yield backends.ScipyDataStore(fobj, 'w')
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        serialized = data.to_netcdf(**save_kwargs)
-        with open_dataset(serialized, engine='scipy',
-                          autoclose=self.autoclose, **open_kwargs) as ds:
-            yield ds
 
     def test_to_netcdf_explicit_engine(self):
         # regression test for GH1321
@@ -951,7 +1138,9 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         fobj = BytesIO()
@@ -962,9 +1151,9 @@ class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                   allow_cleanup_failure=False):
         with create_tmp_file() as tmp_file:
             with open(tmp_file, 'wb') as f:
-                data.to_netcdf(f, **save_kwargs)
+                self.save(data, f, **save_kwargs)
             with open(tmp_file, 'rb') as f:
-                with open_dataset(f, engine='scipy', **open_kwargs) as ds:
+                with self.open(f, **open_kwargs) as ds:
                     yield ds
 
     @pytest.mark.skip(reason='cannot pickle file objects')
@@ -977,52 +1166,39 @@ class ScipyFileObjectTest(CFEncodedDataTest, Only32BitTypes, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'scipy'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             with backends.ScipyDataStore(tmp_file, mode='w') as store:
                 yield store
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='scipy',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
-        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+        with raises_regex(ValueError, 'must be 1-dimensional'):
             with self.roundtrip(ds) as roundtripped:
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):
-        if sys.version_info[:2] < (2, 7):
-            with self.assertRaisesRegexp(ValueError,
-                                         'gzipped netCDF not supported'):
-                open_example_dataset('example_1.nc.gz')
-        else:
-            with open_example_dataset('example_1.nc.gz') as expected:
-                with open_example_dataset('example_1.nc') as actual:
-                    self.assertDatasetIdentical(expected, actual)
+        with open_example_dataset('example_1.nc.gz') as expected:
+            with open_example_dataset('example_1.nc') as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_netcdf3_endianness(self):
         # regression test for GH416
         expected = open_example_dataset('bears.nc', engine='scipy')
-        for var in expected.values():
+        for var in expected.variables.values():
             self.assertTrue(var.dtype.isnative)
 
     @requires_netCDF4
     def test_nc4_scipy(self):
-        with create_tmp_file() as tmp_file:
+        with create_tmp_file(allow_cleanup_failure=True) as tmp_file:
             with nc4.Dataset(tmp_file, 'w', format='NETCDF4') as rootgrp:
                 rootgrp.createGroup('foo')
 
-            with self.assertRaisesRegexp(TypeError, 'pip install netcdf4'):
+            with raises_regex(TypeError, 'pip install netcdf4'):
                 open_dataset(tmp_file, engine='scipy')
 
 
@@ -1031,7 +1207,10 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+    engine = 'netcdf4'
+    file_format = 'NETCDF3_CLASSIC'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
@@ -1039,42 +1218,23 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                     tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF3_CLASSIC',
-                           engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
 
 class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
     autoclose = True
 
 
 @requires_netCDF4
-class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, Only32BitTypes,
+class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
                                        TestCase):
+    engine = 'netcdf4'
+    file_format = 'NETCDF4_CLASSIC'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF4_CLASSIC') as store:
                 yield store
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='NETCDF4_CLASSIC',
-                           engine='netcdf4', **save_kwargs)
-            with open_dataset(tmp_file, engine='netcdf4',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
 
 
 class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
@@ -1083,38 +1243,29 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
 
 
 @requires_scipy_or_netCDF4
-class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
+class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
+    file_format = 'netcdf3_64bit'
 
     def test_write_store(self):
         # there's no specific store to test here
         pass
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, format='netcdf3_64bit', **save_kwargs)
-            with open_dataset(tmp_file,
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
     def test_engine(self):
         data = create_test_data()
-        with self.assertRaisesRegexp(ValueError, 'unrecognized engine'):
+        with raises_regex(ValueError, 'unrecognized engine'):
             data.to_netcdf('foo.nc', engine='foobar')
-        with self.assertRaisesRegexp(ValueError, 'invalid engine'):
+        with raises_regex(ValueError, 'invalid engine'):
             data.to_netcdf(engine='netcdf4')
 
         with create_tmp_file() as tmp_file:
             data.to_netcdf(tmp_file)
-            with self.assertRaisesRegexp(ValueError, 'unrecognized engine'):
+            with raises_regex(ValueError, 'unrecognized engine'):
                 open_dataset(tmp_file, engine='foobar')
 
         netcdf_bytes = data.to_netcdf()
-        with self.assertRaisesRegexp(ValueError, 'can only read'):
+        with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
     def test_cross_engine_read_write_netcdf3(self):
@@ -1134,11 +1285,12 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                         with open_dataset(tmp_file,
                                           engine=read_engine) as actual:
                             # hack to allow test to work:
-                            # coord comes back as DataArray rather than coord, and so
-                            # need to loop through here rather than in the test
-                            # function (or we get recursion)
-                            [assert_allclose(data[k].variable, actual[k].variable)
-                             for k in data]
+                            # coord comes back as DataArray rather than coord,
+                            # and so need to loop through here rather than in
+                            # the test function (or we get recursion)
+                            [assert_allclose(data[k].variable,
+                                             actual[k].variable)
+                             for k in data.variables]
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
@@ -1146,6 +1298,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, Only32BitTypes, TestCase):
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             self.assertDatasetEqual(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
@@ -1159,23 +1312,19 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
 @requires_h5netcdf
 @requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+    engine = 'h5netcdf'
+
     @contextlib.contextmanager
     def create_store(self):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='h5netcdf', **save_kwargs)
-            with open_dataset(tmp_file, engine='h5netcdf',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
-
     def test_orthogonal_indexing(self):
         # doesn't work for h5py (without using dask as an intermediate layer)
+        pass
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
         pass
 
     def test_complex(self):
@@ -1208,12 +1357,14 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_encoding_unlimited_dims(self):
         ds = Dataset({'x': ('y', np.arange(10.0))})
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims=['y'])) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
         ds.encoding = {'unlimited_dims': ['y']}
-        with create_tmp_file() as tmp_file:
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf')
-            with pytest.warns(UserWarning):
-                ds.to_netcdf(tmp_file, engine='h5netcdf', unlimited_dims=['y'])
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            self.assertDatasetEqual(ds, actual)
 
 
 # tests pending h5netcdf fix
@@ -1305,6 +1456,112 @@ class OpenMFDatasetManyFilesTest(TestCase):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
 
 
+@requires_scipy_or_netCDF4
+class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
+    coord_name = 'lon'
+    var_name = 'v1'
+
+    @contextlib.contextmanager
+    def setup_files_and_datasets(self):
+        ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
+        with create_tmp_file() as tmpfile1:
+            with create_tmp_file() as tmpfile2:
+
+                # save data to the temporary files
+                ds1.to_netcdf(tmpfile1)
+                ds2.to_netcdf(tmpfile2)
+
+                yield [tmpfile1, tmpfile2], [ds1, ds2]
+
+    def gen_datasets_with_common_coord_and_time(self):
+        # create coordinate data
+        nx = 10
+        nt = 10
+        x = np.arange(nx)
+        t1 = np.arange(nt)
+        t2 = np.arange(nt, 2 * nt, 1)
+
+        v1 = np.random.randn(nt, nx)
+        v2 = np.random.randn(nt, nx)
+
+        ds1 = Dataset(data_vars={self.var_name: (['t', 'x'], v1),
+                                 self.coord_name: ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t1),
+                          'x': (['x', ], x)
+                      })
+
+        ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
+                                 self.coord_name: ('x', 2 * x)},
+                      coords={
+                          't': (['t', ], t2),
+                          'x': (['x', ], x)
+                      })
+
+        return ds1, ds2
+
+    def test_open_mfdataset_does_same_as_concat(self):
+        options = ['all', 'minimal', 'different', ]
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            for opt in options:
+                with open_mfdataset(files, data_vars=opt) as ds:
+                    kwargs = dict(data_vars=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
+
+                with open_mfdataset(files, coords=opt) as ds:
+                    kwargs = dict(coords=opt, dim='t')
+                    ds_expect = xr.concat([ds1, ds2], **kwargs)
+                    self.assertDatasetIdentical(ds, ds_expect)
+
+    def test_common_coord_when_datavars_all(self):
+        opt = 'all'
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files with the data_var option
+            with open_mfdataset(files, data_vars=opt) as ds:
+
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+
+                self.assertEqual(var_shape, coord_shape)
+                self.assertNotEqual(coord_shape1, coord_shape)
+                self.assertNotEqual(coord_shape2, coord_shape)
+
+    def test_common_coord_when_datavars_minimal(self):
+        opt = 'minimal'
+
+        with self.setup_files_and_datasets() as (files, [ds1, ds2]):
+            # open the files using data_vars option
+            with open_mfdataset(files, data_vars=opt) as ds:
+
+                coord_shape = ds[self.coord_name].shape
+                coord_shape1 = ds1[self.coord_name].shape
+                coord_shape2 = ds2[self.coord_name].shape
+
+                var_shape = ds[self.var_name].shape
+
+                self.assertNotEqual(var_shape, coord_shape)
+                self.assertEqual(coord_shape1, coord_shape)
+                self.assertEqual(coord_shape2, coord_shape)
+
+    def test_invalid_data_vars_value_should_fail(self):
+
+        with self.setup_files_and_datasets() as (files, _):
+            with pytest.raises(ValueError):
+                with open_mfdataset(files, data_vars='minimum'):
+                    pass
+
+            # test invalid coord parameter
+            with pytest.raises(ValueError):
+                with open_mfdataset(files, coords='minimum'):
+                    pass
+
+
 @requires_dask
 @requires_scipy
 @requires_netCDF4
@@ -1318,8 +1575,16 @@ class DaskTest(TestCase, DatasetIOTestCases):
                   allow_cleanup_failure=False):
         yield data.chunk()
 
+    # Override methods in DatasetIOTestCases - not applicable to dask
+    def test_roundtrip_string_encoded_characters(self):
+        pass
+
+    def test_roundtrip_coordinates_with_space(self):
+        pass
+
     def test_roundtrip_datetime_data(self):
-        # Override method in DatasetIOTestCases - remove not applicable save_kwds
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
@@ -1347,13 +1612,13 @@ class DaskTest(TestCase, DatasetIOTestCases):
                     self.assertIsInstance(actual.foo.variable.data, da.Array)
                     self.assertEqual(actual.foo.variable.data.chunks,
                                      ((5, 5),))
-                    self.assertDatasetAllClose(original, actual)
+                    self.assertDatasetIdentical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
                                     autoclose=self.autoclose) as actual:
                     self.assertEqual(actual.foo.variable.data.chunks,
                                      ((3, 2, 3, 2),))
 
-        with self.assertRaisesRegexp(IOError, 'no files to open'):
+        with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
     @requires_pathlib
@@ -1367,7 +1632,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2],
                                     autoclose=self.autoclose) as actual:
-                    self.assertDatasetAllClose(original, actual)
+                    self.assertDatasetIdentical(original, actual)
 
     def test_attrs_mfdataset(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1384,7 +1649,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                     # first dataset loaded
                     self.assertEqual(actual.test1, ds1.test1)
                     # attributes from ds2 are not retained, e.g.,
-                    with self.assertRaisesRegexp(AttributeError,
+                    with raises_regex(AttributeError,
                                                  'no attribute'):
                         actual.test2
 
@@ -1414,17 +1679,16 @@ class DaskTest(TestCase, DatasetIOTestCases):
 
     def test_save_mfdataset_invalid(self):
         ds = Dataset()
-        with self.assertRaisesRegexp(ValueError, 'cannot use mode'):
+        with raises_regex(ValueError, 'cannot use mode'):
             save_mfdataset([ds, ds], ['same', 'same'])
-        with self.assertRaisesRegexp(ValueError, 'same length'):
+        with raises_regex(ValueError, 'same length'):
             save_mfdataset([ds, ds], ['only one path'])
 
     def test_save_mfdataset_invalid_dataarray(self):
         # regression test for GH1555
         da = DataArray([1, 2])
-        with self.assertRaisesRegexp(TypeError, 'supports writing Dataset'):
+        with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
-
 
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
@@ -1446,7 +1710,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
             original.to_netcdf(tmp)
             with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 actual = 1.0 * ds
-                self.assertDatasetAllClose(original, actual)
+                self.assertDatasetAllClose(original, actual,
+                                           decode_bytes=False)
 
     def test_open_mfdataset_concat_dim_none(self):
         with create_tmp_file() as tmp1:
@@ -1507,7 +1772,10 @@ class DaskTest(TestCase, DatasetIOTestCases):
         computed = actual.compute()
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
-        self.assertDataArrayAllClose(actual, computed)
+        self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class DaskTestAutocloseTrue(DaskTest):
@@ -1565,24 +1833,32 @@ class PydapTest(TestCase):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(CFEncodedDataTest, Only32BitTypes, TestCase):
+class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
         pass
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_orthogonal_indexing()
+
+    def test_isel_dataarray(self):
+        with raises_regex(NotImplementedError, 'Nio backend does not '):
+            super(TestPyNio, self).test_isel_dataarray()
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
         pass
 
     @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_netcdf(tmp_file, engine='scipy', **save_kwargs)
-            with open_dataset(tmp_file, engine='pynio',
-                              autoclose=self.autoclose, **open_kwargs) as ds:
-                yield ds
+    def open(self, path, **kwargs):
+        with open_dataset(path, engine='pynio', autoclose=self.autoclose,
+                          **kwargs) as ds:
+            yield ds
+
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine='scipy', **kwargs)
 
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})
@@ -1603,7 +1879,35 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 class TestRasterio(TestCase):
 
-    def test_serialization_utm(self):
+    @requires_scipy_or_netCDF4
+    def test_serialization(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in utm proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Write it to a netcdf and read again (roundtrip)
+            with xr.open_rasterio(tmp_file) as rioda:
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
+
+    def test_utm(self):
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1642,13 +1946,7 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
-
-    def test_serialization_platecarree(self):
+    def test_platecarree(self):
 
         import rasterio
         from rasterio.transform import from_origin
@@ -1685,12 +1983,6 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
-
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
 
     def test_indexing(self):
 
@@ -1747,13 +2039,12 @@ class TestRasterio(TestCase):
                 # but on x and y only windowed operations are allowed, more
                 # exotic slicing should raise an error
                 err_msg = 'not valid on rasterio'
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[2, 4], y=[1, 3]).values
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[4, 2]).values
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=slice(5, 2, -1)).values
-
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)
@@ -1817,7 +2108,7 @@ class TestRasterio(TestCase):
 
                 # Without cache an error is raised
                 err_msg = 'not valid on rasterio'
-                with self.assertRaisesRegexp(IndexError, err_msg):
+                with raises_regex(IndexError, err_msg):
                     actual.isel(x=[2, 4]).values
 
                 # This should cache everything
@@ -1877,7 +2168,7 @@ class TestEncodingInvalid(TestCase):
 
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
         var = xr.Variable(('x',), [1, 2, 3], {}, {'chunking': (2, 1)})
@@ -1893,7 +2184,7 @@ class TestEncodingInvalid(TestCase):
         # not supported with h5netcdf (yet)
         var = xr.Variable(('x',), [1, 2, 3], {},
                           {'least_sigificant_digit': 2})
-        with self.assertRaisesRegexp(ValueError, 'unexpected encoding'):
+        with raises_regex(ValueError, 'unexpected encoding'):
             _extract_nc4_variable_encoding(var, raise_on_invalid=True)
 
 
@@ -1926,17 +2217,17 @@ class TestValidateAttrs(TestCase):
             ds, attrs = new_dataset_and_attrs()
 
             attrs[123] = 'test'
-            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            with raises_regex(TypeError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs[MiscObject()] = 'test'
-            with self.assertRaisesRegexp(TypeError, 'Invalid name for attr'):
+            with raises_regex(TypeError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs[''] = 'test'
-            with self.assertRaisesRegexp(ValueError, 'Invalid name for attr'):
+            with raises_regex(ValueError, 'Invalid name for attr'):
                 ds.to_netcdf('test.nc')
 
             # This one should work
@@ -1947,12 +2238,12 @@ class TestValidateAttrs(TestCase):
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = {'a': 5}
-            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            with raises_regex(TypeError, 'Invalid value for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()
             attrs['test'] = MiscObject()
-            with self.assertRaisesRegexp(TypeError, 'Invalid value for attr'):
+            with raises_regex(TypeError, 'Invalid value for attr'):
                 ds.to_netcdf('test.nc')
 
             ds, attrs = new_dataset_and_attrs()

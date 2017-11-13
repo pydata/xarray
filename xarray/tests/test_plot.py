@@ -5,9 +5,6 @@ from __future__ import print_function
 # import mpl and change the backend before other mpl imports
 try:
     import matplotlib as mpl
-    # Using a different backend makes Travis CI work
-    mpl.use('Agg')
-    # Order of imports is important here.
     import matplotlib.pyplot as plt
 except ImportError:
     pass
@@ -25,9 +22,9 @@ import xarray.plot as xplt
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
-                               _color_palette)
+                               _color_palette, import_seaborn)
 
-from . import TestCase, requires_matplotlib
+from . import TestCase, requires_matplotlib, requires_seaborn, raises_regex
 
 
 @pytest.mark.flaky
@@ -156,10 +153,10 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
-        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+        with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='z', ax=plt.gca())
 
-        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+        with raises_regex(ValueError, '[Ff]acet'):
             d[0].plot(x='x', y='y', col='z', ax=plt.gca())
 
     @pytest.mark.slow
@@ -168,7 +165,7 @@ class TestPlot(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'z'])
         d.coords['z'] = list('abcd')
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool',
-                   subplot_kws=dict(axisbg='r'))
+                   subplot_kws=dict(facecolor='r'))
         for ax in g.axes.flat:
             try:
                 # mpl V2
@@ -191,16 +188,16 @@ class TestPlot(PlotTestCase):
         self.darray.plot(size=5, aspect=2)
         assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+        with raises_regex(ValueError, 'cannot provide both'):
             self.darray.plot(ax=plt.gca(), figsize=(3, 4))
 
-        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+        with raises_regex(ValueError, 'cannot provide both'):
             self.darray.plot(size=5, figsize=(3, 4))
 
-        with self.assertRaisesRegexp(ValueError, 'cannot provide both'):
+        with raises_regex(ValueError, 'cannot provide both'):
             self.darray.plot(size=5, ax=plt.gca())
 
-        with self.assertRaisesRegexp(ValueError, 'cannot provide `aspect`'):
+        with raises_regex(ValueError, 'cannot provide `aspect`'):
             self.darray.plot(aspect=1)
 
     @pytest.mark.slow
@@ -213,7 +210,7 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             self.assertTrue(ax.has_data())
 
-        with self.assertRaisesRegexp(ValueError, '[Ff]acet'):
+        with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
 
@@ -239,7 +236,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_wrong_dims_raises_valueerror(self):
         twodims = DataArray(easy_array((2, 5)))
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             twodims.plot.line()
 
     def test_format_string(self):
@@ -251,7 +248,7 @@ class TestPlot1D(PlotTestCase):
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray([1, 2, 3], {'letter': ['a', 'b', 'c']},
                       dims='letter')
-        with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
+        with raises_regex(TypeError, r'[Pp]lot'):
             a.plot.line()
 
     def test_primitive_returned(self):
@@ -578,18 +575,18 @@ class Common2dMixin:
         self.assertEqual('y', plt.gca().get_ylabel())
 
     def test_1d_raises_valueerror(self):
-        with self.assertRaisesRegexp(ValueError, r'DataArray must be 2d'):
+        with raises_regex(ValueError, r'DataArray must be 2d'):
             self.plotfunc(self.darray[0, :])
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
-        with self.assertRaisesRegexp(ValueError, r'DataArray must be 2d'):
+        with raises_regex(ValueError, r'DataArray must be 2d'):
             self.plotfunc(a)
 
     def test_nonnumeric_index_raises_typeerror(self):
         a = DataArray(easy_array((3, 2)),
                       coords=[['a', 'b', 'c'], ['d', 'e']])
-        with self.assertRaisesRegexp(TypeError, r'[Pp]lot'):
+        with raises_regex(TypeError, r'[Pp]lot'):
             self.plotfunc(a)
 
     def test_can_pass_in_axis(self):
@@ -629,14 +626,11 @@ class Common2dMixin:
         cmap_name = self.plotfunc(abs(self.darray)).get_cmap().name
         self.assertEqual('viridis', cmap_name)
 
+    @requires_seaborn
     def test_seaborn_palette_as_cmap(self):
-        try:
-            import seaborn
-            cmap_name = self.plotmethod(
-                levels=2, cmap='husl').get_cmap().name
-            self.assertEqual('husl', cmap_name)
-        except ImportError:
-            pass
+        cmap_name = self.plotmethod(
+            levels=2, cmap='husl').get_cmap().name
+        self.assertEqual('husl', cmap_name)
 
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
@@ -665,13 +659,13 @@ class Common2dMixin:
         self.assertEqual('y', ax.get_ylabel())
 
     def test_bad_x_string_exception(self):
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'x and y must be coordinate variables'):
             self.plotmethod('not_a_real_dim', 'y')
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'x must be a dimension name if y is not supplied'):
             self.plotmethod(x='not_a_real_dim')
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'y must be a dimension name if x is not supplied'):
             self.plotmethod(y='not_a_real_dim')
         self.darray.coords['z'] = 100
@@ -761,7 +755,7 @@ class Common2dMixin:
         self.plotmethod(add_colorbar=False)
         self.assertNotIn('testvar', text_in_fig())
         # check that error is raised
-        self.assertRaises(ValueError, self.plotmethod,
+        pytest.raises(ValueError, self.plotmethod,
                           add_colorbar=False, cbar_kwargs= {'label':'label'})
 
     def test_verbose_facetgrid(self):
@@ -914,11 +908,11 @@ class TestContour(Common2dMixin, PlotTestCase):
             (0.0, 0.0, 1.0))
 
     def test_cmap_and_color_both(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
 
     def list_of_colors_in_cmap_deprecated(self):
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             self.plotmethod(cmap=['k', 'b'])
 
     @pytest.mark.slow
@@ -990,7 +984,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
     @pytest.mark.slow
     def test_cannot_change_mpl_aspect(self):
 
-        with self.assertRaisesRegexp(ValueError, 'not available in xarray'):
+        with raises_regex(ValueError, 'not available in xarray'):
             self.darray.plot.imshow(aspect='equal')
 
         # with numbers we fall back to fig control
@@ -1004,16 +998,13 @@ class TestImshow(Common2dMixin, PlotTestCase):
         self.assertTrue(isinstance(artist, mpl.image.AxesImage))
 
     @pytest.mark.slow
+    @requires_seaborn
     def test_seaborn_palette_needs_levels(self):
-        try:
-            import seaborn  # noqa
-            with self.assertRaises(ValueError):
-                self.plotmethod(cmap='husl')
-        except ImportError:
-            pass
+        with pytest.raises(ValueError):
+            self.plotmethod(cmap='husl')
 
     def test_2d_coord_names(self):
-        with self.assertRaisesRegexp(ValueError, 'requires 1D coordinates'):
+        with raises_regex(ValueError, 'requires 1D coordinates'):
             self.plotmethod(x='x2d', y='y2d')
 
 
@@ -1085,7 +1076,7 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_norow_nocol_error(self):
-        with self.assertRaisesRegexp(ValueError, r'[Rr]ow'):
+        with raises_regex(ValueError, r'[Rr]ow'):
             xplt.FacetGrid(self.darray)
 
     @pytest.mark.slow
@@ -1106,7 +1097,7 @@ class TestFacetGrid(PlotTestCase):
     @pytest.mark.slow
     def test_nonunique_index_error(self):
         self.darray.coords['z'] = [0.1, 0.2, 0.2]
-        with self.assertRaisesRegexp(ValueError, r'[Uu]nique'):
+        with raises_regex(ValueError, r'[Uu]nique'):
             xplt.FacetGrid(self.darray, col='z')
 
     @pytest.mark.slow
@@ -1165,10 +1156,10 @@ class TestFacetGrid(PlotTestCase):
         g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
         self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
 
-        with self.assertRaisesRegexp(ValueError, "cannot provide both"):
+        with raises_regex(ValueError, "cannot provide both"):
             g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)
 
-        with self.assertRaisesRegexp(ValueError, "Can't use"):
+        with raises_regex(ValueError, "Can't use"):
             g = xplt.plot(self.darray, row=2, col='z', ax=plt.gca(), size=6)
 
     @pytest.mark.slow
@@ -1285,3 +1276,19 @@ class TestDatetimePlot(PlotTestCase):
     def test_datetime_line_plot(self):
         # test if line plot raises no Exception
         self.darray.plot.line()
+
+
+@requires_seaborn
+def test_import_seaborn_no_warning():
+    # GH1633
+    with pytest.warns(None) as record:
+        import_seaborn()
+    assert len(record) == 0
+
+
+@requires_matplotlib
+def test_plot_seaborn_no_import_warning():
+    # GH1633
+    with pytest.warns(None) as record:
+        _color_palette('Blues', 4)
+    assert len(record) == 0

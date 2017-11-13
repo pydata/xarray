@@ -73,12 +73,12 @@ class TestDataArray(TestCase):
         self.assertItemsEqual(list(self.dv.coords), list(self.ds.coords))
         for k, v in iteritems(self.dv.coords):
             self.assertArrayEqual(v, self.ds.coords[k])
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.dv.dataset
         self.assertIsInstance(self.ds['x'].to_index(), pd.Index)
-        with self.assertRaisesRegexp(ValueError, 'must be 1-dimensional'):
+        with raises_regex(ValueError, 'must be 1-dimensional'):
             self.ds['foo'].to_index()
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.dv.variable = self.v
 
     def test_data_property(self):
@@ -104,7 +104,7 @@ class TestDataArray(TestCase):
                           dims=['x', 'y'])
         assert array.get_index('x').equals(pd.Index(['a', 'b']))
         assert array.get_index('y').equals(pd.Index([0, 1, 2]))
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             array.get_index('z')
 
     def test_get_index_size_zero(self):
@@ -190,24 +190,24 @@ class TestDataArray(TestCase):
         arr = self.dv
         self.assertEqual(arr.dims, ('x', 'y'))
 
-        with self.assertRaisesRegexp(AttributeError, 'you cannot assign'):
+        with raises_regex(AttributeError, 'you cannot assign'):
             arr.dims = ('w', 'z')
 
     def test_sizes(self):
         array = DataArray(np.zeros((3, 4)), dims=['x', 'y'])
         self.assertEqual(array.sizes, {'x': 3, 'y': 4})
         self.assertEqual(tuple(array.sizes), array.dims)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             array.sizes['foo'] = 5
 
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'
-        self.assertEquals(expected, self.dv.encoding)
+        assert expected, self.d == encoding
 
         expected = {'baz': 0}
         self.dv.encoding = expected
-        self.assertEquals(expected, self.dv.encoding)
+        assert expected, self.d == encoding
         self.assertIsNot(expected, self.dv.encoding)
 
     def test_constructor(self):
@@ -275,28 +275,31 @@ class TestDataArray(TestCase):
     def test_constructor_invalid(self):
         data = np.random.randn(3, 2)
 
-        with self.assertRaisesRegexp(ValueError, 'coords is not dict-like'):
+        with raises_regex(ValueError, 'coords is not dict-like'):
             DataArray(data, [[0, 1, 2]], ['x', 'y'])
 
-        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
+        with raises_regex(ValueError, 'not a subset of the .* dim'):
             DataArray(data, {'x': [0, 1, 2]}, ['a', 'b'])
-        with self.assertRaisesRegexp(ValueError, 'not a subset of the .* dim'):
+        with raises_regex(ValueError, 'not a subset of the .* dim'):
             DataArray(data, {'x': [0, 1, 2]})
 
-        with self.assertRaisesRegexp(TypeError, 'is not a string'):
+        with raises_regex(TypeError, 'is not a string'):
             DataArray(data, dims=['x', None])
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes for dim'):
+        with raises_regex(ValueError, 'conflicting sizes for dim'):
             DataArray([1, 2, 3], coords=[('x', [0, 1])])
-        with self.assertRaisesRegexp(ValueError, 'conflicting sizes for dim'):
+        with raises_regex(ValueError, 'conflicting sizes for dim'):
             DataArray([1, 2], coords={'x': [0, 1], 'y': ('x', [1])}, dims='x')
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             DataArray(np.random.rand(4, 4),
                       [('x', self.mindex), ('y', self.mindex)])
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             DataArray(np.random.rand(4, 4),
                       [('x', self.mindex), ('level_1', range(4))])
+
+        with raises_regex(ValueError, 'matching the dimension size'):
+            DataArray(data, coords={'x': 0}, dims=['x', 'y'])
 
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
@@ -347,6 +350,21 @@ class TestDataArray(TestCase):
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
         self.assertDataArrayIdentical(expected, actual)
+
+    @requires_dask
+    def test_constructor_dask_coords(self):
+        # regression test for GH1684
+        import dask.array as da
+
+        coord = da.arange(8, chunks=(4,))
+        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        actual = DataArray(data, coords={'x': coord, 'y': coord},
+                           dims=['x', 'y'])
+
+        ecoord = np.arange(8)
+        expected = DataArray(data, coords={'x': ecoord, 'y': ecoord},
+                             dims=['x', 'y'])
+        assert_equal(actual, expected)
 
     def test_equals_and_identical(self):
         orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')
@@ -469,6 +487,50 @@ class TestDataArray(TestCase):
             dims='x')
         self.assertDataArrayIdentical(expected, actual)
 
+    def test_getitem_dataarray(self):
+        # It should not conflict
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
+        ind = DataArray([[0, 1], [0, 1]], dims=['x', 'z'])
+        actual = da[ind]
+        self.assertArrayEqual(actual, da.values[[[0, 1], [0, 1]], :])
+
+        da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
+                       coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
+        ind = xr.DataArray([[0, 1], [0, 1]], dims=['X', 'Y'])
+        actual = da[ind]
+        expected = da.values[[[0, 1], [0, 1]], :]
+        self.assertArrayEqual(actual, expected)
+        assert actual.dims == ('X', 'Y', 'y')
+
+        # boolean indexing
+        ind = xr.DataArray([True, True, False], dims=['x'])
+        self.assertDataArrayEqual(da[ind], da[[0, 1], :])
+        self.assertDataArrayEqual(da[ind], da[[0, 1]])
+        self.assertDataArrayEqual(da[ind], da[ind.values])
+
+    def test_setitem(self):
+        # basic indexing should work as numpy's indexing
+        tuples = [(0, 0), (0, slice(None, None)),
+                  (slice(None, None), slice(None, None)),
+                  (slice(None, None), 0),
+                  ([1, 0], slice(None, None)),
+                  (slice(None, None), [1, 0])]
+        for t in tuples:
+            expected = np.arange(6).reshape(3, 2)
+            orig = DataArray(np.arange(6).reshape(3, 2),
+                             {'x': [1, 2, 3], 'y': ['a', 'b'], 'z': 4,
+                              'x2': ('x', ['a', 'b', 'c']),
+                              'y2': ('y', ['d', 'e'])},
+                             dims=['x', 'y'])
+            orig[t] = 1
+            expected[t] = 1
+            self.assertArrayEqual(orig.values, expected)
+
+    def test_contains(self):
+        data_array = DataArray(1, coords={'x': 2})
+        with pytest.warns(FutureWarning):
+            assert 'x' in data_array
+
     def test_attr_sources_multiindex(self):
         # make sure attr-style access for multi-index levels
         # returns DataArray objects
@@ -508,6 +570,94 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.dv[:3, :5],
                                       self.dv.isel(x=slice(3), y=slice(5)))
 
+    def test_isel_types(self):
+        # regression test for #1405
+        da = DataArray([1, 2, 3], dims='x')
+        # uint64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint64")),
+                                      da.isel(x=np.array([0])))
+        # uint32
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="uint32")),
+                                      da.isel(x=np.array([0])))
+        # int64
+        self.assertDataArrayIdentical(da.isel(x=np.array([0], dtype="int64")),
+                                      da.isel(x=np.array([0])))
+
+    def test_isel_fancy(self):
+        shape = (10, 7, 6)
+        np_array = np.random.random(shape)
+        da = DataArray(np_array, dims=['time', 'y', 'x'],
+                       coords={'time': np.arange(0, 100, 10)})
+        y = [1, 3]
+        x = [3, 0]
+
+        expected = da.values[:, y, x]
+
+        actual = da.isel(y=(('test_coord', ), y), x=(('test_coord', ), x))
+        assert actual.coords['test_coord'].shape == (len(y), )
+        assert list(actual.coords) == ['time']
+        assert actual.dims == ('time', 'test_coord')
+
+        np.testing.assert_equal(actual, expected)
+
+        # a few corner cases
+        da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
+                y=(('points',), [3, 4]))
+        np.testing.assert_allclose(
+            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            np_array[1, 4, 2].squeeze())
+        da.isel(time=(('points', ), [1, 2]))
+        y = [-1, 0]
+        x = [-2, 2]
+        expected = da.values[:, y, x]
+        actual = da.isel(x=(('points', ), x), y=(('points', ), y)).values
+        np.testing.assert_equal(actual, expected)
+
+        # test that the order of the indexers doesn't matter
+        self.assertDataArrayIdentical(
+            da.isel(y=(('points', ), y), x=(('points', ), x)),
+            da.isel(x=(('points', ), x), y=(('points', ), y)))
+
+        # make sure we're raising errors in the right places
+        with raises_regex(IndexError,
+                                     'Dimensions of indexers mismatch'):
+            da.isel(y=(('points', ), [1, 2]), x=(('points', ), [1, 2, 3]))
+
+        # tests using index or DataArray as indexers
+        stations = Dataset()
+        stations['station'] = (('station', ), ['A', 'B', 'C'])
+        stations['dim1s'] = (('station', ), [1, 2, 3])
+        stations['dim2s'] = (('station', ), [4, 5, 1])
+
+        actual = da.isel(x=stations['dim1s'], y=stations['dim2s'])
+        assert 'station' in actual.coords
+        assert 'station' in actual.dims
+        self.assertDataArrayIdentical(actual['station'], stations['station'])
+
+        with raises_regex(ValueError, 'conflicting values for '):
+            da.isel(x=DataArray([0, 1, 2], dims='station',
+                                coords={'station': [0, 1, 2]}),
+                    y=DataArray([0, 1, 2], dims='station',
+                                coords={'station': [0, 1, 3]}))
+
+        # multi-dimensional selection
+        stations = Dataset()
+        stations['a'] = (('a', ), ['A', 'B', 'C'])
+        stations['b'] = (('b', ), [0, 1])
+        stations['dim1s'] = (('a', 'b'), [[1, 2], [2, 3], [3, 4]])
+        stations['dim2s'] = (('a', ), [4, 5, 1])
+
+        actual = da.isel(x=stations['dim1s'], y=stations['dim2s'])
+        assert 'a' in actual.coords
+        assert 'a' in actual.dims
+        assert 'b' in actual.coords
+        assert 'b' in actual.dims
+        self.assertDataArrayIdentical(actual['a'], stations['a'])
+        self.assertDataArrayIdentical(actual['b'], stations['b'])
+        expected = da.variable[:, stations['dim2s'].variable,
+                               stations['dim1s'].variable]
+        self.assertArrayEqual(actual, expected)
+
     def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
         da = self.ds['foo']
@@ -520,6 +670,31 @@ class TestDataArray(TestCase):
         b = DataArray('b')
         self.assertDataArrayIdentical(da[1], da.sel(x=b))
         self.assertDataArrayIdentical(da[[1]], da.sel(x=slice(b, b)))
+
+    def test_sel_dataarray(self):
+        # indexing with DataArray
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+
+        ind = DataArray(['a', 'b', 'c'], dims=['x'])
+        actual = da.sel(x=ind)
+        self.assertDataArrayIdentical(actual, da.isel(x=[0, 1, 2]))
+
+        # along new dimension
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'])
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+
+        # with coordinate
+        ind = DataArray(['a', 'b', 'c'], dims=['new_dim'],
+                        coords={'new_dim': [0, 1, 2]})
+        actual = da.sel(x=ind)
+        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert 'new_dim' in actual.dims
+        assert 'new_dim' in actual.coords
+        self.assertDataArrayEqual(actual['new_dim'].drop('x'),
+                                  ind['new_dim'])
 
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
@@ -606,20 +781,20 @@ class TestDataArray(TestCase):
             da.isel_points(x=x, y=y))
 
         # make sure we're raising errors in the right places
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'All indexers must be the same length'):
             da.isel_points(y=[1, 2], x=[1, 2, 3])
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'dimension bad_key does not exist'):
             da.isel_points(bad_key=[1, 2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+        with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(y=[1.5, 2.2])
-        with self.assertRaisesRegexp(TypeError, 'Indexers must be integers'):
+        with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(x=[1, 2, 3], y=slice(3))
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'Indexers must be 1 dimensional'):
             da.isel_points(y=1, x=2)
-        with self.assertRaisesRegexp(ValueError,
+        with raises_regex(ValueError,
                                      'Existing dimension names are not'):
             da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
@@ -638,10 +813,29 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(da[:3, :4],
                                       da.loc[['a', 'b', 'c'], np.arange(4)])
         self.assertDataArrayIdentical(da[:, :4], da.loc[:, self.ds['y'] < 4])
+
+    def test_loc_assign(self):
+        self.ds['x'] = ('x', np.array(list('abcdefghij')))
+        da = self.ds['foo']
+        # assignment
         da.loc['a':'j'] = 0
         self.assertTrue(np.all(da.values == 0))
         da.loc[{'x': slice('a', 'j')}] = 2
         self.assertTrue(np.all(da.values == 2))
+
+        da.loc[{'x': slice('a', 'j')}] = 2
+        self.assertTrue(np.all(da.values == 2))
+
+        # Multi dimensional case
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0, 0] = 0
+        assert da.values[0, 0] == 0
+        assert da.values[0, 1] != 0
+
+        da = DataArray(np.arange(12).reshape(3, 4), dims=['x', 'y'])
+        da.loc[0] = 0
+        self.assertTrue(np.all(da.values[0] == np.zeros(4)))
+        assert da.values[1, 0] != 0
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])
@@ -684,7 +878,7 @@ class TestDataArray(TestCase):
                                       mdata.sel(x=('a', 1)))
         self.assertDataArrayIdentical(mdata.loc[{'one': 'a'}, ...],
                                       mdata.sel(x={'one': 'a'}))
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             mdata.loc[('a', 1)]
 
         self.assertDataArrayIdentical(mdata.sel(x={'one': 'a', 'two': 1}),
@@ -709,7 +903,7 @@ class TestDataArray(TestCase):
                   IndexVariable('y', np.array([0, 1, 2], 'int64'))]
         da = DataArray(np.random.randn(2, 3), coords, name='foo')
 
-        self.assertEquals(2, len(da.coords))
+        assert 2 == len(da.coords)
 
         self.assertEqual(['x', 'y'], list(da.coords))
 
@@ -720,9 +914,9 @@ class TestDataArray(TestCase):
         self.assertNotIn(0, da.coords)
         self.assertNotIn('foo', da.coords)
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             da.coords[0]
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             da.coords['foo']
 
         expected = dedent("""\
@@ -730,14 +924,14 @@ class TestDataArray(TestCase):
           * x        (x) int64 -1 -2
           * y        (y) int64 0 1 2""")
         actual = repr(da.coords)
-        self.assertEquals(expected, actual)
+        assert expected == actual
 
         del da.coords['x']
         expected = DataArray(da.values, {'y': [0, 1, 2]}, dims=['x', 'y'],
                              name='foo')
         self.assertDataArrayIdentical(da, expected)
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda['level_1'] = np.arange(4)
             self.mda.coords['level_1'] = np.arange(4)
 
@@ -827,13 +1021,13 @@ class TestDataArray(TestCase):
                              dims=['x', 'y'], name='foo')
         self.assertDataArrayIdentical(actual, expected)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot reset coord'):
+        with raises_regex(ValueError, 'cannot reset coord'):
             data.reset_coords(inplace=True)
-        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+        with raises_regex(ValueError, 'cannot be found'):
             data.reset_coords('foo', drop=True)
-        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+        with raises_regex(ValueError, 'cannot be found'):
             data.reset_coords('not_found')
-        with self.assertRaisesRegexp(ValueError, 'cannot remove index'):
+        with raises_regex(ValueError, 'cannot remove index'):
             data.reset_coords('y')
 
     def test_assign_coords(self):
@@ -848,7 +1042,7 @@ class TestDataArray(TestCase):
         expected.coords['d'] = ('x', [1.5, 1.5, 3.5, 3.5])
         self.assertDataArrayIdentical(actual, expected)
 
-        with self.assertRaisesRegexp(ValueError, 'conflicting MultiIndex'):
+        with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda.assign_coords(level_1=range(4))
 
     def test_coords_alignment(self):
@@ -892,7 +1086,7 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(foo, foo.reindex_like(foo))
 
         bar = foo[:4]
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
@@ -945,26 +1139,26 @@ class TestDataArray(TestCase):
                           coords={'x': np.linspace(0.0, 1.0, 3.0)},
                           attrs={'key': 'entry'})
 
-        with self.assertRaisesRegexp(ValueError, 'dim should be str or'):
+        with raises_regex(ValueError, 'dim should be str or'):
             array.expand_dims(0)
-        with self.assertRaisesRegexp(ValueError, 'lengths of dim and axis'):
+        with raises_regex(ValueError, 'lengths of dim and axis'):
             # dims and axis argument should be the same length
             array.expand_dims(dim=['a', 'b'], axis=[1, 2, 3])
-        with self.assertRaisesRegexp(ValueError, 'Dimension x already'):
+        with raises_regex(ValueError, 'Dimension x already'):
             # Should not pass the already existing dimension.
             array.expand_dims(dim=['x'])
         # raise if duplicate
-        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+        with raises_regex(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'y'])
-        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+        with raises_regex(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'z'], axis=[1, 1])
-        with self.assertRaisesRegexp(ValueError, 'duplicate values.'):
+        with raises_regex(ValueError, 'duplicate values.'):
             array.expand_dims(dim=['y', 'z'], axis=[2, -2])
 
         # out of bounds error, axis must be in [-4, 3]
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             array.expand_dims(dim=['y', 'z'], axis=[2, 4])
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             array.expand_dims(dim=['y', 'z'], axis=[2, -5])
         # Does not raise an IndexError
         array.expand_dims(dim=['y', 'z'], axis=[2, -4])
@@ -1057,7 +1251,7 @@ class TestDataArray(TestCase):
                             coords={'x': ('x', [0, 1]),
                                     'level': ('y', [1, 2])},
                             dims=('x', 'y'))
-        with self.assertRaisesRegexp(ValueError, 'dimension mismatch'):
+        with raises_regex(ValueError, 'dimension mismatch'):
             array2d.set_index(x='level')
 
     def test_reset_index(self):
@@ -1104,11 +1298,11 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(array, expected)
 
         array = DataArray([1, 2], dims='x')
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             array.reorder_levels(x=['level_1', 'level_2'])
 
         array['x'] = [0, 1]
-        with self.assertRaisesRegexp(ValueError, 'has no MultiIndex'):
+        with raises_regex(ValueError, 'has no MultiIndex'):
             array.reorder_levels(x=['level_1', 'level_2'])
 
     def test_dataset_getitem(self):
@@ -1186,9 +1380,9 @@ class TestDataArray(TestCase):
     def test_inplace_math_automatic_alignment(self):
         a = DataArray(range(5), [('x', range(5))])
         b = DataArray(range(1, 6), [('x', range(1, 6))])
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             a += b
-        with self.assertRaises(xr.MergeError):
+        with pytest.raises(xr.MergeError):
             b += a
 
     def test_math_name(self):
@@ -1361,14 +1555,14 @@ class TestDataArray(TestCase):
         actual = arr.drop('z')
         self.assertDataArrayIdentical(expected, actual)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             arr.drop('not found')
 
-        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+        with raises_regex(ValueError, 'cannot be found'):
             arr.drop(None)
 
         renamed = arr.rename('foo')
-        with self.assertRaisesRegexp(ValueError, 'cannot be found'):
+        with raises_regex(ValueError, 'cannot be found'):
             renamed.drop('foo')
 
     def test_drop_index_labels(self):
@@ -1525,10 +1719,10 @@ class TestDataArray(TestCase):
         actual = a.fillna(b[:0])
         self.assertDataArrayIdentical(a, actual)
 
-        with self.assertRaisesRegexp(TypeError, 'fillna on a DataArray'):
+        with raises_regex(TypeError, 'fillna on a DataArray'):
             a.fillna({0: 0})
 
-        with self.assertRaisesRegexp(ValueError, 'broadcast'):
+        with raises_regex(ValueError, 'broadcast'):
             a.fillna([1, 2])
 
         fill_value = DataArray([0, 1], dims='y')
@@ -1693,11 +1887,11 @@ class TestDataArray(TestCase):
         actual_agg = actual.groupby('abc').mean()
         self.assertDataArrayAllClose(expected_agg, actual_agg)
 
-        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
+        with raises_regex(TypeError, 'only support binary ops'):
             grouped + 1
-        with self.assertRaisesRegexp(TypeError, 'only support binary ops'):
+        with raises_regex(TypeError, 'only support binary ops'):
             grouped + grouped
-        with self.assertRaisesRegexp(TypeError, 'in-place operations'):
+        with raises_regex(TypeError, 'in-place operations'):
             array += grouped
 
     def test_groupby_math_not_aligned(self):
@@ -1838,7 +2032,7 @@ class TestDataArray(TestCase):
         actual = array.resample(time='24H').reduce(np.mean)
         self.assertDataArrayIdentical(expected, actual)
 
-        with self.assertRaisesRegexp(ValueError, 'index must be monotonic'):
+        with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
     def test_resample_first(self):
@@ -1877,7 +2071,7 @@ class TestDataArray(TestCase):
     def test_resample_bad_resample_dim(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('__resample_dim__', times)])
-        with self.assertRaisesRegexp(ValueError, 'Proxy resampling dimension'):
+        with raises_regex(ValueError, 'Proxy resampling dimension'):
             array.resample(**{'__resample_dim__': '1D'}).first()
 
     @requires_scipy
@@ -2100,7 +2294,7 @@ class TestDataArray(TestCase):
                           {'time': times, 'x': xs, 'y': ys},
                           ('x', 'y', 'time'))
 
-        with self.assertRaisesRegexp(TypeError,
+        with raises_regex(TypeError,
                                      "dask arrays are not yet supported"):
             array.resample(time='1H').interpolate('linear')
 
@@ -2200,11 +2394,11 @@ class TestDataArray(TestCase):
         self.assertDatasetIdentical(result1, array_with_coord)
 
     def test_align_without_indexes_errors(self):
-        with self.assertRaisesRegexp(ValueError, 'cannot be aligned'):
+        with raises_regex(ValueError, 'cannot be aligned'):
             align(DataArray([1, 2, 3], dims=['x']),
                   DataArray([1, 2], dims=['x']))
 
-        with self.assertRaisesRegexp(ValueError, 'cannot be aligned'):
+        with raises_regex(ValueError, 'cannot be aligned'):
             align(DataArray([1, 2, 3], dims=['x']),
                   DataArray([1, 2], coords=[('x', [0, 1])]))
 
@@ -2316,7 +2510,7 @@ class TestDataArray(TestCase):
             roundtripped = DataArray(da.to_pandas()).drop(dims)
             self.assertDataArrayIdentical(da, roundtripped)
 
-        with self.assertRaisesRegexp(ValueError, 'cannot convert'):
+        with raises_regex(ValueError, 'cannot convert'):
             DataArray(np.random.randn(1, 2, 3, 4, 5)).to_pandas()
 
     def test_to_dataframe(self):
@@ -2340,7 +2534,7 @@ class TestDataArray(TestCase):
         self.assertArrayEqual(expected.index.values, actual.index.values)
 
         arr.name = None  # unnamed
-        with self.assertRaisesRegexp(ValueError, 'unnamed'):
+        with raises_regex(ValueError, 'unnamed'):
             arr.to_dataframe()
 
     def test_to_pandas_name_matches_coordinate(self):
@@ -2415,14 +2609,14 @@ class TestDataArray(TestCase):
         d = {'dims': ('x', 'y'),
              'data': array.values,
              'coords': {'x': {'data': ['a', 'b']}}}
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError,
                 "cannot convert dict when coords are missing the key 'dims'"):
             DataArray.from_dict(d)
 
         # this one is missing some necessary information
         d = {'dims': ('t')}
-        with self.assertRaisesRegexp(
+        with raises_regex(
                 ValueError, "cannot convert dict without the key 'data'"):
             DataArray.from_dict(d)
 
@@ -2532,7 +2726,7 @@ class TestDataArray(TestCase):
 
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
-        with self.assertRaisesRegexp(ValueError, 'unable to convert unnamed'):
+        with raises_regex(ValueError, 'unable to convert unnamed'):
             unnamed.to_dataset()
 
         actual = unnamed.to_dataset(name='foo')
@@ -2557,7 +2751,7 @@ class TestDataArray(TestCase):
         actual = array.to_dataset('x')
         self.assertDatasetIdentical(expected, actual)
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             array.to_dataset('x', name='foo')
 
         roundtripped = actual.to_array(dim='x')
@@ -2644,11 +2838,11 @@ class TestDataArray(TestCase):
 
     def test_setattr_raises(self):
         array = DataArray(0, coords={'scalar': 1}, attrs={'foo': 'bar'})
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             array.scalar = 2
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             array.foo = 2
-        with self.assertRaisesRegexp(AttributeError, 'cannot set attr'):
+        with raises_regex(AttributeError, 'cannot set attr'):
             array.other = 2
 
     def test_full_like(self):
@@ -2667,7 +2861,7 @@ class TestDataArray(TestCase):
         # override dtype
         actual = full_like(da, fill_value=True, dtype=bool)
         expect.values = [[True, True], [True, True]]
-        self.assertEquals(expect.dtype, bool)
+        assert expect.dtype == bool
         self.assertDataArrayIdentical(expect, actual)
 
     def test_dot(self):
@@ -2702,11 +2896,11 @@ class TestDataArray(TestCase):
         expected = DataArray(expected_vals, coords=[x, j], dims=['x', 'j'])
         self.assertDataArrayEqual(expected, actual)
 
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             da.dot(dm.to_dataset(name='dm'))
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             da.dot(dm.values)
-        with self.assertRaisesRegexp(ValueError, 'no shared dimensions'):
+        with raises_regex(ValueError, 'no shared dimensions'):
             da.dot(DataArray(1))
 
     def test_binary_op_join_setting(self):
@@ -2949,3 +3143,9 @@ def test_rolling_count_correct():
     expected = DataArray(
         [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')
     assert_equal(result, expected)
+
+
+def test_raise_no_warning_for_nan_in_binary_ops():
+    with pytest.warns(None) as record:
+        xr.DataArray([1, 2, np.NaN]) > 0
+    assert len(record) == 0

@@ -1,21 +1,24 @@
 name: test_env
 channels:
   - conda-forge
+  - conda-forge/label/dev
 dependencies:
   - python=3.6
-  - cython
   - dask
   - distributed
   - h5py
   - h5netcdf
   - matplotlib
+  - netcdf4
   - pytest
-  - flake8
   - numpy
   - pandas
   - scipy
+  - seaborn
   - toolz
+  - rasterio>=1.*
+  - bottleneck
   - pip:
     - coveralls
     - pytest-cov
-    - git+https://github.com/Unidata/netcdf4-python.git
+    - pydap
