@@ -58,12 +58,12 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345,
     return da, df
 
 
-@requires_np112
-@requires_scipy
 @pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1), (100, 100)])
 @pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
 @pytest.mark.parametrize('method', ['linear',  'nearest', 'zero', 'slinear',
                                     'quadratic', 'cubic'])
+@requires_np112
+@requires_scipy
 def test_interpolate_pd_compat(shape, frac_nan, method):
     da, df = make_interpolate_example_data(shape, frac_nan)
 
@@ -73,13 +73,13 @@ def test_interpolate_pd_compat(shape, frac_nan, method):
         np.testing.assert_allclose(actual.values, expected.values)
 
 
-@requires_np112
-@requires_scipy
 @pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1)])
 @pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
 @pytest.mark.parametrize('method', ['time', 'index', 'values', 'linear',
                                     'nearest', 'zero', 'slinear',
                                     'quadratic', 'cubic'])
+@requires_np112
+@requires_scipy
 def test_interpolate_pd_compat_non_uniform_index(shape, frac_nan, method):
     # translate pandas syntax to xarray equivalent
     xmethod = method
@@ -100,11 +100,11 @@ def test_interpolate_pd_compat_non_uniform_index(shape, frac_nan, method):
         np.testing.assert_allclose(actual.values, expected.values)
 
 
-@requires_np112
-@requires_scipy
 @pytest.mark.parametrize('shape', [(8, 8), (100, 100)])
 @pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
 @pytest.mark.parametrize('order', [1, 2, 3])
+@requires_np112
+@requires_scipy
 def test_interpolate_pd_compat_polynomial(shape, frac_nan, order):
     da, df = make_interpolate_example_data(shape, frac_nan)
 
@@ -198,11 +198,11 @@ def test_interpolate_limits():
     assert_equal(actual, expected)
 
 
-@requires_np112
-@requires_scipy
 @pytest.mark.parametrize('method', ['linear', 'nearest', 'zero', 'slinear',
                                     'quadratic', 'cubic', 'polynomial',
                                     'barycentric', 'krog', 'pchip', 'spline'])
+@requires_np112
+@requires_scipy
 def test_interpolate_methods(method):
     kwargs = {}
     if method == 'polynomial':
@@ -216,12 +216,11 @@ def test_interpolate_methods(method):
     assert actual.isnull().sum() == 1
 
 
-@requires_np112
-@requires_scipy
 @pytest.mark.parametrize(
     'kind, interpolator',
     [('linear', NumpyInterpolator), ('linear', ScipyInterpolator),
      ('spline', SplineInterpolator)])
+@requires_scipy
 def test_interpolators(kind, interpolator):
     xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
     yi = np.array([-10, 0, 10, 20, 50], dtype=np.float64)
