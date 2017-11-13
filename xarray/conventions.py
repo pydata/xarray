@@ -17,7 +17,7 @@ except ImportError:
 
 from .core import duck_array_ops, indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items, last_item
-from .core.variable import as_variable, Variable
+from .core.variable import as_variable, IndexVariable, Variable
 from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
 
@@ -832,6 +832,15 @@ def _infer_dtype(array, name=None):
 def ensure_dtype_not_object(var, name=None):
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == 'O':
+        if (isinstance(var, IndexVariable) and
+                isinstance(var.to_index(), pd.MultiIndex)):
+            raise NotImplementedError(
+                'variable {!r} is a MultiIndex, which cannot yet be '
+                'serialized to netCDF files '
+                '(https://github.com/pydata/xarray/issues/1077). Use '
+                'reset_index() to convert MultiIndex levels into coordinate '
+                'variables instead.'.format(name))
+
         dims, data, attrs, encoding = _var_as_tuple(var)
         missing = pd.isnull(data)
         if missing.any():
