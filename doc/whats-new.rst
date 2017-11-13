@@ -56,6 +56,8 @@ Bug fixes
 
 - Fixed ``apply_ufunc`` with ``dask='parallelized'`` for scalar arguments
   (:issue:`1697`).
+- Fix "Chunksize cannot exceed dimension size" error when writing netCDF4 files
+  loaded from disk (:issue:`1225`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Validate the shape of coordinates with names matching dimensions in the
