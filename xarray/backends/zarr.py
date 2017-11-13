@@ -40,7 +40,6 @@ from .api import _protect_dataset_variables_inplace
 # these functions handle encoding / decoding of such items
 def _encode_zarr_attr_value(value):
     # what is the most duck-type friendly way to do this check
-    print("encoding zarr attr value %r" % value)
     if isinstance(value, np.ndarray):
         return value.tolist()
     # I don't know how to check generically if something is a numpy scalar
@@ -56,9 +55,7 @@ def _encode_zarr_attr_value(value):
 
 
 def _ensure_valid_fill_value(value, dtype):
-    print('ensure_valid_fill_value (%r, %r)' % (value, dtype))
     if dtype.type == np.string_ and type(value) == bytes:
-        print('decoding ascii')
         return value.decode('ascii')
     else:
         return value
@@ -80,7 +77,8 @@ def _decode_zarr_attrs(attrs):
                         for k, v in attrs.items()])
 
 
-class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
+                       indexing.NDArrayIndexable):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -105,6 +103,10 @@ class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         #if self.datastore.is_remote:  # pragma: no cover
         #    getitem = functools.partial(robust_getitem, catch=RuntimeError)
         #else:
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError(
+             'Vectorized indexing for {} is not implemented. Load your '
+             'data first with .load() or .compute().'.format(type(self)))
         getitem = operator.getitem
         try:
             data = getitem(self.get_array(), key)
@@ -327,7 +329,6 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
             name = 'zarr_array-%s' % token
             # do we need to worry about the zarr synchronizer / dask lock?
             lock = self._synchronizer
-            print("Chunking variable")
             var = var.chunk(chunks=zarr_array.chunks, name=name, lock=lock)
 
         return var
@@ -350,7 +351,10 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
                                                      self._DIMENSION_KEY)
             return dimensions
 
-    def set_dimension(self, name, length):
+    def set_dimension(self, name, length, is_unlimited=False):
+        if is_unlimited:
+            raise NotImplementedError("Zarr backend doesn't know how to "
+                    "handle unlimited dimensions.")
         with self.ensure_open(autoclose=False):
             self.ds.attrs[self._DIMENSION_KEY][name] = length
 
@@ -390,9 +394,6 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
-
-        print('preparing variable with attributes %r' % attrs)
-        print('preparing variable with encoding %r' % encoding)
         ### arguments for zarr.create
         # zarr.creation.create(shape, chunks=None, dtype=None, compressor='default',
         # fill_value=0, order='C', store=None, synchronizer=None, overwrite=False,
