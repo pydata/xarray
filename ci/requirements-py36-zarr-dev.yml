@@ -17,4 +17,4 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
-    - git@github.com:alimanfoo/zarr.git
+    - git+https://github.com/alimanfoo/zarr.git
