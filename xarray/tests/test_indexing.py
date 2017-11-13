@@ -11,7 +11,7 @@ import pandas as pd
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from xarray.core import nputils
-from xarray.core.pycompat import integer_types
+from xarray.core.pycompat import native_int_types
 from . import TestCase, ReturnItem, raises_regex, IndexerMaker
 
 
@@ -175,7 +175,7 @@ class TestLazyArray(TestCase):
                                           indexing.LazilyIndexedArray)
 
                         # make sure actual.key is appropriate type
-                        if all(isinstance(k, integer_types + (slice, ))
+                        if all(isinstance(k, native_int_types + (slice, ))
                                for k in v_lazy._data.key.tuple):
                             assert isinstance(v_lazy._data.key,
                                               indexing.BasicIndexer)
@@ -289,7 +289,7 @@ def check_integer(indexer_cls):
 def check_slice(indexer_cls):
     (value,) = indexer_cls((slice(1, None, np.int64(2)),)).tuple
     assert value == slice(1, None, 2)
-    assert isinstance(value.step, int)
+    assert isinstance(value.step, native_int_types)
 
 
 def check_array1d(indexer_cls):
