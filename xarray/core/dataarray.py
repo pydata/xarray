@@ -1223,44 +1223,79 @@ class DataArray(AbstractArray, BaseDataObject):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : {'linear', 'time', 'index', 'values', 'nearest'}
-            'linear': ignore the index and treat the values as equally
-                      spaced. default
-            'time': interpolation works on daily and higher resolution data to
-                    interpolate given length of interval
-            'index', 'values': use the actual numerical values of the index
-            'nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'barycentric',
-            'polynomial' is passed to scipy.interpolate.interp1d with the
-            order given both 'polynomial' and 'spline' require that you also
-            specify and order (int) e.g. da.interpolate_na(method='polynomial',
-            order=4)
-        use_coordinate : boolean, default True
-        limit : limit : int, default None
-            Maximum number of consecutive NaNs to fill. Must be greater than 0.
+        method : {'linear', 'time', 'index', 'values', 'nearest'}, optional
+            String indicating which method to use for interpolation:
+
+            - 'linear': linear interpolation (Default). Additional keyword
+              arguments are passed to ``numpy.interp``
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
+              method=='polynomial', the ``order`` keyword argument must also be
+              provided.
+            - 'barycentric', 'krog', 'pchip', 'spline': use their respective
+              ``scipy.interpolate`` classes.
+        use_coordinate : boolean or str, default True
+            Specifies which index to use as the x values in the interpolation
+            formulated as `y = f(x)`. If False, values are treated as if
+            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
+            used. If use_coordinate is a string, it specifies the name of a
+            coordinate variariable to use as the index.
+        limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit.
 
         Returns
         -------
         DataArray
+
+        See also
+        --------
+        numpy.interp
+        scipy.interpolate
         """
         from .missing import interp_na
         return interp_na(self, dim=dim, method=method, limit=limit,
                          use_coordinate=use_coordinate, **kwargs)
 
-    def interpolate_at(self, dim, locs, method='linear', inplace=False,
-                       limit=None, **kwargs):
-        # this is just here so I remember the signature we discussed
-        # dim: the dimension along which to interpolate
-        # locs: a broadcastable boolean mask describing where interpolation
-        #       should happen
-        raise NotImplementedError()
-
     def ffill(self, dim, limit=None):
-        '''TODO'''
+        '''Fill NaN values by propogating values forward
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propogate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
         from .missing import ffill
         return ffill(self, dim, limit=limit)
 
     def bfill(self, dim, limit=None):
-        '''TODO'''
+        '''Fill NaN values by propogating values backward
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propogate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to backward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
         from .missing import bfill
         return bfill(self, dim, limit=limit)
 

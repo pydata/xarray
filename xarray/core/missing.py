@@ -86,7 +86,7 @@ class ScipyInterpolator(BaseInterpolator):
         if kind == 'polynomial':
             kind = kwargs.pop('order', None)
             if kind is None:
-                raise ValueError('order is required when kind=polynomial')
+                raise ValueError('order is required when method=polynomial')
 
         self.kind = kind
 
@@ -100,28 +100,6 @@ class ScipyInterpolator(BaseInterpolator):
 
         self.f = interp1d(xi, yi, kind=self.kind, fill_value=fill_value,
                           bounds_error=False, **self.cons_kwargs)
-
-
-class FromDerivativesInterpolator(BaseInterpolator):
-    '''Piecewise polynomial in terms of coefficients and breakpoints.
-
-    See Also
-    --------
-    scipy.interpolate.BPoly
-    '''
-    def __init__(self, xi, yi, kind=None, fill_value=None, **kwargs):
-        from scipy.interpolate import BPoly
-
-        if kind is None:
-            raise ValueError('kind is a required argument')
-
-        self.kind = kind
-        self.cons_kwargs = kwargs
-
-        if fill_value is not None:
-            raise ValueError('from_derivatives does not support fill_value')
-
-        self.f = BPoly.from_derivatives(xi, yi, **self.cons_kwargs)
 
 
 class SplineInterpolator(BaseInterpolator):
@@ -160,10 +138,12 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
     '''
 
     if use_coordinate:
-        index = arr.get_index(dim)
+        if use_coordinate is True:
+            index = arr.get_index(dim)
+        else:
+            index = arr.coords[use_coordinate]
         if isinstance(index, pd.DatetimeIndex):
             index = index.values.astype(np.float64)
-
         # check index sorting now so we can skip it later
         if not (np.diff(index) > 0).all():
             raise ValueError("Index must be monotonicly increasing")
@@ -188,21 +168,17 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate,
                                    **kwargs)
-    kwargs.update(kind=method)
-
     interpolator = _get_interpolator(method, **kwargs)
 
     arr = apply_ufunc(interpolator, index, self,
                       input_core_dims=[[dim], [dim]],
                       output_core_dims=[[dim]],
                       output_dtypes=[self.dtype],
-                      output_sizes=dict(zip(self.dims, self.shape)),
                       dask='parallelized',
                       vectorize=True,
                       keep_attrs=True).transpose(*self.dims)
 
     if limit is not None:
-        print(valids)
         arr = arr.where(valids)
 
     return arr
@@ -210,11 +186,6 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
 
 def wrap_interpolator(interpolator, x, y, **kwargs):
     '''helper function to apply interpolation along 1 dimension'''
-    if x.shape != y.shape:
-        # this can probably be removed once I get apply_ufuncs to work
-        raise AssertionError("x and y shapes do not match "
-                             "%s != %s" % (x.shape, y.shape))
-
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
     out = y.copy()
@@ -282,11 +253,12 @@ def _get_interpolator(method, **kwargs):
     '''
     interp1d_methods = ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                         'cubic', 'polynomial']
-    valid_methods = interp1d_methods + ['piecewise_polynomial', 'barycentric',
-                                        'krog', 'pchip', 'spline']
+    valid_methods = interp1d_methods + ['barycentric', 'krog', 'pchip',
+                                        'spline']
 
     if (method == 'linear' and not
             kwargs.get('fill_value', None) == 'extrapolate'):
+        kwargs.update(kind=method)
         interp_class = NumpyInterpolator
     elif method in valid_methods:
         try:
@@ -295,11 +267,8 @@ def _get_interpolator(method, **kwargs):
             raise ImportError(
                 'Interpolation with method `%s` requires scipy' % method)
         if method in interp1d_methods:
+            kwargs.update(kind=method)
             interp_class = ScipyInterpolator
-        elif method == 'piecewise_polynomial':
-            raise NotImplementedError(
-                '%s has not been fully implemented' % method)
-            # interp_class = FromDerivativesInterpolator
         elif method == 'barycentric':
             interp_class = interpolate.BarycentricInterpolator
         elif method == 'krog':
@@ -307,6 +276,7 @@ def _get_interpolator(method, **kwargs):
         elif method == 'pchip':
             interp_class = interpolate.PchipInterpolator
         elif method == 'spline':
+            kwargs.update(kind=method)
             interp_class = SplineInterpolator
         else:
             raise ValueError('%s is not a valid scipy interpolator' % method)
