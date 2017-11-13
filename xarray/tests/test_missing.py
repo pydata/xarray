@@ -16,19 +16,10 @@ from xarray.tests import (assert_equal, assert_array_equal, raises_regex,
                           requires_np112)
 
 
-@pytest.fixture(params=[1])
-def da(request):
-    if request.param == 1:
-        times = pd.date_range('2000-01-01', freq='1D', periods=21)
-        values = np.random.random((3, 21, 4))
-        da = xr.DataArray(values, dims=('a', 'time', 'x'))
-        da['time'] = times
-        return da
-
-    if request.param == 2:
-        return xr.DataArray(
-            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
-            dims='time')
+@pytest.fixture
+def da():
+    return xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                        dims='time')
 
 
 def make_interpolate_example_data(shape, frac_nan, seed=12345,
@@ -368,7 +359,6 @@ def test_ffill_bfill_allnans():
 
 @requires_np112
 @requires_bottleneck
-@pytest.mark.parametrize('da', (1, 2), indirect=True)
 def test_ffill_functions(da):
     result = da.ffill('time')
     assert result.isnull().sum() == 0
