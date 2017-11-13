@@ -35,7 +35,7 @@ def _infer_coords_and_dims(shape, coords, dims):
     """All the logic for creating a new DataArray"""
 
     if (coords is not None and not utils.is_dict_like(coords) and
-        len(coords) != len(shape)):
+            len(coords) != len(shape)):
         raise ValueError('coords is not dict-like, but it has %s items, '
                          'which does not match the %s dimensions of the '
                          'data' % (len(coords), len(shape)))
@@ -50,8 +50,8 @@ def _infer_coords_and_dims(shape, coords, dims):
             if utils.is_dict_like(coords):
                 # deprecated in GH993, removed in GH1539
                 raise ValueError('inferring DataArray dimensions from '
-                                 'dictionary like ``coords`` has been '
-                                 'deprecated. Use an explicit list of '
+                                 'dictionary like ``coords`` is no longer '
+                                 'supported. Use an explicit list of '
                                  '``dims`` instead.')
             for n, (dim, coord) in enumerate(zip(dims, coords)):
                 coord = as_variable(coord,
@@ -86,6 +86,12 @@ def _infer_coords_and_dims(shape, coords, dims):
                 raise ValueError('conflicting sizes for dimension %r: '
                                  'length %s on the data but length %s on '
                                  'coordinate %r' % (d, sizes[d], s, k))
+
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError('coordinate %r is a DataArray dimension, but '
+                             'it has shape %r rather than expected shape %r '
+                             'matching the dimension size'
+                             % (k, v.shape, (sizes[k],)))
 
     assert_unique_multiindex_level_names(new_coords)
 

@@ -376,9 +376,17 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(original, actual)
 
-        expected = original.drop('foo')
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetIdentical(expected, actual)
+    def test_roundtrip_global_coordinates(self):
+        original = Dataset({'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={'x': 0, 'y z': 1})
+        expected = Dataset({'y z': 1}, {'x': 0})
+        with pytest.warns(xr.SerializationWarning):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -711,6 +719,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
+    def test_multiindex_not_implemented(self):
+        ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
+              .set_index(x=['y', 'z']))
+        with raises_regex(NotImplementedError, 'MultiIndex'):
+            with self.roundtrip(ds):
+                pass
+
 
 _counter = itertools.count()
 
@@ -908,6 +923,21 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
+
+    def test_encoding_chunksizes_unlimited(self):
+        # regression test for GH1225
+        ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
+        ds.variables['x'].encoding = {
+            'zlib': False,
+            'shuffle': False,
+            'complevel': 0,
+            'fletcher32': False,
+            'contiguous': False,
+            'chunksizes': (2 ** 20,),
+            'original_shape': (3,),
+        }
+        with self.roundtrip(ds) as actual:
+            self.assertDatasetEqual(ds, actual)
 
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
@@ -1230,6 +1260,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             self.assertDatasetEqual(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
@@ -1506,8 +1537,11 @@ class DaskTest(TestCase, DatasetIOTestCases):
                   allow_cleanup_failure=False):
         yield data.chunk()
 
+    # Override methods in DatasetIOTestCases - not applicable to dask
     def test_roundtrip_string_encoded_characters(self):
-        # Override method in DatasetIOTestCases - not applicable to dask
+        pass
+
+    def test_roundtrip_coordinates_with_space(self):
         pass
 
     def test_roundtrip_datetime_data(self):

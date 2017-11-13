@@ -490,6 +490,7 @@ Exceptions
    :toctree: generated/
 
    MergeError
+   SerializationWarning
 
 Advanced API
 ============

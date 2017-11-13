@@ -43,12 +43,29 @@ Bug fixes
   ``NumpyIndexingAdapter``. (:issue:`1694`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
+- Fix importing xarray when running Python with ``-OO`` (:issue:`1706`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Saving a netCDF file with a coordinates with a spaces in its names now raises
+  an appropriate warning (:issue:`1689`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fix two bugs that were preventing dask arrays from being specified as
   coordinates in the DataArray constructor (:issue:`1684`).
   By `Joe Hamman <https://github.com/jhamman>`_
 
 - Fixed ``apply_ufunc`` with ``dask='parallelized'`` for scalar arguments
   (:issue:`1697`).
+- Fix "Chunksize cannot exceed dimension size" error when writing netCDF4 files
+  loaded from disk (:issue:`1225`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Validate the shape of coordinates with names matching dimensions in the
+  DataArray constructor (:issue:`1709`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Raise ``NotImplementedError`` when attempting to save a MultiIndex to a
+  netCDF file (:issue:`1547`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Testing
