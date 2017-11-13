@@ -719,6 +719,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
+    def test_multiindex_not_implemented(self):
+        ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
+              .set_index(x=['y', 'z']))
+        with raises_regex(NotImplementedError, 'MultiIndex'):
+            with self.roundtrip(ds):
+                pass
+
 
 _counter = itertools.count()
 
