@@ -437,12 +437,7 @@ class NdimSizeLenMixin(object):
             raise TypeError('len() of unsized object')
 
 
-class DunderArrayMixin(object):
-    def __array__(self, dtype=None):
-        return np.asarray(self[...], dtype=dtype)
-
-
-class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
+class NDArrayMixin(NdimSizeLenMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
