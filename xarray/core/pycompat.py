@@ -12,7 +12,7 @@ if PY3:  # pragma: no cover
     basestring = str
     unicode_type = str
     bytes_type = bytes
-    integer_types = (int, np.integer)
+    native_int_types = (int,)
 
     def iteritems(d):
         return iter(d.items())
@@ -31,7 +31,7 @@ else:  # pragma: no cover
     basestring = basestring  # noqa
     unicode_type = unicode  # noqa
     bytes_type = str
-    integer_types = (int, long, np.integer)  # noqa
+    native_int_types = (int, long)  # noqa
 
     def iteritems(d):
         return d.iteritems()
@@ -45,6 +45,9 @@ else:  # pragma: no cover
     import __builtin__ as builtins
     from urllib import urlretrieve
     from inspect import getargspec
+
+integer_types = native_int_types + (np.integer,)
+
 try:
     from cyordereddict import OrderedDict
 except ImportError:  # pragma: no cover

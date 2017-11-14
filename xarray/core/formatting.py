@@ -69,38 +69,39 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = BasicIndexer((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), )
-                           + (slice(None), ) * n_steps)
+    indexer = ((0,) * (len(shape) - 1 - n_steps) +
+               (slice(stop),) +
+               (slice(None),) * n_steps)
     return indexer
 
 
-def first_n_items(x, n_desired):
+def first_n_items(array, n_desired):
     """Returns the first n_desired items of an array"""
-    # Unfortunately, we can't just do x.flat[:n_desired] here because x might
-    # not be a numpy.ndarray. Moreover, access to elements of x could be very
-    # expensive (e.g. if it's only available over DAP), so go out of our way to
-    # get them in a single call to __getitem__ using only slices.
+    # Unfortunately, we can't just do array.flat[:n_desired] here because it
+    # might not be a numpy.ndarray. Moreover, access to elements of the array
+    # could be very expensive (e.g. if it's only available over DAP), so go out
+    # of our way to get them in a single call to __getitem__ using only slices.
     if n_desired < 1:
         raise ValueError('must request at least one item')
 
-    if x.size == 0:
+    if array.size == 0:
         # work around for https://github.com/numpy/numpy/issues/5195
         return []
 
-    if n_desired < x.size:
-        indexer = _get_indexer_at_least_n_items(x.shape, n_desired)
-        x = x[indexer]
-    return np.asarray(x).flat[:n_desired]
+    if n_desired < array.size:
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired)
+        array = array[indexer]
+    return np.asarray(array).flat[:n_desired]
 
 
-def last_item(x):
+def last_item(array):
     """Returns the last item of an array in a list or an empty list."""
-    if x.size == 0:
+    if array.size == 0:
         # work around for https://github.com/numpy/numpy/issues/5195
         return []
 
-    indexer = (slice(-1, None),) * x.ndim
-    return np.ravel(x[indexer]).tolist()
+    indexer = (slice(-1, None),) * array.ndim
+    return np.ravel(array[indexer]).tolist()
 
 
 def format_timestamp(t):
@@ -174,19 +175,18 @@ def format_items(x):
     return formatted
 
 
-def format_array_flat(items_ndarray, max_width):
+def format_array_flat(array, max_width):
     """Return a formatted string for as many items in the flattened version of
-    items_ndarray that will fit within max_width characters
+    array that will fit within max_width characters.
     """
     # every item will take up at least two characters, but we always want to
     # print at least one item
     max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
-    relevant_items = first_n_items(items_ndarray, max_possibly_relevant)
+    relevant_items = first_n_items(array, max_possibly_relevant)
     pprint_items = format_items(relevant_items)
 
     cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
-    if (max_possibly_relevant < items_ndarray.size or
-            (cum_len > max_width).any()):
+    if (max_possibly_relevant < array.size or (cum_len > max_width).any()):
         end_padding = u' ...'
         count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
         pprint_items = pprint_items[:count]

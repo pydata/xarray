@@ -444,7 +444,7 @@ class DatasetIOTestCases(object):
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
-                if isinstance(obj.array, indexing.NDArrayIndexable):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
                 else:
                     if isinstance(obj.array, np.ndarray):
@@ -1802,11 +1802,11 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_orthogonal_indexing()
 
     def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_isel_dataarray()
 
     def test_array_type_after_indexing(self):

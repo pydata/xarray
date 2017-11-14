@@ -10,12 +10,10 @@ from .. import conventions
 from .. import Variable
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
-                          DunderArrayMixin, close_on_error,
-                          is_remote_uri)
+from ..core.utils import (FrozenOrderedDict, close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
 
-from .common import (WritableCFDataStore, robust_getitem,
+from .common import (WritableCFDataStore, robust_getitem, BackendArray,
                      DataStorePickleMixin, find_root)
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
 
@@ -27,8 +25,7 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin,
-                       indexing.NDArrayIndexable):
+class BaseNetCDF4Array(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -51,12 +48,8 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin,
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        if isinstance(key, indexing.VectorizedIndexer):
-            raise NotImplementedError(
-             'Vectorized indexing for {} is not implemented. Load your '
-             'data first with .load() or .compute().'.format(type(self)))
-
-        key = indexing.to_tuple(key)
+        key = indexing.unwrap_explicit_indexer(
+            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
 
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
