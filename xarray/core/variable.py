@@ -1270,7 +1270,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             return (self.dims == other.dims and
                     (self._data is other._data or
                      equiv(self.data, other.data)))
-        except (TypeError, AttributeError) as e:
+        except (TypeError, AttributeError):
             return False
 
     def broadcast_equals(self, other, equiv=duck_array_ops.array_equiv):
