@@ -89,7 +89,7 @@ install:
   - python xarray/util/print_versions.py
 
 script:
-  - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
+  - git diff upstream/master xarray/**/*py | flake8 --diff --exit-zero || true
   - python -OO -c "import xarray"
   - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
 
