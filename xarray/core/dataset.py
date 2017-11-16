@@ -138,8 +138,8 @@ def merge_indexes(
 
         for n in var_names:
             var = variables[n]
-            if ((current_index_variable is not None) and
-                    (var.dims != current_index_variable.dims)):
+            if (current_index_variable is not None and
+                    var.dims != current_index_variable.dims):
                 raise ValueError(
                     "dimension mismatch between %r %s and %r %s"
                     % (dim, current_index_variable.dims, n, var.dims))
