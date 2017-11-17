@@ -2,38 +2,26 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
-import warnings
 from itertools import product
-from collections import MutableMapping
-import operator
+# import operator
 
 import numpy as np
 
-from .. import Variable, Dataset
+from .. import Variable
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, close_on_error, HiddenKeyDict,
-                          NdimSizeLenMixin,DunderArrayMixin)
-from ..core.pycompat import (iteritems, bytes_type, unicode_type, OrderedDict,
-                             basestring)
+from ..core.utils import FrozenOrderedDict, HiddenKeyDict
+from ..core.pycompat import iteritems, OrderedDict
 
-from .common import (WritableCFDataStore, AbstractWritableDataStore,
-                     DataStorePickleMixin)
+from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
 
 from .. import conventions
 
 # this is a private method but we need it for open_zar
 from .api import _protect_dataset_variables_inplace
 
-# most of the other stores have some kind of wrapper class like
-# class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
-# class H5NetCDFArrayWrapper(BaseNetCDF4Array):
-# class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
-# we problaby need something like this
+# need some special secret attributes to tell us the dimensions
+_DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
-# the first question is whether it should be based on BaseNetCDF4Array or
-# NdimSizeLenMixing?
-
-# or maybe we don't need wrappers at all? probably not true
 
 # zarr attributes have to be serializable as json
 # many xarray datasets / variables have numpy arrays and values
@@ -61,11 +49,7 @@ def _ensure_valid_fill_value(value, dtype):
         return value
 
 
-def _encode_zarr_attrs(attrs):
-    return OrderedDict([(k, _encode_zarr_attr_value(v))
-                        for k, v in attrs.items()])
-
-
+# TODO: cleanup/combine these next two functions
 def _decode_zarr_attr_value(value):
     # what happens if we just don't decode anything?
     # does it matter that we don't convert back to numpy types?
@@ -77,8 +61,28 @@ def _decode_zarr_attrs(attrs):
                         for k, v in attrs.items()])
 
 
-class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
-                       indexing.NDArrayIndexable):
+# untested, but I think this does the appropriate shape munging to make slices
+# appear as the last axes of the result array
+def _replace_slices_with_arrays(key, shape):
+    num_slices = sum(1 for k in key if isinstance(k, slice))
+    num_arrays = len(shape) - num_slices
+    new_key = []
+    slice_count = 0
+    for k, size in zip(key, shape):
+        if isinstance(k, slice):
+            array = np.arange(*k.indices(size))
+            sl = [np.newaxis] * len(shape)
+            sl[num_arrays + slice_count] = np.newaxis
+            k = array[sl]
+            slice_count += 1
+        else:
+            assert isinstance(k, np.ndarray)
+            k = k[(slice(None),) * num_arrays + (np.newaxis,) * num_slices]
+        new_key.append(k)
+    return tuple(new_key)
+
+
+class ZarrArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -98,53 +102,31 @@ class ZarrArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
         return self.datastore.ds[self.variable_name]
 
     def __getitem__(self, key):
-        # TODO: do we want to use robust_getitem for certain types of
-        # zarr store (e.g. S3)?
-        #if self.datastore.is_remote:  # pragma: no cover
-        #    getitem = functools.partial(robust_getitem, catch=RuntimeError)
-        #else:
-        if isinstance(key, indexing.VectorizedIndexer):
-            raise NotImplementedError(
-             'Vectorized indexing for {} is not implemented. Load your '
-             'data first with .load() or .compute().'.format(type(self)))
-        getitem = operator.getitem
-        try:
-            data = getitem(self.get_array(), key)
-        except IndexError:
-            # Catch IndexError in netCDF4 and return a more informative
-            # error message.  This is most often called when an unsorted
-            # indexer is used before the data is loaded from disk.
-            msg = ('The indexing operation you are attempting to perform '
-                   'is not valid on zarr.core.Array object. Try loading '
-                   'your data into memory first by calling .load().')
-            if not PY3:
-                import traceback
-                msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
-            raise IndexError(msg)
-        return data
-
+        array = self.get_array()
+        if isinstance(key, indexing.BasicIndexer):
+            return array[key.tuple]
+        elif isinstance(key, indexing.VectorizedIndexer):
+            return array.vindex[_replace_slices_with_arrays(key.tuple,
+                                                            self.shape)]
+        else:
+            assert isinstance(key, indexing.OuterIndexer)
+            return array.oindex[key.tuple]
         # if self.ndim == 0:
         # could possibly have a work-around for 0d data here
 
-# keyword args for zarr.group
-# store=None, overwrite=False, chunk_store=None, synchronizer=None, path=None
-# the group name is called "path" in the zarr lexicon
-
-# args for zarr.open_group
-# store=None, mode='a', synchronizer=None, path=None
 
 def _open_zarr_group(store=None, overwrite=None, synchronizer=None,
                      group=None, mode=None):
+    '''Wrap zarr.open_group'''
+
     import zarr
-    #zarr_group = zarr.group(store=store, overwrite=overwrite,
-    #        chunk_store=chunk_store, synchronizer=synchronizer, path=path)
-    zarr_group = zarr.open_group(store=store,  mode=mode,
-                        synchronizer=synchronizer, path=group)
+    zarr_group = zarr.open_group(store=store, mode=mode,
+                                 synchronizer=synchronizer, path=group)
     return zarr_group
 
 
 def _dask_chunks_to_zarr_chunks(chunks):
-    # this function dask chunks syntax to zarr chunks
+    '''this function dask chunks syntax to zarr chunks'''
     if chunks is None:
         return chunks
 
@@ -156,6 +138,7 @@ def _dask_chunks_to_zarr_chunks(chunks):
                              chunks)
     return first_chunk
 
+
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     """
     Given encoding chunks (possibly None) and variable chunks (possibly None)
@@ -165,8 +148,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # chunks : int or tuple of ints, optional
     #   Chunk shape. If not provided, will be guessed from shape and dtype.
 
-    # if there are no chunks in encoding and the variable data is a numpy array,
-    # then we let zarr use its own heuristics to pick the chunks
+    # if there are no chunks in encoding and the variable data is a numpy
+    # array, then we let zarr use its own heuristics to pick the chunks
     if var_chunks is None and enc_chunks is None:
         return None
 
@@ -181,10 +164,10 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
         first_var_chunk = next(all_var_chunks)
         for this_chunk in all_var_chunks:
             if not (this_chunk == first_var_chunk):
-                raise ValueError("zarr requires uniform chunk sizes, but "
-                        "variable has non-uniform chunks %r. "
-                        "Consider rechunking the data using `chunk()`." %
-                        var_chunks)
+                raise ValueError(
+                    "zarr requires uniform chunk sizes, but variable has "
+                    "non-uniform chunks %r. Consider rechunking the data "
+                    "using `chunk()`." % var_chunks)
         return first_var_chunk
 
     # from here on, we are dealing with user-specified chunks in encoding
@@ -195,7 +178,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
 
     # this coerces a single int to a tuple but leaves a tuple as is
     enc_chunks_tuple = tuple(enc_chunks)
-    if len(enc_chunks_tuple)==1:
+    if len(enc_chunks_tuple) == 1:
         enc_chunks_tuple = ndim * enc_chunks_tuple
 
     if not len(enc_chunks_tuple) == ndim:
@@ -217,21 +200,22 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # DESIGN CHOICE: do not allow multiple dask chunks on a single zarr chunk
     # this avoids the need to get involved in zarr synchronization / locking
     # From zarr docs:
-    #  "If each worker in a parallel computation is writing to a separate region
-    #   of the array, and if region boundaries are perfectly aligned with chunk
-    #   boundaries, then no synchronization is required."
+    #  "If each worker in a parallel computation is writing to a separate
+    #   region of the array, and if region boundaries are perfectly aligned
+    #   with chunk boundaries, then no synchronization is required."
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
             for dchunk in dchunks:
                 if not dchunk % zchunk == 0:
-                    raise ValueError("Specified zarr chunks %r would"
-                            "overlap multiple dask chunks %r."
-                            "Consider rechunking the data using `chunk()` "
-                            "or specifying different chunks in encoding."
-                            % (enc_chunks_tuple, var_chunks))
+                    raise ValueError(
+                        "Specified zarr chunks %r would overlap multiple dask "
+                        "chunks %r. Consider rechunking the data using "
+                        "`chunk()` or specifying different chunks in encoding."
+                        % (enc_chunks_tuple, var_chunks))
         return enc_chunks_tuple
 
-    raise RuntimeError("We should never get here. Function logic must be wrong.")
+    raise RuntimeError(
+        "We should never get here. Function logic must be wrong.")
 
 
 def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
@@ -244,21 +228,17 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     return dimensions, attributes
 
 
-### arguments for zarr.create
-# zarr.creation.create(shape, chunks=None, dtype=None, compressor='default',
-# fill_value=0, order='C', store=None, synchronizer=None, overwrite=False,
-# path=None, chunk_store=None, filters=None, cache_metadata=True, **kwargs)
-
 def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
     encoding = variable.encoding.copy()
 
-    valid_encodings = set(['chunks', 'compressor', 'filters', 'cache_metadata'])
+    valid_encodings = set(['chunks', 'compressor', 'filters',
+                           'cache_metadata'])
 
     if raise_on_invalid:
         invalid = [k for k in encoding if k not in valid_encodings]
         if invalid:
-            raise ValueError('unexpected encoding parameters for zarr backend: '
-                             ' %r' % invalid)
+            raise ValueError('unexpected encoding parameters for zarr '
+                             'backend:  %r' % invalid)
     else:
         for k in list(encoding):
             if k not in valid_encodings:
@@ -277,9 +257,6 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
 class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via zarr
     """
-
-    # need some special secret attributes to tell us the dimensions
-    _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     def __init__(self, store=None, mode='a', synchronizer=None, group=None,
                  writer=None, autoclose=None):
@@ -300,10 +277,9 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self.ds = self._opener(mode=mode)
 
-
         # initialize hidden dimension attribute
-        if self._DIMENSION_KEY not in self.ds.attrs:
-            self.ds.attrs[self._DIMENSION_KEY] = {}
+        if _DIMENSION_KEY not in self.ds.attrs:
+            self.ds.attrs[_DIMENSION_KEY] = {}
 
         # do we need to define attributes for all of the opener keyword args?
         super(ZarrStore, self).__init__(writer)
@@ -313,8 +289,8 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # zarr seems to implement the required ndarray interface
         # TODO: possibly wrap zarr array in dask with aligned chunks
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
-        dimensions, attributes = _get_zarr_dims_and_attrs(
-                                    zarr_array, self._DIMENSION_KEY)
+        dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
+                                                          _DIMENSION_KEY)
         attributes = _decode_zarr_attrs(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
@@ -323,7 +299,6 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 
         return Variable(dimensions, data, attributes, encoding)
 
-
     def get_variables(self):
         with self.ensure_open(autoclose=False):
             return FrozenOrderedDict((k, self.open_store_variable(k, v))
@@ -331,28 +306,25 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 
     def get_attrs(self):
         with self.ensure_open(autoclose=True):
-            _, attributes = _get_zarr_dims_and_attrs(self.ds,
-                                                     self._DIMENSION_KEY)
+            _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
             return _decode_zarr_attrs(attributes)
 
     def get_dimensions(self):
         with self.ensure_open(autoclose=True):
-            dimensions, _ = _get_zarr_dims_and_attrs(self.ds,
-                                                     self._DIMENSION_KEY)
+            dimensions, _ = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
             return dimensions
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
-            raise NotImplementedError("Zarr backend doesn't know how to "
-                    "handle unlimited dimensions.")
+            raise NotImplementedError(
+                "Zarr backend doesn't know how to handle unlimited dimensions")
         with self.ensure_open(autoclose=False):
-            self.ds.attrs[self._DIMENSION_KEY][name] = length
+            self.ds.attrs[_DIMENSION_KEY][name] = length
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
-            _, attributes = _get_zarr_dims_and_attrs(self.ds,
-                                self._DIMENSION_KEY)
-            attributes[key] =  _encode_zarr_attr_value(value)
+            _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+            attributes[key] = _encode_zarr_attr_value(value)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -384,10 +356,11 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
-        ### arguments for zarr.create
-        # zarr.creation.create(shape, chunks=None, dtype=None, compressor='default',
-        # fill_value=0, order='C', store=None, synchronizer=None, overwrite=False,
-        # path=None, chunk_store=None, filters=None, cache_metadata=True, **kwargs)
+        # arguments for zarr.create:
+        # zarr.creation.create(shape, chunks=None, dtype=None,
+        # compressor='default', fill_value=0, order='C', store=None,
+        # synchronizer=None, overwrite=False, path=None, chunk_store=None,
+        # filters=None, cache_metadata=True, **kwargs)
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)
         # decided not to explicity enumerate encoding options because we
@@ -400,9 +373,8 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         #                            cache_metadata=encoding.get('cache_metadata'))
 
         # the magic for storing the hidden dimension data
-        zarr_array.attrs[self._DIMENSION_KEY] = dims
-        _, attributes = _get_zarr_dims_and_attrs(zarr_array,
-                                                 self._DIMENSION_KEY)
+        zarr_array.attrs[_DIMENSION_KEY] = dims
+        _, attributes = _get_zarr_dims_and_attrs(zarr_array, _DIMENSION_KEY)
 
         for k, v in iteritems(attrs):
             attributes[k] = _encode_zarr_attr_value(v)
@@ -415,16 +387,17 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 # from zarr docs
 
 # Zarr arrays can be used as either the source or sink for data in parallel
-# computations. Both multi-threaded and multi-process parallelism are supported.
-# The Python global interpreter lock (GIL) is released for both compression and
-# decompression operations, so Zarr will not block other Python threads from running.
+# computations. Both multi-threaded and multi-process parallelism are
+# supported. The Python global interpreter lock (GIL) is released for both
+# compression and decompression operations, so Zarr will not block other Python
+# threads from running.
 #
 # A Zarr array can be read concurrently by multiple threads or processes. No
 # synchronization (i.e., locking) is required for concurrent reads.
 #
 # A Zarr array can also be written to concurrently by multiple threads or
-# processes. Some synchronization may be required, depending on the way the data
-# is being written.
+# processes. Some synchronization may be required, depending on the way the
+# data is being written.
 
 # If each worker in a parallel computation is writing to a separate region of
 # the array, and if region boundaries are perfectly aligned with chunk
@@ -433,13 +406,10 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 # avoid two workers attempting to modify the same chunk at the same time.
 
 
-
-
 def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
-                decode_cf=True,
-                 mask_and_scale=True, decode_times=True, autoclose=False,
-                 concat_characters=True, decode_coords=True,
-                 cache=False, drop_variables=None):
+              decode_cf=True, mask_and_scale=True, decode_times=True,
+              autoclose=False, concat_characters=True, decode_coords=True,
+              cache=False, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters

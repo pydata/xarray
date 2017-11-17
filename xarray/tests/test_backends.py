@@ -167,7 +167,6 @@ class DatasetIOTestCases(object):
                           **kwargs) as ds:
             yield ds
 
-    # note: zero dimensional arrays are not suppoerted by zarr backend
     def test_zero_dimensional_variable(self):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
@@ -446,7 +445,7 @@ class DatasetIOTestCases(object):
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
-                if isinstance(obj.array, indexing.NDArrayIndexable):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
                 else:
                     if isinstance(obj.array, np.ndarray):
@@ -1081,16 +1080,16 @@ class BaseZarrTest(CFEncodedDataTest):
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
-        with self.roundtrip(original,
-                open_kwargs={'auto_chunk': False}) as actual:
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': False}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # there should be no chunks
                 self.assertEqual(v.chunks, None)
 
-        with self.roundtrip(original,
-                open_kwargs={'auto_chunk': True}) as actual:
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
@@ -1107,6 +1106,15 @@ class BaseZarrTest(CFEncodedDataTest):
         with pytest.raises(ValueError):
             with self.roundtrip(data) as actual:
                 pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
+
+    def test_dataset_caching(self):
+        # TODO: someone who understand caching figure out whether chaching
+        # makes sense for Zarr backend
+        pass
 
 
 @requires_zarr
@@ -1133,11 +1141,11 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
-        with create_tmp_file(suffix='.zarr',
+        with create_tmp_file(
+                suffix='.zarr',
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_zarr(store=tmp_file, **save_kwargs)
             yield xr.open_zarr(tmp_file, **open_kwargs)
-
 
 
 @requires_scipy
@@ -1869,11 +1877,11 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_orthogonal_indexing()
 
     def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_isel_dataarray()
 
     def test_array_type_after_indexing(self):
