@@ -15,6 +15,19 @@ What's New
 
 .. _whats-new.0.10.0:
 
+v0.10.0 (unreleased)
+--------------------
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed unexpected behavior in ``Dataset.set_index()`` and
+  ``DataArray.set_index()`` introduced by Pandas 0.21.0. Setting a new
+  index with a single variable resulted in 1-level
+  ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
+  (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+
 v0.10.0 rc2 (13 November 2017)
 ------------------------------
 
