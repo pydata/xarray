@@ -203,8 +203,10 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                          "variable.ndim %g" %
                          (enc_chunks_tuple, _DIMENSION_KEY))
 
-    if not all(x is int for x in enc_chunks_tuple):
-        raise ValueError("zarr chunks much be an int or a tuple of ints")
+    for x in enc_chunks_tuple:
+        if not isinstance(x, int):
+            raise ValueError("zarr chunks must be an int or a tuple of ints. "
+                             "Instead found %r" % (enc_chunks_tuple,))
 
     # if there are chunks in encoding and the variabile data is a numpy array,
     # we use the specified chunks

@@ -1097,6 +1097,17 @@ class BaseZarrTest(CFEncodedDataTest):
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
 
+    def test_chunk_encoding(self):
+        data = create_test_data()
+        chunks = (5, 5)
+        data['var2'].encoding.update({'chunks': chunks})
+        with self.roundtrip(data) as actual:
+            self.assertEqual(chunks, actual['var2'].encoding['chunks'])
+        data['var2'].encoding.update({'chunks': (5, 4.5)})
+        with pytest.raises(ValueError):
+            with self.roundtrip(data) as actual:
+                pass
+
 
 @requires_zarr
 class ZarrDictStoreTest(BaseZarrTest, TestCase):
