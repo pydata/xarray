@@ -209,7 +209,7 @@ def summarize_variable(name, var, col_width, show_values=True,
     front_str = u'%s%s%s ' % (first_col, dims_str, var.dtype)
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
-    elif isinstance(var.data, dask_array_type):
+    elif isinstance(var._data, dask_array_type):
         values_str = short_dask_repr(var, show_dtype=False)
     else:
         values_str = u'...'

@@ -27,6 +27,8 @@ Bug fixes
   ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
   (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.
 
+- Fixed unexpected memory loading of backend arrays after ``print``.
+  (:issue:`1720`).  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 v0.10.0 rc2 (13 November 2017)
 ------------------------------
