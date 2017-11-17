@@ -15,67 +15,21 @@ What's New
 
 .. _whats-new.0.10.0:
 
-
 v0.10.0 (unreleased)
 --------------------
-
-Changes since v0.10.0 rc1 (Unreleased)
---------------------------------------
-
-- Experimental support for the Dask collection interface (:issue:`1674`).
-  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-- Suppress warning in Ipython autocompletion, related to the deprecation
-  of ``.T`` attributes (:issue:`1675`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_
+- Fixed unexpected behavior in ``Dataset.set_index()`` and
+  ``DataArray.set_index()`` introduced by Pandas 0.21.0. Setting a new
+  index with a single variable resulted in 1-level
+  ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
+  (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.
 
-- Fix a bug in lazily-indexing netCDF array. (:issue:`1688`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_
 
-- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
-  Also made some internal cleanups around array wrappers (:issue:`1429`).
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_
-
-- (Internal bug) MemoryCachedArray now always wraps ``np.ndarray`` by
-  ``NumpyIndexingAdapter``. (:issue:`1694`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_
-
-- Fix importing xarray when running Python with ``-OO`` (:issue:`1706`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Saving a netCDF file with a coordinates with a spaces in its names now raises
-  an appropriate warning (:issue:`1689`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Fix two bugs that were preventing dask arrays from being specified as
-  coordinates in the DataArray constructor (:issue:`1684`).
-  By `Joe Hamman <https://github.com/jhamman>`_
-
-- Fixed ``apply_ufunc`` with ``dask='parallelized'`` for scalar arguments
-  (:issue:`1697`).
-- Fix "Chunksize cannot exceed dimension size" error when writing netCDF4 files
-  loaded from disk (:issue:`1225`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Validate the shape of coordinates with names matching dimensions in the
-  DataArray constructor (:issue:`1709`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-- Raise ``NotImplementedError`` when attempting to save a MultiIndex to a
-  netCDF file (:issue:`1547`).
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-
-Testing
-~~~~~~~
-
-- Remove netCDF dependency from rasterio backend tests.
-  By `Matti Eskelinen <https://github.com/maaleske>`_
-
-v0.10.0 rc1 (30 October 2017)
------------------------------
+v0.10.0 rc2 (13 November 2017)
+------------------------------
 
 .. caution::
 
@@ -324,6 +278,9 @@ Enhancements
   functions on data stored as dask arrays (:issue:`1279`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Experimental support for the Dask collection interface (:issue:`1674`).
+  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -415,6 +372,54 @@ Bug fixes
 
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
+
+Bug fixes after rc1
+~~~~~~~~~~~~~~~~~~~
+
+- Suppress warning in IPython autocompletion, related to the deprecation
+  of ``.T`` attributes (:issue:`1675`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fix a bug in lazily-indexing netCDF array. (:issue:`1688`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- (Internal bug) MemoryCachedArray now supports the orthogonal indexing.
+  Also made some internal cleanups around array wrappers (:issue:`1429`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- (Internal bug) MemoryCachedArray now always wraps ``np.ndarray`` by
+  ``NumpyIndexingAdapter``. (:issue:`1694`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fix importing xarray when running Python with ``-OO`` (:issue:`1706`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Saving a netCDF file with a coordinates with a spaces in its names now raises
+  an appropriate warning (:issue:`1689`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix two bugs that were preventing dask arrays from being specified as
+  coordinates in the DataArray constructor (:issue:`1684`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fixed ``apply_ufunc`` with ``dask='parallelized'`` for scalar arguments
+  (:issue:`1697`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fix "Chunksize cannot exceed dimension size" error when writing netCDF4 files
+  loaded from disk (:issue:`1225`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Validate the shape of coordinates with names matching dimensions in the
+  DataArray constructor (:issue:`1709`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Raise ``NotImplementedError`` when attempting to save a MultiIndex to a
+  netCDF file (:issue:`1547`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Remove netCDF dependency from rasterio backend tests.
+  By `Matti Eskelinen <https://github.com/maaleske>`_
 
 .. _whats-new.0.9.6:
 
