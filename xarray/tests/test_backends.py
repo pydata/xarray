@@ -1077,20 +1077,7 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 
 
 @requires_zarr
-class ZarrDataTest(CFEncodedDataTest, TestCase):
-    @contextlib.contextmanager
-    def create_store(self):
-        with create_tmp_file(suffix='.zarr') as tmp:
-            yield backends.ZarrStore(store=tmp)
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(suffix='.zarr',
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_zarr(store=tmp_file, **save_kwargs)
-            yield xr.open_zarr(tmp_file, **open_kwargs)
-
+class BaseZarrTest(CFEncodedDataTest):
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1109,6 +1096,37 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
+
+
+@requires_zarr
+class ZarrDictStoreTest(BaseZarrTest, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        yield backends.ZarrStore(store={})
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        dict_store = {}
+        data.to_zarr(store=dict_store, **save_kwargs)
+        yield xr.open_zarr(dict_store, **open_kwargs)
+
+
+@requires_zarr
+class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
+    @contextlib.contextmanager
+    def create_store(self):
+        with create_tmp_file(suffix='.zarr') as tmp:
+            yield backends.ZarrStore(store=tmp)
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(suffix='.zarr',
+                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
+            data.to_zarr(store=tmp_file, **save_kwargs)
+            yield xr.open_zarr(tmp_file, **open_kwargs)
+
 
 
 @requires_scipy
