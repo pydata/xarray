@@ -529,9 +529,10 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     if auto_chunk:
         # adapted from Dataset.Chunk()
         def maybe_chunk(name, var):
+            from dask.base import tokenize
             chunks = var.encoding.get('chunks')
             if (var.ndim > 0) and (chunks is not None):
-                token2 = tokenize(name, token if token else var._data)
+                token2 = tokenize(name, var._data)
                 name2 = 'zarr-%s-%s' % (name, token2)
                 return var.chunk(chunks, name=name2, lock=None)
             else:

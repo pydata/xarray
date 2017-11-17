@@ -1088,13 +1088,11 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
                   allow_cleanup_failure=False):
         with create_tmp_file(suffix='.zarr',
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            print("__to_zarr__")
             data.to_zarr(store=tmp_file, **save_kwargs)
-            print ("__open_zarr__")
             yield xr.open_zarr(tmp_file, **open_kwargs)
 
     def test_auto_chunk(self):
-        original = create_test_data ().chunk()
+        original = create_test_data().chunk()
 
         with self.roundtrip(original,
                 open_kwargs={'auto_chunk': False}) as actual:
@@ -1110,7 +1108,6 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # chunk size should be the same as original
-                print('%s v.variable.chunks' % k, v.variable.chunks)
                 self.assertEqual(v.chunks, original[k].chunks)
 
 
