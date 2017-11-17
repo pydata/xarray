@@ -496,9 +496,8 @@ class DatasetIOTestCases(object):
         """ Make sure print does not load file into memory """
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
-            if not on_disk['var1']._in_memory:
-                print(on_disk)
-                assert not on_disk['var1']._in_memory
+            repr(on_disk)
+            assert not on_disk['var1']._in_memory
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
