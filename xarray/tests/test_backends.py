@@ -492,6 +492,14 @@ class DatasetIOTestCases(object):
             actual = on_disk.dropna(dim='x')
             assert_identical(expected, actual)
 
+    def test_ondisk_after_print(self):
+        """ Make sure print does not load file into memory """
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            if not on_disk['var1']._in_memory:
+                print(on_disk)
+                assert not on_disk['var1']._in_memory
+
 
 class CFEncodedDataTest(DatasetIOTestCases):
 
