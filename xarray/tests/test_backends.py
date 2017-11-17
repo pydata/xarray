@@ -1081,16 +1081,16 @@ class BaseZarrTest(CFEncodedDataTest):
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
-        with self.roundtrip(original,
-                open_kwargs={'auto_chunk': False}) as actual:
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': False}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # there should be no chunks
                 self.assertEqual(v.chunks, None)
 
-        with self.roundtrip(original,
-                open_kwargs={'auto_chunk': True}) as actual:
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
@@ -1107,6 +1107,9 @@ class BaseZarrTest(CFEncodedDataTest):
         with pytest.raises(ValueError):
             with self.roundtrip(data) as actual:
                 pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 @requires_zarr
@@ -1133,11 +1136,11 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
-        with create_tmp_file(suffix='.zarr',
+        with create_tmp_file(
+                suffix='.zarr',
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
             data.to_zarr(store=tmp_file, **save_kwargs)
             yield xr.open_zarr(tmp_file, **open_kwargs)
-
 
 
 @requires_scipy
