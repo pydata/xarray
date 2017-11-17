@@ -409,7 +409,6 @@ def array_repr(arr):
 
 
 def dataset_repr(ds):
-    var = ds.data_vars[list(ds.data_vars.keys())[0]]
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
     col_width = _calculate_col_width(_get_col_items(ds.variables))
