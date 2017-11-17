@@ -9,7 +9,7 @@ import operator
 
 import numpy as np
 
-from .. import Variable
+from .. import Variable, Dataset
 from ..core import indexing
 from ..core.utils import (FrozenOrderedDict, close_on_error, HiddenKeyDict,
                           NdimSizeLenMixin,DunderArrayMixin)
@@ -280,11 +280,10 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
     _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     def __init__(self, store=None, mode='a', synchronizer=None, group=None,
-                    auto_chunk=True, writer=None, autoclose=None):
+                 writer=None, autoclose=None):
         self._mode = mode
         self._synchronizer = synchronizer
         self._group = group
-        self._auto_chunk = auto_chunk
 
         # zarr stores don't need to be opened, closed, or synced.
         # So what do we do with all this logical about openers?
@@ -320,18 +319,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
                     'filters': zarr_array.filters,
                     'fill_value': zarr_array.fill_value}
 
-        var = Variable(dimensions, data, attributes, encoding)
-
-        if self._auto_chunk:
-            from dask.base import tokenize
-            # is this token enough?
-            token = tokenize(zarr_array)
-            name = 'zarr_array-%s' % token
-            # do we need to worry about the zarr synchronizer / dask lock?
-            lock = self._synchronizer
-            var = var.chunk(chunks=zarr_array.chunks, name=name, lock=lock)
-
-        return var
+        return Variable(dimensions, data, attributes, encoding)
 
 
     def get_variables(self):
@@ -533,5 +521,24 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
         return ds
 
     zarr_store = ZarrStore(store=store, mode=mode, synchronizer=synchronizer,
-                    group=group, auto_chunk=auto_chunk)
-    return maybe_decode_store(zarr_store)
+                           group=group)
+    ds = maybe_decode_store(zarr_store)
+
+    # auto chunking needs to be here and not in ZarrStore because variable
+    # chunks do not survive decode_cf
+    if auto_chunk:
+        # adapted from Dataset.Chunk()
+        def maybe_chunk(name, var):
+            chunks = var.encoding.get('chunks')
+            if (var.ndim > 0) and (chunks is not None):
+                token2 = tokenize(name, token if token else var._data)
+                name2 = 'zarr-%s-%s' % (name, token2)
+                return var.chunk(chunks, name=name2, lock=None)
+            else:
+                return var
+
+        variables = OrderedDict([(k, maybe_chunk(k, v))
+                                 for k, v in ds.variables.items()])
+        return ds._replace_vars_and_dims(variables)
+    else:
+        return ds

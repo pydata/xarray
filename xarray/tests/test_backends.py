@@ -30,7 +30,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_pynio, requires_pathlib, requires_zarr,
                requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
                flaky, network, assert_identical, raises_regex)
-            
+
 from .test_dataset import create_test_data
 
 from xarray.tests import mock, assert_identical
@@ -1088,7 +1088,9 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
                   allow_cleanup_failure=False):
         with create_tmp_file(suffix='.zarr',
                 allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
+            print("__to_zarr__")
             data.to_zarr(store=tmp_file, **save_kwargs)
+            print ("__open_zarr__")
             yield xr.open_zarr(tmp_file, **open_kwargs)
 
     def test_auto_chunk(self):
@@ -1108,6 +1110,7 @@ class ZarrDataTest(CFEncodedDataTest, TestCase):
                 # only index variables should be in memory
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # chunk size should be the same as original
+                print('%s v.variable.chunks' % k, v.variable.chunks)
                 self.assertEqual(v.chunks, original[k].chunks)
 
 
