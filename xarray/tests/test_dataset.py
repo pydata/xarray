@@ -2007,6 +2007,12 @@ class TestDataset(TestCase):
         ds.set_index(x=mindex.names, inplace=True)
         self.assertDatasetIdentical(ds, expected)
 
+        # ensure set_index with no existing index and a single data var given
+        # doesn't return multi-index
+        ds = Dataset(data_vars={'x_var': ('x', [0, 1, 2])})
+        expected = Dataset(coords={'x': [0, 1, 2]})
+        self.assertDataArrayIdentical(ds.set_index(x='x_var'), expected)
+
     def test_reset_index(self):
         ds = create_test_multiindex()
         mindex = ds['x'].to_index()

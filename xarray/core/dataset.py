@@ -136,6 +136,14 @@ def merge_indexes(
         names, labels, levels = [], [], []
         current_index_variable = variables.get(dim)
 
+        for n in var_names:
+            var = variables[n]
+            if (current_index_variable is not None and
+                    var.dims != current_index_variable.dims):
+                raise ValueError(
+                    "dimension mismatch between %r %s and %r %s"
+                    % (dim, current_index_variable.dims, n, var.dims))
+
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
@@ -148,20 +156,19 @@ def merge_indexes(
                 labels.append(cat.codes)
                 levels.append(cat.categories)
 
-        for n in var_names:
-            names.append(n)
-            var = variables[n]
-            if ((current_index_variable is not None) and
-                    (var.dims != current_index_variable.dims)):
-                raise ValueError(
-                    "dimension mismatch between %r %s and %r %s"
-                    % (dim, current_index_variable.dims, n, var.dims))
-            else:
+        if not len(names) and len(var_names) == 1:
+            idx = pd.Index(variables[var_names[0]].values)
+
+        else:
+            for n in var_names:
+                names.append(n)
+                var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
                 labels.append(cat.codes)
                 levels.append(cat.categories)
 
-        idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+            idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
 
