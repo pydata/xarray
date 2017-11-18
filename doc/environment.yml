@@ -16,5 +16,6 @@ dependencies:
   - hdf4=4.2.12  # temporary install to get netCD4 working (GH1106)
   - cartopy=0.15.1
   - rasterio=0.36.0
+  - sphinx_rtd_theme=0.2.4
   - pip:
     - sphinx-gallery
