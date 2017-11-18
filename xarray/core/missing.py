@@ -18,18 +18,18 @@ class BaseInterpolator(object):
     cons_kwargs = {}
     call_kwargs = {}
     f = None
-    kind = None
+    method = None
 
-    def __init__(self, xi, yi, kind=None, **kwargs):
-        self.kind = kind
+    def __init__(self, xi, yi, method=None, **kwargs):
+        self.method = method
         self.call_kwargs = kwargs
 
     def __call__(self, x):
         return self.f(x, **self.call_kwargs)
 
     def __repr__(self):
-        return "{type}: kind={kind}".format(type=self.__class__.__name__,
-                                            kind=self.kind)
+        return "{type}: method={method}".format(type=self.__class__.__name__,
+                                            method=self.method)
 
 
 class NumpyInterpolator(BaseInterpolator):
@@ -39,8 +39,13 @@ class NumpyInterpolator(BaseInterpolator):
     --------
     numpy.interp
     '''
-    def __init__(self, xi, yi, kind='linear', fill_value=None, **kwargs):
-        self.kind = kind
+    def __init__(self, xi, yi, method='linear', fill_value=None, **kwargs):
+
+        if method is not 'linear':
+            raise ValueError(
+                'only method `linear` is valid for the NumpyInterpolator')
+
+        self.method = method
         self.f = np.interp
         self.cons_kwargs = kwargs
         self.call_kwargs = {'period': self.cons_kwargs.pop('period', None)}
@@ -76,30 +81,32 @@ class ScipyInterpolator(BaseInterpolator):
     --------
     scipy.interpolate.interp1d
     '''
-    def __init__(self, xi, yi, kind=None, fill_value=None, assume_sorted=True,
-                 copy=False, bounds_error=False, **kwargs):
+    def __init__(self, xi, yi, method=None, fill_value=None,
+                 assume_sorted=True, copy=False, bounds_error=False, **kwargs):
         from scipy.interpolate import interp1d
 
-        if kind is None:
-            raise ValueError('kind is a required argument')
+        if method is None:
+            raise ValueError('method is a required argument, please supply a '
+                             'valid scipy.inter1d method (kind)')
 
-        if kind == 'polynomial':
-            kind = kwargs.pop('order', None)
-            if kind is None:
+        if method == 'polynomial':
+            method = kwargs.pop('order', None)
+            if method is None:
                 raise ValueError('order is required when method=polynomial')
 
-        self.kind = kind
+        self.method = method
 
         self.cons_kwargs = kwargs
         self.call_kwargs = {}
 
-        if fill_value is None and kind == 'linear':
+        if fill_value is None and method == 'linear':
             fill_value = kwargs.pop('fill_value', (np.nan, yi[-1]))
         elif fill_value is None:
             fill_value = np.nan
 
-        self.f = interp1d(xi, yi, kind=self.kind, fill_value=fill_value,
-                          bounds_error=False, **self.cons_kwargs)
+        self.f = interp1d(xi, yi, kind=self.method, fill_value=fill_value,
+                          bounds_error=False, assume_sorted=assume_sorted,
+                          copy=copy, **self.cons_kwargs)
 
 
 class SplineInterpolator(BaseInterpolator):
@@ -109,13 +116,15 @@ class SplineInterpolator(BaseInterpolator):
     --------
     scipy.interpolate.UnivariateSpline
     '''
-    def __init__(self, xi, yi, kind=None, fill_value=None, order=3, **kwargs):
+    def __init__(self, xi, yi, method='spline', fill_value=None, order=3,
+                 **kwargs):
         from scipy.interpolate import UnivariateSpline
 
-        if kind is None:
-            raise ValueError('kind is a required argument')
+        if method is not 'spline':
+            raise ValueError(
+                'only method `spline` is valid for the SplineInterpolator')
 
-        self.kind = kind
+        self.method = method
         self.cons_kwargs = kwargs
         self.call_kwargs['nu'] = kwargs.pop('nu', 0)
         self.call_kwargs['ext'] = kwargs.pop('ext', None)
@@ -142,6 +151,10 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
             index = arr.get_index(dim)
         else:
             index = arr.coords[use_coordinate]
+            if index.ndim != 1:
+                raise ValueError(
+                    'Coordinates used for interpolation must be 1D, '
+                    '%s is %dD.' % (use_coordinate, index.ndim))
         if isinstance(index, pd.DatetimeIndex):
             index = index.values.astype(np.float64)
         # check index sorting now so we can skip it later
@@ -258,7 +271,7 @@ def _get_interpolator(method, **kwargs):
 
     if (method == 'linear' and not
             kwargs.get('fill_value', None) == 'extrapolate'):
-        kwargs.update(kind=method)
+        kwargs.update(method=method)
         interp_class = NumpyInterpolator
     elif method in valid_methods:
         try:
@@ -267,7 +280,7 @@ def _get_interpolator(method, **kwargs):
             raise ImportError(
                 'Interpolation with method `%s` requires scipy' % method)
         if method in interp1d_methods:
-            kwargs.update(kind=method)
+            kwargs.update(method=method)
             interp_class = ScipyInterpolator
         elif method == 'barycentric':
             interp_class = interpolate.BarycentricInterpolator
@@ -276,7 +289,7 @@ def _get_interpolator(method, **kwargs):
         elif method == 'pchip':
             interp_class = interpolate.PchipInterpolator
         elif method == 'spline':
-            kwargs.update(kind=method)
+            kwargs.update(method=method)
             interp_class = SplineInterpolator
         else:
             raise ValueError('%s is not a valid scipy interpolator' % method)

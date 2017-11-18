@@ -1229,7 +1229,9 @@ class DataArray(AbstractArray, BaseDataObject):
         ----------
         dim : str
             Specifies the dimension along which to interpolate.
-        method : {'linear', 'time', 'index', 'values', 'nearest'}, optional
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+                  'polynomial', 'barycentric', 'krog', 'pchip',
+                  'spline'}, optional
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword

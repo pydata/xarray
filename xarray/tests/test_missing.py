@@ -217,16 +217,16 @@ def test_interpolate_methods(method):
 
 
 @pytest.mark.parametrize(
-    'kind, interpolator',
+    'method, interpolator',
     [('linear', NumpyInterpolator), ('linear', ScipyInterpolator),
      ('spline', SplineInterpolator)])
 @requires_scipy
-def test_interpolators(kind, interpolator):
+def test_interpolators(method, interpolator):
     xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
     yi = np.array([-10, 0, 10, 20, 50], dtype=np.float64)
     x = np.array([3, 4], dtype=np.float64)
 
-    f = interpolator(xi, yi, kind=kind)
+    f = interpolator(xi, yi, method=method)
     out = f(x)
     assert pd.isnull(out).sum() == 0
 
