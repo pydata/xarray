@@ -19,6 +19,7 @@ from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
+from .computation import apply_ufunc
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes, assert_coordinate_consistent,
                           remap_label_indexers)
@@ -1970,6 +1971,42 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
                                               interpolation=interpolation)
         return self._from_temp_dataset(ds)
+
+    def rank(self, dim):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0.
+
+        NaNs in the input array are returned as NaNs.
+
+        Parameters
+        ----------
+        dim : str, optional
+
+        Returns
+        -------
+        ranked : DataArray
+            DataArray with the same coordinates and dtype 'float64'.
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr.rank('x')
+        <xarray.DataArray (x: 3)>
+        array([ 1.,   2.,   3.])
+        Dimensions without coordinates: x
+        """
+        import bottleneck as bn
+        axis = self.get_axis_num(dim)
+        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        return apply_ufunc(func, self,
+                           dask='parallelized',
+                           keep_attrs=True,
+                           output_dtypes=[np.float_],
+                           kwargs=dict(axis=axis)).transpose(*self.dims)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

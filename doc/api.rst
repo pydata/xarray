@@ -312,6 +312,7 @@ Computation
 :py:attr:`~DataArray.T`
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
+:py:attr:`~DataArray.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`

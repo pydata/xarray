@@ -19,7 +19,7 @@ from xarray.core.common import full_like
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
-    raises_regex, requires_scipy)
+    raises_regex, requires_scipy, requires_bottleneck)
 
 
 class TestDataArray(TestCase):
@@ -3103,6 +3103,21 @@ class TestDataArray(TestCase):
         expected = sorted2d
         actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
+
+    @requires_bottleneck
+    def test_rank(self):
+        # floats
+        ar = DataArray([[3, 4, np.nan, 1]])
+        expect_0 = DataArray([[1, 1, np.nan, 1]])
+        expect_1 = DataArray([[2, 3, np.nan, 1]])
+        self.assertDataArrayEqual(ar.rank('dim_0'), expect_0)
+        self.assertDataArrayEqual(ar.rank('dim_1'), expect_1)
+        # int
+        x = DataArray([3,2,1])
+        self.assertDataArrayEqual(x.rank('dim_0'), x)
+        # str
+        y =  DataArray(['c', 'b', 'a'])
+        self.assertDataArrayEqual(y.rank('dim_0'), x)
 
 
 @pytest.fixture(params=[1])

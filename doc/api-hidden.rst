@@ -91,6 +91,7 @@
    DataArray.T
    DataArray.cumsum
    DataArray.cumprod
+   DataArray.rank
 
    ufuncs.angle
    ufuncs.arccos
