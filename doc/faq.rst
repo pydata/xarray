@@ -58,6 +58,15 @@ fundamentally multi-dimensional. If your data is unstructured or
 one-dimensional, stick with pandas.
 
 
+Gotchas
+-------
+
+xarray tries hard to be self-consistent. Operations on xarray objects return
+other xarray objects. In particular, operations like `mean` or `sum` - even
+when applied to all axes - will return xarray objects. Constructing `pandas`
+objects sometimes require explicit casting.
+
+
 .. _approach to metadata:
 
 What is your approach to metadata?
