@@ -21,6 +21,8 @@ v0.10.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Facet grid plots now accept `cbar_ax` and `cbar_kwargs` arguments.
+
 Bug fixes
 ~~~~~~~~~
 

@@ -236,7 +236,8 @@ class FacetGrid(object):
         # Order is important
         func_kwargs = kwargs.copy()
         func_kwargs.update(cmap_params)
-        func_kwargs.update({'cbar_ax': None, 'cbar_kwargs': None, 'add_colorbar': False, 'add_labels': False})
+        func_kwargs.update({'cbar_ax': None, 'cbar_kwargs': None,
+                            'add_colorbar': False, 'add_labels': False})
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(darray=self.data.loc[self.name_dicts.flat[0]],
