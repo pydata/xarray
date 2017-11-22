@@ -120,7 +120,6 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """
 
     import rasterio
-    from rasterio.transform import Affine
     riods = rasterio.open(filename, mode='r')
 
     if cache is None:
@@ -138,11 +137,15 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         transform = riods.affine
     else:
         transform = riods.transform
-    # Xarray's convention is pixel centered
-    transform = transform * Affine.translation(0.5, 0.5)
     nx, ny = riods.width, riods.height
-    x, _ = (np.arange(nx), np.zeros(nx)) * transform
-    _, y = (np.zeros(ny), np.arange(ny)) * transform
+    if transform.is_rectilinear:
+        # Xarray's convention is pixel centered
+        x, _ = (np.arange(nx)+0.5, np.zeros(nx)+0.5) * transform
+        _, y = (np.zeros(ny)+0.5, np.arange(ny)+0.5) * transform
+    else:
+        # Can this happen?
+        raise RuntimeError()
+
     coords['y'] = y
     coords['x'] = x
 
