@@ -24,8 +24,6 @@ if PY3:  # pragma: no cover
     zip = zip
     from functools import reduce
     import builtins
-    from urllib.request import urlretrieve
-    from inspect import getfullargspec as getargspec
 else:  # pragma: no cover
     # Python 2
     basestring = basestring  # noqa
@@ -43,8 +41,6 @@ else:  # pragma: no cover
     from itertools import izip as zip, imap as map
     reduce = reduce
     import __builtin__ as builtins
-    from urllib import urlretrieve
-    from inspect import getargspec
 
 integer_types = native_int_types + (np.integer,)
 

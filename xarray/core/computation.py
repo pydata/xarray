@@ -2,11 +2,9 @@
 
 NOT PUBLIC API.
 """
-import collections
 import functools
 import itertools
 import operator
-import re
 
 import numpy as np
 
