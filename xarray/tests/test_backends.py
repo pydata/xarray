@@ -28,10 +28,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
                assert_allclose, flaky, network, requires_rasterio,
-               assert_identical, raises_regex)
+               assert_identical, raises_regex, mock)
 from .test_dataset import create_test_data
-
-from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -638,7 +636,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
             ds = Dataset({name: da})
             with raises_regex(*e):
-                with self.roundtrip(ds) as actual:
+                with self.roundtrip(ds):
                     pass
 
     def test_encoding_kwarg(self):
@@ -1146,7 +1144,7 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
         with raises_regex(ValueError, 'must be 1-dimensional'):
-            with self.roundtrip(ds) as roundtripped:
+            with self.roundtrip(ds):
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):

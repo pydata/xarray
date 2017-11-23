@@ -80,9 +80,9 @@ def _consolidate_slices(slices):
     for slice_ in slices:
         if not isinstance(slice_, slice):
             raise ValueError('list element is not a slice: %r' % slice_)
-        if (result and last_slice.stop == slice_.start
-                and _is_one_or_none(last_slice.step)
-                and _is_one_or_none(slice_.step)):
+        if (result and last_slice.stop == slice_.start and
+                _is_one_or_none(last_slice.step) and
+                _is_one_or_none(slice_.step)):
             last_slice = slice(last_slice.start, slice_.stop, slice_.step)
             result[-1] = last_slice
         else:

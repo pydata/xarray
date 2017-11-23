@@ -74,9 +74,9 @@ def _asarray_tuplesafe(values):
 
 
 def _is_nested_tuple(possible_tuple):
-    return (isinstance(possible_tuple, tuple)
-            and any(isinstance(value, (tuple, list, slice))
-                    for value in possible_tuple))
+    return (isinstance(possible_tuple, tuple) and
+            any(isinstance(value, (tuple, list, slice))
+                for value in possible_tuple))
 
 
 def _index_method_kwargs(method, tolerance):

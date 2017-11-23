@@ -339,8 +339,8 @@ class TestDataset(TestCase):
             DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']),  # panel
         ]
 
-        for da in das:
-            pandas_obj = da.to_pandas()
+        for a in das:
+            pandas_obj = a.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)
             for dim in ds_based_on_pandas.data_vars:
                 self.assertArrayEqual(ds_based_on_pandas[dim], pandas_obj[dim])
@@ -2457,7 +2457,9 @@ class TestDataset(TestCase):
             self.assertEqual(actual[0], expected[0])
             self.assertDatasetEqual(actual[1], expected[1])
 
-        def identity(x): return x
+        def identity(x):
+            return x
+
         for k in ['x', 'c', 'y']:
             actual = data.groupby(k, squeeze=False).apply(identity)
             self.assertDatasetEqual(data, actual)
@@ -2513,7 +2515,8 @@ class TestDataset(TestCase):
         self.assertDatasetAllClose(expected, actual)
 
     def test_groupby_math(self):
-        def reorder_dims(x): return x.transpose('dim1', 'dim2', 'dim3', 'time')
+        def reorder_dims(x):
+            return x.transpose('dim1', 'dim2', 'dim3', 'time')
 
         ds = create_test_data()
         ds['dim1'] = ds['dim1']
@@ -2584,13 +2587,14 @@ class TestDataset(TestCase):
         ds = Dataset()
         for vn in ['a', 'b', 'c']:
             ds[vn] = DataArray(np.arange(10), dims=['t'])
-        all_vars_ref = list(ds.variables.keys())
         data_vars_ref = list(ds.data_vars.keys())
         ds = ds.groupby('t').mean()
-        all_vars = list(ds.variables.keys())
         data_vars = list(ds.data_vars.keys())
         self.assertEqual(data_vars, data_vars_ref)
+
         # coords are now at the end of the list, so the test below fails
+        # all_vars = list(ds.variables.keys())
+        # all_vars_ref = list(ds.variables.keys())
         # self.assertEqual(all_vars, all_vars_ref)
 
     def test_resample_and_first(self):
@@ -3264,17 +3268,17 @@ class TestDataset(TestCase):
     def test_reduce_bad_dim(self):
         data = create_test_data()
         with raises_regex(ValueError, 'Dataset does not contain'):
-            ds = data.mean(dim='bad_dim')
+            data.mean(dim='bad_dim')
 
     def test_reduce_cumsum_test_dims(self):
         data = create_test_data()
         for cumfunc in ['cumsum', 'cumprod']:
             with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
-                ds = getattr(data, cumfunc)()
+                getattr(data, cumfunc)()
             with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
-                ds = getattr(data, cumfunc)(dim=['dim1', 'dim2'])
+                getattr(data, cumfunc)(dim=['dim1', 'dim2'])
             with raises_regex(ValueError, 'Dataset does not contain'):
-                ds = getattr(data, cumfunc)(dim='bad_dim')
+                getattr(data, cumfunc)(dim='bad_dim')
 
             # ensure dimensions are correct
             for reduct, expected in [('dim1', ['dim1', 'dim2', 'dim3', 'time']),

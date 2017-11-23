@@ -91,7 +91,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         return complex(self.values)
 
     def __long__(self):
-        return long(self.values)
+        return long(self.values)  # flake8: noqa
 
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)

@@ -203,11 +203,11 @@ class TestDataArray(TestCase):
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'
-        assert expected, self.d == encoding
+        assert expected == self.dv.encoding
 
         expected = {'baz': 0}
         self.dv.encoding = expected
-        assert expected, self.d == encoding
+        assert expected == self.dv.encoding
         self.assertIsNot(expected, self.dv.encoding)
 
     def test_constructor(self):

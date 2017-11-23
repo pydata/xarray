@@ -8,8 +8,6 @@ import pandas as pd
 import pytest
 import warnings
 
-import pytest
-
 from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
 from . import TestCase, requires_netCDF4, unittest, raises_regex, IndexerMaker
