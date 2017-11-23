@@ -157,6 +157,9 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
+    if hasattr(riods, 'nodatavals'):
+        # The nodata values for the raster bands
+        attrs['nodatavals'] = riods.nodatavals
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
