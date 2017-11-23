@@ -13,8 +13,8 @@ def test_consolidate_slices():
 
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
-    assert (_consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)])
-            == [slice(2, 6, 1)])
+    assert (_consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)]) ==
+            [slice(2, 6, 1)])
 
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices

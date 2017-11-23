@@ -641,7 +641,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
             ds = Dataset({name: da})
             with raises_regex(*e):
-                with self.roundtrip(ds) as actual:
+                with self.roundtrip(ds):
                     pass
 
     def test_encoding_kwarg(self):

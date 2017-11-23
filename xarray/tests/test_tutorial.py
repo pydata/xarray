@@ -3,7 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 import os
-import pytest
 
 from xarray import tutorial, DataArray
 from xarray.core.pycompat import suppress

@@ -21,7 +21,6 @@ except ImportError:
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
-from .indexing import BasicIndexer
 
 
 def pretty_print(x, numchars):
