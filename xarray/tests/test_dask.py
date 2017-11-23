@@ -653,7 +653,7 @@ class TestToDaskDataFrame(TestCase):
     def test_to_dask_dataframe_coordinates(self):
         # Test if coordinate is also a dask array
         x = da.from_array(np.random.randn(10), chunks=4)
-        t = da.from_array(np.arange(10)*2, chunks=4)
+        t = da.from_array(np.arange(10) * 2, chunks=4)
 
         ds = Dataset(OrderedDict([('a', ('t', x)),
                                   ('t', ('t', t))]))

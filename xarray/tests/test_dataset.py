@@ -319,7 +319,7 @@ class TestDataset(TestCase):
 
         ds = self.make_example_math_dataset()
         pandas_objs = OrderedDict(
-            (var_name, ds[var_name].to_pandas()) for var_name in ['foo','bar']
+            (var_name, ds[var_name].to_pandas()) for var_name in ['foo', 'bar']
         )
         ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         del ds_based_on_pandas['x']
@@ -336,16 +336,15 @@ class TestDataset(TestCase):
 
         das = [
             DataArray(np.random.rand(4), dims=['a']),  # series
-            DataArray(np.random.rand(4,3), dims=['a', 'b']),  # df
-            DataArray(np.random.rand(4,3,2), dims=['a','b','c']), # panel
-            ]
+            DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
+            DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']),  # panel
+        ]
 
         for da in das:
             pandas_obj = da.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)
             for dim in ds_based_on_pandas.data_vars:
                 self.assertArrayEqual(ds_based_on_pandas[dim], pandas_obj[dim])
-
 
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
@@ -931,7 +930,7 @@ class TestDataset(TestCase):
                                               dim1=(('points', ), pdim1)))
         # make sure we're raising errors in the right places
         with raises_regex(IndexError,
-                                     'Dimensions of indexers mismatch'):
+                          'Dimensions of indexers mismatch'):
             data.isel(dim1=(('points', ), [1, 2]),
                       dim2=(('points', ), [1, 2, 3]))
         with raises_regex(TypeError, 'cannot use a Dataset'):
@@ -1197,8 +1196,8 @@ class TestDataset(TestCase):
             mds.sel(one=['a', 'b'])
 
         with raises_regex(ValueError, 'Vectorized selection is '
-                                     'not available along MultiIndex variable:'
-                                     ' x'):
+                          'not available along MultiIndex variable:'
+                          ' x'):
             mds.sel(x=xr.DataArray([np.array(midx[:2]), np.array(midx[-2:])],
                                    dims=['a', 'b']))
 
@@ -1250,20 +1249,20 @@ class TestDataset(TestCase):
 
         # make sure we're raising errors in the right places
         with raises_regex(ValueError,
-                                     'All indexers must be the same length'):
+                          'All indexers must be the same length'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2, 3])
         with raises_regex(ValueError,
-                                     'dimension bad_key does not exist'):
+                          'dimension bad_key does not exist'):
             data.isel_points(bad_key=[1, 2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             data.isel_points(dim1=[1.5, 2.2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             data.isel_points(dim1=[1, 2, 3], dim2=slice(3))
         with raises_regex(ValueError,
-                                     'Indexers must be 1 dimensional'):
+                          'Indexers must be 1 dimensional'):
             data.isel_points(dim1=1, dim2=2)
         with raises_regex(ValueError,
-                                     'Existing dimension names are not valid'):
+                          'Existing dimension names are not valid'):
             data.isel_points(dim1=[1, 2], dim2=[1, 2], dim='dim2')
 
         # test to be sure we keep around variables that were not indexed
@@ -1685,7 +1684,7 @@ class TestDataset(TestCase):
         y = Dataset({'foo': DataArray([1, 2], coords=[('x', [1, 2])])})
         expected_x2 = x
         expected_y2 = Dataset({'foo': DataArray([1, 2, np.nan],
-                                                 coords=[('x', [1, 2, 3])])})
+                                                coords=[('x', [1, 2, 3])])})
 
         x2, y2 = align(x, y, copy=False, join='outer')
         self.assertDatasetIdentical(expected_x2, x2)
@@ -1699,10 +1698,10 @@ class TestDataset(TestCase):
 
     def test_align_indexes(self):
         x = Dataset({'foo': DataArray([1, 2, 3], dims='x',
-                    coords=[('x', [1, 2, 3])])})
+                                      coords=[('x', [1, 2, 3])])})
         x2, = align(x, indexes={'x': [2, 3, 1]})
         expected_x2 = Dataset({'foo': DataArray([2, 3, 1], dims='x',
-                              coords={'x': [2, 3, 1]})})
+                                                coords={'x': [2, 3, 1]})})
         self.assertDatasetIdentical(expected_x2, x2)
 
     def test_align_non_unique(self):
@@ -1720,7 +1719,7 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': (('x', 'y'), [[0, 0]]),
                             'bar': (('x', 'y'), [[1, 1]]),
                             'baz': (('x', 'y'), [[2, 3]])},
-                            {'c': ('x', [4])})
+                           {'c': ('x', [4])})
         actual, = broadcast(ds)
         self.assertDatasetIdentical(expected, actual)
 
@@ -1753,7 +1752,7 @@ class TestDataset(TestCase):
 
     def test_broadcast_exclude(self):
         x = Dataset({
-            'foo': DataArray([[1, 2],[3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]}),
+            'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]}),
             'bar': DataArray(5),
         })
         y = Dataset({
@@ -2249,7 +2248,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(data1, data2)
         # can't assign an ND array without dimensions
         with raises_regex(ValueError,
-                                     'without explicit dimension names'):
+                          'without explicit dimension names'):
             data2['C'] = var.values.reshape(2, 4)
         # but can assign a 1D array
         data1['C'] = var.values
@@ -2456,7 +2455,7 @@ class TestDataset(TestCase):
             self.assertEqual(actual[0], expected[0])
             self.assertDatasetEqual(actual[1], expected[1])
 
-        identity = lambda x: x
+        def identity(x): return x
         for k in ['x', 'c', 'y']:
             actual = data.groupby(k, squeeze=False).apply(identity)
             self.assertDatasetEqual(data, actual)
@@ -2512,7 +2511,7 @@ class TestDataset(TestCase):
         self.assertDatasetAllClose(expected, actual)
 
     def test_groupby_math(self):
-        reorder_dims = lambda x: x.transpose('dim1', 'dim2', 'dim3', 'time')
+        def reorder_dims(x): return x.transpose('dim1', 'dim2', 'dim3', 'time')
 
         ds = create_test_data()
         ds['dim1'] = ds['dim1']
@@ -2660,7 +2659,7 @@ class TestDataset(TestCase):
         ys = np.arange(3)
         times = pd.date_range('2000-01-01', freq='6H', periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
-        xx, yy = np.meshgrid(xs*5, ys*2.5)
+        xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
         array = DataArray(data,
                           {'time': times, 'x': xs, 'y': ys},
@@ -2762,7 +2761,7 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # GH697
-        df = pd.DataFrame({'A' : []})
+        df = pd.DataFrame({'A': []})
         actual = Dataset.from_dataframe(df)
         expected = Dataset({'A': DataArray([], dims=('index',))}, {'index': []})
         self.assertDatasetIdentical(expected, actual)
@@ -2873,7 +2872,7 @@ class TestDataset(TestCase):
              't': {'data': t, 'dims': 't'},
              'b': {'dims': 't', 'data': y}}
         with raises_regex(ValueError, "cannot convert dict "
-                                     "without the key 'dims'"):
+                          "without the key 'dims'"):
             Dataset.from_dict(d)
 
     def test_to_and_from_dict_with_time_dim(self):
@@ -3199,17 +3198,17 @@ class TestDataset(TestCase):
 
         # 2d with odd coordinates
         ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])},
-                coords={'x': [4, 3], 'y': [1, 2],
-                    'z' : (['x','y'], [[np.e, np.pi], [np.pi*np.e, np.pi*3]])})
+                     coords={'x': [4, 3], 'y': [1, 2],
+                             'z': (['x', 'y'], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]])})
         expected = Dataset({'a': (('x', 'y'), [[3]])},
-                coords={'x': [3], 'y': [2],
-                    'z' : (['x','y'], [[np.pi*3]])})
+                           coords={'x': [3], 'y': [2],
+                                   'z': (['x', 'y'], [[np.pi * 3]])})
         actual = ds.where(ds > 2, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
         # 2d multiple variables
-        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x','y'), [[4, 5], [6, 7]])})
-        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6,7]])})
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6, 7]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6, 7]])})
         actual = ds.where(ds > 0, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
@@ -3455,7 +3454,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['numbers'], data['numbers'])
 
         actual = data.apply(np.asarray)
-        expected = data.drop('time') # time is not used on a data var
+        expected = data.drop('time')  # time is not used on a data var
         self.assertDatasetEqual(expected, actual)
 
     def make_example_math_dataset(self):
@@ -3809,7 +3808,7 @@ class TestDataset(TestCase):
         # For more thorough tests, see test_variable.py
         # Note: testing data_vars with mismatched dtypes
         ds = Dataset({
-            'd1': DataArray([1,2,3], dims=['x'], coords={'x': [10, 20, 30]}),
+            'd1': DataArray([1, 2, 3], dims=['x'], coords={'x': [10, 20, 30]}),
             'd2': DataArray([1.1, 2.2, 3.3], dims=['y'])
         }, attrs={'foo': 'bar'})
         actual = full_like(ds, 2)
@@ -4010,11 +4009,13 @@ def test_dir_expected_attrs(data_set):
     result = dir(data_set)
     assert set(result) >= some_expected_attrs
 
+
 def test_dir_non_string(data_set):
     # add a numbered key to ensure this doesn't break dir
     data_set[5] = 'foo'
     result = dir(data_set)
     assert not (5 in result)
+
 
 def test_dir_unicode(data_set):
     data_set[u'unicode'] = 'uni'

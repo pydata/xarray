@@ -34,6 +34,7 @@ class _UFuncSignature(object):
     output_core_dims : tuple[tuple]
         Core dimension names on each output variable.
     """
+
     def __init__(self, input_core_dims, output_core_dims=((),)):
         self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
         self.output_core_dims = tuple(tuple(a) for a in output_core_dims)

@@ -189,7 +189,7 @@ class TestEncodeCFVariable(TestCase):
             Variable(['t'], pd.to_timedelta(['1 day']), {'units': 'foobar'}),
             Variable(['t'], [0, 1, 2], {'add_offset': 0}, {'add_offset': 2}),
             Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
-            ]
+        ]
         for var in invalid_vars:
             with pytest.raises(ValueError):
                 conventions.encode_cf_variable(var)
@@ -337,6 +337,7 @@ class NullWrapper(utils.NDArrayMixin):
     Just for testing, this lets us create a numpy array directly
     but make it look like its not in memory yet.
     """
+
     def __init__(self, array):
         self.array = array
 

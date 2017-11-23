@@ -15,6 +15,7 @@ from . import TestCase, raises_regex
 @xr.register_dataarray_accessor('example_accessor')
 class ExampleAccessor(object):
     """For the pickling tests below."""
+
     def __init__(self, xarray_obj):
         self.obj = xarray_obj
 
@@ -26,6 +27,7 @@ class TestAccessor(TestCase):
         @xr.register_dataarray_accessor('demo')
         class DemoAccessor(object):
             """Demo accessor."""
+
             def __init__(self, xarray_obj):
                 self._obj = xarray_obj
 

@@ -145,7 +145,7 @@ def convert_label_indexer(index, label, index_name='', method=None,
                     raise ValueError('Vectorized selection is not '
                                      'available along level variable: ' + k)
             indexer, new_index = index.get_loc_level(
-                        tuple(label.values()), level=tuple(label.keys()))
+                tuple(label.values()), level=tuple(label.keys()))
 
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
@@ -290,6 +290,7 @@ class ExplicitIndexer(object):
     Do not instantiate BaseIndexer objects directly: instead, use one of the
     sub-classes BasicIndexer, OuterIndexer or VectorizedIndexer.
     """
+
     def __init__(self, key):
         if type(self) is ExplicitIndexer:
             raise TypeError('cannot instantiate base ExplicitIndexer objects')
@@ -321,6 +322,7 @@ class BasicIndexer(ExplicitIndexer):
     rules for basic indexing: each axis is independently sliced and axes
     indexed with an integer are dropped from the result.
     """
+
     def __init__(self, key):
         if not isinstance(key, tuple):
             raise TypeError('key must be a tuple: {!r}'.format(key))
@@ -347,6 +349,7 @@ class OuterIndexer(ExplicitIndexer):
     axes indexed with an integer are dropped from the result. This type of
     indexing works like MATLAB/Fortran.
     """
+
     def __init__(self, key):
         if not isinstance(key, tuple):
             raise TypeError('key must be a tuple: {!r}'.format(key))
@@ -383,6 +386,7 @@ class VectorizedIndexer(ExplicitIndexer):
     (including broadcasting) except sliced axes are always moved to the end:
     https://github.com/numpy/numpy/pull/6256
     """
+
     def __init__(self, key):
         if not isinstance(key, tuple):
             raise TypeError('key must be a tuple: {!r}'.format(key))
@@ -458,6 +462,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and orthogonal indexing lazy.
     """
+
     def __init__(self, array, key=None):
         """
         Parameters
