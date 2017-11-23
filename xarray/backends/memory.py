@@ -18,6 +18,7 @@ class InMemoryDataStore(AbstractWritableDataStore):
 
     This store exists purely for internal testing purposes.
     """
+
     def __init__(self, variables=None, attributes=None, writer=None):
         self._variables = OrderedDict() if variables is None else variables
         self._attributes = OrderedDict() if attributes is None else attributes

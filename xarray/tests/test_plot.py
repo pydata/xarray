@@ -724,7 +724,7 @@ class Common2dMixin:
     def test_colorbar_kwargs(self):
         # replace label
         self.darray.name = 'testvar'
-        self.plotmethod(add_colorbar=True, cbar_kwargs={'label':'MyLabel'})
+        self.plotmethod(add_colorbar=True, cbar_kwargs={'label': 'MyLabel'})
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
@@ -736,7 +736,7 @@ class Common2dMixin:
         # change cbar ax
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
-                        cbar_kwargs={'label':'MyBar'})
+                        cbar_kwargs={'label': 'MyBar'})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -745,7 +745,7 @@ class Common2dMixin:
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, add_colorbar=True,
-                        cbar_kwargs={'label':'MyBar', 'cax':cax})
+                        cbar_kwargs={'label': 'MyBar', 'cax': cax})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -756,7 +756,7 @@ class Common2dMixin:
         self.assertNotIn('testvar', text_in_fig())
         # check that error is raised
         pytest.raises(ValueError, self.plotmethod,
-                          add_colorbar=False, cbar_kwargs= {'label':'label'})
+                      add_colorbar=False, cbar_kwargs={'label': 'label'})
 
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))

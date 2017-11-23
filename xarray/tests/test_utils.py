@@ -31,7 +31,7 @@ class TestSafeCastToIndex(TestCase):
                 (pd.Index(x, dtype=object), x.astype(object)),
                 (pd.Index(td), td),
                 (pd.Index(td, dtype=object), td.astype(object)),
-                ]:
+        ]:
             actual = utils.safe_cast_to_index(array)
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)

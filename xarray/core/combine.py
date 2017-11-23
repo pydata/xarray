@@ -275,7 +275,6 @@ def _dataset_concat(datasets, dim, data_vars, coords, compat, positions):
                     raise ValueError(
                         'variable %s not equal across datasets' % k)
 
-
     # we've already verified everything is consistent; now, calculate
     # shared dimension sizes so we can expand the necessary variables
     dim_lengths = [ds.dims.get(dim, 1) for ds in datasets]

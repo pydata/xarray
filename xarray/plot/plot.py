@@ -57,6 +57,7 @@ def _ensure_plottable(*args):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates.')
 
+
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
                     size=None, subplot_kws=None, **kwargs):

@@ -15,6 +15,7 @@ class AccessorRegistrationWarning(Warning):
 
 class _CachedAccessor(object):
     """Custom property-like object (descriptor) for caching accessors."""
+
     def __init__(self, name, accessor):
         self._name = name
         self._accessor = accessor

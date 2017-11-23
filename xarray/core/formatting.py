@@ -60,6 +60,7 @@ def ensure_valid_repr(string):
 
 class ReprMixin(object):
     """Mixin that defines __repr__ for a class that already has __unicode__."""
+
     def __repr__(self):
         return ensure_valid_repr(self.__unicode__())
 

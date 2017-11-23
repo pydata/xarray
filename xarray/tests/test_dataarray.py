@@ -620,7 +620,7 @@ class TestDataArray(TestCase):
 
         # make sure we're raising errors in the right places
         with raises_regex(IndexError,
-                                     'Dimensions of indexers mismatch'):
+                          'Dimensions of indexers mismatch'):
             da.isel(y=(('points', ), [1, 2]), x=(('points', ), [1, 2, 3]))
 
         # tests using index or DataArray as indexers
@@ -782,20 +782,20 @@ class TestDataArray(TestCase):
 
         # make sure we're raising errors in the right places
         with raises_regex(ValueError,
-                                     'All indexers must be the same length'):
+                          'All indexers must be the same length'):
             da.isel_points(y=[1, 2], x=[1, 2, 3])
         with raises_regex(ValueError,
-                                     'dimension bad_key does not exist'):
+                          'dimension bad_key does not exist'):
             da.isel_points(bad_key=[1, 2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(y=[1.5, 2.2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(x=[1, 2, 3], y=slice(3))
         with raises_regex(ValueError,
-                                     'Indexers must be 1 dimensional'):
+                          'Indexers must be 1 dimensional'):
             da.isel_points(y=1, x=2)
         with raises_regex(ValueError,
-                                     'Existing dimension names are not'):
+                          'Existing dimension names are not'):
             da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
         # using non string dims
@@ -2080,7 +2080,7 @@ class TestDataArray(TestCase):
         ys = np.arange(3)
         times = pd.date_range('2000-01-01', freq='6H', periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
-        xx, yy = np.meshgrid(xs*5, ys*2.5)
+        xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
         array = DataArray(data,
                           {'time': times, 'x': xs, 'y': ys},
@@ -2256,7 +2256,7 @@ class TestDataArray(TestCase):
         expected_times = times.to_series().resample('1H').asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
-        new_times_idx = np.linspace(0, len(times)-1, len(times)*5)
+        new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                      'cubic']:
             actual = array.resample(time='1H').interpolate(kind)
@@ -2295,7 +2295,7 @@ class TestDataArray(TestCase):
                           ('x', 'y', 'time'))
 
         with raises_regex(TypeError,
-                                     "dask arrays are not yet supported"):
+                          "dask arrays are not yet supported"):
             array.resample(time='1H').interpolate('linear')
 
     def test_align(self):

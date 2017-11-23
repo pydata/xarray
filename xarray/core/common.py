@@ -609,7 +609,7 @@ class BaseDataObject(AttrAccessMixin):
                       "calculations. Instead of passing 'dim' and "
                       "'how=\"{how}\", instead consider using "
                       ".resample({dim}=\"{freq}\").{how}() ".format(
-                            dim=dim, freq=freq, how=how
+                          dim=dim, freq=freq, how=how
                       ), DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):

@@ -229,7 +229,7 @@ class TestDatetime(TestCase):
                 ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
                 (0, 'milliseconds since 2000-01-01T00:00:00'),
                 (0, 'microseconds since 2000-01-01T00:00:00'),
-                ]:
+        ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(nc4.num2date(num_dates, units, calendar))
                 print(num_dates, units, calendar)
@@ -473,7 +473,7 @@ class TestDatetime(TestCase):
                  ['NaT', '2000-01-01T00:00:00Z']),
                 ([np.nan, 0, 1], 'days since 2000-01-01',
                  ['NaT', '2000-01-01T00:00:00Z', '2000-01-02T00:00:00Z']),
-                ]:
+        ]:
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', 'All-NaN')
                 actual = conventions.decode_cf_datetime(num_dates, units)
@@ -604,7 +604,7 @@ class TestEncodeCFVariable(TestCase):
             Variable(['t'], pd.to_timedelta(['1 day']), {'units': 'foobar'}),
             Variable(['t'], [0, 1, 2], {'add_offset': 0}, {'add_offset': 2}),
             Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
-            ]
+        ]
         for var in invalid_vars:
             with pytest.raises(ValueError):
                 conventions.encode_cf_variable(var)
@@ -685,6 +685,7 @@ class NullWrapper(utils.NDArrayMixin):
     Just for testing, this lets us create a numpy array directly
     but make it look like its not in memory yet.
     """
+
     def __init__(self, array):
         self.array = array
 
