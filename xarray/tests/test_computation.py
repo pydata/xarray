@@ -488,10 +488,10 @@ def test_keep_attrs():
     actual = add(a, b, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
-    a = xr.Dataset({'x': ('x', [1, 2]), 'y': [0, 1]})
+    a = xr.Dataset({'x': ('y', [1, 2]), 'x': [0, 1]})
     a.attrs['attr'] = 'ds'
     a.x.attrs['attr'] = 'da'
-    b = xr.Dataset({'x': ('x', [1, 1]), 'y': [0, 1]})
+    b = xr.Dataset({'x': ('y', [1, 1]), 'x': [0, 1]})
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
