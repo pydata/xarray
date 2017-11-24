@@ -1972,18 +1972,19 @@ class DataArray(AbstractArray, BaseDataObject):
                                               interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
-    def rank(self, dim):
+    def rank(self, dim, pct=False):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
         would have been otherwise assigned to all of the values within that set.
-        Ranks begin at 1, not 0.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
 
         NaNs in the input array are returned as NaNs.
 
         Parameters
         ----------
-        dim : str, optional
+        dim : str
+        pct : bool, optional
 
         Returns
         -------
@@ -2002,11 +2003,14 @@ class DataArray(AbstractArray, BaseDataObject):
         import bottleneck as bn
         axis = self.get_axis_num(dim)
         func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
-        return apply_ufunc(func, self,
-                           dask='parallelized',
-                           keep_attrs=True,
-                           output_dtypes=[np.float_],
-                           kwargs=dict(axis=axis)).transpose(*self.dims)
+        ranks = apply_ufunc(func, self,
+                            dask='parallelized',
+                            keep_attrs=True,
+                            output_dtypes=[np.float_],
+                            kwargs=dict(axis=axis)).transpose(*self.dims)
+        if not pct:
+            return ranks
+        return (ranks - 1) / (self.count(dim) - 1)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs
