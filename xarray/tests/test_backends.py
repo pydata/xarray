@@ -501,6 +501,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoding = {'_FillValue': b'X', 'dtype': 'S1'}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
+        print(original)
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 

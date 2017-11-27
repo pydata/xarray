@@ -47,7 +47,7 @@ def _ensure_valid_fill_value(value, dtype):
         valid = value.decode('ascii')
     else:
         valid = value
-    return _encode_zarr_attr_value(value)
+    return _encode_zarr_attr_value(valid)
 
 
 # TODO: cleanup/combine these next two functions
@@ -296,13 +296,10 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters}
-            # I use _FillValue as the encoding key to be consistent
-            # with CF / netCDF. Is this right? Could also just call it
-            # 'fill_value'. Does it matter?
-            # Am I making things harder by tring to make ZarrStore
-            # CFDataStore when it is not?
+        # _FillValue needs to be in attributes, not encoding, so it will get
+        # picked up by decode_cf
         if getattr(zarr_array, 'fill_value') is not None:
-            encoding['_FillValue'] = zarr_array.fill_value
+            attributes['_FillValue'] = zarr_array.fill_value
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -344,20 +341,8 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # TODO: figure out how zarr should deal with unlimited dimensions
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
-        # netcdf uses pop not get...yet it works. Why?
-        # here we are basically duplicating zarr's own internal fill_value
-        # in an attribute. This seems redundant and error prone. How can
-        # we do better?
-        # Also, this needs to be encoded as a zarr attr
         fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
                                               dtype)
-        # TODO: figure out what this is for (it's copied from netCDF4)
-        if fill_value in ['\x00']:
-            fill_value = None
-
-        # messy! fix
-        #if fill_value is not None:
-        #    attrs['_FillValue'] = fill_value
 
         # TODO: figure out what encoding is needed for zarr
         encoding = _extract_zarr_variable_encoding(
@@ -368,6 +353,7 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # compressor='default', fill_value=0, order='C', store=None,
         # synchronizer=None, overwrite=False, path=None, chunk_store=None,
         # filters=None, cache_metadata=True, **kwargs)
+        print('creating', name, shape, dtype)
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)
         # decided not to explicity enumerate encoding options because we
@@ -510,7 +496,9 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
         def maybe_chunk(name, var):
             from dask.base import tokenize
             chunks = var.encoding.get('chunks')
+            print('chunks', chunks)
             if (var.ndim > 0) and (chunks is not None):
+                # does this cause any data to be read?
                 token2 = tokenize(name, var._data)
                 name2 = 'zarr-%s-%s' % (name, token2)
                 return var.chunk(chunks, name=name2, lock=None)
