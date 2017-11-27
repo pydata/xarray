@@ -44,9 +44,10 @@ def _encode_zarr_attr_value(value):
 
 def _ensure_valid_fill_value(value, dtype):
     if dtype.type == np.string_ and type(value) == bytes:
-        return value.decode('ascii')
+        valid = value.decode('ascii')
     else:
-        return value
+        valid = value
+    return _encode_zarr_attr_value(value)
 
 
 # TODO: cleanup/combine these next two functions
@@ -294,8 +295,14 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         attributes = _decode_zarr_attrs(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
-                    'filters': zarr_array.filters,
-                    'fill_value': zarr_array.fill_value}
+                    'filters': zarr_array.filters}
+            # I use _FillValue as the encoding key to be consistent
+            # with CF / netCDF. Is this right? Could also just call it
+            # 'fill_value'. Does it matter?
+            # Am I making things harder by tring to make ZarrStore
+            # CFDataStore when it is not?
+        if getattr(zarr_array, 'fill_value') is not None:
+            encoding['_FillValue'] = zarr_array.fill_value
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -342,15 +349,15 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
         # in an attribute. This seems redundant and error prone. How can
         # we do better?
         # Also, this needs to be encoded as a zarr attr
-        fill_value = _ensure_valid_fill_value(
-                        _encode_zarr_attr_value(attrs.get('_FillValue', None)),
-                        dtype)
+        fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
+                                              dtype)
+        # TODO: figure out what this is for (it's copied from netCDF4)
         if fill_value in ['\x00']:
             fill_value = None
 
         # messy! fix
-        if fill_value is not None:
-            attrs['_FillValue'] = fill_value
+        #if fill_value is not None:
+        #    attrs['_FillValue'] = fill_value
 
         # TODO: figure out what encoding is needed for zarr
         encoding = _extract_zarr_variable_encoding(
