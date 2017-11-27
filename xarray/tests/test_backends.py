@@ -671,7 +671,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            print("actual.x.encoding", actual.x.encoding)
             self.assertEqual(actual.x.encoding['_FillValue'],
                              np.nan)
         self.assertEqual(ds.x.encoding, {})
