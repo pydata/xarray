@@ -148,6 +148,9 @@ Computation
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
 :py:attr:`~Dataset.fillna`
+:py:attr:`~Dataset.ffill`
+:py:attr:`~Dataset.bfill`
+:py:attr:`~Dataset.interpolate_na`
 :py:attr:`~Dataset.where`
 
 **ndarray methods**:

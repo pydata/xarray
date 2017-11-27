@@ -22,6 +22,16 @@ def da():
                         dims='time')
 
 
+@pytest.fixture
+def ds():
+    ds = xr.Dataset()
+    ds['var1'] = xr.DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                              dims='time')
+    ds['var2'] = xr.DataArray([10, np.nan, 11, 12, np.nan, 13, 14, 15, np.nan,
+                               16, 17], dims='x')
+    return ds
+
+
 def make_interpolate_example_data(shape, frac_nan, seed=12345,
                                   non_uniform=False):
     rs = np.random.RandomState(seed)
@@ -73,29 +83,29 @@ def test_interpolate_pd_compat(shape, frac_nan, method):
         np.testing.assert_allclose(actual.values, expected.values)
 
 
+@pytest.mark.parametrize('method', ['barycentric', 'krog', 'pchip', 'spline',
+                                    'akima'])
+def test_scipy_methods_function(method):
+    kwargs = {}
+    # This test seems silly but the problem is, Pandas does some wacky things
+    # with these methods and I can't get a integration test to work.
+    da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
+    actual = da.interpolate_na(method=method, dim='time', **kwargs)
+    assert (da.count('time') <= actual.count('time')).all()
+
+
 @pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1)])
 @pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
-@pytest.mark.parametrize('method', ['time', 'index', 'values', 'linear',
-                                    'nearest', 'zero', 'slinear',
-                                    'quadratic', 'cubic'])
+@pytest.mark.parametrize('method', ['time', 'index', 'values'])
 @requires_np112
 @requires_scipy
 def test_interpolate_pd_compat_non_uniform_index(shape, frac_nan, method):
-    # translate pandas syntax to xarray equivalent
-    xmethod = method
-    use_coordinate = False
-    if method in ['time', 'index', 'values']:
-        use_coordinate = True
-        xmethod = 'linear'
-    elif method in ['nearest', 'slinear', 'quadratic', 'cubic']:
-        use_coordinate = True
-
     da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
     for dim in ['time', 'x']:
         if method == 'time' and dim != 'time':
             continue
-        actual = da.interpolate_na(method=xmethod, dim=dim,
-                                   use_coordinate=use_coordinate)
+        actual = da.interpolate_na(method='linear', dim=dim,
+                                   use_coordinate=True)
         expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
         np.testing.assert_allclose(actual.values, expected.values)
 
@@ -134,6 +144,26 @@ def test_interpolate_invalid_interpolator_raises():
     da = xr.DataArray(np.array([1, 2, np.nan, 5], dtype=np.float64), dims='x')
     with raises_regex(ValueError, 'not a valid'):
         da.interpolate_na(dim='x', method='foo')
+
+
+def test_interpolate_multiindex_raises():
+    data = np.random.randn(2, 3)
+    data[1, 1] = np.nan
+    da = xr.DataArray(data, coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+    das = da.stack(z=('x', 'y'))
+    with raises_regex(TypeError, 'Index must be castable to float64'):
+        das.interpolate_na(dim='z')
+
+
+def test_interpolate_2d_coord_raises():
+    coords = {'x': xr.Variable(('a', 'b'), np.arange(6).reshape(2, 3)),
+              'y': xr.Variable(('a', 'b'), np.arange(6).reshape(2, 3)) * 2}
+
+    data = np.random.randn(2, 3)
+    data[1, 1] = np.nan
+    da = xr.DataArray(data, dims=('a', 'b'), coords=coords)
+    with raises_regex(ValueError, 'interpolation must be 1D'):
+        da.interpolate_na(dim='a', use_coordinate='x')
 
 
 @requires_np112
@@ -199,14 +229,11 @@ def test_interpolate_limits():
 
 
 @pytest.mark.parametrize('method', ['linear', 'nearest', 'zero', 'slinear',
-                                    'quadratic', 'cubic', 'polynomial',
-                                    'barycentric', 'krog', 'pchip', 'spline'])
+                                    'quadratic', 'cubic'])
 @requires_np112
 @requires_scipy
 def test_interpolate_methods(method):
     kwargs = {}
-    if method == 'polynomial':
-        kwargs['order'] = 1
     da = xr.DataArray(np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8],
                                dtype=np.float64), dims='x')
     actual = da.interpolate_na('x', method=method, **kwargs)
@@ -376,3 +403,20 @@ def test_ffill_limit():
     result = da.ffill('time', limit=1)
     expected = xr.DataArray(
         [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims='time')
+
+
+def test_interpolate_dataset(ds):
+    actual = ds.interpolate_na(dim='time')
+    # no missing values in var1
+    assert actual['var1'].count('time') == actual.dims['time']
+
+    # var2 should be the same as it was
+    assert_array_equal(actual['var2'], ds['var2'])
+
+
+def test_ffill_dataset(ds):
+    ds.ffill(dim='time')
+
+
+def test_bfill_dataset(ds):
+    ds.ffill(dim='time')

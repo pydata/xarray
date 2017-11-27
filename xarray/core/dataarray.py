@@ -1231,7 +1231,7 @@ class DataArray(AbstractArray, BaseDataObject):
             Specifies the dimension along which to interpolate.
         method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
                   'polynomial', 'barycentric', 'krog', 'pchip',
-                  'spline'}, optional
+                  'spline', 'akima'}, optional
             String indicating which method to use for interpolation:
 
             - 'linear': linear interpolation (Default). Additional keyword
@@ -1240,8 +1240,8 @@ class DataArray(AbstractArray, BaseDataObject):
               'polynomial': are passed to ``scipy.interpolate.interp1d``. If
               method=='polynomial', the ``order`` keyword argument must also be
               provided.
-            - 'barycentric', 'krog', 'pchip', 'spline': use their respective
-              ``scipy.interpolate`` classes.
+            - 'barycentric', 'krog', 'pchip', 'spline', and `akima`: use their
+              respective``scipy.interpolate`` classes.
         use_coordinate : boolean or str, default True
             Specifies which index to use as the x values in the interpolation
             formulated as `y = f(x)`. If False, values are treated as if
@@ -1268,10 +1268,12 @@ class DataArray(AbstractArray, BaseDataObject):
     def ffill(self, dim, limit=None):
         '''Fill NaN values by propogating values forward
 
+        *Requires bottleneck.*
+
         Parameters
         ----------
         dim : str
-            Specifies the dimension along which to propogate values when
+            Specifies the dimension along which to propagate values when
             filling.
         limit : int, default None
             The maximum number of consecutive NaN values to forward fill. In
@@ -1289,10 +1291,12 @@ class DataArray(AbstractArray, BaseDataObject):
     def bfill(self, dim, limit=None):
         '''Fill NaN values by propogating values backward
 
+        *Requires bottleneck and Numpy v1.12.0 or later.*
+
         Parameters
         ----------
         dim : str
-            Specifies the dimension along which to propogate values when
+            Specifies the dimension along which to propagate values when
             filling.
         limit : int, default None
             The maximum number of consecutive NaN values to backward fill. In

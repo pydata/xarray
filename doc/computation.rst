@@ -59,8 +59,9 @@ Missing values
 
 xarray objects borrow the :py:meth:`~xarray.DataArray.isnull`,
 :py:meth:`~xarray.DataArray.notnull`, :py:meth:`~xarray.DataArray.count`,
-:py:meth:`~xarray.DataArray.dropna` and :py:meth:`~xarray.DataArray.fillna` methods
-for working with missing data from pandas:
+:py:meth:`~xarray.DataArray.dropna`, :py:meth:`~xarray.DataArray.fillna`,
+:py:meth:`~xarray.DataArray.ffill`, and :py:meth:`~xarray.DataArray.bfill`
+methods for working with missing data from pandas:
 
 .. ipython:: python
 
@@ -70,9 +71,24 @@ for working with missing data from pandas:
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
+    x.ffill()
+    x.bfill()
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
+
+xarray objects also have an :py:meth:`~xarray.DataArray.interpolate_na` method
+for filling missing values via 1D interpolation.
+
+.. ipython:: python
+
+    x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'],
+                     coords={'xx': [0, 1, 1.1, 1.9, 3]})
+    x.interpolate_na(dim='x', method='linear', use_coordinate='xx')
+
+Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
+providing the ``use_coordinate`` keyword which facilitates a clear specification
+of which values to use as the index in the interpolation.
 
 Aggregation
 ===========

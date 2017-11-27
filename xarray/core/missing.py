@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 
+from .pycompat import iteritems
 from .computation import apply_ufunc
 from .utils import is_scalar
 
@@ -29,7 +30,7 @@ class BaseInterpolator(object):
 
     def __repr__(self):
         return "{type}: method={method}".format(type=self.__class__.__name__,
-                                            method=self.method)
+                                                method=self.method)
 
 
 class NumpyInterpolator(BaseInterpolator):
@@ -41,7 +42,7 @@ class NumpyInterpolator(BaseInterpolator):
     '''
     def __init__(self, xi, yi, method='linear', fill_value=None, **kwargs):
 
-        if method is not 'linear':
+        if method != 'linear':
             raise ValueError(
                 'only method `linear` is valid for the NumpyInterpolator')
 
@@ -120,7 +121,7 @@ class SplineInterpolator(BaseInterpolator):
                  **kwargs):
         from scipy.interpolate import UnivariateSpline
 
-        if method is not 'spline':
+        if method != 'spline':
             raise ValueError(
                 'only method `spline` is valid for the SplineInterpolator')
 
@@ -135,6 +136,22 @@ class SplineInterpolator(BaseInterpolator):
         self.f = UnivariateSpline(xi, yi, k=order, **self.cons_kwargs)
 
 
+def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
+    '''wrapper for datasets'''
+    # can this be done with apply_ufunc somehow?
+    from .dataset import Dataset
+
+    ds = Dataset(coords=self.coords, attrs=self.attrs)
+
+    for name, var in iteritems(self.data_vars):
+        if dim in var.dims:
+            ds[name] = func(var, dim=dim, **kwargs)
+        else:
+            ds[name] = var
+
+    return ds
+
+
 def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
     '''get index to use for x values in interpolation.
 
@@ -145,7 +162,6 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
     If use_coordinate is False, the x values are set as an equally spaced
     sequence.
     '''
-
     if use_coordinate:
         if use_coordinate is True:
             index = arr.get_index(dim)
@@ -155,15 +171,21 @@ def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
                 raise ValueError(
                     'Coordinates used for interpolation must be 1D, '
                     '%s is %dD.' % (use_coordinate, index.ndim))
-        if isinstance(index, pd.DatetimeIndex):
+
+        # raise if index cannot be cast to a float (e.g. MultiIndex)
+        try:
             index = index.values.astype(np.float64)
+        except (TypeError, ValueError):
+            # pandas raises a TypeError
+            # xarray/nuppy raise a ValueError
+            raise TypeError('Index must be castable to float64 to support'
+                            'interpolation, got: %s' % type(index))
         # check index sorting now so we can skip it later
         if not (np.diff(index) > 0).all():
             raise ValueError("Index must be monotonicly increasing")
-
     else:
         axis = arr.get_axis_num(dim)
-        index = np.arange(arr.shape[axis])
+        index = np.arange(arr.shape[axis], dtype=np.float64)
 
     return index
 
@@ -267,7 +289,7 @@ def _get_interpolator(method, **kwargs):
     interp1d_methods = ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                         'cubic', 'polynomial']
     valid_methods = interp1d_methods + ['barycentric', 'krog', 'pchip',
-                                        'spline']
+                                        'spline', 'akima']
 
     if (method == 'linear' and not
             kwargs.get('fill_value', None) == 'extrapolate'):
@@ -291,6 +313,8 @@ def _get_interpolator(method, **kwargs):
         elif method == 'spline':
             kwargs.update(method=method)
             interp_class = SplineInterpolator
+        elif method == 'akima':
+            interp_class = interpolate.Akima1DInterpolator
         else:
             raise ValueError('%s is not a valid scipy interpolator' % method)
     else:
