@@ -13,32 +13,21 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.10.0:
+.. _whats-new.0.10.1:
 
-v0.10.0 (unreleased)
+v0.10.1 (unreleased)
 --------------------
+
+Enhancements
+~~~~~~~~~~~~
 
 Bug fixes
 ~~~~~~~~~
 
-- Fixed unexpected behavior in ``Dataset.set_index()`` and
-  ``DataArray.set_index()`` introduced by Pandas 0.21.0. Setting a new
-  index with a single variable resulted in 1-level
-  ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
-  (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.
+.. _whats-new.0.10.0:
 
-
-v0.10.0 rc2 (13 November 2017)
-------------------------------
-
-.. caution::
-
-  You're reached the documentation for the **pre-release version of xarray.**
-  Please test out this release candidate and report any issues on GitHub. If
-  all goes well, the final v0.10.0 release will come out in about a week. To
-  install, use::
-
-    pip install --pre --upgrade --upgrade-strategy=only-if-needed xarray
+v0.10.0 (20 November 2017)
+--------------------------
 
 This is a major release that includes bug fixes, new features and a few
 backwards incompatible changes. Highlights include:
@@ -420,6 +409,18 @@ Bug fixes after rc1
 
 - Remove netCDF dependency from rasterio backend tests.
   By `Matti Eskelinen <https://github.com/maaleske>`_
+
+Bug fixes after rc2
+~~~~~~~~~~~~~~~~~~~
+
+- Fixed unexpected behavior in ``Dataset.set_index()`` and
+  ``DataArray.set_index()`` introduced by Pandas 0.21.0. Setting a new
+  index with a single variable resulted in 1-level
+  ``pandas.MultiIndex`` instead of a simple ``pandas.Index``
+  (:issue:`1722`).  By `Benoit Bovy <https://github.com/benbovy>`_.
+
+- Fixed unexpected memory loading of backend arrays after ``print``.
+  (:issue:`1720`).  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.9.6:
 
