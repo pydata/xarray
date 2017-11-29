@@ -28,15 +28,3 @@ def test_vindex():
     vindex[[0, 1], [0, 1], :] = vindex[[0, 1], [0, 1], :]
     vindex[[0, 1], :, [0, 1]] = vindex[[0, 1], :, [0, 1]]
     vindex[:, [0, 1], [0, 1]] = vindex[:, [0, 1], [0, 1]]
-
-def test_vindex_4d():
-    x = np.arange(3 * 4 * 5 * 6).reshape((3, 4, 5, 6))
-    vindex = NumpyVIndexAdapter(x)
-
-    # getitem
-    assert_array_equal(vindex[0], x[0])
-    assert_array_equal(vindex[[1, 2], [1, 2]], x[[1, 2], [1, 2]])
-    assert vindex[[0, 1], [0, 1], :].shape == (2, 5, 6)
-    assert vindex[[0, 1], :, [0, 1]].shape == (2, 4, 6)
-    assert vindex[:, [0, 1], [0, 1]].shape == (2, 3, 6)
-    assert vindex[:, [0, 1], :, [0, 1]].shape == (2, 3, 5)
