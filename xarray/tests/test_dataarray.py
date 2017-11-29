@@ -526,6 +526,36 @@ class TestDataArray(TestCase):
             expected[t] = 1
             self.assertArrayEqual(orig.values, expected)
 
+    def test_setitem_fancy(self):
+        # vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[dict(x=ind, y=ind)] = 0
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 0d-variable
+        da[dict(x=ind, y=ind)] = Variable((), 0)
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 1d-variable
+        da[dict(x=ind, y=ind)] = Variable(['a'], [2, 3])
+        expected = DataArray([[2, 1], [1, 3], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        # 2d-vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind_x = DataArray([[0, 1]], dims=['a', 'b'])
+        ind_y = DataArray([[1, 0]], dims=['a', 'b'])
+        da[dict(x=ind_x, y=ind_y)] = 0
+        expected = DataArray([[1, 0], [0, 1], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[ind] = 0
+        expected = DataArray([[0, 0], [0, 0], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
     def test_contains(self):
         data_array = DataArray(1, coords={'x': 2})
         with pytest.warns(FutureWarning):

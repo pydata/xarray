@@ -484,7 +484,9 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
-            # xarray-style array indexing
+            # DataArray key -> Variable key
+            key = {k: v.variable if isinstance(v, DataArray) else v
+                   for k, v in self._item_key_to_dict(key).items()}
             self.variable[key] = value
 
     def __delitem__(self, key):

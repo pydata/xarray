@@ -129,6 +129,8 @@ class NumpyVIndexAdapter(object):
 
     def __setitem__(self, key, value):
         """Value must have dimensionality matching the key."""
-        mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
-        self._array[key] = np.moveaxis(value, vindex_positions,
-                                       mixed_positions)
+        if np.isscalar(value):
+            self._array[key] = value
+        else:
+            mixed_pos, vindex_pos = _advanced_indexer_subspaces(key)
+            self._array[key] = np.moveaxis(value, vindex_pos, mixed_pos)

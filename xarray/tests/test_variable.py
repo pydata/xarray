@@ -1440,6 +1440,39 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[dict(x=[True, False], y=[False, True, False])] = 1
         self.assertTrue(v[0, 1] == 1)
 
+    def test_setitem_fancy(self):
+        # vectorized indexing
+        v = Variable(['x', 'y'], np.ones((3, 2)))
+        ind = Variable(['a'], [0, 1])
+        v[dict(x=ind, y=ind)] = 0
+        expected = Variable(['x', 'y'], [[0, 1], [1, 0], [1, 1]])
+        self.assertVariableIdentical(expected, v)
+        # assign another 0d-variable
+        v[dict(x=ind, y=ind)] = Variable((), 0)
+        expected = Variable(['x', 'y'], [[0, 1], [1, 0], [1, 1]])
+        self.assertVariableIdentical(expected, v)
+        # assign another 1d-variable
+        v[dict(x=ind, y=ind)] = Variable(['a'], [2, 3])
+        expected = Variable(['x', 'y'], [[2, 1], [1, 3], [1, 1]])
+        self.assertVariableIdentical(expected, v)
+
+        # 2d-vectorized indexing
+        v = Variable(['x', 'y'], np.ones((3, 2)))
+        ind_x = Variable(['a', 'b'], [[0, 1]])
+        ind_y = Variable(['a', 'b'], [[1, 0]])
+        v[dict(x=ind_x, y=ind_y)] = 0
+        expected = Variable(['x', 'y'], [[1, 0], [0, 1], [1, 1]])
+        self.assertVariableIdentical(expected, v)
+
+        # vindex with slice
+        v = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        ind = Variable(['a'], [0, 1])
+        v[dict(y=ind, z=ind)] = 0
+        expected = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        expected[:, 0, 0] = 0
+        expected[:, 1, 1] = 0
+        self.assertVariableIdentical(expected, v)
+
         # dimension broadcast
         v = Variable(['x', 'y'], np.ones((3, 2)))
         ind = Variable(['a', 'b'], [[0, 1]])
