@@ -107,6 +107,15 @@ class TestPlot(PlotTestCase):
         a.coords['dim_1'] = [2, 1, 89]
         self.assertTrue(self.contourf_called(a.plot.contourf))
 
+    def test2d_1d_2d_coordinates_contourf(self):
+        sz = (20, 10)
+        depth = easy_array(sz)
+        a = DataArray(easy_array(sz), dims=['z', 'time'],
+                      coords={'depth': (['z', 'time'], depth),
+                              'time': np.linspace(0, 1, sz[1])})
+
+        a.plot.contourf(x='time', y='depth')
+
     def test3d(self):
         self.darray.plot()
 
