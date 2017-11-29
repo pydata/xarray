@@ -639,15 +639,21 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         if isinstance(value, Variable):
             value = value.set_dims(dims).data
-
-        if new_order:
-            value = duck_array_ops.asarray(value)
+        else:  # first broadcast value
+            value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
                     'shape mismatch: value array of shape %s could not be'
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
 
+            if value.ndim == 0:
+                value = Variable((), value).set_dims(dims).data
+            else:
+                value = Variable(dims[-value.ndim:], value).set_dims(dims).data
+
+        if new_order:
+            value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
             value = np.moveaxis(value, new_order, range(len(new_order)))
