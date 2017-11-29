@@ -255,7 +255,7 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
     return encoding
 
 
-class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
+class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
     """Store for reading and writing data via zarr
     """
 
@@ -373,7 +373,14 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
             attributes[k] = _encode_zarr_attr_value(v)
 
         return zarr_array, variable.data
+    
 
+    def store(self, variables, attributes, *args, **kwargs):
+        # All NetCDF files get CF encoded by default, without this attempting
+        # to write times, for example, would fail.
+        cf_variables, cf_attrs = cf_encoder(variables, attributes)
+        AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
+                                        *args, **kwargs)
     # sync() and close() methods should not be needed with zarr
 
 
