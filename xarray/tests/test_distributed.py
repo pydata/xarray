@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 import xarray as xr
 from xarray.core.pycompat import suppress
@@ -23,6 +25,8 @@ if has_h5netcdf:
     ENGINES.append('h5netcdf')
 
 
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine', ENGINES)
 def test_dask_distributed_integration_test(loop, engine):
     with cluster() as (s, _):
