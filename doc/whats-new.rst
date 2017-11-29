@@ -24,6 +24,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 .. _whats-new.0.10.0:
 
 v0.10.0 (20 November 2017)
