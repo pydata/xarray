@@ -13,7 +13,7 @@ matrix:
   - python: 2.7
     env: CONDA_ENV=py27-min
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio
+    env: CONDA_ENV=py27-cdat+iris+pynio
   - python: 3.4
     env: CONDA_ENV=py34
   - python: 3.5
