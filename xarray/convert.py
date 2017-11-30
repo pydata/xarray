@@ -7,7 +7,7 @@ from __future__ import print_function
 import numpy as np
 
 from .core.dataarray import DataArray
-from .core.pycompat import OrderedDict
+from .core.pycompat import OrderedDict, range
 from .conventions import (
     maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
 
@@ -124,8 +124,7 @@ def to_iris(dataarray):
     args['dim_coords_and_dims'] = dim_coords
     args['aux_coords_and_dims'] = aux_coords
     if 'cell_methods' in dataarray.attrs:
-        args['cell_methods'] = parse_cell_methods(
-            dataarray.name, dataarray.attrs['cell_methods'])
+        args['cell_methods'] = parse_cell_methods(dataarray.attrs['cell_methods'])
 
     cube = iris.cube.Cube(dataarray.to_masked_array(), **args)
     return cube
@@ -167,7 +166,7 @@ def from_iris(cube):
     import iris.exceptions
     name = cube.var_name
     dims = []
-    for i in xrange(cube.ndim):
+    for i in range(cube.ndim):
         try:
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
             dims.append(dim_coord.var_name)

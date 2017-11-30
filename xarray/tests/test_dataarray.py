@@ -15,7 +15,7 @@ from xarray import (align, broadcast, Dataset, DataArray,
                     IndexVariable, Variable)
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
-
+from xarray.conventions import maybe_encode_datetime
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
@@ -2722,6 +2722,60 @@ class TestDataArray(TestCase):
         self.assertEqual(str(component_times[0]), '2000-1-1 0:0:0.0')
 
         roundtripped = DataArray.from_cdms2(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
+    def test_to_and_from_iris(self):
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        original = DataArray(np.arange(6).reshape(2, 3), coord_dict,
+                             name='Temperature', attrs={'baz': 123,
+                                                        'units': 'Kelvin',
+                                                        'standard_name':
+                                                            'fire_temperature',
+                                                        'long_name':
+                                                            'Fire Temperature'},
+                             dims=('distance', 'time'))
+
+        original.attrs['cell_methods'] = 'height: mean (comment: A cell method)'
+        actual = original.to_iris()
+        self.assertArrayEqual(actual.data, original.data)
+        self.assertEqual(actual.var_name, original.name)
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
+        self.assertEqual(actual.cell_methods,
+                         (iris.coords.CellMethod(method='mean',
+                                                 coords=('height',),
+                                                 intervals=(),
+                                                 comments=('A cell method',)),))
+
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            self.assertEqual(coord.var_name, original_coord.name)
+            self.assertArrayEqual(coord.points,
+                                  maybe_encode_datetime(original_coord).values)
+            self.assertEqual(actual.coord_dims(coord),
+                             original.get_axis_num
+                             (original.coords[coord.var_name].dims))
+
+        self.assertEqual(actual.coord('distance2').attributes['foo'],
+                         original.coords['distance2'].attrs['foo'])
+        self.assertEqual(actual.coord('distance').units,
+                         cf_units.Unit(original.coords['distance'].units))
+        self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
+        self.assertEqual(actual.standard_name, original.attrs['standard_name'])
+
+        roundtripped = DataArray.from_iris(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
     def test_to_dataset_whole(self):
