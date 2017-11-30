@@ -11,17 +11,13 @@ from .core.pycompat import OrderedDict, range
 from .conventions import (
     maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
 
-cdms2_ignored_attrs = set(['name', 'tileIndex'])
-iris_forbidden_keys = set(
-    ['standard_name', 'long_name', 'units', 'bounds', 'axis',
-     'calendar', 'leap_month', 'leap_year', 'month_lengths',
-     'coordinates', 'grid_mapping', 'climatology',
-     'cell_methods', 'formula_terms', 'compress',
-     'missing_value', 'add_offset', 'scale_factor',
-     'valid_max', 'valid_min', 'valid_range', '_FillValue'])
-cell_methods_strings = set(['point', 'sum', 'maximum', 'median', 'mid_range',
-                            'minimum', 'mean', 'mode', 'standard_deviation',
-                            'variance'])
+cdms2_ignored_attrs = {'name', 'tileIndex'}
+iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis', 'calendar', 'leap_month', 'leap_year',
+                       'month_lengths', 'coordinates', 'grid_mapping', 'climatology', 'cell_methods', 'formula_terms',
+                       'compress', 'missing_value', 'add_offset', 'scale_factor', 'valid_max', 'valid_min',
+                       'valid_range', '_FillValue'}
+cell_methods_strings = {'point', 'sum', 'maximum', 'median', 'mid_range', 'minimum', 'mean', 'mode',
+                        'standard_deviation', 'variance'}
 
 
 def encode(var):
