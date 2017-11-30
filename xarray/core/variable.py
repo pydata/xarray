@@ -626,8 +626,43 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         data = self._indexable_data[index_tuple]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
+
+    def _finalize_indexing_result(self, dims, data):
+        """Used by IndexVariable to return IndexVariable objects when possible.
+        """
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    def _getitem_with_mask(self, key, fill_value=dtypes.NA):
+        """Index this Variable with -1 remapped to fill_value."""
+        # TODO(shoyer): expose this method in public API somewhere (isel?) and
+        # use it for reindex.
+        # TODO(shoyer): add a sanity check that all other integers are
+        # non-negative
+        # TODO(shoyer): add an optimization, remapping -1 to an adjacent value
+        # that is actually indexed rather than mapping it to the last value
+        # along each axis.
+
+        if fill_value is dtypes.NA:
+            fill_value = dtypes.get_fill_value(self.dtype)
+
+        dims, index_tuple, new_order = self._broadcast_indexes(key)
+
+        if self.size:
+            data = self._indexable_data[index_tuple]
+            chunks_hint = getattr(data, 'chunks', None)
+            mask = indexing.create_mask(index_tuple, self.shape, chunks_hint)
+            data = duck_array_ops.where(mask, fill_value, data)
+        else:
+            # array cannot be indexed along dimensions of size 0, so just
+            # build the mask directly instead.
+            mask = indexing.create_mask(index_tuple, self.shape)
+            data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
+
+        if new_order:
+            data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
@@ -1463,14 +1498,12 @@ class IndexVariable(Variable):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
-    def __getitem__(self, key):
-        dims, index_tuple, new_order = self._broadcast_indexes(key)
-        values = self._indexable_data[index_tuple]
-        if getattr(values, 'ndim', 0) != 1:
+    def _finalize_indexing_result(self, dims, data):
+        if getattr(data, 'ndim', 0) != 1:
             # returns Variable rather than IndexVariable if multi-dimensional
-            return Variable(dims, values, self._attrs, self._encoding)
+            return Variable(dims, data, self._attrs, self._encoding)
         else:
-            return type(self)(dims, values, self._attrs,
+            return type(self)(dims, data, self._attrs,
                               self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):

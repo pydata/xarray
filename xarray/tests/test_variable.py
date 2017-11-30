@@ -24,7 +24,8 @@ from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 from xarray.core.utils import NDArrayMixin
 
-from . import TestCase, source_ndarray, requires_dask, raises_regex
+from . import (
+    TestCase, source_ndarray, requires_dask, raises_regex, assert_identical)
 
 
 class VariableSubclassTestCases(object):
@@ -102,6 +103,20 @@ class VariableSubclassTestCases(object):
         with raises_regex(IndexError, "Boolean indexer should"):
             ind = Variable(('a', ), [True, False, True])
             v[ind]
+
+    def test_getitem_with_mask(self):
+        v = self.cls(['x'], [0, 1, 2])
+        assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
+        assert_identical(v._getitem_with_mask([0, -1, 1]),
+                         self.cls(['x'], [0, np.nan, 1]))
+        assert_identical(v._getitem_with_mask([0, -1, 1], fill_value=-99),
+                         self.cls(['x'], [0, -99, 1]))
+
+    def test_getitem_with_mask_size_zero(self):
+        v = self.cls(['x'], [])
+        assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
+        assert_identical(v._getitem_with_mask([-1, -1, -1]),
+                         self.cls(['x'], [np.nan, np.nan, np.nan]))
 
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
