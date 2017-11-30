@@ -446,6 +446,7 @@ DataArray methods
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_iris
    DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
