@@ -12,7 +12,8 @@ from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from ..core.pycompat import iteritems, OrderedDict
 
-from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
+from .common import (AbstractWritableDataStore, DataStorePickleMixin,
+                     BackendArray)
 
 from .. import conventions
 
@@ -254,8 +255,43 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
 
     return encoding
 
+# copied from conventions.encode_cf_variable
 
-class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
+def encode_zarr_variable(var, needs_copy=True, name=None):
+    """
+    Converts an Variable into an Variable which follows some
+    of the CF conventions:
+
+        - Nans are masked using _FillValue (or the deprecated missing_value)
+        - Rescaling via: scale_factor and add_offset
+        - datetimes are converted to the CF 'units since time' format
+        - dtype encodings are enforced.
+
+    Parameters
+    ----------
+    var : xarray.Variable
+        A variable holding un-encoded data.
+
+    Returns
+    -------
+    out : xarray.Variable
+        A variable which has been encoded as described above.
+    """
+    var = conventions.maybe_encode_datetime(var, name=name)
+    var = conventions.maybe_encode_timedelta(var, name=name)
+    var, needs_copy = conventions.maybe_encode_offset_and_scale(var,
+                                                        needs_copy, name=name)
+    var, needs_copy = conventions.maybe_encode_fill_value(var, needs_copy,
+                                                          name=name)
+    var = conventions.maybe_encode_nonstring_dtype(var, name=name)
+    var = conventions.maybe_default_fill_value(var)
+    var = conventions.maybe_encode_bools(var)
+    var = conventions.ensure_dtype_not_object(var, name=name)
+    var = conventions.maybe_encode_string_dtype(var, name=name)
+    return var
+
+
+class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
     """Store for reading and writing data via zarr
     """
 
@@ -374,6 +410,12 @@ class ZarrStore(WritableCFDataStore, DataStorePickleMixin):
 
         return zarr_array, variable.data
 
+
+    def store(self, variables, attributes, *args, **kwargs):
+        new_vars = OrderedDict((k, encode_zarr_variable(v, name=k))
+                               for k, v in iteritems(variables))
+        AbstractWritableDataStore.store(self, new_vars, attributes,
+                                        *args, **kwargs)
     # sync() and close() methods should not be needed with zarr
 
 
