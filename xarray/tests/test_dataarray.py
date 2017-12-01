@@ -3119,6 +3119,10 @@ class TestDataArray(TestCase):
         y =  DataArray(['c', 'b', 'a'])
         self.assertDataArrayEqual(y.rank('dim_0'), x)
 
+        x = DataArray([3.0, 1.0, np.nan, 2.0], dims=('z',))
+        y = DataArray([1.0, 0.0, np.nan, 0.5], dims=('z',))
+        self.assertDataArrayEqual(y.rank('z', pct=True), y)
+
 
 @pytest.fixture(params=[1])
 def da(request):

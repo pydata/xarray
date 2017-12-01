@@ -1981,6 +1981,8 @@ class DataArray(AbstractArray, BaseDataObject):
 
         NaNs in the input array are returned as NaNs.
 
+        The `bottleneck` library is required.
+
         Parameters
         ----------
         dim : str
@@ -2006,7 +2008,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ranks = apply_ufunc(func, self,
                             dask='parallelized',
                             keep_attrs=True,
-                            output_dtypes=[np.float_],
+                            output_dtypes=[np.float64],
                             kwargs=dict(axis=axis)).transpose(*self.dims)
         if not pct:
             return ranks
