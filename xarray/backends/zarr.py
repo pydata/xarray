@@ -277,6 +277,11 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     out : xarray.Variable
         A variable which has been encoded as described above.
     """
+
+    if var.dtype.kind == 'O':
+        raise NotImplementedError("Variable `%s` is an object. "
+                                  "Zarr store can't yet encode objects." % name)
+
     var = conventions.maybe_encode_datetime(var, name=name)
     var = conventions.maybe_encode_timedelta(var, name=name)
     var, needs_copy = conventions.maybe_encode_offset_and_scale(var,

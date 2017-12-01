@@ -1103,6 +1103,8 @@ class BaseZarrTest(CFEncodedDataTest):
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
 
+
+
     def test_chunk_encoding(self):
         data = create_test_data()
         chunks = (5, 5)
@@ -1114,14 +1116,34 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(data) as actual:
                 pass
 
+
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=True)
 
 
+    # TODO: implement zarr object encoding and make these tests pass
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_multiindex_not_implemented(self):
+        super(CFEncodedDataTest, self).test_multiindex_not_implemented()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_bytes_with_fill_value(self):
+        super(CFEncodedDataTest, self).test_roundtrip_bytes_with_fill_value()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_object_dtype(self):
+        super(CFEncodedDataTest, self).test_roundtrip_object_dtype()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_string_encoded_characters(self):
+        super(CFEncodedDataTest,
+              self).test_roundtrip_string_encoded_characters()
+
+    # TODO: someone who understand caching figure out whether chaching
+    # makes sense for Zarr backend
+    @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
-        # TODO: someone who understand caching figure out whether chaching
-        # makes sense for Zarr backend
-        pass
+        super(CFEncodedDataTest, self).test_dataset_caching()
 
 
 @requires_zarr
