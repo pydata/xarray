@@ -85,12 +85,12 @@ def lazy_elemwise_func(array, func, dtype):
 
     Returns
     -------
-    Either a dask.array.Array or _LazyFuncArray.
+    Either a dask.array.Array or _ElementwiseFunctionArray.
     """
     if isinstance(array, dask_array_type):
         return array.map_blocks(func, dtype=dtype)
     else:
-        return _LazyFuncArray(array, func, dtype)
+        return _ElementwiseFunctionArray(array, func, dtype)
 
 
 def unpack_for_encoding(var):
