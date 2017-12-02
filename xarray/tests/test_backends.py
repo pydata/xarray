@@ -1819,7 +1819,7 @@ class TestPyNioAutocloseTrue(TestPyNio):
 class TestRasterio(TestCase):
 
     @requires_scipy_or_netCDF4
-    def test_serialization(self):
+    def test_netcdf_serialization(self):
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1878,6 +1878,37 @@ class TestRasterio(TestCase):
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
+                assert 'res' in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert 'is_tiled' in rioda.attrs
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert 'transform' in rioda.attrs
+                assert isinstance(rioda.attrs['transform'], tuple)
+
+    def test_non_rectilinear(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file with 2d coordinates
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(0, 3, 1, 1).rotation(45)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Not much we can test here. See if things are parsed ok
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert rioda['xx'].shape == rioda['yy'].shape
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+                assert 'crs' not in rioda.attrs
                 assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert 'is_tiled' in rioda.attrs

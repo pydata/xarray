@@ -84,7 +84,8 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin,
         return out
 
 
-def open_rasterio(filename, chunks=None, cache=None, lock=None):
+def open_rasterio(filename, parse_coordinates=True, chunks=None, cache=None,
+                  lock=None):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -98,11 +99,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     ----------
     filename : str
         Path to the file to open.
-
-    Returns
-    -------
-    data : DataArray
-        The newly created DataArray.
+    parse_coordinates : bool, optional
+        Whether to parse the x and y coordinates out of the file's
+        ``transform`` attribute or not. It can  be useful to switch this off
+        if your files are large or if you don't need the coordinates.
     chunks : int, tuple or dict, optional
         Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
         ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new
@@ -117,6 +117,11 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         :py:func:`dask.array.from_array`. By default, a global lock is
         used to avoid issues with concurrent access to the same file when using
         dask's multithreaded backend.
+
+    Returns
+    -------
+    data : DataArray
+        The newly created DataArray.
     """
 
     import rasterio
@@ -133,21 +138,24 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     coords['band'] = np.asarray(riods.indexes)
 
     # Get coordinates
-    if LooseVersion(rasterio.__version__) < '1.0':
-        transform = riods.affine
-    else:
-        transform = riods.transform
-    nx, ny = riods.width, riods.height
-    if transform.is_rectilinear:
-        # Xarray's convention is pixel centered
-        x, _ = (np.arange(nx)+0.5, np.zeros(nx)+0.5) * transform
-        _, y = (np.zeros(ny)+0.5, np.arange(ny)+0.5) * transform
-    else:
-        # Can this happen?
-        raise RuntimeError()
-
-    coords['y'] = y
-    coords['x'] = x
+    if parse_coordinates:
+        if LooseVersion(rasterio.__version__) < '1.0':
+            transform = riods.affine
+        else:
+            transform = riods.transform
+        nx, ny = riods.width, riods.height
+        if transform.is_rectilinear:
+            # for 1d coordinates we need two calls: columns and rows
+            # xarray's convention is pixel centered
+            x, _ = (np.arange(nx)+0.5, np.zeros(nx)+0.5) * transform
+            _, y = (np.zeros(ny)+0.5, np.arange(ny)+0.5) * transform
+            coords['y'] = y
+            coords['x'] = x
+        else:
+            # 2d coordinates
+            x, y = np.meshgrid(np.arange(nx), np.arange(ny)) * transform
+            coords['yy'] = (('y', 'x'), y)
+            coords['xx'] = (('y', 'x'), x)
 
     # Attributes
     attrs = {}
