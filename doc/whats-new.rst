@@ -28,6 +28,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+.. _whats-new.0.10.0:
+
 v0.10.0 (20 November 2017)
 --------------------------
 
