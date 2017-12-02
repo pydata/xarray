@@ -151,7 +151,8 @@ def open_rasterio(filename, parse_coordinates=True, chunks=None, cache=None,
             coords['x'] = x
         else:
             # 2d coordinates
-            x, y = np.meshgrid(np.arange(nx), np.arange(ny)) * transform
+            x, y = (np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) *
+                    transform)
             coords['yy'] = (('y', 'x'), y)
             coords['xx'] = (('y', 'x'), x)
 
