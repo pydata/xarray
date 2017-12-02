@@ -444,7 +444,7 @@ class DatasetIOTestCases(object):
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
-                if isinstance(obj.array, indexing.NDArrayIndexable):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
                 else:
                     if isinstance(obj.array, np.ndarray):
@@ -491,6 +491,13 @@ class DatasetIOTestCases(object):
             expected = in_memory.dropna(dim='x')
             actual = on_disk.dropna(dim='x')
             assert_identical(expected, actual)
+
+    def test_ondisk_after_print(self):
+        """ Make sure print does not load file into memory """
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            repr(on_disk)
+            assert not on_disk['var1']._in_memory
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -719,6 +726,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
+    def test_multiindex_not_implemented(self):
+        ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
+              .set_index(x=['y', 'z']))
+        with raises_regex(NotImplementedError, 'MultiIndex'):
+            with self.roundtrip(ds):
+                pass
+
 
 _counter = itertools.count()
 
@@ -916,6 +930,21 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
+
+    def test_encoding_chunksizes_unlimited(self):
+        # regression test for GH1225
+        ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
+        ds.variables['x'].encoding = {
+            'zlib': False,
+            'shuffle': False,
+            'complevel': 0,
+            'fletcher32': False,
+            'contiguous': False,
+            'chunksizes': (2 ** 20,),
+            'original_shape': (3,),
+        }
+        with self.roundtrip(ds) as actual:
+            self.assertDatasetEqual(ds, actual)
 
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
@@ -1238,6 +1267,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             self.assertDatasetEqual(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
@@ -1779,11 +1809,11 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_orthogonal_indexing()
 
     def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_isel_dataarray()
 
     def test_array_type_after_indexing(self):

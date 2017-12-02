@@ -14,7 +14,7 @@ import pytest
 
 from xarray.core import utils
 from xarray.core.pycompat import PY3
-from xarray.core.indexing import NDArrayIndexable
+from xarray.core.indexing import ExplicitlyIndexed
 from xarray.testing import assert_equal, assert_identical, assert_allclose
 from xarray.plot.utils import import_seaborn
 
@@ -199,7 +199,7 @@ class UnexpectedDataAccess(Exception):
     pass
 
 
-class InaccessibleArray(utils.NDArrayMixin, NDArrayIndexable):
+class InaccessibleArray(utils.NDArrayMixin, ExplicitlyIndexed):
 
     def __init__(self, array):
         self.array = array
@@ -212,6 +212,17 @@ class ReturnItem(object):
 
     def __getitem__(self, key):
         return key
+
+
+class IndexerMaker(object):
+
+    def __init__(self, indexer_cls):
+        self._indexer_cls = indexer_cls
+
+    def __getitem__(self, key):
+        if not isinstance(key, tuple):
+            key = (key,)
+        return self._indexer_cls(key)
 
 
 def source_ndarray(array):

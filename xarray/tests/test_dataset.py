@@ -1556,7 +1556,8 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('time', np.random.randn(5))},
                            {'time': range(5)})
         time2 = DataArray(np.arange(5), dims="time2")
-        actual = expected.reindex(time=time2)
+        with pytest.warns(FutureWarning):
+            actual = expected.reindex(time=time2)
         self.assertDatasetIdentical(actual, expected)
 
         # another regression test
@@ -2005,6 +2006,12 @@ class TestDataset(TestCase):
 
         ds.set_index(x=mindex.names, inplace=True)
         self.assertDatasetIdentical(ds, expected)
+
+        # ensure set_index with no existing index and a single data var given
+        # doesn't return multi-index
+        ds = Dataset(data_vars={'x_var': ('x', [0, 1, 2])})
+        expected = Dataset(coords={'x': [0, 1, 2]})
+        self.assertDataArrayIdentical(ds.set_index(x='x_var'), expected)
 
     def test_reset_index(self):
         ds = create_test_multiindex()
