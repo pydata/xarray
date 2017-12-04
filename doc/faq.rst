@@ -72,7 +72,7 @@ Why don't aggregations return Python scalars?
 xarray tries hard to be self-consistent: operations on a ``DataArray`` (resp.
 ``Dataset``) return another ``DataArray`` (resp. ``Dataset``) object. In
 particular, operations returning scalar values (e.g. indexing or aggregations
-like `mean` or `sum` applied to all axes) will also return xarray objects.
+like ``mean`` or ``sum`` applied to all axes) will also return xarray objects.
 
 Unfortunately, this means we sometimes have to explicitly cast our results from
 xarray when using them in other libraries. As an illustration, the following
