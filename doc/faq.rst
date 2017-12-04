@@ -83,12 +83,19 @@ code fragment
     arr = xr.DataArray([1, 2, 3])
     pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()})
 
-does not yield the pandas DataFrame we expected. We need to do the type
+does not yield the pandas DataFrame we expected. We need to specify the type
 conversion ourselves:
 
 .. ipython:: python
 
-    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()}).astype(float)
+    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()}, dtype=float)
+
+Alternatively, we could use the ``item`` method or the ``float`` constructor to
+convert values one at a time
+
+.. ipython:: python
+
+    pd.Series({'x': arr[0].item(), 'mean': float(arr.mean())})
 
 
 .. _approach to metadata:
