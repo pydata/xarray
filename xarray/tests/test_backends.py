@@ -22,7 +22,8 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
-from xarray.core.pycompat import iteritems, PY2, ExitStack, basestring
+from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
+                                  dask_array_type)
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -31,7 +32,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                assert_identical, raises_regex)
 from .test_dataset import create_test_data
 
-from xarray.tests import mock
+from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -375,9 +376,17 @@ class DatasetIOTestCases(object):
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(original, actual)
 
-        expected = original.drop('foo')
-        with self.roundtrip(expected) as actual:
-            self.assertDatasetIdentical(expected, actual)
+    def test_roundtrip_global_coordinates(self):
+        original = Dataset({'x': [2, 3], 'y': ('a', [42]), 'z': ('x', [4, 5])})
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+    def test_roundtrip_coordinates_with_space(self):
+        original = Dataset(coords={'x': 0, 'y z': 1})
+        expected = Dataset({'y z': 1}, {'x': 0})
+        with pytest.warns(xr.SerializationWarning):
+            with self.roundtrip(original) as actual:
+                self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_boolean_dtype(self):
         original = create_boolean_data()
@@ -393,11 +402,102 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+
+    def _test_vectorized_indexing(self, vindex_support=True):
+        # Make sure vectorized_indexing works or at least raises
+        # NotImplementedError
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
+                        'dim2': DataArray([0, 2, 3], dims='a')}
+            expected = in_memory.isel(**indexers)
+            if vindex_support:
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+                # do it twice, to make sure we're switched from
+                # orthogonal -> numpy when we cached the values
+                actual = on_disk.isel(**indexers)
+                assert_identical(expected, actual)
+            else:
+                with raises_regex(NotImplementedError, 'Vectorized indexing '):
+                    actual = on_disk.isel(**indexers)
+
+    def test_vectorized_indexing(self):
+        # This test should be overwritten if vindex is supported
+        self._test_vectorized_indexing(vindex_support=False)
+
+    def test_isel_dataarray(self):
+        # Make sure isel works lazily. GH:issue:1688
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            expected = in_memory.isel(dim2=in_memory['dim2'] < 3)
+            actual = on_disk.isel(dim2=on_disk['dim2'] < 3)
             self.assertDatasetIdentical(expected, actual)
+
+    def validate_array_type(self, ds):
+        # Make sure that only NumpyIndexingAdapter stores a bare np.ndarray.
+        def find_and_validate_array(obj):
+            # recursively called function. obj: array or array wrapper.
+            if hasattr(obj, 'array'):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
+                    find_and_validate_array(obj.array)
+                else:
+                    if isinstance(obj.array, np.ndarray):
+                        assert isinstance(obj, indexing.NumpyIndexingAdapter)
+                    elif isinstance(obj.array, dask_array_type):
+                        assert isinstance(obj, indexing.DaskIndexingAdapter)
+                    elif isinstance(obj.array, pd.Index):
+                        assert isinstance(obj, indexing.PandasIndexAdapter)
+                    else:
+                        raise TypeError('{} is wrapped by {}'.format(
+                                            type(obj.array), type(obj)))
+
+        for k, v in ds.variables.items():
+            find_and_validate_array(v._data)
+
+    def test_array_type_after_indexing(self):
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            indexers = {'dim1': [1, 2, 0], 'dim2': [3, 2, 0, 3],
+                        'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+            # do it twice, to make sure we're switched from orthogonal -> numpy
+            # when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            self.validate_array_type(actual)
+
+    def test_dropna(self):
+        # regression test for GH:issue:1694
+        a = np.random.randn(4, 3)
+        a[1, 1] = np.NaN
+        in_memory = xr.Dataset({'a': (('y', 'x'), a)},
+                               coords={'y': np.arange(4), 'x': np.arange(3)})
+
+        assert_identical(in_memory.dropna(dim='x'),
+                         in_memory.isel(x=slice(None, None, 2)))
+
+        with self.roundtrip(in_memory) as on_disk:
+            self.validate_array_type(on_disk)
+            expected = in_memory.dropna(dim='x')
+            actual = on_disk.dropna(dim='x')
+            assert_identical(expected, actual)
+
+    def test_ondisk_after_print(self):
+        """ Make sure print does not load file into memory """
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            repr(on_disk)
+            assert not on_disk['var1']._in_memory
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -623,6 +723,16 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.open(tmp_file) as actual:
                 self.assertDatasetIdentical(data, actual)
 
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=False)
+
+    def test_multiindex_not_implemented(self):
+        ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
+              .set_index(x=['y', 'z']))
+        with raises_regex(NotImplementedError, 'MultiIndex'):
+            with self.roundtrip(ds):
+                pass
+
 
 _counter = itertools.count()
 
@@ -821,6 +931,21 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             self.assertDatasetEqual(expected, actual)
 
+    def test_encoding_chunksizes_unlimited(self):
+        # regression test for GH1225
+        ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
+        ds.variables['x'].encoding = {
+            'zlib': False,
+            'shuffle': False,
+            'complevel': 0,
+            'fletcher32': False,
+            'contiguous': False,
+            'chunksizes': (2 ** 20,),
+            'original_shape': (3,),
+        }
+        with self.roundtrip(ds) as actual:
+            self.assertDatasetEqual(ds, actual)
+
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
             with nc4.Dataset(tmp_file, mode='w') as nc:
@@ -946,6 +1071,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
 
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
@@ -1139,6 +1267,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             self.assertDatasetEqual(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
@@ -1161,6 +1290,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_orthogonal_indexing(self):
         # doesn't work for h5py (without using dask as an intermediate layer)
+        pass
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
         pass
 
     def test_complex(self):
@@ -1411,8 +1544,11 @@ class DaskTest(TestCase, DatasetIOTestCases):
                   allow_cleanup_failure=False):
         yield data.chunk()
 
+    # Override methods in DatasetIOTestCases - not applicable to dask
     def test_roundtrip_string_encoded_characters(self):
-        # Override method in DatasetIOTestCases - not applicable to dask
+        pass
+
+    def test_roundtrip_coordinates_with_space(self):
         pass
 
     def test_roundtrip_datetime_data(self):
@@ -1523,7 +1659,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(TypeError, 'supports writing Dataset'):
             save_mfdataset([da], ['dataarray'])
 
-
     @requires_pathlib
     def test_save_mfdataset_pathlib_roundtrip(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -1608,6 +1743,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
 
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
 
 class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
@@ -1671,6 +1809,15 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
+        with raises_regex(NotImplementedError, 'Outer indexing'):
+            super(TestPyNio, self).test_orthogonal_indexing()
+
+    def test_isel_dataarray(self):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
+            super(TestPyNio, self).test_isel_dataarray()
+
+    def test_array_type_after_indexing(self):
+        # pynio also does not support list-like indexing
         pass
 
     @contextlib.contextmanager
@@ -1701,7 +1848,35 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 class TestRasterio(TestCase):
 
-    def test_serialization_utm(self):
+    @requires_scipy_or_netCDF4
+    def test_serialization(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file in utm proj
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Write it to a netcdf and read again (roundtrip)
+            with xr.open_rasterio(tmp_file) as rioda:
+                with create_tmp_file(suffix='.nc') as tmp_nc_file:
+                    rioda.to_netcdf(tmp_nc_file)
+                    with xr.open_dataarray(tmp_nc_file) as ncds:
+                        assert_identical(rioda, ncds)
+
+    def test_utm(self):
         import rasterio
         from rasterio.transform import from_origin
 
@@ -1740,13 +1915,7 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
-
-    def test_serialization_platecarree(self):
+    def test_platecarree(self):
 
         import rasterio
         from rasterio.transform import from_origin
@@ -1783,12 +1952,6 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
-
-                # Write it to a netcdf and read again (roundtrip)
-                with create_tmp_file(suffix='.nc') as tmp_nc_file:
-                    rioda.to_netcdf(tmp_nc_file)
-                    with xr.open_dataarray(tmp_nc_file) as ncds:
-                        assert_identical(rioda, ncds)
 
     def test_indexing(self):
 
@@ -1851,7 +2014,6 @@ class TestRasterio(TestCase):
                     actual.isel(x=[4, 2]).values
                 with raises_regex(IndexError, err_msg):
                     actual.isel(x=slice(5, 2, -1)).values
-
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)

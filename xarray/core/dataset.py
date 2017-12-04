@@ -136,6 +136,14 @@ def merge_indexes(
         names, labels, levels = [], [], []
         current_index_variable = variables.get(dim)
 
+        for n in var_names:
+            var = variables[n]
+            if (current_index_variable is not None and
+                    var.dims != current_index_variable.dims):
+                raise ValueError(
+                    "dimension mismatch between %r %s and %r %s"
+                    % (dim, current_index_variable.dims, n, var.dims))
+
         if current_index_variable is not None and append:
             current_index = current_index_variable.to_index()
             if isinstance(current_index, pd.MultiIndex):
@@ -148,20 +156,19 @@ def merge_indexes(
                 labels.append(cat.codes)
                 levels.append(cat.categories)
 
-        for n in var_names:
-            names.append(n)
-            var = variables[n]
-            if ((current_index_variable is not None) and
-                    (var.dims != current_index_variable.dims)):
-                raise ValueError(
-                    "dimension mismatch between %r %s and %r %s"
-                    % (dim, current_index_variable.dims, n, var.dims))
-            else:
+        if not len(names) and len(var_names) == 1:
+            idx = pd.Index(variables[var_names[0]].values)
+
+        else:
+            for n in var_names:
+                names.append(n)
+                var = variables[n]
                 cat = pd.Categorical(var.values, ordered=True)
                 labels.append(cat.codes)
                 levels.append(cat.categories)
 
-        idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+            idx = pd.MultiIndex(labels=labels, levels=levels, names=names)
+
         vars_to_replace[dim] = IndexVariable(dim, idx)
         vars_to_remove.extend(var_names)
 
@@ -492,6 +499,77 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 v.load()
 
         return self
+
+    def __dask_graph__(self):
+        graphs = {k: v.__dask_graph__() for k, v in self.variables.items()}
+        graphs = {k: v for k, v in graphs.items() if v is not None}
+        if not graphs:
+            return None
+        else:
+            from dask import sharedict
+            return sharedict.merge(*graphs.values())
+
+    def __dask_keys__(self):
+        import dask
+        return [v.__dask_keys__() for v in self.variables.values()
+                if dask.is_dask_collection(v)]
+
+    @property
+    def __dask_optimize__(self):
+        import dask.array as da
+        return da.Array.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        import dask.array as da
+        return da.Array.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        import dask
+        info = [(True, k, v.__dask_postcompute__())
+                if dask.is_dask_collection(v) else
+                (False, k, v) for k, v in self._variables.items()]
+        return self._dask_postcompute, (info, self._coord_names, self._dims,
+                                        self._attrs, self._file_obj,
+                                        self._encoding)
+
+    def __dask_postpersist__(self):
+        import dask
+        info = [(True, k, v.__dask_postpersist__())
+                if dask.is_dask_collection(v) else
+                (False, k, v) for k, v in self._variables.items()]
+        return self._dask_postpersist, (info, self._coord_names, self._dims,
+                                        self._attrs, self._file_obj,
+                                        self._encoding)
+
+    @staticmethod
+    def _dask_postcompute(results, info, *args):
+        variables = OrderedDict()
+        results2 = list(results[::-1])
+        for is_dask, k, v in info:
+            if is_dask:
+                func, args2 = v
+                r = results2.pop()
+                result = func(r, *args2)
+            else:
+                result = v
+            variables[k] = result
+
+        final = Dataset._construct_direct(variables, *args)
+        return final
+
+    @staticmethod
+    def _dask_postpersist(dsk, info, *args):
+        variables = OrderedDict()
+        for is_dask, k, v in info:
+            if is_dask:
+                func, args2 = v
+                result = func(dsk, *args2)
+            else:
+                result = v
+            variables[k] = result
+
+        return Dataset._construct_direct(variables, *args)
 
     def compute(self, **kwargs):
         """Manually trigger loading of this dataset's data from disk or a

@@ -11,7 +11,11 @@ import pandas as pd
 from xarray import Dataset, DataArray, Variable
 from xarray.core import indexing
 from xarray.core import nputils
-from . import TestCase, ReturnItem, raises_regex
+from xarray.core.pycompat import native_int_types
+from . import TestCase, ReturnItem, raises_regex, IndexerMaker
+
+
+B = IndexerMaker(indexing.BasicIndexer)
 
 
 class TestIndexers(TestCase):
@@ -169,6 +173,16 @@ class TestLazyArray(TestCase):
                         self.assertArrayEqual(expected, actual)
                         assert isinstance(actual._data,
                                           indexing.LazilyIndexedArray)
+
+                        # make sure actual.key is appropriate type
+                        if all(isinstance(k, native_int_types + (slice, ))
+                               for k in v_lazy._data.key.tuple):
+                            assert isinstance(v_lazy._data.key,
+                                              indexing.BasicIndexer)
+                        else:
+                            assert isinstance(v_lazy._data.key,
+                                              indexing.OuterIndexer)
+
         # test sequentially applied indexers
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
@@ -186,16 +200,16 @@ class TestCopyOnWriteArray(TestCase):
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        wrapped[:] = 0
+        wrapped[B[:]] = 0
         self.assertArrayEqual(original, np.arange(10))
         self.assertArrayEqual(wrapped, np.zeros(10))
 
     def test_sub_array(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
-        child = wrapped[:5]
+        child = wrapped[B[:5]]
         self.assertIsInstance(child, indexing.CopyOnWriteArray)
-        child[:] = 0
+        child[B[:]] = 0
         self.assertArrayEqual(original, np.arange(10))
         self.assertArrayEqual(wrapped, np.arange(10))
         self.assertArrayEqual(child, np.zeros(5))
@@ -203,7 +217,7 @@ class TestCopyOnWriteArray(TestCase):
     def test_index_scalar(self):
         # regression test for GH1374
         x = indexing.CopyOnWriteArray(np.array(['foo', 'bar']))
-        assert np.array(x[0][()]) == 'foo'
+        assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
 class TestMemoryCachedArray(TestCase):
@@ -211,60 +225,163 @@ class TestMemoryCachedArray(TestCase):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         self.assertArrayEqual(wrapped, np.arange(10))
-        self.assertIsInstance(wrapped.array, np.ndarray)
+        self.assertIsInstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
-        child = wrapped[:5]
+        child = wrapped[B[:5]]
         self.assertIsInstance(child, indexing.MemoryCachedArray)
         self.assertArrayEqual(child, np.arange(5))
-        self.assertIsInstance(child.array, np.ndarray)
+        self.assertIsInstance(child.array, indexing.NumpyIndexingAdapter)
         self.assertIsInstance(wrapped.array, indexing.LazilyIndexedArray)
 
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
-        wrapped[:] = 0
+        wrapped[B[:]] = 0
         self.assertArrayEqual(original, np.zeros(10))
 
     def test_index_scalar(self):
         # regression test for GH1374
         x = indexing.MemoryCachedArray(np.array(['foo', 'bar']))
-        assert np.array(x[0][()]) == 'foo'
+        assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
-class TestIndexerTuple(TestCase):
-    """ Make sure _outer_to_numpy_indexer gives similar result to
-    Variable._broadcast_indexes_vectorized
-    """
-    def test_outer_indexer(self):
-        def nonzero(x):
-            if isinstance(x, np.ndarray) and x.dtype.kind == 'b':
-                x = x.nonzero()[0]
-            return x
-        original = np.random.rand(10, 20, 30)
-        v = Variable(['i', 'j', 'k'], original)
-        I = ReturnItem()
-        # test orthogonally applied indexers
-        indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
-                    np.arange(10) < 5]
-        for i, j, k in itertools.product(indexers, repeat=3):
+def test_base_explicit_indexer():
+    with pytest.raises(TypeError):
+        indexing.ExplicitIndexer(())
 
-            if isinstance(j, np.ndarray) and j.dtype.kind == 'b':  # match size
-                j = np.arange(20) < 4
-            if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
-                k = np.arange(30) < 8
+    class Subclass(indexing.ExplicitIndexer):
+        pass
 
-            _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
-            expected_data = nputils.NumpyVIndexAdapter(v.data)[expected]
-            if new_order:
-                old_order = range(len(new_order))
-                expected_data = np.moveaxis(expected_data, old_order,
-                                            new_order)
+    value = Subclass((1, 2, 3))
+    assert value.tuple == (1, 2, 3)
+    assert repr(value) == 'Subclass((1, 2, 3))'
 
-            outer_index = indexing.OuterIndexer(
-                (nonzero(i), nonzero(j), nonzero(k)))
-            actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
-            actual_data = v.data[actual]
-            self.assertArrayEqual(actual_data, expected_data)
+
+@pytest.mark.parametrize('indexer_cls', [indexing.BasicIndexer,
+                                         indexing.OuterIndexer,
+                                         indexing.VectorizedIndexer])
+def test_invalid_for_all(indexer_cls):
+    with pytest.raises(TypeError):
+        indexer_cls(None)
+    with pytest.raises(TypeError):
+        indexer_cls(([],))
+    with pytest.raises(TypeError):
+        indexer_cls((None,))
+    with pytest.raises(TypeError):
+        indexer_cls(('foo',))
+    with pytest.raises(TypeError):
+        indexer_cls((1.0,))
+    with pytest.raises(TypeError):
+        indexer_cls((slice('foo'),))
+    with pytest.raises(TypeError):
+        indexer_cls((np.array(['foo']),))
+
+
+def check_integer(indexer_cls):
+    value = indexer_cls((1, np.uint64(2),)).tuple
+    assert all(isinstance(v, int) for v in value)
+    assert value == (1, 2)
+
+
+def check_slice(indexer_cls):
+    (value,) = indexer_cls((slice(1, None, np.int64(2)),)).tuple
+    assert value == slice(1, None, 2)
+    assert isinstance(value.step, native_int_types)
+
+
+def check_array1d(indexer_cls):
+    (value,) = indexer_cls((np.arange(3, dtype=np.int32),)).tuple
+    assert value.dtype == np.int64
+    np.testing.assert_array_equal(value, [0, 1, 2])
+
+
+def check_array2d(indexer_cls):
+    array = np.array([[1, 2], [3, 4]], dtype=np.int64)
+    (value,) = indexer_cls((array,)).tuple
+    assert value.dtype == np.int64
+    np.testing.assert_array_equal(value, array)
+
+
+def test_basic_indexer():
+    check_integer(indexing.BasicIndexer)
+    check_slice(indexing.BasicIndexer)
+    with pytest.raises(TypeError):
+        check_array1d(indexing.BasicIndexer)
+    with pytest.raises(TypeError):
+        check_array2d(indexing.BasicIndexer)
+
+
+def test_outer_indexer():
+    check_integer(indexing.OuterIndexer)
+    check_slice(indexing.OuterIndexer)
+    check_array1d(indexing.OuterIndexer)
+    with pytest.raises(TypeError):
+        check_array2d(indexing.OuterIndexer)
+
+
+def test_vectorized_indexer():
+    with pytest.raises(TypeError):
+        check_integer(indexing.VectorizedIndexer)
+    check_slice(indexing.VectorizedIndexer)
+    check_array1d(indexing.VectorizedIndexer)
+    check_array2d(indexing.VectorizedIndexer)
+
+
+def test_unwrap_explicit_indexer():
+    indexer = indexing.BasicIndexer((1, 2))
+    target = None
+
+    unwrapped = indexing.unwrap_explicit_indexer(
+        indexer, target, allow=indexing.BasicIndexer)
+    assert unwrapped == (1, 2)
+
+    with raises_regex(NotImplementedError, 'Load your data'):
+        indexing.unwrap_explicit_indexer(
+            indexer, target, allow=indexing.OuterIndexer)
+
+    with raises_regex(TypeError, 'unexpected key type'):
+        indexing.unwrap_explicit_indexer(
+            indexer.tuple, target, allow=indexing.OuterIndexer)
+
+
+def test_implicit_indexing_adapter():
+    array = np.arange(10)
+    implicit = indexing.ImplicitToExplicitIndexingAdapter(
+        indexing.NumpyIndexingAdapter(array), indexing.BasicIndexer)
+    np.testing.assert_array_equal(array, np.asarray(implicit))
+    np.testing.assert_array_equal(array, implicit[:])
+
+
+def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
+    def nonzero(x):
+        if isinstance(x, np.ndarray) and x.dtype.kind == 'b':
+            x = x.nonzero()[0]
+        return x
+
+    original = np.random.rand(10, 20, 30)
+    v = Variable(['i', 'j', 'k'], original)
+    I = ReturnItem()
+    # test orthogonally applied indexers
+    indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
+                np.arange(10) < 5]
+    for i, j, k in itertools.product(indexers, repeat=3):
+
+        if isinstance(j, np.ndarray) and j.dtype.kind == 'b':  # match size
+            j = np.arange(20) < 4
+        if isinstance(k, np.ndarray) and k.dtype.kind == 'b':
+            k = np.arange(30) < 8
+
+        _, expected, new_order = v._broadcast_indexes_vectorized((i, j, k))
+        expected_data = nputils.NumpyVIndexAdapter(v.data)[expected.tuple]
+        if new_order:
+            old_order = range(len(new_order))
+            expected_data = np.moveaxis(expected_data, old_order,
+                                        new_order)
+
+        outer_index = (nonzero(i), nonzero(j), nonzero(k))
+        actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
+        actual_data = v.data[actual]
+        np.testing.assert_array_equal(actual_data, expected_data)

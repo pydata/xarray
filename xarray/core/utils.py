@@ -13,7 +13,8 @@ from collections import Mapping, MutableMapping, MutableSet, Iterable
 import numpy as np
 import pandas as pd
 
-from .pycompat import iteritems, OrderedDict, basestring, bytes_type
+from .pycompat import (iteritems, OrderedDict, basestring, bytes_type,
+                       dask_array_type)
 
 
 def alias_message(old_name, new_name):
@@ -188,7 +189,7 @@ def is_scalar(value):
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (basestring, bytes_type)) or not
-        isinstance(value, Iterable))
+        isinstance(value, (Iterable, ) + dask_array_type))
 
 
 def is_valid_numpy_dtype(dtype):
@@ -436,12 +437,7 @@ class NdimSizeLenMixin(object):
             raise TypeError('len() of unsized object')
 
 
-class DunderArrayMixin(object):
-    def __array__(self, dtype=None):
-        return np.asarray(self[...], dtype=dtype)
-
-
-class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
+class NDArrayMixin(NdimSizeLenMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 

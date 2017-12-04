@@ -10,12 +10,10 @@ from .. import conventions
 from .. import Variable
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, NdimSizeLenMixin,
-                          DunderArrayMixin, close_on_error,
-                          is_remote_uri)
+from ..core.utils import (FrozenOrderedDict, close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
 
-from .common import (WritableCFDataStore, robust_getitem,
+from .common import (WritableCFDataStore, robust_getitem, BackendArray,
                      DataStorePickleMixin, find_root)
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
 
@@ -27,7 +25,7 @@ _endian_lookup = {'=': 'native',
                   '|': 'native'}
 
 
-class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
+class BaseNetCDF4Array(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
@@ -50,7 +48,8 @@ class BaseNetCDF4Array(NdimSizeLenMixin, DunderArrayMixin):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.to_tuple(key)
+        key = indexing.unwrap_explicit_indexer(
+            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
 
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
@@ -141,7 +140,11 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
-                                   lsd_okay=True, backend='netCDF4'):
+                                   lsd_okay=True, backend='netCDF4',
+                                   unlimited_dims=None):
+    if unlimited_dims is None:
+        unlimited_dims = ()
+
     encoding = variable.encoding.copy()
 
     safe_to_drop = set(['source', 'original_shape'])
@@ -150,10 +153,17 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 
-    if (encoding.get('chunksizes') is not None and
-            (encoding.get('original_shape', variable.shape) !=
-                variable.shape) and not raise_on_invalid):
-        del encoding['chunksizes']
+    if not raise_on_invalid and encoding.get('chunksizes') is not None:
+        # It's possible to get encoded chunksizes larger than a dimension size
+        # if the original file had an unlimited dimension. This is problematic
+        # if the new file no longer has an unlimited dimension.
+        chunksizes = encoding['chunksizes']
+        chunks_too_big = any(
+            c > d and dim not in unlimited_dims
+            for c, d, dim in zip(chunksizes, variable.shape, variable.dims))
+        changed_shape = encoding.get('original_shape') != variable.shape
+        if chunks_too_big or changed_shape:
+            del encoding['chunksizes']
 
     for k in safe_to_drop:
         if k in encoding:
@@ -340,7 +350,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                 'NC_CHAR type.' % name)
 
         encoding = _extract_nc4_variable_encoding(
-            variable, raise_on_invalid=check_encoding)
+            variable, raise_on_invalid=check_encoding,
+            unlimited_dims=unlimited_dims)
         nc4_var = self.ds.createVariable(
             varname=name,
             datatype=datatype,

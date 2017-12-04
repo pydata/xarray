@@ -19,7 +19,7 @@ from . import ops
 from . import utils
 from .pycompat import (basestring, OrderedDict, zip, integer_types,
                        dask_array_type)
-from .indexing import (PandasIndexAdapter, xarray_indexable, BasicIndexer,
+from .indexing import (PandasIndexAdapter, as_indexable, BasicIndexer,
                        OuterIndexer, VectorizedIndexer)
 from .utils import OrderedSet
 
@@ -31,6 +31,8 @@ except ImportError:
     pass
 
 
+NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
+    indexing.ExplicitlyIndexed, pd.Index) + dask_array_type
 BASIC_INDEXING_TYPES = integer_types + (slice,)
 
 
@@ -94,7 +96,7 @@ def as_variable(obj, name=None):
                             '{}'.format(obj))
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
-    elif getattr(obj, 'name', None) is not None:
+    elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
     elif name is not None:
         data = as_compatible_data(obj)
@@ -159,12 +161,7 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, Variable):
         return data.data
 
-    # add a custom fast-path for dask.array to avoid expensive checks for the
-    # dtype attribute
-    if isinstance(data, dask_array_type):
-        return data
-
-    if isinstance(data, pd.Index):
+    if isinstance(data, NON_NUMPY_SUPPORTED_ARRAY_TYPES):
         return _maybe_wrap_data(data)
 
     if isinstance(data, tuple):
@@ -177,14 +174,6 @@ def as_compatible_data(data, fastpath=False):
     if isinstance(data, timedelta):
         data = np.timedelta64(getattr(data, 'value', data), 'ns')
 
-    if (not hasattr(data, 'dtype') or not isinstance(data.dtype, np.dtype) or
-            not hasattr(data, 'shape') or
-            isinstance(data, (np.string_, np.unicode_,
-                              np.datetime64, np.timedelta64))):
-        # data must be ndarray-like
-        # don't allow non-numpy dtypes (e.g., categories)
-        data = np.asarray(data)
-
     # we don't want nested self-described arrays
     data = getattr(data, 'values', data)
 
@@ -196,6 +185,9 @@ def as_compatible_data(data, fastpath=False):
             data[mask] = fill_value
         else:
             data = np.asarray(data)
+
+    # validate whether the data is valid data types
+    data = np.asarray(data)
 
     if isinstance(data, np.ndarray):
         if data.dtype.kind == 'O':
@@ -298,7 +290,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _in_memory(self):
         return (isinstance(self._data, (np.ndarray, np.number, PandasIndexAdapter)) or
                 (isinstance(self._data, indexing.MemoryCachedArray) and
-                 isinstance(self._data.array, np.ndarray)))
+                 isinstance(self._data.array, indexing.NumpyIndexingAdapter)))
 
     @property
     def data(self):
@@ -317,7 +309,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _indexable_data(self):
-        return xarray_indexable(self._data)
+        return as_indexable(self._data)
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
@@ -362,6 +354,41 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         new = self.copy(deep=False)
         return new.load(**kwargs)
+
+    def __dask_graph__(self):
+        if isinstance(self._data, dask_array_type):
+            return self._data.__dask_graph__()
+        else:
+            return None
+
+    def __dask_keys__(self):
+        return self._data.__dask_keys__()
+
+    @property
+    def __dask_optimize__(self):
+        return self._data.__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        return self._data.__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        array_func, array_args = self._data.__dask_postcompute__()
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
+
+    def __dask_postpersist__(self):
+        array_func, array_args = self._data.__dask_postpersist__()
+        return self._dask_finalize, (array_func, array_args, self._dims,
+                                     self._attrs, self._encoding)
+
+    @staticmethod
+    def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
+        if isinstance(results, dict):  # persist case
+            name = array_args[0]
+            results = {k: v for k, v in results.items() if k[0] == name}  # cull
+        data = array_func(results, *array_args)
+        return Variable(dims, data, attrs=attrs, encoding=encoding)
 
     @property
     def values(self):
@@ -441,8 +468,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
         # Convert a scalar Variable as an integer
-        key = tuple([(k.data.item() if isinstance(k, Variable) and k.ndim == 0
-                      else k) for k in key])
+        key = tuple(
+            k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k
+            for k in key)
+
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
             return self._broadcast_indexes_basic(key)
 
@@ -461,9 +490,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 if len(k.dims) > 1:
                     return self._broadcast_indexes_vectorized(key)
                 dims.append(k.dims[0])
-            if not isinstance(k, integer_types):
+            elif not isinstance(k, integer_types):
                 dims.append(d)
-
         if len(set(dims)) == len(dims):
             return self._broadcast_indexes_outer(key)
 
@@ -506,17 +534,18 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         dims = tuple(k.dims[0] if isinstance(k, Variable) else dim
                      for k, dim in zip(key, self.dims)
                      if not isinstance(k, integer_types))
-        indexer = []
+
+        new_key = []
         for k in key:
             if isinstance(k, Variable):
                 k = k.data
-
-            if isinstance(k, BASIC_INDEXING_TYPES):
-                indexer.append(k)
-            else:
+            if not isinstance(k, BASIC_INDEXING_TYPES):
                 k = np.asarray(k)
-                indexer.append(k if k.dtype.kind != 'b' else np.flatnonzero(k))
-        return dims, OuterIndexer(indexer), None
+                if k.dtype.kind == 'b':
+                    (k,) = np.nonzero(k)
+            new_key.append(k)
+
+        return dims, OuterIndexer(tuple(new_key)), None
 
     def _nonzero(self):
         """ Equivalent numpy's nonzero but returns a tuple of Varibles. """
@@ -578,7 +607,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             new_order = None
 
-        return out_dims, VectorizedIndexer(out_key), new_order
+        return out_dims, VectorizedIndexer(tuple(out_key)), new_order
 
     def __getitem__(self, key):
         """Return a new Array object whose contents are consistent with
@@ -740,6 +769,12 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             if utils.is_dict_like(chunks):
                 chunks = tuple(chunks.get(n, s)
                                for n, s in enumerate(self.shape))
+            # da.from_array works by using lazily indexing with a tuple of
+            # slices. Using OuterIndexer is a pragmatic choice: dask does not
+            # yet handle different indexing types in an explicit way:
+            # https://github.com/dask/dask/issues/2883
+            data = indexing.ImplicitToExplicitIndexingAdapter(
+                data, indexing.OuterIndexer)
             data = da.from_array(data, chunks, name=name, lock=lock)
 
         return type(self)(self.dims, data, self._attrs, self._encoding,

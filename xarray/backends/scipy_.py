@@ -9,11 +9,10 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
-from ..core.utils import (Frozen, FrozenOrderedDict, NdimSizeLenMixin,
-                          DunderArrayMixin)
+from ..core.utils import (Frozen, FrozenOrderedDict)
 from ..core.indexing import NumpyIndexingAdapter
 
-from .common import WritableCFDataStore, DataStorePickleMixin
+from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
                       encode_nc3_variable)
 
@@ -31,7 +30,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class ScipyArrayWrapper(BackendArray):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore

@@ -4,14 +4,14 @@ from __future__ import print_function
 import numpy as np
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, NDArrayMixin
+from ..core.utils import FrozenOrderedDict, Frozen
 from ..core import indexing
 from ..core.pycompat import integer_types
 
-from .common import AbstractDataStore, robust_getitem
+from .common import AbstractDataStore, BackendArray, robust_getitem
 
 
-class PydapArrayWrapper(NDArrayMixin):
+class PydapArrayWrapper(BackendArray):
     def __init__(self, array):
         self.array = array
 
@@ -27,13 +27,9 @@ class PydapArrayWrapper(NDArrayMixin):
             return np.dtype(t.typecode + str(t.size))
 
     def __getitem__(self, key):
-        key = indexing.to_tuple(key)
-        if not isinstance(key, tuple):
-            key = (key,)
-        for k in key:
-            if not (isinstance(k, integer_types + (slice,)) or k is Ellipsis):
-                raise IndexError('pydap only supports indexing with int, '
-                                 'slice and Ellipsis objects')
+        key = indexing.unwrap_explicit_indexer(
+            key, target=self, allow=indexing.BasicIndexer)
+
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
         array = getattr(self.array, 'array', self.array)

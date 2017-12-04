@@ -1,11 +1,11 @@
 import os
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import DunderArrayMixin, NdimSizeLenMixin, is_scalar
+from ..core.utils import is_scalar
 from ..core import indexing
+from .common import BackendArray
 try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
@@ -18,7 +18,7 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'first.')
 
 
-class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds
@@ -38,7 +38,8 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self._shape
 
     def __getitem__(self, key):
-        key = indexing.to_tuple(key)
+        key = indexing.unwrap_explicit_indexer(
+            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
 
         # bands cannot be windowed but they can be listed
         band_key = key[0]

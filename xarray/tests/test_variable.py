@@ -15,9 +15,14 @@ import pandas as pd
 from xarray import Variable, IndexVariable, Coordinate, Dataset
 from xarray.core import indexing
 from xarray.core.variable import as_variable, as_compatible_data
-from xarray.core.indexing import PandasIndexAdapter, LazilyIndexedArray
+from xarray.core.indexing import (PandasIndexAdapter, LazilyIndexedArray,
+                                  BasicIndexer, OuterIndexer,
+                                  VectorizedIndexer, NumpyIndexingAdapter,
+                                  CopyOnWriteArray, MemoryCachedArray,
+                                  DaskIndexingAdapter)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
+from xarray.core.utils import NDArrayMixin
 
 from . import TestCase, source_ndarray, requires_dask, raises_regex
 
@@ -54,28 +59,29 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(expected, actual)
 
     def test_getitem_1d(self):
-        v = self.cls(['x'], [0, 1, 2])
+        data = np.array([0, 1, 2])
+        v = self.cls(['x'], data)
 
         v_new = v[dict(x=[0, 1])]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data[[0, 1]])
+        self.assertArrayEqual(v_new, data[[0, 1]])
 
         v_new = v[dict(x=slice(None))]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data)
+        self.assertArrayEqual(v_new, data)
 
         v_new = v[dict(x=Variable('a', [0, 1]))]
         assert v_new.dims == ('a', )
-        self.assertArrayEqual(v_new, v._data[[0, 1]])
+        self.assertArrayEqual(v_new, data[[0, 1]])
 
         v_new = v[dict(x=1)]
         assert v_new.dims == ()
-        self.assertArrayEqual(v_new, v._data[1])
+        self.assertArrayEqual(v_new, data[1])
 
         # tuple argument
         v_new = v[slice(None)]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data)
+        self.assertArrayEqual(v_new, data)
 
     def test_getitem_1d_fancy(self):
         v = self.cls(['x'], [0, 1, 2])
@@ -575,6 +581,9 @@ class VariableSubclassTestCases(object):
         v_new = v[np.array([0], dtype="uint64")]
         self.assertArrayEqual(v_new, v_data[[0], :])
 
+        v_new = v[np.uint64(0)]
+        self.assertArrayEqual(v_new, v_data[0, :])
+
     def test_getitem_0d_array(self):
         # make sure 0d-np.array can be used as an indexer
         v = self.cls(['x'], [0, 1, 2])
@@ -937,6 +946,39 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         vind = Variable(('a', 'b'), [[0, 2], [1, 3]])
         _, ind, _ = v._broadcast_indexes((vind, 3))
         assert type(ind) == indexing.VectorizedIndexer
+
+    def test_indexer_type(self):
+        # GH:issue:1688. Wrong indexer type induces NotImplementedError
+        data = np.random.random((10, 11))
+        v = Variable(['x', 'y'], data)
+
+        def assert_indexer_type(key, object_type):
+            dims, index_tuple, new_order = v._broadcast_indexes(key)
+            assert isinstance(index_tuple, object_type)
+
+        # should return BasicIndexer
+        assert_indexer_type((0, 1), BasicIndexer)
+        assert_indexer_type((0, slice(None, None)), BasicIndexer)
+        assert_indexer_type((Variable([], 3), slice(None, None)), BasicIndexer)
+        assert_indexer_type((Variable([], 3), (Variable([], 6))), BasicIndexer)
+
+        # should return OuterIndexer
+        assert_indexer_type(([0, 1], 1), OuterIndexer)
+        assert_indexer_type(([0, 1], [1, 2]), OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), 1), OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), slice(None, None)),
+                            OuterIndexer)
+        assert_indexer_type((Variable(('x'), [0, 1]), Variable(('y'), [0, 1])),
+                            OuterIndexer)
+
+        # should return VectorizedIndexer
+        assert_indexer_type((Variable(('y'), [0, 1]), [0, 1]),
+                            VectorizedIndexer)
+        assert_indexer_type((Variable(('z'), [0, 1]), Variable(('z'), [0, 1])),
+                            VectorizedIndexer)
+        assert_indexer_type((Variable(('a', 'b'), [[0, 1], [1, 2]]),
+                             Variable(('a', 'b'), [[0, 1], [1, 2]])),
+                            VectorizedIndexer)
 
     def test_items(self):
         data = np.random.random((10, 11))
@@ -1676,8 +1718,97 @@ class TestAsCompatibleData(TestCase):
         self.assertVariableIdentical(ones_like(orig, dtype=int),
                                      full_like(orig, 1, dtype=int))
 
+    def test_unsupported_type(self):
+        # Non indexable type
+        class CustomArray(NDArrayMixin):
+            def __init__(self, array):
+                self.array = array
+
+        class CustomIndexable(CustomArray, indexing.ExplicitlyIndexed):
+            pass
+
+        array = CustomArray(np.arange(3))
+        orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
+        assert isinstance(orig._data, np.ndarray)  # should not be CustomArray
+
+        array = CustomIndexable(np.arange(3))
+        orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
+        assert isinstance(orig._data, CustomIndexable)
+
 
 def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         Variable('x', [1, 2, np.NaN]) > 0
     assert len(record) == 0
+
+
+class TestBackendIndexing(TestCase):
+    """    Make sure all the array wrappers can be indexed. """
+    def setUp(self):
+        self.d = np.random.random((10, 3)).astype(np.float64)
+
+    def check_orthogonal_indexing(self, v):
+        assert np.allclose(v.isel(x=[8, 3], y=[2, 1]),
+                           self.d[[8, 3]][:, [2, 1]])
+
+    def check_vectorized_indexing(self, v):
+        ind_x = Variable('z', [0, 2])
+        ind_y = Variable('z', [2, 1])
+        assert np.allclose(v.isel(x=ind_x, y=ind_y), self.d[ind_x, ind_y])
+
+    def test_NumpyIndexingAdapter(self):
+        v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(self.d))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+        # could not doubly wrapping
+        with raises_regex(TypeError, 'NumpyIndexingAdapter only wraps '):
+            v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(
+                                            NumpyIndexingAdapter(self.d)))
+
+    def test_LazilyIndexedArray(self):
+        v = Variable(dims=('x', 'y'), data=LazilyIndexedArray(self.d))
+        self.check_orthogonal_indexing(v)
+        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
+            self.check_vectorized_indexing(v)
+        # doubly wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=LazilyIndexedArray(LazilyIndexedArray(self.d)))
+        self.check_orthogonal_indexing(v)
+        # hierarchical wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=LazilyIndexedArray(NumpyIndexingAdapter(self.d)))
+        self.check_orthogonal_indexing(v)
+
+    def test_CopyOnWriteArray(self):
+        v = Variable(dims=('x', 'y'), data=CopyOnWriteArray(self.d))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+        # doubly wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
+        self.check_orthogonal_indexing(v)
+        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
+            self.check_vectorized_indexing(v)
+
+    def test_MemoryCachedArray(self):
+        v = Variable(dims=('x', 'y'), data=MemoryCachedArray(self.d))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+        # doubly wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=CopyOnWriteArray(MemoryCachedArray(self.d)))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+
+    @requires_dask
+    def test_DaskIndexingAdapter(self):
+        import dask.array as da
+        da = da.asarray(self.d)
+        v = Variable(dims=('x', 'y'), data=DaskIndexingAdapter(da))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)
+        # doubly wrapping
+        v = Variable(dims=('x', 'y'),
+                     data=CopyOnWriteArray(DaskIndexingAdapter(da)))
+        self.check_orthogonal_indexing(v)
+        self.check_vectorized_indexing(v)

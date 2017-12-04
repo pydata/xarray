@@ -298,6 +298,9 @@ class TestDataArray(TestCase):
             DataArray(np.random.rand(4, 4),
                       [('x', self.mindex), ('level_1', range(4))])
 
+        with raises_regex(ValueError, 'matching the dimension size'):
+            DataArray(data, coords={'x': 0}, dims=['x', 'y'])
+
     def test_constructor_from_self_described(self):
         data = [[-0.1, 21], [0, 2]]
         expected = DataArray(data,
@@ -347,6 +350,21 @@ class TestDataArray(TestCase):
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)
         self.assertDataArrayIdentical(expected, actual)
+
+    @requires_dask
+    def test_constructor_dask_coords(self):
+        # regression test for GH1684
+        import dask.array as da
+
+        coord = da.arange(8, chunks=(4,))
+        data = da.random.random((8, 8), chunks=(4, 4)) + 1
+        actual = DataArray(data, coords={'x': coord, 'y': coord},
+                           dims=['x', 'y'])
+
+        ecoord = np.arange(8)
+        expected = DataArray(data, coords={'x': ecoord, 'y': ecoord},
+                             dims=['x', 'y'])
+        assert_equal(actual, expected)
 
     def test_equals_and_identical(self):
         orig = DataArray(np.arange(5.0), {'a': 42}, dims='x')

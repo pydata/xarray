@@ -17,7 +17,7 @@ except ImportError:
 
 from .core import duck_array_ops, indexing, ops, utils
 from .core.formatting import format_timestamp, first_n_items, last_item
-from .core.variable import as_variable, Variable
+from .core.variable import as_variable, IndexVariable, Variable
 from .core.pycompat import iteritems, OrderedDict, PY3, basestring
 
 
@@ -30,6 +30,10 @@ _NS_PER_TIME_DELTA = {'us': 1e3,
                       'm': 1e9 * 60,
                       'h': 1e9 * 60 * 60,
                       'D': 1e9 * 60 * 60 * 24}
+
+
+class SerializationWarning(RuntimeWarning):
+    """Warnings about encoding/decoding issues in serialization."""
 
 
 def mask_and_scale(array, fill_value=None, scale_factor=None, add_offset=None,
@@ -113,7 +117,7 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
         warnings.warn('Unable to decode time axis into full '
                       'numpy.datetime64 objects, continuing using dummy '
                       'netCDF4.datetime objects instead, reason: dates out'
-                      ' of range', RuntimeWarning, stacklevel=3)
+                      ' of range', SerializationWarning, stacklevel=3)
     else:
         try:
             dates = nctime_to_nptime(dates)
@@ -121,7 +125,7 @@ def _decode_datetime_with_netcdf4(num_dates, units, calendar):
             warnings.warn('Unable to decode time axis into full '
                           'numpy.datetime64 objects, continuing using '
                           'dummy netCDF4.datetime objects instead, reason:'
-                          '{0}'.format(e), RuntimeWarning, stacklevel=3)
+                          '{0}'.format(e), SerializationWarning, stacklevel=3)
     return dates
 
 
@@ -333,7 +337,7 @@ def encode_cf_timedelta(timedeltas, units=None):
     return (num, units)
 
 
-class MaskedAndScaledArray(utils.NDArrayMixin):
+class MaskedAndScaledArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically scaled and masked according to
     CF conventions for packed and missing data values.
@@ -370,7 +374,7 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
             After applying scale_factor, add this number to entries in the
             original array.
         """
-        self.array = array
+        self.array = indexing.as_indexable(array)
         self.fill_value = fill_value
         self.scale_factor = scale_factor
         self.add_offset = add_offset
@@ -391,21 +395,22 @@ class MaskedAndScaledArray(utils.NDArrayMixin):
                  self.scale_factor, self.add_offset, self._dtype))
 
 
-class DecodedCFDatetimeArray(utils.NDArrayMixin):
+class DecodedCFDatetimeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into datetime objects
     using decode_cf_datetime.
     """
     def __init__(self, array, units, calendar=None):
-        self.array = array
+        self.array = indexing.as_indexable(array)
         self.units = units
         self.calendar = calendar
 
         # Verify that at least the first and last date can be decoded
         # successfully. Otherwise, tracebacks end up swallowed by
         # Dataset.__repr__ when users try to view their lazily decoded array.
-        example_value = np.concatenate([first_n_items(array, 1) or [0],
-                                        last_item(array) or [0]])
+        values = indexing.ImplicitToExplicitIndexingAdapter(self.array)
+        example_value = np.concatenate([first_n_items(values, 1) or [0],
+                                        last_item(values) or [0]])
 
         try:
             result = decode_cf_datetime(example_value, units, calendar)
@@ -430,13 +435,13 @@ class DecodedCFDatetimeArray(utils.NDArrayMixin):
                                   calendar=self.calendar)
 
 
-class DecodedCFTimedeltaArray(utils.NDArrayMixin):
+class DecodedCFTimedeltaArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically converted into timedelta objects
     using decode_cf_timedelta.
     """
     def __init__(self, array, units):
-        self.array = array
+        self.array = indexing.as_indexable(array)
         self.units = units
 
     @property
@@ -447,7 +452,7 @@ class DecodedCFTimedeltaArray(utils.NDArrayMixin):
         return decode_cf_timedelta(self.array[key], units=self.units)
 
 
-class StackedBytesArray(utils.NDArrayMixin):
+class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper around array-like objects to create a new indexable object where
     values, when accessed, are automatically stacked along the last dimension.
 
@@ -465,7 +470,7 @@ class StackedBytesArray(utils.NDArrayMixin):
         if array.dtype != 'S1':
             raise ValueError(
                 "can only use StackedBytesArray if argument has dtype='S1'")
-        self.array = array
+        self.array = indexing.as_indexable(array)
 
     @property
     def dtype(self):
@@ -478,7 +483,7 @@ class StackedBytesArray(utils.NDArrayMixin):
     def __str__(self):
         # TODO(shoyer): figure out why we need this special case?
         if self.ndim == 0:
-            return str(self[...].item())
+            return str(np.array(self).item())
         else:
             return repr(self)
 
@@ -487,13 +492,13 @@ class StackedBytesArray(utils.NDArrayMixin):
 
     def __getitem__(self, key):
         # require slicing the last dimension completely
-        key = indexing.expanded_indexer(key, self.array.ndim)
-        if key[-1] != slice(None):
+        key = type(key)(indexing.expanded_indexer(key.tuple, self.array.ndim))
+        if key.tuple[-1] != slice(None):
             raise IndexError('too many indices')
         return char_to_bytes(self.array[key])
 
 
-class BytesToStringArray(utils.NDArrayMixin):
+class BytesToStringArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Wrapper that decodes bytes to unicode when values are read.
 
     >>> BytesToStringArray(np.array([b'abc']))[:]
@@ -509,7 +514,7 @@ class BytesToStringArray(utils.NDArrayMixin):
         encoding : str
             String encoding to use.
         """
-        self.array = array
+        self.array = indexing.as_indexable(array)
         self.encoding = encoding
 
     @property
@@ -520,7 +525,7 @@ class BytesToStringArray(utils.NDArrayMixin):
     def __str__(self):
         # TODO(shoyer): figure out why we need this special case?
         if self.ndim == 0:
-            return str(self[...].item())
+            return str(np.array(self).item())
         else:
             return repr(self)
 
@@ -532,7 +537,7 @@ class BytesToStringArray(utils.NDArrayMixin):
         return decode_bytes_array(self.array[key], self.encoding)
 
 
-class NativeEndiannessArray(utils.NDArrayMixin):
+class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Decode arrays on the fly from non-native to native endianness
 
     This is useful for decoding arrays from netCDF3 files (which are all
@@ -551,7 +556,7 @@ class NativeEndiannessArray(utils.NDArrayMixin):
     dtype('int16')
     """
     def __init__(self, array):
-        self.array = array
+        self.array = indexing.as_indexable(array)
 
     @property
     def dtype(self):
@@ -561,7 +566,7 @@ class NativeEndiannessArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class BoolTypeArray(utils.NDArrayMixin):
+class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Decode arrays on the fly from integer to boolean datatype
 
     This is useful for decoding boolean arrays from integer typed netCDF
@@ -579,7 +584,7 @@ class BoolTypeArray(utils.NDArrayMixin):
     dtype('bool')
     """
     def __init__(self, array):
-        self.array = array
+        self.array = indexing.as_indexable(array)
 
     @property
     def dtype(self):
@@ -589,7 +594,7 @@ class BoolTypeArray(utils.NDArrayMixin):
         return np.asarray(self.array[key], dtype=self.dtype)
 
 
-class UnsignedIntTypeArray(utils.NDArrayMixin):
+class UnsignedIntTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     """Decode arrays on the fly from signed integer to unsigned
     integer. Typically used when _Unsigned is set at as a netCDF
     attribute on a signed integer variable.
@@ -606,7 +611,7 @@ class UnsignedIntTypeArray(utils.NDArrayMixin):
     array([  0,   1, 127, 128, 255], dtype=uint8)
     """
     def __init__(self, array):
-        self.array = array
+        self.array = indexing.as_indexable(array)
         self.unsigned_dtype = np.dtype('u%s' % array.dtype.itemsize)
 
     @property
@@ -773,7 +778,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
-                                  RuntimeWarning, stacklevel=3)
+                                  SerializationWarning, stacklevel=3)
                 data = duck_array_ops.around(data)[...]
                 if encoding.get('_Unsigned', False):
                     signed_dtype = np.dtype('i%s' % dtype.itemsize)
@@ -828,6 +833,15 @@ def _infer_dtype(array, name=None):
 def ensure_dtype_not_object(var, name=None):
     # TODO: move this from conventions to backends? (it's not CF related)
     if var.dtype.kind == 'O':
+        if (isinstance(var, IndexVariable) and
+                isinstance(var.to_index(), pd.MultiIndex)):
+            raise NotImplementedError(
+                'variable {!r} is a MultiIndex, which cannot yet be '
+                'serialized to netCDF files '
+                '(https://github.com/pydata/xarray/issues/1077). Use '
+                'reset_index() to convert MultiIndex levels into coordinate '
+                'variables instead.'.format(name))
+
         dims, data, attrs, encoding = _var_as_tuple(var)
         missing = pd.isnull(data)
         if missing.any():
@@ -951,7 +965,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         else:
             warnings.warn("variable %r has _Unsigned attribute but is not "
                           "of integer type. Ignoring attribute." % name,
-                          RuntimeWarning, stacklevel=3)
+                          SerializationWarning, stacklevel=3)
 
     if mask_and_scale:
         if 'missing_value' in attributes:
@@ -975,7 +989,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
             warnings.warn("variable {!r} has multiple fill values {}, "
                           "decoding all values to NaN."
                           .format(name, fill_value),
-                          RuntimeWarning, stacklevel=3)
+                          SerializationWarning, stacklevel=3)
 
         scale_factor = pop_to(attributes, encoding, 'scale_factor')
         add_offset = pop_to(attributes, encoding, 'add_offset')
@@ -1185,6 +1199,16 @@ def cf_decoder(variables, attributes,
 def _encode_coordinates(variables, attributes, non_dim_coord_names):
     # calculate global and variable specific coordinates
     non_dim_coord_names = set(non_dim_coord_names)
+
+    for name in list(non_dim_coord_names):
+        if isinstance(name, basestring) and ' ' in name:
+            warnings.warn(
+                'coordinate {!r} has a space in its name, which means it '
+                'cannot be marked as a coordinate on disk and will be '
+                'saved as a data variable instead'.format(name),
+                SerializationWarning, stacklevel=6)
+            non_dim_coord_names.discard(name)
+
     global_coordinates = non_dim_coord_names.copy()
     variable_coordinates = defaultdict(set)
     for coord_name in non_dim_coord_names:

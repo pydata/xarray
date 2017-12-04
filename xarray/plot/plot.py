@@ -402,7 +402,7 @@ def _plot2d(plotfunc):
     """
 
     # Build on the original docstring
-    plotfunc.__doc__ = '\n'.join((plotfunc.__doc__, commondoc))
+    plotfunc.__doc__ = '%s\n%s' % (plotfunc.__doc__, commondoc)
 
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
@@ -452,6 +452,13 @@ def _plot2d(plotfunc):
         xval = darray[xlab].values
         yval = darray[ylab].values
         zval = darray.to_masked_array(copy=False)
+
+        # check if we need to broadcast one dimension
+        if xval.ndim < yval.ndim:
+            xval = np.broadcast_to(xval, yval.shape)
+
+        if yval.ndim < xval.ndim:
+            yval = np.broadcast_to(yval, xval.shape)
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
