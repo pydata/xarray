@@ -302,28 +302,17 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     return var
 
 
-class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
+class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr
     """
 
     def __init__(self, store=None, mode='a', synchronizer=None, group=None,
-                 writer=None, autoclose=None):
+                 writer=None):
         self._mode = mode
         self._synchronizer = synchronizer
         self._group = group
-
-        # zarr stores don't need to be opened, closed, or synced.
-        # So what do we do with all this logical about openers?
-        if autoclose:
-            raise NotImplementedError('autoclose=True is not implemented '
-                                      'for the zarr backend')
-        self._autoclose = False
-        self._isopen = True
-
-        opener = functools.partial(_open_zarr_group, store=store,
+        self.ds = _open_zarr_group(store=store, mode=mode,
                                    synchronizer=synchronizer, group=group)
-        self._opener = opener
-        self.ds = self._opener(mode=mode)
 
         # initialize hidden dimension attribute
         if _DIMENSION_KEY not in self.ds.attrs:
@@ -348,38 +337,33 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
         return Variable(dimensions, data, attributes, encoding)
 
     def get_variables(self):
-        with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.arrays())
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.arrays())
 
     def get_attrs(self):
-        with self.ensure_open(autoclose=True):
-            _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-            return _decode_zarr_attrs(attributes)
+        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        return _decode_zarr_attrs(attributes)
 
     def get_dimensions(self):
-        with self.ensure_open(autoclose=True):
-            dimensions, _ = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-            return dimensions
+        dimensions, _ = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        return dimensions
 
     def set_dimension(self, name, length, is_unlimited=False):
         if is_unlimited:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
-        with self.ensure_open(autoclose=False):
-            # consistency check
-            if name in self.ds.attrs[_DIMENSION_KEY]:
-                if self.ds.attrs[_DIMENSION_KEY][name] != length:
-                    raise ValueError("Prexisting array dimensions %r "
-                            "encoded in Zarr attributes are incompatible "
-                            "with newly specified dimension `%s`: %g" %
-                            (self.ds.attrs[_DIMENSION_KEY], name, length))
-            self.ds.attrs[_DIMENSION_KEY][name] = length
+        # consistency check
+        if name in self.ds.attrs[_DIMENSION_KEY]:
+            if self.ds.attrs[_DIMENSION_KEY][name] != length:
+                raise ValueError("Prexisting array dimensions %r "
+                        "encoded in Zarr attributes are incompatible "
+                        "with newly specified dimension `%s`: %g" %
+                        (self.ds.attrs[_DIMENSION_KEY], name, length))
+        self.ds.attrs[_DIMENSION_KEY][name] = length
 
     def set_attribute(self, key, value):
-        with self.ensure_open(autoclose=False):
-            _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-            attributes[key] = _encode_zarr_attr_value(value)
+        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        attributes[key] = _encode_zarr_attr_value(value)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
