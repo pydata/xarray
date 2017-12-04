@@ -206,13 +206,16 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     #  "If each worker in a parallel computation is writing to a separate
     #   region of the array, and if region boundaries are perfectly aligned
     #   with chunk boundaries, then no synchronization is required."
+    # TODO: incorporate synchronizer to allow writes from multiple dask
+    # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
             for dchunk in dchunks:
                 if dchunk % zchunk:
-                    raise ValueError(
+                    raise NotImplementedError(
                         "Specified zarr chunks %r would overlap multiple dask "
-                        "chunks %r. Consider rechunking the data using "
+                        "chunks %r. This is not implemented in xarray yet. "
+                        " Consider rechunking the data using "
                         "`chunk()` or specifying different chunks in encoding."
                         % (enc_chunks_tuple, var_chunks))
         return enc_chunks_tuple
@@ -443,12 +446,21 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
               cache=False, drop_variables=None):
-    """Load and decode a dataset from a file or file-like object.
+    """Load and decode a dataset from a Zarr store.
+
+    .. note:: Experimental
+              The Zarr backend is new and experimental. Please report any
+              unexpected behavior via github issues.
+
+    The `store` object should be a valid store for a Zarr group. `store`
+    variables must contain dimension metadata encoded in the
+    `_ARRAY_DIMENSIONS` attribute.
 
     Parameters
     ----------
     store : MutableMapping or str
-        Store or path to directory in file system.
+        A MutableMapping where a Zarr Group has been stored or a path to a
+        directory in file system where a Zarr DirectoryStore has been stored.
     mode : {‘r’, ‘r+’}
         Persistence mode: ‘r’ means read only (must exist); ‘r+’ means
         read/write (must exist)
@@ -474,10 +486,6 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -506,6 +514,10 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     See Also
     --------
     open_dataset
+
+    References
+    ----------
+    http://zarr.readthedocs.io/
     """
     if mode not in ['r', 'r+']:
         raise ValueError("Mode must be 'r' or 'r+'.")

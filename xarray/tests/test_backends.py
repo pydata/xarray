@@ -1109,15 +1109,67 @@ class BaseZarrTest(CFEncodedDataTest):
 
 
     def test_chunk_encoding(self):
+        # These datasets have no dask chunks. All chunking specified in
+        # encoding
         data = create_test_data()
         chunks = (5, 5)
         data['var2'].encoding.update({'chunks': chunks})
+
         with self.roundtrip(data) as actual:
             self.assertEqual(chunks, actual['var2'].encoding['chunks'])
+
+        # expect an error with non-integer chunks
         data['var2'].encoding.update({'chunks': (5, 4.5)})
         with pytest.raises(TypeError):
             with self.roundtrip(data) as actual:
                 pass
+
+
+    def test_chunk_encoding_with_dask(self):
+        # These datasets DO have dask chunks. Need to check for various
+        # interactions between dask and zarr chunks
+        ds = xr.DataArray((np.arange(12)), dims='x', name='var1').to_dataset()
+
+        ## no encoding specified ##
+
+        # zarr automatically gets chunk information from dask chunks
+        ds_chunk4 = ds.chunk({'x': 4})
+        with self.roundtrip(ds_chunk4) as actual:
+            self.assertEqual((4,), actual['var1'].encoding['chunks'])
+
+        # should fail if dask_chunks are irregular...
+        ds_chunk_irreg = ds.chunk({'x': (5, 4, 3)})
+        with pytest.raises(ValueError):
+            with self.roundtrip(ds_chunk_irreg) as actual:
+                pass
+
+        # ... except if the last chunk is smaller than the first
+        ds_chunk_irreg = ds.chunk({'x': (5, 5, 2)})
+        with self.roundtrip(ds_chunk_irreg) as actual:
+            self.assertEqual((5,), actual['var1'].encoding['chunks'])
+
+        ## encoding specified ##
+
+        # specify compatible encodings
+        for chunk_enc in 4, (4, ):
+            ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
+            with self.roundtrip(ds_chunk4) as actual:
+                self.assertEqual((4,), actual['var1'].encoding['chunks'])
+
+        # specify incompatible encoding
+        ds_chunk4['var1'].encoding.update({'chunks': (5,5)})
+        with pytest.raises(ValueError):
+            with self.roundtrip(ds_chunk4) as actual:
+                pass
+
+        # TODO: remove this failure once syncronized overlapping writes are
+        # supported by xarray
+        ds_chunk4['var1'].encoding.update({'chunks': 5})
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(ds_chunk4) as actual:
+                pass
+
+
 
 
     def test_vectorized_indexing(self):

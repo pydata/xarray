@@ -1135,6 +1135,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                 encoding=None):
         """Write dataset contents to a zarr group.
 
+        .. note:: Experimental
+                  The Zarr backend is new and experimental. Please report any
+                  unexpected behavior via github issues.
+
         Parameters
         ----------
         store : MutableMapping or str, optional
