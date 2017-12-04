@@ -1104,6 +1104,9 @@ class BaseZarrTest(CFEncodedDataTest):
                 self.assertEqual(v.chunks, original[k].chunks)
 
 
+    def test_hidden_attrs(self):
+        pass
+
 
     def test_chunk_encoding(self):
         data = create_test_data()
@@ -1112,7 +1115,7 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(data) as actual:
             self.assertEqual(chunks, actual['var2'].encoding['chunks'])
         data['var2'].encoding.update({'chunks': (5, 4.5)})
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             with self.roundtrip(data) as actual:
                 pass
 

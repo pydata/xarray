@@ -3,14 +3,14 @@ from __future__ import division
 from __future__ import print_function
 import functools
 from itertools import product
-# import operator
+from base64 import b64encode
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from ..core.pycompat import iteritems, OrderedDict
+from ..core.pycompat import iteritems, OrderedDict, integer_types
 
 from .common import (AbstractWritableDataStore, DataStorePickleMixin,
                      BackendArray)
@@ -28,33 +28,29 @@ _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 # many xarray datasets / variables have numpy arrays and values
 # these functions handle encoding / decoding of such items
 def _encode_zarr_attr_value(value):
-    # what is the most duck-type friendly way to do this check
     if isinstance(value, np.ndarray):
-        return value.tolist()
-    # I don't know how to check generically if something is a numpy scalar
-    # i.e. np.float32 or np.int8, etc. without checking against each dtype
-    # manually. This was the best I could come up with
+        encoded = value.tolist()
+    # this checks if it's a scalar number
     elif isinstance(value, np.generic):
+        encoded = value.item()
         # np.string_('X').item() returns a type `bytes`
         # zarr still doesn't like that
-        # causes some fill_value encoding to fail
-        return value.item()
+        if type(encoded) is bytes:
+            encoded = b64encode(encoded)
     else:
-        return value
+        encoded = value
+    return encoded
 
 
 def _ensure_valid_fill_value(value, dtype):
     if dtype.type == np.string_ and type(value) == bytes:
-        valid = value.decode('ascii')
+        valid = b64encode(value)
     else:
         valid = value
     return _encode_zarr_attr_value(valid)
 
 
-# TODO: cleanup/combine these next two functions
 def _decode_zarr_attr_value(value):
-    # what happens if we just don't decode anything?
-    # does it matter that we don't convert back to numpy types?
     return value
 
 
@@ -63,8 +59,9 @@ def _decode_zarr_attrs(attrs):
                         for k, v in attrs.items()])
 
 
-# untested, but I think this does the appropriate shape munging to make slices
+# Do the appropriate shape munging to make slices
 # appear as the last axes of the result array
+# TODO: write tests for this
 def _replace_slices_with_arrays(key, shape):
     num_slices = sum(1 for k in key if isinstance(k, slice))
     num_arrays = len(shape) - num_slices
@@ -75,7 +72,7 @@ def _replace_slices_with_arrays(key, shape):
             array = np.arange(*k.indices(size))
             sl = [np.newaxis] * len(shape)
             sl[num_arrays + slice_count] = np.newaxis
-            k = array[sl]
+            k = array[tuple(sl)]
             slice_count += 1
         else:
             assert isinstance(k, np.ndarray)
@@ -93,11 +90,6 @@ class ZarrArrayWrapper(BackendArray):
         self.shape = array.shape
 
         dtype = array.dtype
-        if dtype is str:
-            # use object dtype because that's the only way in numpy to
-            # represent variable length strings; it also prevents automatic
-            # string concatenation via conventions.decode_cf_variable
-            dtype = np.dtype('O')
         self.dtype = dtype
 
     def get_array(self):
@@ -128,14 +120,14 @@ def _open_zarr_group(store=None, overwrite=None, synchronizer=None,
 
 
 def _dask_chunks_to_zarr_chunks(chunks):
-    '''this function dask chunks syntax to zarr chunks'''
+    '''this function translates dask chunk syntax to zarr chunk syntax'''
     if chunks is None:
         return chunks
 
     all_chunks = product(*chunks)
     first_chunk = next(all_chunks)
     for this_chunk in all_chunks:
-        if not (this_chunk == first_chunk):
+        if this_chunk != first_chunk:
             raise ValueError("zarr requires uniform chunk sizes, found %r" %
                              chunks)
     return first_chunk
@@ -162,13 +154,22 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and enc_chunks is None:
-        all_var_chunks = product(*var_chunks)
-        first_var_chunk = next(all_var_chunks)
-        for this_chunk in all_var_chunks:
-            if not (this_chunk == first_var_chunk):
+        all_var_chunks = list(product(*var_chunks))
+        first_var_chunk = all_var_chunks[0]
+        # all but the last chunk have to match exactly
+        for this_chunk in all_var_chunks[:-1]:
+            if this_chunk != first_var_chunk:
                 raise ValueError(
-                    "zarr requires uniform chunk sizes, but variable has "
-                    "non-uniform chunks %r. Consider rechunking the data "
+                    "Zarr requires uniform chunk sizes excpet for final chunk. "
+                    "Variable %r has incompatible chunks. Consider rechunking "
+                    "using `chunk()`." % var_chunks)
+        # last chunk is allowed to be smaller
+        last_var_chunk = all_var_chunks[-1]
+        for len_first, len_last in zip(first_var_chunk, last_var_chunk):
+            if len_last > len_first:
+                raise ValueError(
+                    "Final chunk of Zarr array must be smaller than first. "
+                    "Variable %r has incompatible chunks. Consider rechunking "
                     "using `chunk()`." % var_chunks)
         return first_var_chunk
 
@@ -178,24 +179,24 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # Here we re-implement this expansion ourselves. That makes the logic of
     # checking chunk compatibility easier
 
-    # this coerces a single int to a tuple but leaves a tuple as is
-    enc_chunks_tuple = tuple(enc_chunks)
-    if len(enc_chunks_tuple) == 1:
-        enc_chunks_tuple = ndim * enc_chunks_tuple
+    if type(enc_chunks) in integer_types:
+        enc_chunks_tuple = ndim * (enc_chunks,)
+    else:
+        enc_chunks_tuple = tuple(enc_chunks)
 
-    if not len(enc_chunks_tuple) == ndim:
+    if len(enc_chunks_tuple) != ndim:
         raise ValueError("zarr chunks tuple %r must have same length as "
                          "variable.ndim %g" %
-                         (enc_chunks_tuple, _DIMENSION_KEY))
+                         (enc_chunks_tuple, ndim))
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
-            raise ValueError("zarr chunks must be an int or a tuple of ints. "
+            raise TypeError("zarr chunks must be an int or a tuple of ints. "
                              "Instead found %r" % (enc_chunks_tuple,))
 
-    # if there are chunks in encoding and the variabile data is a numpy array,
+    # if there are chunks in encoding and the variable data is a numpy array,
     # we use the specified chunks
-    if enc_chunks_tuple and var_chunks is None:
+    if var_chunks is None:
         return enc_chunks_tuple
 
     # the hard case
@@ -208,7 +209,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
             for dchunk in dchunks:
-                if not dchunk % zchunk == 0:
+                if dchunk % zchunk:
                     raise ValueError(
                         "Specified zarr chunks %r would overlap multiple dask "
                         "chunks %r. Consider rechunking the data using "
@@ -216,7 +217,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                         % (enc_chunks_tuple, var_chunks))
         return enc_chunks_tuple
 
-    raise RuntimeError(
+    raise AssertionError(
         "We should never get here. Function logic must be wrong.")
 
 
@@ -225,7 +226,12 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     # an attribute that specifies the dimension. We have to hide this attribute
     # when we send the attributes to the user.
     # zarr_obj can be either a zarr group or zarr array
-    dimensions = zarr_obj.attrs.get(dimension_key)
+    try:
+        dimensions = zarr_obj.attrs[dimension_key]
+    except KeyError:
+        raise KeyError("Zarr object is missing the attribute `%s`, which is"
+                       "required for xarray to determine variable dimensions."
+                       % (dimension_key))
     attributes = HiddenKeyDict(zarr_obj.attrs, dimension_key)
     return dimensions, attributes
 
@@ -255,8 +261,8 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
 
     return encoding
 
-# copied from conventions.encode_cf_variable
-
+# Function below is copied from conventions.encode_cf_variable.
+# The only change is to raise an error for object dtypes.
 def encode_zarr_variable(var, needs_copy=True, name=None):
     """
     Converts an Variable into an Variable which follows some
@@ -327,9 +333,6 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
         super(ZarrStore, self).__init__(writer)
 
     def open_store_variable(self, name, zarr_array):
-        # I don't see why it is necessary to wrap self.ds[name]
-        # zarr seems to implement the required ndarray interface
-        # TODO: possibly wrap zarr array in dask with aligned chunks
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
@@ -364,6 +367,13 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
         with self.ensure_open(autoclose=False):
+            # consistency check
+            if name in self.ds.attrs[_DIMENSION_KEY]:
+                if self.ds.attrs[_DIMENSION_KEY][name] != length:
+                    raise ValueError("Prexisting array dimensions %r "
+                            "encoded in Zarr attributes are incompatible "
+                            "with newly specified dimension `%s`: %g" %
+                            (self.ds.attrs[_DIMENSION_KEY], name, length))
             self.ds.attrs[_DIMENSION_KEY][name] = length
 
     def set_attribute(self, key, value):
@@ -394,7 +404,6 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
         # compressor='default', fill_value=0, order='C', store=None,
         # synchronizer=None, overwrite=False, path=None, chunk_store=None,
         # filters=None, cache_metadata=True, **kwargs)
-        print('creating', name, shape, dtype)
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)
         # decided not to explicity enumerate encoding options because we
@@ -448,7 +457,7 @@ class ZarrStore(AbstractWritableDataStore, DataStorePickleMixin):
 
 def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
-              autoclose=False, concat_characters=True, decode_coords=True,
+              concat_characters=True, decode_coords=True,
               cache=False, drop_variables=None):
     """Load and decode a dataset from a file or file-like object.
 
@@ -514,6 +523,9 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     --------
     open_dataset
     """
+    if mode not in ['r', 'r+']:
+        raise ValueError("Mode must be 'r' or 'r+'.")
+
     if not decode_cf:
         mask_and_scale = False
         decode_times = False
@@ -543,7 +555,6 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
         def maybe_chunk(name, var):
             from dask.base import tokenize
             chunks = var.encoding.get('chunks')
-            print('chunks', chunks)
             if (var.ndim > 0) and (chunks is not None):
                 # does this cause any data to be read?
                 token2 = tokenize(name, var._data)
