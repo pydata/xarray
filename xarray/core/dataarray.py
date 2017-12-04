@@ -1972,7 +1972,7 @@ class DataArray(AbstractArray, BaseDataObject):
                                               interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
-    def rank(self, dim, pct=False):
+    def rank(self, dim, pct=False, keep_attrs=False):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -1987,6 +1987,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ----------
         dim : str
         pct : bool, optional
+        keep_attrs : bool, optional
 
         Returns
         -------
@@ -2002,17 +2003,8 @@ class DataArray(AbstractArray, BaseDataObject):
         array([ 1.,   2.,   3.])
         Dimensions without coordinates: x
         """
-        import bottleneck as bn
-        axis = self.get_axis_num(dim)
-        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
-        ranks = apply_ufunc(func, self,
-                            dask='parallelized',
-                            keep_attrs=True,
-                            output_dtypes=[np.float64],
-                            kwargs=dict(axis=axis)).transpose(*self.dims)
-        if not pct:
-            return ranks
-        return (ranks - 1) / (self.count(dim) - 1)
+        ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
+        return self._from_temp_dataset(ds)
 
 
 # priority most be higher than Variable to properly work with binary ufuncs

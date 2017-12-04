@@ -1348,7 +1348,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-
         if isinstance(self.data, dask_array_type):
             raise TypeError("quantile does not work for arrays stored as dask "
                             "arrays. Load the data via .compute() or .load() "
@@ -1378,6 +1377,45 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         qs = np.nanpercentile(self.data, q * 100., axis=axis,
                               interpolation=interpolation)
         return Variable(new_dims, qs)
+
+    def rank(self, dim, pct=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+        pct : bool, optional
+
+        Returns
+        -------
+        ranked : Variable
+
+        See Also
+        --------
+        Dataset.rank, DataArray.rank
+        """
+        import bottleneck as bn
+
+        if isinstance(self.data, dask_array_type):
+            raise TypeError("rank does not work for arrays stored as dask "
+                            "arrays. Load the data via .compute() or .load() "
+                            "prior to calling this method.")
+
+        axis = self.get_axis_num(dim)
+        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        ranked = func(self.data, axis=axis)
+        if pct:
+            count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
+            ranked = (ranked - 1) / (count - 1)
+        return Variable(self.dims, ranked)
 
     @property
     def real(self):

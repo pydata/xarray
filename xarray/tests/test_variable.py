@@ -26,6 +26,8 @@ from xarray.core.utils import NDArrayMixin
 
 from . import TestCase, source_ndarray, requires_dask, raises_regex
 
+from xarray.tests import requires_bottleneck
+
 
 class VariableSubclassTestCases(object):
     def test_properties(self):
@@ -1352,6 +1354,28 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with raises_regex(TypeError, 'arrays stored as dask'):
             v.quantile(0.5, dim='x')
+
+    @requires_bottleneck
+    def test_rank(self):
+        import bottleneck as bn
+        # floats
+        v = Variable(['x', 'y'], [[3, 4, np.nan, 1]])
+        expect_0 = bn.nanrankdata(v.data, axis=0)
+        expect_1 = bn.nanrankdata(v.data, axis=1)
+        np.testing.assert_allclose(v.rank('x').values, expect_0)
+        np.testing.assert_allclose(v.rank('y').values, expect_1)
+        # int
+        v = Variable(['x'], [3,2,1])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # str
+        v =  Variable(['x'], ['c', 'b', 'a'])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # pct
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0])
+        v_expect = Variable(['x'], [1.0, 0.0, np.nan, 0.5])
+        self.assertVariableEqual(v.rank('x', pct=True), v_expect)
 
     def test_big_endian_reduce(self):
         # regression test for GH489
