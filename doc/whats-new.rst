@@ -33,6 +33,11 @@ Enhancements
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`
+**New functions/methods**
+
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -189,9 +194,6 @@ Enhancements
 - Added :py:func:`~xarray.show_versions` function to aid in debugging
   (:issue:`1485`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
-- New :py:meth:`~xarray.DataArray.rank`. Requires bottleneck (:issue:`1731`).
-  By `0x0L <https://github.com/0x0L>`_.
 
 **Performance improvements**
 

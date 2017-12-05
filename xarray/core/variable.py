@@ -1414,7 +1414,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         ranked = func(self.data, axis=axis)
         if pct:
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
-            ranked = (ranked - 1) / (count - 1)
+            ranked /= count
         return Variable(self.dims, ranked)
 
     @property

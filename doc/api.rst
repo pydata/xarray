@@ -160,6 +160,7 @@ Computation
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
+:py:attr:`~Dataset.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`

@@ -1373,8 +1373,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expect = bn.rankdata(v.data, axis=0)
         np.testing.assert_allclose(v.rank('x').values, expect)
         # pct
-        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0])
-        v_expect = Variable(['x'], [1.0, 0.0, np.nan, 0.5])
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0])
+        v_expect = Variable(['x'], [0.75, 0.25, np.nan, 0.5, 1.0])
         self.assertVariableEqual(v.rank('x', pct=True), v_expect)
 
     def test_big_endian_reduce(self):

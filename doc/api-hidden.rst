@@ -46,6 +46,7 @@
    Dataset.T
    Dataset.cumsum
    Dataset.cumprod
+   Dataset.rank
 
    DataArray.ndim
    DataArray.shape

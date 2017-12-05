@@ -3119,8 +3119,8 @@ class TestDataArray(TestCase):
         y =  DataArray(['c', 'b', 'a'])
         self.assertDataArrayEqual(y.rank('dim_0'), x)
 
-        x = DataArray([3.0, 1.0, np.nan, 2.0], dims=('z',))
-        y = DataArray([1.0, 0.0, np.nan, 0.5], dims=('z',))
+        x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=('z',))
+        y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=('z',))
         self.assertDataArrayEqual(y.rank('z', pct=True), y)
 
 
