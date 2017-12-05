@@ -232,7 +232,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
     try:
         dimensions = zarr_obj.attrs[dimension_key]
     except KeyError:
-        raise KeyError("Zarr object is missing the attribute `%s`, which is"
+        raise KeyError("Zarr object is missing the attribute `%s`, which is "
                        "required for xarray to determine variable dimensions."
                        % (dimension_key))
     attributes = HiddenKeyDict(zarr_obj.attrs, dimension_key)
@@ -358,7 +358,7 @@ class ZarrStore(AbstractWritableDataStore):
         # consistency check
         if name in self.ds.attrs[_DIMENSION_KEY]:
             if self.ds.attrs[_DIMENSION_KEY][name] != length:
-                raise ValueError("Prexisting array dimensions %r "
+                raise ValueError("Pre-existing array dimensions %r "
                         "encoded in Zarr attributes are incompatible "
                         "with newly specified dimension `%s`: %g" %
                         (self.ds.attrs[_DIMENSION_KEY], name, length))

@@ -1084,6 +1084,9 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 
 @requires_zarr
 class BaseZarrTest(CFEncodedDataTest):
+
+    DIMENSION_KEY = '_ARRAY_DIMENSIONS'
+
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1102,10 +1105,6 @@ class BaseZarrTest(CFEncodedDataTest):
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
-
-
-    def test_hidden_attrs(self):
-        pass
 
 
     def test_chunk_encoding(self):
@@ -1170,10 +1169,43 @@ class BaseZarrTest(CFEncodedDataTest):
                 pass
 
 
-
-
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=True)
+
+
+    def test_hidden_zarr_keys(self):
+        expected = create_test_data()
+        with self.create_store(mode='w') as store:
+            expected.dump_to_store(store)
+            zarr_group = store.ds
+
+            # check that the global hidden attribute is present
+            assert self.DIMENSION_KEY in zarr_group.attrs
+
+            # check that a variable hidden attribute is present and correct
+            # for some reason, one is a list and the other a tuple
+            for var in expected.variables.keys():
+                assert (zarr_group[var].attrs[self.DIMENSION_KEY]
+                        == list(expected[var].dims))
+
+            with xr.decode_cf(store) as actual:
+                # make sure it is hidden
+                assert self.DIMENSION_KEY not in actual.attrs
+                for var in expected.variables.keys():
+                    assert self.DIMENSION_KEY not in expected[var].attrs
+
+            # verify that the dataset fails to open if dimension key is missing
+            del zarr_group.attrs[self.DIMENSION_KEY]
+            with pytest.raises(KeyError):
+                with xr.decode_cf(store) as actual:
+                    pass
+
+            # put it back and try something else
+            zarr_group.attrs[self.DIMENSION_KEY] = {}
+            del zarr_group.var2.attrs[self.DIMENSION_KEY]
+            with xr.decode_cf(store) as actual:
+                pass
+
 
 
     # TODO: implement zarr object encoding and make these tests pass
@@ -1204,8 +1236,8 @@ class BaseZarrTest(CFEncodedDataTest):
 @requires_zarr
 class ZarrDictStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
-    def create_store(self):
-        yield backends.ZarrStore(store={})
+    def create_store(self, **open_kwargs):
+        yield backends.ZarrStore(store={}, **open_kwargs)
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -1218,9 +1250,9 @@ class ZarrDictStoreTest(BaseZarrTest, TestCase):
 @requires_zarr
 class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
-    def create_store(self):
+    def create_store(self, **open_kwargs):
         with create_tmp_file(suffix='.zarr') as tmp:
-            yield backends.ZarrStore(store=tmp)
+            yield backends.ZarrStore(store=tmp, **open_kwargs)
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
