@@ -25,7 +25,7 @@ Enhancements
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added :py:meth:`DataArray.to_iris <xray.DataArray.to_iris>` and :py:meth:`DataArray.from_iris <xray.DataArray.from_iris>` for
   converting data arrays to and from Iris_ Cubes with the same data and coordinates (:issue:`621` and :issue:`37`).
-  By `Neil Parley <https://github.com/nparley>`_.
+  By `Neil Parley <https://github.com/nparley>`_ and `Duncan Watson-Parris <https://github.com/duncanwp>`_.
 
 .. _Iris: http://scitools.org.uk/iris
 

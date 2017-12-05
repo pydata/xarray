@@ -338,6 +338,34 @@ supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'nol
 By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
+.. _io.iris:
+
+Iris
+----
+
+The Iris_ tool allows easy reading of common meteorological and climate model formats
+(including GRIB and UK MetOffice PP files) into ``Cube``s which are in many ways very
+similar to to ``DataArray``s, while enforcing a CF-compliant data model. If iris is
+installaed xarray can convert a ``Cube`` into a ``DataArray`` using
+:py:meth:`~xarray.Dataset.from_iris`:
+
+.. ipython:: python
+
+    da_cube = xr.Dataset.from_iris(cube)
+    da_cube
+
+
+Conversly, We can create a new cube object from a ``DataArray`` using
+:py:meth:`~xarray.Dataset.from_dict`:
+
+.. ipython:: python
+
+    cube = da.to_iris()
+    cube
+
+.. _Iris: http://scitools.org.uk/iris
+
+
 OPeNDAP
 -------
 
