@@ -22,7 +22,7 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
-  - iris
+  - iris>=1.10
   - pip:
     - coveralls
     - pytest-cov

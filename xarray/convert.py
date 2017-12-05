@@ -91,12 +91,7 @@ def to_iris(dataarray):
     """
     # Iris not a hard dependency
     import iris
-    try:
-        from iris.fileformats.netcdf import parse_cell_methods
-    except ImportError:
-        # prior to v1.10
-        from iris.fileformats._pyke_rules.compiled_krb.fc_rules_cf_fc \
-            import _parse_cell_methods as parse_cell_methods
+    from iris.fileformats.netcdf import parse_cell_methods
 
     dim_coords = []
     aux_coords = []
