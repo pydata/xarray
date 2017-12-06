@@ -35,11 +35,15 @@ class TestDatetimeAccessor(TestCase):
                             coords=[self.times, ], dims=['time', ])
         hours = xr.DataArray(self.times.hour, name='hour',
                              coords=[self.times, ], dims=['time', ])
+        dates = xr.DataArray((pd.to_datetime(self.times).floor('1D')),
+                             name='date', coords=[self.times, ],
+                             dims=['time', ])
 
         self.assertDataArrayEqual(years, self.data.time.dt.year)
         self.assertDataArrayEqual(months, self.data.time.dt.month)
         self.assertDataArrayEqual(days, self.data.time.dt.day)
         self.assertDataArrayEqual(hours, self.data.time.dt.hour)
+        self.assertDataArrayEqual(dates, self.data.time.dt.date)
 
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()

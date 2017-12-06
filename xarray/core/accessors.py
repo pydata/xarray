@@ -26,8 +26,11 @@ def _access_through_series(values, name):
     if name == "season":
         months = values_as_series.dt.month.values
         field_values = _season_from_months(months)
+    elif name == "date":
+        field_values = values_as_series.dt.floor('1D').values
     else:
         field_values = getattr(values_as_series.dt, name).values
+
     return field_values.reshape(values.shape)
 
 
@@ -145,4 +148,8 @@ class DatetimeAccessor(object):
 
     time = _tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
+    )
+
+    date = _tslib_field_accessor(
+        "date", "Date with hours, minutes etc. dropped", object
     )
