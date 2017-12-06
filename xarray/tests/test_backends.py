@@ -1254,6 +1254,15 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(original, open_kwargs={'mode': 'w'}) as actual:
                 pass
 
+    def test_compressor_encoding(self):
+        original = create_test_data()
+        # specify a custom compressor
+        import zarr
+        blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
+        save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
+        with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+            assert actual.var1.encoding['compressor'] == blosc_comp
+
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
     def test_multiindex_not_implemented(self):
