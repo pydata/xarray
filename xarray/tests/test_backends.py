@@ -33,7 +33,7 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
 
 from .test_dataset import create_test_data
 
-from xarray.tests import mock, assert_identical
+from xarray.tests import mock
 
 try:
     import netCDF4 as nc4
@@ -1106,7 +1106,6 @@ class BaseZarrTest(CFEncodedDataTest):
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
 
-
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in
         # encoding
@@ -1123,14 +1122,12 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(data) as actual:
                 pass
 
-
     def test_chunk_encoding_with_dask(self):
         # These datasets DO have dask chunks. Need to check for various
         # interactions between dask and zarr chunks
         ds = xr.DataArray((np.arange(12)), dims='x', name='var1').to_dataset()
 
-        ## no encoding specified ##
-
+        # - no encoding specified -
         # zarr automatically gets chunk information from dask chunks
         ds_chunk4 = ds.chunk({'x': 4})
         with self.roundtrip(ds_chunk4) as actual:
@@ -1147,8 +1144,7 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(ds_chunk_irreg) as actual:
             self.assertEqual((5,), actual['var1'].encoding['chunks'])
 
-        ## encoding specified ##
-
+        # - encoding specified  -
         # specify compatible encodings
         for chunk_enc in 4, (4, ):
             ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
@@ -1156,7 +1152,7 @@ class BaseZarrTest(CFEncodedDataTest):
                 self.assertEqual((4,), actual['var1'].encoding['chunks'])
 
         # specify incompatible encoding
-        ds_chunk4['var1'].encoding.update({'chunks': (5,5)})
+        ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
         with pytest.raises(ValueError):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
@@ -1168,10 +1164,8 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
 
-
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=True)
-
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
@@ -1206,8 +1200,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with pytest.raises(KeyError):
                 with xr.decode_cf(store) as actual:
                     pass
-
-
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
@@ -1332,7 +1324,7 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
         with raises_regex(ValueError, 'must be 1-dimensional'):
-            with self.roundtrip(ds) as roundtripped:
+            with self.roundtrip(ds):
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):

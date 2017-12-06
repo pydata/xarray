@@ -1086,7 +1086,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT','NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1161,7 +1161,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             encoding = {}
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
-                         group=group, encoding=encoding)
+                       group=group, encoding=encoding)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)

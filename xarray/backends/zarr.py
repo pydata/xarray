@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import functools
 from itertools import product
 from base64 import b64encode
 
@@ -12,8 +11,7 @@ from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from ..core.pycompat import iteritems, OrderedDict, integer_types
 
-from .common import (AbstractWritableDataStore, DataStorePickleMixin,
-                     BackendArray)
+from .common import (AbstractWritableDataStore, BackendArray)
 
 from .. import conventions
 
@@ -160,9 +158,9 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
         for this_chunk in all_var_chunks[:-1]:
             if this_chunk != first_var_chunk:
                 raise ValueError(
-                    "Zarr requires uniform chunk sizes excpet for final chunk. "
-                    "Variable %r has incompatible chunks. Consider rechunking "
-                    "using `chunk()`." % var_chunks)
+                    "Zarr requires uniform chunk sizes excpet for final chunk."
+                    " Variable %r has incompatible chunks. Consider "
+                    "rechunking using `chunk()`." % var_chunks)
         # last chunk is allowed to be smaller
         last_var_chunk = all_var_chunks[-1]
         for len_first, len_last in zip(first_var_chunk, last_var_chunk):
@@ -192,7 +190,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
             raise TypeError("zarr chunks must be an int or a tuple of ints. "
-                             "Instead found %r" % (enc_chunks_tuple,))
+                            "Instead found %r" % (enc_chunks_tuple,))
 
     # if there are chunks in encoding and the variable data is a numpy array,
     # we use the specified chunks
@@ -264,6 +262,7 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
 
     return encoding
 
+
 # Function below is copied from conventions.encode_cf_variable.
 # The only change is to raise an error for object dtypes.
 def encode_zarr_variable(var, needs_copy=True, name=None):
@@ -288,13 +287,14 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     """
 
     if var.dtype.kind == 'O':
-        raise NotImplementedError("Variable `%s` is an object. "
-                                  "Zarr store can't yet encode objects." % name)
+        raise NotImplementedError("Variable `%s` is an object. Zarr "
+                                  "store can't yet encode objects." % name)
 
     var = conventions.maybe_encode_datetime(var, name=name)
     var = conventions.maybe_encode_timedelta(var, name=name)
     var, needs_copy = conventions.maybe_encode_offset_and_scale(var,
-                                                        needs_copy, name=name)
+                                                                needs_copy,
+                                                                name=name)
     var, needs_copy = conventions.maybe_encode_fill_value(var, needs_copy,
                                                           name=name)
     var = conventions.maybe_encode_nonstring_dtype(var, name=name)
@@ -359,9 +359,9 @@ class ZarrStore(AbstractWritableDataStore):
         if name in self.ds.attrs[_DIMENSION_KEY]:
             if self.ds.attrs[_DIMENSION_KEY][name] != length:
                 raise ValueError("Pre-existing array dimensions %r "
-                        "encoded in Zarr attributes are incompatible "
-                        "with newly specified dimension `%s`: %g" %
-                        (self.ds.attrs[_DIMENSION_KEY], name, length))
+                                 "encoded in Zarr attributes are incompatible "
+                                 "with newly specified dimension `%s`: %g" %
+                                 (self.ds.attrs[_DIMENSION_KEY], name, length))
         self.ds.attrs[_DIMENSION_KEY][name] = length
 
     def set_attribute(self, key, value):
@@ -410,7 +410,6 @@ class ZarrStore(AbstractWritableDataStore):
             attributes[k] = _encode_zarr_attr_value(v)
 
         return zarr_array, variable.data
-
 
     def store(self, variables, attributes, *args, **kwargs):
         new_vars = OrderedDict((k, encode_zarr_variable(v, name=k))
