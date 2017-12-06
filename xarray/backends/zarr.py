@@ -518,6 +518,7 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     ----------
     http://zarr.readthedocs.io/
     """
+    # note: there is no way to actually use 'r+' yet
     if mode not in ['r', 'r+']:
         raise ValueError("Mode must be 'r' or 'r+'.")
 

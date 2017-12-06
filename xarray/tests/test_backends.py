@@ -1087,6 +1087,18 @@ class BaseZarrTest(CFEncodedDataTest):
 
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
+    @contextlib.contextmanager
+    def create_store(self, **open_kwargs):
+        with self.create_zarr_target() as store_target:
+            yield backends.ZarrStore(store=store_target, **open_kwargs)
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with self.create_zarr_target() as store_target:
+            data.to_zarr(store=store_target, **save_kwargs)
+            yield xr.open_zarr(store_target, **open_kwargs)
+
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1201,6 +1213,47 @@ class BaseZarrTest(CFEncodedDataTest):
                 with xr.decode_cf(store) as actual:
                     pass
 
+    def test_write_persistence_modes(self):
+        original = create_test_data()
+
+        # overwrite mode
+        with self.roundtrip(original, save_kwargs={'mode': 'w'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        # don't overwrite mode
+        with self.roundtrip(original, save_kwargs={'mode': 'w-'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        # make sure overwriting works as expected
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            # should overwrite with no error
+            original.to_zarr(store, mode='w')
+            actual = xr.open_zarr(store)
+            self.assertDatasetIdentical(original, actual)
+            with pytest.raises(ValueError):
+                xr.open_zarr(store, mode='w-')
+
+        # check that we can't use other persistence modes
+        # TODO: reconsider whether other persistence modes should be supported
+        with pytest.raises(ValueError):
+            with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
+                pass
+
+    def test_read_persistence_modes(self):
+        original = create_test_data()
+
+        with self.roundtrip(original, open_kwargs={'mode': 'r'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        # TODO: actually do something with 'r+' that is different from 'r'
+        with self.roundtrip(original, open_kwargs={'mode': 'r+'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        with pytest.raises(ValueError):
+            with self.roundtrip(original, open_kwargs={'mode': 'w'}) as actual:
+                pass
+
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
     def test_multiindex_not_implemented(self):
@@ -1229,32 +1282,16 @@ class BaseZarrTest(CFEncodedDataTest):
 @requires_zarr
 class ZarrDictStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
-    def create_store(self, **open_kwargs):
-        yield backends.ZarrStore(store={}, **open_kwargs)
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        dict_store = {}
-        data.to_zarr(store=dict_store, **save_kwargs)
-        yield xr.open_zarr(dict_store, **open_kwargs)
+    def create_zarr_target(self):
+        yield {}
 
 
 @requires_zarr
 class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
     @contextlib.contextmanager
-    def create_store(self, **open_kwargs):
+    def create_zarr_target(self):
         with create_tmp_file(suffix='.zarr') as tmp:
-            yield backends.ZarrStore(store=tmp, **open_kwargs)
-
-    @contextlib.contextmanager
-    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
-                  allow_cleanup_failure=False):
-        with create_tmp_file(
-                suffix='.zarr',
-                allow_cleanup_failure=allow_cleanup_failure) as tmp_file:
-            data.to_zarr(store=tmp_file, **save_kwargs)
-            yield xr.open_zarr(tmp_file, **open_kwargs)
+            yield tmp
 
 
 @requires_scipy

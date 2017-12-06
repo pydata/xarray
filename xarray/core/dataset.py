@@ -1131,7 +1131,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
 
-    def to_zarr(self, store=None, mode='a', synchronizer=None, group=None,
+    def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
                 encoding=None):
         """Write dataset contents to a zarr group.
 
@@ -1143,11 +1143,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         ----------
         store : MutableMapping or str, optional
             Store or path to directory in file system.
-        mode : {‘r’, ‘r+’, ‘a’, ‘w’, ‘w-‘}
-            Persistence mode: ‘r’ means read only (must exist); ‘r+’ means
-            read/write (must exist); ‘a’ means read/write (create if doesn’t
-            exist); ‘w’ means create (overwrite if exists); ‘w-‘ means create
-            (fail if exists).
+        mode : {‘w’, ‘w-‘}
+            Persistence mode: ‘‘w’ means create (overwrite if exists);
+            ‘w-‘ means create (fail if exists).
         synchronizer : object, optional
             Array synchronizer
         group : str, obtional
@@ -1159,6 +1157,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         if encoding is None:
             encoding = {}
+        if mode not in ['w', 'w-']:
+            # TODO: figure out how to handle ‘r+’ and ‘a’
+            raise ValueError("The only supported options for mode are 'w' "
+                             "and 'w-'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding)
