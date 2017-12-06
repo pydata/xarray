@@ -487,7 +487,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # Coordinates in key, value and self[key] should be consistent.
             obj = self[key]
             if isinstance(value, DataArray):
-                assert_coordinate_consistent(value, obj.coords)
+                assert_coordinate_consistent(value, obj._coords)
             # DataArray key -> Variable key
             key = {k: v.variable if isinstance(v, DataArray) else v
                    for k, v in self._item_key_to_dict(key).items()}

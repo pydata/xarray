@@ -313,8 +313,7 @@ def assert_coordinate_consistent(obj, coords):
     for k in obj.dims:
         # make sure there are no conflict in dimension coordinates
         if (k in coords and k in obj.coords):
-            coord = getattr(coords[k], 'variable', coords[k])  # Variable
-            if not coord.equals(obj[k].variable):
+            if not coords[k].equals(obj[k].variable):
                 raise IndexError(
                     'dimension coordinate {!r} conflicts between '
                     'indexed and indexing objects:\n{}\nvs.\n{}'
