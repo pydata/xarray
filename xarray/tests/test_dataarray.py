@@ -2778,6 +2778,14 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_iris(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
+        actual.remove_coord('time')
+        auto_time_dimension = DataArray.from_iris(actual)
+        self.assertEqual(auto_time_dimension.dims, ('distance', 'dim_1'))
+
+        actual.coord('distance').var_name = None
+        with raises_regex(ValueError, 'no var_name attribute'):
+            DataArray.from_iris(actual)
+
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         with raises_regex(ValueError, 'unable to convert unnamed'):
