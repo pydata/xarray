@@ -444,7 +444,7 @@ class DatasetIOTestCases(object):
         def find_and_validate_array(obj):
             # recursively called function. obj: array or array wrapper.
             if hasattr(obj, 'array'):
-                if isinstance(obj.array, indexing.NDArrayIndexable):
+                if isinstance(obj.array, indexing.ExplicitlyIndexed):
                     find_and_validate_array(obj.array)
                 else:
                     if isinstance(obj.array, np.ndarray):
@@ -491,6 +491,13 @@ class DatasetIOTestCases(object):
             expected = in_memory.dropna(dim='x')
             actual = on_disk.dropna(dim='x')
             assert_identical(expected, actual)
+
+    def test_ondisk_after_print(self):
+        """ Make sure print does not load file into memory """
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            repr(on_disk)
+            assert not on_disk['var1']._in_memory
 
 
 class CFEncodedDataTest(DatasetIOTestCases):
@@ -1802,11 +1809,11 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     def test_orthogonal_indexing(self):
         # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_orthogonal_indexing()
 
     def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Nio backend does not '):
+        with raises_regex(NotImplementedError, 'Outer indexing'):
             super(TestPyNio, self).test_isel_dataarray()
 
     def test_array_type_after_indexing(self):

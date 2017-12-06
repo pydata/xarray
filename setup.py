@@ -12,7 +12,7 @@ MINOR = 10
 MICRO = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = 'rc1'
+QUALIFIER = ''
 
 
 DISTNAME = 'xarray'

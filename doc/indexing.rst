@@ -279,7 +279,7 @@ dimension names, such as ``np.ndarray``, ``list``, but not
 :py:meth:`~xarray.DataArray` or :py:meth:`~xarray.Variable`) indexing can be
 understand as orthogonally. Each indexer component selects independently along
 the corresponding dimension, similar to how vector indexing works in Fortran or
-MATLAB, or after using the :py:func:`numpy.xi_` helper:
+MATLAB, or after using the :py:func:`numpy.ix_` helper:
 
 .. ipython:: python
 
