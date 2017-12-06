@@ -20,7 +20,7 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes)
+                          Indexes, assert_coordinate_consistent)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
@@ -484,6 +484,10 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
+            # Coordinates in key, value and self[key] should be consistent.
+            obj = self[key]
+            if isinstance(value, DataArray):
+                assert_coordinate_consistent(value, obj.coords)
             # DataArray key -> Variable key
             key = {k: v.variable if isinstance(v, DataArray) else v
                    for k, v in self._item_key_to_dict(key).items()}

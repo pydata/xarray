@@ -23,7 +23,8 @@ from . import formatting
 from . import duck_array_ops
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
+                          assert_coordinate_consistent)
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -1305,15 +1306,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # we don't need to call align() explicitly, because merge_variables
         # already checks for exact alignment between dimension coordinates
         coords = merge_variables(coord_list)
-
-        for k in self.dims:
-            # make sure there are not conflict in dimension coordinates
-            if (k in coords and k in self._variables and
-                    not coords[k].equals(self._variables[k])):
-                raise IndexError(
-                    'dimension coordinate {!r} conflicts between '
-                    'indexed and indexing objects:\n{}\nvs.\n{}'
-                    .format(k, self._variables[k], coords[k]))
+        assert_coordinate_consistent(self, coords)
 
         attached_coords = OrderedDict()
         for k, v in coords.items():  # silently drop the conflicted variables.
