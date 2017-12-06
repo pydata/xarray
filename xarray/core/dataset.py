@@ -1158,7 +1158,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         if encoding is None:
             encoding = {}
         if mode not in ['w', 'w-']:
-            # TODO: figure out how to handle ‘r+’ and ‘a’
+            # TODO: figure out how to handle 'r+' and 'a'
             raise ValueError("The only supported options for mode are 'w' "
                              "and 'w-'.")
         from ..backends.api import to_zarr
