@@ -8,8 +8,10 @@ import numpy as np
 
 from .core.dataarray import DataArray
 from .core.pycompat import OrderedDict, range
+from .core.dtypes import get_fill_value
 from .conventions import (
     maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
+from dask.array import ma
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis', 'calendar', 'leap_month', 'leap_year',
@@ -117,7 +119,7 @@ def to_iris(dataarray):
     if 'cell_methods' in dataarray.attrs:
         args['cell_methods'] = parse_cell_methods(dataarray.attrs['cell_methods'])
 
-    cube = iris.cube.Cube(dataarray.to_masked_array(), **args)
+    cube = iris.cube.Cube(ma.masked_invalid(dataarray), **args)
     return cube
 
 
@@ -181,7 +183,9 @@ def from_iris(cube):
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)
     if cell_methods:
         array_attrs['cell_methods'] = cell_methods
-    dataarray = DataArray(cube.data, coords=coords, name=name,
+
+    cube_data = ma.filled(cube.core_data(), get_fill_value(cube.dtype)) if hasattr(cube, 'core_data') else cube.data
+    dataarray = DataArray(cube_data, coords=coords, name=name,
                           attrs=array_attrs, dims=dims)
     decoded_ds = decode_cf(dataarray._to_temp_dataset())
     return dataarray._from_temp_dataset(decoded_ds)
