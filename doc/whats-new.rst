@@ -21,6 +21,9 @@ v0.10.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- `DatetimeAccessor` learned to return `date` i.e. `'2014-01-01T01:00:00.000000000'` is transformed to `'2014-01-01T00:00:00.000000000'`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a 1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of time).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
