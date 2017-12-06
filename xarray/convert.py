@@ -170,7 +170,7 @@ def from_iris(cube):
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
         if not coord.var_name:
-            raise ValueError('Coordinate has no var_name')
+            raise ValueError("Coordinate '{}' has no var_name attribute".format(coord.name()))
         if coord_dims:
             coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
         else:
