@@ -201,6 +201,6 @@ def test_hidden_key_dict():
     for k, v in data_expected.items():
         assert hkd[k] == v
     with pytest.raises(KeyError):
-        _ = hkd[hidden_key]
+        hkd[hidden_key]
     with pytest.raises(KeyError):
         del hkd[hidden_key]

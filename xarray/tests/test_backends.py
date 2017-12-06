@@ -1088,9 +1088,9 @@ class BaseZarrTest(CFEncodedDataTest):
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
-    def create_store(self, **open_kwargs):
+    def create_store(self):
         with self.create_zarr_target() as store_target:
-            yield backends.ZarrStore(store=store_target, **open_kwargs)
+            yield backends.ZarrStore.open_group(store_target, mode='w')
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -1181,7 +1181,7 @@ class BaseZarrTest(CFEncodedDataTest):
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
-        with self.create_store(mode='w') as store:
+        with self.create_store() as store:
             expected.dump_to_store(store)
             zarr_group = store.ds
 
@@ -1189,7 +1189,8 @@ class BaseZarrTest(CFEncodedDataTest):
             assert self.DIMENSION_KEY in zarr_group.attrs
 
             # check that a variable hidden attribute is present and correct
-            # for some reason, one is a list and the other a tuple
+            # JSON only has a single array type, which maps to list in Python.
+            # In contrast, dims in xarray is always a tuple.
             for var in expected.variables.keys():
                 assert (zarr_group[var].attrs[self.DIMENSION_KEY]
                         == list(expected[var].dims))

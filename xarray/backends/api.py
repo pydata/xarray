@@ -731,9 +731,9 @@ def to_zarr(dataset, store=None, mode='a', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    store = backends.ZarrStore(store=store, mode=mode,
-                               synchronizer=synchronizer, group=group,
-                               writer=None)
+    store = backends.ZarrStore.open_group(store=store, mode=mode,
+                                          synchronizer=synchronizer,
+                                          group=group, writer=None)
 
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims

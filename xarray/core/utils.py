@@ -543,7 +543,7 @@ class HiddenKeyDict(MutableMapping):
     def __init__(self, data, hidden_keys):
         self._data = data
         if type(hidden_keys) not in (list, tuple):
-            raise ValueError("hidden_keys must be a list or tuple")
+            raise TypeError("hidden_keys must be a list or tuple")
         self._hidden_keys = hidden_keys
 
     def _raise_if_hidden(self, key):

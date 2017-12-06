@@ -10,13 +10,8 @@ from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from ..core.pycompat import iteritems, OrderedDict, integer_types
-
 from .common import (AbstractWritableDataStore, BackendArray)
-
 from .. import conventions
-
-# this is a private method but we need it for open_zar
-from .api import _protect_dataset_variables_inplace
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -109,30 +104,6 @@ class ZarrArrayWrapper(BackendArray):
         # could possibly have a work-around for 0d data here
 
 
-def _open_zarr_group(store=None, overwrite=None, synchronizer=None,
-                     group=None, mode=None):
-    '''Wrap zarr.open_group'''
-
-    import zarr
-    zarr_group = zarr.open_group(store=store, mode=mode,
-                                 synchronizer=synchronizer, path=group)
-    return zarr_group
-
-
-def _dask_chunks_to_zarr_chunks(chunks):
-    '''this function translates dask chunk syntax to zarr chunk syntax'''
-    if chunks is None:
-        return chunks
-
-    all_chunks = product(*chunks)
-    first_chunk = next(all_chunks)
-    for this_chunk in all_chunks:
-        if this_chunk != first_chunk:
-            raise ValueError("zarr requires uniform chunk sizes, found %r" %
-                             chunks)
-    return first_chunk
-
-
 def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     """
     Given encoding chunks (possibly None) and variable chunks (possibly None)
@@ -179,7 +150,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # Here we re-implement this expansion ourselves. That makes the logic of
     # checking chunk compatibility easier
 
-    if type(enc_chunks) in integer_types:
+    if isinstance(enc_chunks, integer_types):
         enc_chunks_tuple = ndim * (enc_chunks,)
     else:
         enc_chunks_tuple = tuple(enc_chunks)
@@ -258,10 +229,6 @@ def _extract_zarr_variable_encoding(variable, raise_on_invalid=False):
     chunks = _determine_zarr_chunks(encoding.get('chunks'), variable.chunks,
                                     variable.ndim)
     encoding['chunks'] = chunks
-
-    # TODO: figure out how to serialize compressor and filters options
-    # in zarr these are python objects, not strings
-
     return encoding
 
 
@@ -311,13 +278,21 @@ class ZarrStore(AbstractWritableDataStore):
     """Store for reading and writing data via zarr
     """
 
-    def __init__(self, store=None, mode='a', synchronizer=None, group=None,
+    @classmethod
+    def open_group(cls, store, mode='r', synchronizer=None, group=None,
+                   writer=None):
+        import zarr
+        zarr_group = zarr.open_group(store=store, mode=mode,
+                                     synchronizer=synchronizer, path=group)
+        return cls(zarr_group, mode=mode, synchronizer=synchronizer,
+                   group=group, writer=writer)
+
+    def __init__(self, zarr_group, mode='r', synchronizer=None, group=None,
                  writer=None):
+        self.ds = zarr_group
         self._mode = mode
         self._synchronizer = synchronizer
         self._group = group
-        self.ds = _open_zarr_group(store=store, mode=mode,
-                                   synchronizer=synchronizer, group=group)
 
         # initialize hidden dimension attribute
         if _DIMENSION_KEY not in self.ds.attrs:
@@ -446,7 +421,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              cache=False, drop_variables=None):
+              drop_variables=None):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -462,8 +437,8 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     store : MutableMapping or str
         A MutableMapping where a Zarr Group has been stored or a path to a
         directory in file system where a Zarr DirectoryStore has been stored.
-    mode : {‘r’, ‘r+’}
-        Persistence mode: ‘r’ means read only (must exist); ‘r+’ means
+    mode : {'r', 'r+'}
+        Persistence mode: 'r' means read only (must exist); 'r+' means
         read/write (must exist)
     synchronizer : object, optional
         Array synchronizer
@@ -495,13 +470,6 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    cache : bool, optional
-        If True, cache data loaded from the underlying datastore in memory as
-        NumPy arrays when accessed to avoid reading from the underlying data-
-        store multiple times. Defaults to True unless you specify the `chunks`
-        argument to use dask, in which case it defaults to False. Does not
-        change the behavior of coordinates corresponding to dimensions, which
-        always load their data from disk into a ``pandas.Index``.
     drop_variables: string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
@@ -536,14 +504,13 @@ def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
 
-        # this is how we would apply caching
-        # but do we want it for zarr stores?
-        _protect_dataset_variables_inplace(ds, cache)
+        # TODO: this is where we would apply caching
 
         return ds
 
-    zarr_store = ZarrStore(store=store, mode=mode, synchronizer=synchronizer,
-                           group=group)
+    zarr_store = ZarrStore.open_group(store, mode=mode,
+                                      synchronizer=synchronizer,
+                                      group=group)
     ds = maybe_decode_store(zarr_store)
 
     # auto chunking needs to be here and not in ZarrStore because variable
