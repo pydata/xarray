@@ -1144,8 +1144,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store : MutableMapping or str, optional
             Store or path to directory in file system.
         mode : {‘w’, ‘w-‘}
-            Persistence mode: ‘‘w’ means create (overwrite if exists);
-            ‘w-‘ means create (fail if exists).
+            Persistence mode: 'w' means create (overwrite if exists);
+            'w-' means create (fail if exists).
         synchronizer : object, optional
             Array synchronizer
         group : str, obtional
