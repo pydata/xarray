@@ -57,24 +57,26 @@ def _decode_zarr_attrs(attrs):
                         for k, v in attrs.items()])
 
 
-# Do the appropriate shape munging to make slices
-# appear as the last axes of the result array
-# TODO: write tests for this
 def _replace_slices_with_arrays(key, shape):
+    """Replace slice objects in vindex with equivalent ndarray objects."""
     num_slices = sum(1 for k in key if isinstance(k, slice))
-    num_arrays = len(shape) - num_slices
+    array_subspace_size = max(
+        (k.ndim for k in key if isinstance(k, np.ndarray)), default=0)
+    assert len(key) == len(shape)
     new_key = []
     slice_count = 0
     for k, size in zip(key, shape):
         if isinstance(k, slice):
+            # the slice subspace always appears after the ndarray subspace
             array = np.arange(*k.indices(size))
             sl = [np.newaxis] * len(shape)
-            sl[num_arrays + slice_count] = np.newaxis
+            sl[array_subspace_size + slice_count] = slice(None)
             k = array[tuple(sl)]
             slice_count += 1
         else:
             assert isinstance(k, np.ndarray)
-            k = k[(slice(None),) * num_arrays + (np.newaxis,) * num_slices]
+            k = k[(slice(None),) * array_subspace_size
+                  + (np.newaxis,) * num_slices]
         new_key.append(k)
     return tuple(new_key)
 
