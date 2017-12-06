@@ -523,7 +523,7 @@ Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
 xarray. To write a dataset to zarr using files, we use the
-:py:attr:`Dataset.to_netcdf <xarray.Dataset.to_zarr>` method.
+:py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method.
 To write to a local directory, we pass a path to a directory
 
 .. ipython:: python
@@ -546,7 +546,7 @@ from being overwritten. To override this behavior and overwrite and existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
 To read back a zarr dataset that has been created this way, we use the
-py:func:`~xarray.open_zarr` method:
+:py:func:`~xarray.open_zarr` method:
 
 .. ipython:: python
 
