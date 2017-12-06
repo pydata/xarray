@@ -1200,11 +1200,12 @@ class BaseZarrTest(CFEncodedDataTest):
                 with xr.decode_cf(store) as actual:
                     pass
 
-            # put it back and try something else
+            # put it back and try removing from a variable
             zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
-            with xr.decode_cf(store) as actual:
-                pass
+            with pytest.raises(KeyError):
+                with xr.decode_cf(store) as actual:
+                    pass
 
 
 

@@ -235,7 +235,7 @@ def _get_zarr_dims_and_attrs(zarr_obj, dimension_key):
         raise KeyError("Zarr object is missing the attribute `%s`, which is "
                        "required for xarray to determine variable dimensions."
                        % (dimension_key))
-    attributes = HiddenKeyDict(zarr_obj.attrs, dimension_key)
+    attributes = HiddenKeyDict(zarr_obj.attrs, [dimension_key])
     return dimensions, attributes
 
 

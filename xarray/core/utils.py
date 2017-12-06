@@ -542,13 +542,13 @@ class HiddenKeyDict(MutableMapping):
     # ``__init__`` method required to create instance from class.
     def __init__(self, data, hidden_keys):
         self._data = data
-        if type(hidden_keys) is not list:
-            hidden_keys = [ hidden_keys ]
+        if type(hidden_keys) not in (list, tuple):
+            raise ValueError("hidden_keys must be a list or tuple")
         self._hidden_keys = hidden_keys
 
     def _raise_if_hidden(self, key):
         if key in self._hidden_keys:
-            raise KeyError('Key is hidden.')
+            raise KeyError('Key `%r` is hidden.' % key)
 
     # The next five methods are requirements of the ABC.
     def __setitem__(self, key, value):
