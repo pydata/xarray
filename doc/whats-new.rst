@@ -24,6 +24,10 @@ Enhancements
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a 1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of time).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Support for using `Zarr`_ as storage layer for xarray.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+
+.. _Zarr: http://zarr.readthedocs.io/
 
 Bug fixes
 ~~~~~~~~~
