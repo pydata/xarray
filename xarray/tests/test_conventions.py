@@ -644,9 +644,9 @@ class TestEncodeCFVariable(TestCase):
         foo1_coords = enc['foo1'].attrs.get('coordinates', '')
         foo2_coords = enc['foo2'].attrs.get('coordinates', '')
         foo3_coords = enc['foo3'].attrs.get('coordinates', '')
-        assert set(foo1_coords.split()) == set(['time', 'lat1', 'lon1'])
-        assert set(foo2_coords.split()) == set(['time', 'lat2', 'lon2'])
-        assert set(foo3_coords.split()) == set(['time', 'lat3', 'lon3'])
+        assert set(foo1_coords.split()) == set(['lat1', 'lon1'])
+        assert set(foo2_coords.split()) == set(['lat2', 'lon2'])
+        assert set(foo3_coords.split()) == set(['lat3', 'lon3'])
         # Should not have any global coordinates.
         assert 'coordinates' not in attrs
 
