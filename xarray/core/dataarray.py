@@ -594,7 +594,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def __dask_scheduler__(self):
-        return self._to_temp_dataset().__dask_optimize__
+        return self._to_temp_dataset().__dask_scheduler__
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
