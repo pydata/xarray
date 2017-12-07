@@ -21,8 +21,13 @@ v0.10.1 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:func:`~plot.contourf()` learned to contour 2D variables that have both a 1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of time).
+- :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
+  1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
+  time) (:issue:`1737`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Use ``pandas.Grouper`` class in xarray resample methods rather than the
+  deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 
 Bug fixes
