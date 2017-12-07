@@ -397,7 +397,11 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     --------
     open_dataset
     """
-    dataset = open_dataset(*args, **kwargs)
+    dataset = open_dataset(filename_or_obj, group=None, decode_cf=True,
+                           mask_and_scale=True, decode_times=True, 
+                           autoclose=False, concat_characters=True, 
+                           decode_coords=True, engine=None,chunks=None, 
+                           lock=None, cache=None, drop_variables=None)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
