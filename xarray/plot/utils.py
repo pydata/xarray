@@ -234,7 +234,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels = np.linspace(vmin, vmax, levels)
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = mpl.ticker.MaxNLocator(levels-1)
+                ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 

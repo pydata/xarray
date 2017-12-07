@@ -358,6 +358,7 @@ class MaskedAndScaledArray(indexing.ExplicitlyIndexedNDArrayMixin):
     ----------
     http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
     """
+
     def __init__(self, array, fill_value=None, scale_factor=None,
                  add_offset=None, dtype=float):
         """
@@ -400,6 +401,7 @@ class DecodedCFDatetimeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     values, when accessed, are automatically converted into datetime objects
     using decode_cf_datetime.
     """
+
     def __init__(self, array, units, calendar=None):
         self.array = indexing.as_indexable(array)
         self.units = units
@@ -440,6 +442,7 @@ class DecodedCFTimedeltaArray(indexing.ExplicitlyIndexedNDArrayMixin):
     values, when accessed, are automatically converted into timedelta objects
     using decode_cf_timedelta.
     """
+
     def __init__(self, array, units):
         self.array = indexing.as_indexable(array)
         self.units = units
@@ -460,6 +463,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     array('abc',
           dtype='|S3')
     """
+
     def __init__(self, array):
         """
         Parameters
@@ -505,6 +509,7 @@ class BytesToStringArray(indexing.ExplicitlyIndexedNDArrayMixin):
     array(['abc'],
           dtype=object)
     """
+
     def __init__(self, array, encoding='utf-8'):
         """
         Parameters
@@ -555,6 +560,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> NativeEndianArray(x)[:].dtype
     dtype('int16')
     """
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
 
@@ -583,6 +589,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> BoolTypeArray(x)[:].dtype
     dtype('bool')
     """
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
 
@@ -610,6 +617,7 @@ class UnsignedIntTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> UnsignedIntTypeArray(sb)[:]
     array([  0,   1, 127, 128, 255], dtype=uint8)
     """
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
         self.unsigned_dtype = np.dtype('u%s' % array.dtype.itemsize)

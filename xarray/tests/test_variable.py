@@ -218,11 +218,11 @@ class VariableSubclassTestCases(object):
     def test_datetime64_conversion(self):
         times = pd.date_range('2000-01-01', periods=3)
         for values, preserve_source in [
-                (times, True),
-                (times.values, True),
-                (times.values.astype('datetime64[s]'), False),
-                (times.to_pydatetime(), False),
-               ]:
+            (times, True),
+            (times.values, True),
+            (times.values.astype('datetime64[s]'), False),
+            (times.to_pydatetime(), False),
+        ]:
             v = self.cls(['t'], values)
             self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
             self.assertArrayEqual(v.values, times.values)
@@ -233,11 +233,11 @@ class VariableSubclassTestCases(object):
     def test_timedelta64_conversion(self):
         times = pd.timedelta_range(start=0, periods=3)
         for values, preserve_source in [
-                (times, True),
-                (times.values, True),
-                (times.values.astype('timedelta64[s]'), False),
-                (times.to_pytimedelta(), False),
-               ]:
+            (times, True),
+            (times.values, True),
+            (times.values.astype('timedelta64[s]'), False),
+            (times.to_pytimedelta(), False),
+        ]:
             v = self.cls(['t'], values)
             self.assertEqual(v.dtype, np.dtype('timedelta64[ns]'))
             self.assertArrayEqual(v.values, times.values)
@@ -732,10 +732,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_datetime64_conversion_scalar(self):
         expected = np.datetime64('2000-01-01', 'ns')
         for values in [
-                 np.datetime64('2000-01-01'),
-                 pd.Timestamp('2000-01-01T00'),
-                 datetime(2000, 1, 1),
-                ]:
+            np.datetime64('2000-01-01'),
+            pd.Timestamp('2000-01-01T00'),
+            datetime(2000, 1, 1),
+        ]:
             v = Variable([], values)
             self.assertEqual(v.dtype, np.dtype('datetime64[ns]'))
             self.assertEqual(v.values, expected)
@@ -744,10 +744,10 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_timedelta64_conversion_scalar(self):
         expected = np.timedelta64(24 * 60 * 60 * 10 ** 9, 'ns')
         for values in [
-                 np.timedelta64(1, 'D'),
-                 pd.Timedelta('1 day'),
-                 timedelta(days=1),
-                ]:
+            np.timedelta64(1, 'D'),
+            pd.Timedelta('1 day'),
+            timedelta(days=1),
+        ]:
             v = Variable([], values)
             self.assertEqual(v.dtype, np.dtype('timedelta64[ns]'))
             self.assertEqual(v.values, expected)
@@ -1141,7 +1141,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
                 np.timedelta64(1, 'h'),
                 None,
                 object(),
-                ]:
+        ]:
             variable = Variable([], value)
             actual = variable.transpose()
             assert actual.identical(variable)
@@ -1661,7 +1661,7 @@ class TestAsCompatibleData(TestCase):
 
     def test_full_like(self):
         # For more thorough tests, see test_variable.py
-        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
 
         expect = orig.copy(deep=True)
@@ -1703,7 +1703,7 @@ class TestAsCompatibleData(TestCase):
                 assert not isinstance(v, np.ndarray)
 
     def test_zeros_like(self):
-        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         self.assertVariableIdentical(zeros_like(orig),
                                      full_like(orig, 0))
@@ -1711,7 +1711,7 @@ class TestAsCompatibleData(TestCase):
                                      full_like(orig, 0, dtype=int))
 
     def test_ones_like(self):
-        orig = Variable(dims=('x', 'y'), data=[[1.5 ,2.0], [3.1, 4.3]],
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         self.assertVariableIdentical(ones_like(orig),
                                      full_like(orig, 1))
@@ -1744,6 +1744,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 class TestBackendIndexing(TestCase):
     """    Make sure all the array wrappers can be indexed. """
+
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
@@ -1763,7 +1764,7 @@ class TestBackendIndexing(TestCase):
         # could not doubly wrapping
         with raises_regex(TypeError, 'NumpyIndexingAdapter only wraps '):
             v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(
-                                            NumpyIndexingAdapter(self.d)))
+                NumpyIndexingAdapter(self.d)))
 
     def test_LazilyIndexedArray(self):
         v = Variable(dims=('x', 'y'), data=LazilyIndexedArray(self.d))

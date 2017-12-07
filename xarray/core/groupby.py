@@ -80,9 +80,9 @@ def _consolidate_slices(slices):
     for slice_ in slices:
         if not isinstance(slice_, slice):
             raise ValueError('list element is not a slice: %r' % slice_)
-        if (result and last_slice.stop == slice_.start
-                and _is_one_or_none(last_slice.step)
-                and _is_one_or_none(slice_.step)):
+        if (result and last_slice.stop == slice_.start and
+                _is_one_or_none(last_slice.step) and
+                _is_one_or_none(slice_.step)):
             last_slice = slice(last_slice.start, slice_.stop, slice_.step)
             result[-1] = last_slice
         else:
@@ -172,6 +172,7 @@ class GroupBy(object):
     Dataset.groupby
     DataArray.groupby
     """
+
     def __init__(self, obj, group, squeeze=False, grouper=None, bins=None,
                  cut_kwargs={}):
         """Create a GroupBy object
@@ -441,6 +442,7 @@ def _maybe_reorder(xarray_obj, dim, positions):
 class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     """GroupBy object specialized to grouping DataArray objects
     """
+
     def _iter_grouped_shortcut(self):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
@@ -573,6 +575,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
+
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)
 
@@ -662,6 +665,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         Dataset.assign
         """
         return self.apply(lambda ds: ds.assign(**kwargs))
+
 
 ops.inject_reduce_methods(DatasetGroupBy)
 ops.inject_binary_ops(DatasetGroupBy)

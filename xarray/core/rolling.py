@@ -122,6 +122,7 @@ class DataArrayRolling(Rolling):
     + rolling.DataArrayRolling
     + ops.inject_bottleneck_rolling_methods
     """
+
     def __init__(self, obj, min_periods=None, center=False, **windows):
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
@@ -228,6 +229,7 @@ class DataArrayRolling(Rolling):
         Methods to return a wrapped function for any function `func` for
         numpy methods.
         """
+
         def wrapped_func(self, **kwargs):
             return self.reduce(func, **kwargs)
         return wrapped_func
@@ -238,6 +240,7 @@ class DataArrayRolling(Rolling):
         Methods to return a wrapped function for any function `func` for
         bottoleneck method, except for `median`.
         """
+
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
@@ -285,6 +288,7 @@ class DatasetRolling(Rolling):
     Dataset.rolling
     DataArray.rolling
     """
+
     def __init__(self, obj, min_periods=None, center=False, **windows):
         """
         Moving window object for Dataset.
@@ -355,6 +359,7 @@ class DatasetRolling(Rolling):
         Return a wrapped function for injecting numpy and bottoleneck methods.
         see ops.inject_datasetrolling_methods
         """
+
         def wrapped_func(self, **kwargs):
             from .dataset import Dataset
             reduced = OrderedDict()
@@ -366,6 +371,7 @@ class DatasetRolling(Rolling):
                     reduced[key] = self.obj[key]
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
+
 
 inject_bottleneck_rolling_methods(DataArrayRolling)
 inject_datasetrolling_methods(DatasetRolling)

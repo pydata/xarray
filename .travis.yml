@@ -91,7 +91,7 @@ install:
 script:
   - python -OO -c "import xarray"
   - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
-  - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
+  - flake8 -j auto xarray
 
 after_success:
   - coveralls

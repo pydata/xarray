@@ -20,6 +20,7 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
+
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds
         self._shape = (rasterio_ds.count, rasterio_ds.height,
@@ -63,9 +64,9 @@ class RasterioArrayWrapper(BackendArray):
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
-                squeeze_axis.append(i+1)
+                squeeze_axis.append(i + 1)
                 start = k
-                stop = k+1
+                stop = k + 1
             else:
                 k = np.asarray(k)
                 start = k[0]
@@ -134,10 +135,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     dx, dy = riods.res[0], -riods.res[1]
     x0 = riods.bounds.right if dx < 0 else riods.bounds.left
     y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    coords['y'] = np.linspace(start=y0 + dy/2, num=ny,
-                              stop=(y0 + (ny - 1) * dy) + dy/2)
-    coords['x'] = np.linspace(start=x0 + dx/2, num=nx,
-                              stop=(x0 + (nx - 1) * dx) + dx/2)
+    coords['y'] = np.linspace(start=y0 + dy / 2, num=ny,
+                              stop=(y0 + (ny - 1) * dy) + dy / 2)
+    coords['x'] = np.linspace(start=x0 + dx / 2, num=nx,
+                              stop=(x0 + (nx - 1) * dx) + dx / 2)
 
     # Attributes
     attrs = {}

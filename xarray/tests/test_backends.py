@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from io import BytesIO
-from threading import Lock
 import contextlib
 import itertools
 import os.path
@@ -29,10 +28,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
                assert_allclose, flaky, network, requires_rasterio,
-               assert_identical, raises_regex)
+               assert_identical, raises_regex, mock)
 from .test_dataset import create_test_data
-
-from xarray.tests import mock, assert_identical
 
 try:
     import netCDF4 as nc4
@@ -455,7 +452,7 @@ class DatasetIOTestCases(object):
                         assert isinstance(obj, indexing.PandasIndexAdapter)
                     else:
                         raise TypeError('{} is wrapped by {}'.format(
-                                            type(obj.array), type(obj)))
+                            type(obj.array), type(obj)))
 
         for k, v in ds.variables.items():
             find_and_validate_array(v._data)
@@ -639,7 +636,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         for name, e in zip([0, (4, 5), True, ''], [te, te, te, ve]):
             ds = Dataset({name: da})
             with raises_regex(*e):
-                with self.roundtrip(ds) as actual:
+                with self.roundtrip(ds):
                     pass
 
     def test_encoding_kwarg(self):
@@ -1147,7 +1144,7 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
         with raises_regex(ValueError, 'must be 1-dimensional'):
-            with self.roundtrip(ds) as roundtripped:
+            with self.roundtrip(ds):
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):
@@ -1353,13 +1350,13 @@ class OpenMFDatasetManyFilesTest(TestCase):
                                else 'netcdf4')
                 # split into multiple sets of temp files
                 for ii in original.x.values:
-                    subds = original.isel(x=slice(ii, ii+1))
+                    subds = original.isel(x=slice(ii, ii + 1))
                     subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
                 # check that calculation on opened datasets works properly
                 ds = open_mfdataset(tmpfiles, engine=readengine,
                                     autoclose=True)
-                self.assertAllClose(ds.x.sum().values, (nfiles*(nfiles-1))/2)
+                self.assertAllClose(ds.x.sum().values, (nfiles * (nfiles - 1)) / 2)
                 self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
                 self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
                 ds.close()
@@ -1458,14 +1455,14 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
                       coords={
                           't': (['t', ], t1),
                           'x': (['x', ], x)
-                      })
+        })
 
         ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
                                  self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t2),
                           'x': (['x', ], x)
-                      })
+        })
 
         return ds1, ds2
 
@@ -1619,7 +1616,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                     self.assertEqual(actual.test1, ds1.test1)
                     # attributes from ds2 are not retained, e.g.,
                     with raises_regex(AttributeError,
-                                                 'no attribute'):
+                                      'no attribute'):
                         actual.test2
 
     def test_preprocess_mfdataset(self):
@@ -1737,7 +1734,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         # Test DataArray.compute() on dask backend.
         # The test for Dataset.compute() is already in DatasetIOTestCases;
         # however dask is the only tested backend which supports DataArrays
-        actual = DataArray([1,2]).chunk()
+        actual = DataArray([1, 2]).chunk()
         computed = actual.compute()
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
@@ -1857,7 +1854,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.tif') as tmp_file:
             # data
             nx, ny, nz = 4, 3, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(5000, 80000, 1000, 2000.)
             with rasterio.open(
@@ -1884,7 +1881,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.tif') as tmp_file:
             # data
             nx, ny, nz = 4, 3, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(5000, 80000, 1000, 2000.)
             with rasterio.open(
@@ -1901,9 +1898,9 @@ class TestRasterio(TestCase):
             expected = DataArray(data, dims=('band', 'y', 'x'),
                                  coords={
                                      'band': [1, 2, 3],
-                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
-                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
-                                 })
+                                     'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
+                                     'x': np.arange(nx) * 1000 + 5000 + dx / 2,
+            })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 assert 'crs' in rioda.attrs
@@ -1939,8 +1936,8 @@ class TestRasterio(TestCase):
             expected = DataArray(data[np.newaxis, ...],
                                  dims=('band', 'y', 'x'),
                                  coords={'band': [1],
-                                         'y': -np.arange(ny)*2 + 2 + dy/2,
-                                         'x': np.arange(nx)*0.5 + 1 + dx/2,
+                                         'y': -np.arange(ny) * 2 + 2 + dy / 2,
+                                         'x': np.arange(nx) * 0.5 + 1 + dx / 2,
                                          })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
@@ -1962,7 +1959,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.tif') as tmp_file:
             # data
             nx, ny, nz = 8, 10, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(1, 2, 0.5, 2.)
             with rasterio.open(
@@ -1976,8 +1973,8 @@ class TestRasterio(TestCase):
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
-                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
+                                 coords={'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
+                                         'y': (-np.arange(ny) * 2 + 2) + dy / 2,
                                          'band': [1, 2, 3]})
 
             with xr.open_rasterio(tmp_file, cache=False) as actual:
@@ -2054,7 +2051,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.tif') as tmp_file:
             # data
             nx, ny, nz = 8, 10, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(1, 2, 0.5, 2.)
             with rasterio.open(
@@ -2068,8 +2065,8 @@ class TestRasterio(TestCase):
 
             # ref
             expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': (np.arange(nx)*0.5 + 1) + dx/2,
-                                         'y': (-np.arange(ny)*2 + 2) + dy/2,
+                                 coords={'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
+                                         'y': (-np.arange(ny) * 2 + 2) + dy / 2,
                                          'band': [1, 2, 3]})
 
             # Cache is the default
@@ -2098,7 +2095,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.tif') as tmp_file:
             # data
             nx, ny, nz = 8, 10, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(1, 2, 0.5, 2.)
             with rasterio.open(
@@ -2119,8 +2116,8 @@ class TestRasterio(TestCase):
 
                 # ref
                 expected = DataArray(data, dims=('band', 'y', 'x'),
-                                     coords={'x': np.arange(nx)*0.5 + 1 + dx/2,
-                                             'y': -np.arange(ny)*2 + 2 + dy/2,
+                                     coords={'x': np.arange(nx) * 0.5 + 1 + dx / 2,
+                                             'y': -np.arange(ny) * 2 + 2 + dy / 2,
                                              'band': [1, 2, 3]})
 
                 # do some arithmetic
