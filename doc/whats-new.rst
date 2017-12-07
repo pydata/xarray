@@ -30,6 +30,8 @@ Bug fixes
 
 .. _whats-new.0.10.0:
 
+- Properly point DataArray.__dask_scheduler__ to dask.threaded.get
+
 v0.10.0 (20 November 2017)
 --------------------------
 
