@@ -1215,7 +1215,7 @@ def _encode_coordinates(variables, attributes, non_dim_coord_names):
         target_dims = variables[coord_name].dims
         for k, v in variables.items():
             if (k not in non_dim_coord_names and k not in v.dims and
-                    any(d in target_dims for d in v.dims)):
+                    set(target_dims) <= set(v.dims)):
                 variable_coordinates[k].add(coord_name)
                 global_coordinates.discard(coord_name)
 
