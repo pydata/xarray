@@ -20,7 +20,8 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes, assert_coordinate_consistent)
+                          Indexes, assert_coordinate_consistent,
+                          remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
@@ -115,8 +116,7 @@ class _LocIndexer(object):
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
 
-        ds = self.data_array._to_temp_dataset()
-        pos_indexers, _ = ds._remap_label_indexers(**key)
+        pos_indexers, _ = remap_label_indexers(self.data_array, **key)
         self.data_array[pos_indexers] = value
 
 

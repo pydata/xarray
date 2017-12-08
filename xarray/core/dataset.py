@@ -24,7 +24,7 @@ from . import duck_array_ops
 from .. import conventions
 from .alignment import align
 from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
-                          assert_coordinate_consistent)
+                          assert_coordinate_consistent, remap_label_indexers)
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -1371,28 +1371,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                        .union(coord_vars))
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
-    def _remap_label_indexers(self, method=None, tolerance=None, **indexers):
-        from .dataarray import DataArray
-
-        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
-                      for k, v in indexers.items()}
-
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, v_indexers, method=method, tolerance=tolerance
-        )
-        # attach indexer's coordinate to pos_indexers
-        for k, v in indexers.items():
-            if isinstance(v, Variable):
-                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-            elif isinstance(v, DataArray):
-                # drop coordinates found in indexers since .sel() already
-                # ensures alignments
-                coords = OrderedDict((k, v) for k, v in v._coords.items()
-                                     if k not in indexers)
-                pos_indexers[k] = DataArray(pos_indexers[k],
-                                            coords=coords, dims=v.dims)
-        return pos_indexers, new_indexes
-
     def sel(self, method=None, tolerance=None, drop=False, **indexers):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
@@ -1452,8 +1430,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel
         DataArray.sel
         """
-        pos_indexers, new_indexes = self._remap_label_indexers(
-                                                method, tolerance, **indexers)
+        pos_indexers, new_indexes = remap_label_indexers(
+                                        self, method, tolerance, **indexers)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 
