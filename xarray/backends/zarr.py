@@ -133,7 +133,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                 raise ValueError(
                     "Zarr requires uniform chunk sizes excpet for final chunk."
                     " Variable %r has incompatible chunks. Consider "
-                    "rechunking using `chunk()`." % var_chunks)
+                    "rechunking using `chunk()`." % (var_chunks,))
         # last chunk is allowed to be smaller
         last_var_chunk = all_var_chunks[-1]
         for len_first, len_last in zip(first_var_chunk, last_var_chunk):
@@ -284,19 +284,22 @@ class ZarrStore(AbstractWritableDataStore):
         import zarr
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
-        return cls(zarr_group, mode=mode, synchronizer=synchronizer,
-                   group=group, writer=writer)
+        return cls(zarr_group, writer=writer)
 
-    def __init__(self, zarr_group, mode='r', synchronizer=None, group=None,
-                 writer=None):
+    def __init__(self, zarr_group, writer=None):
         self.ds = zarr_group
-        self._mode = mode
-        self._synchronizer = synchronizer
-        self._group = group
+        self._read_only = self.ds.read_only
+        self._synchronizer = self.ds.synchronizer
+        self._group = self.ds.path
 
-        # initialize hidden dimension attribute
         if _DIMENSION_KEY not in self.ds.attrs:
-            self.ds.attrs[_DIMENSION_KEY] = {}
+            if self._read_only:
+                raise KeyError("Zarr group can't be read by xarray because "
+                               "it is missing the `%s` attribute." %
+                               _DIMENSION_KEY)
+            else:
+                # initialize hidden dimension attribute
+                self.ds.attrs[_DIMENSION_KEY] = {}
 
         if writer is None:
             # by default, we should not need a lock for writing zarr because
@@ -425,7 +428,7 @@ class ZarrStore(AbstractWritableDataStore):
 # avoid two workers attempting to modify the same chunk at the same time.
 
 
-def open_zarr(store, mode='r+', group=None, synchronizer=None, auto_chunk=True,
+def open_zarr(store, mode='r', group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
               drop_variables=None):

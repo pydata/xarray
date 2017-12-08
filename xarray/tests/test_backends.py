@@ -1147,9 +1147,11 @@ class BaseZarrTest(CFEncodedDataTest):
 
         # should fail if dask_chunks are irregular...
         ds_chunk_irreg = ds.chunk({'x': (5, 4, 3)})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError) as e_info:
             with self.roundtrip(ds_chunk_irreg) as actual:
                 pass
+        # make sure this error message is correct and not some other error
+        assert e_info.match('chunks')
 
         # ... except if the last chunk is smaller than the first
         ds_chunk_irreg = ds.chunk({'x': (5, 5, 2)})
@@ -1165,9 +1167,10 @@ class BaseZarrTest(CFEncodedDataTest):
 
         # specify incompatible encoding
         ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError) as e_info:
             with self.roundtrip(ds_chunk4) as actual:
                 pass
+        assert e_info.match('chunks')
 
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
@@ -1248,6 +1251,7 @@ class BaseZarrTest(CFEncodedDataTest):
             self.assertDatasetIdentical(original, actual)
 
         # TODO: actually do something with 'r+' that is different from 'r'
+        # what does 'r+' really mean for xarray?
         with self.roundtrip(original, open_kwargs={'mode': 'r+'}) as actual:
             self.assertDatasetIdentical(original, actual)
 
@@ -1263,6 +1267,24 @@ class BaseZarrTest(CFEncodedDataTest):
         save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
         with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
             assert actual.var1.encoding['compressor'] == blosc_comp
+
+    def test_group(self):
+        original = create_test_data()
+        group = 'some/random/path'
+        with self.roundtrip(original, save_kwargs={'group': group},
+                            open_kwargs={'group': group}) as actual:
+            self.assertDatasetIdentical(original, actual)
+        with pytest.raises(KeyError):
+            with self.roundtrip(original,
+                                save_kwargs={'group': group}) as actual:
+                self.assertDatasetIdentical(original, actual)
+        # if we open the dataset without specifying group but with mode='r+',
+        # no error is raised, but the variables are not there. This is because
+        # xarray creates the attribute it needs. Is this the right behavior?
+        # Should we even allow 'r+' mode?
+        with self.roundtrip(original, save_kwargs={'group': group},
+                            open_kwargs={'mode': 'r+'}) as actual:
+            assert len(actual.variables) == 0
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
