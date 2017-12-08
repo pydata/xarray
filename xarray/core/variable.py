@@ -1392,7 +1392,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Parameters
         ----------
         dim : str
+            Dimension over which to compute rank.
         pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
 
         Returns
         -------

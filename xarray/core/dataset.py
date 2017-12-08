@@ -3236,8 +3236,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Parameters
         ----------
         dim : str
+            Dimension over which to compute rank.
         pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
         keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
 
         Returns
         -------
