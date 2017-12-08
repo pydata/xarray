@@ -2113,8 +2113,7 @@ class TestRasterio(TestCase):
                         ns='ENVI',
                         description='{Tagged file}',
                         wavelength='{123.000000, 234.234000, 345.345678}',
-                        fwhm='{1.000000, 0.234000, 0.000345}',
-                        )
+                        fwhm='{1.000000, 0.234000, 0.000345}')
                 s.write(data)
                 dx, dy = s.res[0], -s.res[1]
 
@@ -2126,14 +2125,10 @@ class TestRasterio(TestCase):
                                      'x': np.arange(nx) * 1000 + 5000 + dx/2,
                                      'wavelength': (
                                          'band',
-                                         np.array([123, 234.234, 345.345678]),
-                                         ),
+                                         np.array([123, 234.234, 345.345678])),
                                      'fwhm': (
                                          'band',
-                                         np.array([1, 0.234, 0.000345]),
-                                         ),
-                                    },
-                                 )
+                                         np.array([1, 0.234, 0.000345]))})
 
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)

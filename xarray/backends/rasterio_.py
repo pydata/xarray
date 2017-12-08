@@ -108,10 +108,8 @@ def _parse_envi(meta):
     def default(s):
         return s.strip('{}')
 
-    parse = {
-        'wavelength': parsevec,
-        'fwhm': parsevec,
-        }
+    parse = {'wavelength': parsevec,
+             'fwhm': parsevec}
     parsed_meta = {k: parse.get(k, default)(v) for k, v in meta.items()}
     return parsed_meta
 
@@ -194,9 +192,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         attrs['transform'] = tuple(riods.transform)
 
     # Parse extra metadata from tags, if supported
-    parsers = {
-            'ENVI': _parse_envi,
-            }
+    parsers = {'ENVI': _parse_envi}
 
     driver = riods.driver
     if driver in parsers:
