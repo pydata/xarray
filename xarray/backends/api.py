@@ -718,7 +718,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
             encoding=None):
     """This function creates an appropriate datastore for writing a dataset to
-    disk a zarr ztore
+    a zarr ztore
 
     See `Dataset.to_zarr` for full API docs.
     """

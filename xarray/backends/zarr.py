@@ -428,7 +428,7 @@ class ZarrStore(AbstractWritableDataStore):
 # avoid two workers attempting to modify the same chunk at the same time.
 
 
-def open_zarr(store, mode='r', group=None, synchronizer=None, auto_chunk=True,
+def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
               drop_variables=None):
@@ -447,11 +447,8 @@ def open_zarr(store, mode='r', group=None, synchronizer=None, auto_chunk=True,
     store : MutableMapping or str
         A MutableMapping where a Zarr Group has been stored or a path to a
         directory in file system where a Zarr DirectoryStore has been stored.
-    mode : {'r', 'r+'}
-        Persistence mode: 'r' means read only (must exist); 'r+' means
-        read/write (must exist)
     synchronizer : object, optional
-        Array synchronizer
+        Array synchronizer provided to zarr
     group : str, obtional
         Group path. (a.k.a. `path` in zarr terminology.)
     auto_chunk : bool, optional
@@ -498,9 +495,6 @@ def open_zarr(store, mode='r', group=None, synchronizer=None, auto_chunk=True,
     ----------
     http://zarr.readthedocs.io/
     """
-    # note: there is no way to actually use 'r+' yet
-    if mode not in ['r', 'r+']:
-        raise ValueError("Mode must be 'r' or 'r+'.")
 
     if not decode_cf:
         mask_and_scale = False
@@ -518,6 +512,9 @@ def open_zarr(store, mode='r', group=None, synchronizer=None, auto_chunk=True,
 
         return ds
 
+    # Zarr supports a wide range of access modes, but for now xarray either
+    # reads or writes from a store, never both. For open_zarr, we only read
+    mode = 'r'
     zarr_store = ZarrStore.open_group(store, mode=mode,
                                       synchronizer=synchronizer,
                                       group=group)

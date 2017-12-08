@@ -1236,27 +1236,12 @@ class BaseZarrTest(CFEncodedDataTest):
             actual = xr.open_zarr(store)
             self.assertDatasetIdentical(original, actual)
             with pytest.raises(ValueError):
-                xr.open_zarr(store, mode='w-')
+                original.to_zarr(store, mode='w-')
 
         # check that we can't use other persistence modes
         # TODO: reconsider whether other persistence modes should be supported
         with pytest.raises(ValueError):
             with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
-                pass
-
-    def test_read_persistence_modes(self):
-        original = create_test_data()
-
-        with self.roundtrip(original, open_kwargs={'mode': 'r'}) as actual:
-            self.assertDatasetIdentical(original, actual)
-
-        # TODO: actually do something with 'r+' that is different from 'r'
-        # what does 'r+' really mean for xarray?
-        with self.roundtrip(original, open_kwargs={'mode': 'r+'}) as actual:
-            self.assertDatasetIdentical(original, actual)
-
-        with pytest.raises(ValueError):
-            with self.roundtrip(original, open_kwargs={'mode': 'w'}) as actual:
                 pass
 
     def test_compressor_encoding(self):
@@ -1278,13 +1263,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(original,
                                 save_kwargs={'group': group}) as actual:
                 self.assertDatasetIdentical(original, actual)
-        # if we open the dataset without specifying group but with mode='r+',
-        # no error is raised, but the variables are not there. This is because
-        # xarray creates the attribute it needs. Is this the right behavior?
-        # Should we even allow 'r+' mode?
-        with self.roundtrip(original, save_kwargs={'group': group},
-                            open_kwargs={'mode': 'r+'}) as actual:
-            assert len(actual.variables) == 0
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
