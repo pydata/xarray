@@ -32,6 +32,9 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Fixed encoding of multi-dimensional coordinates in
+  :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
+  By `Mike Neish <https://github.com/neishm>`_.
 
 .. _whats-new.0.10.0:
 
