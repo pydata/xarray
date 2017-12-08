@@ -312,7 +312,7 @@ def assert_coordinate_consistent(obj, coords):
     """
     for k in obj.dims:
         # make sure there are no conflict in dimension coordinates
-        if (k in coords and k in obj.coords):
+        if k in coords and k in obj.coords:
             if not coords[k].equals(obj[k].variable):
                 raise IndexError(
                     'dimension coordinate {!r} conflicts between '
