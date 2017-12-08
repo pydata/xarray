@@ -1430,8 +1430,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel
         DataArray.sel
         """
-        pos_indexers, new_indexes = remap_label_indexers(
-                                        self, method, tolerance, **indexers)
+        pos_indexers, new_indexes = remap_label_indexers(self, method,
+                                                         tolerance, **indexers)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

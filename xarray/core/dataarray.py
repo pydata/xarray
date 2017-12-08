@@ -484,6 +484,8 @@ class DataArray(AbstractArray, BaseDataObject):
             self.coords[key] = value
         else:
             # Coordinates in key, value and self[key] should be consistent.
+            # TODO Coordinate consistency in key is checked here, but it
+            # causes unnecessary indexing. It should be optimized.
             obj = self[key]
             if isinstance(value, DataArray):
                 assert_coordinate_consistent(value, obj.coords.variables)
