@@ -360,7 +360,8 @@ These methods may and also be applied to ``Dataset`` objects
 .. note::
 
   If an indexer is a :py:meth:`~xarray.DataArray`, its coordinates should not
-  conflict with the selected subpart of the target array.
+  conflict with the selected subpart of the target array (except for the
+  explicitly indexed dimensions with ``.loc``/``.sel``).
   Otherwise, ``IndexError`` will be raised.
 
 
