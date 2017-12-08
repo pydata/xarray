@@ -932,10 +932,9 @@ class TestDataArray(TestCase):
 
         da = get_data()
         # indexer with inconsistent coordinates.
-        ind = DataArray(np.arange(1, 4), dims=['x'],
-                        coords={'x': np.random.randn(3)})
-        da.sel(x=ind)
-        with raises_regex(IndexError, "dimension coordinate 'x'"):
+        ind = DataArray(np.arange(1, 4), dims=['y'],
+                        coords={'y': np.random.randn(3)})
+        with raises_regex(IndexError, "dimension coordinate 'y'"):
             da.loc[dict(x=ind)] = 0
 
         # indexer with consistent coordinates.
@@ -962,19 +961,6 @@ class TestDataArray(TestCase):
         assert np.allclose(da[dict(x=ind)].values, 0)
         self.assertDataArrayIdentical(da['x'], get_data()['x'])
         self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
-
-        # Conflict in the non-dimension coordinate
-        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
-                             coords={'x': [1, 2, 3],
-                                     'non-dim': ('x', [0, 2, 4])})
-        with raises_regex(IndexError, "dimension coordinate 'x'"):
-            da[dict(x=ind)] = value
-
-        # consistent coordinate in the assigning values
-        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
-                             coords={'x': [1, 2, 3],
-                                     'non-dim': ('x', [0, 2, 4])})
-        da[dict(x=ind)] = value  # should not raise
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])
