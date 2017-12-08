@@ -164,9 +164,10 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self):
+    def __init__(self, lock=GLOBAL_LOCK):
         self.sources = []
         self.targets = []
+        self.lock = lock
 
     def add(self, source, target):
         if isinstance(source, dask_array_type):
@@ -184,7 +185,7 @@ class ArrayWriter(object):
             import dask.array as da
             import dask
             if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
-                da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
+                da.store(self.sources, self.targets, lock=self.lock)
             else:
                 da.store(self.sources, self.targets)
             self.sources = []

@@ -10,7 +10,7 @@ from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from ..core.pycompat import iteritems, OrderedDict, integer_types
-from .common import (AbstractWritableDataStore, BackendArray)
+from .common import AbstractWritableDataStore, BackendArray, ArrayWriter
 from .. import conventions
 
 # need some special secret attributes to tell us the dimensions
@@ -298,8 +298,15 @@ class ZarrStore(AbstractWritableDataStore):
         if _DIMENSION_KEY not in self.ds.attrs:
             self.ds.attrs[_DIMENSION_KEY] = {}
 
+        if writer is None:
+            # by default, we should not need a lock for writing zarr because
+            # we do not (yet) allow overlapping chunks during write
+            zarr_writer = ArrayWriter(lock=None)
+        else:
+            zarr_writer = writer
+
         # do we need to define attributes for all of the opener keyword args?
-        super(ZarrStore, self).__init__(writer)
+        super(ZarrStore, self).__init__(zarr_writer)
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
