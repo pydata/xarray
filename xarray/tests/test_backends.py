@@ -2132,20 +2132,13 @@ class TestRasterio(TestCase):
 
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
                 # from ENVI tags
-                assert 'description' in rioda.attrs
                 assert isinstance(rioda.attrs['description'], basestring)
-                assert 'map_info' in rioda.attrs
                 assert isinstance(rioda.attrs['map_info'], basestring)
-                assert 'samples' in rioda.attrs
                 assert isinstance(rioda.attrs['samples'], basestring)
 
 
