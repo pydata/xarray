@@ -109,6 +109,8 @@ class VariableSubclassTestCases(object):
         assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
         assert_identical(v._getitem_with_mask([0, -1, 1]),
                          self.cls(['x'], [0, np.nan, 1]))
+        assert_identical(v._getitem_with_mask(slice(2)),
+                         self.cls(['x'], [0, 1]))
         assert_identical(v._getitem_with_mask([0, -1, 1], fill_value=-99),
                          self.cls(['x'], [0, -99, 1]))
 
@@ -117,6 +119,11 @@ class VariableSubclassTestCases(object):
         assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
         assert_identical(v._getitem_with_mask([-1, -1, -1]),
                          self.cls(['x'], [np.nan, np.nan, np.nan]))
+
+    def test_getitem_with_mask_nd_indexer(self):
+        v = self.cls(['x'], [0, 1, 2])
+        indexer = Variable(('x', 'y'), [[0, -1], [-1, 2]])
+        assert_identical(v._getitem_with_mask(indexer, fill_value=-1), indexer)
 
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
@@ -1051,6 +1058,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data[:, 1])
 
+    def test_getitem_with_mask_2d_input(self):
+        v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
+        assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
+                         Variable(('x', 'y'), [[np.nan, np.nan], [1, np.nan]]))
+        assert_identical(v._getitem_with_mask((slice(2), [0, 1, 2])), v)
+
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
         self.assertVariableIdentical(v.isel(time=slice(None)), v)
@@ -1517,6 +1530,13 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
             pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
+
+    def test_getitem_with_mask_nd_indexer(self):
+        import dask.array as da
+        v = Variable(['x'], da.arange(3, chunks=3))
+        indexer = Variable(('x', 'y'), [[0, -1], [-1, 2]])
+        assert_identical(v._getitem_with_mask(indexer, fill_value=-1),
+                         self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):

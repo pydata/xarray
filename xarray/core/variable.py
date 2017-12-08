@@ -307,10 +307,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 "replacement data must match the Variable's shape")
         self._data = data
 
-    @property
-    def _indexable_data(self):
-        return as_indexable(self._data)
-
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
         remote source into memory and return this variable.
@@ -622,8 +618,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
-        dims, index_tuple, new_order = self._broadcast_indexes(key)
-        data = self._indexable_data[index_tuple]
+        dims, indexer, new_order = self._broadcast_indexes(key)
+        data = as_indexable(self._data)[indexer]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
         return self._finalize_indexing_result(dims, data)
@@ -647,17 +643,25 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if fill_value is dtypes.NA:
             fill_value = dtypes.get_fill_value(self.dtype)
 
-        dims, index_tuple, new_order = self._broadcast_indexes(key)
+        dims, indexer, new_order = self._broadcast_indexes(key)
 
         if self.size:
-            data = self._indexable_data[index_tuple]
+            if isinstance(self._data, dask_array_type):
+                # dask's indexing is faster this way; also vindex does not
+                # support negative indices yet:
+                # https://github.com/dask/dask/pull/2967
+                actual_indexer = indexing.posify_mask_indexer(indexer)
+            else:
+                actual_indexer = indexer
+
+            data = as_indexable(self._data)[actual_indexer]
             chunks_hint = getattr(data, 'chunks', None)
-            mask = indexing.create_mask(index_tuple, self.shape, chunks_hint)
+            mask = indexing.create_mask(indexer, self.shape, chunks_hint)
             data = duck_array_ops.where(mask, fill_value, data)
         else:
             # array cannot be indexed along dimensions of size 0, so just
             # build the mask directly instead.
-            mask = indexing.create_mask(index_tuple, self.shape)
+            mask = indexing.create_mask(indexer, self.shape)
             data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
 
         if new_order:
@@ -687,7 +691,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                           (Ellipsis,)]
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
-        self._indexable_data[index_tuple] = value
+        indexable = as_indexable(self._data)
+        indexable[index_tuple] = value
 
     @property
     def attrs(self):

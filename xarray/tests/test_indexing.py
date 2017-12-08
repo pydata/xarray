@@ -442,3 +442,22 @@ def test_create_mask_dask():
 
     with pytest.raises(ValueError):
         indexing.create_mask(indexer, (5, 2), chunks_hint=())
+
+
+def test_create_mask_error():
+    with raises_regex(TypeError, 'unexpected key type'):
+        indexing.create_mask((1, 2), (3, 4))
+
+
+@pytest.mark.parametrize('indices, expected', [
+    (np.arange(5), np.arange(5)),
+    (np.array([0, -1, -1]), np.array([0, 0, 0])),
+    (np.array([-1, 1, -1]), np.array([1, 1, 1])),
+    (np.array([-1, -1, 2]), np.array([2, 2, 2])),
+    (np.array([-1]), np.array([0])),
+    (np.array([0, -1, 1, -1, -1]), np.array([0, 0, 1, 1, 1])),
+    (np.array([0, -1, -1, -1, 1]), np.array([0, 0, 0, 0, 1])),
+])
+def test_posify_mask_subindexer(indices, expected):
+    actual = indexing._posify_mask_subindexer(indices)
+    np.testing.assert_array_equal(expected, actual)

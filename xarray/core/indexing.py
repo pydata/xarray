@@ -711,6 +711,55 @@ def create_mask(indexer, shape, chunks_hint=None):
     return mask
 
 
+def _posify_mask_subindexer(index):
+    """Convert masked indices in a flat array to the nearest unmasked index.
+
+    Parameters
+    ----------
+    index : np.ndarray
+        One dimensional ndarray with dtype=int.
+
+    Returns
+    -------
+    np.ndarray
+        One dimensional ndarray with all values equal to -1 replaced by an
+        adjacent non-masked element.
+    """
+    masked = index == -1
+    unmasked_locs = np.flatnonzero(~masked)
+    if not unmasked_locs.size:
+        # indexing unmasked_locs is invalid
+        return np.zeros_like(index)
+    masked_locs = np.flatnonzero(masked)
+    prev_value = np.maximum(0, np.searchsorted(unmasked_locs, masked_locs) - 1)
+    new_index = index.copy()
+    new_index[masked_locs] = index[unmasked_locs[prev_value]]
+    return new_index
+
+
+def posify_mask_indexer(indexer):
+    """Convert masked values (-1) in an indexer to nearest unmasked values.
+
+    This routine is useful for dask, where it can be much faster to index
+    adjacent points than arbitrary points from the end of an array.
+
+    Parameters
+    ----------
+    indexer : ExplicitIndexer
+        Input indexer.
+
+    Returns
+    -------
+    ExplicitIndexer
+        Same type of input, with all values in ndarray keys equal to -1
+        replaced by an adjacent non-masked element.
+    """
+    key = tuple(_posify_mask_subindexer(k.ravel()).reshape(k.shape)
+                if isinstance(k, np.ndarray) else k
+                for k in indexer.tuple)
+    return type(indexer)(key)
+
+
 class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a NumPy array to use explicit indexing."""
 
