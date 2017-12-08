@@ -55,8 +55,8 @@ def _decode_zarr_attrs(attrs):
 def _replace_slices_with_arrays(key, shape):
     """Replace slice objects in vindex with equivalent ndarray objects."""
     num_slices = sum(1 for k in key if isinstance(k, slice))
-    array_subspace_size = max(
-        (k.ndim for k in key if isinstance(k, np.ndarray)), default=0)
+    ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
+    array_subspace_size = max(ndims) if ndims else 0
     assert len(key) == len(shape)
     new_key = []
     slice_count = 0
