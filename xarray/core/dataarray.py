@@ -102,13 +102,6 @@ class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
 
-    def _remap_key(self, key):
-        if not utils.is_dict_like(key):
-            # expand the indexer so we can handle Ellipsis
-            labels = indexing.expanded_indexer(key, self.data_array.ndim)
-            key = dict(zip(self.data_array.dims, labels))
-        return indexing.remap_label_indexers(self.data_array, key)
-
     def __getitem__(self, key):
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
@@ -117,7 +110,13 @@ class _LocIndexer(object):
         return self.data_array.sel(**key)
 
     def __setitem__(self, key, value):
-        pos_indexers, _ = self._remap_key(key)
+        if not utils.is_dict_like(key):
+            # expand the indexer so we can handle Ellipsis
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+
+        ds = self.data_array._to_temp_dataset()
+        pos_indexers, _ = ds._remap_label_indexers(**key)
         self.data_array[pos_indexers] = value
 
 
