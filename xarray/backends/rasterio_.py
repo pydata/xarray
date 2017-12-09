@@ -159,7 +159,7 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         attrs['transform'] = tuple(riods.transform)
     if hasattr(riods, 'nodatavals'):
         # The nodata values for the raster bands
-        attrs['nodatavals'] = tuple([np.nan if nodata is None else nodataval
+        attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
                                      for nodataval in riods.nodatavals])
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
