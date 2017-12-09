@@ -1440,6 +1440,56 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[dict(x=[True, False], y=[False, True, False])] = 1
         self.assertTrue(v[0, 1] == 1)
 
+    def test_setitem_fancy(self):
+        # assignment which should work as np.ndarray does
+        def assert_assigned_2d(array, key_x, key_y, values):
+            expected = array.copy()
+            expected[key_x, key_y] = values
+            v = Variable(['x', 'y'], array)
+            v[dict(x=key_x, y=key_y)] = values
+            self.assertArrayEqual(expected, v)
+
+        # 1d vectorized indexing
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=0)
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable((), 0))
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable(('a'), [3, 2]))
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=slice(None),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable(('a'), [3, 2]))
+
+        # 2d-vectorized indexing
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a', 'b'], [[0, 1]]),
+                           key_y=Variable(['a', 'b'], [[1, 0]]),
+                           values=0)
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a', 'b'], [[0, 1]]),
+                           key_y=Variable(['a', 'b'], [[1, 0]]),
+                           values=[0])
+        assert_assigned_2d(np.random.randn(5, 4),
+                           key_x=Variable(['a', 'b'], [[0, 1], [2, 3]]),
+                           key_y=Variable(['a', 'b'], [[1, 0], [3, 3]]),
+                           values=[2, 3])
+
+        # vindex with slice
+        v = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        ind = Variable(['a'], [0, 1])
+        v[dict(x=ind, z=ind)] = 0
+        expected = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        expected[0, :, 0] = 0
+        expected[1, :, 1] = 0
+        self.assertVariableIdentical(expected, v)
+
         # dimension broadcast
         v = Variable(['x', 'y'], np.ones((3, 2)))
         ind = Variable(['a', 'b'], [[0, 1]])

@@ -1001,15 +1001,12 @@ class TestDataset(TestCase):
         # Conflict in the dimension coordinate
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3)})
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_da)
         # Also the case for DataArray
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             actual = data['var2'].isel(dim2=indexing_da)
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             data['dim2'].isel(dim2=indexing_da)
 
         # same name coordinate which does not conflict
@@ -1502,7 +1499,7 @@ class TestDataset(TestCase):
 
         expected = data.copy(deep=True)
         expected['dim3'] = ('dim3', list('cdefghijkl'))
-        expected['var3'][:-2] = expected['var3'][2:]
+        expected['var3'][:-2] = expected['var3'][2:].values
         expected['var3'][-2:] = np.nan
         expected['letters'] = expected['letters'].astype(object)
         expected['letters'][-2:] = np.nan
@@ -1614,9 +1611,9 @@ class TestDataset(TestCase):
         left = create_test_data()
         right = left.copy(deep=True)
         right['dim3'] = ('dim3', list('cdefghijkl'))
-        right['var3'][:-2] = right['var3'][2:]
+        right['var3'][:-2] = right['var3'][2:].values
         right['var3'][-2:] = np.random.randn(*right['var3'][-2:].shape)
-        right['numbers'][:-2] = right['numbers'][2:]
+        right['numbers'][:-2] = right['numbers'][2:].values
         right['numbers'][-2:] = -10
 
         intersection = list('cdefghij')

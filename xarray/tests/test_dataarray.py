@@ -526,6 +526,93 @@ class TestDataArray(TestCase):
             expected[t] = 1
             self.assertArrayEqual(orig.values, expected)
 
+    def test_setitem_fancy(self):
+        # vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[dict(x=ind, y=ind)] = 0
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 0d-variable
+        da[dict(x=ind, y=ind)] = Variable((), 0)
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 1d-variable
+        da[dict(x=ind, y=ind)] = Variable(['a'], [2, 3])
+        expected = DataArray([[2, 1], [1, 3], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        # 2d-vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind_x = DataArray([[0, 1]], dims=['a', 'b'])
+        ind_y = DataArray([[1, 0]], dims=['a', 'b'])
+        da[dict(x=ind_x, y=ind_y)] = 0
+        expected = DataArray([[1, 0], [0, 1], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[ind] = 0
+        expected = DataArray([[0, 0], [0, 0], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+    def test_setitem_dataarray(self):
+        def get_data():
+            return DataArray(np.ones((4, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': np.arange(4), 'y': ['a', 'b', 'c'],
+                                     'non-dim': ('x', [1, 3, 4, 2])})
+
+        da = get_data()
+        # indexer with inconsistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.random.randn(3)})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = 0
+
+        # indexer with consistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.arange(1, 4)})
+        da[dict(x=ind)] = 0  # should not raise
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        da = get_data()
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        # Conflict in the non-dimension coordinate
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value  # should not raise
+
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value  # should not raise
+
     def test_contains(self):
         data_array = DataArray(1, coords={'x': 2})
         with pytest.warns(FutureWarning):
@@ -836,6 +923,44 @@ class TestDataArray(TestCase):
         da.loc[0] = 0
         self.assertTrue(np.all(da.values[0] == np.zeros(4)))
         assert da.values[1, 0] != 0
+
+    def test_loc_assign_dataarray(self):
+        def get_data():
+            return DataArray(np.ones((4, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': np.arange(4), 'y': ['a', 'b', 'c'],
+                                     'non-dim': ('x', [1, 3, 4, 2])})
+
+        da = get_data()
+        # indexer with inconsistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['y'],
+                        coords={'y': np.random.randn(3)})
+        with raises_regex(IndexError, "dimension coordinate 'y'"):
+            da.loc[dict(x=ind)] = 0
+
+        # indexer with consistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.arange(1, 4)})
+        da.loc[dict(x=ind)] = 0  # should not raise
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        da = get_data()
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da.loc[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da.loc[dict(x=ind)] = value
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])
