@@ -20,6 +20,7 @@ v0.10.1 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
+- Added nodatavals attribute to dataset when using open_rasterio.
 
 Bug fixes
 ~~~~~~~~~
