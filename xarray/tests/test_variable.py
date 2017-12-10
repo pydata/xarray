@@ -1355,6 +1355,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with raises_regex(TypeError, 'arrays stored as dask'):
             v.quantile(0.5, dim='x')
 
+    @requires_dask
+    @requires_bottleneck
+    def test_rank_dask_raises(self):
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
+        with raises_regex(TypeError, 'arrays stored as dask'):
+            v.rank('x')
+
     @requires_bottleneck
     def test_rank(self):
         import bottleneck as bn
@@ -1376,6 +1383,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0])
         v_expect = Variable(['x'], [0.75, 0.25, np.nan, 0.5, 1.0])
         self.assertVariableEqual(v.rank('x', pct=True), v_expect)
+        # invalid dim
+        with raises_regex(ValueError, 'not found'):
+            v.rank('y')
 
     def test_big_endian_reduce(self):
         # regression test for GH489

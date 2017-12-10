@@ -3414,9 +3414,19 @@ class TestDataset(TestCase):
     @requires_bottleneck
     def test_rank(self):
         ds = create_test_data(seed=1234)
-        x = ds.rank('dim3').var3
+        # only ds.var3 depends on dim3
+        z = ds.rank('dim3')
+        self.assertItemsEqual(['var3'], list(z.data_vars))
+        # same as dataarray version
+        x = z.var3
         y = ds.var3.rank('dim3')
         self.assertDataArrayEqual(x, y)
+        # coordinates stick
+        self.assertItemsEqual(list(z.coords), list(ds.coords))
+        self.assertItemsEqual(list(x.coords), list(y.coords))
+        # invalid dim
+        with raises_regex(ValueError, 'does not contain'):
+            x.rank('invalid_dim')
 
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})

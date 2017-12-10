@@ -3254,11 +3254,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            if name in self.data_vars and dim in var.dims:
-                variables[name] = var.rank(dim, pct=pct)
-                variables.update({
-                    k: self.variables[k] for k in var.dims
-                    if k not in variables and k in self.variables})
+            if name in self.data_vars:
+                if dim in var.dims:
+                    variables[name] = var.rank(dim, pct=pct)
+            else:
+                variables[name] = var
 
         coord_names = set(k for k in self.coords if k in variables)
         attrs = self.attrs if keep_attrs else None
