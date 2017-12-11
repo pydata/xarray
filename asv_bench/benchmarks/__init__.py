@@ -29,3 +29,12 @@ def randn(shape, frac_nan=None, chunks=None):
         x.flat[inds] = np.nan
 
     return x
+
+
+def randint(low, high=None, size=None, frac_minus=None):
+    x = np.random.randint(low, high, size)
+    if frac_minus is not None:
+        inds = random.sample(range(x.size), int(x.size * frac_minus))
+        x.flat[inds] = np.nan
+
+    return x
