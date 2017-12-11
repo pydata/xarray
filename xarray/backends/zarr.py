@@ -304,7 +304,7 @@ class ZarrStore(AbstractWritableDataStore):
         if writer is None:
             # by default, we should not need a lock for writing zarr because
             # we do not (yet) allow overlapping chunks during write
-            zarr_writer = ArrayWriter(lock=None)
+            zarr_writer = ArrayWriter(lock=False)
         else:
             zarr_writer = writer
 
