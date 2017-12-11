@@ -522,7 +522,7 @@ Xarray's Zarr backend allows xarray to leverage these capabilities.
 Xarray can't open just any zarr dataset, because xarray requires special
 metadata (attributes) describing the dataset dimensions and coordinates.
 At this time, xarray can only open zarr datasets that have been written by
-xarray. To write a dataset to zarr using files, we use the
+xarray. To write a dataset with zarr, we use the
 :py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method.
 To write to a local directory, we pass a path to a directory
 
@@ -540,9 +540,9 @@ To write to a local directory, we pass a path to a directory
     ds.to_zarr('path/to/directory.zarr')
 
 (The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
-there.) If the directory does not exist, it will be created. If a a zarr
-store is already present at that path an error will be raised, preventing it
-from being overwritten. To override this behavior and overwrite and existing
+there.) If the directory does not exist, it will be created. If a zarr
+store is already present at that path, an error will be raised, preventing it
+from being overwritten. To override this behavior and overwrite an existing
 store, add ``mode='w'`` when invoking ``to_zarr``.
 
 To read back a zarr dataset that has been created this way, we use the
@@ -557,7 +557,7 @@ Cloud Storage Buckets
 ~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to read and write xarray datasets directly from / to cloud
-storage buckets using zarr. This example uses the `gcsfs`_ pacakge to provide
+storage buckets using zarr. This example uses the `gcsfs`_ package to provide
 a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
 pass to xarray::
 
