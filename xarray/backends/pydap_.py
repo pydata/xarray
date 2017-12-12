@@ -22,14 +22,6 @@ class PydapArrayWrapper(BackendArray):
     @property
     def dtype(self):
         return self.array.dtype
-        t = self.array.type
-        if t.size is None and t.typecode == 'S':
-            # return object dtype because that's the only way in numpy to
-            # represent variable length strings; it also prevents automatic
-            # string concatenation via conventions.decode_cf_variable
-            return np.dtype('O')
-        else:
-            return np.dtype(t.typecode + str(t.size))
 
     def __getitem__(self, key):
         key = indexing.unwrap_explicit_indexer(
