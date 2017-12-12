@@ -34,7 +34,7 @@ class PydapArrayWrapper(BackendArray):
         # pydap doesn't squeeze axes automatically like numpy
         axis = tuple(n for n, k in enumerate(key)
                      if isinstance(k, integer_types))
-        if len(axis) > 1:
+        if len(axis) > 0:
             result = np.squeeze(result, axis)
         return result
 
