@@ -1783,8 +1783,16 @@ class PydapTest(TestCase):
                                     expected.isel(i=0, j=-1))
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
-                                    expected.isel(j=slice(1, 2)))
+            expected.attrs = {}
+            actual.attrs = {}
+            ac = actual.isel(j=slice(1, 2)).load()
+            ex = expected.isel(j=slice(1, 2)).load()
+            for key in ac:
+                self.assertDataArrayEqual(ac[key], ex[key])
+            for key in ac.coords:
+                self.assertDataArrayEqual(ac[key], ex[key])
+            self.assertDatasetEqual(actual.isel(j=slice(1, 2)).load(),
+                                    expected.isel(j=slice(1, 2)).load())
 
     def test_session(self):
         from pydap.cas.urs import setup_session
