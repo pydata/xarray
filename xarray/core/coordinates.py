@@ -5,11 +5,12 @@ from collections import Mapping
 from contextlib import contextmanager
 import pandas as pd
 
-from . import formatting
+from . import formatting, indexing
 from .utils import Frozen
 from .merge import (
     merge_coords, expand_and_merge_variables, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
+from .variable import Variable
 
 
 class AbstractCoordinates(Mapping, formatting.ReprMixin):
@@ -301,3 +302,54 @@ class Indexes(Mapping, formatting.ReprMixin):
 
     def __unicode__(self):
         return formatting.indexes_repr(self)
+
+
+def assert_coordinate_consistent(obj, coords):
+    """ Maeke sure the dimension coordinate of obj is
+    consistent with coords.
+
+    obj: DataArray or Dataset
+    coords: Dict-like of variables
+    """
+    for k in obj.dims:
+        # make sure there are no conflict in dimension coordinates
+        if k in coords and k in obj.coords:
+            if not coords[k].equals(obj[k].variable):
+                raise IndexError(
+                    'dimension coordinate {!r} conflicts between '
+                    'indexed and indexing objects:\n{}\nvs.\n{}'
+                    .format(k, obj[k], coords[k]))
+
+
+def remap_label_indexers(obj, method=None, tolerance=None, **indexers):
+    """
+    Remap **indexers from obj.coords.
+    If indexer is an instance of DataArray and it has coordinate, then this
+    coordinate will be attached to pos_indexers.
+
+    Returns
+    -------
+    pos_indexers: Same type of indexers.
+        np.ndarray or Variable or DataArra
+    new_indexes: mapping of new dimensional-coordinate.
+    """
+    from .dataarray import DataArray
+
+    v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
+                  for k, v in indexers.items()}
+
+    pos_indexers, new_indexes = indexing.remap_label_indexers(
+        obj, v_indexers, method=method, tolerance=tolerance
+    )
+    # attach indexer's coordinate to pos_indexers
+    for k, v in indexers.items():
+        if isinstance(v, Variable):
+            pos_indexers[k] = Variable(v.dims, pos_indexers[k])
+        elif isinstance(v, DataArray):
+            # drop coordinates found in indexers since .sel() already
+            # ensures alignments
+            coords = OrderedDict((k, v) for k, v in v._coords.items()
+                                 if k not in indexers)
+            pos_indexers[k] = DataArray(pos_indexers[k],
+                                        coords=coords, dims=v.dims)
+    return pos_indexers, new_indexes

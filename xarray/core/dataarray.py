@@ -20,7 +20,8 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes)
+                          Indexes, assert_coordinate_consistent,
+                          remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
@@ -102,13 +103,6 @@ class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
 
-    def _remap_key(self, key):
-        if not utils.is_dict_like(key):
-            # expand the indexer so we can handle Ellipsis
-            labels = indexing.expanded_indexer(key, self.data_array.ndim)
-            key = dict(zip(self.data_array.dims, labels))
-        return indexing.remap_label_indexers(self.data_array, key)
-
     def __getitem__(self, key):
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
@@ -117,7 +111,12 @@ class _LocIndexer(object):
         return self.data_array.sel(**key)
 
     def __setitem__(self, key, value):
-        pos_indexers, _ = self._remap_key(key)
+        if not utils.is_dict_like(key):
+            # expand the indexer so we can handle Ellipsis
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+
+        pos_indexers, _ = remap_label_indexers(self.data_array, **key)
         self.data_array[pos_indexers] = value
 
 
@@ -484,7 +483,15 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
-            # xarray-style array indexing
+            # Coordinates in key, value and self[key] should be consistent.
+            # TODO Coordinate consistency in key is checked here, but it
+            # causes unnecessary indexing. It should be optimized.
+            obj = self[key]
+            if isinstance(value, DataArray):
+                assert_coordinate_consistent(value, obj.coords.variables)
+            # DataArray key -> Variable key
+            key = {k: v.variable if isinstance(v, DataArray) else v
+                   for k, v in self._item_key_to_dict(key).items()}
             self.variable[key] = value
 
     def __delitem__(self, key):
@@ -594,7 +601,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def __dask_scheduler__(self):
-        return self._to_temp_dataset().__dask_optimize__
+        return self._to_temp_dataset().__dask_scheduler__
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
