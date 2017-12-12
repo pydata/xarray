@@ -16,7 +16,12 @@ class PydapArrayWrapper(BackendArray):
         self.array = array
 
     @property
+    def shape(self):
+        return self.array.shape
+
+    @property
     def dtype(self):
+        return self.array.dtype
         t = self.array.type
         if t.size is None and t.typecode == 'S':
             # return object dtype because that's the only way in numpy to
