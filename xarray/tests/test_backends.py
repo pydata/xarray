@@ -2132,6 +2132,56 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
+    def test_ENVI_tags(self):
+        rasterio = pytest.importorskip('rasterio', minversion='1.0a')
+        from rasterio.transform import from_origin
+
+        # Create an ENVI file with some tags in the ENVI namespace
+        with create_tmp_file(suffix='.dat') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(5000, 80000, 1000, 2000.)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='ENVI', height=ny, width=nx, count=nz,
+                    crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
+                         'proj': 'utm', 'zone': 18},
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.update_tags(
+                        ns='ENVI',
+                        description='{Tagged file}',
+                        wavelength='{123.000000, 234.234000, 345.345678}',
+                        fwhm='{1.000000, 0.234000, 0.000345}')
+                s.write(data)
+                dx, dy = s.res[0], -s.res[1]
+
+            # Tests
+            expected = DataArray(data, dims=('band', 'y', 'x'),
+                                 coords={
+                                     'band': [1, 2, 3],
+                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
+                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
+                                     'wavelength': (
+                                         'band',
+                                         np.array([123, 234.234, 345.345678])),
+                                     'fwhm': (
+                                         'band',
+                                         np.array([1, 0.234, 0.000345]))})
+
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert_allclose(rioda, expected)
+                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert isinstance(rioda.attrs['transform'], tuple)
+                # from ENVI tags
+                assert isinstance(rioda.attrs['description'], basestring)
+                assert isinstance(rioda.attrs['map_info'], basestring)
+                assert isinstance(rioda.attrs['samples'], basestring)
+
 
 class TestEncodingInvalid(TestCase):
 

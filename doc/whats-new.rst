@@ -30,6 +30,10 @@ Enhancements
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 
+- Experimental support for parsing ENVI metadata to coordinates and attributes
+  in :py:func:`xarray.open_rasterio`.
+  By `Matti Eskelinen <https://github.com/maaleske>`
+
 Bug fixes
 ~~~~~~~~~
 
