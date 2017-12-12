@@ -3260,7 +3260,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             else:
                 variables[name] = var
 
-        coord_names = set(k for k in self.coords if k in variables)
+        coord_names = set(self.coords)
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 

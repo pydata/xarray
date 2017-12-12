@@ -33,6 +33,7 @@ Enhancements
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`
+
 **New functions/methods**
 
 - New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
