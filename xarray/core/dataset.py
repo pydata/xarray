@@ -23,7 +23,8 @@ from . import formatting
 from . import duck_array_ops
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
+                          assert_coordinate_consistent, remap_label_indexers)
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -1339,15 +1340,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # we don't need to call align() explicitly, because merge_variables
         # already checks for exact alignment between dimension coordinates
         coords = merge_variables(coord_list)
-
-        for k in self.dims:
-            # make sure there are not conflict in dimension coordinates
-            if (k in coords and k in self._variables and
-                    not coords[k].equals(self._variables[k])):
-                raise IndexError(
-                    'dimension coordinate {!r} conflicts between '
-                    'indexed and indexing objects:\n{}\nvs.\n{}'
-                    .format(k, self._variables[k], coords[k]))
+        assert_coordinate_consistent(self, coords)
 
         attached_coords = OrderedDict()
         for k, v in coords.items():  # silently drop the conflicted variables.
@@ -1471,25 +1464,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel
         DataArray.sel
         """
-        from .dataarray import DataArray
-
-        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
-                      for k, v in indexers.items()}
-
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, v_indexers, method=method, tolerance=tolerance
-        )
-        # attach indexer's coordinate to pos_indexers
-        for k, v in indexers.items():
-            if isinstance(v, Variable):
-                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-            elif isinstance(v, DataArray):
-                # drop coordinates found in indexers since .sel() already
-                # ensures alignments
-                coords = OrderedDict((k, v) for k, v in v._coords.items()
-                                     if k not in indexers)
-                pos_indexers[k] = DataArray(pos_indexers[k],
-                                            coords=coords, dims=v.dims)
+        pos_indexers, new_indexes = remap_label_indexers(self, method,
+                                                         tolerance, **indexers)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 

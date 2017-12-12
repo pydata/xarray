@@ -830,3 +830,16 @@ def test_dataarray_with_dask_coords():
     assert not dask.is_dask_collection(array2)
 
     assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())
+
+
+def test_basic_compute():
+    ds = Dataset({'foo': ('x', range(5)),
+                  'bar': ('x', range(5))}).chunk({'x': 2})
+    for get in [dask.threaded.get,
+                dask.multiprocessing.get,
+                dask.local.get_sync,
+                None]:
+        with dask.set_options(get=get):
+            ds.compute()
+            ds.foo.compute()
+            ds.foo.variable.compute()

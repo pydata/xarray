@@ -277,7 +277,7 @@ Like numpy and pandas, xarray supports indexing many array elements at once in a
 If you only provide integers, slices, or unlabeled arrays (array without
 dimension names, such as ``np.ndarray``, ``list``, but not
 :py:meth:`~xarray.DataArray` or :py:meth:`~xarray.Variable`) indexing can be
-understand as orthogonally. Each indexer component selects independently along
+understood as orthogonally. Each indexer component selects independently along
 the corresponding dimension, similar to how vector indexing works in Fortran or
 MATLAB, or after using the :py:func:`numpy.ix_` helper:
 
@@ -357,6 +357,14 @@ These methods may and also be applied to ``Dataset`` objects
   ``isel_points`` and ``sel_points`` are now deprecated.
   See :ref:`more_advanced_indexing` for their alternative.
 
+.. note::
+
+  If an indexer is a :py:meth:`~xarray.DataArray`, its coordinates should not
+  conflict with the selected subpart of the target array (except for the
+  explicitly indexed dimensions with ``.loc``/``.sel``).
+  Otherwise, ``IndexError`` will be raised.
+
+
 .. _assigning_values:
 
 Assigning values with indexing
@@ -401,6 +409,11 @@ __ https://docs.scipy.org/doc/numpy/user/basics.indexing.html#assigning-values-t
   Dask array does not support value assignment
   (see :ref:`dask` for the details).
 
+.. note::
+
+  Coordinates in both the left- and right-hand-side arrays should not
+  conflict with each other.
+  Otherwise, ``IndexError`` will be raised.
 
 .. warning::
 
@@ -456,6 +469,7 @@ method:
                          dims='new_time')
     arr.sel(space=xr.DataArray(['IA', 'IL', 'IN'], dims=['new_time']),
             time=times)
+
 
 .. _align and reindex:
 

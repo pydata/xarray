@@ -81,6 +81,37 @@ class RasterioArrayWrapper(BackendArray):
         return out
 
 
+def _parse_envi(meta):
+    """Parse ENVI metadata into Python data structures.
+
+    See the link for information on the ENVI header file format:
+    http://www.harrisgeospatial.com/docs/enviheaderfiles.html
+
+    Parameters
+    ----------
+    meta : dict
+        Dictionary of keys and str values to parse, as returned by the rasterio
+        tags(ns='ENVI') call.
+
+    Returns
+    -------
+    parsed_meta : dict
+        Dictionary containing the original keys and the parsed values
+
+    """
+
+    def parsevec(s):
+        return np.fromstring(s.strip('{}'), dtype='float', sep=',')
+
+    def default(s):
+        return s.strip('{}')
+
+    parse = {'wavelength': parsevec,
+             'fwhm': parsevec}
+    parsed_meta = {k: parse.get(k, default)(v) for k, v in meta.items()}
+    return parsed_meta
+
+
 def open_rasterio(filename, chunks=None, cache=None, lock=None):
     """Open a file with rasterio (experimental).
 
@@ -157,6 +188,21 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
+
+    # Parse extra metadata from tags, if supported
+    parsers = {'ENVI': _parse_envi}
+
+    driver = riods.driver
+    if driver in parsers:
+        meta = parsers[driver](riods.tags(ns=driver))
+
+        for k, v in meta.items():
+            # Add values as coordinates if they match the band count,
+            # as attributes otherwise
+            if isinstance(v, (list, np.ndarray)) and len(v) == riods.count:
+                coords[k] = ('band', np.asarray(v))
+            else:
+                attrs[k] = v
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 
