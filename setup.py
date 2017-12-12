@@ -110,6 +110,9 @@ if not ISRELEASED:
         # Strip leading v from tags format "vx.y.z" to get th version string
         FULLVERSION = rev.lstrip('v')
 
+        # make sure we respect PEP 440
+        FULLVERSION = FULLVERSION.replace("-", "+dev", 1).replace("-", ".")
+
 else:
     FULLVERSION += QUALIFIER
 
