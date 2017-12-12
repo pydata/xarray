@@ -105,7 +105,7 @@ if not ISRELEASED:
             # partial clone, manually construct version string
             # this is the format before we started using git-describe
             # to get an ordering on dev version strings.
-            rev = "v%s.dev-%s" % (VERSION, rev)
+            rev = "v%s+dev.%s" % (VERSION, rev)
 
         # Strip leading v from tags format "vx.y.z" to get th version string
         FULLVERSION = rev.lstrip('v')
