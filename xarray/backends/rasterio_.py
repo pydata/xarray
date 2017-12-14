@@ -125,11 +125,12 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
     for more information).
 
-    You can generate coordinates from a non-rectilinear transformation with::
+    You can generate 2D coordinates from the file's attributes with::
 
         from affine import Affine
+        da = xr.open_rasterio('path_to_file.tif')
         transform = Affine(*da.attrs['transform'])
-        nx, ny = , da.sizes['y']
+        nx, ny = da.sizes['x'], da.sizes['y']
         x, y = np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) * transform
 
 
@@ -141,7 +142,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         Whether to parse the x and y coordinates out of the file's
         ``transform`` attribute or not. The default is to automatically
         parse the coordinates only if they are rectilinear (1D).
-        It can be useful to set `parse_coordinates=False`
+        It can be useful to set ``parse_coordinates=False``
         if your files are very large or if you don't need the coordinates.
     chunks : int, tuple or dict, optional
         Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
@@ -184,7 +185,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         transform = riods.transform
     if transform.is_rectilinear:
         # 1d coordinates
-        parse = True if parse_coordinates is None else parse_coordinates
+        parse = True if (parse_coordinates is None) else parse_coordinates
         if parse:
             nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered
@@ -194,7 +195,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             coords['x'] = x
     else:
         # 2d coordinates
-        parse = False if parse_coordinates is None else parse_coordinates
+        parse = False if (parse_coordinates is None) else parse_coordinates
         if parse:
             warnings.warn("The file coordinates' transformation isn't "
                           "rectilinear: xarray won't parse the coordinates "

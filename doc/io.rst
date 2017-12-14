@@ -480,10 +480,14 @@ rasterio is installed. Here is an example of how to use
     [1703814 values with dtype=uint8]
     Coordinates:
       * band     (band) int64 1 2 3
-      * y        (y) float64 2.827e+06 2.827e+06 2.826e+06 2.826e+06 2.826e+06 ...
-      * x        (x) float64 1.02e+05 1.023e+05 1.026e+05 1.029e+05 1.032e+05 ...
+      * y        (y) float64 2.827e+06 2.826e+06 2.826e+06 2.826e+06 2.826e+06 ...
+      * x        (x) float64 1.021e+05 1.024e+05 1.027e+05 1.03e+05 1.033e+05 ...
     Attributes:
-        crs:      +init=epsg:32618
+        res:        (300.0379266750948, 300.041782729805)
+        transform:  (300.0379266750948, 0.0, 101985.0, 0.0, -300.041782729805, 28...
+        is_tiled:   0
+        crs:        +init=epsg:32618
+
 
 The ``x`` and ``y`` coordinates are generated out of the file's metadata
 (``bounds``, ``width``, ``height``), and they can be understood as cartesian
