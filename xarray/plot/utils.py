@@ -258,17 +258,21 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels=levels, norm=norm)
 
 
-def _infer_xy_labels(darray, x, y):
+def _infer_xy_labels(darray, x, y, imshow=False):
     """
     Determine x and y labels. For use in _plot2d
 
-    darray must be a 2 dimensional data array.
+    darray must be a 2 dimensional data array, or 3d for imshow only.
     """
 
     if x is None and y is None:
         if darray.ndim != 2:
-            raise ValueError('DataArray must be 2d')
-        y, x = darray.dims
+            if not imshow:
+                raise ValueError('DataArray must be 2d')
+            elif darray.ndim != 3 or darray.shape[2] not in (3, 4):
+                raise ValueError('DataArray for imshow must be 2d, MxNx3 for '
+                                 'RGB image, or MxNx4 for RGBA image.')
+        y, x, *_ = darray.dims
     elif x is None:
         if y not in darray.dims:
             raise ValueError('y must be a dimension name if x is not supplied')

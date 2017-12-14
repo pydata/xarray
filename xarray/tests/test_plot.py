@@ -619,6 +619,8 @@ class Common2dMixin:
 
     def test_3d_raises_valueerror(self):
         a = DataArray(easy_array((2, 3, 4)))
+        if self.plotfunc.__name__ == 'imshow':
+            pytest.skip()
         with raises_regex(ValueError, r'DataArray must be 2d'):
             self.plotfunc(a)
 
@@ -1061,6 +1063,20 @@ class TestImshow(Common2dMixin, PlotTestCase):
     def test_2d_coord_names(self):
         with raises_regex(ValueError, 'requires 1D coordinates'):
             self.plotmethod(x='x2d', y='y2d')
+
+    def test_plot_rgb_image(self):
+        DataArray(
+            easy_array((10, 15, 3), start=0),
+            dims=['y', 'x', 'band'],
+        ).plot.imshow()
+        self.assertEqual(0, len(find_possible_colorbars()))
+
+    def test_plot_rgb_faceted(self):
+        DataArray(
+            easy_array((2, 2, 10, 15, 3), start=0),
+            dims=['a', 'b', 'y', 'x', 'band'],
+        ).plot.imshow(row='a', col='b')
+        self.assertEqual(0, len(find_possible_colorbars()))
 
 
 class TestFacetGrid(PlotTestCase):

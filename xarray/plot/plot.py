@@ -443,6 +443,10 @@ def _plot2d(plotfunc):
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
             add_colorbar = plotfunc.__name__ != 'contour'
+        if (plotfunc.__name__ == 'imshow' and
+            darray.ndim == (3 + (row is not None) + (col is not None))):
+            # Don't add a colorbar when showing an image with explicit colors
+            add_colorbar = False
 
         # Handle facetgrids first
         if row or col:
@@ -470,7 +474,8 @@ def _plot2d(plotfunc):
                           "Use colors keyword instead.",
                           DeprecationWarning, stacklevel=3)
 
-        xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y)
+        xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y,
+                                      imshow=plotfunc.__name__ == 'imshow')
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -595,6 +600,10 @@ def imshow(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
 
+    While other plot methods require the DataArray to be strictly
+    two-dimensional, ``imshow`` also accepts a 3D array where the third
+    dimension can be interpreted as RGB or RGBA color channels.
+
     .. note::
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.
@@ -631,6 +640,15 @@ def imshow(x, y, z, ax, **kwargs):
 
     # Allow user to override these defaults
     defaults.update(kwargs)
+
+    if z.ndim == 3:
+        # matplotlib imshow uses black for missing data, but Xarray makes
+        # missing data transparent.  We therefore add an alpha channel if
+        # there isn't one, and set it to transparent where data is masked.
+        if z.shape[-1] == 3:
+            z = np.ma.concatenate((z, np.ma.ones(z.shape[:2] + (1,))), 2)
+        z = z.copy()
+        z[np.any(z.mask, axis=-1), -1] = 0
 
     primitive = ax.imshow(z, **defaults)
 

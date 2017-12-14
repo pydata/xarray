@@ -240,7 +240,7 @@ class FacetGrid(object):
 
         # Get x, y labels for the first subplot
         x, y = _infer_xy_labels(darray=self.data.loc[self.name_dicts.flat[0]],
-                                x=x, y=y)
+                                x=x, y=y, imshow=func.__name__ == 'imshow')
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
