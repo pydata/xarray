@@ -21,32 +21,34 @@ DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
-def _get_default_engine(path, allow_remote=False):
-    if OPTIONS['io_engine'] is not None:
-        return OPTIONS['io_engine']
+def _file_startswith(path, *args):
+    """Check that the file statswith with the sepcific byte sequence."""
+    with open(path, 'rb') as f:
+        for b in args:
+            sig = f.read(len(b))
+            print(sig, b)
+            return True if sig == b else False
 
+
+def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):  # pragma: no cover
-        try:
-            import netCDF4
-            engine = 'netcdf4'
-        except ImportError:
-            try:
-                import pydap
-                engine = 'pydap'
-            except ImportError:
-                raise ValueError('netCDF4 or pydap is required for accessing '
-                                 'remote datasets via OPeNDAP')
+        for engine in OPTIONS['io_engines']:
+            if engine in ('netcdf4', 'pydap', 'h5netcdf'):
+                return engine
+        else:
+            raise ValueError('netCDF4 or pydap is required for accessing '
+                             'remote datasets via OPeNDAP')
     else:
-        try:
-            import netCDF4
-            engine = 'netcdf4'
-        except ImportError:  # pragma: no cover
-            try:
-                import scipy.io.netcdf
-                engine = 'scipy'
-            except ImportError:
-                raise ValueError('cannot read or write netCDF files without '
-                                 'netCDF4-python or scipy installed')
+        for engine in OPTIONS['io_engines']:
+            if engine in ('netcdf4', 'h5netcdf') \
+                    and _file_startswith(path, b'\x89HDF\r\n\x1a\n'):
+                return engine
+            elif engine == 'scipy' \
+                    and _file_startswith(path, b'CDF\x00', b'CDF\x01'):
+                return engine
+        else:
+            raise ValueError('cannot read or write netCDF files without '
+                             'netCDF4-python, scipy, or h5netcdf installed')
     return engine
 
 
@@ -221,8 +223,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
-
-    engine = engine or OPTIONS['io_engine']
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -539,8 +539,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
-    engine = engine or OPTIONS['io_engine']
-
     if lock is None:
         lock = _default_lock(paths[0], engine)
     datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
@@ -587,7 +585,6 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
-    engine = engine or OPTIONS['io_engine']
     if path_or_file is None:
         if engine is None:
             engine = 'scipy'
@@ -711,8 +708,6 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         raise ValueError('must supply lists of the same length for the '
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
-
-    engine = engine or OPTIONS['io_engine']
 
     writer = ArrayWriter()
     stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
