@@ -2151,13 +2151,9 @@ class TestRasterio(TestCase):
                                  })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
             # Check no parse coords
@@ -2228,13 +2224,9 @@ class TestRasterio(TestCase):
                                          })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
     def test_notransform(self):
@@ -2266,11 +2258,8 @@ class TestRasterio(TestCase):
                                              })
                 with xr.open_rasterio(tmp_file) as rioda:
                     assert_allclose(rioda, expected)
-                    assert 'res' in rioda.attrs
                     assert isinstance(rioda.attrs['res'], tuple)
-                    assert 'is_tiled' in rioda.attrs
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                    assert 'transform' in rioda.attrs
                     assert isinstance(rioda.attrs['transform'], tuple)
 
     def test_indexing(self):
