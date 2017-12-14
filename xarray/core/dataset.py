@@ -1087,7 +1087,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT','NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1131,6 +1131,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
+
+    def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
+                encoding=None):
+        """Write dataset contents to a zarr group.
+
+        .. note:: Experimental
+                  The Zarr backend is new and experimental. Please report any
+                  unexpected behavior via github issues.
+
+        Parameters
+        ----------
+        store : MutableMapping or str, optional
+            Store or path to directory in file system.
+        mode : {'w', 'w-'}
+            Persistence mode: 'w' means create (overwrite if exists);
+            'w-' means create (fail if exists).
+        synchronizer : object, optional
+            Array synchronizer
+        group : str, obtional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        """
+        if encoding is None:
+            encoding = {}
+        if mode not in ['w', 'w-']:
+            # TODO: figure out how to handle 'r+' and 'a'
+            raise ValueError("The only supported options for mode are 'w' "
+                             "and 'w-'.")
+        from ..backends.api import to_zarr
+        return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
+                       group=group, encoding=encoding)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
