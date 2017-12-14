@@ -590,10 +590,9 @@ class BaseDataObject(AttrAccessMixin):
             raise TypeError("Dimension name should be a string; "
                             "was passed %r" % dim)
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        time_grouper = pd.TimeGrouper(freq=freq, closed=closed,
-                                      label=label, base=base)
+        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
-                                       grouper=time_grouper,
+                                       grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
 
         return resampler
@@ -615,9 +614,9 @@ class BaseDataObject(AttrAccessMixin):
         if isinstance(dim, basestring):
             dim = self[dim]
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        time_grouper = pd.TimeGrouper(freq=freq, how=how, closed=closed,
-                                      label=label, base=base)
-        gb = self._groupby_cls(self, group, grouper=time_grouper)
+        grouper = pd.Grouper(freq=freq, how=how, closed=closed, label=label,
+                             base=base)
+        gb = self._groupby_cls(self, group, grouper=grouper)
         if isinstance(how, basestring):
             f = getattr(gb, how)
             if how in ['first', 'last']:

@@ -637,17 +637,22 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         dims, index_tuple, new_order = self._broadcast_indexes(key)
 
-        if isinstance(value, Variable):
-            value = value.set_dims(dims).data
-
-        if new_order:
-            value = duck_array_ops.asarray(value)
+        if not isinstance(value, Variable):
+            value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
                     'shape mismatch: value array of shape %s could not be'
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
+            if value.ndim == 0:
+                value = Variable((), value)
+            else:
+                value = Variable(dims[-value.ndim:], value)
+        # broadcast to become assignable
+        value = value.set_dims(dims).data
 
+        if new_order:
+            value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
             value = np.moveaxis(value, new_order, range(len(new_order)))
@@ -1613,6 +1618,11 @@ def _unified_dims(variables):
 
 
 def _broadcast_compat_variables(*variables):
+    """Create broadcast compatible variables, with the same dimensions.
+
+    Unlike the result of broadcast_variables(), some variables may have
+    dimensions of size 1 instead of the the size of the broadcast dimension.
+    """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var
                  for var in variables)

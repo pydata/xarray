@@ -23,7 +23,8 @@ from . import formatting
 from . import duck_array_ops
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
+                          assert_coordinate_consistent, remap_label_indexers)
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -1086,7 +1087,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT','NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1130,6 +1131,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
+
+    def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
+                encoding=None):
+        """Write dataset contents to a zarr group.
+
+        .. note:: Experimental
+                  The Zarr backend is new and experimental. Please report any
+                  unexpected behavior via github issues.
+
+        Parameters
+        ----------
+        store : MutableMapping or str, optional
+            Store or path to directory in file system.
+        mode : {'w', 'w-'}
+            Persistence mode: 'w' means create (overwrite if exists);
+            'w-' means create (fail if exists).
+        synchronizer : object, optional
+            Array synchronizer
+        group : str, obtional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        """
+        if encoding is None:
+            encoding = {}
+        if mode not in ['w', 'w-']:
+            # TODO: figure out how to handle 'r+' and 'a'
+            raise ValueError("The only supported options for mode are 'w' "
+                             "and 'w-'.")
+        from ..backends.api import to_zarr
+        return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
+                       group=group, encoding=encoding)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -1305,15 +1340,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # we don't need to call align() explicitly, because merge_variables
         # already checks for exact alignment between dimension coordinates
         coords = merge_variables(coord_list)
-
-        for k in self.dims:
-            # make sure there are not conflict in dimension coordinates
-            if (k in coords and k in self._variables and
-                    not coords[k].equals(self._variables[k])):
-                raise IndexError(
-                    'dimension coordinate {!r} conflicts between '
-                    'indexed and indexing objects:\n{}\nvs.\n{}'
-                    .format(k, self._variables[k], coords[k]))
+        assert_coordinate_consistent(self, coords)
 
         attached_coords = OrderedDict()
         for k, v in coords.items():  # silently drop the conflicted variables.
@@ -1437,25 +1464,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel
         DataArray.sel
         """
-        from .dataarray import DataArray
-
-        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
-                      for k, v in indexers.items()}
-
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, v_indexers, method=method, tolerance=tolerance
-        )
-        # attach indexer's coordinate to pos_indexers
-        for k, v in indexers.items():
-            if isinstance(v, Variable):
-                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-            elif isinstance(v, DataArray):
-                # drop coordinates found in indexers since .sel() already
-                # ensures alignments
-                coords = OrderedDict((k, v) for k, v in v._coords.items()
-                                     if k not in indexers)
-                pos_indexers[k] = DataArray(pos_indexers[k],
-                                            coords=coords, dims=v.dims)
+        pos_indexers, new_indexes = remap_label_indexers(self, method,
+                                                         tolerance, **indexers)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 
