@@ -125,6 +125,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     <http://web.archive.org/web/20160326194152/http://remotesensing.org/geotiff/spec/geotiff2.5.html#2.5.2>`_
     for more information).
 
+    You can generate coordinates from a non-rectilinear transformation with::
+
+        from affine import Affine
+        transform = Affine(*da.attrs['transform'])
+        nx, ny = , da.sizes['y']
+        x, y = np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) * transform
+
+
     Parameters
     ----------
     filename : str
@@ -132,8 +140,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     parse_coordinates : bool, optional
         Whether to parse the x and y coordinates out of the file's
         ``transform`` attribute or not. The default is to automatically
-        parse the coordinates if they are rectilinear (1D) and don't parse them
-        if they aren't (2D). It can  be useful to set `parse_coordinates=False`
+        parse the coordinates only if they are rectilinear (1D).
+        It can be useful to set `parse_coordinates=False`
         if your files are very large or if you don't need the coordinates.
     chunks : int, tuple or dict, optional
         Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
@@ -195,7 +203,12 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                           RuntimeWarning, stacklevel=3)
 
     # Attributes
-    attrs = {}
+    attrs = dict()
+    # Affine transformation matrix (always available)
+    # This describes coefficients mapping pixel coordinates to CRS
+    # For serialization store as tuple of 6 floats, the last row being
+    # always (0, 0, 1) per definition (see https://github.com/sgillies/affine)
+    attrs['transform'] = tuple(transform)[:6]
     if hasattr(riods, 'crs') and riods.crs:
         # CRS is a dict-like object specific to rasterio
         # If CRS is not None, we convert it back to a PROJ4 string using
@@ -208,10 +221,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
         attrs['is_tiled'] = np.uint8(riods.is_tiled)
-    if hasattr(riods, 'transform'):
-        # Affine transformation matrix (tuple of floats)
-        # Describes coefficients mapping pixel coordinates to CRS
-        attrs['transform'] = tuple(riods.transform)
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
