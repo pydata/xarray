@@ -567,8 +567,7 @@ def imshow(x, y, z, ax, **kwargs):
 
     Wraps matplotlib.pyplot.imshow
 
-    ..note::
-
+    .. note::
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.
 
