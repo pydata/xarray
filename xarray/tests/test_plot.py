@@ -624,6 +624,10 @@ class Common2dMixin:
         clim2 = self.plotfunc(x2).get_clim()
         self.assertEqual(clim1, clim2)
 
+    def test_can_plot_all_nans(self):
+        # regression test for issue #1780
+        self.plotfunc(DataArray(np.full((2, 2), np.nan)))
+
     def test_viridis_cmap(self):
         cmap_name = self.plotmethod(cmap='viridis').get_cmap().name
         self.assertEqual('viridis', cmap_name)
