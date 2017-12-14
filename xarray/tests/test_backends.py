@@ -27,12 +27,13 @@ from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, requires_pathlib, has_netCDF4, has_scipy,
-               assert_allclose, flaky, network, requires_rasterio,
-               assert_identical, raises_regex)
+               requires_pynio, requires_pathlib, requires_zarr,
+               requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
+               flaky, network, assert_identical, raises_regex)
+
 from .test_dataset import create_test_data
 
-from xarray.tests import mock, assert_identical
+from xarray.tests import mock
 
 try:
     import netCDF4 as nc4
@@ -507,6 +508,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoding = {'_FillValue': b'X', 'dtype': 'S1'}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
+        print(original)
         with self.roundtrip(original) as actual:
             self.assertDatasetIdentical(expected, actual)
 
@@ -1080,6 +1082,249 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
 
 
+@requires_zarr
+class BaseZarrTest(CFEncodedDataTest):
+
+    DIMENSION_KEY = '_ARRAY_DIMENSIONS'
+
+    @contextlib.contextmanager
+    def create_store(self):
+        with self.create_zarr_target() as store_target:
+            yield backends.ZarrStore.open_group(store_target, mode='w')
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with self.create_zarr_target() as store_target:
+            data.to_zarr(store=store_target, **save_kwargs)
+            yield xr.open_zarr(store_target, **open_kwargs)
+
+    def test_auto_chunk(self):
+        original = create_test_data().chunk()
+
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': False}) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                self.assertEqual(v._in_memory, k in actual.dims)
+                # there should be no chunks
+                self.assertEqual(v.chunks, None)
+
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
+            for k, v in actual.variables.items():
+                # only index variables should be in memory
+                self.assertEqual(v._in_memory, k in actual.dims)
+                # chunk size should be the same as original
+                self.assertEqual(v.chunks, original[k].chunks)
+
+    def test_chunk_encoding(self):
+        # These datasets have no dask chunks. All chunking specified in
+        # encoding
+        data = create_test_data()
+        chunks = (5, 5)
+        data['var2'].encoding.update({'chunks': chunks})
+
+        with self.roundtrip(data) as actual:
+            self.assertEqual(chunks, actual['var2'].encoding['chunks'])
+
+        # expect an error with non-integer chunks
+        data['var2'].encoding.update({'chunks': (5, 4.5)})
+        with pytest.raises(TypeError):
+            with self.roundtrip(data) as actual:
+                pass
+
+    def test_chunk_encoding_with_dask(self):
+        # These datasets DO have dask chunks. Need to check for various
+        # interactions between dask and zarr chunks
+        ds = xr.DataArray((np.arange(12)), dims='x', name='var1').to_dataset()
+
+        # - no encoding specified -
+        # zarr automatically gets chunk information from dask chunks
+        ds_chunk4 = ds.chunk({'x': 4})
+        with self.roundtrip(ds_chunk4) as actual:
+            self.assertEqual((4,), actual['var1'].encoding['chunks'])
+
+        # should fail if dask_chunks are irregular...
+        ds_chunk_irreg = ds.chunk({'x': (5, 4, 3)})
+        with pytest.raises(ValueError) as e_info:
+            with self.roundtrip(ds_chunk_irreg) as actual:
+                pass
+        # make sure this error message is correct and not some other error
+        assert e_info.match('chunks')
+
+        # ... except if the last chunk is smaller than the first
+        ds_chunk_irreg = ds.chunk({'x': (5, 5, 2)})
+        with self.roundtrip(ds_chunk_irreg) as actual:
+            self.assertEqual((5,), actual['var1'].encoding['chunks'])
+
+        # - encoding specified  -
+        # specify compatible encodings
+        for chunk_enc in 4, (4, ):
+            ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
+            with self.roundtrip(ds_chunk4) as actual:
+                self.assertEqual((4,), actual['var1'].encoding['chunks'])
+
+        # specify incompatible encoding
+        ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
+        with pytest.raises(ValueError) as e_info:
+            with self.roundtrip(ds_chunk4) as actual:
+                pass
+        assert e_info.match('chunks')
+
+        # TODO: remove this failure once syncronized overlapping writes are
+        # supported by xarray
+        ds_chunk4['var1'].encoding.update({'chunks': 5})
+        with pytest.raises(NotImplementedError):
+            with self.roundtrip(ds_chunk4) as actual:
+                pass
+
+    def test_vectorized_indexing(self):
+        self._test_vectorized_indexing(vindex_support=True)
+
+    def test_hidden_zarr_keys(self):
+        expected = create_test_data()
+        with self.create_store() as store:
+            expected.dump_to_store(store)
+            zarr_group = store.ds
+
+            # check that the global hidden attribute is present
+            assert self.DIMENSION_KEY in zarr_group.attrs
+
+            # check that a variable hidden attribute is present and correct
+            # JSON only has a single array type, which maps to list in Python.
+            # In contrast, dims in xarray is always a tuple.
+            for var in expected.variables.keys():
+                assert (zarr_group[var].attrs[self.DIMENSION_KEY]
+                        == list(expected[var].dims))
+
+            with xr.decode_cf(store) as actual:
+                # make sure it is hidden
+                assert self.DIMENSION_KEY not in actual.attrs
+                for var in expected.variables.keys():
+                    assert self.DIMENSION_KEY not in expected[var].attrs
+
+            # verify that the dataset fails to open if dimension key is missing
+            del zarr_group.attrs[self.DIMENSION_KEY]
+            with pytest.raises(KeyError):
+                with xr.decode_cf(store) as actual:
+                    pass
+
+            # put it back and try removing from a variable
+            zarr_group.attrs[self.DIMENSION_KEY] = {}
+            del zarr_group.var2.attrs[self.DIMENSION_KEY]
+            with pytest.raises(KeyError):
+                with xr.decode_cf(store) as actual:
+                    pass
+
+    def test_write_persistence_modes(self):
+        original = create_test_data()
+
+        # overwrite mode
+        with self.roundtrip(original, save_kwargs={'mode': 'w'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        # don't overwrite mode
+        with self.roundtrip(original, save_kwargs={'mode': 'w-'}) as actual:
+            self.assertDatasetIdentical(original, actual)
+
+        # make sure overwriting works as expected
+        with self.create_zarr_target() as store:
+            original.to_zarr(store)
+            # should overwrite with no error
+            original.to_zarr(store, mode='w')
+            actual = xr.open_zarr(store)
+            self.assertDatasetIdentical(original, actual)
+            with pytest.raises(ValueError):
+                original.to_zarr(store, mode='w-')
+
+        # check that we can't use other persistence modes
+        # TODO: reconsider whether other persistence modes should be supported
+        with pytest.raises(ValueError):
+            with self.roundtrip(original, save_kwargs={'mode': 'a'}) as actual:
+                pass
+
+    def test_compressor_encoding(self):
+        original = create_test_data()
+        # specify a custom compressor
+        import zarr
+        blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
+        save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
+        with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
+            assert actual.var1.encoding['compressor'] == blosc_comp
+
+    def test_group(self):
+        original = create_test_data()
+        group = 'some/random/path'
+        with self.roundtrip(original, save_kwargs={'group': group},
+                            open_kwargs={'group': group}) as actual:
+            self.assertDatasetIdentical(original, actual)
+        with pytest.raises(KeyError):
+            with self.roundtrip(original,
+                                save_kwargs={'group': group}) as actual:
+                self.assertDatasetIdentical(original, actual)
+
+    # TODO: implement zarr object encoding and make these tests pass
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_multiindex_not_implemented(self):
+        super(CFEncodedDataTest, self).test_multiindex_not_implemented()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_bytes_with_fill_value(self):
+        super(CFEncodedDataTest, self).test_roundtrip_bytes_with_fill_value()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_object_dtype(self):
+        super(CFEncodedDataTest, self).test_roundtrip_object_dtype()
+
+    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
+    def test_roundtrip_string_encoded_characters(self):
+        super(CFEncodedDataTest,
+              self).test_roundtrip_string_encoded_characters()
+
+    # TODO: someone who understand caching figure out whether chaching
+    # makes sense for Zarr backend
+    @pytest.mark.xfail(reason="Zarr caching not implemented")
+    def test_dataset_caching(self):
+        super(CFEncodedDataTest, self).test_dataset_caching()
+
+
+@requires_zarr
+class ZarrDictStoreTest(BaseZarrTest, TestCase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        yield {}
+
+
+@requires_zarr
+class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
+    @contextlib.contextmanager
+    def create_zarr_target(self):
+        with create_tmp_file(suffix='.zarr') as tmp:
+            yield tmp
+
+
+def test_replace_slices_with_arrays():
+    (actual,) = xr.backends.zarr._replace_slices_with_arrays(
+        key=(slice(None),), shape=(5,))
+    np.testing.assert_array_equal(actual, np.arange(5))
+
+    actual = xr.backends.zarr._replace_slices_with_arrays(
+        key=(np.arange(5),) * 3, shape=(8, 10, 12))
+    expected = np.stack([np.arange(5)] * 3)
+    np.testing.assert_array_equal(np.stack(actual), expected)
+
+    a, b = xr.backends.zarr._replace_slices_with_arrays(
+        key=(np.arange(5), slice(None)), shape=(8, 10))
+    np.testing.assert_array_equal(a, np.arange(5)[:, np.newaxis])
+    np.testing.assert_array_equal(b, np.arange(10)[np.newaxis, :])
+
+    a, b = xr.backends.zarr._replace_slices_with_arrays(
+        key=(slice(None), np.arange(5)), shape=(8, 10))
+    np.testing.assert_array_equal(a, np.arange(8)[np.newaxis, :])
+    np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
+
+
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     engine = 'scipy'
@@ -1147,7 +1392,7 @@ class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_array_attrs(self):
         ds = Dataset(attrs={'foo': [[1, 2], [3, 4]]})
         with raises_regex(ValueError, 'must be 1-dimensional'):
-            with self.roundtrip(ds) as roundtripped:
+            with self.roundtrip(ds):
                 pass
 
     def test_roundtrip_example_1_netcdf_gz(self):

@@ -16,3 +16,4 @@ dependencies:
   - cartopy=0.15.1
   - rasterio=0.36.0
   - sphinx-gallery
+  - zarr

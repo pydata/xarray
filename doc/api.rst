@@ -415,7 +415,9 @@ Dataset methods
    open_dataset
    open_mfdataset
    open_rasterio
+   open_zarr
    Dataset.to_netcdf
+   Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe

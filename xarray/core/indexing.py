@@ -376,9 +376,9 @@ class VectorizedIndexer(ExplicitIndexer):
     """Tuple for vectorized indexing.
 
     All elements should be slice or N-dimensional np.ndarray objects with an
-    integer dtype. Indexing follows proposed rules for np.ndarray.vindex, which
-    matches NumPy's advanced indexing rules (including broadcasting) except
-    sliced axes are always moved to the end:
+    integer dtype and the same number of dimensions. Indexing follows proposed
+    rules for np.ndarray.vindex, which matches NumPy's advanced indexing rules
+    (including broadcasting) except sliced axes are always moved to the end:
     https://github.com/numpy/numpy/pull/6256
     """
     def __init__(self, key):
@@ -386,6 +386,7 @@ class VectorizedIndexer(ExplicitIndexer):
             raise TypeError('key must be a tuple: {!r}'.format(key))
 
         new_key = []
+        ndim = None
         for k in key:
             if isinstance(k, slice):
                 k = as_integer_slice(k)
@@ -393,6 +394,13 @@ class VectorizedIndexer(ExplicitIndexer):
                 if not np.issubdtype(k.dtype, np.integer):
                     raise TypeError('invalid indexer array, does not have '
                                     'integer dtype: {!r}'.format(k))
+                if ndim is None:
+                    ndim = k.ndim
+                elif ndim != k.ndim:
+                    ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
+                    raise ValueError('invalid indexer key: ndarray arguments '
+                                     'have different numbers of dimensions: {}'
+                                     .format(ndims))
                 k = np.asarray(k, dtype=np.int64)
             else:
                 raise TypeError('unexpected indexer type for {}: {!r}'

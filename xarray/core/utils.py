@@ -533,3 +533,41 @@ def ensure_us_time_resolution(val):
     elif np.issubdtype(val.dtype, np.timedelta64):
         val = val.astype('timedelta64[us]')
     return val
+
+
+class HiddenKeyDict(MutableMapping):
+    '''
+    Acts like a normal dictionary, but hides certain keys.
+    '''
+    # ``__init__`` method required to create instance from class.
+    def __init__(self, data, hidden_keys):
+        self._data = data
+        if type(hidden_keys) not in (list, tuple):
+            raise TypeError("hidden_keys must be a list or tuple")
+        self._hidden_keys = hidden_keys
+
+    def _raise_if_hidden(self, key):
+        if key in self._hidden_keys:
+            raise KeyError('Key `%r` is hidden.' % key)
+
+    # The next five methods are requirements of the ABC.
+    def __setitem__(self, key, value):
+        self._raise_if_hidden(key)
+        self._data[key] = value
+
+    def __getitem__(self, key):
+        self._raise_if_hidden(key)
+        return self._data[key]
+
+    def __delitem__(self, key):
+        self._raise_if_hidden(key)
+        del self._data[key]
+
+    def __iter__(self):
+        for k in self._data:
+            if k not in self._hidden_keys:
+                yield k
+
+    def __len__(self):
+        num_hidden = sum([k in self._hidden_keys for k in self._data])
+        return len(self._data) - num_hidden

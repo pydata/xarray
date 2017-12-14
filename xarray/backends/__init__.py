@@ -10,3 +10,4 @@ from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore
+from .zarr import ZarrStore

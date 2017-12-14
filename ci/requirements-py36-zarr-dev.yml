@@ -5,10 +5,7 @@ dependencies:
   - python=3.6
   - dask
   - distributed
-  - h5py
-  - h5netcdf
   - matplotlib
-  - netcdf4
   - pytest
   - flake8
   - numpy
@@ -16,10 +13,8 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio
   - bottleneck
-  - zarr
   - pip:
     - coveralls
     - pytest-cov
-    - pydap
+    - git+https://github.com/alimanfoo/zarr.git

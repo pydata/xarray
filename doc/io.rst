@@ -295,7 +295,7 @@ string encoding for character arrays in netCDF files was
 Technically, you can use
 `any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
 by setting the ``_Encoding`` field in ``encoding``. But
-`we don't recommend it<http://utf8everywhere.org/>`_.
+`we don't recommend it <http://utf8everywhere.org/>`_.
 
 .. warning::
 
@@ -502,6 +502,103 @@ longitudes and latitudes.
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/jswhit/pyproj
 
+.. _io.zarr:
+
+Zarr
+----
+
+`Zarr`_ is a Python package providing an implementation of chunked, compressed,
+N-dimensional arrays.
+Zarr has the ability to store arrays in a range of ways, including in memory,
+in files, and in cloud-based object storage such as `Amazon S3`_ and
+`Google Cloud Storage`_.
+Xarray's Zarr backend allows xarray to leverage these capabilities.
+
+.. warning::
+
+    Zarr support is still an experimental feature. Please report any bugs or
+    unexepected behavior via github issues.
+
+Xarray can't open just any zarr dataset, because xarray requires special
+metadata (attributes) describing the dataset dimensions and coordinates.
+At this time, xarray can only open zarr datasets that have been written by
+xarray. To write a dataset with zarr, we use the
+:py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method.
+To write to a local directory, we pass a path to a directory
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
+                    coords={'x': [10, 20, 30, 40],
+                            'y': pd.date_range('2000-01-01', periods=5),
+                            'z': ('x', list('abcd'))})
+    ds.to_zarr('path/to/directory.zarr')
+
+(The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
+there.) If the directory does not exist, it will be created. If a zarr
+store is already present at that path, an error will be raised, preventing it
+from being overwritten. To override this behavior and overwrite an existing
+store, add ``mode='w'`` when invoking ``to_zarr``.
+
+To read back a zarr dataset that has been created this way, we use the
+:py:func:`~xarray.open_zarr` method:
+
+.. ipython:: python
+
+    ds_zarr = xr.open_zarr('path/to/directory.zarr')
+    ds_zarr
+
+Cloud Storage Buckets
+~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to read and write xarray datasets directly from / to cloud
+storage buckets using zarr. This example uses the `gcsfs`_ package to provide
+a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
+pass to xarray::
+
+    import gcsfs
+    fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
+    gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
+    # write to the bucket
+    ds.to_zarr(store=gcsmap)
+    # read it back
+    ds_gcs = xr.open_zarr(gcsmap, mode='r')
+
+.. _Zarr: http://zarr.readthedocs.io/
+.. _Amazon S3: https://aws.amazon.com/s3/
+.. _Google Cloud Storage: https://cloud.google.com/storage/
+.. _gcsfs: https://github.com/dask/gcsfs
+
+Zarr Compressors and Filters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are many different options for compression and filtering possible with
+zarr. These are described in the
+`zarr documentation <http://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+These options can be passed to the ``to_zarr`` method as variable encoding.
+For example:
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf foo.zarr
+
+.. ipython:: python
+
+    import zarr
+    compressor = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
+    ds.to_zarr('foo.zarr', encoding={'foo': {'compressor': compressor}})
+
+.. note::
+
+    Not all native zarr compression and filtering options have been tested with
+    xarray.
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -527,6 +624,7 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+
 
 
 Combining multiple files

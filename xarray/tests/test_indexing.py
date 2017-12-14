@@ -328,6 +328,9 @@ def test_vectorized_indexer():
     check_slice(indexing.VectorizedIndexer)
     check_array1d(indexing.VectorizedIndexer)
     check_array2d(indexing.VectorizedIndexer)
+    with raises_regex(ValueError, 'numbers of dimensions'):
+        indexing.VectorizedIndexer((np.array(1, dtype=np.int64),
+                                    np.arange(5, dtype=np.int64)))
 
 
 def test_unwrap_explicit_indexer():
