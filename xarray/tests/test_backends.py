@@ -1915,6 +1915,11 @@ class TestRasterio(TestCase):
                 assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
 
+            # Check no parse coords
+            with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+
     def test_non_rectilinear(self):
         import rasterio
         from rasterio.transform import from_origin
@@ -1933,18 +1938,21 @@ class TestRasterio(TestCase):
                     dtype=rasterio.float32) as s:
                 s.write(data)
 
-            # Not much we can test here. See if things are parsed ok
+            # Default is to not parse coords
             with xr.open_rasterio(tmp_file) as rioda:
-                assert rioda['xx'].shape == rioda['yy'].shape
                 assert 'x' not in rioda.coords
                 assert 'y' not in rioda.coords
                 assert 'crs' not in rioda.attrs
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
+
+            # See if a warning is raised if we force it
+            with self.assertWarns("transformation isn't rectilinear"):
+                with xr.open_rasterio(tmp_file,
+                                      parse_coordinates=True) as rioda:
+                    assert 'x' not in rioda.coords
+                    assert 'y' not in rioda.coords
 
     def test_platecarree(self):
 

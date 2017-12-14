@@ -1,4 +1,5 @@
 import os
+import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
 import numpy as np
@@ -82,7 +83,7 @@ class RasterioArrayWrapper(BackendArray):
         return out
 
 
-def open_rasterio(filename, parse_coordinates=True, chunks=None, cache=None,
+def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                   lock=None):
     """Open a file with rasterio (experimental).
 
@@ -99,8 +100,10 @@ def open_rasterio(filename, parse_coordinates=True, chunks=None, cache=None,
         Path to the file to open.
     parse_coordinates : bool, optional
         Whether to parse the x and y coordinates out of the file's
-        ``transform`` attribute or not. It can  be useful to switch this off
-        if your files are large or if you don't need the coordinates.
+        ``transform`` attribute or not. The default is to automatically
+        parse the coordinates if they are rectilinear (1D) and don't parse them
+        if they aren't (2D). It can  be useful to set `parse_coordinates=False`
+        if your files are very large or if you don't need the coordinates.
     chunks : int, tuple or dict, optional
         Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
         ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new
@@ -136,25 +139,29 @@ def open_rasterio(filename, parse_coordinates=True, chunks=None, cache=None,
     coords['band'] = np.asarray(riods.indexes)
 
     # Get coordinates
-    if parse_coordinates:
-        if LooseVersion(rasterio.__version__) < '1.0':
-            transform = riods.affine
-        else:
-            transform = riods.transform
-        nx, ny = riods.width, riods.height
-        if transform.is_rectilinear:
-            # for 1d coordinates we need two calls: columns and rows
-            # xarray's convention is pixel centered
+    if LooseVersion(rasterio.__version__) < '1.0':
+        transform = riods.affine
+    else:
+        transform = riods.transform
+    if transform.is_rectilinear:
+        # 1d coordinates
+        parse = True if parse_coordinates is None else parse_coordinates
+        if parse:
+            nx, ny = riods.width, riods.height
+            # xarray coordinates are pixel centered
             x, _ = (np.arange(nx)+0.5, np.zeros(nx)+0.5) * transform
             _, y = (np.zeros(ny)+0.5, np.arange(ny)+0.5) * transform
             coords['y'] = y
             coords['x'] = x
-        else:
-            # 2d coordinates
-            x, y = (np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) *
-                    transform)
-            coords['yy'] = (('y', 'x'), y)
-            coords['xx'] = (('y', 'x'), x)
+    else:
+        # 2d coordinates
+        parse = False if parse_coordinates is None else parse_coordinates
+        if parse:
+            warnings.warn("The file coordinates' transformation isn't "
+                          "rectilinear: xarray won't parse the coordinates "
+                          "in this case. Set `parse_coordinates=False` to "
+                          "suppress this warning.",
+                          RuntimeWarning, stacklevel=3)
 
     # Attributes
     attrs = {}
