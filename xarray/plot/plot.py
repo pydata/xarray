@@ -158,7 +158,7 @@ def line(darray, *args, **kwargs):
     """
     Line plot of 1 dimensional DataArray index against values
 
-    Wraps matplotlib.pyplot.plot
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
 
     Parameters
     ----------
@@ -220,7 +220,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     """
     Histogram of DataArray
 
-    Wraps matplotlib.pyplot.hist
+    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
 
     Plots N dimensional arrays by first flattening the array.
 
@@ -565,7 +565,7 @@ def imshow(x, y, z, ax, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib.pyplot
 
-    Wraps matplotlib.pyplot.imshow
+    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
 
     .. note::
         This function needs uniformly spaced coordinates to
@@ -607,7 +607,7 @@ def contour(x, y, z, ax, **kwargs):
     """
     Contour plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.contour
+    Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
@@ -618,7 +618,7 @@ def contourf(x, y, z, ax, **kwargs):
     """
     Filled contour plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.contourf
+    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
@@ -646,7 +646,7 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.pcolormesh
+    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`
     """
 
     # decide on a default for infer_intervals (GH781)
