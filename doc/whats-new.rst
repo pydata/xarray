@@ -33,12 +33,14 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
   Now item assignment to :py:meth:`~DataArray.__setitem__` checks
   coordinates of target, destination and keys. If there are any conflict among
   these coordinates, ``IndexError`` will be raised.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 
 .. _whats-new.0.10.0:
 

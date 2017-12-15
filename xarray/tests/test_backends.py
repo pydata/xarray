@@ -1815,11 +1815,8 @@ class PydapOnlineTest(PydapTest):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
         actual = open_dataset(url, engine='pydap', **kwargs)
         with open_example_dataset('bears.nc') as expected:
-            # don't check attributes since pydap doesn't serialize them
-            # correctly also skip the "bears" variable since the test DAP
-            # server incorrectly concatenates it.
-            actual = actual.drop('bears')
-            expected = expected.drop('bears')
+            # workaround to restore string which is converted to byte
+            expected['bears'] = expected['bears'].astype(str)
             yield actual, expected
 
     def test_session(self):
