@@ -94,6 +94,9 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+    def test2dline(self):
+        self.darray[:, :, 0].plot.line()
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
@@ -242,11 +245,6 @@ class TestPlot1D(PlotTestCase):
         self.darray.name = 'temperature'
         self.darray.plot()
         self.assertEqual(self.darray.name, plt.gca().get_ylabel())
-
-    def test_wrong_dims_raises_valueerror(self):
-        twodims = DataArray(easy_array((2, 5)))
-        with pytest.raises(ValueError):
-            twodims.plot.line()
 
     def test_format_string(self):
         self.darray.plot.line('ro')

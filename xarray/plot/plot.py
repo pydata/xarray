@@ -156,7 +156,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
 # matplotlib format strings
 def line(darray, *args, **kwargs):
     """
-    Line plot of 1 dimensional DataArray index against values
+    Line plot of DataArray index against values
 
     Wraps :func:`matplotlib:matplotlib.pyplot.plot`
 
@@ -176,6 +176,10 @@ def line(darray, *args, **kwargs):
     ax : matplotlib axes object, optional
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
+    x : string, optional
+        Coordinate for x axis (2D inputs only). If None use darray.dims[1]
+    add_legend : boolean, optional
+        Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
         Additional arguments to matplotlib.pyplot.plot
 
@@ -183,8 +187,8 @@ def line(darray, *args, **kwargs):
     plt = import_matplotlib_pyplot()
 
     ndims = len(darray.dims)
-    if ndims != 1:
-        raise ValueError('Line plots are for 1 dimensional DataArrays. '
+    if ndims > 2:
+        raise ValueError('Line plots are for 1- or 2-dimensional DataArrays. '
                          'Passed DataArray has {ndims} '
                          'dimensions'.format(ndims=ndims))
 
@@ -193,11 +197,19 @@ def line(darray, *args, **kwargs):
     aspect = kwargs.pop('aspect', None)
     size = kwargs.pop('size', None)
     ax = kwargs.pop('ax', None)
+    x = kwargs.pop('x', None)
+    add_legend = kwargs.pop('add_legend', True)
 
     ax = get_axis(figsize, size, aspect, ax)
 
-    xlabel, = darray.dims
-    x = darray.coords[xlabel]
+    if ndims == 1:
+        xlabel, = darray.dims
+        x = darray.coords[xlabel]
+
+    else:
+        xlabel, ylabel = _infer_xy_labels(darray=darray, x=x, y=None)
+        x = darray.coords[xlabel]
+        darray = darray.transpose(xlabel, ylabel)
 
     _ensure_plottable(x)
 
@@ -208,6 +220,9 @@ def line(darray, *args, **kwargs):
 
     if darray.name is not None:
         ax.set_ylabel(darray.name)
+
+    if darray.ndim == 2 and add_legend:
+        ax.legend(darray.coords[ylabel].values, title=ylabel)
 
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
