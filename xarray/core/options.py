@@ -25,8 +25,6 @@ try:
     _AVAILABLE_IO_ENGINES.append('h5netcdf')
 except ImportError:
     pass
-if len(_AVAILABLE_IO_ENGINES) == 0:
-    raise RuntimeError('No suitable I/O engines found installed')
 
 OPTIONS = {
     'display_width': 80,
@@ -44,7 +42,8 @@ class set_options(object):
       Default: ``80``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
-    - ``io_engines``: List of backend data I/O engines. Default: All the
+    - ``io_engines``: List of backend data I/O engines to try in order when
+      saving/loading data without an explicit engine. Default: All the
       installed engines on start up from this list: ['netcdf4', 'pydap',
       'scipy', 'h5netcdf'].
 
