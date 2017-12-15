@@ -228,7 +228,10 @@ def line(darray, *args, **kwargs):
     ax.set_title(darray._title_for_slice())
 
     if darray.name is not None:
-        ax.set_ylabel(darray.name)
+        name = darray.name
+        if isinstance(darray.attrs.get('units', None), str):
+            name += ' ({})'.format(darray.attrs['units'])
+        ax.set_ylabel(name)
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
@@ -280,7 +283,10 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     ax.set_ylabel('Count')
 
     if darray.name is not None:
-        ax.set_title('Histogram of {0}'.format(darray.name))
+        name = darray.name
+        if isinstance(darray.attrs.get('units', None), str):
+            name += ' ({})'.format(darray.attrs['units'])
+        ax.set_title('Histogram of {}'.format(name))
 
     return primitive
 
@@ -548,7 +554,10 @@ def _plot2d(plotfunc):
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
             if darray.name and add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(darray.name, rotation=90)
+                name = darray.name
+                if isinstance(darray.attrs.get('units', None), str):
+                    name += ' ({})'.format(darray.attrs['units'])
+                cbar.set_label(name, rotation=90)
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

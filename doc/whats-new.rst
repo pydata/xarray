@@ -38,11 +38,14 @@ Enhancements
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 - :py:func:`~plot()` learned to rotate x-axis ticks if x-axis is time.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Plots of a :obj:`DataArray` with ``units`` in the attrs dict are now
+  labelled ``name (units)`` instead of just ``name`` (:issue:`1630`).
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - :py:func:`~plot.line()` learned to draw multiple lines if provided with a
   2D variable.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
-.. _Zarr: http://zarr.readthedocs.io/
+.. _Zarr: https://zarr.readthedocs.io/
 
 .. _Iris: http://scitools.org.uk/iris
 
