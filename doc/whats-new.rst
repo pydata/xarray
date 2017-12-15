@@ -33,6 +33,9 @@ Enhancements
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
+  By `Matti Eskelinen <https://github.com/maaleske>`
+- :py:func:`~plot()` learned to rotate x-axis ticks if x-axis is time.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 

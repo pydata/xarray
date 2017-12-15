@@ -615,6 +615,14 @@ class Common2dMixin:
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         self.assertTrue(all(abs(x) < 1 for x in diffs))
 
+    def test_x_ticks_are_rotated_for_time(self):
+        time = pd.date_range('2000-01-01', '2000-01-10')
+        a = DataArray(np.random.randn(2, len(time)),
+                      [('xx', [1, 2]), ('t', time)])
+        a.plot(x='t')
+        rotation = plt.gca().get_xticklabels()[0].get_rotation()
+        self.assertFalse(rotation == 0)
+
     def test_plot_nans(self):
         x1 = self.darray[:5]
         x2 = self.darray.copy()

@@ -530,6 +530,10 @@ def _plot2d(plotfunc):
 
         _update_axes_limits(ax, xincrease, yincrease)
 
+        # Rotate dates on xlabels
+        if np.issubdtype(xval.dtype, np.datetime64):
+            plt.gcf().autofmt_xdate()
+
         return primitive
 
     # For use as DataArray.plot.plotmethod
