@@ -21,35 +21,40 @@ DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
-def _file_startswith(path, *args):
-    """Check that the file statswith with the sepcific byte sequence."""
+def _guess_file_format(path):
+    """Make an educated guess about the file format based on the first few
+    bytes.
+    """
     with open(path, 'rb') as f:
-        for b in args:
-            sig = f.read(len(b))
-            print(sig, b)
-            return True if sig == b else False
+        # Ten bytes should be enough...
+        sig = f.read(10)
+
+    if sig[:8] == b'\x89HDF\r\n\x1a\n':
+        return 'hdf5'
+    elif sig[:5] == b'CDF\x00' or sig == b'CDF\x01':
+        return 'netcdf3'
+    else:
+        return 'unknown'
 
 
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):  # pragma: no cover
         for engine in OPTIONS['io_engines']:
-            if engine in ('netcdf4', 'pydap', 'h5netcdf'):
+            if engine in ('netcdf4', 'pydap'):
                 return engine
         else:
             raise ValueError('netCDF4 or pydap is required for accessing '
                              'remote datasets via OPeNDAP')
     else:
+        filefmt = _guess_file_format(path)
         for engine in OPTIONS['io_engines']:
-            if engine in ('netcdf4', 'h5netcdf') \
-                    and _file_startswith(path, b'\x89HDF\r\n\x1a\n'):
+            if filefmt == 'hdf5' and engine in ('netcdf4', 'h5netcdf'):
                 return engine
-            elif engine == 'scipy' \
-                    and _file_startswith(path, b'CDF\x00', b'CDF\x01'):
+            elif filefmt == 'netcdf3' and engine in ('netcdf4', 'scipy'):
                 return engine
         else:
             raise ValueError('cannot read or write netCDF files without '
                              'netCDF4-python, scipy, or h5netcdf installed')
-    return engine
 
 
 def _normalize_path(path):
