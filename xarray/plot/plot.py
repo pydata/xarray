@@ -180,7 +180,6 @@ def line(darray, *args, **kwargs):
         Additional arguments to matplotlib.pyplot.plot
 
     """
-    plt = import_matplotlib_pyplot()
 
     ndims = len(darray.dims)
     if ndims != 1:
@@ -211,7 +210,7 @@ def line(darray, *args, **kwargs):
 
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
-        plt.gcf().autofmt_xdate()
+        ax.get_figure().autofmt_xdate()
 
     return primitive
 
@@ -532,7 +531,7 @@ def _plot2d(plotfunc):
 
         # Rotate dates on xlabels
         if np.issubdtype(xval.dtype, np.datetime64):
-            plt.gcf().autofmt_xdate()
+            ax.get_figure().autofmt_xdate()
 
         return primitive
 
