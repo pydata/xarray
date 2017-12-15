@@ -47,6 +47,10 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Properly point :py:meth:`DataArray.__dask_scheduler__` to
   ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
+  with size one in some dimension can now be plotted, which is good for
+  exploring satellite imagery.  (:issue:`1780`)
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 
 .. _whats-new.0.10.0:
