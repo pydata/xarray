@@ -165,6 +165,11 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
 
     calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
 
+    # Handle all-NaN input data gracefully
+    if calc_data.size == 0:
+        # Arbitrary default for when all values are NaN
+        calc_data = np.array(0.0)
+
     # Setting center=False prevents a divergent cmap
     possibly_divergent = center is not False
 

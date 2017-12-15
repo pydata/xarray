@@ -32,7 +32,7 @@ Enhancements
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
-  By `Matti Eskelinen <https://github.com/maaleske>`
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -40,16 +40,20 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
-  Now item assignment to :py:meth:`~DataArray.__setitem__` checks
+- Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
+  Now item assignment to :py:meth:`DataArray.__setitem__` checks
   coordinates of target, destination and keys. If there are any conflict among
   these coordinates, ``IndexError`` will be raised.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Properly point :py:meth:`DataArray.__dask_scheduler__` to
+  ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
+  with size one in some dimension can now be plotted, which is good for
+  exploring satellite imagery.  (:issue:`1780`)
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 
 .. _whats-new.0.10.0:
-
-- Properly point DataArray.__dask_scheduler__ to dask.threaded.get
 
 v0.10.0 (20 November 2017)
 --------------------------
