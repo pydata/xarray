@@ -22,6 +22,7 @@ dependencies:
   - seaborn
   - toolz
   - rasterio
+  - zarr
   - pip:
     - coveralls
     - pytest-cov

@@ -1618,6 +1618,11 @@ def _unified_dims(variables):
 
 
 def _broadcast_compat_variables(*variables):
+    """Create broadcast compatible variables, with the same dimensions.
+
+    Unlike the result of broadcast_variables(), some variables may have
+    dimensions of size 1 instead of the the size of the broadcast dimension.
+    """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var
                  for var in variables)
