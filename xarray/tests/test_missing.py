@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import pytest
+import itertools
 
 import xarray as xr
 
@@ -68,62 +69,74 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345,
     return da, df
 
 
-@pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1), (100, 100)])
-@pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
-@pytest.mark.parametrize('method', ['linear',  'nearest', 'zero', 'slinear',
-                                    'quadratic', 'cubic'])
 @requires_np112
 @requires_scipy
-def test_interpolate_pd_compat(shape, frac_nan, method):
-    da, df = make_interpolate_example_data(shape, frac_nan)
+def test_interpolate_pd_compat():
+    shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
+    frac_nans = [0, 0.5, 1]
+    methods = ['linear',  'nearest', 'zero', 'slinear', 'quadratic', 'cubic']
 
-    for dim in ['time', 'x']:
-        actual = da.interpolate_na(method=method, dim=dim)
-        expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
-        np.testing.assert_allclose(actual.values, expected.values)
+    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans,
+                                                       methods):
 
+        da, df = make_interpolate_example_data(shape, frac_nan)
 
-@pytest.mark.parametrize('method', ['barycentric', 'krog', 'pchip', 'spline',
-                                    'akima'])
-def test_scipy_methods_function(method):
-    kwargs = {}
-    # This test seems silly but the problem is, Pandas does some wacky things
-    # with these methods and I can't get a integration test to work.
-    da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-    actual = da.interpolate_na(method=method, dim='time', **kwargs)
-    assert (da.count('time') <= actual.count('time')).all()
+        for dim in ['time', 'x']:
+            actual = da.interpolate_na(method=method, dim=dim)
+            expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
+            np.testing.assert_allclose(actual.values, expected.values)
 
 
-@pytest.mark.parametrize('shape', [(8, 8), (1, 20), (20, 1)])
-@pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
-@pytest.mark.parametrize('method', ['time', 'index', 'values'])
+@requires_scipy
+def test_scipy_methods_function():
+    for method in ['barycentric', 'krog', 'pchip', 'spline', 'akima']:
+        kwargs = {}
+        # Note: Pandas does some wacky things with these methods and the full
+        # integration tests wont work.
+        da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
+        actual = da.interpolate_na(method=method, dim='time', **kwargs)
+        assert (da.count('time') <= actual.count('time')).all()
+
+
 @requires_np112
 @requires_scipy
-def test_interpolate_pd_compat_non_uniform_index(shape, frac_nan, method):
-    da, df = make_interpolate_example_data(shape, frac_nan, non_uniform=True)
-    for dim in ['time', 'x']:
-        if method == 'time' and dim != 'time':
-            continue
-        actual = da.interpolate_na(method='linear', dim=dim,
-                                   use_coordinate=True)
-        expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
-        np.testing.assert_allclose(actual.values, expected.values)
+def test_interpolate_pd_compat_non_uniform_index():
+    shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
+    frac_nans = [0, 0.5, 1]
+    methods = ['time', 'index', 'values']
+
+    for (shape, frac_nan, method) in itertools.product(shapes, frac_nans,
+                                                       methods):
+
+        da, df = make_interpolate_example_data(shape, frac_nan,
+                                               non_uniform=True)
+        for dim in ['time', 'x']:
+            if method == 'time' and dim != 'time':
+                continue
+            actual = da.interpolate_na(method='linear', dim=dim,
+                                       use_coordinate=True)
+            expected = df.interpolate(method=method, axis=da.get_axis_num(dim))
+            np.testing.assert_allclose(actual.values, expected.values)
 
 
-@pytest.mark.parametrize('shape', [(8, 8), (100, 100)])
-@pytest.mark.parametrize('frac_nan', [0, 0.5, 1])
-@pytest.mark.parametrize('order', [1, 2, 3])
 @requires_np112
 @requires_scipy
-def test_interpolate_pd_compat_polynomial(shape, frac_nan, order):
-    da, df = make_interpolate_example_data(shape, frac_nan)
+def test_interpolate_pd_compat_polynomial():
+    shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
+    frac_nans = [0, 0.5, 1]
+    orders = [1, 2, 3]
 
-    for dim in ['time', 'x']:
-        actual = da.interpolate_na(method='polynomial', order=order, dim=dim,
-                                   use_coordinate=False)
-        expected = df.interpolate(method='polynomial', order=order,
-                                  axis=da.get_axis_num(dim))
-        np.testing.assert_allclose(actual.values, expected.values)
+    for (shape, frac_nan, order) in itertools.product(shapes, frac_nans,
+                                                      orders):
+
+        da, df = make_interpolate_example_data(shape, frac_nan)
+
+        for dim in ['time', 'x']:
+            actual = da.interpolate_na(method='polynomial', order=order, dim=dim,
+                                       use_coordinate=False)
+            expected = df.interpolate(method='polynomial', order=order,
+                                      axis=da.get_axis_num(dim))
+            np.testing.assert_allclose(actual.values, expected.values)
 
 
 @requires_scipy
@@ -228,34 +241,33 @@ def test_interpolate_limits():
     assert_equal(actual, expected)
 
 
-@pytest.mark.parametrize('method', ['linear', 'nearest', 'zero', 'slinear',
-                                    'quadratic', 'cubic'])
 @requires_np112
 @requires_scipy
-def test_interpolate_methods(method):
-    kwargs = {}
-    da = xr.DataArray(np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8],
-                               dtype=np.float64), dims='x')
-    actual = da.interpolate_na('x', method=method, **kwargs)
-    assert actual.isnull().sum() == 0
+def test_interpolate_methods():
+    for method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                   'cubic']:
+        kwargs = {}
+        da = xr.DataArray(np.array([0, 1, 2, np.nan, np.nan, np.nan, 6, 7, 8],
+                                   dtype=np.float64), dims='x')
+        actual = da.interpolate_na('x', method=method, **kwargs)
+        assert actual.isnull().sum() == 0
 
-    actual = da.interpolate_na('x', method=method, limit=2, **kwargs)
-    assert actual.isnull().sum() == 1
+        actual = da.interpolate_na('x', method=method, limit=2, **kwargs)
+        assert actual.isnull().sum() == 1
 
 
-@pytest.mark.parametrize(
-    'method, interpolator',
-    [('linear', NumpyInterpolator), ('linear', ScipyInterpolator),
-     ('spline', SplineInterpolator)])
 @requires_scipy
-def test_interpolators(method, interpolator):
-    xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
-    yi = np.array([-10, 0, 10, 20, 50], dtype=np.float64)
-    x = np.array([3, 4], dtype=np.float64)
+def test_interpolators():
+    for method, interpolator in [('linear', NumpyInterpolator),
+                                 ('linear', ScipyInterpolator),
+                                 ('spline', SplineInterpolator)]:
+        xi = np.array([-1, 0, 1, 2, 5], dtype=np.float64)
+        yi = np.array([-10, 0, 10, 20, 50], dtype=np.float64)
+        x = np.array([3, 4], dtype=np.float64)
 
-    f = interpolator(xi, yi, method=method)
-    out = f(x)
-    assert pd.isnull(out).sum() == 0
+        f = interpolator(xi, yi, method=method)
+        out = f(x)
+        assert pd.isnull(out).sum() == 0
 
 
 @requires_np112
@@ -414,9 +426,11 @@ def test_interpolate_dataset(ds):
     assert_array_equal(actual['var2'], ds['var2'])
 
 
+@requires_bottleneck
 def test_ffill_dataset(ds):
     ds.ffill(dim='time')
 
 
+@requires_bottleneck
 def test_bfill_dataset(ds):
     ds.ffill(dim='time')

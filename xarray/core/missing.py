@@ -138,7 +138,6 @@ class SplineInterpolator(BaseInterpolator):
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     '''wrapper for datasets'''
-    # can this be done with apply_ufunc somehow?
     from .dataset import Dataset
 
     ds = Dataset(coords=self.coords, attrs=self.attrs)

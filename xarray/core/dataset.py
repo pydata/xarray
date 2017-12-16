@@ -2453,8 +2453,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         """
         from .missing import interp_na, _apply_over_vars_with_dim
 
-        new = _apply_over_vars_with_dim(interp_na, self, dim=dim, method=method,
-                                        limit=limit,
+        new = _apply_over_vars_with_dim(interp_na, self, dim=dim,
+                                        method=method, limit=limit,
                                         use_coordinate=use_coordinate,
                                         **kwargs)
         return new
