@@ -94,8 +94,25 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-    def test2dline(self):
+    def test_2d_line(self):
         self.darray[:, :, 0].plot.line()
+
+    def test_2d_line_accepts_legend_kw(self):
+        self.darray[:, :, 0].plot.line(add_legend=False)
+        self.assertFalse(plt.gca().get_legend())
+        plt.cla()
+        self.darray[:, :, 0].plot.line(add_legend=True)
+        self.assertTrue(plt.gca().get_legend())
+        # check whether legend title is set
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_0')
+
+    def test_2d_line_accepts_x_kw(self):
+        self.darray[:, :, 0].plot.line(x='dim_0')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
