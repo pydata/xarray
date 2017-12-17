@@ -176,9 +176,13 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
-        Coordinate for which you want multiple lines plotted (2D inputs only).
+        Coordinate for which you want multiple lines plotted
+        (2D DataArrays only).
     x : string, optional
-        Coordinate for x axis.
+        1D and 2D DataArrays: Coordinate for x axis.
+    y : string, optional
+        1D DataArray: Can be coordinate name or DataArray.name
+        2D DataArray: Coordinate for y axis.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -199,35 +203,70 @@ def line(darray, *args, **kwargs):
     ax = kwargs.pop('ax', None)
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
+    y = kwargs.pop('y', None)
     add_legend = kwargs.pop('add_legend', True)
 
     ax = get_axis(figsize, size, aspect, ax)
 
     if ndims == 1:
-        xlabel, = darray.dims
-        if x is not None and xlabel != x:
-            raise ValueError('Input does not have specified dimension'
-                             ' {!r}'.format(x))
+        dim, = darray.dims  # get the only dimension name
 
-        x = darray.coords[xlabel]
+        error_msg = 'must be either None or %r' % dim
+        if darray.name:
+            error_msg += ' or %r.' % darray.name
+
+        if x not in [None, dim, darray.name]:
+            raise ValueError('x ' + error_msg)
+
+        if y not in [None, dim, darray.name]:
+            raise ValueError('y ' + error_msg)
+
+        if x is not None and y is not None and x == y:
+            raise ValueError('Cannot make a plot with x=%r and y=%r' % (x, y))
+
+        if (x is None and y is None) or x == dim or y is darray.name:
+            xplt = darray.coords[dim]
+            yplt = darray
+            xlabel = dim
+            ylabel = darray.name
+
+        elif y == dim or x is darray.name:
+            yplt = darray.coords[dim]
+            xplt = darray
+            xlabel = darray.name
+            ylabel = dim
 
     else:
-        if x is None and hue is None:
+        if x is None and y is None and hue is None:
             raise ValueError('For 2D inputs, please specify either hue or x.')
 
-        xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
-        x = darray.coords[xlabel]
-        darray = darray.transpose(xlabel, huelabel)
+        if y is None:
+            xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
+            ylabel = darray.name
+            xplt = darray.coords[xlabel]
+            yplt = darray.transpose(xlabel, huelabel)
 
-    _ensure_plottable(x)
+        else:
+            if x is not None and x is not darray.name:
+                raise ValueError('Cannot make a plot with x=%r and y=%r '
+                                 % (x, y))
 
-    primitive = ax.plot(x, darray, *args, **kwargs)
+            ylabel, huelabel = _infer_xy_labels(darray=darray, x=y, y=hue)
+            xlabel = darray.name
+            xplt = darray.transpose(ylabel, huelabel)
+            yplt = darray.coords[ylabel]
 
-    ax.set_xlabel(xlabel)
+    _ensure_plottable(xplt)
+
+    primitive = ax.plot(xplt, yplt, *args, **kwargs)
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+
     ax.set_title(darray._title_for_slice())
-
-    if darray.name is not None:
-        ax.set_ylabel(darray.name)
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
@@ -235,7 +274,7 @@ def line(darray, *args, **kwargs):
                   title=huelabel)
 
     # Rotate dates on xlabels
-    if np.issubdtype(x.dtype, np.datetime64):
+    if np.issubdtype(xplt.dtype, np.datetime64):
         ax.get_figure().autofmt_xdate()
 
     return primitive

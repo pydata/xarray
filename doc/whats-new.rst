@@ -141,6 +141,8 @@ Enhancements
   encoding/decoding of datetimes with non-standard calendars without the
   netCDF4 dependency (:issue:`1084`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
