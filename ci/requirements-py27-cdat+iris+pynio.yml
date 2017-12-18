@@ -23,6 +23,7 @@ dependencies:
   - toolz
   - rasterio
   - iris>=1.10
+  - zarr
   - pip:
     - coveralls
     - pytest-cov

@@ -43,6 +43,8 @@ matrix:
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
     env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
   allow_failures:
   - python: 3.6
     env:
@@ -67,6 +69,8 @@ matrix:
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
     env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then

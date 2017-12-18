@@ -328,6 +328,9 @@ def test_vectorized_indexer():
     check_slice(indexing.VectorizedIndexer)
     check_array1d(indexing.VectorizedIndexer)
     check_array2d(indexing.VectorizedIndexer)
+    with raises_regex(ValueError, 'numbers of dimensions'):
+        indexing.VectorizedIndexer((np.array(1, dtype=np.int64),
+                                    np.arange(5, dtype=np.int64)))
 
 
 def test_unwrap_explicit_indexer():
@@ -385,3 +388,79 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
         actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
         actual_data = v.data[actual]
         np.testing.assert_array_equal(actual_data, expected_data)
+
+
+def test_create_mask_outer_indexer():
+    indexer = indexing.OuterIndexer((np.array([0, -1, 2]),))
+    expected = np.array([False, True, False])
+    actual = indexing.create_mask(indexer, (5,))
+    np.testing.assert_array_equal(expected, actual)
+
+    indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2]),))
+    expected = np.array(2 * [[False, True, False]])
+    actual = indexing.create_mask(indexer, (5, 5, 5,))
+    np.testing.assert_array_equal(expected, actual)
+
+
+def test_create_mask_vectorized_indexer():
+    indexer = indexing.VectorizedIndexer(
+        (np.array([0, -1, 2]), np.array([0, 1, -1])))
+    expected = np.array([False, True, True])
+    actual = indexing.create_mask(indexer, (5,))
+    np.testing.assert_array_equal(expected, actual)
+
+    indexer = indexing.VectorizedIndexer(
+        (np.array([0, -1, 2]), slice(None), np.array([0, 1, -1])))
+    expected = np.array([[False, True, True]] * 2).T
+    actual = indexing.create_mask(indexer, (5, 2))
+    np.testing.assert_array_equal(expected, actual)
+
+
+def test_create_mask_basic_indexer():
+    indexer = indexing.BasicIndexer((-1,))
+    actual = indexing.create_mask(indexer, (3,))
+    np.testing.assert_array_equal(True, actual)
+
+    indexer = indexing.BasicIndexer((0,))
+    actual = indexing.create_mask(indexer, (3,))
+    np.testing.assert_array_equal(False, actual)
+
+
+def test_create_mask_dask():
+    da = pytest.importorskip('dask.array')
+
+    indexer = indexing.OuterIndexer((1, slice(2), np.array([0, -1, 2]),))
+    expected = np.array(2 * [[False, True, False]])
+    actual = indexing.create_mask(indexer, (5, 5, 5,),
+                                  chunks_hint=((1, 1), (2, 1)))
+    assert actual.chunks == ((1, 1), (2, 1))
+    np.testing.assert_array_equal(expected, actual)
+
+    indexer = indexing.VectorizedIndexer(
+        (np.array([0, -1, 2]), slice(None), np.array([0, 1, -1])))
+    expected = np.array([[False, True, True]] * 2).T
+    actual = indexing.create_mask(indexer, (5, 2), chunks_hint=((3,), (2,)))
+    assert isinstance(actual, da.Array)
+    np.testing.assert_array_equal(expected, actual)
+
+    with pytest.raises(ValueError):
+        indexing.create_mask(indexer, (5, 2), chunks_hint=())
+
+
+def test_create_mask_error():
+    with raises_regex(TypeError, 'unexpected key type'):
+        indexing.create_mask((1, 2), (3, 4))
+
+
+@pytest.mark.parametrize('indices, expected', [
+    (np.arange(5), np.arange(5)),
+    (np.array([0, -1, -1]), np.array([0, 0, 0])),
+    (np.array([-1, 1, -1]), np.array([1, 1, 1])),
+    (np.array([-1, -1, 2]), np.array([2, 2, 2])),
+    (np.array([-1]), np.array([0])),
+    (np.array([0, -1, 1, -1, -1]), np.array([0, 0, 1, 1, 1])),
+    (np.array([0, -1, -1, -1, 1]), np.array([0, 0, 0, 0, 1])),
+])
+def test_posify_mask_subindexer(indices, expected):
+    actual = indexing._posify_mask_subindexer(indices)
+    np.testing.assert_array_equal(expected, actual)
