@@ -10,8 +10,7 @@ from .core.dataarray import DataArray
 from .core.pycompat import OrderedDict, range
 from .core.dtypes import get_fill_value
 from .conventions import (
-    maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
-from dask.array import ma
+    maybe_encode_timedelta, maybe_encode_datetime, decode_cf, decode_cf_variable)
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis', 'calendar', 'leap_month', 'leap_year',
@@ -94,6 +93,11 @@ def to_iris(dataarray):
     # Iris not a hard dependency
     import iris
     from iris.fileformats.netcdf import parse_cell_methods
+    try:
+        from dask.array import ma as dask_ma
+        from dask.array import Array
+    except ImportError:
+        dask_ma = None
 
     dim_coords = []
     aux_coords = []
@@ -119,7 +123,14 @@ def to_iris(dataarray):
     if 'cell_methods' in dataarray.attrs:
         args['cell_methods'] = parse_cell_methods(dataarray.attrs['cell_methods'])
 
-    cube = iris.cube.Cube(ma.masked_invalid(dataarray), **args)
+    # Create the right type of masked array (should be easier after #1769)
+    if isinstance(dataarray.data, Array):
+        masked_data = dask_ma.masked_invalid(dataarray)
+    else:
+        masked_data = np.ma.masked_invalid(dataarray)
+
+    cube = iris.cube.Cube(masked_data, **args)
+
     return cube
 
 
@@ -157,6 +168,12 @@ def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
+    try:
+        from dask.array import ma as dask_ma
+        from dask.array import Array
+    except ImportError:
+        dask_ma = None
+
     name = cube.var_name
     dims = []
     for i in range(cube.ndim):
@@ -176,16 +193,25 @@ def from_iris(cube):
         if coord_dims:
             coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[coord.var_name] = ((),
-                                      np.asscalar(coord.points), coord_attrs)
+            coords[coord.var_name] = ((), np.asscalar(coord.points), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)
     if cell_methods:
         array_attrs['cell_methods'] = cell_methods
 
-    cube_data = ma.filled(cube.core_data(), get_fill_value(cube.dtype)) if hasattr(cube, 'core_data') else cube.data
-    dataarray = DataArray(cube_data, coords=coords, name=name,
+    # Deal with iris 1.* and 2.*
+    cube_data = cube.core_data() if hasattr(cube, 'core_data') else cube.data
+
+    # Deal with dask and numpy masked arrays
+    if dask_ma and isinstance(cube_data, Array):
+        filled_data = dask_ma.filled(cube_data, get_fill_value(cube.dtype))
+    elif isinstance(cube_data, np.ma.MaskedArray):
+        filled_data = np.ma.filled(cube_data, get_fill_value(cube.dtype))
+    else:
+        filled_data = cube_data
+
+    dataarray = DataArray(filled_data, coords=coords, name=name,
                           attrs=array_attrs, dims=dims)
     decoded_ds = decode_cf(dataarray._to_temp_dataset())
     return dataarray._from_temp_dataset(decoded_ds)

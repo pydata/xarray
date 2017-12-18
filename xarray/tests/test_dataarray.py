@@ -2738,7 +2738,7 @@ class TestDataArray(TestCase):
         coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
         coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
 
-        original = DataArray(np.arange(6).reshape(2, 3), coord_dict,
+        original = DataArray(np.arange(6, dtype='float').reshape(2, 3), coord_dict,
                              name='Temperature', attrs={'baz': 123,
                                                         'units': 'Kelvin',
                                                         'standard_name':
@@ -2746,6 +2746,9 @@ class TestDataArray(TestCase):
                                                         'long_name':
                                                             'Fire Temperature'},
                              dims=('distance', 'time'))
+
+        # Set a bad value to test the masking logic
+        original.data[0, 2] = np.NaN
 
         original.attrs['cell_methods'] = 'height: mean (comment: A cell method)'
         actual = original.to_iris()
@@ -2777,6 +2780,82 @@ class TestDataArray(TestCase):
 
         roundtripped = DataArray.from_iris(actual)
         self.assertDataArrayIdentical(original, roundtripped)
+
+        actual.remove_coord('time')
+        auto_time_dimension = DataArray.from_iris(actual)
+        self.assertEqual(auto_time_dimension.dims, ('distance', 'dim_1'))
+
+        actual.coord('distance').var_name = None
+        with raises_regex(ValueError, 'no var_name attribute'):
+            DataArray.from_iris(actual)
+
+    @requires_dask
+    def test_to_and_from_iris_dask(self):
+        import dask.array as da
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        original = DataArray(da.from_array(np.arange(-1, 5, dtype='float').reshape(2, 3), 3), coord_dict,
+                             name='Temperature', attrs={'baz': 123,
+                                                        'units': 'Kelvin',
+                                                        'standard_name':
+                                                            'fire_temperature',
+                                                        'long_name':
+                                                            'Fire Temperature'},
+                             dims=('distance', 'time'))
+
+        # Set a bad value to test the masking logic
+        original.data = da.ma.masked_less(original.data, 0)
+
+        original.attrs['cell_methods'] = 'height: mean (comment: A cell method)'
+        actual = original.to_iris()
+
+        # Be careful not to trigger the loading of the iris data
+        actual_data = actual.core_data() if hasattr(actual, 'core_data') else actual.data
+        self.assertArrayEqual(actual_data, original.data)
+        self.assertEqual(actual.var_name, original.name)
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
+        self.assertEqual(actual.cell_methods,
+                         (iris.coords.CellMethod(method='mean',
+                                                 coords=('height',),
+                                                 intervals=(),
+                                                 comments=('A cell method',)),))
+
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            self.assertEqual(coord.var_name, original_coord.name)
+            self.assertArrayEqual(coord.points,
+                                  maybe_encode_datetime(original_coord).values)
+            self.assertEqual(actual.coord_dims(coord),
+                             original.get_axis_num
+                             (original.coords[coord.var_name].dims))
+
+        self.assertEqual(actual.coord('distance2').attributes['foo'],
+                         original.coords['distance2'].attrs['foo'])
+        self.assertEqual(actual.coord('distance').units,
+                         cf_units.Unit(original.coords['distance'].units))
+        self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
+        self.assertEqual(actual.standard_name, original.attrs['standard_name'])
+
+        roundtripped = DataArray.from_iris(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
+        # If the Iris version supports it then we should get a dask array back
+        if hasattr(actual, 'core_data'):
+            pass
+            # TODO This currently fails due to the decoding loading the data (#1372)
+            # self.assertEqual(type(original.data), type(roundtripped.data))
 
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)
