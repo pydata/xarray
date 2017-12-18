@@ -27,6 +27,8 @@ from xarray.core.utils import NDArrayMixin
 from . import (
     TestCase, source_ndarray, requires_dask, raises_regex, assert_identical)
 
+from xarray.tests import requires_bottleneck
+
 
 class VariableSubclassTestCases(object):
     def test_properties(self):
@@ -1380,6 +1382,38 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         with raises_regex(TypeError, 'arrays stored as dask'):
             v.quantile(0.5, dim='x')
+
+    @requires_dask
+    @requires_bottleneck
+    def test_rank_dask_raises(self):
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
+        with raises_regex(TypeError, 'arrays stored as dask'):
+            v.rank('x')
+
+    @requires_bottleneck
+    def test_rank(self):
+        import bottleneck as bn
+        # floats
+        v = Variable(['x', 'y'], [[3, 4, np.nan, 1]])
+        expect_0 = bn.nanrankdata(v.data, axis=0)
+        expect_1 = bn.nanrankdata(v.data, axis=1)
+        np.testing.assert_allclose(v.rank('x').values, expect_0)
+        np.testing.assert_allclose(v.rank('y').values, expect_1)
+        # int
+        v = Variable(['x'], [3,2,1])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # str
+        v =  Variable(['x'], ['c', 'b', 'a'])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # pct
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0])
+        v_expect = Variable(['x'], [0.75, 0.25, np.nan, 0.5, 1.0])
+        self.assertVariableEqual(v.rank('x', pct=True), v_expect)
+        # invalid dim
+        with raises_regex(ValueError, 'not found'):
+            v.rank('y')
 
     def test_big_endian_reduce(self):
         # regression test for GH489
