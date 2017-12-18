@@ -93,11 +93,7 @@ def to_iris(dataarray):
     # Iris not a hard dependency
     import iris
     from iris.fileformats.netcdf import parse_cell_methods
-    try:
-        from dask.array import ma as dask_ma
-        from dask.array import Array
-    except ImportError:
-        dask_ma = None
+    from xarray.core.pycompat import dask_array_type
 
     dim_coords = []
     aux_coords = []
@@ -124,7 +120,8 @@ def to_iris(dataarray):
         args['cell_methods'] = parse_cell_methods(dataarray.attrs['cell_methods'])
 
     # Create the right type of masked array (should be easier after #1769)
-    if isinstance(dataarray.data, Array):
+    if isinstance(dataarray.data, dask_array_type):
+        from dask.array import ma as dask_ma
         masked_data = dask_ma.masked_invalid(dataarray)
     else:
         masked_data = np.ma.masked_invalid(dataarray)
@@ -168,11 +165,7 @@ def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
-    try:
-        from dask.array import ma as dask_ma
-        from dask.array import Array
-    except ImportError:
-        dask_ma = None
+    from xarray.core.pycompat import dask_array_type
 
     name = cube.var_name
     dims = []
@@ -204,7 +197,8 @@ def from_iris(cube):
     cube_data = cube.core_data() if hasattr(cube, 'core_data') else cube.data
 
     # Deal with dask and numpy masked arrays
-    if dask_ma and isinstance(cube_data, Array):
+    if isinstance(cube_data, dask_array_type):
+        from dask.array import ma as dask_ma
         filled_data = dask_ma.filled(cube_data, get_fill_value(cube.dtype))
     elif isinstance(cube_data, np.ma.MaskedArray):
         filled_data = np.ma.filled(cube_data, get_fill_value(cube.dtype))
