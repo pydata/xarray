@@ -417,6 +417,7 @@ def test_ffill_limit():
         [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims='time')
 
 
+@requires_np112
 def test_interpolate_dataset(ds):
     actual = ds.interpolate_na(dim='time')
     # no missing values in var1
