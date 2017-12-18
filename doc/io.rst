@@ -345,7 +345,7 @@ Iris
 
 The Iris_ tool allows easy reading of common meteorological and climate model formats
 (including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
-similar to ``DataArray``s, while enforcing a CF-compliant data model. If iris is
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
 installed xarray can convert a ``Cube`` into a ``DataArray`` using
 :py:meth:`~xarray.Dataset.from_iris`:
 
