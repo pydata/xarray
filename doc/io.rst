@@ -363,7 +363,7 @@ Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
 
 .. ipython:: python
 
-    da_cube = xr.Dataarray.from_iris(cube)
+    da_cube = xr.DataArray.from_iris(cube)
     da_cube
 
 
