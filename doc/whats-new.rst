@@ -37,6 +37,12 @@ Enhancements
 .. _Zarr: http://zarr.readthedocs.io/
 
 
+**New functions/methods**
+
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
+
 Bug fixes
 ~~~~~~~~~
 

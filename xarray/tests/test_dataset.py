@@ -31,7 +31,8 @@ from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
-                          assert_array_equal, requires_scipy)
+                          assert_array_equal, requires_bottleneck,
+                          requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -3409,6 +3410,23 @@ class TestDataset(TestCase):
             ds_quantile = ds.quantile(q, dim=dim)
             assert 'dim3' in ds_quantile.dims
             assert all(d not in ds_quantile.dims for d in dim)
+
+    @requires_bottleneck
+    def test_rank(self):
+        ds = create_test_data(seed=1234)
+        # only ds.var3 depends on dim3
+        z = ds.rank('dim3')
+        self.assertItemsEqual(['var3'], list(z.data_vars))
+        # same as dataarray version
+        x = z.var3
+        y = ds.var3.rank('dim3')
+        self.assertDataArrayEqual(x, y)
+        # coordinates stick
+        self.assertItemsEqual(list(z.coords), list(ds.coords))
+        self.assertItemsEqual(list(x.coords), list(y.coords))
+        # invalid dim
+        with raises_regex(ValueError, 'does not contain'):
+            x.rank('invalid_dim')
 
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})
