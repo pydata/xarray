@@ -177,7 +177,7 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     x : string, optional
-        Coordinate for x axis (2D inputs only). If None use darray.dims[1]
+        Coordinate for x axis (2D inputs only). If None use longer dimension.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -207,6 +207,9 @@ def line(darray, *args, **kwargs):
         x = darray.coords[xlabel]
 
     else:
+        if x is None:
+            x = darray.dims[np.argmax(darray.shape)]
+
         xlabel, ylabel = _infer_xy_labels(darray=darray, x=x, y=None)
         x = darray.coords[xlabel]
         darray = darray.transpose(xlabel, ylabel)

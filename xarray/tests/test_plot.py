@@ -96,6 +96,7 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line(self):
         self.darray[:, :, 0].plot.line()
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
         self.darray[:, :, 0].plot.line(add_legend=False)
