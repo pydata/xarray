@@ -94,19 +94,24 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+        with raises_regex(ValueError, 'dimension'):
+            self.darray[:, 0, 0].plot(x='dim_1')
+
     def test_2d_line(self):
-        self.darray[:, :, 0].plot.line()
-        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
+        with raises_regex(ValueError, 'hue'):
+            self.darray[:, :, 0].plot.line()
+
+        self.darray[:, :, 0].plot.line(hue='dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
-        self.darray[:, :, 0].plot.line(add_legend=False)
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
         self.assertFalse(plt.gca().get_legend())
         plt.cla()
-        self.darray[:, :, 0].plot.line(add_legend=True)
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
         self.assertTrue(plt.gca().get_legend())
         # check whether legend title is set
         self.assertTrue(plt.gca().get_legend().get_title().get_text()
-                        == 'dim_0')
+                        == 'dim_1')
 
     def test_2d_line_accepts_x_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0')

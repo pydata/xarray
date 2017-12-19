@@ -179,8 +179,7 @@ def line(darray, *args, **kwargs):
     hue : string, optional
         Coordinate for which you want multiple lines plotted (2D inputs only).
     x : string, optional
-        Coordinate for x axis (2D inputs only). If both x and hue are None,
-        x is set to the longer dimension.
+        Coordinate for x axis.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -208,11 +207,14 @@ def line(darray, *args, **kwargs):
 
     if ndims == 1:
         xlabel, = darray.dims
+        if x is not None and xlabel != x:
+            raise ValueError('Input does not have specified dimension ' + x)
+
         x = darray.coords[xlabel]
 
     else:
         if x is None and hue is None:
-            x = darray.dims[np.argmax(darray.shape)]
+            raise ValueError('For 2D inputs, please specify either hue or x.')
 
         xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
         x = darray.coords[xlabel]
