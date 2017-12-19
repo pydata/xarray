@@ -10,15 +10,18 @@ from .core.dataarray import DataArray
 from .core.pycompat import OrderedDict, range
 from .core.dtypes import get_fill_value
 from .conventions import (
-    maybe_encode_timedelta, maybe_encode_datetime, decode_cf, decode_cf_variable)
+    maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
-iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis', 'calendar', 'leap_month', 'leap_year',
-                       'month_lengths', 'coordinates', 'grid_mapping', 'climatology', 'cell_methods', 'formula_terms',
-                       'compress', 'missing_value', 'add_offset', 'scale_factor', 'valid_max', 'valid_min',
-                       'valid_range', '_FillValue'}
-cell_methods_strings = {'point', 'sum', 'maximum', 'median', 'mid_range', 'minimum', 'mean', 'mode',
-                        'standard_deviation', 'variance'}
+iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',
+                       'calendar', 'leap_month', 'leap_year', 'month_lengths',
+                       'coordinates', 'grid_mapping', 'climatology',
+                       'cell_methods', 'formula_terms', 'compress',
+                       'missing_value', 'add_offset', 'scale_factor',
+                       'valid_max', 'valid_min', 'valid_range', '_FillValue'}
+cell_methods_strings = {'point', 'sum', 'maximum', 'median', 'mid_range',
+                        'minimum', 'mean', 'mode', 'standard_deviation',
+                        'variance'}
 
 
 def encode(var):
@@ -117,7 +120,8 @@ def to_iris(dataarray):
     args['dim_coords_and_dims'] = dim_coords
     args['aux_coords_and_dims'] = aux_coords
     if 'cell_methods' in dataarray.attrs:
-        args['cell_methods'] = parse_cell_methods(dataarray.attrs['cell_methods'])
+        args['cell_methods'] = \
+            parse_cell_methods(dataarray.attrs['cell_methods'])
 
     # Create the right type of masked array (should be easier after #1769)
     if isinstance(dataarray.data, dask_array_type):
@@ -182,11 +186,13 @@ def from_iris(cube):
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
         if not coord.var_name:
-            raise ValueError("Coordinate '{}' has no var_name attribute".format(coord.name()))
+            raise ValueError("Coordinate '{}' has no "
+                             "var_name attribute".format(coord.name()))
         if coord_dims:
             coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[coord.var_name] = ((), np.asscalar(coord.points), coord_attrs)
+            coords[coord.var_name] = ((),
+                                      np.asscalar(coord.points), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)
