@@ -6,8 +6,8 @@ import xarray as xr
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 import dask
-from distributed.utils_test import gen_cluster
-from distributed.client import futures_of
+from distributed.utils_test import gen_cluster, cluster, loop
+from distributed.client import futures_of, Client
 
 from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
 from xarray.tests.test_dataset import create_test_data
@@ -43,17 +43,18 @@ def test_dask_distributed_netcdf_integration_test(c, s, a, b):
 
 
 @requires_zarr
-@gen_cluster(client=True, timeout=None)
-def test_dask_distributed_zarr_integration_test(c, s, a, b):
+def test_dask_distributed_zarr_integration_test(loop):
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 5}
-    original = create_test_data().chunk(chunks)
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
-                         suffix='.zarr') as filename:
-        original.to_zarr(filename)
-        with xr.open_zarr(filename) as restored:
-            assert isinstance(restored.var1.data, da.Array)
-            computed = restored.compute()
-            assert_allclose(original, computed)
+    with cluster() as (s, [a, b]):
+        with Client(s['address'], loop=loop) as c:
+            original = create_test_data().chunk(chunks)
+            with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
+                                 suffix='.zarr') as filename:
+                original.to_zarr(filename)
+                with xr.open_zarr(filename) as restored:
+                    assert isinstance(restored.var1.data, da.Array)
+                    computed = restored.compute()
+                    assert_allclose(original, computed)
 
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',
