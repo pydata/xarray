@@ -229,7 +229,9 @@ def line(darray, *args, **kwargs):
         ax.set_ylabel(darray.name)
 
     if darray.ndim == 2 and add_legend:
-        ax.legend(darray.coords[huelabel].values, title=huelabel)
+        ax.legend(handles=primitive,
+                  labels=list(darray.coords[huelabel].values),
+                  title=huelabel)
 
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):
