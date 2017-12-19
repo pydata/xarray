@@ -274,7 +274,7 @@ class TestPlot1D(PlotTestCase):
         a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        self.assertFalse(rotation == 0)
+        self.assertNotEqual(rotation, 0)
 
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
