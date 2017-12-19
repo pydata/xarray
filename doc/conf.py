@@ -23,7 +23,7 @@ import importlib
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
-             'cartopy netCDF4 rasterio').split():
+             'cartopy netCDF4 rasterio zarr').split():
     try:
         module = importlib.import_module(name)
         if name == 'matplotlib':

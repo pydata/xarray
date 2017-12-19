@@ -28,6 +28,13 @@ Enhancements
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support for using `Zarr`_ as storage layer for xarray.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+- Experimental support for parsing ENVI metadata to coordinates and attributes
+  in :py:func:`xarray.open_rasterio`.
+  By `Matti Eskelinen <https://github.com/maaleske>`
+
+.. _Zarr: http://zarr.readthedocs.io/
 
 
 Bug fixes
