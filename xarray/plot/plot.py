@@ -176,8 +176,11 @@ def line(darray, *args, **kwargs):
     ax : matplotlib axes object, optional
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
+    hue : string, optional
+        Coordinate for which you want multiple lines plotted (2D inputs only).
     x : string, optional
-        Coordinate for x axis (2D inputs only). If None use longer dimension.
+        Coordinate for x axis (2D inputs only). If both x and hue are None,
+        x is set to the longer dimension.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -197,6 +200,7 @@ def line(darray, *args, **kwargs):
     aspect = kwargs.pop('aspect', None)
     size = kwargs.pop('size', None)
     ax = kwargs.pop('ax', None)
+    hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     add_legend = kwargs.pop('add_legend', True)
 
@@ -207,12 +211,12 @@ def line(darray, *args, **kwargs):
         x = darray.coords[xlabel]
 
     else:
-        if x is None:
+        if x is None and hue is None:
             x = darray.dims[np.argmax(darray.shape)]
 
-        xlabel, ylabel = _infer_xy_labels(darray=darray, x=x, y=None)
+        xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
         x = darray.coords[xlabel]
-        darray = darray.transpose(xlabel, ylabel)
+        darray = darray.transpose(xlabel, huelabel)
 
     _ensure_plottable(x)
 
@@ -225,7 +229,7 @@ def line(darray, *args, **kwargs):
         ax.set_ylabel(darray.name)
 
     if darray.ndim == 2 and add_legend:
-        ax.legend(darray.coords[ylabel].values, title=ylabel)
+        ax.legend(darray.coords[huelabel].values, title=huelabel)
 
     # Rotate dates on xlabels
     if np.issubdtype(x.dtype, np.datetime64):

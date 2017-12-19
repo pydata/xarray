@@ -115,6 +115,15 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_1')
         self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
 
+    def test_2d_line_accepts_hue_kw(self):
+        self.darray[:, :, 0].plot.line(hue='dim_0')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_1')
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
