@@ -17,3 +17,4 @@ dependencies:
   - rasterio=0.36.0
   - sphinx-gallery
   - zarr
+  - iris

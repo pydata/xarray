@@ -25,6 +25,9 @@ Enhancements
   1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
   time) (:issue:`1737`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`DataArray.to_iris <xray.DataArray.to_iris>` and :py:meth:`DataArray.from_iris <xray.DataArray.from_iris>` for
+  converting data arrays to and from Iris_ Cubes with the same data and coordinates (:issue:`621` and :issue:`37`).
+  By `Neil Parley <https://github.com/nparley>`_ and `Duncan Watson-Parris <https://github.com/duncanwp>`_.
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
@@ -36,6 +39,7 @@ Enhancements
 
 .. _Zarr: http://zarr.readthedocs.io/
 
+.. _Iris: http://scitools.org.uk/iris
 
 **New functions/methods**
 
