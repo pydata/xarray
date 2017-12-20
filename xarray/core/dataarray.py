@@ -1922,6 +1922,24 @@ class DataArray(AbstractArray, BaseDataObject):
         sorted: DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+            
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.random.rand(5),
+        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 5)>
+        array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+        >>> da.sortby(da)
+        <xarray.DataArray (time: 5)>
+        array([ 0.26532 ,  0.270962,  0.552878,  0.615637,  0.965471])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-03 2000-01-04 2000-01-05 ...      
         """
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
