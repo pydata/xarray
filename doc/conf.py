@@ -323,4 +323,5 @@ intersphinx_mapping = {
     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
 }

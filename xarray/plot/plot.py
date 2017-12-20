@@ -158,7 +158,7 @@ def line(darray, *args, **kwargs):
     """
     Line plot of 1 dimensional DataArray index against values
 
-    Wraps matplotlib.pyplot.plot
+    Wraps :func:`matplotlib:matplotlib.pyplot.plot`
 
     Parameters
     ----------
@@ -220,7 +220,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     """
     Histogram of DataArray
 
-    Wraps matplotlib.pyplot.hist
+    Wraps :func:`matplotlib:matplotlib.pyplot.hist`
 
     Plots N dimensional arrays by first flattening the array.
 
@@ -565,10 +565,9 @@ def imshow(x, y, z, ax, **kwargs):
     """
     Image plot of 2d DataArray using matplotlib.pyplot
 
-    Wraps matplotlib.pyplot.imshow
+    Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
 
-    ..note::
-
+    .. note::
         This function needs uniformly spaced coordinates to
         properly label the axes. Call DataArray.plot() to check.
 
@@ -581,8 +580,15 @@ def imshow(x, y, z, ax, **kwargs):
                          'pcolormesh or contour(f)')
 
     # Centering the pixels- Assumes uniform spacing
-    xstep = (x[1] - x[0]) / 2.0
-    ystep = (y[1] - y[0]) / 2.0
+    try:
+        xstep = (x[1] - x[0]) / 2.0
+    except IndexError:
+        # Arbitrary default value, similar to matplotlib behaviour
+        xstep = .1
+    try:
+        ystep = (y[1] - y[0]) / 2.0
+    except IndexError:
+        ystep = .1
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
@@ -608,7 +614,7 @@ def contour(x, y, z, ax, **kwargs):
     """
     Contour plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.contour
+    Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
     primitive = ax.contour(x, y, z, **kwargs)
     return primitive
@@ -619,7 +625,7 @@ def contourf(x, y, z, ax, **kwargs):
     """
     Filled contour plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.contourf
+    Wraps :func:`matplotlib:matplotlib.pyplot.contourf`
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
@@ -635,6 +641,8 @@ def _infer_interval_breaks(coord, axis=0):
     """
     coord = np.asarray(coord)
     deltas = 0.5 * np.diff(coord, axis=axis)
+    if deltas.size == 0:
+        deltas = np.array(0.0)
     first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
     last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
     trim_last = tuple(slice(None, -1) if n == axis else slice(None)
@@ -647,7 +655,7 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     """
     Pseudocolor plot of 2d DataArray
 
-    Wraps matplotlib.pyplot.pcolormesh
+    Wraps :func:`matplotlib:matplotlib.pyplot.pcolormesh`
     """
 
     # decide on a default for infer_intervals (GH781)
