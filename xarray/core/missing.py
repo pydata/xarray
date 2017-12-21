@@ -139,9 +139,8 @@ class SplineInterpolator(BaseInterpolator):
 
 def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     '''wrapper for datasets'''
-    from .dataset import Dataset
 
-    ds = Dataset(coords=self.coords, attrs=self.attrs)
+    ds = type(self)(coords=self.coords, attrs=self.attrs)
 
     for name, var in iteritems(self.data_vars):
         if dim in var.dims:
