@@ -7,7 +7,6 @@ import time
 import traceback
 import contextlib
 from collections import Mapping
-from distutils.version import LooseVersion
 
 from ..conventions import cf_encoder
 from ..core import indexing
@@ -183,11 +182,7 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            import dask
-            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
-                da.store(self.sources, self.targets, lock=self.lock)
-            else:
-                da.store(self.sources, self.targets)
+            da.store(self.sources, self.targets, lock=self.lock)
             self.sources = []
             self.targets = []
 
@@ -232,11 +227,8 @@ class AbstractWritableDataStore(AbstractDataStore):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            if vn not in self.variables:
-                target, source = self.prepare_variable(
-                    name, v, check, unlimited_dims=unlimited_dims)
-            else:
-                target, source = self.ds.variables[name], v.data
+            target, source = self.prepare_variable(
+                name, v, check, unlimited_dims=unlimited_dims)
 
             self.writer.add(source, target)
 
