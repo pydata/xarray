@@ -12,6 +12,7 @@ import pandas as pd
 from .pycompat import iteritems
 from .computation import apply_ufunc
 from .utils import is_scalar
+from .npcompat import flip
 
 
 class BaseInterpolator(object):
@@ -241,13 +242,13 @@ def _bfill(arr, n=None, axis=-1):
     '''inverse of ffill'''
     import bottleneck as bn
 
-    arr = np.flip(arr, axis=axis)
+    arr = flip(arr, axis=axis)
 
     # fill
     arr = bn.push(arr, axis=axis, n=n)
 
     # reverse back to original
-    return np.flip(arr, axis=axis)
+    return flip(arr, axis=axis)
 
 
 def ffill(arr, dim=None, limit=None):
