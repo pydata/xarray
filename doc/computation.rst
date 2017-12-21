@@ -83,7 +83,7 @@ for filling missing values via 1D interpolation.
 .. ipython:: python
 
     x = xr.DataArray([0, 1, np.nan, np.nan, 2], dims=['x'],
-                     coords={'xx': [0, 1, 1.1, 1.9, 3]})
+                     coords={'xx': xr.Variable('x', [0, 1, 1.1, 1.9, 3])})
     x.interpolate_na(dim='x', method='linear', use_coordinate='xx')
 
 Note that xarray slightly diverges from the pandas ``interpolate`` syntax by
