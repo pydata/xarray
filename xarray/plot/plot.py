@@ -443,14 +443,17 @@ def _plot2d(plotfunc):
         # Decide on a default for the colorbar before facetgrids
         if add_colorbar is None:
             add_colorbar = plotfunc.__name__ != 'contour'
-        if (plotfunc.__name__ == 'imshow' and
-            darray.ndim == (3 + (row is not None) + (col is not None))):
+        imshow_rgb = (
+            plotfunc.__name__ == 'imshow' and
+            darray.ndim == (3 + (row is not None) + (col is not None)))
+        if imshow_rgb:
             # Don't add a colorbar when showing an image with explicit colors
             add_colorbar = False
 
         # Handle facetgrids first
         if row or col:
             allargs = locals().copy()
+            allargs.pop('imshow_rgb')
             allargs.update(allargs.pop('kwargs'))
 
             # Need the decorated plotting function
@@ -474,13 +477,19 @@ def _plot2d(plotfunc):
                           "Use colors keyword instead.",
                           DeprecationWarning, stacklevel=3)
 
-        xlab, ylab = _infer_xy_labels(darray=darray, x=x, y=y,
-                                      imshow=plotfunc.__name__ == 'imshow')
+        rgb = kwargs.pop('rgb', None)
+        xlab, ylab = _infer_xy_labels(
+            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
+
+        if rgb is not None and plotfunc.__name__ != 'imshow':
+            raise ValueError('The "rgb" keyword is only valid for imshow()')
+        elif rgb is not None and not imshow_rgb:
+            raise ValueError('The "rgb" keyword is only valid for imshow()'
+                             'with a three-dimensional array (per facet)')
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
         yval = darray[ylab].values
-        zval = darray.to_masked_array(copy=False)
 
         # check if we need to broadcast one dimension
         if xval.ndim < yval.ndim:
@@ -491,8 +500,19 @@ def _plot2d(plotfunc):
 
         # May need to transpose for correct x, y labels
         # xlab may be the name of a coord, we have to check for dim names
-        if darray[xlab].dims[-1] == darray.dims[0]:
-            zval = zval.T
+        if imshow_rgb:
+            # For RGB[A] images, matplotlib requires the color dimension
+            # to be last.  In Xarray the order should be unimportant, so
+            # we transpose to (y, x, color) to make this work.
+            yx_dims = (ylab, xlab)
+            dims = yx_dims + tuple(d for d in darray.dims if d not in yx_dims)
+            if dims != darray.dims:
+                darray = darray.transpose(*dims)
+        elif darray[xlab].dims[-1] == darray.dims[0]:
+            darray = darray.transpose()
+
+        # Pass the data as a masked ndarray too
+        zval = darray.to_masked_array(copy=False)
 
         _ensure_plottable(xval, yval)
 
@@ -601,8 +621,9 @@ def imshow(x, y, z, ax, **kwargs):
     Wraps :func:`matplotlib:matplotlib.pyplot.imshow`
 
     While other plot methods require the DataArray to be strictly
-    two-dimensional, ``imshow`` also accepts a 3D array where the third
-    dimension can be interpreted as RGB or RGBA color channels.
+    two-dimensional, ``imshow`` also accepts a 3D array where some
+    dimension can be interpreted as RGB or RGBA color channels and
+    allows this dimension to be specified via the kwarg ``rgb=``.
 
     .. note::
         This function needs uniformly spaced coordinates to

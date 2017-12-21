@@ -672,6 +672,11 @@ class Common2dMixin:
         if self.plotfunc.__name__ not in ('contour', 'contourf'):
             self.plotfunc(DataArray(np.ones((1, 1))))
 
+    def test_disallows_rgb_arg(self):
+        with pytest.raises(ValueError):
+            # Always invalid for most plots.  Invalid for imshow with 2D data.
+            self.plotfunc(DataArray(np.ones((2, 2))), rgb='not None')
+
     def test_viridis_cmap(self):
         cmap_name = self.plotmethod(cmap='viridis').get_cmap().name
         self.assertEqual('viridis', cmap_name)
@@ -1071,12 +1076,44 @@ class TestImshow(Common2dMixin, PlotTestCase):
         ).plot.imshow()
         self.assertEqual(0, len(find_possible_colorbars()))
 
+    def test_plot_rgb_image_explicit(self):
+        DataArray(
+            easy_array((10, 15, 3), start=0),
+            dims=['y', 'x', 'band'],
+        ).plot.imshow(y='y', x='x', rgb='band')
+        self.assertEqual(0, len(find_possible_colorbars()))
+
     def test_plot_rgb_faceted(self):
         DataArray(
             easy_array((2, 2, 10, 15, 3), start=0),
             dims=['a', 'b', 'y', 'x', 'band'],
         ).plot.imshow(row='a', col='b')
         self.assertEqual(0, len(find_possible_colorbars()))
+
+    def test_plot_rgba_image_transposed(self):
+        # We can handle the color axis being in any position
+        DataArray(
+            easy_array((4, 10, 15), start=0),
+            dims=['band', 'y', 'x'],
+        ).plot.imshow()
+
+    def test_warns_ambigious_dim(self):
+        arr = DataArray(easy_array((3, 3, 3)), dims=['y', 'x', 'band'])
+        with pytest.warns(UserWarning):
+            arr.plot.imshow()
+        # but doesn't warn if dimensions specified
+        arr.plot.imshow(rgb='band')
+        arr.plot.imshow(x='x', y='y')
+
+    def test_rgb_errors_too_many_dims(self):
+        arr = DataArray(easy_array((3, 3, 3, 3)), dims=['y', 'x', 'z', 'band'])
+        with pytest.raises(ValueError):
+            arr.plot.imshow(rgb='band')
+
+    def test_rgb_errors_bad_dim_sizes(self):
+        arr = DataArray(easy_array((5, 5, 5)), dims=['y', 'x', 'band'])
+        with pytest.raises(ValueError):
+            arr.plot.imshow(rgb='band')
 
 
 class TestFacetGrid(PlotTestCase):
