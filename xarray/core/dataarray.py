@@ -19,6 +19,7 @@ from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
+from .computation import apply_ufunc
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes, assert_coordinate_consistent,
                           remap_label_indexers)
@@ -1630,6 +1631,19 @@ class DataArray(AbstractArray, BaseDataObject):
         from ..convert import from_cdms2
         return from_cdms2(variable)
 
+    def to_iris(self):
+        """Convert this array into a iris.cube.Cube
+        """
+        from ..convert import to_iris
+        return to_iris(self)
+
+    @classmethod
+    def from_iris(cls, cube):
+        """Convert a iris.cube.Cube into an xarray.DataArray
+        """
+        from ..convert import from_iris
+        return from_iris(cube)
+
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
 
@@ -2012,6 +2026,24 @@ class DataArray(AbstractArray, BaseDataObject):
         sorted: DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+            
+        Examples
+        --------
+        
+        >>> da = xr.DataArray(np.random.rand(5),
+        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 5)>
+        array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+        >>> da.sortby(da)
+        <xarray.DataArray (time: 5)>
+        array([ 0.26532 ,  0.270962,  0.552878,  0.615637,  0.965471])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-03 2000-01-04 2000-01-05 ...      
         """
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
@@ -2060,6 +2092,45 @@ class DataArray(AbstractArray, BaseDataObject):
 
         ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
                                               interpolation=interpolation)
+        return self._from_temp_dataset(ds)
+
+    def rank(self, dim, pct=False, keep_attrs=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        ranked : DataArray
+            DataArray with the same coordinates and dtype 'float64'.
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr.rank('x')
+        <xarray.DataArray (x: 3)>
+        array([ 1.,   2.,   3.])
+        Dimensions without coordinates: x
+        """
+        ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
 

@@ -163,6 +163,7 @@ Computation
 :py:attr:`~Dataset.real`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
+:py:attr:`~Dataset.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -318,6 +319,7 @@ Computation
 :py:attr:`~DataArray.T`
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
+:py:attr:`~DataArray.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
@@ -454,6 +456,8 @@ DataArray methods
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_iris
+   DataArray.from_iris
    DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2

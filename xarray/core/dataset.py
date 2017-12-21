@@ -3355,6 +3355,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             new.coords['quantile'] = q
         return new
 
+    def rank(self, dim, pct=False, keep_attrs=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        ranked : Dataset
+            Variables that do not depend on `dim` are dropped.
+        """
+        if dim not in self.dims:
+            raise ValueError('Dataset does not contain the dimension: %s' % dim)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            if name in self.data_vars:
+                if dim in var.dims:
+                    variables[name] = var.rank(dim, pct=pct)
+            else:
+                variables[name] = var
+
+        coord_names = set(self.coords)
+        attrs = self.attrs if keep_attrs else None
+        return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
