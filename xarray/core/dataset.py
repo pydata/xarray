@@ -2487,7 +2487,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
     def bfill(self, dim, limit=None):
         '''Fill NaN values by propogating values backward
 
-        *Requires bottleneck and Numpy v1.12.0 or later.*
+        *Requires bottleneck.*
 
         Parameters
         ----------

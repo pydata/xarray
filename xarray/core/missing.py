@@ -61,7 +61,7 @@ class NumpyInterpolator(BaseInterpolator):
 
         if fill_value is None:
             self._left = np.nan
-            self._right = yi[-1]
+            self._right = np.nan
         elif isinstance(fill_value, Iterable) and len(fill_value) == 2:
             self._left = fill_value[0]
             self._right = fill_value[1]
@@ -102,7 +102,7 @@ class ScipyInterpolator(BaseInterpolator):
         self.call_kwargs = {}
 
         if fill_value is None and method == 'linear':
-            fill_value = kwargs.pop('fill_value', (np.nan, yi[-1]))
+            fill_value = kwargs.pop('fill_value', (np.nan, np.nan))
         elif fill_value is None:
             fill_value = np.nan
 
