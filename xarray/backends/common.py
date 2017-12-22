@@ -132,24 +132,15 @@ class AbstractDataStore(Mapping):
 
     @property
     def variables(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
-        variables, _ = self.load()
-        return variables
+        raise RuntimeError('using variables property is deprecated')
 
     @property
     def attrs(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
-        _, attributes = self.load()
-        return attributes
+        raise RuntimeError('using attrs property is deprecated')
 
     @property
     def dimensions(self):
+        raise RuntimeError('using dimensions property is deprecated')
         return self.get_dimensions()
 
     def close(self):
@@ -235,8 +226,9 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_necessary_dimensions(self, variable, unlimited_dims=None):
         if unlimited_dims is None:
             unlimited_dims = set()
+        dims = self.get_dimensions()
         for d, l in zip(variable.dims, variable.shape):
-            if d not in self.dimensions:
+            if d not in dims:
                 is_unlimited = d in unlimited_dims
                 self.set_dimension(d, l, is_unlimited)
 
