@@ -7,6 +7,7 @@ import time
 import traceback
 import contextlib
 from collections import Mapping
+import warnings
 
 from ..conventions import cf_encoder
 from ..core import indexing
@@ -132,15 +133,25 @@ class AbstractDataStore(Mapping):
 
     @property
     def variables(self):
-        raise RuntimeError('using variables property is deprecated')
+        warnings.warn('The ``variables`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
+        variables, _ = self.load()
+        return variables
 
     @property
     def attrs(self):
-        raise RuntimeError('using attrs property is deprecated')
+        warnings.warn('The ``attrs`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
+        _, attrs = self.load()
+        return attrs
 
     @property
     def dimensions(self):
-        raise RuntimeError('using dimensions property is deprecated')
+        warnings.warn('The ``dimensions`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         return self.get_dimensions()
 
     def close(self):
