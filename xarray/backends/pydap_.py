@@ -46,11 +46,6 @@ def _fix_global_attributes(attributes):
             # move global attributes to the top level, like the netcdf-C
             # DAP client
             attributes.update(attributes.pop(k))
-        elif is_dict_like(attributes[k]):
-            # Make Hierarchical attributes to a single level with a
-            # dot-separated key
-            attributes.update({'{}.{}'.format(k, k_child): v_child for
-                               k_child, v_child in attributes.pop(k).items()})
     return attributes
 
 
