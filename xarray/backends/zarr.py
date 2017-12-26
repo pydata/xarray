@@ -351,9 +351,11 @@ class ZarrStore(AbstractWritableDataStore):
                                  (self.ds.attrs[_DIMENSION_KEY], name, length))
         self.ds.attrs[_DIMENSION_KEY][name] = length
 
-    def set_attribute(self, key, value):
-        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-        attributes[key] = _encode_zarr_attr_value(value)
+    def set_attributes(self, attributes):
+        attrs = {}
+        for k, v in iteritems(attributes):
+            attrs[k] = _encode_zarr_attr_value(v)
+        self.ds.attrs.update(attrs)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
