@@ -280,7 +280,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     @classmethod
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
-                   writer=None):
+                   writer=None, ):
         import zarr
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
@@ -331,31 +331,45 @@ class ZarrStore(AbstractWritableDataStore):
                                  for k, v in self.ds.arrays())
 
     def get_attrs(self):
-        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        attributes = HiddenKeyDict(self.ds.attrs, [_DIMENSION_KEY])
         return _decode_zarr_attrs(attributes)
 
     def get_dimensions(self):
-        dimensions, _ = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        try:
+            dimensions = self.ds.attrs[_DIMENSION_KEY]
+        except KeyError:
+            raise KeyError("Zarr object is missing the attribute `%s`, which "
+                           "is required for xarray to determine variable "
+                           "dimensions." % (_DIMENSION_KEY))
         return dimensions
 
-    def set_dimension(self, name, length, is_unlimited=False):
-        if is_unlimited:
+    # TODO: we need these checks one way or another
+    # def set_dimension(self, name, length, is_unlimited=False):
+    #     # consistency check
+    #     if name in self.ds.attrs[_DIMENSION_KEY]:
+    #         if self.ds.attrs[_DIMENSION_KEY][name] != length:
+    #             raise ValueError("Pre-existing array dimensions %r "
+    #                              "encoded in Zarr attributes are incompatible "
+    #                              "with newly specified dimension `%s`: %g" %
+    #                              (self.ds.attrs[_DIMENSION_KEY], name, length))
+    #     self.ds.attrs[_DIMENSION_KEY][name] = length
+
+    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+        if unlimited_dims is not None:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
-        # consistency check
-        if name in self.ds.attrs[_DIMENSION_KEY]:
-            if self.ds.attrs[_DIMENSION_KEY][name] != length:
-                raise ValueError("Pre-existing array dimensions %r "
-                                 "encoded in Zarr attributes are incompatible "
-                                 "with newly specified dimension `%s`: %g" %
-                                 (self.ds.attrs[_DIMENSION_KEY], name, length))
-        self.ds.attrs[_DIMENSION_KEY][name] = length
+        dims = OrderedDict()
+        for d, l in zip(variable.dims, variable.shape):
+            # for now we're avoiding the checks in set_dimension to avoid
+            # hitting the remote dataset.
+            # TODO: fix this
+            dims[d] = l
+        self.ds.attrs[_DIMENSION_KEY].update(dims)
 
     def set_attributes(self, attributes):
-        attrs = {}
-        for k, v in iteritems(attributes):
-            attrs[k] = _encode_zarr_attr_value(v)
-        self.ds.attrs.update(attrs)
+        encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
+                                    for k, v in iteritems(attributes))
+        self.ds.attrs.update(encoded_attrs)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -395,11 +409,13 @@ class ZarrStore(AbstractWritableDataStore):
         #                            cache_metadata=encoding.get('cache_metadata'))
 
         # the magic for storing the hidden dimension data
-        zarr_array.attrs[_DIMENSION_KEY] = dims
-        _, attributes = _get_zarr_dims_and_attrs(zarr_array, _DIMENSION_KEY)
-
+        encoded_attrs = OrderedDict()
+        encoded_attrs[_DIMENSION_KEY] = dims
         for k, v in iteritems(attrs):
-            attributes[k] = _encode_zarr_attr_value(v)
+            encoded_attrs[k] = _encode_zarr_attr_value(v)
+
+        # update all the attributes at once
+        zarr_array.attrs.update(encoded_attrs)
 
         return zarr_array, variable.data
 
