@@ -156,8 +156,11 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                     'chunksizes', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-        nc4_var = self.ds.createVariable(name, dtype, variable.dims,
-                                         fill_value=fill_value, **kwargs)
+        if name not in self.ds.variables:
+            nc4_var = self.ds.createVariable(name, dtype, variable.dims,
+                                             fill_value=fill_value, **kwargs)
+        else:
+            nc4_var = self.ds.variables[name]
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)

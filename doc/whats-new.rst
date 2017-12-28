@@ -59,8 +59,13 @@ Bug fixes
   ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
 - Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
   with size one in some dimension can now be plotted, which is good for
-  exploring satellite imagery.  (:issue:`1780`)
+  exploring satellite imagery (:issue:`1780`).
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- The ``variables``, ``attrs``, and ``dimensions`` properties have been
+  deprecated as part of a bug fix addressing an issue where backends were
+  unintentionally loading the datastores data and attributes repeatedly during
+  writes  (:issue:`1798`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 
 .. _whats-new.0.10.0:
