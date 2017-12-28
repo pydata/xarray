@@ -949,7 +949,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
 
     original_dtype = data.dtype
 
-    if concat_characters and data.dtype.kind == 'S':
+    if concat_characters and data.dtype.kind in ['U', 'S', 'O']:
         if stack_char_dim:
             dimensions = dimensions[:-1]
             data = StackedBytesArray(data)
