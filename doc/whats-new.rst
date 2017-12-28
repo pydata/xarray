@@ -66,6 +66,7 @@ Bug fixes
   unintentionally loading the datastores data and attributes repeatedly during
   writes  (:issue:`1798`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Properly handle ``_FillValue`` for variable-length unicode strings (:issue:`1781`). By `Michael Delgado <https://github.com/delgadom>`_.
 
 
 .. _whats-new.0.10.0:
