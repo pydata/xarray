@@ -280,7 +280,7 @@ class ZarrStore(AbstractWritableDataStore):
 
     @classmethod
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
-                   writer=None, ):
+                   writer=None):
         import zarr
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
