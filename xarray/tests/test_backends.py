@@ -833,14 +833,12 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         # https://github.com/Unidata/netcdf4-python/issues/730
         # https://github.com/shoyer/h5netcdf/issues/37
         original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                self.assertDatasetIdentical(expected, actual)
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
-        with pytest.raises(NotImplementedError):
-            with self.roundtrip(original) as actual:
-                self.assertDatasetIdentical(expected, actual)
+        with self.roundtrip(original) as actual:
+            self.assertDatasetIdentical(expected, actual)
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
