@@ -6,7 +6,6 @@ import pandas as pd
 
 try:
     import dask
-    import dask.multiprocessing
 except ImportError:
     pass
 
