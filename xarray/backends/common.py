@@ -7,7 +7,7 @@ import time
 import traceback
 import contextlib
 from collections import Mapping
-from distutils.version import LooseVersion
+import warnings
 
 from ..conventions import cf_encoder
 from ..core import indexing
@@ -133,24 +133,25 @@ class AbstractDataStore(Mapping):
 
     @property
     def variables(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
+        warnings.warn('The ``variables`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         variables, _ = self.load()
         return variables
 
     @property
     def attrs(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
-        _, attributes = self.load()
-        return attributes
+        warnings.warn('The ``attrs`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
+        _, attrs = self.load()
+        return attrs
 
     @property
     def dimensions(self):
+        warnings.warn('The ``dimensions`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         return self.get_dimensions()
 
     def close(self):
@@ -183,11 +184,7 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            import dask
-            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
-                da.store(self.sources, self.targets, lock=self.lock)
-            else:
-                da.store(self.sources, self.targets)
+            da.store(self.sources, self.targets, lock=self.lock)
             self.sources = []
             self.targets = []
 
@@ -232,19 +229,17 @@ class AbstractWritableDataStore(AbstractDataStore):
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
-            if vn not in self.variables:
-                target, source = self.prepare_variable(
-                    name, v, check, unlimited_dims=unlimited_dims)
-            else:
-                target, source = self.ds.variables[name], v.data
+            target, source = self.prepare_variable(
+                name, v, check, unlimited_dims=unlimited_dims)
 
             self.writer.add(source, target)
 
     def set_necessary_dimensions(self, variable, unlimited_dims=None):
         if unlimited_dims is None:
             unlimited_dims = set()
+        dims = self.get_dimensions()
         for d, l in zip(variable.dims, variable.shape):
-            if d not in self.dimensions:
+            if d not in dims:
                 is_unlimited = d in unlimited_dims
                 self.set_dimension(d, l, is_unlimited)
 

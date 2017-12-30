@@ -352,20 +352,24 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         encoding = _extract_nc4_variable_encoding(
             variable, raise_on_invalid=check_encoding,
             unlimited_dims=unlimited_dims)
-        nc4_var = self.ds.createVariable(
-            varname=name,
-            datatype=datatype,
-            dimensions=variable.dims,
-            zlib=encoding.get('zlib', False),
-            complevel=encoding.get('complevel', 4),
-            shuffle=encoding.get('shuffle', True),
-            fletcher32=encoding.get('fletcher32', False),
-            contiguous=encoding.get('contiguous', False),
-            chunksizes=encoding.get('chunksizes'),
-            endian='native',
-            least_significant_digit=encoding.get('least_significant_digit'),
-            fill_value=fill_value)
-        _disable_auto_decode_variable(nc4_var)
+        if name in self.ds.variables:
+            nc4_var = self.ds.variables[name]
+        else:
+            nc4_var = self.ds.createVariable(
+                varname=name,
+                datatype=datatype,
+                dimensions=variable.dims,
+                zlib=encoding.get('zlib', False),
+                complevel=encoding.get('complevel', 4),
+                shuffle=encoding.get('shuffle', True),
+                fletcher32=encoding.get('fletcher32', False),
+                contiguous=encoding.get('contiguous', False),
+                chunksizes=encoding.get('chunksizes'),
+                endian='native',
+                least_significant_digit=encoding.get(
+                    'least_significant_digit'),
+                fill_value=fill_value)
+            _disable_auto_decode_variable(nc4_var)
 
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
