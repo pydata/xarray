@@ -2410,6 +2410,105 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         out = ops.fillna(self, value)
         return out
 
+    def interpolate_na(self, dim=None, method='linear', limit=None,
+                       use_coordinate=True,
+                       **kwargs):
+        """Interpolate values according to different methods.
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to interpolate.
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+                  'polynomial', 'barycentric', 'krog', 'pchip',
+                  'spline'}, optional
+            String indicating which method to use for interpolation:
+
+            - 'linear': linear interpolation (Default). Additional keyword
+              arguments are passed to ``numpy.interp``
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
+              method=='polynomial', the ``order`` keyword argument must also be
+              provided.
+            - 'barycentric', 'krog', 'pchip', 'spline': use their respective
+              ``scipy.interpolate`` classes.
+        use_coordinate : boolean or str, default True
+            Specifies which index to use as the x values in the interpolation
+            formulated as `y = f(x)`. If False, values are treated as if
+            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
+            used. If use_coordinate is a string, it specifies the name of a
+            coordinate variariable to use as the index.
+        limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit.
+
+        Returns
+        -------
+        Dataset
+
+        See also
+        --------
+        numpy.interp
+        scipy.interpolate
+        """
+        from .missing import interp_na, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(interp_na, self, dim=dim,
+                                        method=method, limit=limit,
+                                        use_coordinate=use_coordinate,
+                                        **kwargs)
+        return new
+
+    def ffill(self, dim, limit=None):
+        '''Fill NaN values by propogating values forward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        Dataset
+        '''
+        from .missing import ffill, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
+        return new
+
+    def bfill(self, dim, limit=None):
+        '''Fill NaN values by propogating values backward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to backward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        Dataset
+        '''
+        from .missing import bfill, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
+        return new
+
     def combine_first(self, other):
         """Combine two Datasets, default to data_vars of self.
 
