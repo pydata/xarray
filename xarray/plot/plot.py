@@ -208,7 +208,8 @@ def line(darray, *args, **kwargs):
     if ndims == 1:
         xlabel, = darray.dims
         if x is not None and xlabel != x:
-            raise ValueError('Input does not have specified dimension ' + x)
+            raise ValueError('Input does not have specified dimension'
+                             + ' {!r}'.format(x))
 
         x = darray.coords[xlabel]
 
