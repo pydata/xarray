@@ -36,6 +36,9 @@ Enhancements
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
+- :py:func:`~plot.line()` learned to draw multiple lines if provided with a
+  2D variable.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
