@@ -530,7 +530,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
     def test_unsigned_roundtrip_mask_and_scale(self):
         decoded = create_unsigned_masked_scaled_data()
         encoded = create_encoded_unsigned_masked_scaled_data()
-        print('ORIGINAL', encoded, encoded.x.attrs, encoded.x.encoding)
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 self.assertEqual(decoded.variables[k].dtype,
@@ -550,7 +549,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        print('NOW', encoded, encoded.x.attrs, encoded.x.encoding)
         self.assertDatasetAllClose(
             encoded, create_encoded_unsigned_masked_scaled_data())
         with self.roundtrip(encoded) as actual:

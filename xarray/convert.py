@@ -6,11 +6,11 @@ from __future__ import print_function
 
 import numpy as np
 
+from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .core.dataarray import DataArray
 from .core.pycompat import OrderedDict, range
 from .core.dtypes import get_fill_value
-from .conventions import (
-    maybe_encode_timedelta, maybe_encode_datetime, decode_cf)
+from .conventions import decode_cf
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',
@@ -25,7 +25,7 @@ cell_methods_strings = {'point', 'sum', 'maximum', 'median', 'mid_range',
 
 
 def encode(var):
-    return maybe_encode_timedelta(maybe_encode_datetime(var.variable))
+    return CFTimedeltaCoder().encode(CFDatetimeCoder().encode(var.variable))
 
 
 def _filter_attrs(attrs, ignored_attrs):
