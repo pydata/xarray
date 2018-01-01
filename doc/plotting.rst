@@ -178,13 +178,9 @@ entire figure (as for matplotlib's ``figsize`` argument).
 Multiple lines showing variation along a dimension
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to make line plots of two-dimensional data by calling ``xarray.plot.line()`` with appropriate arguments. Consider the 3D variable ``air``
-
-.. ipython:: python
-
-    air
-
-We can use line plots to check the variation of air temperature at three different latitudes along a longitude line:
+It is possible to make line plots of two-dimensional data by calling ``xarray.plot.line()``
+with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
+plots to check the variation of air temperature at three different latitudes along a longitude line:
 
 .. ipython:: python
 
@@ -196,12 +192,8 @@ It is required to explicitly specify either
 1. ``x``: the dimension to be used for the x-axis, or
 2. ``hue``: the dimension you want to represent by multiple lines.
 
-Thus, we can make the previous plot by specifying ``hue='lat'`` instead of ``x='time'``. If required, the automatic legend can be turned off using ``add_legend=False``.
-
-.. ipython:: python
-
-    @savefig plotting_example_multiple_lines_hue_kwarg.png
-    air.isel(lon=10, lat=[19,21,22]).plot.line(hue='lat', add_legend=False)
+Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
+If required, the automatic legend can be turned off using ``add_legend=False``.
 
 Two Dimensions
 --------------
