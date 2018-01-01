@@ -2051,7 +2051,6 @@ class PydapTest(TestCase):
     def test_compatible_to_netcdf(self):
         # make sure it can be saved as a netcdf
         with self.create_datasets() as (actual, expected):
-            print(actual)
             with create_tmp_file() as tmp_file:
                 actual.to_netcdf(tmp_file)
                 actual = open_dataset(tmp_file)
