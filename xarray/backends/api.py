@@ -90,26 +90,28 @@ def _validate_dataset_names(dataset):
         check_name(k)
 
 
+def check_attr(name, value):
+    if isinstance(name, basestring):
+        if not name:
+            raise ValueError('Invalid name for attr: string must be '
+                             'length 1 or greater for serialization to '
+                             'netCDF files')
+    else:
+        raise TypeError("Invalid name for attr: {} must be a string for "
+                        "serialization to netCDF files".format(name))
+
+    if not isinstance(value, (basestring, Number, np.ndarray, np.number,
+                              list, tuple)):
+        raise TypeError('Invalid value for attr: {} must be a number '
+                        'string, ndarray or a list/tuple of '
+                        'numbers/strings for serialization to netCDF '
+                        'files'.format(value))
+
+
 def _validate_attrs(dataset):
     """`attrs` must have a string key and a value which is either: a number
     a string, an ndarray or a list/tuple of numbers/strings.
     """
-    def check_attr(name, value):
-        if isinstance(name, basestring):
-            if not name:
-                raise ValueError('Invalid name for attr: string must be '
-                                 'length 1 or greater for serialization to '
-                                 'netCDF files')
-        else:
-            raise TypeError("Invalid name for attr: {} must be a string for "
-                            "serialization to netCDF files".format(name))
-
-        if not isinstance(value, (basestring, Number, np.ndarray, np.number,
-                                  list, tuple)):
-            raise TypeError('Invalid value for attr: {} must be a number '
-                            'string, ndarray or a list/tuple of '
-                            'numbers/strings for serialization to netCDF '
-                            'files'.format(value))
 
     # Check attrs on the dataset itself
     for k, v in dataset.attrs.items():

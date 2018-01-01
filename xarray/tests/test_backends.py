@@ -2034,6 +2034,9 @@ class PydapTest(TestCase):
             self.assertNotIn('NC_GLOBAL', actual.attrs)
             self.assertIn('history', actual.attrs)
 
+            # attributes and encoding
+            assert actual.attrs.keys() == expected.attrs.keys()
+
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
 
@@ -2044,6 +2047,16 @@ class PydapTest(TestCase):
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
+
+    def test_compatible_to_netcdf(self):
+        # make sure it can be saved as a netcdf
+        with self.create_datasets() as (actual, expected):
+            print(actual)
+            with create_tmp_file() as tmp_file:
+                actual.to_netcdf(tmp_file)
+                actual = open_dataset(tmp_file)
+                actual['bears'] = actual['bears'].astype(str)
+                self.assertDatasetEqual(actual, expected)
 
     @requires_dask
     def test_dask(self):
