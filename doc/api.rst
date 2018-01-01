@@ -148,6 +148,9 @@ Computation
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
 :py:attr:`~Dataset.fillna`
+:py:attr:`~Dataset.ffill`
+:py:attr:`~Dataset.bfill`
+:py:attr:`~Dataset.interpolate_na`
 :py:attr:`~Dataset.where`
 
 **ndarray methods**:
@@ -299,6 +302,9 @@ Computation
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
 :py:attr:`~DataArray.fillna`
+:py:attr:`~DataArray.ffill`
+:py:attr:`~DataArray.bfill`
+:py:attr:`~DataArray.interpolate_na`
 :py:attr:`~DataArray.where`
 
 **ndarray methods**:
@@ -450,6 +456,8 @@ DataArray methods
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_iris
+   DataArray.from_iris
    DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
