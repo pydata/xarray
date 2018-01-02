@@ -379,37 +379,27 @@ class ZarrStore(AbstractWritableDataStore):
         fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
                                               dtype)
 
-        # TODO: figure out what encoding is needed for zarr
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
-        # arguments for zarr.create:
-        # zarr.creation.create(shape, chunks=None, dtype=None,
-        # compressor='default', fill_value=0, order='C', store=None,
-        # synchronizer=None, overwrite=False, path=None, chunk_store=None,
-        # filters=None, cache_metadata=True, **kwargs)
-        if name in self.ds:
-            zarr_array = self.ds[name]
-        else:
-            zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
-                                        fill_value=fill_value, **encoding)
-        # decided not to explicity enumerate encoding options because we
-        # risk overriding zarr's defaults (e.g. if we specificy
-        # cache_metadata=None instead of True). Alternative is to have lots of
-        # logic in _extract_zarr_variable encoding to duplicate zarr defaults.
-        #                            chunks=encoding.get('chunks'),
-        #                            compressor=encoding.get('compressor'),
-        #                            filters=encodings.get('filters'),
-        #                            cache_metadata=encoding.get('cache_metadata'))
-
-        # the magic for storing the hidden dimension data
         encoded_attrs = OrderedDict()
+        # the magic for storing the hidden dimension data
         encoded_attrs[_DIMENSION_KEY] = dims
         for k, v in iteritems(attrs):
             encoded_attrs[k] = _encode_zarr_attr_value(v)
 
-        # update all the attributes at once
-        zarr_array.attrs.update(encoded_attrs)
+        if name in self.ds:
+            zarr_array = self.ds[name]
+            zarr_array.attrs.update(encoded_attrs)
+        else:
+            # arguments for zarr.create:
+            # zarr.creation.create(shape, chunks=None, dtype=None,
+            # compressor='default', fill_value=0, order='C', store=None,
+            # synchronizer=None, overwrite=False, path=None, chunk_store=None,
+            # filters=None, cache_metadata=True, **kwargs)
+            zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
+                                        fill_value=fill_value, **encoding)
+            zarr_array.attrs.put(encoded_attrs)
 
         return zarr_array, variable.data
 
@@ -419,28 +409,6 @@ class ZarrStore(AbstractWritableDataStore):
         AbstractWritableDataStore.store(self, new_vars, attributes,
                                         *args, **kwargs)
     # sync() and close() methods should not be needed with zarr
-
-
-# from zarr docs
-
-# Zarr arrays can be used as either the source or sink for data in parallel
-# computations. Both multi-threaded and multi-process parallelism are
-# supported. The Python global interpreter lock (GIL) is released for both
-# compression and decompression operations, so Zarr will not block other Python
-# threads from running.
-#
-# A Zarr array can be read concurrently by multiple threads or processes. No
-# synchronization (i.e., locking) is required for concurrent reads.
-#
-# A Zarr array can also be written to concurrently by multiple threads or
-# processes. Some synchronization may be required, depending on the way the
-# data is being written.
-
-# If each worker in a parallel computation is writing to a separate region of
-# the array, and if region boundaries are perfectly aligned with chunk
-# boundaries, then no synchronization is required. However, if region and chunk
-# boundaries are not perfectly aligned, then synchronization is required to
-# avoid two workers attempting to modify the same chunk at the same time.
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
