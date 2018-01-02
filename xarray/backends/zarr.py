@@ -343,25 +343,16 @@ class ZarrStore(AbstractWritableDataStore):
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
 
-        existing_dims = self.get_dimensions()
-
         dims = {}
-        for v in variables.values:
+        for v in variables.values():
             dims.update(dict(zip(v.dims, v.shape)))
 
-        update_dims = {}
-        for d, l in dims.items():
-            if d in existing_dims and l != existing_dims[d]:
-                raise ValueError("Unable to update size for existing dimension"
-                                 "%r (%d != %d)" % (d, l, existing_dims[d]))
-            update_dims[d] = l
-
-        self.ds.attrs[_DIMENSION_KEY].update(update_dims)
+        self.ds.attrs[_DIMENSION_KEY].update(dims)
 
     def set_attributes(self, attributes):
         encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
                                     for k, v in iteritems(attributes))
-        self.ds.attrs.update(encoded_attrs)
+        self.ds.attrs.put(encoded_attrs)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
