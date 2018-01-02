@@ -343,28 +343,25 @@ class ZarrStore(AbstractWritableDataStore):
                            "dimensions." % (_DIMENSION_KEY))
         return dimensions
 
-    # TODO: we need these checks one way or another
-    # def set_dimension(self, name, length, is_unlimited=False):
-    #     # consistency check
-    #     if name in self.ds.attrs[_DIMENSION_KEY]:
-    #         if self.ds.attrs[_DIMENSION_KEY][name] != length:
-    #             raise ValueError("Pre-existing array dimensions %r "
-    #                              "encoded in Zarr attributes are incompatible "
-    #                              "with newly specified dimension `%s`: %g" %
-    #                              (self.ds.attrs[_DIMENSION_KEY], name, length))
-    #     self.ds.attrs[_DIMENSION_KEY][name] = length
-
-    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+    def set_dimensions(self, variables, unlimited_dims=None):
         if unlimited_dims is not None:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
-        dims = OrderedDict()
-        for d, l in zip(variable.dims, variable.shape):
-            # for now we're avoiding the checks in set_dimension to avoid
-            # hitting the remote dataset.
-            # TODO: fix this
-            dims[d] = l
-        self.ds.attrs[_DIMENSION_KEY].update(dims)
+
+        existing_dims = self.get_dimensions()
+
+        dims = {}
+        for v in variables.values:
+            dims.update(dict(zip(v.dims, v.shape)))
+
+        update_dims = {}
+        for d, l in dims.items():
+            if d in existing_dims and l != existing_dims[d]:
+                raise ValueError("Unable to update size for existing dimension"
+                                 "%r (%d != %d)" % (d, l, existing_dims[d]))
+            update_dims[d] = l
+
+        self.ds.attrs[_DIMENSION_KEY].update(update_dims)
 
     def set_attributes(self, attributes):
         encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
@@ -378,9 +375,6 @@ class ZarrStore(AbstractWritableDataStore):
         dims = variable.dims
         dtype = variable.dtype
         shape = variable.shape
-
-        # TODO: figure out how zarr should deal with unlimited dimensions
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
                                               dtype)

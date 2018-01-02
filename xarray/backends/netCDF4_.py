@@ -334,8 +334,6 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             variable = encode_nc3_variable(variable)
             datatype = variable.dtype
 
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
-
         attrs = variable.attrs.copy()
 
         fill_value = attrs.pop('_FillValue', None)

@@ -188,10 +188,6 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
 
-        if unlimited_dims is not None and len(unlimited_dims) > 1:
-            raise ValueError('NETCDF3 only supports one unlimited dimension')
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
-
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support

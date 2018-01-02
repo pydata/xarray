@@ -133,8 +133,6 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         attrs = variable.attrs.copy()
         variable, dtype = _nc4_values_and_dtype(variable)
 
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
-
         fill_value = attrs.pop('_FillValue', None)
         if dtype is str and fill_value is not None:
             raise NotImplementedError(

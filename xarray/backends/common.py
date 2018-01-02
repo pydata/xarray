@@ -6,10 +6,10 @@ import logging
 import time
 import traceback
 import contextlib
-from collections import Mapping
+from collections import Mapping, OrderedDict
 import warnings
 
-from ..conventions import cf_encoder
+from ..conventions import cf_encoder, maybe_encode_as_char_array
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
@@ -216,7 +216,11 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
               unlimited_dims=None):
+        # This seems out of place
+        variables = OrderedDict([(k, maybe_encode_as_char_array(v))
+                                 for k, v in variables.items()])
         self.set_attributes(attributes)
+        self.set_dimensions(variables, unlimited_dims=unlimited_dims)
         self.set_variables(variables, check_encoding_set,
                            unlimited_dims=unlimited_dims)
 
@@ -234,12 +238,22 @@ class AbstractWritableDataStore(AbstractDataStore):
 
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+    def set_dimensions(self, variables, unlimited_dims=None):
         if unlimited_dims is None:
             unlimited_dims = set()
-        dims = self.get_dimensions()
-        for d, l in zip(variable.dims, variable.shape):
-            if d not in dims:
+
+        existing_dims = self.get_dimensions()
+
+        dims = {}
+        for v in variables.values():
+            dims.update(dict(zip(v.dims, v.shape)))
+
+        for d, l in dims.items():
+
+            if d in existing_dims and l != existing_dims[d]:
+                raise ValueError("Unable to update size for existing dimension"
+                                 "%r (%d != %d)" % (d, l, existing_dims[d]))
+            elif d not in existing_dims:
                 is_unlimited = d in unlimited_dims
                 self.set_dimension(d, l, is_unlimited)
 
