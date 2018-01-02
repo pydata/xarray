@@ -43,13 +43,8 @@ def _ensure_valid_fill_value(value, dtype):
     return _encode_zarr_attr_value(valid)
 
 
-def _decode_zarr_attr_value(value):
-    return value
-
-
 def _decode_zarr_attrs(attrs):
-    return OrderedDict([(k, _decode_zarr_attr_value(v))
-                        for k, v in attrs.items()])
+    return OrderedDict(attrs.asdict())
 
 
 def _replace_slices_with_arrays(key, shape):
@@ -388,18 +383,9 @@ class ZarrStore(AbstractWritableDataStore):
         for k, v in iteritems(attrs):
             encoded_attrs[k] = _encode_zarr_attr_value(v)
 
-        if name in self.ds:
-            zarr_array = self.ds[name]
-            zarr_array.attrs.update(encoded_attrs)
-        else:
-            # arguments for zarr.create:
-            # zarr.creation.create(shape, chunks=None, dtype=None,
-            # compressor='default', fill_value=0, order='C', store=None,
-            # synchronizer=None, overwrite=False, path=None, chunk_store=None,
-            # filters=None, cache_metadata=True, **kwargs)
-            zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
-                                        fill_value=fill_value, **encoding)
-            zarr_array.attrs.put(encoded_attrs)
+        zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
+                                    fill_value=fill_value, **encoding)
+        zarr_array.attrs.put(encoded_attrs)
 
         return zarr_array, variable.data
 
@@ -408,7 +394,6 @@ class ZarrStore(AbstractWritableDataStore):
                                for k, v in iteritems(variables))
         AbstractWritableDataStore.store(self, new_vars, attributes,
                                         *args, **kwargs)
-    # sync() and close() methods should not be needed with zarr
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

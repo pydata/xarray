@@ -725,6 +725,16 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.open(tmp_file) as actual:
                 self.assertDatasetIdentical(data, actual)
 
+    def test_append_with_invalid_dim_raises(self):
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            self.save(data, tmp_file, mode='w')
+            data['var9'] = data['var2'] * 3
+            data = data.isel(dim1=slice(2, 6))  # modify one dimension
+            with raises_regex(ValueError,
+                              'Unable to update size for existing dimension'):
+                self.save(data, tmp_file, mode='a')
+
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
