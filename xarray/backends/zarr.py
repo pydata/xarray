@@ -292,9 +292,6 @@ class ZarrStore(AbstractWritableDataStore):
                 raise KeyError("Zarr group can't be read by xarray because "
                                "it is missing the `%s` attribute." %
                                _DIMENSION_KEY)
-            else:
-                # initialize hidden dimension attribute
-                self.ds.attrs[_DIMENSION_KEY] = {}
 
         if writer is None:
             # by default, we should not need a lock for writing zarr because
@@ -310,7 +307,7 @@ class ZarrStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
-        attributes = _decode_zarr_attrs(attributes)
+        attributes = _decode_zarr_attrs(attributes.asdict())
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters}
@@ -326,12 +323,12 @@ class ZarrStore(AbstractWritableDataStore):
                                  for k, v in self.ds.arrays())
 
     def get_attrs(self):
-        attributes = HiddenKeyDict(self.ds.attrs, [_DIMENSION_KEY])
+        attributes = HiddenKeyDict(self.ds.attrs.asdict(), [_DIMENSION_KEY])
         return _decode_zarr_attrs(attributes)
 
     def get_dimensions(self):
         try:
-            dimensions = self.ds.attrs[_DIMENSION_KEY]
+            dimensions = self.ds.attrs[_DIMENSION_KEY].asdict()
         except KeyError:
             raise KeyError("Zarr object is missing the attribute `%s`, which "
                            "is required for xarray to determine variable "
@@ -347,7 +344,7 @@ class ZarrStore(AbstractWritableDataStore):
         for v in variables.values():
             dims.update(dict(zip(v.dims, v.shape)))
 
-        self.ds.attrs[_DIMENSION_KEY].update(dims)
+        self.ds.attrs.update({_DIMENSION_KEY: dims})
 
     def set_attributes(self, attributes):
         encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
