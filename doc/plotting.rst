@@ -175,10 +175,12 @@ entire figure (as for matplotlib's ``figsize`` argument).
 .. _not equivalent to matplotlib's: https://github.com/mwaskom/seaborn/issues/746
 
 
+.. _plotting.multiplelines:
+
 Multiple lines showing variation along a dimension
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to make line plots of two-dimensional data by calling ``xarray.plot.line()``
+It is possible to make line plots of two-dimensional data by calling :py:func:`xarray.plot.line`
 with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
 plots to check the variation of air temperature at three different latitudes along a longitude line:
 
