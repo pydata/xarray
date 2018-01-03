@@ -651,7 +651,7 @@ class Common2dMixin:
                       [('xx', [1, 2]), ('t', time)])
         a.plot(x='t')
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        self.assertFalse(rotation == 0)
+        self.assertNotEqual(rotation, 0)
 
     def test_plot_nans(self):
         x1 = self.darray[:5]
