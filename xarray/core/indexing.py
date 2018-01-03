@@ -3,12 +3,14 @@ from __future__ import division
 from __future__ import print_function
 from datetime import timedelta
 from collections import defaultdict, Hashable
+import functools
 import operator
 import numpy as np
 import pandas as pd
 
 from . import nputils
 from . import utils
+from . import duck_array_ops
 from .pycompat import (iteritems, range, integer_types, dask_array_type,
                        suppress)
 from .utils import is_dict_like
@@ -589,27 +591,23 @@ def as_indexable(array):
     raise TypeError('Invalid array type: {}'.format(type(array)))
 
 
-def _outer_to_numpy_indexer(key, shape):
-    """Convert an OuterIndexer into an indexer for NumPy.
+def _outer_to_vectorized_indexer(key, shape):
+    """Convert an OuterIndexer into an vectorized indexer.
 
     Parameters
     ----------
     key : tuple
-        Outer indexing tuple to convert.
+        Tuple from an OuterIndexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
 
     Returns
     -------
     tuple
-        Base tuple suitable for use to index a NumPy array.
+        Tuple suitable for use to index a NumPy array with vectorized indexing.
+        Each element is an integer or array: broadcasting them together gives
+        the shape of the result.
     """
-    if len([k for k in key if not isinstance(k, slice)]) <= 1:
-        # If there is only one vector and all others are slice,
-        # it can be safely used in mixed basic/advanced indexing.
-        # Boolean index should already be converted to integer array.
-        return tuple(key)
-
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
     new_key = []
@@ -625,6 +623,149 @@ def _outer_to_numpy_indexer(key, shape):
             new_key.append(k.reshape(*shape))
             i_dim += 1
     return tuple(new_key)
+
+
+def _outer_to_numpy_indexer(key, shape):
+    """Convert an OuterIndexer into an indexer for NumPy.
+
+    Parameters
+    ----------
+    key : tuple
+        Tuple from an OuterIndexer to convert.
+    shape : tuple
+        Shape of the array subject to the indexing.
+
+    Returns
+    -------
+    tuple
+        Tuple suitable for use to index a NumPy array.
+    """
+    if len([k for k in key if not isinstance(k, slice)]) <= 1:
+        # If there is only one vector and all others are slice,
+        # it can be safely used in mixed basic/advanced indexing.
+        # Boolean index should already be converted to integer array.
+        return tuple(key)
+    else:
+        return _outer_to_vectorized_indexer(key, shape)
+
+
+def _dask_array_with_chunks_hint(array, chunks):
+    """Create a dask array using the chunks hint for dimensions of size > 1."""
+    import dask.array as da
+    if len(chunks) < array.ndim:
+        raise ValueError('not enough chunks in hint')
+    new_chunks = []
+    for chunk, size in zip(chunks, array.shape):
+        new_chunks.append(chunk if size > 1 else (1,))
+    return da.from_array(array, new_chunks)
+
+
+def _logical_any(args):
+    return functools.reduce(operator.or_, args)
+
+
+def _masked_result_drop_slice(key, chunks_hint=None):
+    key = (k for k in key if not isinstance(k, slice))
+    if chunks_hint is not None:
+        key = [_dask_array_with_chunks_hint(k, chunks_hint)
+               if isinstance(k, np.ndarray) else k
+               for k in key]
+    return _logical_any(k == -1 for k in key)
+
+
+def create_mask(indexer, shape, chunks_hint=None):
+    """Create a mask for indexing with a fill-value.
+
+    Parameters
+    ----------
+    indexer : ExplicitIndexer
+        Indexer with -1 in integer or ndarray value to indicate locations in
+        the result that should be masked.
+    shape : tuple
+        Shape of the array being indexed.
+    chunks_hint : tuple, optional
+        Optional tuple indicating desired chunks for the result. If provided,
+        used as a hint for chunks on the resulting dask. Must have a hint for
+        each dimension on the result array.
+
+    Returns
+    -------
+    mask : bool, np.ndarray or dask.array.Array with dtype=bool
+        Dask array if chunks_hint is provided, otherwise a NumPy array. Has the
+        same shape as the indexing result.
+    """
+    if isinstance(indexer, OuterIndexer):
+        key = _outer_to_vectorized_indexer(indexer.tuple, shape)
+        assert not any(isinstance(k, slice) for k in key)
+        mask = _masked_result_drop_slice(key, chunks_hint)
+
+    elif isinstance(indexer, VectorizedIndexer):
+        key = indexer.tuple
+        base_mask = _masked_result_drop_slice(key, chunks_hint)
+        slice_shape = tuple(np.arange(*k.indices(size)).size
+                            for k, size in zip(key, shape)
+                            if isinstance(k, slice))
+        expanded_mask = base_mask[
+            (Ellipsis,) + (np.newaxis,) * len(slice_shape)]
+        mask = duck_array_ops.broadcast_to(
+            expanded_mask, base_mask.shape + slice_shape)
+
+    elif isinstance(indexer, BasicIndexer):
+        mask = any(k == -1 for k in indexer.tuple)
+
+    else:
+        raise TypeError('unexpected key type: {}'.format(type(indexer)))
+
+    return mask
+
+
+def _posify_mask_subindexer(index):
+    """Convert masked indices in a flat array to the nearest unmasked index.
+
+    Parameters
+    ----------
+    index : np.ndarray
+        One dimensional ndarray with dtype=int.
+
+    Returns
+    -------
+    np.ndarray
+        One dimensional ndarray with all values equal to -1 replaced by an
+        adjacent non-masked element.
+    """
+    masked = index == -1
+    unmasked_locs = np.flatnonzero(~masked)
+    if not unmasked_locs.size:
+        # indexing unmasked_locs is invalid
+        return np.zeros_like(index)
+    masked_locs = np.flatnonzero(masked)
+    prev_value = np.maximum(0, np.searchsorted(unmasked_locs, masked_locs) - 1)
+    new_index = index.copy()
+    new_index[masked_locs] = index[unmasked_locs[prev_value]]
+    return new_index
+
+
+def posify_mask_indexer(indexer):
+    """Convert masked values (-1) in an indexer to nearest unmasked values.
+
+    This routine is useful for dask, where it can be much faster to index
+    adjacent points than arbitrary points from the end of an array.
+
+    Parameters
+    ----------
+    indexer : ExplicitIndexer
+        Input indexer.
+
+    Returns
+    -------
+    ExplicitIndexer
+        Same type of input, with all values in ndarray keys equal to -1
+        replaced by an adjacent non-masked element.
+    """
+    key = tuple(_posify_mask_subindexer(k.ravel()).reshape(k.shape)
+                if isinstance(k, np.ndarray) else k
+                for k in indexer.tuple)
+    return type(indexer)(key)
 
 
 class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):

@@ -94,6 +94,41 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+        with raises_regex(ValueError, 'dimension'):
+            self.darray[:, 0, 0].plot(x='dim_1')
+
+    def test_2d_line(self):
+        with raises_regex(ValueError, 'hue'):
+            self.darray[:, :, 0].plot.line()
+
+        self.darray[:, :, 0].plot.line(hue='dim_1')
+
+    def test_2d_line_accepts_legend_kw(self):
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
+        self.assertFalse(plt.gca().get_legend())
+        plt.cla()
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
+        self.assertTrue(plt.gca().get_legend())
+        # check whether legend title is set
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_1')
+
+    def test_2d_line_accepts_x_kw(self):
+        self.darray[:, :, 0].plot.line(x='dim_0')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
+
+    def test_2d_line_accepts_hue_kw(self):
+        self.darray[:, :, 0].plot.line(hue='dim_0')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_1')
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
@@ -242,11 +277,6 @@ class TestPlot1D(PlotTestCase):
         self.darray.name = 'temperature'
         self.darray.plot()
         self.assertEqual(self.darray.name, plt.gca().get_ylabel())
-
-    def test_wrong_dims_raises_valueerror(self):
-        twodims = DataArray(easy_array((2, 5)))
-        with pytest.raises(ValueError):
-            twodims.plot.line()
 
     def test_format_string(self):
         self.darray.plot.line('ro')
