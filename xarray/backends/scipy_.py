@@ -181,9 +181,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             value = encode_nc3_attr_value(value)
             setattr(self.ds, key, value)
 
+    def encode_variable(self, variable):
+        variable = encode_nc3_variable(variable)
+        return variable
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
-        variable = encode_nc3_variable(variable)
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))

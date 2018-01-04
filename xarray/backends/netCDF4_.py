@@ -74,19 +74,28 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         return data
 
 
-def _nc4_values_and_dtype(var):
+def _encode_nc4_variable(var):
+    if var.dtype.kind == 'S':
+        var = conventions.maybe_encode_as_char_array(var)
+    return var
+
+
+def _get_datatype(var, nc_format='NETCDF4'):
+    if nc_format == 'NETCDF4':
+        datatype = _nc4_dtype(var)
+    else:
+        datatype = var.dtype
+    return datatype
+
+
+def _nc4_dtype(var):
     if var.dtype.kind == 'U':
         dtype = str
-    elif var.dtype.kind == 'S':
-        # use character arrays instead of unicode, because unicode support in
-        # netCDF4 is still rather buggy
-        var = conventions.maybe_encode_as_char_array(var)
-        dtype = var.dtype
-    elif var.dtype.kind in ['i', 'u', 'f', 'c']:
+    elif var.dtype.kind in ['i', 'u', 'f', 'c', 'S']:
         dtype = var.dtype
     else:
         raise ValueError('cannot infer dtype for netCDF4 variable')
-    return var, dtype
+    return dtype
 
 
 def _nc4_group(ds, group, mode):
@@ -324,16 +333,17 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             super(NetCDF4DataStore, self).set_variables(*args, **kwargs)
 
-    def prepare_variable(self, name, variable, check_encoding=False,
-                         unlimited_dims=None):
+    def encode_variable(self, variable):
         variable = _force_native_endianness(variable)
-
         if self.format == 'NETCDF4':
-            variable, datatype = _nc4_values_and_dtype(variable)
+            variable = _encode_nc4_variable(variable)
         else:
             variable = encode_nc3_variable(variable)
-            datatype = variable.dtype
+        return variable
 
+    def prepare_variable(self, name, variable, check_encoding=False,
+                         unlimited_dims=None):
+        datatype = _get_datatype(variable, self.format)
         attrs = variable.attrs.copy()
 
         fill_value = attrs.pop('_FillValue', None)

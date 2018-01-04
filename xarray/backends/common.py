@@ -9,7 +9,7 @@ import contextlib
 from collections import Mapping, OrderedDict
 import warnings
 
-from ..conventions import cf_encoder, maybe_encode_as_char_array
+from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
@@ -177,7 +177,7 @@ class ArrayWriter(object):
         else:
             try:
                 target[...] = source
-            except TypeError:
+            except (TypeError, PermissionError):
                 # workaround for GH: scipy/scipy#6880
                 target[:] = source
 
@@ -194,6 +194,19 @@ class AbstractWritableDataStore(AbstractDataStore):
         if writer is None:
             writer = ArrayWriter()
         self.writer = writer
+
+    def encode(self, variables, attributes):
+        variables = OrderedDict([(k, self.encode_variable(v))
+                                 for k, v in variables.items()])
+        attributes = OrderedDict([(k, self.encode_attribute(v))
+                                  for k, v in attributes.items()])
+        return variables, attributes
+
+    def encode_variable(self, v):
+        return v
+
+    def encode_attribute(self, a):
+        return a
 
     def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
@@ -216,9 +229,8 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
               unlimited_dims=None):
-        # This seems out of place
-        variables = OrderedDict([(k, maybe_encode_as_char_array(v))
-                                 for k, v in variables.items()])
+        variables, attributes = self.encode(variables, attributes)
+
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
         self.set_variables(variables, check_encoding_set,
@@ -260,11 +272,18 @@ class AbstractWritableDataStore(AbstractDataStore):
 
 class WritableCFDataStore(AbstractWritableDataStore):
 
-    def store(self, variables, attributes, *args, **kwargs):
+    def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
+        variables, attributes = cf_encoder(variables, attributes)
+        variables = OrderedDict([(k, self.encode_variable(v))
+                                 for k, v in variables.items()])
+        attributes = OrderedDict([(k, self.encode_attribute(v))
+                                  for k, v in attributes.items()])
+        return variables, attributes
+
+    def store(self, variables, attributes, *args, **kwargs):
+        AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
 
 

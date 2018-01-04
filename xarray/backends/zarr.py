@@ -44,7 +44,7 @@ def _ensure_valid_fill_value(value, dtype):
 
 
 def _decode_zarr_attrs(attrs):
-    return OrderedDict(attrs.asdict())
+    return OrderedDict(attrs)
 
 
 def _replace_slices_with_arrays(key, shape):
@@ -307,7 +307,7 @@ class ZarrStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
-        attributes = _decode_zarr_attrs(attributes.asdict())
+        attributes = _decode_zarr_attrs(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters}
@@ -351,6 +351,10 @@ class ZarrStore(AbstractWritableDataStore):
                                     for k, v in iteritems(attributes))
         self.ds.attrs.put(encoded_attrs)
 
+    def encode_variable(self, variable):
+        variable = encode_zarr_variable(variable)
+        return variable
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
 
@@ -378,9 +382,7 @@ class ZarrStore(AbstractWritableDataStore):
         return zarr_array, variable.data
 
     def store(self, variables, attributes, *args, **kwargs):
-        new_vars = OrderedDict((k, encode_zarr_variable(v, name=k))
-                               for k, v in iteritems(variables))
-        AbstractWritableDataStore.store(self, new_vars, attributes,
+        AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
 
 
