@@ -828,19 +828,30 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
-        # netCDF4-based backends don't support an explicit fillvalue
+        # H5netcdf backends don't support an explicit fillvalue
         # for variable length strings yet.
-        # https://github.com/Unidata/netcdf4-python/issues/730
         # https://github.com/shoyer/h5netcdf/issues/37
+        # The netCDF4-python backend does accept an explicit _FillValue:
+        # https://github.com/Unidata/netcdf4-python/issues/730
+        # This tests both of those states (:issue:`1802`)
         original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
-        with pytest.raises(NotImplementedError):
+        if isinstance(self, H5NetCDFDataTest):
+            with pytest.raises(NotImplementedError):
+                with self.roundtrip(original) as actual:
+                    self.assertDatasetIdentical(expected, actual)
+        else:
             with self.roundtrip(original) as actual:
                 self.assertDatasetIdentical(expected, actual)
 
         original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
-        with pytest.raises(NotImplementedError):
+        if isinstance(self, H5NetCDFDataTest):
+            with pytest.raises(NotImplementedError):
+                with self.roundtrip(original) as actual:
+                    self.assertDatasetIdentical(expected, actual)
+        else:
             with self.roundtrip(original) as actual:
                 self.assertDatasetIdentical(expected, actual)
+
 
     def test_roundtrip_character_array(self):
         with create_tmp_file() as tmp_file:
