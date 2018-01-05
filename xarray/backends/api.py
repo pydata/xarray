@@ -29,7 +29,7 @@ def _guess_file_format(path):
     """
     try:
         f = open(path, 'rb')
-    except FileNotFoundError:
+    except IOError:
         return 'netcdf3'
 
     with f:
