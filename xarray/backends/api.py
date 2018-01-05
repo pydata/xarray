@@ -24,14 +24,21 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 def _guess_file_format(path):
     """Make an educated guess about the file format based on the first few
     bytes.
+
+    If the file does not exist, assume netcdf3.
     """
-    with open(path, 'rb') as f:
+    try:
+        f = open(path, 'rb')
+    except FileNotFoundError:
+        return 'netcdf3'
+
+    with f:
         # Ten bytes should be enough...
         sig = f.read(10)
 
     if sig[:8] == b'\x89HDF\r\n\x1a\n':
         return 'hdf5'
-    elif sig[:5] == b'CDF\x00' or sig == b'CDF\x01':
+    elif sig[:4] == b'CDF\x02' or sig[:4] == b'CDF\x01':
         return 'netcdf3'
     else:
         return 'unknown'
