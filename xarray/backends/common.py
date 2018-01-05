@@ -259,7 +259,7 @@ class AbstractWritableDataStore(AbstractDataStore):
 
         existing_dims = self.get_dimensions()
 
-        dims = {}
+        dims = OrderedDict()
         for v in variables.values():
             dims.update(dict(zip(v.dims, v.shape)))
 
