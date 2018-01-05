@@ -96,6 +96,9 @@ class AbstractDataStore(Mapping):
     def __len__(self):
         return len(self.variables)
 
+    def get_dimensions(self):  # pragma: no cover
+        raise NotImplementedError
+
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError
 
@@ -177,7 +180,7 @@ class ArrayWriter(object):
         else:
             try:
                 target[...] = source
-            except (TypeError, PermissionError):
+            except TypeError:
                 # workaround for GH: scipy/scipy#6880
                 target[:] = source
 
