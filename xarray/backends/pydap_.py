@@ -39,9 +39,7 @@ class PydapArrayWrapper(BackendArray):
         return result
 
 
-def _fix_global_attributes(attributes):
-    from .api import check_attr
-
+def _fix_attributes(attributes):
     attributes = dict(attributes)
     for k in list(attributes):
         if k.lower() == 'global' or k.lower().endswith('_global'):
@@ -53,11 +51,6 @@ def _fix_global_attributes(attributes):
             # dot-separated key
             attributes.update({'{}.{}'.format(k, k_child): v_child for
                                k_child, v_child in attributes.pop(k).items()})
-    for k in list(attributes):
-        try:  # drop invalid attributes
-            check_attr(k, attributes[k])
-        except (TypeError, ValueError):
-            attributes.pop(k)
     return attributes
 
 
@@ -84,14 +77,14 @@ class PydapDataStore(AbstractDataStore):
     def open_store_variable(self, var):
         data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data,
-                        _fix_global_attributes(var.attributes))
+                        _fix_attributes(var.attributes))
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(self.ds[k]))
                                  for k in self.ds.keys())
 
     def get_attrs(self):
-        return Frozen(_fix_global_attributes(self.ds.attributes))
+        return Frozen(_fix_attributes(self.ds.attributes))
 
     def get_dimensions(self):
         return Frozen(self.ds.dimensions)

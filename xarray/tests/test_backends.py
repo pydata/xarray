@@ -2034,7 +2034,9 @@ class PydapTest(TestCase):
             self.assertNotIn('NC_GLOBAL', actual.attrs)
             self.assertIn('history', actual.attrs)
 
-            # attributes and encoding
+            # we don't check attributes exactly with assertDatasetIdentical() because
+            # the test DAP server seems to insert some extra attributes not found in the
+            # netCDF file.
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
