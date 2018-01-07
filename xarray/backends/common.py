@@ -184,12 +184,14 @@ class ArrayWriter(object):
                 # workaround for GH: scipy/scipy#6880
                 target[:] = source
 
-    def sync(self):
+    def sync(self, compute=True):
         if self.sources:
             import dask.array as da
-            da.store(self.sources, self.targets, lock=self.lock)
+            futures = da.store(self.sources, self.targets, lock=self.lock,
+                               compute=compute, flush=True)
             self.sources = []
             self.targets = []
+            return futures
 
 
 class AbstractWritableDataStore(AbstractDataStore):
@@ -197,6 +199,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         if writer is None:
             writer = ArrayWriter()
         self.writer = writer
+        self.futures = None
 
     def encode(self, variables, attributes):
         variables = OrderedDict([(k, self.encode_variable(v))
@@ -220,8 +223,9 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def sync(self):
-        self.writer.sync()
+    def sync(self, compute=True):
+        futures = self.writer.sync(compute=compute)
+        return futures
 
     def store_dataset(self, dataset):
         # in stores variables are all variables AND coordinates

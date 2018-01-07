@@ -567,7 +567,8 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None,
+              compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -615,14 +616,14 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
-                              unlimited_dims=unlimited_dims)
+                              unlimited_dims=unlimited_dims, compute=compute)
         if path_or_file is None:
             return target.getvalue()
     finally:
         if sync and isinstance(path_or_file, basestring):
             store.close()
 
-    if not sync:
+    if not sync or not compute:
         return store
 
 
@@ -714,9 +715,11 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         for store in stores:
             store.close()
 
+    return stores
+
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None):
+            encoding=None, compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -737,5 +740,5 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
-    dataset.dump_to_store(store, sync=True, encoding=encoding)
+    dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
     return store

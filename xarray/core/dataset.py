@@ -1050,7 +1050,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return obj
 
     def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
-                      unlimited_dims=None):
+                      unlimited_dims=None, compute=True):
         """Store dataset contents to a backends.*DataStore object."""
         if encoding is None:
             encoding = {}
@@ -1069,10 +1069,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            store.sync()
+            store.futures = store.sync(compute=compute)
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None):
+                  engine=None, encoding=None, unlimited_dims=None,
+                  compute=True):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1124,6 +1125,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
+        compute: boolean
+            If true compute immediately, otherwise return dask.delayed.Delayed
+            in `store.futures`.
         """
         if encoding is None:
             encoding = {}
@@ -1133,7 +1137,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                          unlimited_dims=unlimited_dims)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None):
+                encoding=None, compute=True):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1155,6 +1159,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        compute: boolean
+            If true compute immediately, otherwise return dask.delayed.Delayed
+            in `store.futures`.
         """
         if encoding is None:
             encoding = {}
@@ -1164,7 +1171,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
                              "and 'w-'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
-                       group=group, encoding=encoding)
+                       group=group, encoding=encoding, compute=compute)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
