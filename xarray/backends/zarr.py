@@ -340,7 +340,7 @@ class ZarrStore(AbstractWritableDataStore):
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
 
-        dims = {}
+        dims = OrderedDict()
         for v in variables.values():
             dims.update(dict(zip(v.dims, v.shape)))
 
