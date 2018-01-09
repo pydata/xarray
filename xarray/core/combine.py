@@ -138,7 +138,7 @@ def _calc_concat_dim_coord(dim):
         coord = as_variable(dim).to_index_variable()
         dim, = coord.dims
     else:
-        coord = dim
+        coord = dim.rename({dim.dims[0]: dim.name})
         dim, = coord.dims
     return dim, coord
 

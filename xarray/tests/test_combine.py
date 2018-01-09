@@ -234,6 +234,14 @@ class TestConcatDataset(TestCase):
         assert expected.equals(actual)
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
+    def test_concat_dim_name(self):
+        da = [DataArray(np.random.randn(3), dims=['d1']) for aa in range(5)]
+        labels = ['foo1', 'foo2', 'foo3', 'foo4', 'foo5']
+        daconcat = concat(da, DataArray(labels, name='stat'))
+        pdconcat = concat(da, pd.Index(labels, name='stat'))
+
+        self.assertDataArrayEqual(daconcat, pdconcat)
+
 
 class TestConcatDataArray(TestCase):
     def test_concat(self):
