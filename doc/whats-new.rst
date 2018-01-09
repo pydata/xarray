@@ -55,6 +55,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
+  Now item assignment to :py:meth:`~DataArray.__setitem__` checks
 - Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`DataArray.__setitem__` checks
   coordinates of target, destination and keys. If there are any conflict among
@@ -71,7 +76,6 @@ Bug fixes
   unintentionally loading the datastores data and attributes repeatedly during
   writes  (:issue:`1798`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
 
 .. _whats-new.0.10.0:
 
