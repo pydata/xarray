@@ -37,6 +37,11 @@ Enhancements
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
+- :py:func:`~plot()` learned to rotate x-axis ticks if x-axis is time.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`~plot.line()` learned to draw multiple lines if provided with a
+  2D variable.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -51,6 +56,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
+  Now item assignment to :py:meth:`~DataArray.__setitem__` checks
 - Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`DataArray.__setitem__` checks
   coordinates of target, destination and keys. If there are any conflict among
@@ -67,7 +77,6 @@ Bug fixes
   unintentionally loading the datastores data and attributes repeatedly during
   writes  (:issue:`1798`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
 
 .. _whats-new.0.10.0:
 

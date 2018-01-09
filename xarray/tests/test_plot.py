@@ -94,6 +94,41 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
+        with raises_regex(ValueError, 'dimension'):
+            self.darray[:, 0, 0].plot(x='dim_1')
+
+    def test_2d_line(self):
+        with raises_regex(ValueError, 'hue'):
+            self.darray[:, :, 0].plot.line()
+
+        self.darray[:, :, 0].plot.line(hue='dim_1')
+
+    def test_2d_line_accepts_legend_kw(self):
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
+        self.assertFalse(plt.gca().get_legend())
+        plt.cla()
+        self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
+        self.assertTrue(plt.gca().get_legend())
+        # check whether legend title is set
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_1')
+
+    def test_2d_line_accepts_x_kw(self):
+        self.darray[:, :, 0].plot.line(x='dim_0')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
+
+    def test_2d_line_accepts_hue_kw(self):
+        self.darray[:, :, 0].plot.line(hue='dim_0')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_0')
+        plt.cla()
+        self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.assertTrue(plt.gca().get_legend().get_title().get_text()
+                        == 'dim_1')
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
@@ -243,11 +278,6 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot()
         self.assertEqual(self.darray.name, plt.gca().get_ylabel())
 
-    def test_wrong_dims_raises_valueerror(self):
-        twodims = DataArray(easy_array((2, 5)))
-        with pytest.raises(ValueError):
-            twodims.plot.line()
-
     def test_format_string(self):
         self.darray.plot.line('ro')
 
@@ -274,7 +304,7 @@ class TestPlot1D(PlotTestCase):
         a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        self.assertFalse(rotation == 0)
+        self.assertNotEqual(rotation, 0)
 
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
@@ -614,6 +644,14 @@ class Common2dMixin:
         ylim = plt.gca().get_ylim()
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
         self.assertTrue(all(abs(x) < 1 for x in diffs))
+
+    def test_x_ticks_are_rotated_for_time(self):
+        time = pd.date_range('2000-01-01', '2000-01-10')
+        a = DataArray(np.random.randn(2, len(time)),
+                      [('xx', [1, 2]), ('t', time)])
+        a.plot(x='t')
+        rotation = plt.gca().get_xticklabels()[0].get_rotation()
+        self.assertNotEqual(rotation, 0)
 
     def test_plot_nans(self):
         x1 = self.darray[:5]
