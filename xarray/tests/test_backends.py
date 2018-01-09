@@ -1212,9 +1212,6 @@ class BaseZarrTest(CFEncodedDataTest):
             expected.dump_to_store(store)
             zarr_group = store.ds
 
-            # check that the global hidden attribute is present
-            assert self.DIMENSION_KEY in zarr_group.attrs
-
             # check that a variable hidden attribute is present and correct
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
@@ -1224,19 +1221,12 @@ class BaseZarrTest(CFEncodedDataTest):
 
             with xr.decode_cf(store) as actual:
                 # make sure it is hidden
-                assert self.DIMENSION_KEY not in actual.attrs
+                # assert self.DIMENSION_KEY not in actual.attrs
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            # verify that the dataset fails to open if dimension key is missing
-            # this is not passing because the store is not read only
-            # del zarr_group.attrs[self.DIMENSION_KEY]
-            # with pytest.raises(KeyError):
-            #     with xr.decode_cf(store) as actual:
-            #         pass
-
             # put it back and try removing from a variable
-            zarr_group.attrs[self.DIMENSION_KEY] = {}
+            # zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
                 with xr.decode_cf(store) as actual:
