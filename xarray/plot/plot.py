@@ -40,6 +40,7 @@ def _valid_other_type(x, types):
     if not np.issubdtype(np.generic, x.dtype):
         return False
     else:
+        print(set(type(el) for el in np.ravel(x)))
         return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
 
 
@@ -56,6 +57,7 @@ def _ensure_plottable(*args):
                 or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates.')
+
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
