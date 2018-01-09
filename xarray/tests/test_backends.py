@@ -1315,23 +1315,6 @@ class BaseZarrTest(CFEncodedDataTest):
     def test_append_with_invalid_dim_raises(self):
         super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
 
-    # zero-dim variables
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_zero_dimensional_variable(self):
-        super(CFEncodedDataTest, self).test_zero_dimensional_variable()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_timedelta_data(self):
-        super(CFEncodedDataTest, self).test_roundtrip_timedelta_data()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_datetime_data(self):
-        super(CFEncodedDataTest, self).test_roundtrip_datetime_data()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_coordinates_with_space(self):
-        super(CFEncodedDataTest, self).test_roundtrip_coordinates_with_space()
-
 
 @requires_zarr
 class ZarrDictStoreTest(BaseZarrTest, TestCase):
