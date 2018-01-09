@@ -37,11 +37,7 @@ def _valid_other_type(x, types):
     """
     Do all elements of x have a type from types?
     """
-    if not np.issubdtype(np.generic, x.dtype):
-        return False
-    else:
-        print(set(type(el) for el in np.ravel(x)))
-        return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
 
 
 def _ensure_plottable(*args):
