@@ -217,7 +217,11 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     if chunks is not None:
         from dask.base import tokenize
         # augment the token with the file modification time
-        mtime = os.path.getmtime(filename)
+        try:
+            mtime = os.path.getmtime(filename)
+        except FileNotFoundError:
+            # the filename is probably and s3 bucket rather than a regular file
+            mtime = None
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
         if lock is None:
