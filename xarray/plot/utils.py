@@ -47,8 +47,13 @@ def register_pandas_datetime_converter_if_needed():
     # based on https://github.com/pandas-dev/pandas/pull/17710
     global _registered
     if not _registered:
-        from pandas.tseries import converter
-        converter.register()
+        try:
+            from pandas.plotting import register_matplotlib_converters
+            register_matplotlib_converters()
+        except ImportError:
+            # register_matplotlib_converters new in pandas 0.22
+            from pandas.tseries import converter
+            converter.register()
         _registered = True
 
 
