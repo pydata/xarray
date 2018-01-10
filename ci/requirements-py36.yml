@@ -23,3 +23,4 @@ dependencies:
     - coveralls
     - pytest-cov
     - pydap
+    - lxml

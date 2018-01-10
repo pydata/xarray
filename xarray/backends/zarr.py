@@ -43,10 +43,6 @@ def _ensure_valid_fill_value(value, dtype):
     return _encode_zarr_attr_value(valid)
 
 
-def _decode_zarr_attrs(attrs):
-    return OrderedDict(attrs)
-
-
 def _replace_slices_with_arrays(key, shape):
     """Replace slice objects in vindex with equivalent ndarray objects."""
     num_slices = sum(1 for k in key if isinstance(k, slice))
@@ -287,12 +283,6 @@ class ZarrStore(AbstractWritableDataStore):
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
 
-        if _DIMENSION_KEY not in self.ds.attrs:
-            if self._read_only:
-                raise KeyError("Zarr group can't be read by xarray because "
-                               "it is missing the `%s` attribute." %
-                               _DIMENSION_KEY)
-
         if writer is None:
             # by default, we should not need a lock for writing zarr because
             # we do not (yet) allow overlapping chunks during write
@@ -307,7 +297,7 @@ class ZarrStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
-        attributes = _decode_zarr_attrs(attributes)
+        attributes = OrderedDict(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters}
@@ -323,28 +313,25 @@ class ZarrStore(AbstractWritableDataStore):
                                  for k, v in self.ds.arrays())
 
     def get_attrs(self):
-        attributes = HiddenKeyDict(self.ds.attrs.asdict(), [_DIMENSION_KEY])
-        return _decode_zarr_attrs(attributes)
+        attributes = OrderedDict(self.ds.attrs.asdict())
+        return attributes
 
     def get_dimensions(self):
-        try:
-            dimensions = self.ds.attrs[_DIMENSION_KEY].asdict()
-        except KeyError:
-            raise KeyError("Zarr object is missing the attribute `%s`, which "
-                           "is required for xarray to determine variable "
-                           "dimensions." % (_DIMENSION_KEY))
+        dimensions = OrderedDict()
+        for k, v in self.ds.arrays():
+            try:
+                for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
+                    dimensions[d] = s
+            except KeyError:
+                raise KeyError("Zarr object is missing the attribute `%s`, "
+                               "which is required for xarray to determine "
+                               "variable dimensions." % (_DIMENSION_KEY))
         return dimensions
 
     def set_dimensions(self, variables, unlimited_dims=None):
         if unlimited_dims is not None:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
-
-        dims = {}
-        for v in variables.values():
-            dims.update(dict(zip(v.dims, v.shape)))
-
-        self.ds.attrs.update({_DIMENSION_KEY: dims})
 
     def set_attributes(self, attributes):
         encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))

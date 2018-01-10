@@ -21,6 +21,7 @@ from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
                     open_mfdataset, backends, save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
+from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
 from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
                                   dask_array_type)
@@ -1212,9 +1213,6 @@ class BaseZarrTest(CFEncodedDataTest):
             expected.dump_to_store(store)
             zarr_group = store.ds
 
-            # check that the global hidden attribute is present
-            assert self.DIMENSION_KEY in zarr_group.attrs
-
             # check that a variable hidden attribute is present and correct
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
@@ -1224,19 +1222,12 @@ class BaseZarrTest(CFEncodedDataTest):
 
             with xr.decode_cf(store) as actual:
                 # make sure it is hidden
-                assert self.DIMENSION_KEY not in actual.attrs
+                # assert self.DIMENSION_KEY not in actual.attrs
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            # verify that the dataset fails to open if dimension key is missing
-            # this is not passing because the store is not read only
-            # del zarr_group.attrs[self.DIMENSION_KEY]
-            # with pytest.raises(KeyError):
-            #     with xr.decode_cf(store) as actual:
-            #         pass
-
             # put it back and try removing from a variable
-            zarr_group.attrs[self.DIMENSION_KEY] = {}
+            # zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
                 with xr.decode_cf(store) as actual:
@@ -1324,23 +1315,6 @@ class BaseZarrTest(CFEncodedDataTest):
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
         super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
-
-    # zero-dim variables
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_zero_dimensional_variable(self):
-        super(CFEncodedDataTest, self).test_zero_dimensional_variable()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_timedelta_data(self):
-        super(CFEncodedDataTest, self).test_roundtrip_timedelta_data()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_datetime_data(self):
-        super(CFEncodedDataTest, self).test_roundtrip_datetime_data()
-
-    @pytest.mark.xfail(reason="Zero-dimension variables are broken")
-    def test_roundtrip_coordinates_with_space(self):
-        super(CFEncodedDataTest, self).test_roundtrip_coordinates_with_space()
 
 
 @requires_zarr
@@ -2050,20 +2024,33 @@ class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
 
 
-@network
 @requires_scipy_or_netCDF4
 @requires_pydap
 class PydapTest(TestCase):
+    def convert_to_pydap_dataset(self, original):
+        from pydap.model import GridType, BaseType, DatasetType
+        ds = DatasetType('bears', **original.attrs)
+        for key, var in original.data_vars.items():
+            v = GridType(key)
+            v[key] = BaseType(key, var.values, dimensions=var.dims,
+                              **var.attrs)
+            for d in var.dims:
+                v[d] = BaseType(d, var[d].values)
+            ds[key] = v
+        # check all dims are stored in ds
+        for d in original.coords:
+            ds[d] = BaseType(d, original[d].values, dimensions=(d, ),
+                             **original[d].attrs)
+        return ds
+
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
-        url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
-        actual = open_dataset(url, engine='pydap', **kwargs)
         with open_example_dataset('bears.nc') as expected:
-            # don't check attributes since pydap doesn't serialize them
-            # correctly also skip the "bears" variable since the test DAP
-            # server incorrectly concatenates it.
-            actual = actual.drop('bears')
-            expected = expected.drop('bears')
+            pydap_ds = self.convert_to_pydap_dataset(expected)
+            actual = open_dataset(PydapDataStore(pydap_ds))
+            # TODO solve this workaround:
+            # netcdf converts string to byte not unicode
+            expected['bears'] = expected['bears'].astype(str)
             yield actual, expected
 
     def test_cmp_local_file(self):
@@ -2073,6 +2060,11 @@ class PydapTest(TestCase):
             # global attributes should be global attributes on the dataset
             self.assertNotIn('NC_GLOBAL', actual.attrs)
             self.assertIn('history', actual.attrs)
+
+            # we don't check attributes exactly with assertDatasetIdentical() because
+            # the test DAP server seems to insert some extra attributes not found in the
+            # netCDF file.
+            assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
@@ -2085,6 +2077,34 @@ class PydapTest(TestCase):
             self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
 
+    def test_compatible_to_netcdf(self):
+        # make sure it can be saved as a netcdf
+        with self.create_datasets() as (actual, expected):
+            with create_tmp_file() as tmp_file:
+                actual.to_netcdf(tmp_file)
+                actual = open_dataset(tmp_file)
+                actual['bears'] = actual['bears'].astype(str)
+                self.assertDatasetEqual(actual, expected)
+
+    @requires_dask
+    def test_dask(self):
+        with self.create_datasets(chunks={'j': 2}) as (actual, expected):
+            self.assertDatasetEqual(actual, expected)
+
+
+@network
+@requires_scipy_or_netCDF4
+@requires_pydap
+class PydapOnlineTest(PydapTest):
+    @contextlib.contextmanager
+    def create_datasets(self, **kwargs):
+        url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
+        actual = open_dataset(url, engine='pydap', **kwargs)
+        with open_example_dataset('bears.nc') as expected:
+            # workaround to restore string which is converted to byte
+            expected['bears'] = expected['bears'].astype(str)
+            yield actual, expected
+
     def test_session(self):
         from pydap.cas.urs import setup_session
 
@@ -2092,11 +2112,6 @@ class PydapTest(TestCase):
         with mock.patch('pydap.client.open_url') as mock_func:
             xr.backends.PydapDataStore.open('http://test.url', session=session)
         mock_func.assert_called_with('http://test.url', session=session)
-
-    @requires_dask
-    def test_dask(self):
-        with self.create_datasets(chunks={'j': 2}) as (actual, expected):
-            self.assertDatasetEqual(actual, expected)
 
 
 @requires_scipy
