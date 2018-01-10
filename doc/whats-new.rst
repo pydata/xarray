@@ -33,6 +33,8 @@ Enhancements
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Support for using `Zarr`_ as storage layer for xarray.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
+- :func:`xarray.plot.imshow` now handles RGB and RGBA images.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
