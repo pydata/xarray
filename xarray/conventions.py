@@ -11,13 +11,10 @@ import pandas as pd
 
 from .coding import times
 from .coding import variables
+from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
 from .core.pycompat import OrderedDict, basestring, iteritems
 from .core.variable import IndexVariable, Variable, as_variable
-
-
-class SerializationWarning(RuntimeWarning):
-    """Warnings about encoding/decoding issues in serialization."""
 
 
 class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
@@ -392,7 +389,7 @@ def encode_cf_variable(var, needs_copy=True, name=None):
                   times.CFTimedeltaCoder(),
                   variables.CFScaleOffsetCoder(),
                   variables.CFMaskCoder(),
-                  variables.UnsignedCoder()]:
+                  variables.UnsignedIntegerCoder()]:
         var = coder.encode(var, name=name)
 
     # TODO(shoyer): convert all of these to use coders, too:
@@ -464,7 +461,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
     var = Variable(dimensions, data, attributes, encoding)
 
     if mask_and_scale:
-        for coder in [variables.UnsignedCoder(),
+        for coder in [variables.UnsignedIntegerCoder(),
                       variables.CFMaskCoder(),
                       variables.CFScaleOffsetCoder()]:
             var = coder.decode(var, name=name)

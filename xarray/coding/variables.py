@@ -240,7 +240,7 @@ class CFScaleOffsetCoder(VariableCoder):
         return Variable(dims, data, attrs, encoding)
 
 
-class UnsignedCoder(VariableCoder):
+class UnsignedIntegerCoder(VariableCoder):
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)

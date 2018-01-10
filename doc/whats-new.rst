@@ -61,7 +61,8 @@ Bug fixes
   with size one in some dimension can now be plotted, which is good for
   exploring satellite imagery.  (:issue:`1780`)
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
-
+- Fixed ``UnboundLocalError`` when opening netCDF file `` (:issue:`1781`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
 

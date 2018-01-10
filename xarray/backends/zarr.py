@@ -264,7 +264,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
                   coding.times.CFTimedeltaCoder(),
                   coding.variables.CFScaleOffsetCoder(),
                   coding.variables.CFMaskCoder(),
-                  coding.variables.UnsignedCoder()]:
+                  coding.variables.UnsignedIntegerCoder()]:
         var = coder.encode(var, name=name)
 
     var = conventions.maybe_encode_nonstring_dtype(var, name=name)
