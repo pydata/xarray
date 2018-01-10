@@ -75,7 +75,10 @@ Bug fixes
 - The ``variables``, ``attrs``, and ``dimensions`` properties have been
   deprecated as part of a bug fix addressing an issue where backends were
   unintentionally loading the datastores data and attributes repeatedly during
-  writes  (:issue:`1798`).
+  writes (:issue:`1798`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
+  (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.0:
