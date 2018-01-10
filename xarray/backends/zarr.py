@@ -379,8 +379,11 @@ class ZarrStore(AbstractWritableDataStore):
         # compressor='default', fill_value=0, order='C', store=None,
         # synchronizer=None, overwrite=False, path=None, chunk_store=None,
         # filters=None, cache_metadata=True, **kwargs)
-        zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
-                                    fill_value=fill_value, **encoding)
+        if name in self.ds:
+            zarr_array = self.ds[name]
+        else:
+            zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
+                                        fill_value=fill_value, **encoding)
         # decided not to explicity enumerate encoding options because we
         # risk overriding zarr's defaults (e.g. if we specificy
         # cache_metadata=None instead of True). Alternative is to have lots of
