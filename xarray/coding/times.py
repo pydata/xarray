@@ -36,6 +36,9 @@ _NS_PER_TIME_DELTA = {'us': 1e3,
                       'h': 1e9 * 60 * 60,
                       'D': 1e9 * 60 * 60 * 24}
 
+TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
+                        'milliseconds', 'microseconds'])
+
 
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
@@ -174,10 +177,6 @@ def decode_cf_timedelta(num_timedeltas, units):
     if result.dtype != 'timedelta64[ns]':
         result = result.astype('timedelta64[ns]')
     return result.reshape(shape)
-
-
-TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
-                        'milliseconds', 'microseconds'])
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
