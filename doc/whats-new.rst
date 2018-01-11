@@ -34,6 +34,10 @@ Enhancements
 - Support for using `Zarr`_ as storage layer for xarray. (:issue:`1223`).
   By `Ryan Abernathey <https://github.com/rabernat>`_ and
   `Joe Hamman <https://github.com/jhamman>`_.
+- Support for using `Zarr`_ as storage layer for xarray.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+- :func:`xarray.plot.imshow` now handles RGB and RGBA images.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
@@ -55,6 +59,9 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Fixed encoding of multi-dimensional coordinates in
+  :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
+  By `Mike Neish <https://github.com/neishm>`_.
 
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -72,6 +79,8 @@ Bug fixes
   with size one in some dimension can now be plotted, which is good for
   exploring satellite imagery (:issue:`1780`).
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- Fixed ``UnboundLocalError`` when opening netCDF file `` (:issue:`1781`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``variables``, ``attrs``, and ``dimensions`` properties have been
   deprecated as part of a bug fix addressing an issue where backends were
   unintentionally loading the datastores data and attributes repeatedly during
