@@ -21,7 +21,9 @@ v0.10.1 (unreleased)
 Documentation
 ~~~~~~~~~~~~~
 
-- New entry `Why don’t aggregations return Python scalars?` in the :doc:`faq`.
+- New entry `Why don’t aggregations return Python scalars?` in the
+  :doc:`faq` (:issue:`1726`).
+  By `0x0L <https://github.com/0x0L>`_.
 
 Enhancements
 ~~~~~~~~~~~~
