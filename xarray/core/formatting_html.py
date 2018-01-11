@@ -2,255 +2,13 @@
 
 import uuid
 from functools import partial
+import pkg_resources
 
 from .formatting import format_array_flat
 
 
-XR_REPR_STYLE = """
-.xr-wrap {
-  width: 540px;
-  font-size: 13px;
-  line-height: 1.5;
-  background-color: #fff;
-}
-
-.xr-wrap ul {
-  padding: 0;
-}
-
-.xr-header {
-  padding: 6px 0 6px 3px;
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-  border-bottom-color: #777;
-  color: #555;;
-}
-
-ul.xr-sections {
-  list-style: none !important;
-  padding: 3px !important;
-  margin: 0 !important;
-}
-
-input.xr-section-in {
-  display: none;
-}
-
-input.xr-section-in + label {
-  display: inline-block;
-  width: 140px;
-  color: #555;
-  font-weight: 500;
-  padding: 4px 0 2px 0;
-}
-
-input.xr-section-in:enabled + label {
-  cursor: pointer;
-}
-
-input.xr-section-in + label:before {
-  display: inline-block;
-  content: '►';
-  font-size: 11px;
-  width: 15px;
-  text-align: center;
-}
-
-input.xr-section-in:checked + label:before {
-  content: '▼';
-}
-
-input.xr-section-in:disabled + label:before {
-  color: #777;
-}
-
-input.xr-section-in + label > span {
-  display: inline-block;
-  margin-left: 4px;
-}
-
-input.xr-section-in:checked + label > span {
-  display: none;
-}
-
-input.xr-section-in ~ ul {
-  display: none;
-}
-
-input.xr-section-in:checked ~ ul {
-  display: block;
-}
-
-.xr-sections summary > div {
-  display: inline-block;
-  cursor: pointer;
-  width: 140px;
-  color: #555;
-  font-weight: 500;
-  padding: 4px 0 2px 0;
-}
-
-.xr-dim-list {
-  display: inline-block !important;
-  list-style: none;
-  padding: 0 !important;
-}
-
-.xr-dim-list li {
-  display: inline-block;
-  font-size: 13px !important;
-  padding: 0;
-  margin: 0;
-}
-
-.xr-dim-list:before {
-  content: '(';
-}
-
-.xr-dim-list:after {
-  content: ')';
-}
-
-.xr-dim-list li:not(:last-child):after {
-  content: ',';
-  padding-right: 5px;
-}
-
-.xr-has-index {
-  text-decoration: underline;
-}
-
-ul.xr-var-list {
-  list-style: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.xr-var-list > li {
-  background-color: #fcfcfc;
-  overflow: hidden;
-}
-
-.xr-var-list > li:nth-child(odd) {
-  background-color: #efefef;
-}
-
-.xr-var-list li:hover {
-  background-color: rgba(3, 169, 244, .2);
-}
-
-.xr-var-list li > span {
-  display: inline-block;
-}
-
-.xr-var-list li input {
-  display: none;
-}
-
-.xr-var-list li input:enabled + label {
-  cursor: pointer;
-}
-
-input.xr-varname-in + label {
-  display: inline-block;
-  width: 140px;
-  padding-left: 0;
-}
-
-input.xr-varname-in + label:before {
-  content: ' ';
-  display: inline-block;
-  font-size: 11px;
-  width: 15px;
-  padding-left: 20px;
-  padding-right: 5px;
-  text-align: center;
-  color: #aaa;
-  text-decoration: none !important;
-}
-
-input.xr-varname-in ~ ul {
-  display: none;
-}
-
-input.xr-varname-in:checked ~ ul {
-  display: block;
-}
-
-input.xr-varname-in:enabled + label:before {
-  content: 'a';
-}
-
-input.xr-varname-in:enabled + label:hover:before {
-  color: #000;
-}
-
-input.xr-varname-in:checked + label:before {
-  color: #ccc;
-}
-
-.xr-dims {
-  width: 80px;
-}
-
-.xr-dtype {
-  width: 96px;
-  padding-right: 4px;
-  text-align: right;
-  color: #555;
-}
-
-.xr-values {
-  width: 200px;
-  text-align: left;
-  color: #888;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.xr-values > span:nth-child(odd) {
-  color: rgba(0, 0, 0, .65);
-}
-
-input.xr-values-in + label:hover > span {
-  color: #000;
-}
-
-input.xr-values-in:checked + label > span {
-  color: #ccc;
-}
-
-input.xr-values-in ~ pre {
-  display: none;
-}
-
-input.xr-values-in:checked ~ pre {
-  display: block;
-}
-
-input.xr-values-in:checked + label > span {
-  color: #ccc;
-}
-
-.xr-data-repr {
-  font-size: 11px !important;
-  background-color: #fff;
-  padding: 4px 0 6px 40px !important;
-  margin: 0 !important;
-}
-
-.xr-attr-list {
-  list-style: none !important;
-  background-color: #fff;
-  padding: 0 0 6px 40px !important;
-  color: #555;
-}
-
-.xr-attr-list li,
-.xr-attr-list li:hover {
-  background-color: #fff;
-}
-"""
+CSS_FILE_PATH = '/'.join(('static', 'css', 'style-jupyterlab.css'))
+CSS_STYLE = pkg_resources.resource_string('xarray', CSS_FILE_PATH)
 
 
 def format_dims(dims, coord_names):
@@ -296,7 +54,7 @@ def summarize_variable(name, var):
 
     if len(var.attrs):
         d['disabled'] = ''
-        d['attrs'] = format_attrs(var.attrs)
+        d['attrs'] = summarize_attrs(var.attrs)
     else:
         d['disabled'] = 'disabled'
         d['attrs'] = ''
@@ -391,7 +149,7 @@ def dataset_repr(ds):
     d = {}
 
     d['header'] = "<div class='xr-header'>xarray.Dataset</div>"
-    d['style'] = "<style>{}</style>".format(XR_REPR_STYLE)
+    d['style'] = "<style>{}</style>".format(CSS_STYLE)
 
     sections = [dim_section(ds),
                 coord_section(ds.coords),

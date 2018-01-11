@@ -104,5 +104,5 @@ setup(
     tests_require=TESTS_REQUIRE,
     url=URL,
     packages=find_packages(),
-    package_data={"xarray": ["py.typed", "tests/data/*"]},
+    package_data={"xarray": ["py.typed", "tests/data/*", "static/*"]},
 )
