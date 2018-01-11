@@ -165,7 +165,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            if name in self.dimensions:
+            if name in self.ds.dimensions:
                 raise ValueError('%s does not support modifying dimensions'
                                  % type(self).__name__)
             dim_length = length if not is_unlimited else None
@@ -196,7 +196,8 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support
         # incremental writes.
-        self.ds.createVariable(name, data.dtype, variable.dims)
+        if name not in self.ds.variables:
+            self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
