@@ -41,6 +41,11 @@ class BaseNetCDF4Array(BackendArray):
             dtype = np.dtype('O')
         self.dtype = dtype
 
+    def __setitem__(self, key, value):
+        with self.datastore.ensure_open(autoclose=True):
+            data = self.get_array()
+            data[key] = value
+
     def get_array(self):
         self.datastore.assert_open()
         return self.datastore.ds.variables[self.variable_name]
@@ -376,7 +381,9 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
 
-        return nc4_var, variable.data
+        target = NetCDF4ArrayWrapper(name, self)
+
+        return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):

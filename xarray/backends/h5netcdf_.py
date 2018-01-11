@@ -164,7 +164,10 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)
-        return nc4_var, variable.data
+
+        target = H5NetCDFArrayWrapper(name, self)
+
+        return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):

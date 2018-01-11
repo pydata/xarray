@@ -55,6 +55,11 @@ class ScipyArrayWrapper(BackendArray):
             copy = self.datastore.ds.use_mmap
             return np.array(data, dtype=self.dtype, copy=copy)
 
+    def __setitem__(self, key, value):
+        with self.datastore.ensure_open(autoclose=True):
+            data = self.get_array()
+            data[key] = value
+
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
     import scipy.io
@@ -202,7 +207,10 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
             setattr(scipy_var, k, v)
-        return scipy_var, data
+
+        target = ScipyArrayWrapper(name, self)
+
+        return target, data
 
     def sync(self):
         with self.ensure_open(autoclose=True):
