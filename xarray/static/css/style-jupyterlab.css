@@ -13,6 +13,10 @@
   padding: 0;
 }
 
+.xr-wrap input + label {
+  margin-bottom: 0 !important;
+}
+
 .xr-header {
   padding: 6px 0 6px 3px;
   border-bottom-width: 1px;
@@ -226,8 +230,8 @@ input.xr-varname-in + label:before {
   display: inline-block;
   font-size: 11px;
   width: 15px;
-  padding-left: 20px;
-  padding-right: 5px;
+  margin-left: 20px;
+  margin-right: 5px;
   text-align: center;
   color: #aaa;
   text-decoration: none !important;
@@ -286,6 +290,7 @@ input.xr-values-in:checked + label > span {
 
 input.xr-values-in ~ pre {
   display: none;
+  background-color: white;
 }
 
 input.xr-values-in:checked ~ pre {
