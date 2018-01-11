@@ -1,8 +1,9 @@
 # coding: utf-8
 
 import uuid
-from functools import partial
 import pkg_resources
+from functools import partial
+from collections import OrderedDict
 
 from .formatting import format_array_flat
 
@@ -12,6 +13,9 @@ CSS_STYLE = pkg_resources.resource_string('xarray', CSS_FILE_PATH)
 
 
 def format_dims(dims, coord_names):
+    if not dims:
+        return ''
+
     dim_css_map = {k: " class='xr-has-index'" if k in coord_names else ''
                    for k, v in dims.items()}
 
@@ -22,8 +26,8 @@ def format_dims(dims, coord_names):
     return "<ul class='xr-dim-list'>{}</ul>".format(dims_li)
 
 
-def format_values_preview(var):
-    pprint_str = format_array_flat(var, 35)
+def format_values_preview(array, max_char=35):
+    pprint_str = format_array_flat(array, max_char)
 
     return "".join("<span>{} </span>".format(s)
                    for s in pprint_str.split())
@@ -59,12 +63,14 @@ def summarize_variable(name, var):
         d['disabled'] = 'disabled'
         d['attrs'] = ''
 
+    # TODO: no value preview if not in memory
     d['values_preview'] = format_values_preview(var)
     d['attrs_subsection'] = summarize_attrs(var.attrs)
     d['data_repr_subsection'] = repr(var.data)
 
     return (
-        "<input id='{attrs_id}' class='xr-varname-in' type='checkbox' {disabled}>"
+        "<input id='{attrs_id}' class='xr-varname-in' "
+        "type='checkbox' {disabled}>"
         "<label class='{cssclass_varname}' for='{attrs_id}'>{name}</label>"
         "<span class='xr-dims'>{dims_str}</span>"
         "<span class='xr-dtype'>{dtype}</span>"
@@ -83,18 +89,28 @@ def summarize_vars(variables):
 
 
 def collapsible_section(name, body, n_items=None,
-                        enabled=True, collapsed=False):
+                        enabled=True, collapsed=False,
+                        input_cssclass='xr-section-in'):
     d = {}
+
+    d['input_cssclass'] = input_cssclass
 
     # "unique" id to expand/collapse the section
     d['section_id'] = 'section-' + str(uuid.uuid4())
 
-    if n_items is not None:
-        n_items_span = " <span>({})</span>".format(n_items)
-    else:
-        n_items_span = ''
+    if name is not None:
+        if n_items is not None:
+            n_items_span = " <span>({})</span>".format(n_items)
+        else:
+            n_items_span = ''
 
-    d['title'] = "{}:{}".format(name, n_items_span)
+        d['title'] = "{}:{}".format(name, n_items_span)
+
+    else:
+        d['title'] = ""
+
+    if n_items is not None and not n_items:
+        collapsed = True
 
     d['body'] = body
 
@@ -102,17 +118,18 @@ def collapsible_section(name, body, n_items=None,
     d['collapsed'] = '' if collapsed else 'checked'
 
     return (
-        "<input id='{section_id}' class='xr-section-in' type='checkbox' {enabled} {collapsed}>"
+        "<input id='{section_id}' class='{input_cssclass}' "
+        "type='checkbox' {enabled} {collapsed}>"
         "<label for='{section_id}'>{title}</label>"
         "{body}"
         .format(**d))
 
 
-def _generic_section(mapping, name, body_func,
-                     enabled=True, nmax_items_collapse=None):
+def _mapping_section(mapping, name, body_func,
+                     enabled=True, max_items_collapse=None):
     n_items = len(mapping)
 
-    if nmax_items_collapse is not None and n_items <= nmax_items_collapse:
+    if max_items_collapse is not None and n_items <= max_items_collapse:
         collapsed = False
     else:
         collapsed = True
@@ -130,31 +147,41 @@ def dim_section(obj):
                                enabled=False, collapsed=True)
 
 
-coord_section = partial(_generic_section,
+def array_section(obj):
+    # TODO: no value preview if not in memory
+    values_preview_div = "<div>{}</div>".format(
+        format_values_preview(obj.values, max_char=70))
+
+    data_repr_pre = "<pre>{}</pre>".format(repr(obj.data))
+
+    body = values_preview_div + data_repr_pre
+
+    # TODO: maybe collapse section dep. on number of lines in <pre>
+    return collapsible_section(None, body, input_cssclass='xr-dataarray-in')
+
+
+coord_section = partial(_mapping_section,
                         name='Coordinates', body_func=summarize_vars,
-                        nmax_items_collapse=25)
+                        max_items_collapse=25)
 
 
-datavar_section = partial(_generic_section,
+datavar_section = partial(_mapping_section,
                           name='Data variables', body_func=summarize_vars,
-                          nmax_items_collapse=15)
+                          max_items_collapse=15)
 
 
-attr_section = partial(_generic_section,
+attr_section = partial(_mapping_section,
                        name='Attributes', body_func=summarize_attrs,
-                       nmax_items_collapse=10)
+                       max_items_collapse=10)
 
 
-def dataset_repr(ds):
+def _obj_repr(header_components, sections):
     d = {}
 
-    d['header'] = "<div class='xr-header'>xarray.Dataset</div>"
-    d['style'] = "<style>{}</style>".format(CSS_STYLE)
+    d['header'] = "<div class='xr-header'>{}</div>".format(
+        "".join(comp for comp in header_components))
 
-    sections = [dim_section(ds),
-                coord_section(ds.coords),
-                datavar_section(ds.data_vars),
-                attr_section(ds.attrs)]
+    d['style'] = "<style>{}</style>".format(CSS_STYLE)
 
     d['sections'] = "".join("<li>{}</li>".format(s)
                             for s in sections)
@@ -163,3 +190,47 @@ def dataset_repr(ds):
             "{header}<ul class='xr-sections'>{sections}</ul>"
             "</div></div>"
             .format(**d))
+
+
+def array_repr(arr):
+    dims = OrderedDict((k, v) for k, v in zip(arr.dims, arr.shape))
+
+    arr_type = "xarray.{}".format(type(arr).__name__)
+
+    if hasattr(arr, 'name') and arr.name is not None:
+        arr_name = "'{}'".format(arr.name)
+    else:
+        arr_name = ""
+
+    if hasattr(arr, 'coords'):
+        coord_names = list(arr.coords)
+    else:
+        coord_names = []
+
+    header_components = [
+        "<div class='xr-dataarray-cls'>{}</div>".format(arr_type),
+        "<div class='xr-dataarray-name'>{}</div>".format(arr_name),
+        format_dims(dims, coord_names)
+    ]
+
+    sections = []
+
+    sections.append(array_section(arr))
+
+    if hasattr(arr, 'coords'):
+        sections.append(coord_section(arr.coords))
+
+    sections.append(attr_section(arr.attrs))
+
+    return _obj_repr(header_components, sections)
+
+
+def dataset_repr(ds):
+    header_components = ["xarray.{}".format(type(ds).__name__)]
+
+    sections = [dim_section(ds),
+                coord_section(ds.coords),
+                datavar_section(ds.data_vars),
+                attr_section(ds.attrs)]
+
+    return _obj_repr(header_components, sections)
