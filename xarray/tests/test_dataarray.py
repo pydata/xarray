@@ -13,9 +13,9 @@ import xarray as xr
 
 from xarray import (align, broadcast, Dataset, DataArray,
                     IndexVariable, Variable)
+from xarray.coding.times import CFDatetimeCoder
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
-from xarray.conventions import maybe_encode_datetime
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
@@ -2891,7 +2891,7 @@ class TestDataArray(TestCase):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
             self.assertArrayEqual(coord.points,
-                                  maybe_encode_datetime(original_coord).values)
+                                  CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
@@ -2963,7 +2963,7 @@ class TestDataArray(TestCase):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
             self.assertArrayEqual(coord.points,
-                                  maybe_encode_datetime(original_coord).values)
+                                  CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
