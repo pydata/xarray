@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from .utils import (_determine_cmap_params, _infer_xy_labels, get_axis,
-                    import_matplotlib_pyplot)
+from .utils import (ROBUST_PERCENTILE, _determine_cmap_params,
+                    _infer_xy_labels, get_axis, import_matplotlib_pyplot)
 from .facetgrid import FacetGrid
 from xarray.core.pycompat import basestring
 
@@ -326,6 +326,39 @@ class _PlotMethods(object):
         return line(self._da, *args, **kwargs)
 
 
+def _rescale_imshow_rgb(darray, vmin, vmax, robust):
+    assert robust or vmin is not None or vmax is not None
+    # There's a cyclic dependency via DataArray, so we can't import from
+    # xarray.ufuncs in global scope.
+    from xarray.ufuncs import maximum, minimum
+    # Calculate vmin and vmax automatically for `robust=True`
+    if robust:
+        if vmax is None:
+            vmax = np.nanpercentile(darray, 100 - ROBUST_PERCENTILE)
+        if vmin is None:
+            vmin = np.nanpercentile(darray, ROBUST_PERCENTILE)
+    # If not robust and one bound is None, calculate the default other bound
+    # and check that an interval between them exists.
+    elif vmax is None:
+        vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
+        if vmax < vmin:
+            raise ValueError(
+                'vmin=%r is less than the default vmax (%r) - you must supply '
+                'a vmax > vmin in this case.' % (vmin, vmax))
+    elif vmin is None:
+        vmin = 0
+        if vmin > vmax:
+            raise ValueError(
+                'vmax=%r is less than the default vmin (0) - you must supply '
+                'a vmin < vmax in this case.' % vmax)
+    # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
+    # to avoid precision loss, integer over/underflow, etc with extreme inputs.
+    # After scaling, downcast to 32-bit float.  This substantially reduces
+    # memory usage after we hand `darray` off to matplotlib.
+    darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
+    return minimum(maximum(darray, 0), 1)
+
+
 def _plot2d(plotfunc):
     """
     Decorator for common 2d plotting logic
@@ -449,6 +482,11 @@ def _plot2d(plotfunc):
         if imshow_rgb:
             # Don't add a colorbar when showing an image with explicit colors
             add_colorbar = False
+            # Matplotlib does not support normalising RGB data, so do it here.
+            # See eg. https://github.com/matplotlib/matplotlib/pull/10220
+            if robust or vmax is not None or vmin is not None:
+                darray = _rescale_imshow_rgb(darray, vmin, vmax, robust)
+                vmin, vmax, robust = None, None, False
 
         # Handle facetgrids first
         if row or col:
@@ -624,6 +662,11 @@ def imshow(x, y, z, ax, **kwargs):
     two-dimensional, ``imshow`` also accepts a 3D array where some
     dimension can be interpreted as RGB or RGBA color channels and
     allows this dimension to be specified via the kwarg ``rgb=``.
+
+    Unlike matplotlib, Xarray can apply ``vmin`` and ``vmax`` to RGB or RGBA
+    data, by applying a single scaling factor and offset to all bands.
+    Passing  ``robust=True`` infers ``vmin`` and ``vmax``
+    :ref:`in the usual way <robust-plotting>`.
 
     .. note::
         This function needs uniformly spaced coordinates to
