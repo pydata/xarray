@@ -29,12 +29,12 @@ from ..core.variable import Variable
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
-_NS_PER_TIME_DELTA = {'us': 1e3,
-                      'ms': 1e6,
-                      's': 1e9,
-                      'm': 1e9 * 60,
-                      'h': 1e9 * 60 * 60,
-                      'D': 1e9 * 60 * 60 * 24}
+_NS_PER_TIME_DELTA = {'us': int(1e3),
+                      'ms': int(1e6),
+                      's': int(1e9),
+                      'm': int(1e9) * 60,
+                      'h': int(1e9) * 60 * 60,
+                      'D': int(1e9) * 60 * 60 * 24}
 
 TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
                         'milliseconds', 'microseconds'])
@@ -180,9 +180,9 @@ def decode_cf_timedelta(num_timedeltas, units):
 
 
 def _infer_time_units_from_diff(unique_timedeltas):
-    for time_unit, delta in [('days', 86400), ('hours', 3600),
-                             ('minutes', 60), ('seconds', 1)]:
-        unit_delta = np.timedelta64(10 ** 9 * delta, 'ns')
+    for time_unit in ['days', 'hours', 'minutes', 'seconds']:
+        delta_ns = _NS_PER_TIME_DELTA[_netcdf_to_numpy_timeunit(time_unit)]
+        unit_delta = np.timedelta64(delta_ns, 'ns')
         diffs = unique_timedeltas / unit_delta
         if np.all(diffs == diffs.astype(int)):
             return time_unit
