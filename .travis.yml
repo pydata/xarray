@@ -13,7 +13,7 @@ matrix:
   - python: 2.7
     env: CONDA_ENV=py27-min
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio
+    env: CONDA_ENV=py27-cdat+iris+pynio
   - python: 3.4
     env: CONDA_ENV=py34
   - python: 3.5
@@ -43,6 +43,8 @@ matrix:
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
     env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
   allow_failures:
   - python: 3.6
     env:
@@ -67,6 +69,8 @@ matrix:
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
     env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -89,9 +93,9 @@ install:
   - python xarray/util/print_versions.py
 
 script:
+  - git diff upstream/master xarray/**/*py | flake8 --diff --exit-zero || true
   - python -OO -c "import xarray"
   - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
-  - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
 
 after_success:
   - coveralls

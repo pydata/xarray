@@ -19,8 +19,10 @@ from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
+from .computation import apply_ufunc
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes)
+                          Indexes, assert_coordinate_consistent,
+                          remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
@@ -102,13 +104,6 @@ class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
 
-    def _remap_key(self, key):
-        if not utils.is_dict_like(key):
-            # expand the indexer so we can handle Ellipsis
-            labels = indexing.expanded_indexer(key, self.data_array.ndim)
-            key = dict(zip(self.data_array.dims, labels))
-        return indexing.remap_label_indexers(self.data_array, key)
-
     def __getitem__(self, key):
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
@@ -117,7 +112,12 @@ class _LocIndexer(object):
         return self.data_array.sel(**key)
 
     def __setitem__(self, key, value):
-        pos_indexers, _ = self._remap_key(key)
+        if not utils.is_dict_like(key):
+            # expand the indexer so we can handle Ellipsis
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+
+        pos_indexers, _ = remap_label_indexers(self.data_array, **key)
         self.data_array[pos_indexers] = value
 
 
@@ -484,7 +484,15 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
-            # xarray-style array indexing
+            # Coordinates in key, value and self[key] should be consistent.
+            # TODO Coordinate consistency in key is checked here, but it
+            # causes unnecessary indexing. It should be optimized.
+            obj = self[key]
+            if isinstance(value, DataArray):
+                assert_coordinate_consistent(value, obj.coords.variables)
+            # DataArray key -> Variable key
+            key = {k: v.variable if isinstance(v, DataArray) else v
+                   for k, v in self._item_key_to_dict(key).items()}
             self.variable[key] = value
 
     def __delitem__(self, key):
@@ -594,7 +602,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def __dask_scheduler__(self):
-        return self._to_temp_dataset().__dask_optimize__
+        return self._to_temp_dataset().__dask_scheduler__
 
     def __dask_postcompute__(self):
         func, args = self._to_temp_dataset().__dask_postcompute__()
@@ -1220,6 +1228,97 @@ class DataArray(AbstractArray, BaseDataObject):
         out = ops.fillna(self, value)
         return out
 
+    def interpolate_na(self, dim=None, method='linear', limit=None,
+                       use_coordinate=True,
+                       **kwargs):
+        """Interpolate values according to different methods.
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to interpolate.
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+                  'polynomial', 'barycentric', 'krog', 'pchip',
+                  'spline', 'akima'}, optional
+            String indicating which method to use for interpolation:
+
+            - 'linear': linear interpolation (Default). Additional keyword
+              arguments are passed to ``numpy.interp``
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
+              method=='polynomial', the ``order`` keyword argument must also be
+              provided.
+            - 'barycentric', 'krog', 'pchip', 'spline', and `akima`: use their
+              respective``scipy.interpolate`` classes.
+        use_coordinate : boolean or str, default True
+            Specifies which index to use as the x values in the interpolation
+            formulated as `y = f(x)`. If False, values are treated as if
+            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
+            used. If use_coordinate is a string, it specifies the name of a
+            coordinate variariable to use as the index.
+        limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit.
+
+        Returns
+        -------
+        DataArray
+
+        See also
+        --------
+        numpy.interp
+        scipy.interpolate
+        """
+        from .missing import interp_na
+        return interp_na(self, dim=dim, method=method, limit=limit,
+                         use_coordinate=use_coordinate, **kwargs)
+
+    def ffill(self, dim, limit=None):
+        '''Fill NaN values by propogating values forward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
+        from .missing import ffill
+        return ffill(self, dim, limit=limit)
+
+    def bfill(self, dim, limit=None):
+        '''Fill NaN values by propogating values backward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to backward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
+        from .missing import bfill
+        return bfill(self, dim, limit=limit)
+
     def combine_first(self, other):
         """Combine two DataArray objects, with union of coordinates.
 
@@ -1531,6 +1630,19 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         from ..convert import from_cdms2
         return from_cdms2(variable)
+
+    def to_iris(self):
+        """Convert this array into a iris.cube.Cube
+        """
+        from ..convert import to_iris
+        return to_iris(self)
+
+    @classmethod
+    def from_iris(cls, cube):
+        """Convert a iris.cube.Cube into an xarray.DataArray
+        """
+        from ..convert import from_iris
+        return from_iris(cube)
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
@@ -1914,6 +2026,24 @@ class DataArray(AbstractArray, BaseDataObject):
         sorted: DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.random.rand(5),
+        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 5)>
+        array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+        >>> da.sortby(da)
+        <xarray.DataArray (time: 5)>
+        array([ 0.26532 ,  0.270962,  0.552878,  0.615637,  0.965471])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-03 2000-01-04 2000-01-05 ...
         """
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
@@ -1962,6 +2092,45 @@ class DataArray(AbstractArray, BaseDataObject):
 
         ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
                                               interpolation=interpolation)
+        return self._from_temp_dataset(ds)
+
+    def rank(self, dim, pct=False, keep_attrs=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        ranked : DataArray
+            DataArray with the same coordinates and dtype 'float64'.
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr.rank('x')
+        <xarray.DataArray (x: 3)>
+        array([ 1.,   2.,   3.])
+        Dimensions without coordinates: x
+        """
+        ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
 

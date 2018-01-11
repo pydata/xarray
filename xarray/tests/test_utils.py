@@ -189,3 +189,18 @@ def test_dask_array_is_scalar():
 
     y = da.arange(8, chunks=4)
     assert not utils.is_scalar(y)
+
+
+def test_hidden_key_dict():
+    hidden_key = '_hidden_key'
+    data = {'a': 1, 'b': 2, hidden_key: 3}
+    data_expected = {'a': 1, 'b': 2}
+    hkd = utils.HiddenKeyDict(data, [hidden_key])
+    assert len(hkd) == 2
+    assert hidden_key not in hkd
+    for k, v in data_expected.items():
+        assert hkd[k] == v
+    with pytest.raises(KeyError):
+        hkd[hidden_key]
+    with pytest.raises(KeyError):
+        del hkd[hidden_key]

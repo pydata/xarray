@@ -13,13 +13,13 @@ import xarray as xr
 
 from xarray import (align, broadcast, Dataset, DataArray,
                     IndexVariable, Variable)
+from xarray.coding.times import CFDatetimeCoder
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
-
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
-    raises_regex, requires_scipy)
+    raises_regex, requires_scipy, requires_bottleneck)
 
 
 class TestDataArray(TestCase):
@@ -526,6 +526,93 @@ class TestDataArray(TestCase):
             expected[t] = 1
             self.assertArrayEqual(orig.values, expected)
 
+    def test_setitem_fancy(self):
+        # vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[dict(x=ind, y=ind)] = 0
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 0d-variable
+        da[dict(x=ind, y=ind)] = Variable((), 0)
+        expected = DataArray([[0, 1], [1, 0], [1, 1]], dims=['x', 'y'])
+        self.assertDataArrayIdentical(expected, da)
+        # assign another 1d-variable
+        da[dict(x=ind, y=ind)] = Variable(['a'], [2, 3])
+        expected = DataArray([[2, 1], [1, 3], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        # 2d-vectorized indexing
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind_x = DataArray([[0, 1]], dims=['a', 'b'])
+        ind_y = DataArray([[1, 0]], dims=['a', 'b'])
+        da[dict(x=ind_x, y=ind_y)] = 0
+        expected = DataArray([[1, 0], [0, 1], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+        da = DataArray(np.ones((3, 2)), dims=['x', 'y'])
+        ind = Variable(['a'], [0, 1])
+        da[ind] = 0
+        expected = DataArray([[0, 0], [0, 0], [1, 1]], dims=['x', 'y'])
+        self.assertVariableIdentical(expected, da)
+
+    def test_setitem_dataarray(self):
+        def get_data():
+            return DataArray(np.ones((4, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': np.arange(4), 'y': ['a', 'b', 'c'],
+                                     'non-dim': ('x', [1, 3, 4, 2])})
+
+        da = get_data()
+        # indexer with inconsistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.random.randn(3)})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = 0
+
+        # indexer with consistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.arange(1, 4)})
+        da[dict(x=ind)] = 0  # should not raise
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        da = get_data()
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        # Conflict in the non-dimension coordinate
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value  # should not raise
+
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da[dict(x=ind)] = value  # should not raise
+
     def test_contains(self):
         data_array = DataArray(1, coords={'x': 2})
         with pytest.warns(FutureWarning):
@@ -836,6 +923,44 @@ class TestDataArray(TestCase):
         da.loc[0] = 0
         self.assertTrue(np.all(da.values[0] == np.zeros(4)))
         assert da.values[1, 0] != 0
+
+    def test_loc_assign_dataarray(self):
+        def get_data():
+            return DataArray(np.ones((4, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': np.arange(4), 'y': ['a', 'b', 'c'],
+                                     'non-dim': ('x', [1, 3, 4, 2])})
+
+        da = get_data()
+        # indexer with inconsistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['y'],
+                        coords={'y': np.random.randn(3)})
+        with raises_regex(IndexError, "dimension coordinate 'y'"):
+            da.loc[dict(x=ind)] = 0
+
+        # indexer with consistent coordinates.
+        ind = DataArray(np.arange(1, 4), dims=['x'],
+                        coords={'x': np.arange(1, 4)})
+        da.loc[dict(x=ind)] = 0  # should not raise
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
+
+        da = get_data()
+        # conflict in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [0, 1, 2],
+                                     'non-dim': ('x', [0, 2, 4])})
+        with raises_regex(IndexError, "dimension coordinate 'x'"):
+            da.loc[dict(x=ind)] = value
+
+        # consistent coordinate in the assigning values
+        value = xr.DataArray(np.zeros((3, 3, 2)), dims=['x', 'y', 'z'],
+                             coords={'x': [1, 2, 3],
+                                     'non-dim': ('x', [0, 2, 4])})
+        da.loc[dict(x=ind)] = value
+        assert np.allclose(da[dict(x=ind)].values, 0)
+        self.assertDataArrayIdentical(da['x'], get_data()['x'])
+        self.assertDataArrayIdentical(da['non-dim'], get_data()['non-dim'])
 
     def test_loc_single_boolean(self):
         data = DataArray([0, 1], coords=[[True, False]])
@@ -2724,6 +2849,150 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_cdms2(actual)
         self.assertDataArrayIdentical(original, roundtripped)
 
+    def test_to_and_from_iris(self):
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        original = DataArray(np.arange(6, dtype='float').reshape(2, 3),
+                             coord_dict, name='Temperature',
+                             attrs={'baz': 123, 'units': 'Kelvin',
+                                    'standard_name': 'fire_temperature',
+                                    'long_name': 'Fire Temperature'},
+                             dims=('distance', 'time'))
+
+        # Set a bad value to test the masking logic
+        original.data[0, 2] = np.NaN
+
+        original.attrs['cell_methods'] = \
+            'height: mean (comment: A cell method)'
+        actual = original.to_iris()
+        self.assertArrayEqual(actual.data, original.data)
+        self.assertEqual(actual.var_name, original.name)
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
+        self.assertEqual(actual.cell_methods,
+                         (iris.coords.CellMethod(method='mean',
+                                                 coords=('height',),
+                                                 intervals=(),
+                                                 comments=('A cell method',)),)
+                         )
+
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            self.assertEqual(coord.var_name, original_coord.name)
+            self.assertArrayEqual(coord.points,
+                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertEqual(actual.coord_dims(coord),
+                             original.get_axis_num
+                             (original.coords[coord.var_name].dims))
+
+        self.assertEqual(actual.coord('distance2').attributes['foo'],
+                         original.coords['distance2'].attrs['foo'])
+        self.assertEqual(actual.coord('distance').units,
+                         cf_units.Unit(original.coords['distance'].units))
+        self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
+        self.assertEqual(actual.standard_name, original.attrs['standard_name'])
+
+        roundtripped = DataArray.from_iris(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
+        actual.remove_coord('time')
+        auto_time_dimension = DataArray.from_iris(actual)
+        self.assertEqual(auto_time_dimension.dims, ('distance', 'dim_1'))
+
+        actual.coord('distance').var_name = None
+        with raises_regex(ValueError, 'no var_name attribute'):
+            DataArray.from_iris(actual)
+
+    @requires_dask
+    def test_to_and_from_iris_dask(self):
+        import dask.array as da
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        original = DataArray(da.from_array(
+            np.arange(-1, 5, dtype='float').reshape(2, 3), 3), coord_dict,
+                             name='Temperature',
+                             attrs={'baz': 123, 'units': 'Kelvin',
+                                    'standard_name': 'fire_temperature',
+                                    'long_name': 'Fire Temperature'},
+                             dims=('distance', 'time'))
+
+        # Set a bad value to test the masking logic
+        original.data = da.ma.masked_less(original.data, 0)
+
+        original.attrs['cell_methods'] = \
+            'height: mean (comment: A cell method)'
+        actual = original.to_iris()
+
+        # Be careful not to trigger the loading of the iris data
+        actual_data = actual.core_data() if \
+            hasattr(actual, 'core_data') else actual.data
+        self.assertArrayEqual(actual_data, original.data)
+        self.assertEqual(actual.var_name, original.name)
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
+        self.assertEqual(actual.cell_methods,
+                         (iris.coords.CellMethod(method='mean',
+                                                 coords=('height',),
+                                                 intervals=(),
+                                                 comments=('A cell method',)),)
+                         )
+
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            self.assertEqual(coord.var_name, original_coord.name)
+            self.assertArrayEqual(coord.points,
+                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertEqual(actual.coord_dims(coord),
+                             original.get_axis_num
+                             (original.coords[coord.var_name].dims))
+
+        self.assertEqual(actual.coord('distance2').attributes['foo'],
+                         original.coords['distance2'].attrs['foo'])
+        self.assertEqual(actual.coord('distance').units,
+                         cf_units.Unit(original.coords['distance'].units))
+        self.assertEqual(actual.attributes['baz'], original.attrs['baz'])
+        self.assertEqual(actual.standard_name, original.attrs['standard_name'])
+
+        roundtripped = DataArray.from_iris(actual)
+        self.assertDataArrayIdentical(original, roundtripped)
+
+        # If the Iris version supports it then we should get a dask array back
+        if hasattr(actual, 'core_data'):
+            pass
+            # TODO This currently fails due to the decoding loading
+            # the data (#1372)
+            # self.assertEqual(type(original.data), type(roundtripped.data))
+
+        actual.remove_coord('time')
+        auto_time_dimension = DataArray.from_iris(actual)
+        self.assertEqual(auto_time_dimension.dims, ('distance', 'dim_1'))
+
+        actual.coord('distance').var_name = None
+        with raises_regex(ValueError, 'no var_name attribute'):
+            DataArray.from_iris(actual)
+
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         with raises_regex(ValueError, 'unable to convert unnamed'):
@@ -2978,6 +3247,25 @@ class TestDataArray(TestCase):
         expected = sorted2d
         actual = da.sortby(['x', 'y'])
         self.assertDataArrayEqual(actual, expected)
+
+    @requires_bottleneck
+    def test_rank(self):
+        # floats
+        ar = DataArray([[3, 4, np.nan, 1]])
+        expect_0 = DataArray([[1, 1, np.nan, 1]])
+        expect_1 = DataArray([[2, 3, np.nan, 1]])
+        self.assertDataArrayEqual(ar.rank('dim_0'), expect_0)
+        self.assertDataArrayEqual(ar.rank('dim_1'), expect_1)
+        # int
+        x = DataArray([3,2,1])
+        self.assertDataArrayEqual(x.rank('dim_0'), x)
+        # str
+        y =  DataArray(['c', 'b', 'a'])
+        self.assertDataArrayEqual(y.rank('dim_0'), x)
+
+        x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=('z',))
+        y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=('z',))
+        self.assertDataArrayEqual(y.rank('z', pct=True), y)
 
 
 @pytest.fixture(params=[1])

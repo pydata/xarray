@@ -5,7 +5,6 @@ from datetime import timedelta
 from collections import defaultdict
 import functools
 import itertools
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -306,10 +305,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             raise ValueError(
                 "replacement data must match the Variable's shape")
         self._data = data
-
-    @property
-    def _indexable_data(self):
-        return as_indexable(self._data)
 
     def load(self, **kwargs):
         """Manually trigger loading of this variable's data from disk or a
@@ -622,12 +617,55 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         If you really want to do indexing like `x[x > 0]`, manipulate the numpy
         array `x.values` directly.
         """
-        dims, index_tuple, new_order = self._broadcast_indexes(key)
-        data = self._indexable_data[index_tuple]
+        dims, indexer, new_order = self._broadcast_indexes(key)
+        data = as_indexable(self._data)[indexer]
         if new_order:
             data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
+
+    def _finalize_indexing_result(self, dims, data):
+        """Used by IndexVariable to return IndexVariable objects when possible.
+        """
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
+
+    def _getitem_with_mask(self, key, fill_value=dtypes.NA):
+        """Index this Variable with -1 remapped to fill_value."""
+        # TODO(shoyer): expose this method in public API somewhere (isel?) and
+        # use it for reindex.
+        # TODO(shoyer): add a sanity check that all other integers are
+        # non-negative
+        # TODO(shoyer): add an optimization, remapping -1 to an adjacent value
+        # that is actually indexed rather than mapping it to the last value
+        # along each axis.
+
+        if fill_value is dtypes.NA:
+            fill_value = dtypes.get_fill_value(self.dtype)
+
+        dims, indexer, new_order = self._broadcast_indexes(key)
+
+        if self.size:
+            if isinstance(self._data, dask_array_type):
+                # dask's indexing is faster this way; also vindex does not
+                # support negative indices yet:
+                # https://github.com/dask/dask/pull/2967
+                actual_indexer = indexing.posify_mask_indexer(indexer)
+            else:
+                actual_indexer = indexer
+
+            data = as_indexable(self._data)[actual_indexer]
+            chunks_hint = getattr(data, 'chunks', None)
+            mask = indexing.create_mask(indexer, self.shape, chunks_hint)
+            data = duck_array_ops.where(mask, fill_value, data)
+        else:
+            # array cannot be indexed along dimensions of size 0, so just
+            # build the mask directly instead.
+            mask = indexing.create_mask(indexer, self.shape)
+            data = np.broadcast_to(fill_value, getattr(mask, 'shape', ()))
+
+        if new_order:
+            data = np.moveaxis(data, range(len(new_order)), new_order)
+        return self._finalize_indexing_result(dims, data)
 
     def __setitem__(self, key, value):
         """__setitem__ is overloaded to access the underlying numpy values with
@@ -637,22 +675,28 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         dims, index_tuple, new_order = self._broadcast_indexes(key)
 
-        if isinstance(value, Variable):
-            value = value.set_dims(dims).data
-
-        if new_order:
-            value = duck_array_ops.asarray(value)
+        if not isinstance(value, Variable):
+            value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
                     'shape mismatch: value array of shape %s could not be'
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
+            if value.ndim == 0:
+                value = Variable((), value)
+            else:
+                value = Variable(dims[-value.ndim:], value)
+        # broadcast to become assignable
+        value = value.set_dims(dims).data
 
+        if new_order:
+            value = duck_array_ops.asarray(value)
             value = value[(len(dims) - value.ndim) * (np.newaxis,) +
                           (Ellipsis,)]
             value = np.moveaxis(value, new_order, range(len(new_order)))
 
-        self._indexable_data[index_tuple] = value
+        indexable = as_indexable(self._data)
+        indexable[index_tuple] = value
 
     @property
     def attrs(self):
@@ -1343,14 +1387,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile,
         DataArray.quantile
         """
-
         if isinstance(self.data, dask_array_type):
             raise TypeError("quantile does not work for arrays stored as dask "
                             "arrays. Load the data via .compute() or .load() "
                             "prior to calling this method.")
-        if LooseVersion(np.__version__) < LooseVersion('1.10.0'):
-            raise NotImplementedError(
-                'quantile requres numpy version 1.10.0 or later')
 
         q = np.asarray(q, dtype=np.float64)
 
@@ -1373,6 +1413,47 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         qs = np.nanpercentile(self.data, q * 100., axis=axis,
                               interpolation=interpolation)
         return Variable(new_dims, qs)
+
+    def rank(self, dim, pct=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+
+        Returns
+        -------
+        ranked : Variable
+
+        See Also
+        --------
+        Dataset.rank, DataArray.rank
+        """
+        import bottleneck as bn
+
+        if isinstance(self.data, dask_array_type):
+            raise TypeError("rank does not work for arrays stored as dask "
+                            "arrays. Load the data via .compute() or .load() "
+                            "prior to calling this method.")
+
+        axis = self.get_axis_num(dim)
+        func = bn.nanrankdata if self.dtype.kind is 'f' else bn.rankdata
+        ranked = func(self.data, axis=axis)
+        if pct:
+            count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
+            ranked /= count
+        return Variable(self.dims, ranked)
 
     @property
     def real(self):
@@ -1463,14 +1544,12 @@ class IndexVariable(Variable):
         # Dummy - do not chunk. This method is invoked e.g. by Dataset.chunk()
         return self.copy(deep=False)
 
-    def __getitem__(self, key):
-        dims, index_tuple, new_order = self._broadcast_indexes(key)
-        values = self._indexable_data[index_tuple]
-        if getattr(values, 'ndim', 0) != 1:
+    def _finalize_indexing_result(self, dims, data):
+        if getattr(data, 'ndim', 0) != 1:
             # returns Variable rather than IndexVariable if multi-dimensional
-            return Variable(dims, values, self._attrs, self._encoding)
+            return Variable(dims, data, self._attrs, self._encoding)
         else:
-            return type(self)(dims, values, self._attrs,
+            return type(self)(dims, data, self._attrs,
                               self._encoding, fastpath=True)
 
     def __setitem__(self, key, value):
@@ -1613,6 +1692,11 @@ def _unified_dims(variables):
 
 
 def _broadcast_compat_variables(*variables):
+    """Create broadcast compatible variables, with the same dimensions.
+
+    Unlike the result of broadcast_variables(), some variables may have
+    dimensions of size 1 instead of the the size of the broadcast dimension.
+    """
     dims = tuple(_unified_dims(variables))
     return tuple(var.set_dims(dims) if var.dims != dims else var
                  for var in variables)

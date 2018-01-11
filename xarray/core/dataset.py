@@ -23,7 +23,8 @@ from . import formatting
 from . import duck_array_ops
 from .. import conventions
 from .alignment import align
-from .coordinates import DatasetCoordinates, LevelCoordinatesSource, Indexes
+from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
+                          assert_coordinate_consistent, remap_label_indexers)
 from .common import ImplementsDatasetReduce, BaseDataObject
 from .dtypes import is_datetime_like
 from .merge import (dataset_update_method, dataset_merge_method,
@@ -1086,7 +1087,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten. If mode='a', existing variables
             will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT','NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1130,6 +1131,40 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
+
+    def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
+                encoding=None):
+        """Write dataset contents to a zarr group.
+
+        .. note:: Experimental
+                  The Zarr backend is new and experimental. Please report any
+                  unexpected behavior via github issues.
+
+        Parameters
+        ----------
+        store : MutableMapping or str, optional
+            Store or path to directory in file system.
+        mode : {'w', 'w-'}
+            Persistence mode: 'w' means create (overwrite if exists);
+            'w-' means create (fail if exists).
+        synchronizer : object, optional
+            Array synchronizer
+        group : str, obtional
+            Group path. (a.k.a. `path` in zarr terminology.)
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, e.g.,
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        """
+        if encoding is None:
+            encoding = {}
+        if mode not in ['w', 'w-']:
+            # TODO: figure out how to handle 'r+' and 'a'
+            raise ValueError("The only supported options for mode are 'w' "
+                             "and 'w-'.")
+        from ..backends.api import to_zarr
+        return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
+                       group=group, encoding=encoding)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -1305,15 +1340,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         # we don't need to call align() explicitly, because merge_variables
         # already checks for exact alignment between dimension coordinates
         coords = merge_variables(coord_list)
-
-        for k in self.dims:
-            # make sure there are not conflict in dimension coordinates
-            if (k in coords and k in self._variables and
-                    not coords[k].equals(self._variables[k])):
-                raise IndexError(
-                    'dimension coordinate {!r} conflicts between '
-                    'indexed and indexing objects:\n{}\nvs.\n{}'
-                    .format(k, self._variables[k], coords[k]))
+        assert_coordinate_consistent(self, coords)
 
         attached_coords = OrderedDict()
         for k, v in coords.items():  # silently drop the conflicted variables.
@@ -1437,25 +1464,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.isel
         DataArray.sel
         """
-        from .dataarray import DataArray
-
-        v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
-                      for k, v in indexers.items()}
-
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, v_indexers, method=method, tolerance=tolerance
-        )
-        # attach indexer's coordinate to pos_indexers
-        for k, v in indexers.items():
-            if isinstance(v, Variable):
-                pos_indexers[k] = Variable(v.dims, pos_indexers[k])
-            elif isinstance(v, DataArray):
-                # drop coordinates found in indexers since .sel() already
-                # ensures alignments
-                coords = OrderedDict((k, v) for k, v in v._coords.items()
-                                     if k not in indexers)
-                pos_indexers[k] = DataArray(pos_indexers[k],
-                                            coords=coords, dims=v.dims)
+        pos_indexers, new_indexes = remap_label_indexers(self, method,
+                                                         tolerance, **indexers)
         result = self.isel(drop=drop, **pos_indexers)
         return result._replace_indexes(new_indexes)
 
@@ -2400,6 +2410,105 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         out = ops.fillna(self, value)
         return out
 
+    def interpolate_na(self, dim=None, method='linear', limit=None,
+                       use_coordinate=True,
+                       **kwargs):
+        """Interpolate values according to different methods.
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to interpolate.
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+                  'polynomial', 'barycentric', 'krog', 'pchip',
+                  'spline'}, optional
+            String indicating which method to use for interpolation:
+
+            - 'linear': linear interpolation (Default). Additional keyword
+              arguments are passed to ``numpy.interp``
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
+              method=='polynomial', the ``order`` keyword argument must also be
+              provided.
+            - 'barycentric', 'krog', 'pchip', 'spline': use their respective
+              ``scipy.interpolate`` classes.
+        use_coordinate : boolean or str, default True
+            Specifies which index to use as the x values in the interpolation
+            formulated as `y = f(x)`. If False, values are treated as if
+            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
+            used. If use_coordinate is a string, it specifies the name of a
+            coordinate variariable to use as the index.
+        limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit.
+
+        Returns
+        -------
+        Dataset
+
+        See also
+        --------
+        numpy.interp
+        scipy.interpolate
+        """
+        from .missing import interp_na, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(interp_na, self, dim=dim,
+                                        method=method, limit=limit,
+                                        use_coordinate=use_coordinate,
+                                        **kwargs)
+        return new
+
+    def ffill(self, dim, limit=None):
+        '''Fill NaN values by propogating values forward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        Dataset
+        '''
+        from .missing import ffill, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(ffill, self, dim=dim, limit=limit)
+        return new
+
+    def bfill(self, dim, limit=None):
+        '''Fill NaN values by propogating values backward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to backward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        Dataset
+        '''
+        from .missing import bfill, _apply_over_vars_with_dim
+
+        new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
+        return new
+
     def combine_first(self, other):
         """Combine two Datasets, default to data_vars of self.
 
@@ -3245,6 +3354,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         else:
             new.coords['quantile'] = q
         return new
+
+    def rank(self, dim, pct=False, keep_attrs=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that set.
+        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        ranked : Dataset
+            Variables that do not depend on `dim` are dropped.
+        """
+        if dim not in self.dims:
+            raise ValueError('Dataset does not contain the dimension: %s' % dim)
+
+        variables = OrderedDict()
+        for name, var in iteritems(self.variables):
+            if name in self.data_vars:
+                if dim in var.dims:
+                    variables[name] = var.rank(dim, pct=pct)
+            else:
+                variables[name] = var
+
+        coord_names = set(self.coords)
+        attrs = self.attrs if keep_attrs else None
+        return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
     @property
     def real(self):

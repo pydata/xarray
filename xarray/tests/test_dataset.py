@@ -31,7 +31,8 @@ from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
 from xarray.tests import (assert_equal, assert_allclose,
-                          assert_array_equal, requires_scipy)
+                          assert_array_equal, requires_bottleneck,
+                          requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -1001,15 +1002,12 @@ class TestDataset(TestCase):
         # Conflict in the dimension coordinate
         indexing_da = DataArray(np.arange(1, 4), dims=['dim2'],
                                 coords={'dim2': np.random.randn(3)})
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             actual = data.isel(dim2=indexing_da)
         # Also the case for DataArray
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             actual = data['var2'].isel(dim2=indexing_da)
-        with raises_regex(
-                IndexError, "dimension coordinate 'dim2'"):
+        with raises_regex(IndexError, "dimension coordinate 'dim2'"):
             data['dim2'].isel(dim2=indexing_da)
 
         # same name coordinate which does not conflict
@@ -1502,7 +1500,7 @@ class TestDataset(TestCase):
 
         expected = data.copy(deep=True)
         expected['dim3'] = ('dim3', list('cdefghijkl'))
-        expected['var3'][:-2] = expected['var3'][2:]
+        expected['var3'][:-2] = expected['var3'][2:].values
         expected['var3'][-2:] = np.nan
         expected['letters'] = expected['letters'].astype(object)
         expected['letters'][-2:] = np.nan
@@ -1614,9 +1612,9 @@ class TestDataset(TestCase):
         left = create_test_data()
         right = left.copy(deep=True)
         right['dim3'] = ('dim3', list('cdefghijkl'))
-        right['var3'][:-2] = right['var3'][2:]
+        right['var3'][:-2] = right['var3'][2:].values
         right['var3'][-2:] = np.random.randn(*right['var3'][-2:].shape)
-        right['numbers'][:-2] = right['numbers'][2:]
+        right['numbers'][:-2] = right['numbers'][2:].values
         right['numbers'][-2:] = -10
 
         intersection = list('cdefghij')
@@ -3412,6 +3410,23 @@ class TestDataset(TestCase):
             ds_quantile = ds.quantile(q, dim=dim)
             assert 'dim3' in ds_quantile.dims
             assert all(d not in ds_quantile.dims for d in dim)
+
+    @requires_bottleneck
+    def test_rank(self):
+        ds = create_test_data(seed=1234)
+        # only ds.var3 depends on dim3
+        z = ds.rank('dim3')
+        self.assertItemsEqual(['var3'], list(z.data_vars))
+        # same as dataarray version
+        x = z.var3
+        y = ds.var3.rank('dim3')
+        self.assertDataArrayEqual(x, y)
+        # coordinates stick
+        self.assertItemsEqual(list(z.coords), list(ds.coords))
+        self.assertItemsEqual(list(x.coords), list(y.coords))
+        # invalid dim
+        with raises_regex(ValueError, 'does not contain'):
+            x.rank('invalid_dim')
 
     def test_count(self):
         ds = Dataset({'x': ('a', [np.nan, 1]), 'y': 0, 'z': np.nan})

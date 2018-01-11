@@ -24,7 +24,10 @@ from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.common import full_like, zeros_like, ones_like
 from xarray.core.utils import NDArrayMixin
 
-from . import TestCase, source_ndarray, requires_dask, raises_regex
+from . import (
+    TestCase, source_ndarray, requires_dask, raises_regex, assert_identical)
+
+from xarray.tests import requires_bottleneck
 
 
 class VariableSubclassTestCases(object):
@@ -102,6 +105,27 @@ class VariableSubclassTestCases(object):
         with raises_regex(IndexError, "Boolean indexer should"):
             ind = Variable(('a', ), [True, False, True])
             v[ind]
+
+    def test_getitem_with_mask(self):
+        v = self.cls(['x'], [0, 1, 2])
+        assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
+        assert_identical(v._getitem_with_mask([0, -1, 1]),
+                         self.cls(['x'], [0, np.nan, 1]))
+        assert_identical(v._getitem_with_mask(slice(2)),
+                         self.cls(['x'], [0, 1]))
+        assert_identical(v._getitem_with_mask([0, -1, 1], fill_value=-99),
+                         self.cls(['x'], [0, -99, 1]))
+
+    def test_getitem_with_mask_size_zero(self):
+        v = self.cls(['x'], [])
+        assert_identical(v._getitem_with_mask(-1), Variable((), np.nan))
+        assert_identical(v._getitem_with_mask([-1, -1, -1]),
+                         self.cls(['x'], [np.nan, np.nan, np.nan]))
+
+    def test_getitem_with_mask_nd_indexer(self):
+        v = self.cls(['x'], [0, 1, 2])
+        indexer = Variable(('x', 'y'), [[0, -1], [-1, 2]])
+        assert_identical(v._getitem_with_mask(indexer, fill_value=-1), indexer)
 
     def _assertIndexedLikeNDArray(self, variable, expected_value0,
                                   expected_dtype=None):
@@ -1036,6 +1060,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert v_new.dims == ('x', )
         self.assertArrayEqual(v_new, v._data[:, 1])
 
+    def test_getitem_with_mask_2d_input(self):
+        v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
+        assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
+                         Variable(('x', 'y'), [[np.nan, np.nan], [1, np.nan]]))
+        assert_identical(v._getitem_with_mask((slice(2), [0, 1, 2])), v)
+
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
         self.assertVariableIdentical(v.isel(time=slice(None)), v)
@@ -1353,6 +1383,38 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with raises_regex(TypeError, 'arrays stored as dask'):
             v.quantile(0.5, dim='x')
 
+    @requires_dask
+    @requires_bottleneck
+    def test_rank_dask_raises(self):
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0]).chunk(2)
+        with raises_regex(TypeError, 'arrays stored as dask'):
+            v.rank('x')
+
+    @requires_bottleneck
+    def test_rank(self):
+        import bottleneck as bn
+        # floats
+        v = Variable(['x', 'y'], [[3, 4, np.nan, 1]])
+        expect_0 = bn.nanrankdata(v.data, axis=0)
+        expect_1 = bn.nanrankdata(v.data, axis=1)
+        np.testing.assert_allclose(v.rank('x').values, expect_0)
+        np.testing.assert_allclose(v.rank('y').values, expect_1)
+        # int
+        v = Variable(['x'], [3,2,1])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # str
+        v =  Variable(['x'], ['c', 'b', 'a'])
+        expect = bn.rankdata(v.data, axis=0)
+        np.testing.assert_allclose(v.rank('x').values, expect)
+        # pct
+        v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0])
+        v_expect = Variable(['x'], [0.75, 0.25, np.nan, 0.5, 1.0])
+        self.assertVariableEqual(v.rank('x', pct=True), v_expect)
+        # invalid dim
+        with raises_regex(ValueError, 'not found'):
+            v.rank('y')
+
     def test_big_endian_reduce(self):
         # regression test for GH489
         data = np.ones(5, dtype='>f4')
@@ -1440,6 +1502,56 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v[dict(x=[True, False], y=[False, True, False])] = 1
         self.assertTrue(v[0, 1] == 1)
 
+    def test_setitem_fancy(self):
+        # assignment which should work as np.ndarray does
+        def assert_assigned_2d(array, key_x, key_y, values):
+            expected = array.copy()
+            expected[key_x, key_y] = values
+            v = Variable(['x', 'y'], array)
+            v[dict(x=key_x, y=key_y)] = values
+            self.assertArrayEqual(expected, v)
+
+        # 1d vectorized indexing
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=0)
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable((), 0))
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a'], [0, 1]),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable(('a'), [3, 2]))
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=slice(None),
+                           key_y=Variable(['a'], [0, 1]),
+                           values=Variable(('a'), [3, 2]))
+
+        # 2d-vectorized indexing
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a', 'b'], [[0, 1]]),
+                           key_y=Variable(['a', 'b'], [[1, 0]]),
+                           values=0)
+        assert_assigned_2d(np.random.randn(4, 3),
+                           key_x=Variable(['a', 'b'], [[0, 1]]),
+                           key_y=Variable(['a', 'b'], [[1, 0]]),
+                           values=[0])
+        assert_assigned_2d(np.random.randn(5, 4),
+                           key_x=Variable(['a', 'b'], [[0, 1], [2, 3]]),
+                           key_y=Variable(['a', 'b'], [[1, 0], [3, 3]]),
+                           values=[2, 3])
+
+        # vindex with slice
+        v = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        ind = Variable(['a'], [0, 1])
+        v[dict(x=ind, z=ind)] = 0
+        expected = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
+        expected[0, :, 0] = 0
+        expected[1, :, 1] = 0
+        self.assertVariableIdentical(expected, v)
+
         # dimension broadcast
         v = Variable(['x', 'y'], np.ones((3, 2)))
         ind = Variable(['a', 'b'], [[0, 1]])
@@ -1502,6 +1614,13 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
             pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
+
+    def test_getitem_with_mask_nd_indexer(self):
+        import dask.array as da
+        v = Variable(['x'], da.arange(3, chunks=3))
+        indexer = Variable(('x', 'y'), [[0, -1], [-1, 2]])
+        assert_identical(v._getitem_with_mask(indexer, fill_value=-1),
+                         self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
