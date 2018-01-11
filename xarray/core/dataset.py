@@ -39,6 +39,7 @@ from . import (
     dtypes,
     duck_array_ops,
     formatting,
+    formatting_html,
     groupby,
     ops,
     resample,
@@ -1618,6 +1619,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
 
     def __repr__(self) -> str:
         return formatting.dataset_repr(self)
+
+    def _repr_html_(self):
+        return formatting_html.dataset_repr(self)
 
     def info(self, buf=None) -> None:
         """
