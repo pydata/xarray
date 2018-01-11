@@ -147,4 +147,6 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      package_data={'xarray': ['tests/data/*', 'plot/default_colormap.csv']})
+      package_data={'xarray': ['static/*',
+                               'tests/data/*',
+                               'plot/default_colormap.csv']})
