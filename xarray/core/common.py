@@ -8,6 +8,7 @@ import warnings
 from .pycompat import basestring, suppress, dask_array_type, OrderedDict
 from . import dtypes
 from . import formatting
+from . import formatting_html
 from . import ops
 from .utils import SortedKeysDict, not_implemented, Frozen
 
@@ -98,6 +99,9 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
 
     def __repr__(self):
         return formatting.array_repr(self)
+
+    def _repr_html_(self):
+        return formatting_html.array_repr(self)
 
     def _iter(self):
         for n in range(len(self)):

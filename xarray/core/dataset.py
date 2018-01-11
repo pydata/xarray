@@ -20,6 +20,7 @@ from . import rolling
 from . import indexing
 from . import alignment
 from . import formatting
+from . import formatting_html
 from . import duck_array_ops
 from .. import conventions
 from .alignment import align
@@ -1168,6 +1169,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
+
+    def _repr_html_(self):
+        return formatting_html.dataset_repr(self)
 
     def info(self, buf=None):
         """
