@@ -58,7 +58,14 @@ class ScipyArrayWrapper(BackendArray):
     def __setitem__(self, key, value):
         with self.datastore.ensure_open(autoclose=True):
             data = self.get_array()
-            data[key] = value
+            try:
+                data[key] = value
+            except TypeError:
+                if key is Ellipsis:
+                    # workaround for GH: scipy/scipy#6880
+                    data[:] = value
+                else:
+                    raise
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):

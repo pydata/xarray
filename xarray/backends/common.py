@@ -175,11 +175,7 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            try:
-                target[...] = source
-            except TypeError:
-                # workaround for GH: scipy/scipy#6880
-                target[:] = source
+            target[...] = source
 
     def sync(self):
         if self.sources:
