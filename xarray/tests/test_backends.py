@@ -24,6 +24,7 @@ from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.core import indexing
 from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
                                   dask_array_type)
+from xarray.backends.api import _guess_file_format
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
@@ -2321,3 +2322,31 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 self.assertDataArrayIdentical(original_da, loaded_da)
+
+
+class TestFileFormat(object):
+    """Test recognizing file formats."""
+
+    def test_hdf5(self):
+        """Test recognizing HDF5 file format."""
+        h5file_name = os.path.join(
+            os.path.dirname(__file__), 'data', 'empty-test.h5')
+        assert 'hdf5' == _guess_file_format(h5file_name)
+
+    def test_unknown(self):
+        """Test unknown file format."""
+        unknown_filename = os.path.join(
+            os.path.dirname(__file__), 'data', 'example_1.nc.gz')
+        assert 'unknown' == _guess_file_format(unknown_filename)
+
+    def test_missing_file(self):
+        """Test when there is no file to guess its file format."""
+        mia_filename = os.path.join(
+            os.path.dirname(__file__), 'data', 'asdolfkjalsdkfj')
+        assert 'netcdf3' == _guess_file_format(mia_filename)
+
+    def test_netcdf3(self):
+        """Test recognizing NetCDF3 Classic file format."""
+        classic = os.path.join(
+            os.path.dirname(__file__), 'data', 'example_1.nc')
+        assert 'netcdf3' == _guess_file_format(classic)
