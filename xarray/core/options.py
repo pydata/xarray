@@ -73,16 +73,10 @@ class set_options(object):
         if 'io_engines' in kwargs:
             if isinstance(kwargs['io_engines'], basestring):
                 kwargs['io_engines'] = [kwargs['io_engines']]
-            new_engines = list()
-            for e in kwargs['io_engines']:
-                if e in _AVAILABLE_IO_ENGINES:
-                    new_engines.append(e)
-                else:
+            new_engines = list(kwargs['io_engines'])
+            for e in new_engines:
+                if e not in _AVAILABLE_IO_ENGINES:
                     raise ValueError('I/O engine %s not installed' % e)
-            if not new_engines:
-                raise ValueError('No I/O engines')
-            else:
-                kwargs['io_engines'] = new_engines
 
         OPTIONS.update(kwargs)
 

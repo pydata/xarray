@@ -33,10 +33,10 @@ def _guess_file_format(path):
         return 'netcdf3'
 
     with f:
-        # Ten bytes should be enough...
+        # First ten bytes should be enough...
         sig = f.read(10)
 
-    if sig[:8] == b'\x89HDF\r\n\x1a\n':
+    if sig[:8] == b'\x89HDF\x0d\x0a\x1a\x0a':
         return 'hdf5'
     elif sig[:4] == b'CDF\x02' or sig[:4] == b'CDF\x01':
         return 'netcdf3'
@@ -53,15 +53,18 @@ def _get_default_engine(path, allow_remote=False):
             raise ValueError('netCDF4 or pydap is required for accessing '
                              'remote datasets via OPeNDAP')
     else:
-        filefmt = _guess_file_format(path)
+        file_format = _guess_file_format(path)
         for engine in OPTIONS['io_engines']:
-            if filefmt == 'hdf5' and engine in ('netcdf4', 'h5netcdf'):
+            if file_format == 'hdf5' and engine in ('netcdf4', 'h5netcdf'):
                 return engine
-            elif filefmt == 'netcdf3' and engine in ('netcdf4', 'scipy'):
+            elif file_format == 'netcdf3' and engine in ('netcdf4', 'scipy'):
                 return engine
+            elif file_format == 'unknown':
+                raise ValueError('{}: File format not supported'.format(path))
         else:
-            raise ValueError('cannot read or write netCDF files without '
-                             'netCDF4-python, scipy, or h5netcdf installed')
+            raise ValueError(
+                'cannot read or write netCDF files with available I/O engines '
+                '{}'.format(OPTIONS['io_engines']))
 
 
 def _normalize_path(path):
