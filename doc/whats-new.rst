@@ -20,7 +20,8 @@ v0.10.1 (unreleased)
 
 Enhancements
 ~~~~~~~~~~~~
-- Added nodatavals attribute to dataset when using open_rasterio.
+- Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
+  By `Alan Snow <https://github.com/snowman2>`_.
 
 Bug fixes
 ~~~~~~~~~
