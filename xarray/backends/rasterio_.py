@@ -185,7 +185,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         transform = riods.transform
     if transform.is_rectilinear:
         # 1d coordinates
-        parse = True if (parse_coordinates is None) else parse_coordinates
+        parse = True if parse_coordinates is None else parse_coordinates
         if parse:
             nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered

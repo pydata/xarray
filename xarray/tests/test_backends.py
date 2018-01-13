@@ -2236,8 +2236,10 @@ class TestRasterio(TestCase):
 
         # Create a geotiff file
         with warnings.catch_warnings():
-            # This warning is expected
-            warnings.filterwarnings('ignore', category=UserWarning)
+            # rasterio throws a NotGeoreferencedWarning here, which is
+            # expected since we test rasterio's defaults in this case.
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message='Dataset has no geotransform set')
             with create_tmp_file(suffix='.tif') as tmp_file:
                 # data
                 nx, ny, nz = 4, 3, 3
