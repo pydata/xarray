@@ -45,6 +45,12 @@ except ImportError:
 
 
 def _importorskip(modname, minversion=None):
+    """
+    This is deprecated - instead use pytest.importorskip. For example:
+
+    matplotlib = pytest.importorskip('matplotlib', minversion='1.9.0')
+
+    """
     try:
         mod = importlib.import_module(modname)
         has = True
@@ -109,6 +115,9 @@ network = pytest.mark.skipif(
 
 
 class TestCase(unittest.TestCase):
+    """
+    These functions are all deprecated. Instead, use functions in xr.testing
+    """
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2
         # assertItemsEqual
