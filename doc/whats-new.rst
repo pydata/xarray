@@ -55,6 +55,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed chunking with non-file-based rasterio datasets (:issue:`1816`) and
+  refactored rasterio test suite.
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 

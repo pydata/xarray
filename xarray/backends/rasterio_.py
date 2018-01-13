@@ -219,8 +219,8 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # augment the token with the file modification time
         try:
             mtime = os.path.getmtime(filename)
-        except FileNotFoundError:
-            # the filename is probably and s3 bucket rather than a regular file
+        except OSError:
+            # the filename is probably an s3 bucket rather than a regular file
             mtime = None
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
