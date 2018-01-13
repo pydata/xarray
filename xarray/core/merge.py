@@ -362,7 +362,8 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     """Used in Dataset.__init__."""
     objs = [data, coords]
     explicit_coords = coords.keys()
-    return merge_core(objs, compat, join, explicit_coords=explicit_coords)
+    return merge_core(objs, compat, join, explicit_coords=explicit_coords,
+                      indexes=coords)
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):

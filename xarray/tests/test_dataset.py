@@ -4035,6 +4035,19 @@ def data_set(seed=None):
     return create_test_data(seed)
 
 
+def test_constructor_aligns_to_explicit_coords():
+
+    coords = {'x': range(3)}
+    a = xr.DataArray([1, 2, 3], dims=['x'], coords={'x': range(2, -1, -1)})
+
+    result = xr.Dataset({'a': a}, coords=coords)
+
+    expected = xr.Dataset(coords=coords)
+    expected['a'] = a
+
+    assert_equal(expected, result)
+
+
 def test_dir_expected_attrs(data_set):
 
     some_expected_attrs = {'pipe', 'mean', 'isnull', 'var1',
