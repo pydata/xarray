@@ -19,8 +19,8 @@ from . import TestCase, assert_frame_equal, raises_regex
 from xarray.tests import mock
 
 dask = pytest.importorskip('dask')
-import dask.array as da
-import dask.dataframe as dd
+import dask.array as da  # noqa: E402  # allow importorskip call above this
+import dask.dataframe as dd  # noqa: E402
 
 
 class DaskTestCase(TestCase):
@@ -171,7 +171,8 @@ class TestVariable(DaskTestCase):
         eager_var = Variable('x', values)
         lazy_var = Variable('x', data)
         self.assertLazyAndIdentical(eager_var, lazy_var.fillna(lazy_var))
-        self.assertLazyAndIdentical(Variable('x', range(4)), lazy_var.fillna(2))
+        self.assertLazyAndIdentical(Variable('x', range(4)),
+                                    lazy_var.fillna(2))
         self.assertLazyAndIdentical(eager_var.count(), lazy_var.count())
 
     def test_concat(self):
@@ -182,7 +183,8 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndIdentical(u[:2], Variable.concat([u[0], v[1]], 'x'))
         self.assertLazyAndIdentical(u[:2], Variable.concat([v[0], u[1]], 'x'))
         self.assertLazyAndIdentical(
-            u[:3], Variable.concat([v[[0, 2]], v[[1]]], 'x', positions=[[0, 2], [1]]))
+            u[:3],
+            Variable.concat([v[[0, 2]], v[[1]]], 'x', positions=[[0, 2], [1]]))
 
     def test_missing_methods(self):
         v = self.lazy_var
@@ -331,13 +333,15 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert isinstance(out['d'].data, np.ndarray)
         assert isinstance(out['c'].data, np.ndarray)
 
-        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars='all', coords='all')
+        out = xr.concat(
+            [ds1, ds2, ds3], dim='n', data_vars='all', coords='all')
         # no extra kernel calls
         assert kernel_call_count == 6
         assert isinstance(out['d'].data, dask.array.Array)
         assert isinstance(out['c'].data, dask.array.Array)
 
-        out = xr.concat([ds1, ds2, ds3], dim='n', data_vars=['d'], coords=['c'])
+        out = xr.concat(
+            [ds1, ds2, ds3], dim='n', data_vars=['d'], coords=['c'])
         # no extra kernel calls
         assert kernel_call_count == 6
         assert isinstance(out['d'].data, dask.array.Array)
@@ -358,7 +362,8 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         # When the test for different turns true halfway through,
         # stop computing variables as it would not have any benefit
-        ds4 = Dataset(data_vars={'d': ('x', [2.0])}, coords={'c': ('x', [2.0])})
+        ds4 = Dataset(data_vars={'d': ('x', [2.0])},
+                      coords={'c': ('x', [2.0])})
         out = xr.concat([ds1, ds2, ds4, ds3], dim='n', data_vars='different',
                         coords='different')
         # the variables of ds1 and ds2 were computed, but those of ds3 didn't
@@ -829,7 +834,8 @@ def test_dataarray_with_dask_coords():
     (array2,) = dask.compute(array)
     assert not dask.is_dask_collection(array2)
 
-    assert all(isinstance(v._variable.data, np.ndarray) for v in array2.coords.values())
+    assert all(isinstance(v._variable.data, np.ndarray)
+               for v in array2.coords.values())
 
 
 def test_basic_compute():

@@ -599,7 +599,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
                 self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
-                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
+                self.assertTrue(
+                    equals_latlon(ds['precip'].attrs['coordinates']))
                 self.assertNotIn('coordinates', ds.attrs)
                 self.assertNotIn('coordinates', ds['lat'].attrs)
                 self.assertNotIn('coordinates', ds['lon'].attrs)
@@ -793,7 +794,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
-        # Create a netCDF file with a dataset stored within a group within a group
+        # Create a netCDF file with a dataset within a group within a group
         with create_tmp_file() as tmp_file:
             rootgrp = nc4.Dataset(tmp_file, 'w')
             foogrp = rootgrp.createGroup('foo')
@@ -889,7 +890,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 actual_encoding = dict((k, v) for k, v in
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
-                self.assertDictEqual(actual_encoding, expected['time'].encoding)
+                self.assertDictEqual(actual_encoding,
+                                     expected['time'].encoding)
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -914,8 +916,10 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 with create_tmp_file() as tmp_file2:
                     xarray_dataset.to_netcdf(tmp_file2)
                     with nc4.Dataset(tmp_file2, 'r') as ds:
-                        self.assertEqual(ds.variables['time'].getncattr('units'), units)
-                        self.assertArrayEqual(ds.variables['time'], np.arange(10) + 4)
+                        self.assertEqual(
+                            ds.variables['time'].getncattr('units'), units)
+                        self.assertArrayEqual(
+                            ds.variables['time'], np.arange(10) + 4)
 
     def test_compression_encoding(self):
         data = create_test_data()
@@ -1044,8 +1048,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(ds) as ondisk:
             inds = np.argsort(dim1)
             ds2 = ondisk.isel(dim1=inds)
+            # Older versions of NetCDF4 raise an exception here, and if so we
+            # want to ensure we improve (that is, replace) the error message
             try:
-                print(ds2.randovar.values)  # should raise IndexError in netCDF4
+                ds2.randovar.values
             except IndexError as err:
                 self.assertIn('first by calling .load', str(err))
 
@@ -1604,7 +1610,8 @@ class OpenMFDatasetManyFilesTest(TestCase):
                 # check that calculation on opened datasets works properly
                 ds = open_mfdataset(tmpfiles, engine=readengine,
                                     autoclose=True)
-                self.assertAllClose(ds.x.sum().values, (nfiles * (nfiles - 1)) / 2)
+                self.assertAllClose(ds.x.sum().values,
+                                    (nfiles * (nfiles - 1)) / 2)
                 self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
                 self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
                 ds.close()
@@ -2033,13 +2040,14 @@ class PydapTest(TestCase):
             self.assertNotIn('NC_GLOBAL', actual.attrs)
             self.assertIn('history', actual.attrs)
 
-            # we don't check attributes exactly with assertDatasetIdentical() because
-            # the test DAP server seems to insert some extra attributes not found in the
-            # netCDF file.
+            # we don't check attributes exactly with assertDatasetIdentical()
+            # because the test DAP server seems to insert some extra
+            # attributes not found in the netCDF file.
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
+            self.assertDatasetEqual(
+                actual.isel(l=2), expected.isel(l=2))  # noqa: E741
 
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(i=0, j=-1),
@@ -2184,11 +2192,10 @@ class TestRasterio(TestCase):
                 dx, dy = s.res[0], -s.res[1]
 
             # Tests
-            expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={
-                                     'band': [1, 2, 3],
-                                     'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
-                                     'x': np.arange(nx) * 1000 + 5000 + dx / 2,
+            expected = DataArray(data, dims=('band', 'y', 'x'), coords={
+                 'band': [1, 2, 3],
+                 'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
+                 'x': np.arange(nx) * 1000 + 5000 + dx / 2,
             })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
@@ -2261,10 +2268,10 @@ class TestRasterio(TestCase):
                 dx, dy = s.res[0], -s.res[1]
 
             # ref
-            expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
-                                         'y': (-np.arange(ny) * 2 + 2) + dy / 2,
-                                         'band': [1, 2, 3]})
+            expected = DataArray(data, dims=('band', 'y', 'x'), coords={
+                'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
+                'y': (-np.arange(ny) * 2 + 2) + dy / 2,
+                'band': [1, 2, 3]})
 
             with xr.open_rasterio(tmp_file, cache=False) as actual:
 
@@ -2353,10 +2360,11 @@ class TestRasterio(TestCase):
                 dx, dy = s.res[0], -s.res[1]
 
             # ref
-            expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
-                                         'y': (-np.arange(ny) * 2 + 2) + dy / 2,
-                                         'band': [1, 2, 3]})
+            expected = DataArray(
+                data, dims=('band', 'y', 'x'), coords={
+                     'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
+                     'y': (-np.arange(ny) * 2 + 2) + dy / 2,
+                     'band': [1, 2, 3]})
 
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
@@ -2404,10 +2412,10 @@ class TestRasterio(TestCase):
                 assert 'open_rasterio' in actual.data.name
 
                 # ref
-                expected = DataArray(data, dims=('band', 'y', 'x'),
-                                     coords={'x': np.arange(nx) * 0.5 + 1 + dx / 2,
-                                             'y': -np.arange(ny) * 2 + 2 + dy / 2,
-                                             'band': [1, 2, 3]})
+                expected = DataArray(data, dims=('band', 'y', 'x'), coords={
+                    'x': np.arange(nx) * 0.5 + 1 + dx / 2,
+                    'y': -np.arange(ny) * 2 + 2 + dy / 2,
+                    'band': [1, 2, 3]})
 
                 # do some arithmetic
                 ac = actual.mean()

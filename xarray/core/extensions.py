@@ -27,9 +27,9 @@ class _CachedAccessor(object):
         try:
             accessor_obj = self._accessor(obj)
         except AttributeError:
-            # __getattr__ on data object will swallow any AttributeErrors raised
-            # when initializing the accessor, so we need to raise as something
-            # else (GH933):
+            # __getattr__ on data object will swallow any AttributeErrors
+            # raised when initializing the accessor, so we need to raise as
+            # something else (GH933):
             msg = 'error initializing %r accessor.' % self._name
             if PY2:
                 msg += ' Full traceback:\n' + traceback.format_exc()

@@ -103,7 +103,7 @@ class TestDataset(TestCase):
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
         Attributes:
-            foo:      bar""") % data['dim3'].dtype
+            foo:      bar""") % data['dim3'].dtype  # noqa: E501
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         self.assertEqual(expected, actual)
@@ -171,7 +171,8 @@ class TestDataset(TestCase):
 
     def test_repr_period_index(self):
         data = create_test_data(seed=456)
-        data.coords['time'] = pd.period_range('2000-01-01', periods=20, freq='B')
+        data.coords['time'] = pd.period_range(
+            '2000-01-01', periods=20, freq='B')
 
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
@@ -522,8 +523,10 @@ class TestDataset(TestCase):
 
         self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
 
-        self.assertVariableIdentical(data.coords['x'].variable, data['x'].variable)
-        self.assertVariableIdentical(data.coords['y'].variable, data['y'].variable)
+        self.assertVariableIdentical(data.coords['x'].variable,
+                                     data['x'].variable)
+        self.assertVariableIdentical(data.coords['y'].variable,
+                                     data['y'].variable)
 
         self.assertIn('x', data.coords)
         self.assertIn('a', data.coords)
@@ -1284,7 +1287,7 @@ class TestDataset(TestCase):
         self.assertDataArrayIdentical(actual['station'].drop(['dim2']),
                                       stations['station'])
 
-        # make sure we get the default 'points' coordinate when a list is passed
+        # make sure we get the default 'points' coordinate when passed a list
         actual = data.isel_points(dim1=stations['dim1s'],
                                   dim2=stations['dim2s'],
                                   dim=['A', 'B', 'C'])
@@ -1294,7 +1297,8 @@ class TestDataset(TestCase):
         # test index
         actual = data.isel_points(dim1=stations['dim1s'].values,
                                   dim2=stations['dim2s'].values,
-                                  dim=pd.Index(['A', 'B', 'C'], name='letters'))
+                                  dim=pd.Index(['A', 'B', 'C'],
+                                               name='letters'))
         assert 'letters' in actual.coords
 
         # can pass a numpy array
@@ -1624,7 +1628,8 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
-        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable,
+                                 right2['dim3'].variable)
         self.assertArrayEqual(left2['dim3'], union)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
@@ -1632,15 +1637,18 @@ class TestDataset(TestCase):
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='left')
-        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable,
+                                 right2['dim3'].variable)
         self.assertVariableEqual(left2['dim3'].variable, left['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(right2['var3'][:2]).all())
 
         left2, right2 = align(left, right, join='right')
-        self.assertVariableEqual(left2['dim3'].variable, right2['dim3'].variable)
-        self.assertVariableEqual(left2['dim3'].variable, right['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable,
+                                 right2['dim3'].variable)
+        self.assertVariableEqual(left2['dim3'].variable,
+                                 right['dim3'].variable)
         self.assertDatasetIdentical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
         self.assertTrue(np.isnan(left2['var3'][-2:]).all())
@@ -1694,7 +1702,8 @@ class TestDataset(TestCase):
         x2, y2 = align(x, y, copy=True, join='outer')
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
-        assert source_ndarray(x['foo'].data) is not source_ndarray(x2['foo'].data)
+        assert source_ndarray(x['foo'].data) is not \
+            source_ndarray(x2['foo'].data)
 
     def test_align_indexes(self):
         x = Dataset({'foo': DataArray([1, 2, 3], dims='x',
@@ -1744,34 +1753,42 @@ class TestDataset(TestCase):
 
         actual_x, = broadcast(x)
         self.assertDatasetIdentical(x, actual_x)
-        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
+        assert source_ndarray(actual_x['foo'].data) is \
+            source_ndarray(x['foo'].data)
 
         actual_x, actual_y = broadcast(x, y)
         self.assertDatasetIdentical(x, actual_x)
-        assert source_ndarray(actual_x['foo'].data) is source_ndarray(x['foo'].data)
+        assert source_ndarray(actual_x['foo'].data) is \
+            source_ndarray(x['foo'].data)
 
     def test_broadcast_exclude(self):
         x = Dataset({
-            'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'], coords={'x': [1, 2], 'y': [3, 4]}),
+            'foo': DataArray([[1, 2], [3, 4]], dims=['x', 'y'],
+                             coords={'x': [1, 2], 'y': [3, 4]}),
             'bar': DataArray(5),
         })
         y = Dataset({
-            'foo': DataArray([[1, 2]], dims=['z', 'y'], coords={'z': [1], 'y': [5, 6]}),
+            'foo': DataArray([[1, 2]], dims=['z', 'y'],
+                             coords={'z': [1], 'y': [5, 6]}),
         })
         x2, y2 = broadcast(x, y, exclude=['y'])
 
         expected_x2 = Dataset({
-            'foo': DataArray([[[1, 2]], [[3, 4]]], dims=['x', 'z', 'y'], coords={'z': [1], 'x': [1, 2], 'y': [3, 4]}),
-            'bar': DataArray([[5], [5]], dims=['x', 'z'], coords={'x': [1, 2], 'z': [1]}),
+            'foo': DataArray([[[1, 2]], [[3, 4]]], dims=['x', 'z', 'y'],
+                             coords={'z': [1], 'x': [1, 2], 'y': [3, 4]}),
+            'bar': DataArray([[5], [5]], dims=['x', 'z'],
+                             coords={'x': [1, 2], 'z': [1]}),
         })
         expected_y2 = Dataset({
-            'foo': DataArray([[[1, 2]], [[1, 2]]], dims=['x', 'z', 'y'], coords={'z': [1], 'x': [1, 2], 'y': [5, 6]}),
+            'foo': DataArray([[[1, 2]], [[1, 2]]], dims=['x', 'z', 'y'],
+                             coords={'z': [1], 'x': [1, 2], 'y': [5, 6]}),
         })
         self.assertDatasetIdentical(expected_x2, x2)
         self.assertDatasetIdentical(expected_y2, y2)
 
     def test_broadcast_misaligned(self):
-        x = Dataset({'foo': DataArray([1, 2, 3], coords=[('x', [-1, -2, -3])])})
+        x = Dataset({'foo': DataArray([1, 2, 3],
+                                      coords=[('x', [-1, -2, -3])])})
         y = Dataset({'bar': DataArray([[1, 2], [3, 4]], dims=['y', 'x'],
                                       coords={'y': [1, 2], 'x': [10, -3]})})
         x2, y2 = broadcast(x, y)
@@ -1922,7 +1939,8 @@ class TestDataset(TestCase):
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
-        expected = Dataset({'z': 42}, {'x': ('y', [1, 2, 3]), 'y': list('abc')})
+        expected = Dataset({'z': 42},
+                           {'x': ('y', [1, 2, 3]), 'y': list('abc')})
         actual = original.swap_dims({'x': 'y'})
         self.assertDatasetIdentical(expected, actual)
         self.assertIsInstance(actual.variables['y'], IndexVariable)
@@ -2224,14 +2242,15 @@ class TestDataset(TestCase):
 
     def test_time_season(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
-        expected = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']
-        self.assertArrayEqual(expected, ds['t.season'])
+        seas = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']
+        self.assertArrayEqual(seas, ds['t.season'])
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
         self.assertVariableEqual(data['time.dayofyear'][:10].variable,
                                  Variable(['time'], 1 + np.arange(10)))
-        self.assertVariableEqual(data['time.dayofyear'][0].variable, Variable([], 1))
+        self.assertVariableEqual(data['time.dayofyear'][0].variable,
+                                 Variable([], 1))
 
     def test_setitem(self):
         # assign a variable
@@ -2767,7 +2786,8 @@ class TestDataset(TestCase):
         # GH697
         df = pd.DataFrame({'A': []})
         actual = Dataset.from_dataframe(df)
-        expected = Dataset({'A': DataArray([], dims=('index',))}, {'index': []})
+        expected = Dataset({'A': DataArray([], dims=('index',))},
+                           {'index': []})
         self.assertDatasetIdentical(expected, actual)
 
         # regression test for GH278
@@ -3183,14 +3203,17 @@ class TestDataset(TestCase):
             ds.where(np.arange(5) > 1, drop=True)
 
         # 1d with odd coordinates
-        array = DataArray(np.array([2, 7, 1, 8, 3]), coords=[np.array([3, 1, 4, 5, 9])], dims=['x'])
-        expected = DataArray(np.array([7, 8, 3]), coords=[np.array([1, 5, 9])], dims=['x'])
+        array = DataArray(np.array([2, 7, 1, 8, 3]),
+                          coords=[np.array([3, 1, 4, 5, 9])], dims=['x'])
+        expected = DataArray(np.array([7, 8, 3]), coords=[np.array([1, 5, 9])],
+                             dims=['x'])
         actual = array.where(array > 2, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
         # 1d multiple variables
         ds = Dataset({'a': (('x'), [0, 1, 2, 3]), 'b': (('x'), [4, 5, 6, 7])})
-        expected = Dataset({'a': (('x'), [np.nan, 1, 2, 3]), 'b': (('x'), [4, 5, 6, np.nan])})
+        expected = Dataset({'a': (('x'), [np.nan, 1, 2, 3]),
+                            'b': (('x'), [4, 5, 6, np.nan])})
         actual = ds.where((ds > 0) & (ds < 7), drop=True)
         self.assertDatasetIdentical(expected, actual)
 
@@ -3201,9 +3224,9 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # 2d with odd coordinates
-        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])},
-                     coords={'x': [4, 3], 'y': [1, 2],
-                             'z': (['x', 'y'], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]])})
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])}, coords={
+            'x': [4, 3], 'y': [1, 2],
+            'z': (['x', 'y'], [[np.e, np.pi], [np.pi * np.e, np.pi * 3]])})
         expected = Dataset({'a': (('x', 'y'), [[3]])},
                            coords={'x': [3], 'y': [2],
                                    'z': (['x', 'y'], [[np.pi * 3]])})
@@ -3211,8 +3234,10 @@ class TestDataset(TestCase):
         self.assertDatasetIdentical(expected, actual)
 
         # 2d multiple variables
-        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6, 7]])})
-        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]), 'b': (('x', 'y'), [[4, 5], [6, 7]])})
+        ds = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]]),
+                      'b': (('x', 'y'), [[4, 5], [6, 7]])})
+        expected = Dataset({'a': (('x', 'y'), [[np.nan, 1], [2, 3]]),
+                            'b': (('x', 'y'), [[4, 5], [6, 7]])})
         actual = ds.where(ds > 0, drop=True)
         self.assertDatasetIdentical(expected, actual)
 
@@ -3271,18 +3296,22 @@ class TestDataset(TestCase):
     def test_reduce_cumsum_test_dims(self):
         data = create_test_data()
         for cumfunc in ['cumsum', 'cumprod']:
-            with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
+            with raises_regex(ValueError,
+                              "must supply either single 'dim' or 'axis'"):
                 getattr(data, cumfunc)()
-            with raises_regex(ValueError, "must supply either single 'dim' or 'axis'"):
+            with raises_regex(ValueError,
+                              "must supply either single 'dim' or 'axis'"):
                 getattr(data, cumfunc)(dim=['dim1', 'dim2'])
             with raises_regex(ValueError, 'Dataset does not contain'):
                 getattr(data, cumfunc)(dim='bad_dim')
 
             # ensure dimensions are correct
-            for reduct, expected in [('dim1', ['dim1', 'dim2', 'dim3', 'time']),
-                                     ('dim2', ['dim1', 'dim2', 'dim3', 'time']),
-                                     ('dim3', ['dim1', 'dim2', 'dim3', 'time']),
-                                     ('time', ['dim1', 'dim2', 'dim3'])]:
+            for reduct, expected in [
+                ('dim1', ['dim1', 'dim2', 'dim3', 'time']),
+                ('dim2', ['dim1', 'dim2', 'dim3', 'time']),
+                ('dim3', ['dim1', 'dim2', 'dim3', 'time']),
+                ('time', ['dim1', 'dim2', 'dim3'])
+            ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
                 print(reduct, actual, expected)
                 self.assertItemsEqual(actual, expected)
@@ -3756,21 +3785,25 @@ class TestDataset(TestCase):
         self.assertFalse(bool(new_ds.data_vars))
 
         # Test return one DataArray.
-        new_ds = ds.filter_by_attrs(standard_name='convective_precipitation_flux')
-        self.assertEqual(new_ds['precipitation'].standard_name, 'convective_precipitation_flux')
+        new_ds = ds.filter_by_attrs(
+            standard_name='convective_precipitation_flux')
+        self.assertEqual(new_ds['precipitation'].standard_name,
+                         'convective_precipitation_flux')
         self.assertDatasetEqual(new_ds['precipitation'], ds['precipitation'])
 
         # Test return more than one DataArray.
         new_ds = ds.filter_by_attrs(standard_name='air_potential_temperature')
         self.assertEqual(len(new_ds.data_vars), 2)
         for var in new_ds.data_vars:
-            self.assertEqual(new_ds[var].standard_name, 'air_potential_temperature')
+            self.assertEqual(new_ds[var].standard_name,
+                             'air_potential_temperature')
 
         # Test callable.
         new_ds = ds.filter_by_attrs(height=lambda v: v is not None)
         self.assertEqual(len(new_ds.data_vars), 2)
         for var in new_ds.data_vars:
-            self.assertEqual(new_ds[var].standard_name, 'air_potential_temperature')
+            self.assertEqual(new_ds[var].standard_name,
+                             'air_potential_temperature')
 
         new_ds = ds.filter_by_attrs(height='10 m')
         self.assertEqual(len(new_ds.data_vars), 1)

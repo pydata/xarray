@@ -107,7 +107,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             # don't include indexes in priority_vars, because we didn't align
             # first
             priority_vars = OrderedDict(
-                (k, v) for k, v in self.variables.items() if k not in self.dims)
+                kv for kv in self.variables.items() if kv[0] not in self.dims)
             variables = merge_coords_for_inplace_math(
                 [self.variables, other.variables], priority_vars=priority_vars)
             yield

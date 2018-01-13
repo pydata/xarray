@@ -437,7 +437,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.ds['x'], x)
         self.assertDataArrayIdentical(self.ds['y'], y)
 
-        I = ReturnItem()
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for i in [I[:], I[...], I[x.values], I[x.variable], I[x], I[x, y],
                   I[x.values > -1], I[x.variable > -1], I[x > -1],
                   I[x > -1, y > -1]]:
@@ -2890,8 +2890,8 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
-            self.assertArrayEqual(coord.points,
-                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertArrayEqual(
+                coord.points, CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
@@ -2963,8 +2963,8 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
-            self.assertArrayEqual(coord.points,
-                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertArrayEqual(
+                coord.points, CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))

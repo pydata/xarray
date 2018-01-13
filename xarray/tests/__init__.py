@@ -22,7 +22,7 @@ try:
     from pandas.testing import assert_frame_equal
 except ImportError:
     # old location, for pandas < 0.20
-    from pandas.util.testing import assert_frame_equal
+    from pandas.util.testing import assert_frame_equal  # noqa: F401
 
 try:
     import unittest2 as unittest
@@ -32,7 +32,7 @@ except ImportError:
 try:
     from unittest import mock
 except ImportError:
-    import mock
+    import mock  # noqa: F401
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -86,7 +86,7 @@ if has_dask:
 try:
     import_seaborn()
     has_seaborn = True
-except:
+except ImportError:
     has_seaborn = False
 requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
 

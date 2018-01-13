@@ -109,9 +109,9 @@ class TestDictionaries(TestCase):
         y['c'] = np.inf
         self.assertTrue(utils.dict_equiv(x, y))  # inf == inf
         y = dict(y)
-        self.assertTrue(utils.dict_equiv(x, y))  # different dictionary types are fine
+        self.assertTrue(utils.dict_equiv(x, y))  # different dict types are ok
         y['b'] = 3 * np.arange(3)
-        self.assertFalse(utils.dict_equiv(x, y))  # not equal when arrays differ
+        self.assertFalse(utils.dict_equiv(x, y))  # unequal when arrays differ
 
     def test_frozen(self):
         x = utils.Frozen(self.x)

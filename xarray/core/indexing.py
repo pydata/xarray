@@ -125,8 +125,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
                                       _try_get_item(label.stop),
                                       _try_get_item(label.step))
         if not isinstance(indexer, slice):
-            # unlike pandas, in xarray we never want to silently convert a slice
-            # indexer into an array indexer
+            # unlike pandas, in xarray we never want to silently convert a
+            # slice indexer into an array indexer
             raise KeyError('cannot represent labeled-based slice indexer for '
                            'dimension %r with a slice over integer positions; '
                            'the index is unsorted or non-unique' % index_name)
@@ -134,8 +134,8 @@ def convert_label_indexer(index, label, index_name='', method=None,
     elif is_dict_like(label):
         is_nested_vals = _is_nested_tuple(tuple(label.values()))
         if not isinstance(index, pd.MultiIndex):
-            raise ValueError('cannot use a dict-like object for selection on a '
-                             'dimension that does not have a MultiIndex')
+            raise ValueError('cannot use a dict-like object for selection on '
+                             'a dimension that does not have a MultiIndex')
         elif len(label) == index.nlevels and not is_nested_vals:
             indexer = index.get_loc(tuple((label[k] for k in index.names)))
         else:

@@ -56,10 +56,13 @@ def test_groupby_da_datetime():
     dd = times.to_pydatetime()
     reference_dates = [dd[0], dd[2]]
     labels = reference_dates[0:1] * 2 + reference_dates[1:2] * 2
-    ind = xr.DataArray(labels, coords=dict(time=times), dims='time', name='reference_date')
+    ind = xr.DataArray(labels, coords=dict(time=times), dims='time',
+                       name='reference_date')
     g = foo.groupby(ind)
     actual = g.sum(dim='time')
-    expected = xr.DataArray([3, 7], coords=dict(reference_date=reference_dates), dims='reference_date')
+    expected = xr.DataArray([3, 7],
+                            coords=dict(reference_date=reference_dates),
+                            dims='reference_date')
     assert actual.equals(expected)
 
 

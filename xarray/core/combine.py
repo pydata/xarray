@@ -9,7 +9,8 @@ from . import utils
 from .alignment import align
 from .merge import merge
 from .pycompat import iteritems, OrderedDict, basestring
-from .variable import Variable, as_variable, IndexVariable, concat as concat_vars
+from .variable import Variable, as_variable, IndexVariable, \
+    concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -103,12 +104,12 @@ def concat(objs, dim=None, data_vars='all', coords='different',
 
     if mode is not None:
         raise ValueError('`mode` is no longer a valid argument to '
-                         'xarray.concat; it has been split into the `data_vars` '
-                         'and `coords` arguments')
+                         'xarray.concat; it has been split into the '
+                         '`data_vars` and `coords` arguments')
     if concat_over is not None:
         raise ValueError('`concat_over` is no longer a valid argument to '
-                         'xarray.concat; it has been split into the `data_vars` '
-                         'and `coords` arguments')
+                         'xarray.concat; it has been split into the '
+                         '`data_vars` and `coords` arguments')
 
     if isinstance(first_obj, DataArray):
         f = _dataarray_concat
@@ -166,8 +167,8 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                     if k not in concat_over:
                         # Compare the variable of all datasets vs. the one
                         # of the first dataset. Perform the minimum amount of
-                        # loads in order to avoid multiple loads from disk while
-                        # keeping the RAM footprint low.
+                        # loads in order to avoid multiple loads from disk
+                        # while keeping the RAM footprint low.
                         v_lhs = datasets[0].variables[k].load()
                         # We'll need to know later on if variables are equal.
                         computed = []
@@ -199,11 +200,11 @@ def _calc_concat_over(datasets, dim, data_vars, coords):
                 if subset == 'coords':
                     raise ValueError(
                         'some variables in coords are not coordinates on '
-                        'the first dataset: %s' % invalid_vars)
+                        'the first dataset: %s' % (invalid_vars,))
                 else:
                     raise ValueError(
-                        'some variables in data_vars are not data variables on '
-                        'the first dataset: %s' % invalid_vars)
+                        'some variables in data_vars are not data variables '
+                        'on the first dataset: %s' % (invalid_vars,))
             concat_over.update(opt)
 
     process_subset_opt(data_vars, 'data_vars')
@@ -376,8 +377,8 @@ def auto_combine(datasets,
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
 
-    It does not concatenate along more than one dimension or sort data under any
-    circumstances. It does align coordinates, but different variables on
+    It does not concatenate along more than one dimension or sort data under
+    any circumstances. It does align coordinates, but different variables on
     datasets can cause it to fail under some scenarios. In complex cases, you
     may need to clean up your data and use ``concat``/``merge`` explicitly.
 
@@ -391,9 +392,9 @@ def auto_combine(datasets,
         Dataset objects to merge.
     concat_dim : str or DataArray or Index, optional
         Dimension along which to concatenate variables, as used by
-        :py:func:`xarray.concat`. You only need to provide this argument if the
-        dimension along which you want to concatenate is not a dimension in
-        the original datasets, e.g., if you want to stack a collection of
+        :py:func:`xarray.concat`. You only need to provide this argument if
+        the dimension along which you want to concatenate is not a dimension
+        in the original datasets, e.g., if you want to stack a collection of
         2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable

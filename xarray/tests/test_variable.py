@@ -183,10 +183,12 @@ class VariableSubclassTestCases(object):
         td = timedelta(hours=1)
 
         x = self.cls(['x'], [np.timedelta64(td)])
-        self._assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
+        self._assertIndexedLikeNDArray(
+            x, np.timedelta64(td), 'timedelta64[ns]')
 
         x = self.cls(['x'], pd.to_timedelta([td]))
-        self._assertIndexedLikeNDArray(x, np.timedelta64(td), 'timedelta64[ns]')
+        self._assertIndexedLikeNDArray(
+            x, np.timedelta64(td), 'timedelta64[ns]')
 
     def test_index_0d_not_a_time(self):
         d = np.datetime64('NaT', 'ns')
@@ -318,7 +320,8 @@ class VariableSubclassTestCases(object):
         # binary ops with all variables
         self.assertArrayEqual(v + v, 2 * v)
         w = self.cls(['x'], y, {'foo': 'bar'})
-        self.assertVariableIdentical(v + w, self.cls(['x'], x + y).to_base_variable())
+        self.assertVariableIdentical(
+            v + w, self.cls(['x'], x + y).to_base_variable())
         self.assertArrayEqual((v * w).values, x * y)
         # something complicated
         self.assertArrayEqual((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
@@ -349,10 +352,11 @@ class VariableSubclassTestCases(object):
         self.assertArrayEqual(v.astype(float), x.astype(float))
         # think this is a break, that argsort changes the type
         self.assertVariableIdentical(v.argsort(), v.to_base_variable())
-        self.assertVariableIdentical(v.clip(2, 3),
-                                     self.cls('x', x.clip(2, 3)).to_base_variable())
+        self.assertVariableIdentical(
+            v.clip(2, 3), self.cls('x', x.clip(2, 3)).to_base_variable())
         # test ufuncs
-        self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)).to_base_variable())
+        self.assertVariableIdentical(
+            np.sin(v), self.cls(['x'], np.sin(x)).to_base_variable())
         self.assertIsInstance(np.sin(v), Variable)
         self.assertNotIsInstance(np.sin(v), IndexVariable)
 
@@ -430,11 +434,15 @@ class VariableSubclassTestCases(object):
         self.assertVariableIdentical(expected, actual)
         # test concatenating along a dimension
         v = Variable(['time', 'x'], np.random.random((10, 8)))
-        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
-        self.assertVariableIdentical(v, Variable.concat([v[:1], v[1:]], 'time'))
+        self.assertVariableIdentical(
+            v, Variable.concat([v[:5], v[5:]], 'time'))
+        self.assertVariableIdentical(
+            v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
+        self.assertVariableIdentical(
+            v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
-        self.assertVariableIdentical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
+        self.assertVariableIdentical(
+            v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
         with raises_regex(ValueError, 'all input arrays must have'):
             Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
@@ -442,7 +450,8 @@ class VariableSubclassTestCases(object):
         # different or conflicting attributes should be removed
         v = self.cls('a', np.arange(5), {'foo': 'bar'})
         w = self.cls('a', np.ones(5))
-        expected = self.cls('a', np.concatenate([np.arange(5), np.ones(5)])).to_base_variable()
+        expected = self.cls(
+            'a', np.concatenate([np.arange(5), np.ones(5)])).to_base_variable()
         self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
         w.attrs['foo'] = 2
         self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
@@ -504,7 +513,8 @@ class VariableSubclassTestCases(object):
         expected_im = self.cls('x', -np.arange(3), {'foo': 'bar'})
         self.assertVariableIdentical(v.imag, expected_im)
 
-        expected_abs = self.cls('x', np.sqrt(2 * np.arange(3) ** 2)).to_base_variable()
+        expected_abs = self.cls(
+            'x', np.sqrt(2 * np.arange(3) ** 2)).to_base_variable()
         self.assertVariableAllClose(abs(v), expected_abs)
 
     def test_aggregate_complex(self):
@@ -1400,7 +1410,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         np.testing.assert_allclose(v.rank('x').values, expect_0)
         np.testing.assert_allclose(v.rank('y').values, expect_1)
         # int
-        v = Variable(['x'], [3,2,1])
+        v = Variable(['x'], [3, 2, 1])
         expect = bn.rankdata(v.data, axis=0)
         np.testing.assert_allclose(v.rank('x').values, expect)
         # str
@@ -1426,7 +1436,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable('x', np.array([1, np.nan, 2, 3]))
         self.assertVariableIdentical(v.mean(), Variable([], 2))
         self.assertVariableIdentical(v.mean(skipna=True), Variable([], 2))
-        self.assertVariableIdentical(v.mean(skipna=False), Variable([], np.nan))
+        self.assertVariableIdentical(v.mean(skipna=False),
+                                     Variable([], np.nan))
         self.assertVariableIdentical(np.mean(v), Variable([], 2))
 
         self.assertVariableIdentical(v.prod(), Variable([], 6))
@@ -1677,7 +1688,8 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
     def test_concat_periods(self):
         periods = pd.period_range('2000-01-01', periods=10)
-        coords = [IndexVariable('t', periods[:5]), IndexVariable('t', periods[5:])]
+        coords = [IndexVariable('t', periods[:5]),
+                  IndexVariable('t', periods[5:])]
         expected = IndexVariable('t', periods)
         actual = IndexVariable.concat(coords, dim='t')
         assert actual.identical(expected)

@@ -550,8 +550,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         ----------
         func : function
             Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
-            np.ndarray over an integer valued axis.
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing
+            an np.ndarray over an integer valued axis.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
@@ -632,8 +632,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         ----------
         func : function
             Function which can be called in the form
-            `func(x, axis=axis, **kwargs)` to return the result of collapsing an
-            np.ndarray over an integer valued axis.
+            `func(x, axis=axis, **kwargs)` to return the result of collapsing
+            an np.ndarray over an integer valued axis.
         dim : str or sequence of str, optional
             Dimension(s) over which to apply `func`.
         axis : int or sequence of int, optional
