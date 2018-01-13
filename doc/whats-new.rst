@@ -77,6 +77,8 @@ Enhancements
   (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
   Correspondingly, encoded variables may also be saved with a smaller dtype.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- `.dt` accessor can now ceil, floor and round timestamps to specified frequency.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 

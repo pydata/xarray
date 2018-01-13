@@ -95,3 +95,14 @@ class TestDatetimeAccessor(TestCase):
         seasons = xr.DataArray(seasons)
 
         assert_array_equal(seasons.values, dates.dt.season.values)
+
+    def test_rounders(self):
+        dates = pd.date_range("2014-01-01", "2014-05-01", freq='H')
+        xdates = xr.DataArray(np.arange(len(dates)),
+                              dims=['time'], coords=[dates])
+        assert_array_equal(dates.floor('D').values,
+                           xdates.time.dt.floor('D').values)
+        assert_array_equal(dates.ceil('D').values,
+                           xdates.time.dt.ceil('D').values)
+        assert_array_equal(dates.round('D').values,
+                           xdates.time.dt.round('D').values)

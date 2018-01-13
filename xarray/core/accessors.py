@@ -58,6 +58,49 @@ def _get_date_field(values, name, dtype):
         return _access_through_series(values, name)
 
 
+def _round_series(values, name, freq):
+    """Coerce an array of datetime-like values to a pandas Series and
+    apply requested rounding
+    """
+    values_as_series = pd.Series(values.ravel())
+    if name == 'floor':
+        field_values = values_as_series.dt.floor(freq=freq).values
+    if name == 'ceil':
+        field_values = values_as_series.dt.ceil(freq=freq).values
+    if name == 'round':
+        field_values = values_as_series.dt.round(freq=freq).values
+
+    return field_values.reshape(values.shape)
+
+
+def _round_field(values, name, freq, dtype):
+    """Indirectly access pandas rounding functions by wrapping data
+    as a Series and calling through `.dt` attribute.
+
+    Parameters
+    ----------
+    values : np.ndarray or dask.array-like
+        Array-like container of datetime-like values
+    name : str (ceil, floor, round)
+        Name of rounding function
+    freq : a freq string indicating the rounding resolution
+    dtype : dtype-like
+        dtype for output date field values
+
+    Returns
+    -------
+    rounded timestamps : same type as values
+        Array-like of datetime fields accessed for each element in values
+
+    """
+    if isinstance(values, dask_array_type):
+        from dask.array import map_blocks
+        return map_blocks(_round_series,
+                          values, name, freq=freq, dtype=dtype)
+    else:
+        return _round_series(values, name, freq)
+
+
 class DatetimeAccessor(object):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
@@ -147,3 +190,23 @@ class DatetimeAccessor(object):
     time = _tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
     )
+
+    def _tslib_round_accessor(self, name, freq, dtype=None):
+        if dtype is None:
+            dtype = self._obj.dtype
+        obj_type = type(self._obj)
+        result = _round_field(self._obj.data, name, freq, dtype)
+        return obj_type(result, name=name,
+                        coords=self._obj.coords, dims=self._obj.dims)
+
+    def floor(self, freq):
+        ''' Round timestamp downward. '''
+        return self._tslib_round_accessor("floor", freq, object)
+
+    def ceil(self, freq):
+        ''' Round timestamp upward. '''
+        return self._tslib_round_accessor("ceil", freq, object)
+
+    def round(self, freq):
+        ''' Round timestamp. '''
+        return self._tslib_round_accessor("round", freq, object)
