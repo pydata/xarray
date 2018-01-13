@@ -2930,13 +2930,14 @@ class TestDataArray(TestCase):
         coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
         coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
 
-        original = DataArray(da.from_array(
-            np.arange(-1, 5, dtype='float').reshape(2, 3), 3), coord_dict,
-                             name='Temperature',
-                             attrs={'baz': 123, 'units': 'Kelvin',
-                                    'standard_name': 'fire_temperature',
-                                    'long_name': 'Fire Temperature'},
-                             dims=('distance', 'time'))
+        original = DataArray(
+            da.from_array(np.arange(-1, 5, dtype='float').reshape(2, 3), 3),
+            coord_dict,
+            name='Temperature',
+            attrs=dict(baz=123, units='Kelvin',
+                       standard_name='fire_temperature',
+                       long_name='Fire Temperature'),
+            dims=('distance', 'time'))
 
         # Set a bad value to test the masking logic
         original.data = da.ma.masked_less(original.data, 0)
@@ -3257,10 +3258,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(ar.rank('dim_0'), expect_0)
         self.assertDataArrayEqual(ar.rank('dim_1'), expect_1)
         # int
-        x = DataArray([3,2,1])
+        x = DataArray([3, 2, 1])
         self.assertDataArrayEqual(x.rank('dim_0'), x)
         # str
-        y =  DataArray(['c', 'b', 'a'])
+        y = DataArray(['c', 'b', 'a'])
         self.assertDataArrayEqual(y.rank('dim_0'), x)
 
         x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=('z',))

@@ -1195,8 +1195,8 @@ class BaseZarrTest(CFEncodedDataTest):
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
             for var in expected.variables.keys():
-                assert (zarr_group[var].attrs[self.DIMENSION_KEY]
-                        == list(expected[var].dims))
+                assert (zarr_group[var].attrs[self.DIMENSION_KEY] ==
+                        list(expected[var].dims))
 
             with xr.decode_cf(store) as actual:
                 # make sure it is hidden
@@ -2426,7 +2426,7 @@ class TestRasterio(TestCase):
         with create_tmp_file(suffix='.dat') as tmp_file:
             # data
             nx, ny, nz = 4, 3, 3
-            data = np.arange(nx*ny*nz,
+            data = np.arange(nx * ny * nz,
                              dtype=rasterio.float32).reshape(nz, ny, nx)
             transform = from_origin(5000, 80000, 1000, 2000.)
             with rasterio.open(
@@ -2437,25 +2437,22 @@ class TestRasterio(TestCase):
                     transform=transform,
                     dtype=rasterio.float32) as s:
                 s.update_tags(
-                        ns='ENVI',
-                        description='{Tagged file}',
-                        wavelength='{123.000000, 234.234000, 345.345678}',
-                        fwhm='{1.000000, 0.234000, 0.000345}')
+                    ns='ENVI',
+                    description='{Tagged file}',
+                    wavelength='{123.000000, 234.234000, 345.345678}',
+                    fwhm='{1.000000, 0.234000, 0.000345}')
                 s.write(data)
                 dx, dy = s.res[0], -s.res[1]
 
             # Tests
-            expected = DataArray(data, dims=('band', 'y', 'x'),
-                                 coords={
-                                     'band': [1, 2, 3],
-                                     'y': -np.arange(ny) * 2000 + 80000 + dy/2,
-                                     'x': np.arange(nx) * 1000 + 5000 + dx/2,
-                                     'wavelength': (
-                                         'band',
-                                         np.array([123, 234.234, 345.345678])),
-                                     'fwhm': (
-                                         'band',
-                                         np.array([1, 0.234, 0.000345]))})
+            coords = {
+                'band': [1, 2, 3],
+                'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
+                'x': np.arange(nx) * 1000 + 5000 + dx / 2,
+                'wavelength': ('band', np.array([123, 234.234, 345.345678])),
+                'fwhm': ('band', np.array([1, 0.234, 0.000345])),
+            }
+            expected = DataArray(data, dims=('band', 'y', 'x'), coords=coords)
 
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)

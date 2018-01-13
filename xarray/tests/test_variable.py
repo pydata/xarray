@@ -1404,7 +1404,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expect = bn.rankdata(v.data, axis=0)
         np.testing.assert_allclose(v.rank('x').values, expect)
         # str
-        v =  Variable(['x'], ['c', 'b', 'a'])
+        v = Variable(['x'], ['c', 'b', 'a'])
         expect = bn.rankdata(v.data, axis=0)
         np.testing.assert_allclose(v.rank('x').values, expect)
         # pct

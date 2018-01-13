@@ -71,8 +71,8 @@ def _replace_slices_with_arrays(key, shape):
             slice_count += 1
         else:
             assert isinstance(k, np.ndarray)
-            k = k[(slice(None),) * array_subspace_size
-                  + (np.newaxis,) * num_slices]
+            k = k[(slice(None),) * array_subspace_size +
+                  (np.newaxis,) * num_slices]
         new_key.append(k)
     return tuple(new_key)
 

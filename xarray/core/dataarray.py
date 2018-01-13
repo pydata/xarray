@@ -19,7 +19,6 @@ from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
-from .computation import apply_ufunc
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes, assert_coordinate_consistent,
                           remap_label_indexers)
