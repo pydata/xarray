@@ -322,7 +322,12 @@ class ZarrStore(AbstractWritableDataStore):
         for k, v in self.ds.arrays():
             try:
                 for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
+                    if d in dimensions and dimensions[d] != s:
+                        raise ValueError(
+                            'found conflicting lengths for dimension %s '
+                            '(%d != %d)' % (d, s, dimensions[d]))
                     dimensions[d] = s
+
             except KeyError:
                 raise KeyError("Zarr object is missing the attribute `%s`, "
                                "which is required for xarray to determine "
@@ -335,13 +340,14 @@ class ZarrStore(AbstractWritableDataStore):
                 "Zarr backend doesn't know how to handle unlimited dimensions")
 
     def set_attributes(self, attributes):
-        encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
-                                    for k, v in iteritems(attributes))
-        self.ds.attrs.put(encoded_attrs)
+        self.ds.attrs.put(attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
         return variable
+
+    def encode_attribute(self, a):
+        return _encode_zarr_attr_value(a)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -361,7 +367,7 @@ class ZarrStore(AbstractWritableDataStore):
         # the magic for storing the hidden dimension data
         encoded_attrs[_DIMENSION_KEY] = dims
         for k, v in iteritems(attrs):
-            encoded_attrs[k] = _encode_zarr_attr_value(v)
+            encoded_attrs[k] = self.encode_attribute(v)
 
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)

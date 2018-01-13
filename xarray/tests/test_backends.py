@@ -1222,12 +1222,10 @@ class BaseZarrTest(CFEncodedDataTest):
 
             with xr.decode_cf(store) as actual:
                 # make sure it is hidden
-                # assert self.DIMENSION_KEY not in actual.attrs
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
             # put it back and try removing from a variable
-            # zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
                 with xr.decode_cf(store) as actual:
