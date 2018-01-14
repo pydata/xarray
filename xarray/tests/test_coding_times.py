@@ -9,8 +9,7 @@ import pandas as pd
 
 from xarray import Variable, coding
 from . import (
-    TestCase, requires_netCDF4, assert_equal, assert_identical,
-    assert_array_equal)
+    TestCase, requires_netCDF4, assert_array_equal)
 import pytest
 
 
@@ -219,7 +218,7 @@ class TestDatetime(TestCase):
                                                              calendar=calendar)
                     assert len(w) == 1
                     assert 'Unable to decode time axis' in \
-                                  str(w[0].message)
+                        str(w[0].message)
 
                 assert actual.dtype == np.dtype('O')
                 assert_array_equal(actual, expected)

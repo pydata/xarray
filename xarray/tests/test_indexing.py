@@ -35,7 +35,7 @@ class TestIndexers(TestCase):
             j = indexing.expanded_indexer(i, x.ndim)
             assert_array_equal(x[i], x[j])
             assert_array_equal(self.set_to_zero(x, i),
-                                  self.set_to_zero(x, j))
+                               self.set_to_zero(x, j))
         with raises_regex(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
 

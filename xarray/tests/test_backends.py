@@ -2193,9 +2193,9 @@ class TestRasterio(TestCase):
 
             # Tests
             expected = DataArray(data, dims=('band', 'y', 'x'), coords={
-                 'band': [1, 2, 3],
-                 'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
-                 'x': np.arange(nx) * 1000 + 5000 + dx / 2,
+                'band': [1, 2, 3],
+                'y': -np.arange(ny) * 2000 + 80000 + dy / 2,
+                'x': np.arange(nx) * 1000 + 5000 + dx / 2,
             })
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
@@ -2362,9 +2362,9 @@ class TestRasterio(TestCase):
             # ref
             expected = DataArray(
                 data, dims=('band', 'y', 'x'), coords={
-                     'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
-                     'y': (-np.arange(ny) * 2 + 2) + dy / 2,
-                     'band': [1, 2, 3]})
+                    'x': (np.arange(nx) * 0.5 + 1) + dx / 2,
+                    'y': (-np.arange(ny) * 2 + 2) + dy / 2,
+                    'band': [1, 2, 3]})
 
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:

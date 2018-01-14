@@ -880,7 +880,7 @@ class TestDataset(TestCase):
         for d in data.dims:
             if d in slicers:
                 assert ret.dims[d] == \
-                                 np.arange(data.dims[d])[slicers[d]].size
+                    np.arange(data.dims[d])[slicers[d]].size
             else:
                 assert data.dims[d] == ret.dims[d]
         # Verify that the data is what we expect
@@ -3757,7 +3757,7 @@ class TestDataset(TestCase):
         for reduct, expected in [('dim2', ['dim1', 'dim3', 'time']), ([
                 'dim2', 'time'
         ], ['dim1', 'dim3']), (('dim2', 'time'), ['dim1', 'dim3']),
-                                 ((), ['dim1', 'dim2', 'dim3', 'time'])]:
+                ((), ['dim1', 'dim2', 'dim3', 'time'])]:
             actual = data.min(dim=reduct).dims
             print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
@@ -3798,7 +3798,7 @@ class TestDataset(TestCase):
                     'dim1', 'dim2', 'dim3', 'time'
             ]), ('dim2', ['dim1', 'dim2', 'dim3',
                           'time']), ('dim3', ['dim1', 'dim2', 'dim3', 'time']),
-                                     ('time', ['dim1', 'dim2', 'dim3'])]:
+                    ('time', ['dim1', 'dim2', 'dim3'])]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
                 print(reduct, actual, expected)
                 self.assertItemsEqual(actual, expected)

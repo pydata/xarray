@@ -143,7 +143,7 @@ class TestBoolTypeArray(TestCase):
         bx = conventions.BoolTypeArray(x)
         assert bx.dtype == np.bool
         assert_array_equal(bx, np.array([True, False, True, True, False],
-                                           dtype=np.bool))
+                                        dtype=np.bool))
 
 
 class TestNativeEndiannessArray(TestCase):

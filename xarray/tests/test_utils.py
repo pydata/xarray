@@ -83,7 +83,7 @@ class TestDictionaries(TestCase):
 
     def test_ordered_dict_intersection(self):
         assert {'b': 'B'} == \
-                         utils.ordered_dict_intersection(self.x, self.y)
+            utils.ordered_dict_intersection(self.x, self.y)
         assert {} == utils.ordered_dict_intersection(self.x, self.z)
 
     def test_dict_equiv(self):
@@ -121,14 +121,14 @@ class TestDictionaries(TestCase):
             x.update(self.y)
         assert x.mapping == self.x
         assert repr(x) in ("Frozen({'a': 'A', 'b': 'B'})",
-                                "Frozen({'b': 'B', 'a': 'A'})")
+                           "Frozen({'b': 'B', 'a': 'A'})")
 
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
         self.assertItemsEqual(y, ['a', 'b', 'c'])
         assert repr(utils.SortedKeysDict()) == \
-                         "SortedKeysDict({})"
+            "SortedKeysDict({})"
 
     def test_chain_map(self):
         m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
@@ -155,13 +155,13 @@ class Test_is_uniform_and_sorted(TestCase):
         assert utils.is_uniform_spaced(np.arange(5))
 
     def test_sorted_not_uniform(self):
-        assert False == utils.is_uniform_spaced([-2, 1, 89])
+        assert not utils.is_uniform_spaced([-2, 1, 89])
 
     def test_not_sorted_uniform(self):
-        assert False == utils.is_uniform_spaced([1, -1, 3])
+        assert not utils.is_uniform_spaced([1, -1, 3])
 
     def test_not_sorted_not_uniform(self):
-        assert False == utils.is_uniform_spaced([4, 1, 89])
+        assert not utils.is_uniform_spaced([4, 1, 89])
 
     def test_two_numbers(self):
         assert utils.is_uniform_spaced([0, 1.7])

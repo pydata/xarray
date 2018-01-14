@@ -40,6 +40,7 @@ def test_dask_distributed_netcdf_integration_test(loop, engine):
                     computed = restored.compute()
                     assert_allclose(original, computed)
 
+
 @requires_zarr
 def test_dask_distributed_zarr_integration_test(loop):
     with cluster() as (s, _):
@@ -51,6 +52,7 @@ def test_dask_distributed_zarr_integration_test(loop):
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
+
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',
                     reason='Need recent distributed version to clean up get')
