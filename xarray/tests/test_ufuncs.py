@@ -13,9 +13,8 @@ from . import (
     assert_equal)
 
 
-
 class TestOps(TestCase):
-    def assertIdentical(self, a, b):
+    def assert_identical(self, a, b):
         assert type(a) is type(b) or (float(a) == float(b))
         try:
             assert a.identical(b), (a, b)
@@ -29,7 +28,7 @@ class TestOps(TestCase):
                 xr.DataArray([0, 0], dims='x'),
                 xr.Dataset({'y': ('x', [0, 0])})]
         for a in args:
-            self.assertIdentical(a + 1, xu.cos(a))
+            self.assert_identical(a + 1, xu.cos(a))
 
     def test_binary(self):
         args = [0,
@@ -39,10 +38,10 @@ class TestOps(TestCase):
                 xr.Dataset({'y': ('x', [0, 0])})]
         for n, t1 in enumerate(args):
             for t2 in args[n:]:
-                self.assertIdentical(t2 + 1, xu.maximum(t1, t2 + 1))
-                self.assertIdentical(t2 + 1, xu.maximum(t2, t1 + 1))
-                self.assertIdentical(t2 + 1, xu.maximum(t1 + 1, t2))
-                self.assertIdentical(t2 + 1, xu.maximum(t2 + 1, t1))
+                self.assert_identical(t2 + 1, xu.maximum(t1, t2 + 1))
+                self.assert_identical(t2 + 1, xu.maximum(t2, t1 + 1))
+                self.assert_identical(t2 + 1, xu.maximum(t1 + 1, t2))
+                self.assert_identical(t2 + 1, xu.maximum(t2 + 1, t1))
 
     def test_groupby(self):
         ds = xr.Dataset({'a': ('x', [0, 0, 0])}, {'c': ('x', [0, 0, 1])})
@@ -68,4 +67,4 @@ class TestOps(TestCase):
     def test_pickle(self):
         a = 1.0
         cos_pickled = pickle.loads(pickle.dumps(xu.cos))
-        self.assertIdentical(cos_pickled(a), xu.cos(a))
+        self.assert_identical(cos_pickled(a), xu.cos(a))
