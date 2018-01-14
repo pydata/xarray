@@ -262,7 +262,7 @@ def inject_reduce_methods(cls):
 
 def inject_cum_methods(cls):
     methods = ([(name, getattr(duck_array_ops, name), True)
-               for name in NAN_CUM_METHODS])
+                for name in NAN_CUM_METHODS])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
         func = cls._reduce_method(f, include_skipna, numeric_only)

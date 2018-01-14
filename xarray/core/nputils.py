@@ -120,6 +120,7 @@ class NumpyVIndexAdapter(object):
     This is a pure Python implementation of (some of) the logic in this NumPy
     proposal: https://github.com/numpy/numpy/pull/6256
     """
+
     def __init__(self, array):
         self._array = array
 

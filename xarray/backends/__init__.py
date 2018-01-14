@@ -11,3 +11,14 @@ from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore
 from .zarr import ZarrStore
+
+__all__ = [
+    'AbstractDataStore',
+    'InMemoryDataStore',
+    'NetCDF4DataStore',
+    'PydapDataStore',
+    'NioDataStore',
+    'ScipyDataStore',
+    'H5NetCDFStore',
+    'ZarrStore',
+]

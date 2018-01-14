@@ -203,11 +203,11 @@ class TestDataArray(TestCase):
     def test_encoding(self):
         expected = {'foo': 'bar'}
         self.dv.encoding['foo'] = 'bar'
-        assert expected, self.d == encoding
+        assert expected == self.dv.encoding
 
         expected = {'baz': 0}
         self.dv.encoding = expected
-        assert expected, self.d == encoding
+        assert expected == self.dv.encoding
         self.assertIsNot(expected, self.dv.encoding)
 
     def test_constructor(self):
@@ -437,7 +437,7 @@ class TestDataArray(TestCase):
         self.assertDataArrayIdentical(self.ds['x'], x)
         self.assertDataArrayIdentical(self.ds['y'], y)
 
-        I = ReturnItem()
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for i in [I[:], I[...], I[x.values], I[x.variable], I[x], I[x, y],
                   I[x.values > -1], I[x.variable > -1], I[x > -1],
                   I[x > -1, y > -1]]:
@@ -707,7 +707,7 @@ class TestDataArray(TestCase):
 
         # make sure we're raising errors in the right places
         with raises_regex(IndexError,
-                                     'Dimensions of indexers mismatch'):
+                          'Dimensions of indexers mismatch'):
             da.isel(y=(('points', ), [1, 2]), x=(('points', ), [1, 2, 3]))
 
         # tests using index or DataArray as indexers
@@ -869,20 +869,20 @@ class TestDataArray(TestCase):
 
         # make sure we're raising errors in the right places
         with raises_regex(ValueError,
-                                     'All indexers must be the same length'):
+                          'All indexers must be the same length'):
             da.isel_points(y=[1, 2], x=[1, 2, 3])
         with raises_regex(ValueError,
-                                     'dimension bad_key does not exist'):
+                          'dimension bad_key does not exist'):
             da.isel_points(bad_key=[1, 2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(y=[1.5, 2.2])
         with raises_regex(TypeError, 'Indexers must be integers'):
             da.isel_points(x=[1, 2, 3], y=slice(3))
         with raises_regex(ValueError,
-                                     'Indexers must be 1 dimensional'):
+                          'Indexers must be 1 dimensional'):
             da.isel_points(y=1, x=2)
         with raises_regex(ValueError,
-                                     'Existing dimension names are not'):
+                          'Existing dimension names are not'):
             da.isel_points(y=[1, 2], x=[1, 2], dim='x')
 
         # using non string dims
@@ -2205,7 +2205,7 @@ class TestDataArray(TestCase):
         ys = np.arange(3)
         times = pd.date_range('2000-01-01', freq='6H', periods=5)
         data = np.tile(np.arange(5), (6, 3, 1))
-        xx, yy = np.meshgrid(xs*5, ys*2.5)
+        xx, yy = np.meshgrid(xs * 5, ys * 2.5)
         tt = np.arange(len(times), dtype=int)
         array = DataArray(data,
                           {'time': times, 'x': xs, 'y': ys},
@@ -2381,7 +2381,7 @@ class TestDataArray(TestCase):
         expected_times = times.to_series().resample('1H').asfreq().index
         # Split the times into equal sub-intervals to simulate the 6 hour
         # to 1 hour up-sampling
-        new_times_idx = np.linspace(0, len(times)-1, len(times)*5)
+        new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
         for kind in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                      'cubic']:
             actual = array.resample(time='1H').interpolate(kind)
@@ -2420,7 +2420,7 @@ class TestDataArray(TestCase):
                           ('x', 'y', 'time'))
 
         with raises_regex(TypeError,
-                                     "dask arrays are not yet supported"):
+                          "dask arrays are not yet supported"):
             array.resample(time='1H').interpolate('linear')
 
     def test_align(self):
@@ -2890,8 +2890,8 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
-            self.assertArrayEqual(coord.points,
-                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertArrayEqual(
+                coord.points, CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
@@ -2930,13 +2930,14 @@ class TestDataArray(TestCase):
         coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
         coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
 
-        original = DataArray(da.from_array(
-            np.arange(-1, 5, dtype='float').reshape(2, 3), 3), coord_dict,
-                             name='Temperature',
-                             attrs={'baz': 123, 'units': 'Kelvin',
-                                    'standard_name': 'fire_temperature',
-                                    'long_name': 'Fire Temperature'},
-                             dims=('distance', 'time'))
+        original = DataArray(
+            da.from_array(np.arange(-1, 5, dtype='float').reshape(2, 3), 3),
+            coord_dict,
+            name='Temperature',
+            attrs=dict(baz=123, units='Kelvin',
+                       standard_name='fire_temperature',
+                       long_name='Fire Temperature'),
+            dims=('distance', 'time'))
 
         # Set a bad value to test the masking logic
         original.data = da.ma.masked_less(original.data, 0)
@@ -2962,8 +2963,8 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             self.assertEqual(coord.var_name, original_coord.name)
-            self.assertArrayEqual(coord.points,
-                                  CFDatetimeCoder().encode(original_coord).values)
+            self.assertArrayEqual(
+                coord.points, CFDatetimeCoder().encode(original_coord).values)
             self.assertEqual(actual.coord_dims(coord),
                              original.get_axis_num
                              (original.coords[coord.var_name].dims))
@@ -3257,10 +3258,10 @@ class TestDataArray(TestCase):
         self.assertDataArrayEqual(ar.rank('dim_0'), expect_0)
         self.assertDataArrayEqual(ar.rank('dim_1'), expect_1)
         # int
-        x = DataArray([3,2,1])
+        x = DataArray([3, 2, 1])
         self.assertDataArrayEqual(x.rank('dim_0'), x)
         # str
-        y =  DataArray(['c', 'b', 'a'])
+        y = DataArray(['c', 'b', 'a'])
         self.assertDataArrayEqual(y.rank('dim_0'), x)
 
         x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=('z',))

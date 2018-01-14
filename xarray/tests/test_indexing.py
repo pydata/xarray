@@ -27,7 +27,7 @@ class TestIndexers(TestCase):
     def test_expanded_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)
-        I = ReturnItem()
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
                   I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:
@@ -137,7 +137,7 @@ class TestIndexers(TestCase):
 
 class TestLazyArray(TestCase):
     def test_slice_slice(self):
-        I = ReturnItem()
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
         x = np.arange(100)
         slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
                   I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
@@ -155,7 +155,7 @@ class TestLazyArray(TestCase):
         v = Variable(['i', 'j', 'k'], original)
         lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
-        I = ReturnItem()
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
         # test orthogonally applied indexers
         indexers = [I[:], 0, -2, I[:3], [0, 1, 2, 3], [0], np.arange(10) < 5]
         for i in indexers:
@@ -366,7 +366,7 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
 
     original = np.random.rand(10, 20, 30)
     v = Variable(['i', 'j', 'k'], original)
-    I = ReturnItem()
+    I = ReturnItem()  # noqa: E741  # allow ambiguous name
     # test orthogonally applied indexers
     indexers = [I[:], 0, -2, I[:3], np.array([0, 1, 2, 3]), np.array([0]),
                 np.arange(10) < 5]

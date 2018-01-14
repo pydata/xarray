@@ -227,6 +227,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
+
     def __init__(self, netcdf4_dataset, mode='r', writer=None, opener=None,
                  autoclose=False):
 

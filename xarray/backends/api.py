@@ -27,18 +27,18 @@ def _get_default_engine(path, allow_remote=False):
             engine = 'netcdf4'
         except ImportError:
             try:
-                import pydap
+                import pydap  # flake8: noqa
                 engine = 'pydap'
             except ImportError:
                 raise ValueError('netCDF4 or pydap is required for accessing '
                                  'remote datasets via OPeNDAP')
     else:
         try:
-            import netCDF4
+            import netCDF4  # flake8: noqa
             engine = 'netcdf4'
         except ImportError:  # pragma: no cover
             try:
-                import scipy.io.netcdf
+                import scipy.io.netcdf  # flake8: noqa
                 engine = 'scipy'
             except ImportError:
                 raise ValueError('cannot read or write netCDF files without '

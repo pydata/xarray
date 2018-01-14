@@ -287,7 +287,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
     @property
     def _in_memory(self):
-        return (isinstance(self._data, (np.ndarray, np.number, PandasIndexAdapter)) or
+        return (isinstance(self._data, (np.ndarray, np.number,
+                                        PandasIndexAdapter)) or
                 (isinstance(self._data, indexing.MemoryCachedArray) and
                  isinstance(self._data.array, indexing.NumpyIndexingAdapter)))
 
@@ -381,7 +382,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
     def _dask_finalize(results, array_func, array_args, dims, attrs, encoding):
         if isinstance(results, dict):  # persist case
             name = array_args[0]
-            results = {k: v for k, v in results.items() if k[0] == name}  # cull
+            results = {k: v for k, v in results.items() if k[0] == name}
         data = array_func(results, *array_args)
         return Variable(dims, data, attrs=attrs, encoding=encoding)
 
@@ -1152,8 +1153,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         Parameters
         ----------
         **dimensions : keyword arguments of the form old_dim={dim1: size1, ...}
-            Names of existing dimensions, and the new dimensions and sizes that they
-            map to.
+            Names of existing dimensions, and the new dimensions and sizes
+            that they map to.
 
         Returns
         -------
@@ -1248,9 +1249,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             dimension is unchanged. Where to insert the new dimension is
             determined by the first variable.
         positions : None or list of integer arrays, optional
-            List of integer arrays which specifies the integer positions to which
-            to assign each dataset along the concatenated dimension. If not
-            supplied, objects are concatenated in the provided order.
+            List of integer arrays which specifies the integer positions to
+            which to assign each dataset along the concatenated dimension.
+            If not supplied, objects are concatenated in the provided order.
         shortcut : bool, optional
             This option is used internally to speed-up groupby operations.
             If `shortcut` is True, some checks of internal consistency between
@@ -1418,8 +1419,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
-        would have been otherwise assigned to all of the values within that set.
-        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+        would have been otherwise assigned to all of the values within that
+        set.  Ranks begin at 1, not 0. If `pct`, computes percentage ranks.
 
         NaNs in the input array are returned as NaNs.
 
