@@ -29,11 +29,11 @@ class TestStackedBytesArray(TestCase):
         array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
         actual = conventions.StackedBytesArray(array)
         expected = np.array([b'abc', b'def'], dtype='S')
-        self.assertEqual(actual.dtype, expected.dtype)
-        self.assertEqual(actual.shape, expected.shape)
-        self.assertEqual(actual.size, expected.size)
-        self.assertEqual(actual.ndim, expected.ndim)
-        self.assertEqual(len(actual), len(expected))
+        assert actual.dtype == expected.dtype
+        assert actual.shape == expected.shape
+        assert actual.size == expected.size
+        assert actual.ndim == expected.ndim
+        assert len(actual) == len(expected)
         self.assertArrayEqual(expected, actual)
         self.assertArrayEqual(expected[:1], actual[B[:1]])
         with pytest.raises(IndexError):
@@ -105,10 +105,10 @@ class TestBytesToStringArray(TestCase):
         actual = conventions.BytesToStringArray(raw_array, encoding=encoding)
         expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
 
-        self.assertEqual(actual.dtype, expected.dtype)
-        self.assertEqual(actual.shape, expected.shape)
-        self.assertEqual(actual.size, expected.size)
-        self.assertEqual(actual.ndim, expected.ndim)
+        assert actual.dtype == expected.dtype
+        assert actual.shape == expected.shape
+        assert actual.size == expected.size
+        assert actual.ndim == expected.ndim
         self.assertArrayEqual(expected, actual)
         self.assertArrayEqual(expected[0], actual[B[0]])
 
@@ -139,7 +139,7 @@ class TestBoolTypeArray(TestCase):
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
         bx = conventions.BoolTypeArray(x)
-        self.assertEqual(bx.dtype, np.bool)
+        assert bx.dtype == np.bool
         self.assertArrayEqual(bx, np.array([True, False, True, True, False],
                                            dtype=np.bool))
 
@@ -196,7 +196,7 @@ class TestEncodeCFVariable(TestCase):
     def test_missing_fillvalue(self):
         v = Variable(['x'], np.array([np.nan, 1, 2, 3]))
         v.encoding = {'dtype': 'int16'}
-        with self.assertWarns('floating point data as an integer'):
+        with pytest.warns('floating point data as an integer'):
             conventions.encode_cf_variable(v)
 
     def test_multidimensional_coordinates(self):
@@ -260,7 +260,7 @@ class TestDecodeCF(TestCase):
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'x'}),
                             'x': ('t', [4, 5])})
         actual = conventions.decode_cf(original)
-        self.assertEqual(actual.foo.encoding['coordinates'], 'x')
+        assert actual.foo.encoding['coordinates'] == 'x'
 
     def test_0d_int32_encoding(self):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
@@ -275,7 +275,7 @@ class TestDecodeCF(TestCase):
         with warnings.catch_warnings(record=True) as w:
             actual = conventions.decode_cf_variable('t', original)
             self.assertDatasetIdentical(expected, actual)
-            self.assertIn('has multiple fill', str(w[0].message))
+            assert 'has multiple fill' in str(w[0].message)
 
     def test_decode_cf_with_drop_variables(self):
         original = Dataset({
@@ -308,11 +308,11 @@ class TestDecodeCF(TestCase):
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', 'unable to decode time')
             ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
-            self.assertIn('(time) object', repr(ds))
+            assert '(time) object' in repr(ds)
 
         attrs = {'units': 'days since 1900-01-01'}
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
-        self.assertIn('(time) datetime64[ns]', repr(ds))
+        assert '(time) datetime64[ns]' in repr(ds)
 
     @requires_netCDF4
     def test_decode_cf_datetime_transition_to_invalid(self):

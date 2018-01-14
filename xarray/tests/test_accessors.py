@@ -75,10 +75,10 @@ class TestDatetimeAccessor(TestCase):
 
         # Double check that outcome chunksize is unchanged
         dask_chunks = dask_times_2d.chunks
-        self.assertEqual(dask_year.data.chunks, dask_chunks)
-        self.assertEqual(dask_month.data.chunks, dask_chunks)
-        self.assertEqual(dask_day.data.chunks, dask_chunks)
-        self.assertEqual(dask_hour.data.chunks, dask_chunks)
+        assert dask_year.data.chunks == dask_chunks
+        assert dask_month.data.chunks == dask_chunks
+        assert dask_day.data.chunks == dask_chunks
+        assert dask_hour.data.chunks == dask_chunks
 
         # Check the actual output from the accessors
         self.assertDataArrayEqual(years, dask_year.compute())

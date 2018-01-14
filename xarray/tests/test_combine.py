@@ -291,8 +291,8 @@ class TestConcatDataArray(TestCase):
             dims=['x', 'y']) for _ in range(2)]
         # should not raise
         combined = concat(arrays, dim='z')
-        self.assertEqual(combined.shape, (2, 3, 3))
-        self.assertEqual(combined.dims, ('z', 'x', 'y'))
+        assert combined.shape == (2, 3, 3)
+        assert combined.dims == ('z', 'x', 'y')
 
 
 class TestAutoCombine(TestCase):

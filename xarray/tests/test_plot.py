@@ -72,7 +72,7 @@ class PlotTestCase(TestCase):
     def pass_in_axis(self, plotmethod):
         fig, axes = plt.subplots(ncols=2)
         plotmethod(ax=axes[0])
-        self.assertTrue(axes[0].has_data())
+        assert axes[0].has_data()
 
     @pytest.mark.slow
     def imshow_called(self, plotmethod):
@@ -105,42 +105,42 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_legend_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
-        self.assertFalse(plt.gca().get_legend())
+        assert not plt.gca().get_legend()
         plt.cla()
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
-        self.assertTrue(plt.gca().get_legend())
+        assert plt.gca().get_legend()
         # check whether legend title is set
-        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
-                         'dim_1')
+        assert plt.gca().get_legend().get_title().get_text() \
+                        == 'dim_1'
 
     def test_2d_line_accepts_x_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0')
-        self.assertTrue(plt.gca().get_xlabel() == 'dim_0')
+        assert plt.gca().get_xlabel() == 'dim_0'
         plt.cla()
         self.darray[:, :, 0].plot.line(x='dim_1')
-        self.assertTrue(plt.gca().get_xlabel() == 'dim_1')
+        assert plt.gca().get_xlabel() == 'dim_1'
 
     def test_2d_line_accepts_hue_kw(self):
         self.darray[:, :, 0].plot.line(hue='dim_0')
-        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
-                         'dim_0')
+        assert plt.gca().get_legend().get_title().get_text() \
+                        == 'dim_0'
         plt.cla()
         self.darray[:, :, 0].plot.line(hue='dim_1')
-        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
-                         'dim_1')
+        assert plt.gca().get_legend().get_title().get_text() \
+                        == 'dim_1'
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
 
     def test2d_uniform_calls_imshow(self):
-        self.assertTrue(self.imshow_called(self.darray[:, :, 0].plot.imshow))
+        assert self.imshow_called(self.darray[:, :, 0].plot.imshow)
 
     @pytest.mark.slow
     def test2d_nonuniform_calls_contourf(self):
         a = self.darray[:, :, 0]
         a.coords['dim_1'] = [2, 1, 89]
-        self.assertTrue(self.contourf_called(a.plot.contourf))
+        assert self.contourf_called(a.plot.contourf)
 
     def test2d_1d_2d_coordinates_contourf(self):
         sz = (20, 10)
@@ -184,7 +184,7 @@ class TestPlot(PlotTestCase):
                       coords=[('time', time), ('y', range(ncol))])
         a.plot()
         ax = plt.gca()
-        self.assertTrue(ax.has_data())
+        assert ax.has_data()
 
     @pytest.mark.slow
     def test_convenient_facetgrid(self):
@@ -195,7 +195,7 @@ class TestPlot(PlotTestCase):
 
         self.assertArrayEqual(g.axes.shape, [2, 2])
         for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
 
         with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='z', ax=plt.gca())
@@ -213,10 +213,10 @@ class TestPlot(PlotTestCase):
         for ax in g.axes.flat:
             try:
                 # mpl V2
-                self.assertEqual(ax.get_facecolor()[0:3],
-                                 mpl.colors.to_rgb('r'))
+                assert ax.get_facecolor()[0:3] == \
+                                 mpl.colors.to_rgb('r')
             except AttributeError:
-                self.assertEqual(ax.get_axis_bgcolor(), 'r')
+                assert ax.get_axis_bgcolor() == 'r'
 
     @pytest.mark.slow
     def test_plot_size(self):
@@ -252,7 +252,7 @@ class TestPlot(PlotTestCase):
 
         self.assertArrayEqual(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
 
         with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
@@ -267,16 +267,16 @@ class TestPlot1D(PlotTestCase):
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
-        self.assertEqual('period', plt.gca().get_xlabel())
+        assert 'period' == plt.gca().get_xlabel()
 
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()
-        self.assertEqual('', plt.gca().get_ylabel())
+        assert '' == plt.gca().get_ylabel()
 
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
         self.darray.plot()
-        self.assertEqual(self.darray.name, plt.gca().get_ylabel())
+        assert self.darray.name == plt.gca().get_ylabel()
 
     def test_format_string(self):
         self.darray.plot.line('ro')
@@ -292,7 +292,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_primitive_returned(self):
         p = self.darray.plot.line()
-        self.assertTrue(isinstance(p[0], mpl.lines.Line2D))
+        assert isinstance(p[0], mpl.lines.Line2D)
 
     @pytest.mark.slow
     def test_plot_nans(self):
@@ -304,13 +304,13 @@ class TestPlot1D(PlotTestCase):
         a = DataArray(np.arange(len(time)), [('t', time)])
         a.plot.line()
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        self.assertNotEqual(rotation, 0)
+        assert rotation != 0
 
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
         self.darray.plot.line()
         title = plt.gca().get_title()
-        self.assertEqual('d = 10', title)
+        assert 'd = 10' == title
 
 
 class TestPlotHistogram(PlotTestCase):
@@ -323,28 +323,28 @@ class TestPlotHistogram(PlotTestCase):
 
     def test_title_no_name(self):
         self.darray.plot.hist()
-        self.assertEqual('', plt.gca().get_title())
+        assert '' == plt.gca().get_title()
 
     def test_title_uses_name(self):
         self.darray.name = 'testpoints'
         self.darray.plot.hist()
-        self.assertIn(self.darray.name, plt.gca().get_title())
+        assert self.darray.name in plt.gca().get_title()
 
     def test_ylabel_is_count(self):
         self.darray.plot.hist()
-        self.assertEqual('Count', plt.gca().get_ylabel())
+        assert 'Count' == plt.gca().get_ylabel()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
         self.darray.plot.hist(bins=nbins)
-        self.assertEqual(nbins, len(plt.gca().patches))
+        assert nbins == len(plt.gca().patches)
 
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.darray.plot.hist)
 
     def test_primitive_returned(self):
         h = self.darray.plot.hist()
-        self.assertTrue(isinstance(h[-1][0], mpl.patches.Rectangle))
+        assert isinstance(h[-1][0], mpl.patches.Rectangle)
 
     @pytest.mark.slow
     def test_plot_nans(self):
@@ -360,20 +360,20 @@ class TestDetermineCmapParams(TestCase):
 
     def test_robust(self):
         cmap_params = _determine_cmap_params(self.data, robust=True)
-        self.assertEqual(cmap_params['vmin'], np.percentile(self.data, 2))
-        self.assertEqual(cmap_params['vmax'], np.percentile(self.data, 98))
-        self.assertEqual(cmap_params['cmap'].name, 'viridis')
-        self.assertEqual(cmap_params['extend'], 'both')
-        self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['norm'])
+        assert cmap_params['vmin'] == np.percentile(self.data, 2)
+        assert cmap_params['vmax'] == np.percentile(self.data, 98)
+        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['extend'] == 'both'
+        assert cmap_params['levels'] is None
+        assert cmap_params['norm'] is None
 
     def test_center(self):
         cmap_params = _determine_cmap_params(self.data, center=0.5)
-        self.assertEqual(cmap_params['vmax'] - 0.5, 0.5 - cmap_params['vmin'])
-        self.assertEqual(cmap_params['cmap'], 'RdBu_r')
-        self.assertEqual(cmap_params['extend'], 'neither')
-        self.assertIsNone(cmap_params['levels'])
-        self.assertIsNone(cmap_params['norm'])
+        assert cmap_params['vmax'] - 0.5 == 0.5 - cmap_params['vmin']
+        assert cmap_params['cmap'] == 'RdBu_r'
+        assert cmap_params['extend'] == 'neither'
+        assert cmap_params['levels'] is None
+        assert cmap_params['norm'] is None
 
     @pytest.mark.slow
     def test_integer_levels(self):
@@ -382,36 +382,36 @@ class TestDetermineCmapParams(TestCase):
         # default is to cover full data range but with no guarantee on Nlevels
         for level in np.arange(2, 10, dtype=int):
             cmap_params = _determine_cmap_params(data, levels=level)
-            self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
-            self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
-            self.assertEqual(cmap_params['extend'], 'neither')
+            assert cmap_params['vmin'] == cmap_params['levels'][0]
+            assert cmap_params['vmax'] == cmap_params['levels'][-1]
+            assert cmap_params['extend'] == 'neither'
 
         # with min max we are more strict
         cmap_params = _determine_cmap_params(data, levels=5, vmin=0, vmax=5,
                                              cmap='Blues')
-        self.assertEqual(cmap_params['vmin'], 0)
-        self.assertEqual(cmap_params['vmax'], 5)
-        self.assertEqual(cmap_params['vmin'], cmap_params['levels'][0])
-        self.assertEqual(cmap_params['vmax'], cmap_params['levels'][-1])
-        self.assertEqual(cmap_params['cmap'].name, 'Blues')
-        self.assertEqual(cmap_params['extend'], 'neither')
-        self.assertEqual(cmap_params['cmap'].N, 4)
-        self.assertEqual(cmap_params['norm'].N, 5)
+        assert cmap_params['vmin'] == 0
+        assert cmap_params['vmax'] == 5
+        assert cmap_params['vmin'] == cmap_params['levels'][0]
+        assert cmap_params['vmax'] == cmap_params['levels'][-1]
+        assert cmap_params['cmap'].name == 'Blues'
+        assert cmap_params['extend'] == 'neither'
+        assert cmap_params['cmap'].N == 4
+        assert cmap_params['norm'].N == 5
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=0.5, vmax=1.5)
-        self.assertEqual(cmap_params['cmap'].name, 'viridis')
-        self.assertEqual(cmap_params['extend'], 'max')
+        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['extend'] == 'max'
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=1.5)
-        self.assertEqual(cmap_params['cmap'].name, 'viridis')
-        self.assertEqual(cmap_params['extend'], 'min')
+        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['extend'] == 'min'
 
         cmap_params = _determine_cmap_params(data, levels=5,
                                              vmin=1.3, vmax=1.5)
-        self.assertEqual(cmap_params['cmap'].name, 'viridis')
-        self.assertEqual(cmap_params['extend'], 'both')
+        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['extend'] == 'both'
 
     def test_list_levels(self):
         data = self.data + 1
@@ -420,10 +420,10 @@ class TestDetermineCmapParams(TestCase):
         # vmin and vmax should be ignored if levels are explicitly provided
         cmap_params = _determine_cmap_params(data, levels=orig_levels,
                                              vmin=0, vmax=3)
-        self.assertEqual(cmap_params['vmin'], 0)
-        self.assertEqual(cmap_params['vmax'], 5)
-        self.assertEqual(cmap_params['cmap'].N, 5)
-        self.assertEqual(cmap_params['norm'].N, 6)
+        assert cmap_params['vmin'] == 0
+        assert cmap_params['vmax'] == 5
+        assert cmap_params['cmap'].N == 5
+        assert cmap_params['norm'].N == 6
 
         for wrap_levels in [list, np.array, pd.Index, DataArray]:
             cmap_params = _determine_cmap_params(
@@ -436,71 +436,71 @@ class TestDetermineCmapParams(TestCase):
 
         # Default with positive data will be a normal cmap
         cmap_params = _determine_cmap_params(pos)
-        self.assertEqual(cmap_params['vmin'], 0)
-        self.assertEqual(cmap_params['vmax'], 1)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == 0
+        assert cmap_params['vmax'] == 1
+        assert cmap_params['cmap'].name == "viridis"
 
         # Default with negative data will be a divergent cmap
         cmap_params = _determine_cmap_params(neg)
-        self.assertEqual(cmap_params['vmin'], -0.9)
-        self.assertEqual(cmap_params['vmax'], 0.9)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.9
+        assert cmap_params['vmax'] == 0.9
+        assert cmap_params['cmap'] == "RdBu_r"
 
         # Setting vmin or vmax should prevent this only if center is false
         cmap_params = _determine_cmap_params(neg, vmin=-0.1, center=False)
-        self.assertEqual(cmap_params['vmin'], -0.1)
-        self.assertEqual(cmap_params['vmax'], 0.9)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == -0.1
+        assert cmap_params['vmax'] == 0.9
+        assert cmap_params['cmap'].name == "viridis"
         cmap_params = _determine_cmap_params(neg, vmax=0.5, center=False)
-        self.assertEqual(cmap_params['vmin'], -0.1)
-        self.assertEqual(cmap_params['vmax'], 0.5)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == -0.1
+        assert cmap_params['vmax'] == 0.5
+        assert cmap_params['cmap'].name == "viridis"
 
         # Setting center=False too
         cmap_params = _determine_cmap_params(neg, center=False)
-        self.assertEqual(cmap_params['vmin'], -0.1)
-        self.assertEqual(cmap_params['vmax'], 0.9)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == -0.1
+        assert cmap_params['vmax'] == 0.9
+        assert cmap_params['cmap'].name == "viridis"
 
         # However, I should still be able to set center and have a div cmap
         cmap_params = _determine_cmap_params(neg, center=0)
-        self.assertEqual(cmap_params['vmin'], -0.9)
-        self.assertEqual(cmap_params['vmax'], 0.9)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.9
+        assert cmap_params['vmax'] == 0.9
+        assert cmap_params['cmap'] == "RdBu_r"
 
         # Setting vmin or vmax alone will force symmetric bounds around center
         cmap_params = _determine_cmap_params(neg, vmin=-0.1)
-        self.assertEqual(cmap_params['vmin'], -0.1)
-        self.assertEqual(cmap_params['vmax'], 0.1)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.1
+        assert cmap_params['vmax'] == 0.1
+        assert cmap_params['cmap'] == "RdBu_r"
         cmap_params = _determine_cmap_params(neg, vmax=0.5)
-        self.assertEqual(cmap_params['vmin'], -0.5)
-        self.assertEqual(cmap_params['vmax'], 0.5)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.5
+        assert cmap_params['vmax'] == 0.5
+        assert cmap_params['cmap'] == "RdBu_r"
         cmap_params = _determine_cmap_params(neg, vmax=0.6, center=0.1)
-        self.assertEqual(cmap_params['vmin'], -0.4)
-        self.assertEqual(cmap_params['vmax'], 0.6)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.4
+        assert cmap_params['vmax'] == 0.6
+        assert cmap_params['cmap'] == "RdBu_r"
 
         # But this is only true if vmin or vmax are negative
         cmap_params = _determine_cmap_params(pos, vmin=-0.1)
-        self.assertEqual(cmap_params['vmin'], -0.1)
-        self.assertEqual(cmap_params['vmax'], 0.1)
-        self.assertEqual(cmap_params['cmap'], "RdBu_r")
+        assert cmap_params['vmin'] == -0.1
+        assert cmap_params['vmax'] == 0.1
+        assert cmap_params['cmap'] == "RdBu_r"
         cmap_params = _determine_cmap_params(pos, vmin=0.1)
-        self.assertEqual(cmap_params['vmin'], 0.1)
-        self.assertEqual(cmap_params['vmax'], 1)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == 0.1
+        assert cmap_params['vmax'] == 1
+        assert cmap_params['cmap'].name == "viridis"
         cmap_params = _determine_cmap_params(pos, vmax=0.5)
-        self.assertEqual(cmap_params['vmin'], 0)
-        self.assertEqual(cmap_params['vmax'], 0.5)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == 0
+        assert cmap_params['vmax'] == 0.5
+        assert cmap_params['cmap'].name == "viridis"
 
         # If both vmin and vmax are provided, output is non-divergent
         cmap_params = _determine_cmap_params(neg, vmin=-0.2, vmax=0.6)
-        self.assertEqual(cmap_params['vmin'], -0.2)
-        self.assertEqual(cmap_params['vmax'], 0.6)
-        self.assertEqual(cmap_params['cmap'].name, "viridis")
+        assert cmap_params['vmin'] == -0.2
+        assert cmap_params['vmax'] == 0.6
+        assert cmap_params['cmap'].name == "viridis"
 
 
 @requires_matplotlib
@@ -518,24 +518,24 @@ class TestDiscreteColorMap(TestCase):
     @pytest.mark.slow
     def test_recover_from_seaborn_jet_exception(self):
         pal = _color_palette('jet', 4)
-        self.assertTrue(type(pal) == np.ndarray)
-        self.assertEqual(len(pal), 4)
+        assert type(pal) == np.ndarray
+        assert len(pal) == 4
 
     @pytest.mark.slow
     def test_build_discrete_cmap(self):
         for (cmap, levels, extend, filled) in [('jet', [0, 1], 'both', False),
                                                ('hot', [-4, 4], 'max', True)]:
             ncmap, cnorm = _build_discrete_cmap(cmap, levels, extend, filled)
-            self.assertEqual(ncmap.N, len(levels) - 1)
-            self.assertEqual(len(ncmap.colors), len(levels) - 1)
-            self.assertEqual(cnorm.N, len(levels))
+            assert ncmap.N == len(levels) - 1
+            assert len(ncmap.colors) == len(levels) - 1
+            assert cnorm.N == len(levels)
             self.assertArrayEqual(cnorm.boundaries, levels)
-            self.assertEqual(max(levels), cnorm.vmax)
-            self.assertEqual(min(levels), cnorm.vmin)
+            assert max(levels) == cnorm.vmax
+            assert min(levels) == cnorm.vmin
             if filled:
-                self.assertEqual(ncmap.colorbar_extend, extend)
+                assert ncmap.colorbar_extend == extend
             else:
-                self.assertEqual(ncmap.colorbar_extend, 'max')
+                assert ncmap.colorbar_extend == 'max'
 
     @pytest.mark.slow
     def test_discrete_colormap_list_of_levels(self):
@@ -546,13 +546,13 @@ class TestDiscreteColorMap(TestCase):
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
                 self.assertArrayEqual(levels, primitive.norm.boundaries)
-                self.assertEqual(max(levels), primitive.norm.vmax)
-                self.assertEqual(min(levels), primitive.norm.vmin)
+                assert max(levels) == primitive.norm.vmax
+                assert min(levels) == primitive.norm.vmin
                 if kind != 'contour':
-                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
+                    assert extend == primitive.cmap.colorbar_extend
                 else:
-                    self.assertEqual('max', primitive.cmap.colorbar_extend)
-                self.assertEqual(len(levels) - 1, len(primitive.cmap.colors))
+                    assert 'max' == primitive.cmap.colorbar_extend
+                assert len(levels) - 1 == len(primitive.cmap.colors)
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
@@ -564,27 +564,27 @@ class TestDiscreteColorMap(TestCase):
                 primitive = getattr(self.darray.plot, kind)(levels=levels,
                                                             vmin=vmin,
                                                             vmax=vmax)
-                self.assertGreaterEqual(levels,
-                                        len(primitive.norm.boundaries) - 1)
+                assert levels >= \
+                                        len(primitive.norm.boundaries) - 1
                 if vmax is None:
-                    self.assertGreaterEqual(primitive.norm.vmax, self.data_max)
+                    assert primitive.norm.vmax >= self.data_max
                 else:
-                    self.assertGreaterEqual(primitive.norm.vmax, vmax)
+                    assert primitive.norm.vmax >= vmax
                 if vmin is None:
-                    self.assertLessEqual(primitive.norm.vmin, self.data_min)
+                    assert primitive.norm.vmin <= self.data_min
                 else:
-                    self.assertLessEqual(primitive.norm.vmin, vmin)
+                    assert primitive.norm.vmin <= vmin
                 if kind != 'contour':
-                    self.assertEqual(extend, primitive.cmap.colorbar_extend)
+                    assert extend == primitive.cmap.colorbar_extend
                 else:
-                    self.assertEqual('max', primitive.cmap.colorbar_extend)
-                self.assertGreaterEqual(levels, len(primitive.cmap.colors))
+                    assert 'max' == primitive.cmap.colorbar_extend
+                assert levels >= len(primitive.cmap.colors)
 
     def test_discrete_colormap_list_levels_and_vmin_or_vmax(self):
         levels = [0, 5, 10, 15]
         primitive = self.darray.plot(levels=levels, vmin=-3, vmax=20)
-        self.assertEqual(primitive.norm.vmax, max(levels))
-        self.assertEqual(primitive.norm.vmin, min(levels))
+        assert primitive.norm.vmax == max(levels)
+        assert primitive.norm.vmin == min(levels)
 
 
 class Common2dMixin:
@@ -610,8 +610,8 @@ class Common2dMixin:
 
     def test_label_names(self):
         self.plotmethod()
-        self.assertEqual('x', plt.gca().get_xlabel())
-        self.assertEqual('y', plt.gca().get_ylabel())
+        assert 'x' == plt.gca().get_xlabel()
+        assert 'y' == plt.gca().get_ylabel()
 
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r'DataArray must be 2d'):
@@ -638,14 +638,14 @@ class Common2dMixin:
         xlim = plt.gca().get_xlim()
         ylim = plt.gca().get_ylim()
         diffs = xlim[0] - 14, xlim[1] - 0, ylim[0] - 9, ylim[1] - 0
-        self.assertTrue(all(abs(x) < 1 for x in diffs))
+        assert all(abs(x) < 1 for x in diffs)
 
     def test_xyincrease_true_changes_axes(self):
         self.plotmethod(xincrease=True, yincrease=True)
         xlim = plt.gca().get_xlim()
         ylim = plt.gca().get_ylim()
         diffs = xlim[0] - 0, xlim[1] - 14, ylim[0] - 0, ylim[1] - 9
-        self.assertTrue(all(abs(x) < 1 for x in diffs))
+        assert all(abs(x) < 1 for x in diffs)
 
     def test_x_ticks_are_rotated_for_time(self):
         time = pd.date_range('2000-01-01', '2000-01-10')
@@ -653,7 +653,7 @@ class Common2dMixin:
                       [('xx', [1, 2]), ('t', time)])
         a.plot(x='t')
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
-        self.assertNotEqual(rotation, 0)
+        assert rotation != 0
 
     def test_plot_nans(self):
         x1 = self.darray[:5]
@@ -662,7 +662,7 @@ class Common2dMixin:
 
         clim1 = self.plotfunc(x1).get_clim()
         clim2 = self.plotfunc(x2).get_clim()
-        self.assertEqual(clim1, clim2)
+        assert clim1 == clim2
 
     def test_can_plot_all_nans(self):
         # regression test for issue #1780
@@ -679,46 +679,46 @@ class Common2dMixin:
 
     def test_viridis_cmap(self):
         cmap_name = self.plotmethod(cmap='viridis').get_cmap().name
-        self.assertEqual('viridis', cmap_name)
+        assert 'viridis' == cmap_name
 
     def test_default_cmap(self):
         cmap_name = self.plotmethod().get_cmap().name
-        self.assertEqual('RdBu_r', cmap_name)
+        assert 'RdBu_r' == cmap_name
 
         cmap_name = self.plotfunc(abs(self.darray)).get_cmap().name
-        self.assertEqual('viridis', cmap_name)
+        assert 'viridis' == cmap_name
 
     @requires_seaborn
     def test_seaborn_palette_as_cmap(self):
         cmap_name = self.plotmethod(
             levels=2, cmap='husl').get_cmap().name
-        self.assertEqual('husl', cmap_name)
+        assert 'husl' == cmap_name
 
     def test_can_change_default_cmap(self):
         cmap_name = self.plotmethod(cmap='Blues').get_cmap().name
-        self.assertEqual('Blues', cmap_name)
+        assert 'Blues' == cmap_name
 
     def test_diverging_color_limits(self):
         artist = self.plotmethod()
         vmin, vmax = artist.get_clim()
-        self.assertAlmostEqual(-vmin, vmax)
+        assert round(abs(-vmin-vmax), 7) == 0
 
     def test_xy_strings(self):
         self.plotmethod('y', 'x')
         ax = plt.gca()
-        self.assertEqual('y', ax.get_xlabel())
-        self.assertEqual('x', ax.get_ylabel())
+        assert 'y' == ax.get_xlabel()
+        assert 'x' == ax.get_ylabel()
 
     def test_positional_coord_string(self):
         self.plotmethod(y='x')
         ax = plt.gca()
-        self.assertEqual('x', ax.get_ylabel())
-        self.assertEqual('y', ax.get_xlabel())
+        assert 'x' == ax.get_ylabel()
+        assert 'y' == ax.get_xlabel()
 
         self.plotmethod(x='x')
         ax = plt.gca()
-        self.assertEqual('x', ax.get_xlabel())
-        self.assertEqual('y', ax.get_ylabel())
+        assert 'x' == ax.get_xlabel()
+        assert 'y' == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
         with raises_regex(
@@ -734,7 +734,7 @@ class Common2dMixin:
 
     def test_coord_strings(self):
         # 1d coords (same as dims)
-        self.assertEqual({'x', 'y'}, set(self.darray.dims))
+        assert {'x', 'y'} == set(self.darray.dims)
         self.plotmethod(y='y', x='x')
 
     def test_non_linked_coords(self):
@@ -743,11 +743,11 @@ class Common2dMixin:
         # Normal case, without transpose
         self.plotfunc(self.darray, x='x', y='newy')
         ax = plt.gca()
-        self.assertEqual('x', ax.get_xlabel())
-        self.assertEqual('newy', ax.get_ylabel())
+        assert 'x' == ax.get_xlabel()
+        assert 'newy' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
-        self.assertTrue(np.min(ax.get_ylim()) > 100.)
+        assert np.min(ax.get_ylim()) > 100.
 
     def test_non_linked_coords_transpose(self):
         # plot with coordinate names that are not dimensions,
@@ -757,11 +757,11 @@ class Common2dMixin:
         self.darray.coords['newy'] = self.darray.y + 150
         self.plotfunc(self.darray, x='newy', y='x')
         ax = plt.gca()
-        self.assertEqual('newy', ax.get_xlabel())
-        self.assertEqual('x', ax.get_ylabel())
+        assert 'newy' == ax.get_xlabel()
+        assert 'x' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
-        self.assertTrue(np.min(ax.get_xlim()) > 100.)
+        assert np.min(ax.get_xlim()) > 100.
 
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
@@ -769,53 +769,53 @@ class Common2dMixin:
         a.coords['d'] = u'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
-        self.assertTrue('c = 1, d = foo' == title or 'd = foo, c = 1' == title)
+        assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title
 
     def test_colorbar_default_label(self):
         self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True)
-        self.assertIn(self.darray.name, text_in_fig())
+        assert self.darray.name in text_in_fig()
 
     def test_no_labels(self):
         self.darray.name = 'testvar'
         self.plotmethod(add_labels=False)
         alltxt = text_in_fig()
         for string in ['x', 'y', 'testvar']:
-            self.assertNotIn(string, alltxt)
+            assert string not in alltxt
 
     def test_colorbar_kwargs(self):
         # replace label
         self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True, cbar_kwargs={'label': 'MyLabel'})
         alltxt = text_in_fig()
-        self.assertIn('MyLabel', alltxt)
-        self.assertNotIn('testvar', alltxt)
+        assert 'MyLabel' in alltxt
+        assert 'testvar' not in alltxt
         # you can use mapping types as well
         self.plotmethod(add_colorbar=True, cbar_kwargs=(('label', 'MyLabel'),))
         alltxt = text_in_fig()
-        self.assertIn('MyLabel', alltxt)
-        self.assertNotIn('testvar', alltxt)
+        assert 'MyLabel' in alltxt
+        assert 'testvar' not in alltxt
         # change cbar ax
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
-                        cbar_kwargs={'label': 'MyBar'})
-        self.assertTrue(ax.has_data())
-        self.assertTrue(cax.has_data())
+                        cbar_kwargs={'label':'MyBar'})
+        assert ax.has_data()
+        assert cax.has_data()
         alltxt = text_in_fig()
-        self.assertIn('MyBar', alltxt)
-        self.assertNotIn('testvar', alltxt)
+        assert 'MyBar' in alltxt
+        assert 'testvar' not in alltxt
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, add_colorbar=True,
-                        cbar_kwargs={'label': 'MyBar', 'cax': cax})
-        self.assertTrue(ax.has_data())
-        self.assertTrue(cax.has_data())
+                        cbar_kwargs={'label':'MyBar', 'cax':cax})
+        assert ax.has_data()
+        assert cax.has_data()
         alltxt = text_in_fig()
-        self.assertIn('MyBar', alltxt)
-        self.assertNotIn('testvar', alltxt)
+        assert 'MyBar' in alltxt
+        assert 'testvar' not in alltxt
         # see that no colorbar is respected
         self.plotmethod(add_colorbar=False)
-        self.assertNotIn('testvar', text_in_fig())
+        assert 'testvar' not in text_in_fig()
         # check that error is raised
         pytest.raises(ValueError, self.plotmethod,
                       add_colorbar=False, cbar_kwargs={'label': 'label'})
@@ -826,14 +826,14 @@ class Common2dMixin:
         g = xplt.FacetGrid(d, col='z')
         g.map_dataarray(self.plotfunc, 'x', 'y')
         for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
 
     def test_2d_function_and_method_signature_same(self):
         func_sig = inspect.getcallargs(self.plotfunc, self.darray)
         method_sig = inspect.getcallargs(self.plotmethod)
         del method_sig['_PlotMethods_obj']
         del func_sig['darray']
-        self.assertEqual(func_sig, method_sig)
+        assert func_sig == method_sig
 
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
@@ -842,29 +842,29 @@ class Common2dMixin:
 
         self.assertArrayEqual(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
             if x == 0:
-                self.assertEqual('y', ax.get_ylabel())
+                assert 'y' == ax.get_ylabel()
             else:
-                self.assertEqual('', ax.get_ylabel())
+                assert '' == ax.get_ylabel()
             if y == 1:
-                self.assertEqual('x', ax.get_xlabel())
+                assert 'x' == ax.get_xlabel()
             else:
-                self.assertEqual('', ax.get_xlabel())
+                assert '' == ax.get_xlabel()
 
         # Infering labels
         g = self.plotfunc(d, col='z', col_wrap=2)
         self.assertArrayEqual(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
             if x == 0:
-                self.assertEqual('y', ax.get_ylabel())
+                assert 'y' == ax.get_ylabel()
             else:
-                self.assertEqual('', ax.get_ylabel())
+                assert '' == ax.get_ylabel()
             if y == 1:
-                self.assertEqual('x', ax.get_xlabel())
+                assert 'x' == ax.get_xlabel()
             else:
-                self.assertEqual('', ax.get_xlabel())
+                assert '' == ax.get_xlabel()
 
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
@@ -873,7 +873,7 @@ class Common2dMixin:
 
         self.assertArrayEqual(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
 
     def test_facetgrid_cmap(self):
         # Regression test for GH592
@@ -881,9 +881,9 @@ class Common2dMixin:
         d = DataArray(data, dims=['x', 'y', 'time'])
         fg = d.plot.pcolormesh(col='time')
         # check that all color limits are the same
-        self.assertEqual(len(set(m.get_clim() for m in fg._mappables)), 1)
+        assert len(set(m.get_clim() for m in fg._mappables)) == 1
         # check that all colormaps are the same
-        self.assertEqual(len(set(m.get_cmap().name for m in fg._mappables)), 1)
+        assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
 
 
 @pytest.mark.slow
@@ -894,46 +894,46 @@ class TestContourf(Common2dMixin, PlotTestCase):
     @pytest.mark.slow
     def test_contourf_called(self):
         # Having both statements ensures the test works properly
-        self.assertFalse(self.contourf_called(self.darray.plot.imshow))
-        self.assertTrue(self.contourf_called(self.darray.plot.contourf))
+        assert not self.contourf_called(self.darray.plot.imshow)
+        assert self.contourf_called(self.darray.plot.contourf)
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
-        self.assertTrue(isinstance(artist, mpl.contour.QuadContourSet))
+        assert isinstance(artist, mpl.contour.QuadContourSet)
 
     @pytest.mark.slow
     def test_extend(self):
         artist = self.plotmethod()
-        self.assertEqual(artist.extend, 'neither')
+        assert artist.extend == 'neither'
 
         self.darray[0, 0] = -100
         self.darray[-1, -1] = 100
         artist = self.plotmethod(robust=True)
-        self.assertEqual(artist.extend, 'both')
+        assert artist.extend == 'both'
 
         self.darray[0, 0] = 0
         self.darray[-1, -1] = 0
         artist = self.plotmethod(vmin=-0, vmax=10)
-        self.assertEqual(artist.extend, 'min')
+        assert artist.extend == 'min'
 
         artist = self.plotmethod(vmin=-10, vmax=0)
-        self.assertEqual(artist.extend, 'max')
+        assert artist.extend == 'max'
 
     @pytest.mark.slow
     def test_2d_coord_names(self):
         self.plotmethod(x='x2d', y='y2d')
         # make sure labels came out ok
         ax = plt.gca()
-        self.assertEqual('x2d', ax.get_xlabel())
-        self.assertEqual('y2d', ax.get_ylabel())
+        assert 'x2d' == ax.get_xlabel()
+        assert 'y2d' == ax.get_ylabel()
 
     @pytest.mark.slow
     def test_levels(self):
         artist = self.plotmethod(levels=[-0.5, -0.4, 0.1])
-        self.assertEqual(artist.extend, 'both')
+        assert artist.extend == 'both'
 
         artist = self.plotmethod(levels=3)
-        self.assertEqual(artist.extend, 'neither')
+        assert artist.extend == 'neither'
 
 
 @pytest.mark.slow
@@ -947,27 +947,22 @@ class TestContour(Common2dMixin, PlotTestCase):
         def _color_as_tuple(c):
             return tuple(c[:3])
         artist = self.plotmethod(colors='k')
-        self.assertEqual(
-            _color_as_tuple(artist.cmap.colors[0]),
-            (0.0, 0.0, 0.0))
+        assert _color_as_tuple(artist.cmap.colors[0]) == \
+            (0.0, 0.0, 0.0)
 
         artist = self.plotmethod(colors=['k', 'b'])
-        self.assertEqual(
-            _color_as_tuple(artist.cmap.colors[1]),
-            (0.0, 0.0, 1.0))
+        assert _color_as_tuple(artist.cmap.colors[1]) == \
+            (0.0, 0.0, 1.0)
 
         artist = self.darray.plot.contour(levels=[-0.5, 0., 0.5, 1.],
                                           colors=['k', 'r', 'w', 'b'])
-        self.assertEqual(
-            _color_as_tuple(artist.cmap.colors[1]),
-            (1.0, 0.0, 0.0))
-        self.assertEqual(
-            _color_as_tuple(artist.cmap.colors[2]),
-            (1.0, 1.0, 1.0))
+        assert _color_as_tuple(artist.cmap.colors[1]) == \
+            (1.0, 0.0, 0.0)
+        assert _color_as_tuple(artist.cmap.colors[2]) == \
+            (1.0, 1.0, 1.0)
         # the last color is now under "over"
-        self.assertEqual(
-            _color_as_tuple(artist.cmap._rgba_over),
-            (0.0, 0.0, 1.0))
+        assert _color_as_tuple(artist.cmap._rgba_over) == \
+            (0.0, 0.0, 1.0)
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
@@ -982,8 +977,8 @@ class TestContour(Common2dMixin, PlotTestCase):
         self.plotmethod(x='x2d', y='y2d')
         # make sure labels came out ok
         ax = plt.gca()
-        self.assertEqual('x2d', ax.get_xlabel())
-        self.assertEqual('y2d', ax.get_ylabel())
+        assert 'x2d' == ax.get_xlabel()
+        assert 'y2d' == ax.get_ylabel()
 
     def test_single_level(self):
         # this used to raise an error, but not anymore since
@@ -998,19 +993,19 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
 
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
-        self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
+        assert isinstance(artist, mpl.collections.QuadMesh)
 
     def test_everything_plotted(self):
         artist = self.plotmethod()
-        self.assertEqual(artist.get_array().size, self.darray.size)
+        assert artist.get_array().size == self.darray.size
 
     @pytest.mark.slow
     def test_2d_coord_names(self):
         self.plotmethod(x='x2d', y='y2d')
         # make sure labels came out ok
         ax = plt.gca()
-        self.assertEqual('x2d', ax.get_xlabel())
-        self.assertEqual('y2d', ax.get_ylabel())
+        assert 'x2d' == ax.get_xlabel()
+        assert 'y2d' == ax.get_ylabel()
 
     def test_dont_infer_interval_breaks_for_cartopy(self):
         # Regression for GH 781
@@ -1018,9 +1013,9 @@ class TestPcolormesh(Common2dMixin, PlotTestCase):
         # Simulate a Cartopy Axis
         setattr(ax, 'projection', True)
         artist = self.plotmethod(x='x2d', y='y2d', ax=ax)
-        self.assertTrue(isinstance(artist, mpl.collections.QuadMesh))
+        assert isinstance(artist, mpl.collections.QuadMesh)
         # Let cartopy handle the axis limits and artist size
-        self.assertTrue(artist.get_array().size <= self.darray.size)
+        assert artist.get_array().size <= self.darray.size
 
 
 @pytest.mark.slow
@@ -1031,17 +1026,17 @@ class TestImshow(Common2dMixin, PlotTestCase):
     @pytest.mark.slow
     def test_imshow_called(self):
         # Having both statements ensures the test works properly
-        self.assertFalse(self.imshow_called(self.darray.plot.contourf))
-        self.assertTrue(self.imshow_called(self.darray.plot.imshow))
+        assert not self.imshow_called(self.darray.plot.contourf)
+        assert self.imshow_called(self.darray.plot.imshow)
 
     def test_xy_pixel_centered(self):
         self.darray.plot.imshow(yincrease=False)
-        self.assertTrue(np.allclose([-0.5, 14.5], plt.gca().get_xlim()))
-        self.assertTrue(np.allclose([9.5, -0.5], plt.gca().get_ylim()))
+        assert np.allclose([-0.5, 14.5], plt.gca().get_xlim())
+        assert np.allclose([9.5, -0.5], plt.gca().get_ylim())
 
     def test_default_aspect_is_auto(self):
         self.darray.plot.imshow()
-        self.assertEqual('auto', plt.gca().get_aspect())
+        assert 'auto' == plt.gca().get_aspect()
 
     @pytest.mark.slow
     def test_cannot_change_mpl_aspect(self):
@@ -1051,13 +1046,13 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
         # with numbers we fall back to fig control
         self.darray.plot.imshow(size=5, aspect=2)
-        self.assertEqual('auto', plt.gca().get_aspect())
+        assert 'auto' == plt.gca().get_aspect()
         assert tuple(plt.gcf().get_size_inches()) == (10, 5)
 
     @pytest.mark.slow
     def test_primitive_artist_returned(self):
         artist = self.plotmethod()
-        self.assertTrue(isinstance(artist, mpl.image.AxesImage))
+        assert isinstance(artist, mpl.image.AxesImage)
 
     @pytest.mark.slow
     @requires_seaborn
@@ -1074,21 +1069,21 @@ class TestImshow(Common2dMixin, PlotTestCase):
             easy_array((10, 15, 3), start=0),
             dims=['y', 'x', 'band'],
         ).plot.imshow()
-        self.assertEqual(0, len(find_possible_colorbars()))
+        assert 0 == len(find_possible_colorbars())
 
     def test_plot_rgb_image_explicit(self):
         DataArray(
             easy_array((10, 15, 3), start=0),
             dims=['y', 'x', 'band'],
         ).plot.imshow(y='y', x='x', rgb='band')
-        self.assertEqual(0, len(find_possible_colorbars()))
+        assert 0 == len(find_possible_colorbars())
 
     def test_plot_rgb_faceted(self):
         DataArray(
             easy_array((2, 2, 10, 15, 3), start=0),
             dims=['a', 'b', 'y', 'x', 'band'],
         ).plot.imshow(row='a', col='b')
-        self.assertEqual(0, len(find_possible_colorbars()))
+        assert 0 == len(find_possible_colorbars())
 
     def test_plot_rgba_image_transposed(self):
         # We can handle the color axis being in any position
@@ -1130,22 +1125,22 @@ class TestFacetGrid(PlotTestCase):
 
         # Don't want colorbar labeled with 'None'
         alltxt = text_in_fig()
-        self.assertNotIn('None', alltxt)
+        assert 'None' not in alltxt
 
         for ax in self.g.axes.flat:
-            self.assertTrue(ax.has_data())
+            assert ax.has_data()
 
     @pytest.mark.slow
     def test_names_appear_somewhere(self):
         self.darray.name = 'testvar'
         self.g.map_dataarray(xplt.contourf, 'x', 'y')
         for k, ax in zip('abc', self.g.axes.flat):
-            self.assertEqual('z = {0}'.format(k), ax.get_title())
+            assert 'z = {0}'.format(k) == ax.get_title()
 
         alltxt = text_in_fig()
-        self.assertIn(self.darray.name, alltxt)
+        assert self.darray.name in alltxt
         for label in ['x', 'y']:
-            self.assertIn(label, alltxt)
+            assert label in alltxt
 
     @pytest.mark.slow
     def test_text_not_super_long(self):
@@ -1154,10 +1149,10 @@ class TestFacetGrid(PlotTestCase):
         g.map_dataarray(xplt.contour, 'x', 'y')
         alltxt = text_in_fig()
         maxlen = max(len(txt) for txt in alltxt)
-        self.assertLess(maxlen, 50)
+        assert maxlen < 50
 
         t0 = g.axes[0, 0].get_title()
-        self.assertTrue(t0.endswith('...'))
+        assert t0.endswith('...')
 
     @pytest.mark.slow
     def test_colorbar(self):
@@ -1169,9 +1164,9 @@ class TestFacetGrid(PlotTestCase):
 
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             clim = np.array(image.get_clim())
-            self.assertTrue(np.allclose(expected, clim))
+            assert np.allclose(expected, clim)
 
-        self.assertEqual(1, len(find_possible_colorbars()))
+        assert 1 == len(find_possible_colorbars())
 
     @pytest.mark.slow
     def test_empty_cell(self):
@@ -1179,8 +1174,8 @@ class TestFacetGrid(PlotTestCase):
         g.map_dataarray(xplt.imshow, 'x', 'y')
 
         bottomright = g.axes[-1, -1]
-        self.assertFalse(bottomright.has_data())
-        self.assertFalse(bottomright.get_visible())
+        assert not bottomright.has_data()
+        assert not bottomright.get_visible()
 
     @pytest.mark.slow
     def test_norow_nocol_error(self):
@@ -1228,7 +1223,7 @@ class TestFacetGrid(PlotTestCase):
             except ValueError:
                 pass
         largest = max(abs(x) for x in numbers)
-        self.assertLess(largest, 21)
+        assert largest < 21
 
     @pytest.mark.slow
     def test_can_set_vmin_vmax(self):
@@ -1238,14 +1233,14 @@ class TestFacetGrid(PlotTestCase):
 
         for image in plt.gcf().findobj(mpl.image.AxesImage):
             clim = np.array(image.get_clim())
-            self.assertTrue(np.allclose(expected, clim))
+            assert np.allclose(expected, clim)
 
     @pytest.mark.slow
     def test_can_set_norm(self):
         norm = mpl.colors.SymLogNorm(0.1)
         self.g.map_dataarray(xplt.imshow, 'x', 'y', norm=norm)
         for image in plt.gcf().findobj(mpl.image.AxesImage):
-            self.assertIs(image.norm, norm)
+            assert image.norm is norm
 
     @pytest.mark.slow
     def test_figure_size(self):
@@ -1280,10 +1275,10 @@ class TestFacetGrid(PlotTestCase):
         for ax in self.g.axes.flat:
             xticks = len(ax.get_xticks())
             yticks = len(ax.get_yticks())
-            self.assertLessEqual(xticks, maxticks)
-            self.assertLessEqual(yticks, maxticks)
-            self.assertGreaterEqual(xticks, nticks / 2.0)
-            self.assertGreaterEqual(yticks, nticks / 2.0)
+            assert xticks <= maxticks
+            assert yticks <= maxticks
+            assert xticks >= nticks / 2.0
+            assert yticks >= nticks / 2.0
 
     @pytest.mark.slow
     def test_map(self):
@@ -1297,17 +1292,17 @@ class TestFacetGrid(PlotTestCase):
 
         alltxt = text_in_fig()
         for label in ['x', 'y']:
-            self.assertIn(label, alltxt)
+            assert label in alltxt
         # everything has a label
-        self.assertNotIn('None', alltxt)
+        assert 'None' not in alltxt
 
         # colorbar can't be inferred automatically
-        self.assertNotIn('foo', alltxt)
-        self.assertEqual(0, len(find_possible_colorbars()))
+        assert 'foo' not in alltxt
+        assert 0 == len(find_possible_colorbars())
 
         g.add_colorbar(label='colors!')
-        self.assertIn('colors!', text_in_fig())
-        self.assertEqual(1, len(find_possible_colorbars()))
+        assert 'colors!' in text_in_fig()
+        assert 1 == len(find_possible_colorbars())
 
     @pytest.mark.slow
     def test_set_axis_labels(self):
@@ -1315,7 +1310,7 @@ class TestFacetGrid(PlotTestCase):
         g.set_axis_labels('longitude', 'latitude')
         alltxt = text_in_fig()
         for label in ['longitude', 'latitude']:
-            self.assertIn(label, alltxt)
+            assert label in alltxt
 
     @pytest.mark.slow
     def test_facetgrid_colorbar(self):
@@ -1323,13 +1318,13 @@ class TestFacetGrid(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'z'], name='foo')
 
         d.plot.imshow(x='x', y='y', col='z')
-        self.assertEqual(1, len(find_possible_colorbars()))
+        assert 1 == len(find_possible_colorbars())
 
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=True)
-        self.assertEqual(1, len(find_possible_colorbars()))
+        assert 1 == len(find_possible_colorbars())
 
         d.plot.imshow(x='x', y='y', col='z', add_colorbar=False)
-        self.assertEqual(0, len(find_possible_colorbars()))
+        assert 0 == len(find_possible_colorbars())
 
     @pytest.mark.slow
     def test_facetgrid_polar(self):
@@ -1354,17 +1349,17 @@ class TestFacetGrid4d(PlotTestCase):
     @pytest.mark.slow
     def test_default_labels(self):
         g = xplt.FacetGrid(self.darray, col='col', row='row')
-        self.assertEqual((2, 3), g.axes.shape)
+        assert (2, 3) == g.axes.shape
 
         g.map_dataarray(xplt.imshow, 'x', 'y')
 
         # Rightmost column should be labeled
         for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
-            self.assertTrue(substring_in_axes(label, ax))
+            assert substring_in_axes(label, ax)
 
         # Top row should be labeled
         for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
-            self.assertTrue(substring_in_axes(label, ax))
+            assert substring_in_axes(label, ax)
 
 
 class TestDatetimePlot(PlotTestCase):

@@ -86,7 +86,7 @@ class TestIndexers(TestCase):
         mdata = DataArray(range(4), [('x', mindex)])
 
         dim_indexers = indexing.get_dim_indexers(mdata, {'one': 'a', 'two': 1})
-        self.assertEqual(dim_indexers, {'x': {'one': 'a', 'two': 1}})
+        assert dim_indexers == {'x': {'one': 'a', 'two': 1}}
 
         with raises_regex(ValueError, 'cannot combine'):
             indexing.get_dim_indexers(mdata, {'x': 'a', 'two': 1})
@@ -169,7 +169,7 @@ class TestLazyArray(TestCase):
                     for actual in [v_lazy[i, j, k],
                                    v_lazy[:, j, k][i],
                                    v_lazy[:, :, k][:, j][i]]:
-                        self.assertEqual(expected.shape, actual.shape)
+                        assert expected.shape == actual.shape
                         self.assertArrayEqual(expected, actual)
                         assert isinstance(actual._data,
                                           indexing.LazilyIndexedArray)
@@ -189,7 +189,7 @@ class TestLazyArray(TestCase):
         for i, j in indexers:
             expected = np.asarray(v[i][j])
             actual = v_lazy[i][j]
-            self.assertEqual(expected.shape, actual.shape)
+            assert expected.shape == actual.shape
             self.assertArrayEqual(expected, actual)
             assert isinstance(actual._data, indexing.LazilyIndexedArray)
             assert isinstance(actual._data.array,
@@ -208,7 +208,7 @@ class TestCopyOnWriteArray(TestCase):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
         child = wrapped[B[:5]]
-        self.assertIsInstance(child, indexing.CopyOnWriteArray)
+        assert isinstance(child, indexing.CopyOnWriteArray)
         child[B[:]] = 0
         self.assertArrayEqual(original, np.arange(10))
         self.assertArrayEqual(wrapped, np.arange(10))
@@ -225,16 +225,16 @@ class TestMemoryCachedArray(TestCase):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         self.assertArrayEqual(wrapped, np.arange(10))
-        self.assertIsInstance(wrapped.array, indexing.NumpyIndexingAdapter)
+        assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
-        self.assertIsInstance(child, indexing.MemoryCachedArray)
+        assert isinstance(child, indexing.MemoryCachedArray)
         self.assertArrayEqual(child, np.arange(5))
-        self.assertIsInstance(child.array, indexing.NumpyIndexingAdapter)
-        self.assertIsInstance(wrapped.array, indexing.LazilyIndexedArray)
+        assert isinstance(child.array, indexing.NumpyIndexingAdapter)
+        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
 
     def test_setitem(self):
         original = np.arange(10)

@@ -70,7 +70,7 @@ class TestOps(TestCase):
             last(self.x, 3)
 
     def test_count(self):
-        self.assertEqual(12, count(self.x))
+        assert 12 == count(self.x)
 
         expected = array([[1, 2, 3], [3, 2, 1]])
         self.assertArrayEqual(expected, count(self.x, axis=-1))

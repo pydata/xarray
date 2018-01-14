@@ -9,6 +9,7 @@ import pandas as pd
 
 from xarray import Variable, coding
 from . import TestCase, requires_netCDF4
+import pytest
 
 
 @np.vectorize
@@ -99,7 +100,7 @@ class TestDatetime(TestCase):
 
         for i, day in enumerate(days):
             result = coding.times.decode_cf_datetime(day, units)
-            self.assertEqual(result, expected[i])
+            assert result == expected[i]
 
     def test_decode_cf_datetime_non_standard_units(self):
         expected = pd.date_range(periods=100, start='1970-01-01', freq='h')
@@ -137,12 +138,12 @@ class TestDatetime(TestCase):
                 warnings.filterwarnings('ignore', 'Unable to decode time axis')
                 actual = coding.times.decode_cf_datetime(noleap_time, units,
                                                          calendar=calendar)
-            self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+            assert actual.dtype == np.dtype('M8[ns]')
             abs_diff = abs(actual - expected)
             # once we no longer support versions of netCDF4 older than 1.1.5,
             # we could do this check with near microsecond accuracy:
             # https://github.com/Unidata/netcdf4-python/issues/355
-            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+            assert (abs_diff <= np.timedelta64(1, 's')).all()
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_single_element(self):
@@ -155,7 +156,7 @@ class TestDatetime(TestCase):
                                             'Unable to decode time axis')
                     actual = coding.times.decode_cf_datetime(num_time, units,
                                                              calendar=calendar)
-                self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+                assert actual.dtype == np.dtype('M8[ns]')
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_single_element_fallback(self):
@@ -165,13 +166,13 @@ class TestDatetime(TestCase):
         dt = nc4.netcdftime.datetime(2001, 2, 29)
         for calendar in ['360_day', 'all_leap', '366_day']:
             num_time = nc4.date2num(dt, units, calendar)
-            with self.assertWarns('Unable to decode time axis'):
+            with pytest.warns('Unable to decode time axis'):
                 actual = coding.times.decode_cf_datetime(num_time, units,
                                                          calendar=calendar)
             expected = np.asarray(nc4.num2date(num_time, units, calendar))
             print(num_time, calendar, actual, expected)
-            self.assertEqual(actual.dtype, np.dtype('O'))
-            self.assertEqual(expected, actual)
+            assert actual.dtype == np.dtype('O')
+            assert expected == actual
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_multidim_time(self):
@@ -195,7 +196,7 @@ class TestDatetime(TestCase):
             warnings.filterwarnings('ignore', 'Unable to decode time axis')
             actual = coding.times.decode_cf_datetime(mdim_time, units,
                                                      calendar=calendar)
-        self.assertEqual(actual.dtype, np.dtype('M8[ns]'))
+        assert actual.dtype == np.dtype('M8[ns]')
         self.assertArrayEqual(actual[:, 0], expected1)
         self.assertArrayEqual(actual[:, 1], expected2)
 
@@ -214,11 +215,11 @@ class TestDatetime(TestCase):
                     warnings.simplefilter('always')
                     actual = coding.times.decode_cf_datetime(num_times, units,
                                                              calendar=calendar)
-                    self.assertEqual(len(w), 1)
-                    self.assertIn('Unable to decode time axis',
-                                  str(w[0].message))
+                    assert len(w) == 1
+                    assert 'Unable to decode time axis' in \
+                                  str(w[0].message)
 
-                self.assertEqual(actual.dtype, np.dtype('O'))
+                assert actual.dtype == np.dtype('O')
                 self.assertArrayEqual(actual, expected)
 
     @requires_netCDF4
@@ -266,8 +267,7 @@ class TestDatetime(TestCase):
                                 (pd.to_datetime(['NaT']),
                                  'days since 1970-01-01 00:00:00'),
                                 ]:
-            self.assertEqual(
-                expected, coding.times.infer_datetime_units(dates))
+            assert expected == coding.times.infer_datetime_units(dates)
 
     def test_cf_timedelta(self):
         examples = [
@@ -289,13 +289,13 @@ class TestDatetime(TestCase):
             expected = numbers
             actual, _ = coding.times.encode_cf_timedelta(timedeltas, units)
             self.assertArrayEqual(expected, actual)
-            self.assertEqual(expected.dtype, actual.dtype)
+            assert expected.dtype == actual.dtype
 
             if units is not None:
                 expected = timedeltas
                 actual = coding.times.decode_cf_timedelta(numbers, units)
                 self.assertArrayEqual(expected, actual)
-                self.assertEqual(expected.dtype, actual.dtype)
+                assert expected.dtype == actual.dtype
 
         expected = np.timedelta64('NaT', 'ns')
         actual = coding.times.decode_cf_timedelta(np.array(np.nan), 'days')
@@ -311,7 +311,7 @@ class TestDatetime(TestCase):
 
         actual = coding.times.decode_cf_timedelta(numbers, units)
         self.assertArrayEqual(expected, actual)
-        self.assertEqual(expected.dtype, actual.dtype)
+        assert expected.dtype == actual.dtype
 
     def test_infer_timedelta_units(self):
         for deltas, expected in [
@@ -319,5 +319,4 @@ class TestDatetime(TestCase):
                 (pd.to_timedelta(['1h', '1 day 1 hour']), 'hours'),
                 (pd.to_timedelta(['1m', '2m', np.nan]), 'minutes'),
                 (pd.to_timedelta(['1m3s', '1m4s']), 'seconds')]:
-            self.assertEqual(
-                expected, coding.times.infer_timedelta_units(deltas))
+            assert expected == coding.times.infer_timedelta_units(deltas)
