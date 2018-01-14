@@ -18,53 +18,24 @@ class TestDatetimeAccessor(TestCase):
         lats = np.linspace(0, 20, 10)
         self.times = pd.date_range(start="2000/01/01", freq='H', periods=nt)
 
-        self.data = xr.DataArray(
-            data,
-            coords=[lons, lats, self.times],
-            dims=['lon', 'lat', 'time'],
-            name='data')
+        self.data = xr.DataArray(data, coords=[lons, lats, self.times],
+                                 dims=['lon', 'lat', 'time'], name='data')
 
         self.times_arr = np.random.choice(self.times, size=(10, 10, nt))
-        self.times_data = xr.DataArray(
-            self.times_arr,
-            coords=[lons, lats, self.times],
-            dims=['lon', 'lat', 'time'],
-            name='data')
+        self.times_data = xr.DataArray(self.times_arr,
+                                       coords=[lons, lats, self.times],
+                                       dims=['lon', 'lat', 'time'],
+                                       name='data')
 
     def test_field_access(self):
-        years = xr.DataArray(
-            self.times.year,
-            name='year',
-            coords=[
-                self.times,
-            ],
-            dims=[
-                'time',
-            ])
-        months = xr.DataArray(
-            self.times.month,
-            name='month',
-            coords=[
-                self.times,
-            ],
-            dims=[
-                'time',
-            ])
-        days = xr.DataArray(
-            self.times.day, name='day', coords=[
-                self.times,
-            ], dims=[
-                'time',
-            ])
-        hours = xr.DataArray(
-            self.times.hour,
-            name='hour',
-            coords=[
-                self.times,
-            ],
-            dims=[
-                'time',
-            ])
+        years = xr.DataArray(self.times.year, name='year',
+                             coords=[self.times, ], dims=['time', ])
+        months = xr.DataArray(self.times.month, name='month',
+                              coords=[self.times, ], dims=['time', ])
+        days = xr.DataArray(self.times.day, name='day',
+                            coords=[self.times, ], dims=['time', ])
+        hours = xr.DataArray(self.times.hour, name='hour',
+                             coords=[self.times, ], dims=['time', ])
 
         assert_equal(years, self.data.time.dt.year)
         assert_equal(months, self.data.time.dt.month)
@@ -88,11 +59,10 @@ class TestDatetimeAccessor(TestCase):
         days = self.times_data.dt.day
 
         dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
-        dask_times_2d = xr.DataArray(
-            dask_times_arr,
-            coords=self.data.coords,
-            dims=self.data.dims,
-            name='data')
+        dask_times_2d = xr.DataArray(dask_times_arr,
+                                     coords=self.data.coords,
+                                     dims=self.data.dims,
+                                     name='data')
         dask_year = dask_times_2d.dt.year
         dask_month = dask_times_2d.dt.month
         dask_day = dask_times_2d.dt.day
@@ -120,10 +90,8 @@ class TestDatetimeAccessor(TestCase):
     def test_seasons(self):
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
         dates = xr.DataArray(dates)
-        seasons = [
-            "DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA", "SON",
-            "SON", "SON", "DJF"
-        ]
+        seasons = ["DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA",
+                   "SON", "SON", "SON", "DJF"]
         seasons = xr.DataArray(seasons)
 
         assert_array_equal(seasons.values, dates.dt.season.values)
