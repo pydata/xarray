@@ -17,7 +17,7 @@ class TestOps(TestCase):
         try:
             assert a.identical(b), (a, b)
         except AttributeError:
-            self.assertArrayEqual(a, b)
+            assert_equal(a, b)
 
     def test_unary(self):
         args = [0,

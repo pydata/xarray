@@ -32,8 +32,8 @@ class TestIndexers(TestCase):
                   I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:
             j = indexing.expanded_indexer(i, x.ndim)
-            self.assertArrayEqual(x[i], x[j])
-            self.assertArrayEqual(self.set_to_zero(x, i),
+            assert_equal(x[i], x[j])
+            assert_equal(self.set_to_zero(x, i),
                                   self.set_to_zero(x, j))
         with raises_regex(IndexError, 'too many indices'):
             indexing.expanded_indexer(I[1, 2, 3], 2)
@@ -100,8 +100,8 @@ class TestIndexers(TestCase):
     def test_remap_label_indexers(self):
         def test_indexer(data, x, expected_pos, expected_idx=None):
             pos, idx = indexing.remap_label_indexers(data, {'x': x})
-            self.assertArrayEqual(pos.get('x'), expected_pos)
-            self.assertArrayEqual(idx.get('x'), expected_idx)
+            assert_equal(pos.get('x'), expected_pos)
+            assert_equal(idx.get('x'), expected_idx)
 
         data = Dataset({'x': ('x', [1, 2, 3])})
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
@@ -147,7 +147,7 @@ class TestLazyArray(TestCase):
                 expected = x[i][j]
                 new_slice = indexing.slice_slice(i, j, size=100)
                 actual = x[new_slice]
-                self.assertArrayEqual(expected, actual)
+                assert_equal(expected, actual)
 
     def test_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
@@ -170,7 +170,7 @@ class TestLazyArray(TestCase):
                                    v_lazy[:, j, k][i],
                                    v_lazy[:, :, k][:, j][i]]:
                         assert expected.shape == actual.shape
-                        self.assertArrayEqual(expected, actual)
+                        assert_equal(expected, actual)
                         assert isinstance(actual._data,
                                           indexing.LazilyIndexedArray)
 
@@ -190,7 +190,7 @@ class TestLazyArray(TestCase):
             expected = np.asarray(v[i][j])
             actual = v_lazy[i][j]
             assert expected.shape == actual.shape
-            self.assertArrayEqual(expected, actual)
+            assert_equal(expected, actual)
             assert isinstance(actual._data, indexing.LazilyIndexedArray)
             assert isinstance(actual._data.array,
                               indexing.NumpyIndexingAdapter)
@@ -201,8 +201,8 @@ class TestCopyOnWriteArray(TestCase):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
         wrapped[B[:]] = 0
-        self.assertArrayEqual(original, np.arange(10))
-        self.assertArrayEqual(wrapped, np.zeros(10))
+        assert_equal(original, np.arange(10))
+        assert_equal(wrapped, np.zeros(10))
 
     def test_sub_array(self):
         original = np.arange(10)
@@ -210,9 +210,9 @@ class TestCopyOnWriteArray(TestCase):
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.CopyOnWriteArray)
         child[B[:]] = 0
-        self.assertArrayEqual(original, np.arange(10))
-        self.assertArrayEqual(wrapped, np.arange(10))
-        self.assertArrayEqual(child, np.zeros(5))
+        assert_equal(original, np.arange(10))
+        assert_equal(wrapped, np.arange(10))
+        assert_equal(child, np.zeros(5))
 
     def test_index_scalar(self):
         # regression test for GH1374
@@ -224,7 +224,7 @@ class TestMemoryCachedArray(TestCase):
     def test_wrapper(self):
         original = indexing.LazilyIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
-        self.assertArrayEqual(wrapped, np.arange(10))
+        assert_equal(wrapped, np.arange(10))
         assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
@@ -232,7 +232,7 @@ class TestMemoryCachedArray(TestCase):
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.MemoryCachedArray)
-        self.assertArrayEqual(child, np.arange(5))
+        assert_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
         assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
 
@@ -240,7 +240,7 @@ class TestMemoryCachedArray(TestCase):
         original = np.arange(10)
         wrapped = indexing.MemoryCachedArray(original)
         wrapped[B[:]] = 0
-        self.assertArrayEqual(original, np.zeros(10))
+        assert_equal(original, np.zeros(10))
 
     def test_index_scalar(self):
         # regression test for GH1374

@@ -32,15 +32,15 @@ class TestOps(TestCase):
         for axis, expected in zip([0, 1, 2, -3, -2, -1],
                                   2 * expected_results):
             actual = first(self.x, axis)
-            self.assertArrayEqual(expected, actual)
+            assert_equal(expected, actual)
 
         expected = self.x[0]
         actual = first(self.x, axis=0, skipna=False)
-        self.assertArrayEqual(expected, actual)
+        assert_equal(expected, actual)
 
         expected = self.x[..., 0]
         actual = first(self.x, axis=-1, skipna=False)
-        self.assertArrayEqual(expected, actual)
+        assert_equal(expected, actual)
 
         with raises_regex(IndexError, 'out of bounds'):
             first(self.x, 3)
@@ -56,15 +56,15 @@ class TestOps(TestCase):
         for axis, expected in zip([0, 1, 2, -3, -2, -1],
                                   2 * expected_results):
             actual = last(self.x, axis)
-            self.assertArrayEqual(expected, actual)
+            assert_equal(expected, actual)
 
         expected = self.x[-1]
         actual = last(self.x, axis=0, skipna=False)
-        self.assertArrayEqual(expected, actual)
+        assert_equal(expected, actual)
 
         expected = self.x[..., -1]
         actual = last(self.x, axis=-1, skipna=False)
-        self.assertArrayEqual(expected, actual)
+        assert_equal(expected, actual)
 
         with raises_regex(IndexError, 'out of bounds'):
             last(self.x, 3)
@@ -73,7 +73,7 @@ class TestOps(TestCase):
         assert 12 == count(self.x)
 
         expected = array([[1, 2, 3], [3, 2, 1]])
-        self.assertArrayEqual(expected, count(self.x, axis=-1))
+        assert_equal(expected, count(self.x, axis=-1))
 
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))

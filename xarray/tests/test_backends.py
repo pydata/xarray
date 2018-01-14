@@ -368,7 +368,7 @@ class DatasetIOTestCases(object):
             # will depend on the encoding used.  For example,
             # without CF encoding 'actual' will end up with
             # a dtype attribute.
-            self.assertDatasetEqual(expected, actual)
+            assert_equal(expected, actual)
 
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
@@ -784,7 +784,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             # check equivalent ways to specify group
             for group in 'foo', '/foo', 'foo/', '/foo/':
                 with open_dataset(tmp_file, group=group) as actual:
-                    self.assertVariableEqual(actual['x'], expected['x'])
+                    assert_equal(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
             with pytest.raises(IOError):
@@ -811,7 +811,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             # check equivalent ways to specify group
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
                 with open_dataset(tmp_file, group=group) as actual:
-                    self.assertVariableEqual(actual['x'], expected['x'])
+                    assert_equal(actual['x'], expected['x'])
 
     def test_write_groups(self):
         data1 = create_test_data()
@@ -885,7 +885,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             expected['time'] = ('time', time, {}, encoding)
 
             with open_dataset(tmp_file) as actual:
-                self.assertVariableEqual(actual['time'], expected['time'])
+                assert_equal(actual['time'], expected['time'])
                 actual_encoding = dict((k, v) for k, v in
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
@@ -932,7 +932,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         # regression test for #156
         expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
-            self.assertDatasetEqual(expected, actual)
+            assert_equal(expected, actual)
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
@@ -947,7 +947,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             'original_shape': (3,),
         }
         with self.roundtrip(ds) as actual:
-            self.assertDatasetEqual(ds, actual)
+            assert_equal(ds, actual)
 
     def test_mask_and_scale(self):
         with create_tmp_file() as tmp_file:
@@ -966,7 +966,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
                 actual = nc.variables['x'][:]
-                self.assertArrayEqual(expected, actual)
+                assert_equal(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
@@ -1514,12 +1514,12 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         with self.roundtrip(ds,
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             assert actual.encoding['unlimited_dims'] == set('y')
-            self.assertDatasetEqual(ds, actual)
+            assert_equal(ds, actual)
 
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             assert actual.encoding['unlimited_dims'] == set('y')
-            self.assertDatasetEqual(ds, actual)
+            assert_equal(ds, actual)
 
 
 class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
@@ -1547,7 +1547,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
-            self.assertDatasetEqual(expected, actual)
+            assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
@@ -1577,11 +1577,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(ds,
                             save_kwargs=dict(unlimited_dims=['y'])) as actual:
             assert actual.encoding['unlimited_dims'] == set('y')
-            self.assertDatasetEqual(ds, actual)
+            assert_equal(ds, actual)
         ds.encoding = {'unlimited_dims': ['y']}
         with self.roundtrip(ds) as actual:
             assert actual.encoding['unlimited_dims'] == set('y')
-            self.assertDatasetEqual(ds, actual)
+            assert_equal(ds, actual)
 
 
 # tests pending h5netcdf fix
@@ -2031,7 +2031,7 @@ class PydapTest(TestCase):
 
     def test_cmp_local_file(self):
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual, expected)
+            assert_equal(actual, expected)
 
             # global attributes should be global attributes on the dataset
             assert 'NC_GLOBAL' not in actual.attrs
@@ -2043,15 +2043,14 @@ class PydapTest(TestCase):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(
-                actual.isel(l=2), expected.isel(l=2))  # noqa: E741
+            assert_equal(actual.isel(l=2), expected.isel(l=2))
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(i=0, j=-1),
+            assert_equal(actual.isel(i=0, j=-1),
                                     expected.isel(i=0, j=-1))
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(j=slice(1, 2)),
+            assert_equal(actual.isel(j=slice(1, 2)),
                                     expected.isel(j=slice(1, 2)))
 
     def test_compatible_to_netcdf(self):
@@ -2061,12 +2060,12 @@ class PydapTest(TestCase):
                 actual.to_netcdf(tmp_file)
                 actual = open_dataset(tmp_file)
                 actual['bears'] = actual['bears'].astype(str)
-                self.assertDatasetEqual(actual, expected)
+                assert_equal(actual, expected)
 
     @requires_dask
     def test_dask(self):
         with self.create_datasets(chunks={'j': 2}) as (actual, expected):
-            self.assertDatasetEqual(actual, expected)
+            assert_equal(actual, expected)
 
 
 @network
