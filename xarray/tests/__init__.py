@@ -45,12 +45,6 @@ except ImportError:
 
 
 def _importorskip(modname, minversion=None):
-    """
-    This is deprecated - instead use pytest.importorskip. For example:
-
-    matplotlib = pytest.importorskip('matplotlib', minversion='1.9.0')
-
-    """
     try:
         mod = importlib.import_module(modname)
         has = True
