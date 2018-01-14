@@ -351,7 +351,7 @@ def ensure_dtype_not_object(var, name=None):
                 fill_value = u''
             else:
                 # insist on using float for numeric values
-                if not np.issubdtype(inferred_dtype, float):
+                if not np.issubdtype(inferred_dtype, np.floating):
                     inferred_dtype = np.dtype(float)
                 fill_value = inferred_dtype.type(np.nan)
 
