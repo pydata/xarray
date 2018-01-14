@@ -247,13 +247,13 @@ class TestDecodeCF(TestCase):
                            {'t': pd.date_range('2000-01-01', periods=3),
                             'y': ('t', [5.0, 10.0, np.nan])})
         actual = conventions.decode_cf(original)
-        self.assertDatasetIdentical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_invalid_coordinates(self):
         # regression test for GH308
         original = Dataset({'foo': ('t', [1, 2], {'coordinates': 'invalid'})})
         actual = conventions.decode_cf(original)
-        self.assertDatasetIdentical(original, actual)
+        assert_identical(original, actual)
 
     def test_decode_coordinates(self):
         # regression test for GH610
@@ -266,7 +266,7 @@ class TestDecodeCF(TestCase):
         original = Variable((), np.int32(0), encoding={'dtype': 'int64'})
         expected = Variable((), np.int64(0))
         actual = conventions.maybe_encode_nonstring_dtype(original)
-        self.assertDatasetIdentical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_decode_cf_with_multiple_missing_values(self):
         original = Variable(['t'], [0, 1, 2],
@@ -274,7 +274,7 @@ class TestDecodeCF(TestCase):
         expected = Variable(['t'], [np.nan, np.nan, 2], {})
         with warnings.catch_warnings(record=True) as w:
             actual = conventions.decode_cf_variable('t', original)
-            self.assertDatasetIdentical(expected, actual)
+            assert_identical(expected, actual)
             assert 'has multiple fill' in str(w[0].message)
 
     def test_decode_cf_with_drop_variables(self):
@@ -293,8 +293,8 @@ class TestDecodeCF(TestCase):
         })
         actual = conventions.decode_cf(original, drop_variables=("x",))
         actual2 = conventions.decode_cf(original, drop_variables="x")
-        self.assertDatasetIdentical(expected, actual)
-        self.assertDatasetIdentical(expected, actual2)
+        assert_identical(expected, actual)
+        assert_identical(expected, actual2)
 
     def test_invalid_time_units_raises_eagerly(self):
         ds = Dataset({'time': ('time', [0, 1], {'units': 'foobar since 123'})})

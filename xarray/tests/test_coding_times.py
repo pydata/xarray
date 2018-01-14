@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from xarray import Variable, coding
-from . import TestCase, requires_netCDF4
+from . import TestCase, requires_netCDF4, assert_equal, assert_identical
 import pytest
 
 

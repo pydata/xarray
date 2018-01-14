@@ -6,7 +6,8 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
-from . import TestCase, requires_dask, raises_regex
+from . import (TestCase, requires_dask, raises_regex, assert_equal,
+               assert_identical, assert_allclose)
 
 
 class TestDatetimeAccessor(TestCase):

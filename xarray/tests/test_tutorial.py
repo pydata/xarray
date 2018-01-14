@@ -25,4 +25,4 @@ class TestLoadDataset(TestCase):
     def test_download_from_github(self):
         ds = tutorial.load_dataset(self.testfile)
         tiny = DataArray(range(5), name='tiny').to_dataset()
-        self.assertDatasetIdentical(ds, tiny)
+        assert_identical(ds, tiny)

@@ -48,7 +48,7 @@ class DaskTestCase(TestCase):
 
 class TestVariable(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
-        self.assertLazyAnd(expected, actual, self.assertVariableIdentical)
+        self.assertLazyAnd(expected, actual, assert_identical)
 
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertVariableAllClose)
@@ -149,7 +149,7 @@ class TestVariable(DaskTestCase):
         assert kernel_call_count == 1
         a2 = pickle.loads(pickle.dumps(a1))
         assert kernel_call_count == 1
-        self.assertVariableIdentical(a1, a2)
+        assert_identical(a1, a2)
         assert not a1._in_memory
         assert not a2._in_memory
 
@@ -239,7 +239,7 @@ class TestVariable(DaskTestCase):
 
 class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndIdentical(self, expected, actual):
-        self.assertLazyAnd(expected, actual, self.assertDataArrayIdentical)
+        self.assertLazyAnd(expected, actual, assert_identical)
 
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
@@ -523,7 +523,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert kernel_call_count == 2
         a2 = pickle.loads(pickle.dumps(a1))
         assert kernel_call_count == 2
-        self.assertDataArrayIdentical(a1, a2)
+        assert_identical(a1, a2)
         assert not a1._in_memory
         assert not a2._in_memory
         assert not a1.coords['y']._in_memory
@@ -542,7 +542,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert kernel_call_count == 2
         ds2 = pickle.loads(pickle.dumps(ds1))
         assert kernel_call_count == 2
-        self.assertDatasetIdentical(ds1, ds2)
+        assert_identical(ds1, ds2)
         assert not ds1['a']._in_memory
         assert not ds2['a']._in_memory
         assert not ds1['y']._in_memory

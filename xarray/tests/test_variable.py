@@ -60,7 +60,7 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], np.random.randn(5))
         actual = v[{'x': 0}]
         expected = v[0]
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_getitem_1d(self):
         data = np.array([0, 1, 2])
@@ -99,9 +99,9 @@ class VariableSubclassTestCases(object):
         # boolean indexing
         ind = Variable(('x', ), [True, False, True])
         v_new = v[ind]
-        self.assertVariableIdentical(v[[0, 2]], v_new)
+        assert_identical(v[[0, 2]], v_new)
         v_new = v[[True, False, True]]
-        self.assertVariableIdentical(v[[0, 2]], v_new)
+        assert_identical(v[[0, 2]], v_new)
 
         with raises_regex(IndexError, "Boolean indexer should"):
             ind = Variable(('a', ), [True, False, True])
@@ -279,7 +279,7 @@ class VariableSubclassTestCases(object):
 
     def test_pandas_data(self):
         v = self.cls(['x'], pd.Series([0, 1, 2], index=[3, 2, 1]))
-        self.assertVariableIdentical(v, v[[0, 1, 2]])
+        assert_identical(v, v[[0, 1, 2]])
         v = self.cls(['x'], pd.Index([0, 1, 2]))
         assert v[0].values == v.values[0]
 
@@ -299,13 +299,13 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], x)
         base_v = v.to_base_variable()
         # unary ops
-        self.assertVariableIdentical(base_v, +v)
-        self.assertVariableIdentical(base_v, abs(v))
+        assert_identical(base_v, +v)
+        assert_identical(base_v, abs(v))
         assert_equal((-v).values, -x)
         # binary ops with numbers
-        self.assertVariableIdentical(base_v, v + 0)
-        self.assertVariableIdentical(base_v, 0 + v)
-        self.assertVariableIdentical(base_v, v * 1)
+        assert_identical(base_v, v + 0)
+        assert_identical(base_v, 0 + v)
+        assert_identical(base_v, v * 1)
         assert_equal((v > 2).values, x > 2)
         assert_equal((0 == v).values, 0 == x)
         assert_equal((v - 1).values, x - 1)
@@ -317,18 +317,13 @@ class VariableSubclassTestCases(object):
         assert_equal(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(['x'], x, {'units': 'meters'})
-        self.assertVariableIdentical(base_v, +v2)
+        assert_identical(base_v, +v2)
         # binary ops with all variables
         assert_equal(v + v, 2 * v)
         w = self.cls(['x'], y, {'foo': 'bar'})
-<<<<<<< HEAD
-        self.assertVariableIdentical(
-            v + w, self.cls(['x'], x + y).to_base_variable())
-        self.assertArrayEqual((v * w).values, x * y)
-=======
-        self.assertVariableIdentical(v + w, self.cls(['x'], x + y).to_base_variable())
+        assert_identical(v + w, self.cls(['x'], x + y).to_base_variable())
         assert_equal((v * w).values, x * y)
->>>>>>> assert_equal
+
         # something complicated
         assert_equal((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
         # make sure dtype is preserved (for Index objects)
@@ -347,7 +342,7 @@ class VariableSubclassTestCases(object):
         v = self.cls(['x'], x)
         actual = v.sum()
         expected = Variable((), 10)
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
         assert type(actual) is Variable
 
     def test_array_interface(self):
@@ -357,20 +352,14 @@ class VariableSubclassTestCases(object):
         # test patched in methods
         assert_equal(v.astype(float), x.astype(float))
         # think this is a break, that argsort changes the type
-        self.assertVariableIdentical(v.argsort(), v.to_base_variable())
-        self.assertVariableIdentical(
-            v.clip(2, 3), self.cls('x', x.clip(2, 3)).to_base_variable())
+        assert_identical(v.argsort(), v.to_base_variable())
+        assert_identical(v.clip(2, 3),
+                         self.cls('x', x.clip(2, 3)).to_base_variable())
         # test ufuncs
-<<<<<<< HEAD
-        self.assertVariableIdentical(
-            np.sin(v), self.cls(['x'], np.sin(x)).to_base_variable())
-        self.assertIsInstance(np.sin(v), Variable)
-        self.assertNotIsInstance(np.sin(v), IndexVariable)
-=======
-        self.assertVariableIdentical(np.sin(v), self.cls(['x'], np.sin(x)).to_base_variable())
+        assert_identical(np.sin(v),
+                         self.cls(['x'], np.sin(x)).to_base_variable())
         assert isinstance(np.sin(v), Variable)
         assert not isinstance(np.sin(v), IndexVariable)
->>>>>>> self_assert from unittest2pytest
 
     def example_1d_objects(self):
         for data in [range(3),
@@ -406,9 +395,9 @@ class VariableSubclassTestCases(object):
         expected = Variable('x', 3 * [False])
         for v, _ in self.example_1d_objects():
             actual = 'z' == v
-            self.assertVariableIdentical(expected, actual)
+            assert_identical(expected, actual)
             actual = ~('z' != v)
-            self.assertVariableIdentical(expected, actual)
+            assert_identical(expected, actual)
 
     def test_encoding_preserved(self):
         expected = self.cls('x', range(3), {'foo': 1}, {'bar': 2})
@@ -420,7 +409,7 @@ class VariableSubclassTestCases(object):
                        expected.copy(deep=True),
                        expected.copy(deep=False)]:
 
-            self.assertVariableIdentical(expected.to_base_variable(),
+            assert_identical(expected.to_base_variable(),
                                          actual.to_base_variable())
             assert expected.encoding == actual.encoding
 
@@ -429,11 +418,11 @@ class VariableSubclassTestCases(object):
         y = np.arange(5, 10)
         v = self.cls(['a'], x)
         w = self.cls(['a'], y)
-        self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
+        assert_identical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat([v, w], 'b'))
-        self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
+        assert_identical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b'))
-        self.assertVariableIdentical(Variable(['b', 'a'], np.array([x, y])),
+        assert_identical(Variable(['b', 'a'], np.array([x, y])),
                                      Variable.concat((v, w), 'b'))
         with raises_regex(ValueError, 'inconsistent dimensions'):
             Variable.concat([v, Variable(['c'], y)], 'b')
@@ -443,18 +432,14 @@ class VariableSubclassTestCases(object):
             positions=[np.arange(0, 10, 2), np.arange(1, 10, 2)],
             dim='a')
         expected = Variable('a', np.array([x, y]).ravel(order='F'))
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
         # test concatenating along a dimension
         v = Variable(['time', 'x'], np.random.random((10, 8)))
-        self.assertVariableIdentical(
-            v, Variable.concat([v[:5], v[5:]], 'time'))
-        self.assertVariableIdentical(
-            v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
-        self.assertVariableIdentical(
-            v, Variable.concat([v[:1], v[1:]], 'time'))
+        assert_identical(v, Variable.concat([v[:5], v[5:]], 'time'))
+        assert_identical(v, Variable.concat([v[:5], v[5:6], v[6:]], 'time'))
+        assert_identical(v, Variable.concat([v[:1], v[1:]], 'time'))
         # test dimension order
-        self.assertVariableIdentical(
-            v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
+        assert_identical(v, Variable.concat([v[:, :5], v[:, 5:]], 'x'))
         with raises_regex(ValueError, 'all input arrays must have'):
             Variable.concat([v[:, 0], v[:, 1:]], 'x')
 
@@ -464,12 +449,12 @@ class VariableSubclassTestCases(object):
         w = self.cls('a', np.ones(5))
         expected = self.cls(
             'a', np.concatenate([np.arange(5), np.ones(5)])).to_base_variable()
-        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
+        assert_identical(expected, Variable.concat([v, w], 'a'))
         w.attrs['foo'] = 2
-        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
+        assert_identical(expected, Variable.concat([v, w], 'a'))
         w.attrs['foo'] = 'bar'
         expected.attrs['foo'] = 'bar'
-        self.assertVariableIdentical(expected, Variable.concat([v, w], 'a'))
+        assert_identical(expected, Variable.concat([v, w], 'a'))
 
     def test_concat_fixed_len_str(self):
         # regression test for #217
@@ -487,7 +472,7 @@ class VariableSubclassTestCases(object):
         b = self.cls('x', ['3', '4'])
         actual = Variable.concat([a, b], dim='x')
         expected = Variable('x', np.arange(5).astype(str).astype(object))
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
         assert expected.dtype == object
         assert type(expected.values[0]) == str
 
@@ -496,7 +481,7 @@ class VariableSubclassTestCases(object):
         for deep in [True, False]:
             w = v.copy(deep=deep)
             assert type(v) is type(w)
-            self.assertVariableIdentical(v, w)
+            assert_identical(v, w)
             assert v.dtype == w.dtype
             if self.cls is Variable:
                 if deep:
@@ -505,7 +490,7 @@ class VariableSubclassTestCases(object):
                 else:
                     assert source_ndarray(v.values) is \
                                   source_ndarray(w.values)
-        self.assertVariableIdentical(v, copy(v))
+        assert_identical(v, copy(v))
 
     def test_copy_index(self):
         midx = pd.MultiIndex.from_product([['a', 'b'], [1, 2], [-1, -2]],
@@ -520,10 +505,10 @@ class VariableSubclassTestCases(object):
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
         expected_re = self.cls('x', np.arange(3), {'foo': 'bar'})
-        self.assertVariableIdentical(v.real, expected_re)
+        assert_identical(v.real, expected_re)
 
         expected_im = self.cls('x', -np.arange(3), {'foo': 'bar'})
-        self.assertVariableIdentical(v.imag, expected_im)
+        assert_identical(v.imag, expected_im)
 
         expected_abs = self.cls(
             'x', np.sqrt(2 * np.arange(3) ** 2)).to_base_variable()
@@ -554,8 +539,8 @@ class VariableSubclassTestCases(object):
     def test_multiindex(self):
         idx = pd.MultiIndex.from_product([list('abc'), [0, 1]])
         v = self.cls('x', idx)
-        self.assertVariableIdentical(Variable((), ('a', 0)), v[0])
-        self.assertVariableIdentical(v, v[:])
+        assert_identical(Variable((), ('a', 0)), v[0])
+        assert_identical(v, v[:])
 
     def test_load(self):
         array = self.cls('x', np.arange(5))
@@ -565,7 +550,7 @@ class VariableSubclassTestCases(object):
             array.load()
             assert type(array._data) is type(orig_data)
             assert type(copied._data) is type(orig_data)
-            self.assertVariableIdentical(array, copied)
+            assert_identical(array, copied)
 
     def test_getitem_advanced(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
@@ -704,13 +689,13 @@ class VariableSubclassTestCases(object):
         ind = Variable(['a', 'b'], [[0]])
         v_new = v[ind, :, :]
         expected = Variable(['a', 'b', 'y', 'z'], v.data[np.newaxis, ...])
-        self.assertVariableIdentical(v_new, expected)
+        assert_identical(v_new, expected)
 
         v = Variable(['w', 'x', 'y', 'z'], [[[[1, 2, 3], [4, 5, 6]]]])
         ind = Variable(['y'], [0])
         v_new = v[ind, :, 1:2, 2]
         expected = Variable(['y', 'x'], [[6]])
-        self.assertVariableIdentical(v_new, expected)
+        assert_identical(v_new, expected)
 
         # slice and vector mixed indexing resulting in the same dimension
         v = Variable(['x', 'y', 'z'], np.arange(60).reshape(3, 4, 5))
@@ -720,7 +705,7 @@ class VariableSubclassTestCases(object):
         expected[0] = v.data[0, 0]
         expected[1] = v.data[1, 1]
         expected[2] = v.data[2, 2]
-        self.assertVariableIdentical(v_new, expected)
+        assert_identical(v_new, expected)
 
         v_new = v[:, ind.data]
         assert v_new.shape == (3, 3, 5)
@@ -889,32 +874,32 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected_extra = Variable('x', data, attrs={'myattr': 'val'},
                                   encoding={'scale_factor': 1})
 
-        self.assertVariableIdentical(expected, as_variable(expected))
+        assert_identical(expected, as_variable(expected))
 
         ds = Dataset({'x': expected})
         var = as_variable(ds['x']).to_base_variable()
-        self.assertVariableIdentical(expected, var)
+        assert_identical(expected, var)
         assert not isinstance(ds['x'], Variable)
         assert isinstance(as_variable(ds['x']), Variable)
 
         FakeVariable = namedtuple('FakeVariable', 'values dims')
         fake_xarray = FakeVariable(expected.values, expected.dims)
-        self.assertVariableIdentical(expected, as_variable(fake_xarray))
+        assert_identical(expected, as_variable(fake_xarray))
 
         FakeVariable = namedtuple('FakeVariable', 'data dims')
         fake_xarray = FakeVariable(expected.data, expected.dims)
-        self.assertVariableIdentical(expected, as_variable(fake_xarray))
+        assert_identical(expected, as_variable(fake_xarray))
 
         FakeVariable = namedtuple('FakeVariable',
                                   'data values dims attrs encoding')
         fake_xarray = FakeVariable(expected_extra.data, expected_extra.values,
                                    expected_extra.dims, expected_extra.attrs,
                                    expected_extra.encoding)
-        self.assertVariableIdentical(expected_extra, as_variable(fake_xarray))
+        assert_identical(expected_extra, as_variable(fake_xarray))
 
         xarray_tuple = (expected_extra.dims, expected_extra.values,
                         expected_extra.attrs, expected_extra.encoding)
-        self.assertVariableIdentical(expected_extra, as_variable(xarray_tuple))
+        assert_identical(expected_extra, as_variable(xarray_tuple))
 
         with raises_regex(TypeError, 'tuples to convert'):
             as_variable(tuple(data))
@@ -923,11 +908,11 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             as_variable(data)
 
         actual = as_variable(data, name='x')
-        self.assertVariableIdentical(expected.to_index_variable(), actual)
+        assert_identical(expected.to_index_variable(), actual)
 
         actual = as_variable(0)
         expected = Variable([], 0)
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
 
         data = np.arange(9).reshape((3, 3))
         expected = Variable(('x', 'y'), data)
@@ -1030,25 +1015,25 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         data = np.random.random((10, 11))
         v = Variable(['x', 'y'], data)
         # test slicing
-        self.assertVariableIdentical(v, v[:])
-        self.assertVariableIdentical(v, v[...])
-        self.assertVariableIdentical(Variable(['y'], data[0]), v[0])
-        self.assertVariableIdentical(Variable(['x'], data[:, 0]), v[:, 0])
-        self.assertVariableIdentical(Variable(['x', 'y'], data[:3, :2]),
+        assert_identical(v, v[:])
+        assert_identical(v, v[...])
+        assert_identical(Variable(['y'], data[0]), v[0])
+        assert_identical(Variable(['x'], data[:, 0]), v[:, 0])
+        assert_identical(Variable(['x', 'y'], data[:3, :2]),
                                      v[:3, :2])
         # test array indexing
         x = Variable(['x'], np.arange(10))
         y = Variable(['y'], np.arange(11))
-        self.assertVariableIdentical(v, v[x.values])
-        self.assertVariableIdentical(v, v[x])
-        self.assertVariableIdentical(v[:3], v[x < 3])
-        self.assertVariableIdentical(v[:, 3:], v[:, y >= 3])
-        self.assertVariableIdentical(v[:3, 3:], v[x < 3, y >= 3])
-        self.assertVariableIdentical(v[:3, :2], v[x[:3], y[:2]])
-        self.assertVariableIdentical(v[:3, :2], v[range(3), range(2)])
+        assert_identical(v, v[x.values])
+        assert_identical(v, v[x])
+        assert_identical(v[:3], v[x < 3])
+        assert_identical(v[:, 3:], v[:, y >= 3])
+        assert_identical(v[:3, 3:], v[x < 3, y >= 3])
+        assert_identical(v[:3, :2], v[x[:3], y[:2]])
+        assert_identical(v[:3, :2], v[range(3), range(2)])
         # test iteration
         for n, item in enumerate(v):
-            self.assertVariableIdentical(Variable(['y'], data[n]), item)
+            assert_identical(Variable(['y'], data[n]), item)
         with raises_regex(TypeError, 'iteration over a 0-d'):
             iter(Variable([], 0))
         # test setting
@@ -1090,74 +1075,74 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_isel(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertVariableIdentical(v.isel(time=slice(None)), v)
-        self.assertVariableIdentical(v.isel(time=0), v[0])
-        self.assertVariableIdentical(v.isel(time=slice(0, 3)), v[:3])
-        self.assertVariableIdentical(v.isel(x=0), v[:, 0])
+        assert_identical(v.isel(time=slice(None)), v)
+        assert_identical(v.isel(time=0), v[0])
+        assert_identical(v.isel(time=slice(0, 3)), v[:3])
+        assert_identical(v.isel(x=0), v[:, 0])
         with raises_regex(ValueError, 'do not exist'):
             v.isel(not_a_dim=0)
 
     def test_index_0d_numpy_string(self):
         # regression test to verify our work around for indexing 0d strings
         v = Variable([], np.string_('asdf'))
-        self.assertVariableIdentical(v[()], v)
+        assert_identical(v[()], v)
 
         v = Variable([], np.unicode_(u'asdf'))
-        self.assertVariableIdentical(v[()], v)
+        assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
         # regression test for GH568
         actual = Variable(('x'), [u'tmax'])[0][()]
         expected = Variable((), u'tmax')
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
     def test_shift(self):
         v = Variable('x', [1, 2, 3, 4, 5])
 
-        self.assertVariableIdentical(v, v.shift(x=0))
+        assert_identical(v, v.shift(x=0))
         assert v is not v.shift(x=0)
 
         expected = Variable('x', [np.nan, 1, 2, 3, 4])
-        self.assertVariableIdentical(expected, v.shift(x=1))
+        assert_identical(expected, v.shift(x=1))
 
         expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
-        self.assertVariableIdentical(expected, v.shift(x=2))
+        assert_identical(expected, v.shift(x=2))
 
         expected = Variable('x', [2, 3, 4, 5, np.nan])
-        self.assertVariableIdentical(expected, v.shift(x=-1))
+        assert_identical(expected, v.shift(x=-1))
 
         expected = Variable('x', [np.nan] * 5)
-        self.assertVariableIdentical(expected, v.shift(x=5))
-        self.assertVariableIdentical(expected, v.shift(x=6))
+        assert_identical(expected, v.shift(x=5))
+        assert_identical(expected, v.shift(x=6))
 
         with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
 
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
-        self.assertVariableIdentical(v, v.shift(x=0))
+        assert_identical(v, v.shift(x=0))
 
         expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
-        self.assertVariableIdentical(expected, v.shift(x=1))
+        assert_identical(expected, v.shift(x=1))
 
     def test_shift2d(self):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])
         expected = Variable(('x', 'y'), [[np.nan, np.nan], [np.nan, 1]])
-        self.assertVariableIdentical(expected, v.shift(x=1, y=1))
+        assert_identical(expected, v.shift(x=1, y=1))
 
     def test_roll(self):
         v = Variable('x', [1, 2, 3, 4, 5])
 
-        self.assertVariableIdentical(v, v.roll(x=0))
+        assert_identical(v, v.roll(x=0))
         assert v is not v.roll(x=0)
 
         expected = Variable('x', [5, 1, 2, 3, 4])
-        self.assertVariableIdentical(expected, v.roll(x=1))
-        self.assertVariableIdentical(expected, v.roll(x=-4))
-        self.assertVariableIdentical(expected, v.roll(x=6))
+        assert_identical(expected, v.roll(x=1))
+        assert_identical(expected, v.roll(x=-4))
+        assert_identical(expected, v.roll(x=6))
 
         expected = Variable('x', [4, 5, 1, 2, 3])
-        self.assertVariableIdentical(expected, v.roll(x=2))
-        self.assertVariableIdentical(expected, v.roll(x=-3))
+        assert_identical(expected, v.roll(x=2))
+        assert_identical(expected, v.roll(x=-3))
 
         with raises_regex(ValueError, 'dimension'):
             v.roll(z=0)
@@ -1174,16 +1159,16 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
         v2 = Variable(['x', 'time'], self.d.T)
-        self.assertVariableIdentical(v, v2.transpose())
-        self.assertVariableIdentical(v.transpose(), v.T)
+        assert_identical(v, v2.transpose())
+        assert_identical(v.transpose(), v.T)
         x = np.random.randn(2, 3, 4, 5)
         w = Variable(['a', 'b', 'c', 'd'], x)
         w2 = Variable(['d', 'b', 'c', 'a'], np.einsum('abcd->dbca', x))
         assert w2.shape == (5, 3, 4, 2)
-        self.assertVariableIdentical(w2, w.transpose('d', 'b', 'c', 'a'))
-        self.assertVariableIdentical(w, w2.transpose('a', 'b', 'c', 'd'))
+        assert_identical(w2, w.transpose('d', 'b', 'c', 'a'))
+        assert_identical(w, w2.transpose('a', 'b', 'c', 'd'))
         w3 = Variable(['b', 'c', 'd', 'a'], np.einsum('abcd->bcda', x))
-        self.assertVariableIdentical(w, w3.transpose('a', 'b', 'c', 'd'))
+        assert_identical(w, w3.transpose('a', 'b', 'c', 'd'))
 
     def test_transpose_0d(self):
         for value in [
@@ -1200,15 +1185,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_squeeze(self):
         v = Variable(['x', 'y'], [[1]])
-        self.assertVariableIdentical(Variable([], 1), v.squeeze())
-        self.assertVariableIdentical(Variable(['y'], [1]), v.squeeze('x'))
-        self.assertVariableIdentical(Variable(['y'], [1]), v.squeeze(['x']))
-        self.assertVariableIdentical(Variable(['x'], [1]), v.squeeze('y'))
-        self.assertVariableIdentical(Variable([], 1), v.squeeze(['x', 'y']))
+        assert_identical(Variable([], 1), v.squeeze())
+        assert_identical(Variable(['y'], [1]), v.squeeze('x'))
+        assert_identical(Variable(['y'], [1]), v.squeeze(['x']))
+        assert_identical(Variable(['x'], [1]), v.squeeze('y'))
+        assert_identical(Variable([], 1), v.squeeze(['x', 'y']))
 
         v = Variable(['x', 'y'], [[1, 2]])
-        self.assertVariableIdentical(Variable(['y'], [1, 2]), v.squeeze())
-        self.assertVariableIdentical(Variable(['y'], [1, 2]), v.squeeze('x'))
+        assert_identical(Variable(['y'], [1, 2]), v.squeeze())
+        assert_identical(Variable(['y'], [1, 2]), v.squeeze('x'))
         with raises_regex(ValueError, 'cannot select a dimension'):
             v.squeeze('y')
 
@@ -1225,19 +1210,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x'], [0, 1])
         actual = v.set_dims(['x', 'y'])
         expected = Variable(['x', 'y'], [[0], [1]])
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.set_dims(['y', 'x'])
-        self.assertVariableIdentical(actual, expected.T)
+        assert_identical(actual, expected.T)
 
         actual = v.set_dims(OrderedDict([('x', 2), ('y', 2)]))
         expected = Variable(['x', 'y'], [[0, 0], [1, 1]])
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         v = Variable(['foo'], [0, 1])
         actual = v.set_dims('foo')
         expected = v
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         with raises_regex(ValueError, 'must be a superset'):
             v.set_dims(['z'])
@@ -1255,18 +1240,18 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
         actual = v.stack(z=('x', 'y'))
         expected = Variable('z', [0, 1, 2, 3], v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.stack(z=('x',))
         expected = Variable(('y', 'z'), v.data.T, v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.stack(z=(),)
-        self.assertVariableIdentical(actual, v)
+        assert_identical(actual, v)
 
         actual = v.stack(X=('x',), Y=('y',)).transpose('X', 'Y')
         expected = Variable(('X', 'Y'), v.data, v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
     def test_stack_errors(self):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]], {'foo': 'bar'})
@@ -1280,15 +1265,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable('z', [0, 1, 2, 3], {'foo': 'bar'})
         actual = v.unstack(z=OrderedDict([('x', 2), ('y', 2)]))
         expected = Variable(('x', 'y'), [[0, 1], [2, 3]], v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.unstack(z=OrderedDict([('x', 4), ('y', 1)]))
         expected = Variable(('x', 'y'), [[0], [1], [2], [3]], v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.unstack(z=OrderedDict([('x', 4)]))
         expected = Variable('x', [0, 1, 2, 3], v.attrs)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
     def test_unstack_errors(self):
         v = Variable('z', [0, 1, 2, 3])
@@ -1303,44 +1288,44 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]])
         actual = v.unstack(y={'z': 2})
         expected = Variable(['x', 'z'], v.data)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
         actual = v.unstack(x={'z': 2})
         expected = Variable(['y', 'z'], v.data.T)
-        self.assertVariableIdentical(actual, expected)
+        assert_identical(actual, expected)
 
     def test_stack_unstack_consistency(self):
         v = Variable(['x', 'y'], [[0, 1], [2, 3]])
         actual = (v.stack(z=('x', 'y'))
                   .unstack(z=OrderedDict([('x', 2), ('y', 2)])))
-        self.assertVariableIdentical(actual, v)
+        assert_identical(actual, v)
 
     def test_broadcasting_math(self):
         x = np.random.randn(2, 3)
         v = Variable(['a', 'b'], x)
         # 1d to 2d broadcasting
-        self.assertVariableIdentical(
+        assert_identical(
             v * v,
             Variable(['a', 'b'], np.einsum('ab,ab->ab', x, x)))
-        self.assertVariableIdentical(
+        assert_identical(
             v * v[0],
             Variable(['a', 'b'], np.einsum('ab,b->ab', x, x[0])))
-        self.assertVariableIdentical(
+        assert_identical(
             v[0] * v,
             Variable(['b', 'a'], np.einsum('b,ab->ba', x[0], x)))
-        self.assertVariableIdentical(
+        assert_identical(
             v[0] * v[:, 0],
             Variable(['b', 'a'], np.einsum('b,a->ba', x[0], x[:, 0])))
         # higher dim broadcasting
         y = np.random.randn(3, 4, 5)
         w = Variable(['b', 'c', 'd'], y)
-        self.assertVariableIdentical(
+        assert_identical(
             v * w, Variable(['a', 'b', 'c', 'd'],
                             np.einsum('ab,bcd->abcd', x, y)))
-        self.assertVariableIdentical(
+        assert_identical(
             w * v, Variable(['b', 'c', 'd', 'a'],
                             np.einsum('bcd,ab->bcda', y, x)))
-        self.assertVariableIdentical(
+        assert_identical(
             v * w[0], Variable(['a', 'b', 'c', 'd'],
                                np.einsum('ab,cd->abcd', x, y[0])))
 
@@ -1368,15 +1353,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_reduce(self):
         v = Variable(['x', 'y'], self.d, {'ignored': 'attributes'})
-        self.assertVariableIdentical(v.reduce(np.std, 'x'),
+        assert_identical(v.reduce(np.std, 'x'),
                                      Variable(['y'], self.d.std(axis=0)))
-        self.assertVariableIdentical(v.reduce(np.std, axis=0),
+        assert_identical(v.reduce(np.std, axis=0),
                                      v.reduce(np.std, dim='x'))
-        self.assertVariableIdentical(v.reduce(np.std, ['y', 'x']),
+        assert_identical(v.reduce(np.std, ['y', 'x']),
                                      Variable([], self.d.std(axis=(0, 1))))
-        self.assertVariableIdentical(v.reduce(np.std),
+        assert_identical(v.reduce(np.std),
                                      Variable([], self.d.std()))
-        self.assertVariableIdentical(
+        assert_identical(
             v.reduce(np.mean, 'x').reduce(np.std, 'y'),
             Variable([], self.d.mean(axis=0).std()))
         self.assertVariableAllClose(v.mean('x'), v.reduce(np.mean, 'x'))
@@ -1442,37 +1427,36 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         data = np.ones(5, dtype='>f4')
         v = Variable(['x'], data)
         expected = Variable([], 5)
-        self.assertVariableIdentical(expected, v.sum())
+        assert_identical(expected, v.sum())
 
     def test_reduce_funcs(self):
         v = Variable('x', np.array([1, np.nan, 2, 3]))
-        self.assertVariableIdentical(v.mean(), Variable([], 2))
-        self.assertVariableIdentical(v.mean(skipna=True), Variable([], 2))
-        self.assertVariableIdentical(v.mean(skipna=False),
-                                     Variable([], np.nan))
-        self.assertVariableIdentical(np.mean(v), Variable([], 2))
+        assert_identical(v.mean(), Variable([], 2))
+        assert_identical(v.mean(skipna=True), Variable([], 2))
+        assert_identical(v.mean(skipna=False), Variable([], np.nan))
+        assert_identical(np.mean(v), Variable([], 2))
 
-        self.assertVariableIdentical(v.prod(), Variable([], 6))
-        self.assertVariableIdentical(v.cumsum(axis=0),
+        assert_identical(v.prod(), Variable([], 6))
+        assert_identical(v.cumsum(axis=0),
                                      Variable('x', np.array([1, 1, 3, 6])))
-        self.assertVariableIdentical(v.cumprod(axis=0),
+        assert_identical(v.cumprod(axis=0),
                                      Variable('x', np.array([1, 1, 2, 6])))
-        self.assertVariableIdentical(v.var(), Variable([], 2.0 / 3))
+        assert_identical(v.var(), Variable([], 2.0 / 3))
 
         if LooseVersion(np.__version__) < '1.9':
             with pytest.raises(NotImplementedError):
                 v.median()
         else:
-            self.assertVariableIdentical(v.median(), Variable([], 2))
+            assert_identical(v.median(), Variable([], 2))
 
         v = Variable('x', [True, False, False])
-        self.assertVariableIdentical(v.any(), Variable([], True))
-        self.assertVariableIdentical(v.all(dim='x'), Variable([], False))
+        assert_identical(v.any(), Variable([], True))
+        assert_identical(v.all(dim='x'), Variable([], False))
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
         with pytest.raises(NotImplementedError):
             v.max(skipna=True)
-        self.assertVariableIdentical(
+        assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
     def test_reduce_keep_attrs(self):
@@ -1493,19 +1477,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
     def test_count(self):
         expected = Variable([], 3)
         actual = Variable(['x'], [1, 2, 3, np.nan]).count()
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
 
         v = Variable(['x'], np.array(['1', '2', '3', np.nan], dtype=object))
         actual = v.count()
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
 
         actual = Variable(['x'], [True, False, True]).count()
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
         assert actual.dtype == int
 
         expected = Variable(['x'], [2, 3])
         actual = Variable(['x', 'y'], [[1, 0, np.nan], [1, 1, 1]]).count('y')
-        self.assertVariableIdentical(expected, actual)
+        assert_identical(expected, actual)
 
     def test_setitem(self):
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
@@ -1573,14 +1557,14 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x', 'y', 'z'], np.ones((4, 3, 2)))
         expected[0, :, 0] = 0
         expected[1, :, 1] = 0
-        self.assertVariableIdentical(expected, v)
+        assert_identical(expected, v)
 
         # dimension broadcast
         v = Variable(['x', 'y'], np.ones((3, 2)))
         ind = Variable(['a', 'b'], [[0, 1]])
         v[ind, :] = 0
         expected = Variable(['x', 'y'], [[0, 0], [0, 0], [1, 1]])
-        self.assertVariableIdentical(expected, v)
+        assert_identical(expected, v)
 
         with raises_regex(ValueError, "shape mismatch"):
             v[ind, ind] = np.zeros((1, 2, 1))
@@ -1597,12 +1581,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         ind = Variable(['a'], [0, 1])
         v[dict(x=ind)] += 1
         expected = Variable(['x', 'y'], [[1, 2], [3, 4], [4, 5]])
-        self.assertVariableIdentical(v, expected)
+        assert_identical(v, expected)
 
         ind = Variable(['a'], [0, 0])
         v[dict(x=ind)] += 1
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
-        self.assertVariableIdentical(v, expected)
+        assert_identical(v, expected)
 
 
 @requires_dask
@@ -1693,7 +1677,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
                                           names=['level_1', 'level_2'])
         x = IndexVariable('x', midx)
         level_1 = IndexVariable('x', midx.get_level_values('level_1'))
-        self.assertVariableIdentical(x.get_level_variable('level_1'), level_1)
+        assert_identical(x.get_level_variable('level_1'), level_1)
 
         with raises_regex(ValueError, 'has no MultiIndex'):
             IndexVariable('y', [10.0]).get_level_variable('level')
@@ -1809,12 +1793,12 @@ class TestAsCompatibleData(TestCase):
 
         expect = orig.copy(deep=True)
         expect.values = [[2.0, 2.0], [2.0, 2.0]]
-        self.assertVariableIdentical(expect, full_like(orig, 2))
+        assert_identical(expect, full_like(orig, 2))
 
         # override dtype
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
-        self.assertVariableIdentical(expect, full_like(orig, True, dtype=bool))
+        assert_identical(expect, full_like(orig, True, dtype=bool))
 
     @requires_dask
     def test_full_like_dask(self):
@@ -1848,17 +1832,17 @@ class TestAsCompatibleData(TestCase):
     def test_zeros_like(self):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
-        self.assertVariableIdentical(zeros_like(orig),
+        assert_identical(zeros_like(orig),
                                      full_like(orig, 0))
-        self.assertVariableIdentical(zeros_like(orig, dtype=int),
+        assert_identical(zeros_like(orig, dtype=int),
                                      full_like(orig, 0, dtype=int))
 
     def test_ones_like(self):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
-        self.assertVariableIdentical(ones_like(orig),
+        assert_identical(ones_like(orig),
                                      full_like(orig, 1))
-        self.assertVariableIdentical(ones_like(orig, dtype=int),
+        assert_identical(ones_like(orig, dtype=int),
                                      full_like(orig, 1, dtype=int))
 
     def test_unsupported_type(self):
