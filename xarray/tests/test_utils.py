@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import pickle
 import pytest
 
 import numpy as np
@@ -32,7 +31,7 @@ class TestSafeCastToIndex(TestCase):
                 (pd.Index(x, dtype=object), x.astype(object)),
                 (pd.Index(td), td),
                 (pd.Index(td, dtype=object), td.astype(object)),
-                ]:
+        ]:
             actual = utils.safe_cast_to_index(array)
             self.assertArrayEqual(expected, actual)
             self.assertEqual(expected.dtype, actual.dtype)
@@ -110,9 +109,9 @@ class TestDictionaries(TestCase):
         y['c'] = np.inf
         self.assertTrue(utils.dict_equiv(x, y))  # inf == inf
         y = dict(y)
-        self.assertTrue(utils.dict_equiv(x, y))  # different dictionary types are fine
+        self.assertTrue(utils.dict_equiv(x, y))  # different dict types are ok
         y['b'] = 3 * np.arange(3)
-        self.assertFalse(utils.dict_equiv(x, y))  # not equal when arrays differ
+        self.assertFalse(utils.dict_equiv(x, y))  # unequal when arrays differ
 
     def test_frozen(self):
         x = utils.Frozen(self.x)
