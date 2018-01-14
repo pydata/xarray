@@ -245,7 +245,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
 
     def assertLazyAndEqual(self, expected, actual):
-        self.assertLazyAnd(expected, actual, self.assertDataArrayEqual)
+        self.assertLazyAnd(expected, actual, self.assert_equal)
 
     def setUp(self):
         self.values = np.random.randn(4, 6)

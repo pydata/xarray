@@ -162,7 +162,7 @@ class TestCase(unittest.TestCase):
         __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
-    def assertDatasetEqual(self, d1, d2):
+    def assert_equal(self, d1, d2):
         __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
@@ -180,7 +180,7 @@ class TestCase(unittest.TestCase):
         __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
 
-    def assertDataArrayEqual(self, ar1, ar2):
+    def assert_equal(self, ar1, ar2):
         __tracebackhide__ = True  # noqa: F841
         assert_equal(ar1, ar2)
 

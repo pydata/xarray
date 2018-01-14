@@ -1189,7 +1189,7 @@ class TestFacetGrid(PlotTestCase):
         upperleft_array = self.darray.loc[upperleft_dict]
         z0 = self.darray.isel(z=0)
 
-        self.assertDataArrayEqual(upperleft_array, z0)
+        self.assert_equal(upperleft_array, z0)
 
     @pytest.mark.slow
     def test_float_index(self):
