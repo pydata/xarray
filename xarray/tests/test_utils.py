@@ -17,7 +17,7 @@ class TestAlias(TestCase):
             pass
         old_method = utils.alias(new_method, 'old_method')
         assert 'deprecated' in old_method.__doc__
-        with pytest.warns('deprecated'):
+        with pytest.warns(Warning, 'deprecated'):
             old_method()
 
 

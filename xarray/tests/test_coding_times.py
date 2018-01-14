@@ -166,7 +166,7 @@ class TestDatetime(TestCase):
         dt = nc4.netcdftime.datetime(2001, 2, 29)
         for calendar in ['360_day', 'all_leap', '366_day']:
             num_time = nc4.date2num(dt, units, calendar)
-            with pytest.warns('Unable to decode time axis'):
+            with pytest.warns(Warning, 'Unable to decode time axis'):
                 actual = coding.times.decode_cf_datetime(num_time, units,
                                                          calendar=calendar)
             expected = np.asarray(nc4.num2date(num_time, units, calendar))
