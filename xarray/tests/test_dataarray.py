@@ -320,8 +320,7 @@ class TestDataArray(TestCase):
 
         series = pd.Series(data[0], index=pd.Index([-1, -2], name='y'))
         actual = DataArray(series)
-        assert_equal(expected[0].reset_coords('x', drop=True),
-                                  actual)
+        assert_equal(expected[0].reset_coords('x', drop=True), actual)
 
         panel = pd.Panel({0: frame})
         actual = DataArray(panel)
@@ -654,21 +653,20 @@ class TestDataArray(TestCase):
         assert_identical(self.dv[0], self.dv.isel(x=0))
         assert_identical(self.dv, self.dv.isel(x=slice(None)))
         assert_identical(self.dv[:3], self.dv.isel(x=slice(3)))
-        assert_identical(self.dv[:3, :5],
-                                      self.dv.isel(x=slice(3), y=slice(5)))
+        assert_identical(self.dv[:3, :5], self.dv.isel(x=slice(3), y=slice(5)))
 
     def test_isel_types(self):
         # regression test for #1405
         da = DataArray([1, 2, 3], dims='x')
         # uint64
         assert_identical(da.isel(x=np.array([0], dtype="uint64")),
-                                      da.isel(x=np.array([0])))
+                         da.isel(x=np.array([0])))
         # uint32
         assert_identical(da.isel(x=np.array([0], dtype="uint32")),
-                                      da.isel(x=np.array([0])))
+                         da.isel(x=np.array([0])))
         # int64
         assert_identical(da.isel(x=np.array([0], dtype="int64")),
-                                      da.isel(x=np.array([0])))
+                         da.isel(x=np.array([0])))
 
     def test_isel_fancy(self):
         shape = (10, 7, 6)
@@ -780,8 +778,7 @@ class TestDataArray(TestCase):
         assert_array_equal(actual, da.isel(x=[0, 1, 2]))
         assert 'new_dim' in actual.dims
         assert 'new_dim' in actual.coords
-        assert_equal(actual['new_dim'].drop('x'),
-                                  ind['new_dim'])
+        assert_equal(actual['new_dim'].drop('x'), ind['new_dim'])
 
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
@@ -897,8 +894,7 @@ class TestDataArray(TestCase):
         assert_identical(da[1], da.loc[{'x': 'b'}])
         assert_identical(da[1], da.loc['b', ...])
         assert_identical(da[:3], da.loc[['a', 'b', 'c']])
-        assert_identical(da[:3, :4],
-                                      da.loc[['a', 'b', 'c'], np.arange(4)])
+        assert_identical(da[:3, :4], da.loc[['a', 'b', 'c'], np.arange(4)])
         assert_identical(da[:, :4], da.loc[:, self.ds['y'] < 4])
 
     def test_loc_assign(self):
@@ -999,15 +995,14 @@ class TestDataArray(TestCase):
         test_sel({'one': 'a'}, range(4), replaced_idx=True)
 
         assert_identical(mdata.loc['a'], mdata.sel(x='a'))
-        assert_identical(mdata.loc[('a', 1), ...],
-                                      mdata.sel(x=('a', 1)))
+        assert_identical(mdata.loc[('a', 1), ...], mdata.sel(x=('a', 1)))
         assert_identical(mdata.loc[{'one': 'a'}, ...],
-                                      mdata.sel(x={'one': 'a'}))
+                         mdata.sel(x={'one': 'a'}))
         with pytest.raises(IndexError):
             mdata.loc[('a', 1)]
 
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
-                                      mdata.sel(one='a', two=1))
+                         mdata.sel(one='a', two=1))
 
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')
@@ -2880,25 +2875,25 @@ class TestDataArray(TestCase):
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
-        assert actual.cell_methods == \
-                         (iris.coords.CellMethod(method='mean',
-                                                 coords=('height',),
-                                                 intervals=(),
-                                                 comments=('A cell method',)),)
+        assert (actual.cell_methods ==
+                iris.coords.CellMethod(method='mean',
+                                       coords=('height',),
+                                       intervals=(),
+                                       comments=('A cell method',)),)
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             self.assertArrayEqual(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert actual.coord_dims(coord) == \
-                             original.get_axis_num \
-                             (original.coords[coord.var_name].dims)
+            assert (actual.coord_dims(coord) ==
+                    original.get_axis_num(
+                        original.coords[coord.var_name].dims))
 
-        assert actual.coord('distance2').attributes['foo'] == \
-                         original.coords['distance2'].attrs['foo']
-        assert actual.coord('distance').units == \
-                         cf_units.Unit(original.coords['distance'].units)
+        assert (actual.coord('distance2').attributes['foo'] ==
+                original.coords['distance2'].attrs['foo'])
+        assert (actual.coord('distance').units ==
+                cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -2952,25 +2947,25 @@ class TestDataArray(TestCase):
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
-        assert actual.cell_methods == \
-                         (iris.coords.CellMethod(method='mean',
-                                                 coords=('height',),
-                                                 intervals=(),
-                                                 comments=('A cell method',)),)
+        assert (actual.cell_methods ==
+                iris.coords.CellMethod(method='mean',
+                                       coords=('height',),
+                                       intervals=(),
+                                       comments=('A cell method',)),)
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
             self.assertArrayEqual(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert actual.coord_dims(coord) == \
-                             original.get_axis_num \
-                             (original.coords[coord.var_name].dims)
+            assert (actual.coord_dims(coord) ==
+                    original.get_axis_num(
+                        original.coords[coord.var_name].dims))
 
-        assert actual.coord('distance2').attributes['foo'] == \
-                         original.coords['distance2'].attrs['foo']
-        assert actual.coord('distance').units == \
-                         cf_units.Unit(original.coords['distance'].units)
+        assert (actual.coord('distance2').attributes['foo'] == original.coords[
+            'distance2'].attrs['foo'])
+        assert (actual.coord('distance').units ==
+                cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
