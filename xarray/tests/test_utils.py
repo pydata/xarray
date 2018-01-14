@@ -125,7 +125,7 @@ class TestDictionaries(TestCase):
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
-        self.assertItemsEqual(y, ['a', 'b', 'c'])
+        assert y == ['a', 'b', 'c']
         assert repr(utils.SortedKeysDict()) == \
                          "SortedKeysDict({})"
 
@@ -140,7 +140,7 @@ class TestDictionaries(TestCase):
         m['x'] = 100
         assert m['x'] == 100
         assert m.maps[0]['x'] == 100
-        self.assertItemsEqual(['x', 'y', 'z'], m)
+        assert ['x', 'y', 'z'] == m
 
 
 def test_repr_object():
