@@ -8,9 +8,7 @@ import numpy as np
 import xarray.ufuncs as xu
 import xarray as xr
 
-from . import (
-    TestCase, raises_regex, assert_equal, assert_identical, assert_array_equal,
-    assert_equal)
+from . import (TestCase, raises_regex, assert_identical, assert_array_equal)
 
 
 class TestOps(TestCase):
@@ -22,20 +20,28 @@ class TestOps(TestCase):
             assert_array_equal(a, b)
 
     def test_unary(self):
-        args = [0,
-                np.zeros(2),
-                xr.Variable(['x'], [0, 0]),
-                xr.DataArray([0, 0], dims='x'),
-                xr.Dataset({'y': ('x', [0, 0])})]
+        args = [
+            0,
+            np.zeros(2),
+            xr.Variable(['x'], [0, 0]),
+            xr.DataArray([0, 0], dims='x'),
+            xr.Dataset({
+                'y': ('x', [0, 0])
+            })
+        ]
         for a in args:
             self.assert_identical(a + 1, xu.cos(a))
 
     def test_binary(self):
-        args = [0,
-                np.zeros(2),
-                xr.Variable(['x'], [0, 0]),
-                xr.DataArray([0, 0], dims='x'),
-                xr.Dataset({'y': ('x', [0, 0])})]
+        args = [
+            0,
+            np.zeros(2),
+            xr.Variable(['x'], [0, 0]),
+            xr.DataArray([0, 0], dims='x'),
+            xr.Dataset({
+                'y': ('x', [0, 0])
+            })
+        ]
         for n, t1 in enumerate(args):
             for t2 in args[n:]:
                 self.assert_identical(t2 + 1, xu.maximum(t1, t2 + 1))

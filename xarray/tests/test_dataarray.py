@@ -2879,7 +2879,7 @@ class TestDataArray(TestCase):
                 iris.coords.CellMethod(method='mean',
                                        coords=('height',),
                                        intervals=(),
-                                       comments=('A cell method',)),)
+                                       comments=('A cell method',)))
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
@@ -2951,7 +2951,7 @@ class TestDataArray(TestCase):
                 iris.coords.CellMethod(method='mean',
                                        coords=('height',),
                                        intervals=(),
-                                       comments=('A cell method',)),)
+                                       comments=('A cell method',)))
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]

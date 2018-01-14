@@ -1187,12 +1187,12 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_transpose_0d(self):
         for value in [
-                3.5,
+            3.5,
             ('a', 1),
-                np.datetime64('2000-01-01'),
-                np.timedelta64(1, 'h'),
-                None,
-                object(),
+            np.datetime64('2000-01-01'),
+            np.timedelta64(1, 'h'),
+            None,
+            object(),
         ]:
             variable = Variable([], value)
             actual = variable.transpose()
