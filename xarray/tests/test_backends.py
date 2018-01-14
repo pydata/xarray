@@ -1249,7 +1249,7 @@ class BaseZarrTest(CFEncodedDataTest):
             self.save(original, store, mode='w')
             with self.open(store) as actual:
                 self.assertDatasetIdentical(original, actual)
-                with pytest.raises(KeyError):
+                with pytest.raises(ValueError):
                     self.save(original, store, mode='w-')
 
         # check that we can't use other persistence modes
@@ -1273,10 +1273,6 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(original, save_kwargs={'group': group},
                             open_kwargs={'group': group}) as actual:
             self.assertDatasetIdentical(original, actual)
-        with pytest.raises(KeyError):
-            with self.roundtrip(original,
-                                save_kwargs={'group': group}) as actual:
-                self.assertDatasetIdentical(original, actual)
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
