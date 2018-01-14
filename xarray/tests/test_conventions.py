@@ -196,7 +196,7 @@ class TestEncodeCFVariable(TestCase):
     def test_missing_fillvalue(self):
         v = Variable(['x'], np.array([np.nan, 1, 2, 3]))
         v.encoding = {'dtype': 'int16'}
-        with pytest.warns(Warning, 'floating point data as an integer'):
+        with pytest.warns(Warning, match='floating point data as an integer'):
             conventions.encode_cf_variable(v)
 
     def test_multidimensional_coordinates(self):

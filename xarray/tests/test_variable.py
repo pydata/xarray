@@ -1700,7 +1700,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         assert isinstance(actual.to_index(), pd.MultiIndex)
 
     def test_coordinate_alias(self):
-        with pytest.warns(Warning, 'deprecated'):
+        with pytest.warns(Warning, match='deprecated'):
             x = Coordinate('x', [1, 2, 3])
         assert isinstance(x, IndexVariable)
 

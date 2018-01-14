@@ -55,7 +55,7 @@ class TestAccessor(TestCase):
         del xr.Dataset.demo
         assert not hasattr(xr.Dataset, 'demo')
 
-        with pytest.warns(Warning, 'overriding a preexisting attribute'):
+        with pytest.warns(Warning, match='overriding a preexisting attribute'):
             @xr.register_dataarray_accessor('demo')
             class Foo(object):
                 pass
