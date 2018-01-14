@@ -63,12 +63,12 @@ class TestConcatDataset(TestCase):
             actual = concat(datasets, data[dim], coords='all')
             expected = np.array([data['extra'].values
                                  for _ in range(data.dims[dim])])
-            assert_equal(actual['extra'].values, expected)
+            self.assertArrayEqual(actual['extra'].values, expected)
 
             actual = concat(datasets, data[dim], coords='different')
-            assert_equal(data['extra'], actual['extra'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
             actual = concat(datasets, data[dim], coords='minimal')
-            assert_equal(data['extra'], actual['extra'])
+            self.assertDataArrayEqual(data['extra'], actual['extra'])
 
         # verify that the dim argument takes precedence over
         # concatenating dataset variables of the same name
@@ -248,7 +248,7 @@ class TestConcatDataArray(TestCase):
         expected = DataArray(np.array([foo.values, bar.values]),
                              dims=['w', 'x', 'y'], coords={'x': [0, 1]})
         actual = concat([foo, bar], 'w')
-        assert_equal(expected, actual)
+        self.assertDataArrayEqual(expected, actual)
         # from iteration:
         grouped = [g for _, g in foo.groupby('x')]
         stacked = concat(grouped, ds['x'])

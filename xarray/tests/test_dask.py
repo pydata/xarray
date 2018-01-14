@@ -64,7 +64,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         assert self.data is v.data
         assert self.data.chunks == v.chunks
-        assert_equal(self.values, v)
+        self.assertArrayEqual(self.values, v)
 
     def test_copy(self):
         self.assertLazyAndIdentical(self.eager_var, self.lazy_var.copy())
@@ -245,7 +245,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
 
     def assertLazyAndEqual(self, expected, actual):
-        self.assertLazyAnd(expected, actual, assert_equal)
+        self.assertLazyAnd(expected, actual, self.assertDataArrayEqual)
 
     def setUp(self):
         self.values = np.random.randn(4, 6)

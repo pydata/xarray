@@ -34,8 +34,8 @@ class TestStackedBytesArray(TestCase):
         assert actual.size == expected.size
         assert actual.ndim == expected.ndim
         assert len(actual) == len(expected)
-        assert_equal(expected, actual)
-        assert_equal(expected[:1], actual[B[:1]])
+        self.assertArrayEqual(expected, actual)
+        self.assertArrayEqual(expected[:1], actual[B[:1]])
         with pytest.raises(IndexError):
             actual[B[:, :2]]
 
@@ -59,34 +59,34 @@ class TestStackedBytesArray(TestCase):
         array = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
         expected = np.array(['abc', 'def'])
         actual = conventions.char_to_bytes(array)
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
         expected = np.array(['ad', 'be', 'cf'])
         actual = conventions.char_to_bytes(array.T)  # non-contiguous
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
     def test_char_to_bytes_ndim_zero(self):
         expected = np.array('a')
         actual = conventions.char_to_bytes(expected)
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
     def test_char_to_bytes_size_zero(self):
         array = np.zeros((3, 0), dtype='S1')
         expected = np.array([b'', b'', b''])
         actual = conventions.char_to_bytes(array)
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
     def test_bytes_to_char(self):
         array = np.array([['ab', 'cd'], ['ef', 'gh']])
         expected = np.array([[['a', 'b'], ['c', 'd']],
                              [['e', 'f'], ['g', 'h']]])
         actual = conventions.bytes_to_char(array)
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
         expected = np.array([[['a', 'b'], ['e', 'f']],
                              [['c', 'd'], ['g', 'h']]])
         actual = conventions.bytes_to_char(array.T)
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
     def test_vectorized_indexing(self):
         array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
@@ -94,7 +94,7 @@ class TestStackedBytesArray(TestCase):
         expected = np.array([[b'abc', b'def'], [b'def', b'abc']])
         indexer = V[np.array([[0, 1], [1, 0]])]
         actual = stacked[indexer]
-        assert_equal(actual, expected)
+        self.assertArrayEqual(actual, expected)
 
 
 class TestBytesToStringArray(TestCase):
@@ -109,8 +109,8 @@ class TestBytesToStringArray(TestCase):
         assert actual.shape == expected.shape
         assert actual.size == expected.size
         assert actual.ndim == expected.ndim
-        assert_equal(expected, actual)
-        assert_equal(expected[0], actual[B[0]])
+        self.assertArrayEqual(expected, actual)
+        self.assertArrayEqual(expected[0], actual[B[0]])
 
     def test_scalar(self):
         expected = np.array(u'abc', dtype=object)
@@ -140,7 +140,7 @@ class TestBoolTypeArray(TestCase):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
         bx = conventions.BoolTypeArray(x)
         assert bx.dtype == np.bool
-        assert_equal(bx, np.array([True, False, True, True, False],
+        self.assertArrayEqual(bx, np.array([True, False, True, True, False],
                                            dtype=np.bool))
 
 
@@ -151,7 +151,7 @@ class TestNativeEndiannessArray(TestCase):
         a = conventions.NativeEndiannessArray(x)
         assert a.dtype == expected.dtype
         assert a.dtype == expected[:].dtype
-        assert_equal(a, expected)
+        self.assertArrayEqual(a, expected)
 
 
 def test_decode_cf_with_conflicting_fill_missing_value():
@@ -326,7 +326,7 @@ class TestDecodeCF(TestCase):
         expected = [datetime(2000, 1, 1, 0, 0),
                     datetime(2265, 10, 28, 0, 0)]
 
-        assert_equal(ds_decoded.time.values, expected)
+        self.assertArrayEqual(ds_decoded.time.values, expected)
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):

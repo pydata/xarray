@@ -324,14 +324,14 @@ class TestDataset(TestCase):
         )
         ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         del ds_based_on_pandas['x']
-        assert_equal(ds, ds_based_on_pandas)
+        self.assertDatasetEqual(ds, ds_based_on_pandas)
 
         # reindex pandas obj, check align works
         rearranged_index = reversed(pandas_objs['foo'].index)
         pandas_objs['foo'] = pandas_objs['foo'].reindex(rearranged_index)
         ds_based_on_pandas = Dataset(pandas_objs, ds.coords, attrs=ds.attrs)
         del ds_based_on_pandas['x']
-        assert_equal(ds, ds_based_on_pandas)
+        self.assertDatasetEqual(ds, ds_based_on_pandas)
 
     def test_constructor_pandas_single(self):
 
@@ -345,7 +345,7 @@ class TestDataset(TestCase):
             pandas_obj = a.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)
             for dim in ds_based_on_pandas.data_vars:
-                assert_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+                self.assertArrayEqual(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
@@ -477,7 +477,7 @@ class TestDataset(TestCase):
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
         assert list(a.variables) == ['foo', 'bar']
-        assert_equal(a['foo'].values, d)
+        self.assertArrayEqual(a['foo'].values, d)
         # try to add variable with dim (10,3) with data that's (3,10)
         with pytest.raises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
@@ -555,11 +555,11 @@ class TestDataset(TestCase):
 
         actual = data.copy(deep=True)
         actual.coords['x'] = ('x', ['a', 'b'])
-        assert_equal(actual['x'], ['a', 'b'])
+        self.assertArrayEqual(actual['x'], ['a', 'b'])
 
         actual = data.copy(deep=True)
         actual.coords['z'] = ('z', ['a', 'b'])
-        assert_equal(actual['z'], ['a', 'b'])
+        self.assertArrayEqual(actual['z'], ['a', 'b'])
 
         actual = data.copy(deep=True)
         with raises_regex(ValueError, 'conflicting sizes'):
@@ -984,10 +984,10 @@ class TestDataset(TestCase):
                                               stations['dim2s'].variable]
         expected_var3 = data['var3'].variable[slice(None),
                                               stations['dim1s'].variable]
-        assert_equal(actual['a'].drop('dim2'), stations['a'])
-        assert_equal(actual['var1'], expected_var1)
-        assert_equal(actual['var2'], expected_var2)
-        assert_equal(actual['var3'], expected_var3)
+        self.assertDataArrayEqual(actual['a'].drop('dim2'), stations['a'])
+        self.assertArrayEqual(actual['var1'], expected_var1)
+        self.assertArrayEqual(actual['var2'], expected_var2)
+        self.assertArrayEqual(actual['var3'], expected_var3)
 
     def test_isel_dataarray(self):
         """ Test for indexing by DataArray """
@@ -1074,30 +1074,30 @@ class TestDataset(TestCase):
         loc_slicers = {'dim1': slice(None, None, 2),
                        'dim2': slice(0, 0.5),
                        'dim3': slice('a', 'c')}
-        assert_equal(data.isel(**int_slicers),
+        self.assertDatasetEqual(data.isel(**int_slicers),
                                 data.sel(**loc_slicers))
         data['time'] = ('time', pd.date_range('2000-01-01', periods=20))
-        assert_equal(data.isel(time=0),
+        self.assertDatasetEqual(data.isel(time=0),
                                 data.sel(time='2000-01-01'))
-        assert_equal(data.isel(time=slice(10)),
+        self.assertDatasetEqual(data.isel(time=slice(10)),
                                 data.sel(time=slice('2000-01-01',
                                                     '2000-01-10')))
-        assert_equal(data, data.sel(time=slice('1999', '2005')))
+        self.assertDatasetEqual(data, data.sel(time=slice('1999', '2005')))
         times = pd.date_range('2000-01-01', periods=3)
-        assert_equal(data.isel(time=slice(3)),
+        self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=times))
-        assert_equal(data.isel(time=slice(3)),
+        self.assertDatasetEqual(data.isel(time=slice(3)),
                                 data.sel(time=(data['time.dayofyear'] <= 3)))
 
         td = pd.to_timedelta(np.arange(3), unit='days')
         data = Dataset({'x': ('td', np.arange(3)), 'td': td})
-        assert_equal(data, data.sel(td=td))
-        assert_equal(data, data.sel(td=slice('3 days')))
-        assert_equal(data.isel(td=0),
+        self.assertDatasetEqual(data, data.sel(td=td))
+        self.assertDatasetEqual(data, data.sel(td=slice('3 days')))
+        self.assertDatasetEqual(data.isel(td=0),
                                 data.sel(td=pd.Timedelta('0 days')))
-        assert_equal(data.isel(td=0),
+        self.assertDatasetEqual(data.isel(td=0),
                                 data.sel(td=pd.Timedelta('0h')))
-        assert_equal(data.isel(td=slice(1, 3)),
+        self.assertDatasetEqual(data.isel(td=slice(1, 3)),
                                 data.sel(td=slice('1 days', '2 days')))
 
     def test_sel_dataarray(self):
@@ -1105,14 +1105,14 @@ class TestDataset(TestCase):
 
         ind = DataArray([0.0, 0.5, 1.0], dims=['dim2'])
         actual = data.sel(dim2=ind)
-        assert_equal(actual, data.isel(dim2=[0, 1, 2]))
+        self.assertDatasetEqual(actual, data.isel(dim2=[0, 1, 2]))
 
         # with different dimension
         ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'])
         actual = data.sel(dim2=ind)
         expected = data.isel(dim2=Variable('new_dim', [0, 1, 2]))
         assert 'new_dim' in actual.dims
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # Multi-dimensional
         ind = DataArray([[0.0], [0.5], [1.0]], dims=['new_dim', 'new_dim2'])
@@ -1121,7 +1121,7 @@ class TestDataset(TestCase):
                                            [[0], [1], [2]]))
         assert 'new_dim' in actual.dims
         assert 'new_dim2' in actual.dims
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # with coordinate
         ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'],
@@ -1130,9 +1130,9 @@ class TestDataset(TestCase):
         expected = data.isel(dim2=[0, 1, 2]).rename({'dim2': 'new_dim'})
         assert 'new_dim' in actual.dims
         assert 'new_dim' in actual.coords
-        assert_equal(actual.drop('new_dim').drop('dim2'),
+        self.assertDatasetEqual(actual.drop('new_dim').drop('dim2'),
                                 expected.drop('new_dim'))
-        assert_equal(actual['new_dim'].drop('dim2'),
+        self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
                                   ind['new_dim'])
 
         # with conflicted coordinate (silently ignored)
@@ -1140,18 +1140,18 @@ class TestDataset(TestCase):
                         coords={'dim2': ['a', 'b', 'c']})
         actual = data.sel(dim2=ind)
         expected = data.isel(dim2=[0, 1, 2])
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # with conflicted coordinate (silently ignored)
         ind = DataArray([0.0, 0.5, 1.0], dims=['new_dim'],
                         coords={'new_dim': ['a', 'b', 'c'],
                                 'dim2': 3})
         actual = data.sel(dim2=ind)
-        assert_equal(actual['new_dim'].drop('dim2'),
+        self.assertDataArrayEqual(actual['new_dim'].drop('dim2'),
                                   ind['new_dim'].drop('dim2'))
         expected = data.isel(dim2=[0, 1, 2])
         expected['dim2'] = (('new_dim'), expected['dim2'].values)
-        assert_equal(actual['dim2'].drop('new_dim'),
+        self.assertDataArrayEqual(actual['dim2'].drop('new_dim'),
                                   expected['dim2'])
         assert actual['var1'].dims == ('dim1', 'new_dim')
 
@@ -1162,7 +1162,7 @@ class TestDataset(TestCase):
                                 'new_dim': ('dim2', [1.1, 1.2, 1.3])})
         actual = data.sel(dim2=ind)
         expected = data.isel(dim2=[0, 1, 2])
-        assert_equal(actual.drop('new_dim'), expected)
+        self.assertDatasetEqual(actual.drop('new_dim'), expected)
         assert np.allclose(actual['new_dim'].values, ind['new_dim'].values)
 
     def test_sel_dataarray_mindex(self):
@@ -1401,7 +1401,7 @@ class TestDataset(TestCase):
         idx_y = DataArray([0, 2, 1], dims=['b'], coords={'b': [0, 3, 6]})
         expected_ary = data['foo'][[0, 1, 2], [0, 2, 1]]
         actual = data.sel(x=idx_x, y=idx_y)
-        assert_equal(expected_ary, actual['foo'])
+        self.assertArrayEqual(expected_ary, actual['foo'])
         assert_identical(actual['a'].drop('x'), idx_x['a'])
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
@@ -1622,7 +1622,7 @@ class TestDataset(TestCase):
         union = list('abcdefghijkl')
 
         left2, right2 = align(left, right, join='inner')
-        assert_equal(left2['dim3'], intersection)
+        self.assertArrayEqual(left2['dim3'], intersection)
         assert_identical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
@@ -1638,8 +1638,6 @@ class TestDataset(TestCase):
         left2, right2 = align(left, right, join='left')
         assert_equal(left2['dim3'].variable, right2['dim3'].variable)
         assert_equal(left2['dim3'].variable, left['dim3'].variable)
-
-        self.assertDatasetIdentical(left2.sel(dim3=intersection),
 
         assert_identical(left2.sel(dim3=intersection),
                                     right2.sel(dim3=intersection))
@@ -1810,13 +1808,13 @@ class TestDataset(TestCase):
         v = data['var1']
         d1 = data['dim1']
         d2 = data['dim2']
-        assert_equal(v, v[d1.values])
-        assert_equal(v, v[d1])
-        assert_equal(v[:3], v[d1 < 3])
-        assert_equal(v[:, 3:], v[:, d2 >= 1.5])
-        assert_equal(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
-        assert_equal(v[:3, :2], v[range(3), range(2)])
-        assert_equal(v[:3, :2], v.loc[d1[:3], d2[:2]])
+        self.assertVariableEqual(v, v[d1.values])
+        self.assertVariableEqual(v, v[d1])
+        self.assertVariableEqual(v[:3], v[d1 < 3])
+        self.assertVariableEqual(v[:, 3:], v[:, d2 >= 1.5])
+        self.assertVariableEqual(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
+        self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
+        self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
     def test_drop_variables(self):
         data = create_test_data()
@@ -1890,7 +1888,7 @@ class TestDataset(TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
-            assert_equal(Variable(dims, v.values, v.attrs),
+            self.assertVariableEqual(Variable(dims, v.values, v.attrs),
                                      renamed[k].variable.to_base_variable())
             assert v.encoding == renamed[k].encoding
             assert type(v) == type(renamed.variables[k])
@@ -1937,7 +1935,7 @@ class TestDataset(TestCase):
         assert not data.equals(copied)
         assert data.dims == {'y': 3, 't': 3}
         # check virtual variables
-        assert_equal(data['t.dayofyear'], [1, 2, 3])
+        self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
@@ -2153,7 +2151,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         assert isinstance(data['var1'], DataArray)
-        assert_equal(data['var1'].variable, data.variables['var1'])
+        self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
         with pytest.raises(KeyError):
             data['notfound']
         with pytest.raises(KeyError):
@@ -2161,7 +2159,7 @@ class TestDataset(TestCase):
 
         actual = data[['var1', 'var2']]
         expected = Dataset({'var1': data['var1'], 'var2': data['var2']})
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
         actual = data['numbers']
         expected = DataArray(data['numbers'].variable,
@@ -2199,18 +2197,18 @@ class TestDataset(TestCase):
         data = create_test_data()
         expected = DataArray(1 + np.arange(20), coords=[data['time']],
                              dims='time', name='dayofyear')
-        assert_identical(expected, data['time.dayofyear'])
-        assert_equal(data['time.month'].values,
+
+        self.assertArrayEqual(data['time.month'].values,
                               data.variables['time'].to_index().month)
-        assert_equal(data['time.season'].values, 'DJF')
+        self.assertArrayEqual(data['time.season'].values, 'DJF')
         # test virtual variable math
-        assert_equal(data['time.dayofyear'] + 1, 2 + np.arange(20))
-        assert_equal(np.sin(data['time.dayofyear']),
+        self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
+        self.assertArrayEqual(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # ensure they become coordinates
         expected = Dataset({}, {'dayofyear': data['time.dayofyear']})
         actual = data[['time.dayofyear']]
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
         # non-coordinate variables
         ds = Dataset({'t': ('x', pd.date_range('2000-01-01', periods=3))})
         assert (ds['t.year'] == 2000).all()
@@ -2249,9 +2247,9 @@ class TestDataset(TestCase):
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
-        assert_equal(data['time.dayofyear'][:10].variable,
+        self.assertVariableEqual(data['time.dayofyear'][:10].variable,
                                  Variable(['time'], 1 + np.arange(10)))
-        assert_equal(data['time.dayofyear'][0].variable, Variable([], 1))
+        self.assertVariableEqual(data['time.dayofyear'][0].variable, Variable([], 1))
 
     def test_setitem(self):
         # assign a variable
@@ -2286,7 +2284,7 @@ class TestDataset(TestCase):
             data1['dim1'] = data1['dim1'][:5]
         # override an existing value
         data1['A'] = 3 * data2['A']
-        assert_equal(data1['A'], 3 * data2['A'])
+        self.assertVariableEqual(data1['A'], 3 * data2['A'])
 
         with pytest.raises(NotImplementedError):
             data1[{'x': 0}] = 0
@@ -2298,7 +2296,7 @@ class TestDataset(TestCase):
         ds_copy = ds.copy()
         ds_copy['bar'] = ds['bar'].to_pandas()
 
-        assert_equal(ds, ds_copy)
+        self.assertDatasetEqual(ds, ds_copy)
 
     def test_setitem_auto_align(self):
         ds = Dataset()
@@ -2473,14 +2471,14 @@ class TestDataset(TestCase):
                           ('c', data.isel(x=2))]
         for actual, expected in zip(groupby, expected_items):
             assert actual[0] == expected[0]
-            assert_equal(actual[1], expected[1])
+            self.assertDatasetEqual(actual[1], expected[1])
 
         def identity(x):
             return x
 
         for k in ['x', 'c', 'y']:
             actual = data.groupby(k, squeeze=False).apply(identity)
-            assert_equal(data, actual)
+            self.assertDatasetEqual(data, actual)
 
     def test_groupby_returns_new_type(self):
         data = Dataset({'z': (['x', 'y'], np.random.randn(3, 5))})
@@ -2497,9 +2495,9 @@ class TestDataset(TestCase):
         data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             assert data['dim1'][n] == t
-            assert_equal(data['var1'][n], sub['var1'])
-            assert_equal(data['var2'][n], sub['var2'])
-            assert_equal(data['var3'][:, n], sub['var3'])
+            self.assertVariableEqual(data['var1'][n], sub['var1'])
+            self.assertVariableEqual(data['var2'][n], sub['var2'])
+            self.assertVariableEqual(data['var3'][:, n], sub['var3'])
 
     def test_groupby_errors(self):
         data = create_test_data()
@@ -2561,10 +2559,10 @@ class TestDataset(TestCase):
         expected = ((ds + Variable('dim3', np.zeros(10)))
                     .transpose('dim3', 'dim1', 'dim2', 'time'))
         actual = grouped + zeros
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
         actual = zeros + grouped
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
         with raises_regex(ValueError, 'incompat.* grouped binary'):
             grouped + ds
@@ -2631,10 +2629,10 @@ class TestDataset(TestCase):
         for how in ['mean', 'sum', 'first', 'last', ]:
             method = getattr(actual, how)
             result = method()
-            assert_equal(expected, result)
+            self.assertDatasetEqual(expected, result)
         for method in [np.mean, ]:
             result = actual.reduce(method)
-            assert_equal(expected, result)
+            self.assertDatasetEqual(expected, result)
 
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -3264,9 +3262,9 @@ class TestDataset(TestCase):
         actual = data.max()
         expected = Dataset(dict((k, v.max())
                                 for k, v in iteritems(data.data_vars)))
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
-        assert_equal(data.min(dim=['dim1']),
+        self.assertDatasetEqual(data.min(dim=['dim1']),
                                 data.min(dim='dim1'))
 
         for reduct, expected in [('dim2', ['dim1', 'dim3', 'time']),
@@ -3277,7 +3275,7 @@ class TestDataset(TestCase):
             print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
-        assert_equal(data.mean(dim=[]), data)
+        self.assertDatasetEqual(data.mean(dim=[]), data)
 
         # uint support
         data = xr.Dataset({'a': (('x', 'y'),
@@ -3326,8 +3324,8 @@ class TestDataset(TestCase):
             data1[v] = (dims, data, {'foo': 'variable'})
 
         assert 'var4' not in data1.mean()
-        assert_equal(data1.mean(), data2.mean())
-        assert_equal(data1.mean(dim='dim1'),
+        self.assertDatasetEqual(data1.mean(), data2.mean())
+        self.assertDatasetEqual(data1.mean(dim='dim1'),
                                 data2.mean(dim='dim1'))
 
     def test_reduce_strings(self):
@@ -3452,7 +3450,7 @@ class TestDataset(TestCase):
         # same as dataarray version
         x = z.var3
         y = ds.var3.rank('dim3')
-        assert_equal(x, y)
+        self.assertDataArrayEqual(x, y)
         # coordinates stick
         self.assertItemsEqual(list(z.coords), list(ds.coords))
         self.assertItemsEqual(list(x.coords), list(y.coords))
@@ -3588,7 +3586,7 @@ class TestDataset(TestCase):
 
         actual = ds.isel(y=slice(1)) + ds.isel(y=slice(1, None))
         expected = 2 * ds.drop(ds.y, dim='y')
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         actual = ds + ds[['bar']]
         expected = (2 * ds[['bar']]).merge(ds.coords)
@@ -3675,17 +3673,17 @@ class TestDataset(TestCase):
         ds = Dataset({'foo': ('x', [5, 5, 6, 6])})
         actual = ds.diff('x')
         expected = Dataset({'foo': ('x', [0, 1, 0])})
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
     def test_dataset_diff_n1_label(self):
         ds = Dataset({'foo': ('x', [5, 5, 6, 6])}, {'x': [0, 1, 2, 3]})
         actual = ds.diff('x', label='lower')
         expected = Dataset({'foo': ('x', [0, 1, 0])}, {'x': [0, 1, 2]})
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
         actual = ds.diff('x', label='upper')
         expected = Dataset({'foo': ('x', [0, 1, 0])}, {'x': [1, 2, 3]})
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
     def test_dataset_diff_n1(self):
         ds = create_test_data(seed=1)
@@ -3700,7 +3698,7 @@ class TestDataset(TestCase):
         expected['var3'] = ds['var3']
         expected = Dataset(expected, coords={'time': ds['time'].values})
         expected.coords['numbers'] = ('dim3', ds['numbers'].values)
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
     def test_dataset_diff_n2(self):
         ds = create_test_data(seed=1)
@@ -3715,7 +3713,7 @@ class TestDataset(TestCase):
         expected['var3'] = ds['var3']
         expected = Dataset(expected, coords={'time': ds['time'].values})
         expected.coords['numbers'] = ('dim3', ds['numbers'].values)
-        assert_equal(expected, actual)
+        self.assertDatasetEqual(expected, actual)
 
     def test_dataset_diff_exception_n_neg(self):
         ds = create_test_data(seed=1)
@@ -3815,29 +3813,29 @@ class TestDataset(TestCase):
         with xr.set_options(arithmetic_join='outer'):
             actual = missing_2 + missing_0
         expected = xr.Dataset({'x': [0, 1, 2]})
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # arithmetic join also applies to data_vars
         ds1 = xr.Dataset({'foo': 1, 'bar': 2})
         ds2 = xr.Dataset({'bar': 2, 'baz': 3})
         expected = xr.Dataset({'bar': 4})  # default is inner joining
         actual = ds1 + ds2
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         with xr.set_options(arithmetic_join='outer'):
             expected = xr.Dataset({'foo': np.nan, 'bar': 4, 'baz': np.nan})
             actual = ds1 + ds2
-            assert_equal(actual, expected)
+            self.assertDatasetEqual(actual, expected)
 
         with xr.set_options(arithmetic_join='left'):
             expected = xr.Dataset({'foo': np.nan, 'bar': 4})
             actual = ds1 + ds2
-            assert_equal(actual, expected)
+            self.assertDatasetEqual(actual, expected)
 
         with xr.set_options(arithmetic_join='right'):
             expected = xr.Dataset({'bar': 4, 'baz': np.nan})
             actual = ds1 + ds2
-            assert_equal(actual, expected)
+            self.assertDatasetEqual(actual, expected)
 
     def test_full_like(self):
         # For more thorough tests, see test_variable.py
@@ -3872,15 +3870,15 @@ class TestDataset(TestCase):
         expected = Dataset({'dsx0': ('x', [0, 0, np.nan]),
                             'dsx1': ('x', [np.nan, 1, 1])},
                            coords={'x': ['a', 'b', 'c']})
-        assert_equal(actual, expected)
-        assert_equal(actual, xr.merge([dsx0, dsx1]))
+        self.assertDatasetEqual(actual, expected)
+        self.assertDatasetEqual(actual, xr.merge([dsx0, dsx1]))
 
         # works just like xr.merge([self, other])
         dsy2 = DataArray([2, 2, 2],
                          [('x', ['b', 'c', 'd'])]).to_dataset(name='dsy2')
         actual = dsx0.combine_first(dsy2)
         expected = xr.merge([dsy2, dsx0])
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
     def test_sortby(self):
         ds = Dataset({'A': DataArray([[1, 2], [3, 4], [5, 6]],
@@ -3904,16 +3902,16 @@ class TestDataset(TestCase):
         expected = sorted1d
         dax = DataArray([100, 99, 98], [('x', ['c', 'b', 'a'])])
         actual = ds.sortby(dax)
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # test descending order sort
         actual = ds.sortby(dax, ascending=False)
-        assert_equal(actual, ds)
+        self.assertDatasetEqual(actual, ds)
 
         # test alignment (fills in nan for 'c')
         dax_short = DataArray([98, 97], [('x', ['b', 'a'])])
         actual = ds.sortby(dax_short)
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # test 1-D lexsort
         # dax0 is sorted first to give indices of [1, 2, 0]
@@ -3921,13 +3919,13 @@ class TestDataset(TestCase):
         dax0 = DataArray([100, 95, 95], [('x', ['c', 'b', 'a'])])
         dax1 = DataArray([0, 1, 0], [('x', ['c', 'b', 'a'])])
         actual = ds.sortby([dax0, dax1])  # lexsort underneath gives [2, 1, 0]
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         expected = sorted2d
         # test multi-dim sort by 1D dataarray values
         day = DataArray([90, 80], [('y', [1, 0])])
         actual = ds.sortby([day, dax])
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # test exception-raising
         with pytest.raises(KeyError) as excinfo:
@@ -3942,7 +3940,7 @@ class TestDataset(TestCase):
 
         expected = sorted1d
         actual = ds.sortby('x')
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # test pandas.MultiIndex
         indices = (('b', 1), ('b', 0), ('a', 1), ('a', 0))
@@ -3959,26 +3957,26 @@ class TestDataset(TestCase):
                                             ('y', [1, 0])]),
                             'B': DataArray([[11, 12], [9, 10], [7, 8], [5, 6]],
                                            dims=['x', 'y'])})
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # multi-dim sort by coordinate objects
         expected = sorted2d
         actual = ds.sortby(['x', 'y'])
-        assert_equal(actual, expected)
+        self.assertDatasetEqual(actual, expected)
 
         # test descending order sort
         actual = ds.sortby(['x', 'y'], ascending=False)
-        assert_equal(actual, ds)
+        self.assertDatasetEqual(actual, ds)
 
     def test_attribute_access(self):
         ds = create_test_data(seed=1)
         for key in ['var1', 'var2', 'var3', 'time', 'dim1',
                     'dim2', 'dim3', 'numbers']:
-            assert_equal(ds[key], getattr(ds, key))
+            self.assertDataArrayEqual(ds[key], getattr(ds, key))
             assert key in dir(ds)
 
         for key in ['dim3', 'dim1', 'numbers']:
-            assert_equal(ds['var3'][key], getattr(ds.var3, key))
+            self.assertDataArrayEqual(ds['var3'][key], getattr(ds.var3, key))
             assert key in dir(ds['var3'])
         # attrs
         assert ds['var3'].attrs['foo'] == ds.var3.foo
