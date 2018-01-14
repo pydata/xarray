@@ -25,8 +25,8 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _color_palette, import_seaborn)
 
 from . import (
-    TestCase, requires_matplotlib, requires_seaborn, raises_regex, assert_equal,
-    assert_array_equal)
+    TestCase, requires_matplotlib, requires_seaborn, raises_regex,
+    assert_equal, assert_array_equal)
 
 
 @pytest.mark.flaky
@@ -162,7 +162,7 @@ class TestPlot(PlotTestCase):
     def test__infer_interval_breaks(self):
         assert_array_equal([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
         assert_array_equal([-0.5, 0.5, 5.0, 9.5, 10.5],
-                              _infer_interval_breaks([0, 1, 9, 10]))
+                           _infer_interval_breaks([0, 1, 9, 10]))
         assert_array_equal(
             pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
             _infer_interval_breaks(pd.date_range('20000101', periods=3)))
@@ -809,7 +809,7 @@ class Common2dMixin:
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, add_colorbar=True,
-                        cbar_kwargs={'label':'MyBar', 'cax':cax})
+                        cbar_kwargs={'label': 'MyBar', 'cax': cax})
         assert ax.has_data()
         assert cax.has_data()
         alltxt = text_in_fig()

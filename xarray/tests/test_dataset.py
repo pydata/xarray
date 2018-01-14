@@ -1631,7 +1631,7 @@ class TestDataset(TestCase):
         assert_equal(left2['dim3'].variable, right2['dim3'].variable)
 
         assert_identical(left2.sel(dim3=intersection),
-                                    right2.sel(dim3=intersection))
+                         right2.sel(dim3=intersection))
         assert np.isnan(left2['var3'][-2:]).all()
         assert np.isnan(right2['var3'][:2]).all()
 
@@ -1646,9 +1646,10 @@ class TestDataset(TestCase):
         left2, right2 = align(left, right, join='right')
         assert_equal(left2['dim3'].variable, right2['dim3'].variable)
         assert_equal(left2['dim3'].variable, right['dim3'].variable)
-        self.assertDatasetIdentical(left2.sel(dim3=intersection),
+
         assert_identical(left2.sel(dim3=intersection),
-                                    right2.sel(dim3=intersection))
+                         right2.sel(dim3=intersection))
+
         assert np.isnan(left2['var3'][-2:]).all()
 
         with raises_regex(ValueError, 'invalid value for join'):

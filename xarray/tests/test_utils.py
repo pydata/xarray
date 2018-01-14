@@ -53,7 +53,8 @@ class TestArrayEquiv(TestCase):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
         assert duck_array_ops.array_equiv(0, np.array(0, dtype=object))
-        assert duck_array_ops.array_equiv(np.nan, np.array(np.nan, dtype=object))
+        assert duck_array_ops.array_equiv(np.nan,
+                                          np.array(np.nan, dtype=object))
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
