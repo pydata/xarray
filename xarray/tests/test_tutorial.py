@@ -7,7 +7,7 @@ import os
 from xarray import tutorial, DataArray
 from xarray.core.pycompat import suppress
 
-from . import TestCase, network
+from . import TestCase, network, assert_identical
 
 
 @network
