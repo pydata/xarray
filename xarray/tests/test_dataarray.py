@@ -2836,7 +2836,7 @@ class TestDataArray(TestCase):
         actual = original.to_cdms2()
         self.assertArrayEqual(actual, original)
         assert actual.id == original.name
-        assert actual.getAxisIds() == original.dims
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
         for axis, coord in zip(actual.getAxisList(), expected_coords):
             assert axis.id == coord.name
             self.assertArrayEqual(axis, coord.values)
@@ -2878,8 +2878,8 @@ class TestDataArray(TestCase):
         actual = original.to_iris()
         self.assertArrayEqual(actual.data, original.data)
         assert actual.var_name == original.name
-        assert [d.var_name for d in actual.dim_coords] == \
-                              original.dims
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
         assert actual.cell_methods == \
                          (iris.coords.CellMethod(method='mean',
                                                  coords=('height',),
@@ -2950,8 +2950,8 @@ class TestDataArray(TestCase):
             hasattr(actual, 'core_data') else actual.data
         self.assertArrayEqual(actual_data, original.data)
         assert actual.var_name == original.name
-        assert [d.var_name for d in actual.dim_coords] == \
-                              original.dims
+        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
+                              original.dims)
         assert actual.cell_methods == \
                          (iris.coords.CellMethod(method='mean',
                                                  coords=('height',),
