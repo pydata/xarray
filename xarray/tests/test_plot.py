@@ -24,7 +24,8 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _build_discrete_cmap,
                                _color_palette, import_seaborn)
 
-from . import TestCase, requires_matplotlib, requires_seaborn, raises_regex
+from . import (
+    TestCase, requires_matplotlib, requires_seaborn, raises_regex, assert_equal)
 
 
 @pytest.mark.flaky
