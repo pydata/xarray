@@ -966,7 +966,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
                 actual = nc.variables['x'][:]
-                self.assertArrayEqual(expected, actual)
+                assert_array_equal(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:

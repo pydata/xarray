@@ -345,7 +345,7 @@ class TestDataset(TestCase):
             pandas_obj = a.to_pandas()
             ds_based_on_pandas = Dataset(pandas_obj)
             for dim in ds_based_on_pandas.data_vars:
-                self.assertArrayEqual(ds_based_on_pandas[dim], pandas_obj[dim])
+                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
@@ -477,7 +477,7 @@ class TestDataset(TestCase):
         a['bar'] = (('time', 'x',), d)
         # order of creation is preserved
         assert list(a.variables) == ['foo', 'bar']
-        self.assertArrayEqual(a['foo'].values, d)
+        assert_array_equal(a['foo'].values, d)
         # try to add variable with dim (10,3) with data that's (3,10)
         with pytest.raises(ValueError):
             a['qux'] = (('time', 'x'), d.T)
@@ -555,11 +555,11 @@ class TestDataset(TestCase):
 
         actual = data.copy(deep=True)
         actual.coords['x'] = ('x', ['a', 'b'])
-        self.assertArrayEqual(actual['x'], ['a', 'b'])
+        assert_array_equal(actual['x'], ['a', 'b'])
 
         actual = data.copy(deep=True)
         actual.coords['z'] = ('z', ['a', 'b'])
-        self.assertArrayEqual(actual['z'], ['a', 'b'])
+        assert_array_equal(actual['z'], ['a', 'b'])
 
         actual = data.copy(deep=True)
         with raises_regex(ValueError, 'conflicting sizes'):
@@ -985,9 +985,9 @@ class TestDataset(TestCase):
         expected_var3 = data['var3'].variable[slice(None),
                                               stations['dim1s'].variable]
         assert_equal(actual['a'].drop('dim2'), stations['a'])
-        self.assertArrayEqual(actual['var1'], expected_var1)
-        self.assertArrayEqual(actual['var2'], expected_var2)
-        self.assertArrayEqual(actual['var3'], expected_var3)
+        assert_array_equal(actual['var1'], expected_var1)
+        assert_array_equal(actual['var2'], expected_var2)
+        assert_array_equal(actual['var3'], expected_var3)
 
     def test_isel_dataarray(self):
         """ Test for indexing by DataArray """
@@ -1401,7 +1401,7 @@ class TestDataset(TestCase):
         idx_y = DataArray([0, 2, 1], dims=['b'], coords={'b': [0, 3, 6]})
         expected_ary = data['foo'][[0, 1, 2], [0, 2, 1]]
         actual = data.sel(x=idx_x, y=idx_y)
-        self.assertArrayEqual(expected_ary, actual['foo'])
+        assert_array_equal(expected_ary, actual['foo'])
         assert_identical(actual['a'].drop('x'), idx_x['a'])
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
@@ -1622,7 +1622,7 @@ class TestDataset(TestCase):
         union = list('abcdefghijkl')
 
         left2, right2 = align(left, right, join='inner')
-        self.assertArrayEqual(left2['dim3'], intersection)
+        assert_array_equal(left2['dim3'], intersection)
         assert_identical(left2, right2)
 
         left2, right2 = align(left, right, join='outer')
@@ -1935,7 +1935,7 @@ class TestDataset(TestCase):
         assert not data.equals(copied)
         assert data.dims == {'y': 3, 't': 3}
         # check virtual variables
-        self.assertArrayEqual(data['t.dayofyear'], [1, 2, 3])
+        assert_array_equal(data['t.dayofyear'], [1, 2, 3])
 
     def test_swap_dims(self):
         original = Dataset({'x': [1, 2, 3], 'y': ('x', list('abc')), 'z': 42})
@@ -2198,12 +2198,12 @@ class TestDataset(TestCase):
         expected = DataArray(1 + np.arange(20), coords=[data['time']],
                              dims='time', name='dayofyear')
 
-        self.assertArrayEqual(data['time.month'].values,
+        assert_array_equal(data['time.month'].values,
                               data.variables['time'].to_index().month)
-        self.assertArrayEqual(data['time.season'].values, 'DJF')
+        assert_array_equal(data['time.season'].values, 'DJF')
         # test virtual variable math
-        self.assertArrayEqual(data['time.dayofyear'] + 1, 2 + np.arange(20))
-        self.assertArrayEqual(np.sin(data['time.dayofyear']),
+        assert_array_equal(data['time.dayofyear'] + 1, 2 + np.arange(20))
+        assert_array_equal(np.sin(data['time.dayofyear']),
                               np.sin(1 + np.arange(20)))
         # ensure they become coordinates
         expected = Dataset({}, {'dayofyear': data['time.dayofyear']})

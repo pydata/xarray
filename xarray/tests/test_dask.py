@@ -15,7 +15,8 @@ from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress, OrderedDict
 from . import (
-    TestCase, assert_frame_equal, raises_regex, assert_equal, assert_identical)
+    TestCase, assert_frame_equal, raises_regex, assert_equal, assert_identical,
+    assert_array_equal)
 
 from xarray.tests import mock
 
@@ -65,7 +66,7 @@ class TestVariable(DaskTestCase):
         v = self.lazy_var
         assert self.data is v.data
         assert self.data.chunks == v.chunks
-        self.assertArrayEqual(self.values, v)
+        assert_array_equal(self.values, v)
 
     def test_copy(self):
         self.assertLazyAndIdentical(self.eager_var, self.lazy_var.copy())

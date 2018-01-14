@@ -64,7 +64,7 @@ class TestDataArray(TestCase):
 
     def test_properties(self):
         self.assertVariableEqual(self.dv.variable, self.v)
-        self.assertArrayEqual(self.dv.values, self.v.values)
+        assert_array_equal(self.dv.values, self.v.values)
         for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes',
                      'ndim', 'attrs']:
             assert getattr(self.dv, attr) == getattr(self.v, attr)
@@ -72,7 +72,7 @@ class TestDataArray(TestCase):
         self.assertVariableEqual(self.dv.variable, self.v)
         assert set(self.dv.coords) == set(self.ds.coords)
         for k, v in iteritems(self.dv.coords):
-            self.assertArrayEqual(v, self.ds.coords[k])
+            assert_array_equal(v, self.ds.coords[k])
         with pytest.raises(AttributeError):
             self.dv.dataset
         assert isinstance(self.ds['x'].to_index(), pd.Index)
@@ -85,10 +85,10 @@ class TestDataArray(TestCase):
         array = DataArray(np.zeros((3, 4)))
         actual = array.copy()
         actual.values = np.ones((3, 4))
-        self.assertArrayEqual(np.ones((3, 4)), actual.values)
+        assert_array_equal(np.ones((3, 4)), actual.values)
         actual.data = 2 * np.ones((3, 4))
-        self.assertArrayEqual(2 * np.ones((3, 4)), actual.data)
-        self.assertArrayEqual(actual.data, actual.values)
+        assert_array_equal(2 * np.ones((3, 4)), actual.data)
+        assert_array_equal(actual.data, actual.values)
 
     def test_indexes(self):
         array = DataArray(np.zeros((2, 3)),
@@ -492,14 +492,14 @@ class TestDataArray(TestCase):
         da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'])
         ind = DataArray([[0, 1], [0, 1]], dims=['x', 'z'])
         actual = da[ind]
-        self.assertArrayEqual(actual, da.values[[[0, 1], [0, 1]], :])
+        assert_array_equal(actual, da.values[[[0, 1], [0, 1]], :])
 
         da = DataArray(np.arange(12).reshape((3, 4)), dims=['x', 'y'],
                        coords={'x': [0, 1, 2], 'y': ['a', 'b', 'c', 'd']})
         ind = xr.DataArray([[0, 1], [0, 1]], dims=['X', 'Y'])
         actual = da[ind]
         expected = da.values[[[0, 1], [0, 1]], :]
-        self.assertArrayEqual(actual, expected)
+        assert_array_equal(actual, expected)
         assert actual.dims == ('X', 'Y', 'y')
 
         # boolean indexing
@@ -524,7 +524,7 @@ class TestDataArray(TestCase):
                              dims=['x', 'y'])
             orig[t] = 1
             expected[t] = 1
-            self.assertArrayEqual(orig.values, expected)
+            assert_array_equal(orig.values, expected)
 
     def test_setitem_fancy(self):
         # vectorized indexing
@@ -743,7 +743,7 @@ class TestDataArray(TestCase):
         assert_identical(actual['b'], stations['b'])
         expected = da.variable[:, stations['dim2s'].variable,
                                stations['dim1s'].variable]
-        self.assertArrayEqual(actual, expected)
+        assert_array_equal(actual, expected)
 
     def test_sel(self):
         self.ds['x'] = ('x', np.array(list('abcdefghij')))
@@ -770,14 +770,14 @@ class TestDataArray(TestCase):
         # along new dimension
         ind = DataArray(['a', 'b', 'c'], dims=['new_dim'])
         actual = da.sel(x=ind)
-        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert_array_equal(actual, da.isel(x=[0, 1, 2]))
         assert 'new_dim' in actual.dims
 
         # with coordinate
         ind = DataArray(['a', 'b', 'c'], dims=['new_dim'],
                         coords={'new_dim': [0, 1, 2]})
         actual = da.sel(x=ind)
-        self.assertArrayEqual(actual, da.isel(x=[0, 1, 2]))
+        assert_array_equal(actual, da.isel(x=[0, 1, 2]))
         assert 'new_dim' in actual.dims
         assert 'new_dim' in actual.coords
         assert_equal(actual['new_dim'].drop('x'),
@@ -1019,8 +1019,8 @@ class TestDataArray(TestCase):
         dates = pd.date_range('2000-01-01', periods=10)
         da = DataArray(np.arange(1, 11), [('time', dates)])
 
-        self.assertArrayEqual(da['time.dayofyear'], da.values)
-        self.assertArrayEqual(da.coords['time.dayofyear'], da.values)
+        assert_array_equal(da['time.dayofyear'], da.values)
+        assert_array_equal(da.coords['time.dayofyear'], da.values)
 
     def test_coords(self):
         # use int64 to ensure repr() consistency on windows
@@ -1435,7 +1435,7 @@ class TestDataArray(TestCase):
         assert_identical(dv, self.dv)
 
     def test_array_interface(self):
-        self.assertArrayEqual(np.asarray(self.dv), self.x)
+        assert_array_equal(np.asarray(self.dv), self.x)
         # test patched in methods
         assert_array_equal(self.dv.astype(float), self.v.astype(float))
         assert_array_equal(self.dv.argsort(), self.v.argsort())
@@ -1499,7 +1499,7 @@ class TestDataArray(TestCase):
         b += 1
         assert b is a
         assert b.variable is v
-        self.assertArrayEqual(b.values, x)
+        assert_array_equal(b.values, x)
         assert source_ndarray(b.values) is x
 
     def test_inplace_math_automatic_alignment(self):
@@ -1881,7 +1881,7 @@ class TestDataArray(TestCase):
         expected_groups = {'a': range(0, 9), 'c': [9], 'b': range(10, 20)}
         assert expected_groups.keys() == grouped.groups.keys()
         for key in expected_groups:
-            self.assertArrayEqual(expected_groups[key], grouped.groups[key])
+            assert_array_equal(expected_groups[key], grouped.groups[key])
         assert 3 == len(grouped)
 
     def test_groupby_apply_identity(self):
@@ -2608,25 +2608,25 @@ class TestDataArray(TestCase):
         # 0d
         actual = DataArray(42).to_pandas()
         expected = np.array(42)
-        self.assertArrayEqual(actual, expected)
+        assert_array_equal(actual, expected)
 
         # 1d
         values = np.random.randn(3)
         index = pd.Index(['a', 'b', 'c'], name='x')
         da = DataArray(values, coords=[index])
         actual = da.to_pandas()
-        self.assertArrayEqual(actual.values, values)
-        self.assertArrayEqual(actual.index, index)
-        self.assertArrayEqual(actual.index.name, 'x')
+        assert_array_equal(actual.values, values)
+        assert_array_equal(actual.index, index)
+        assert_array_equal(actual.index.name, 'x')
 
         # 2d
         values = np.random.randn(3, 2)
         da = DataArray(values, coords=[('x', ['a', 'b', 'c']), ('y', [0, 1])],
                        name='foo')
         actual = da.to_pandas()
-        self.assertArrayEqual(actual.values, values)
-        self.assertArrayEqual(actual.index, ['a', 'b', 'c'])
-        self.assertArrayEqual(actual.columns, [0, 1])
+        assert_array_equal(actual.values, values)
+        assert_array_equal(actual.index, ['a', 'b', 'c'])
+        assert_array_equal(actual.columns, [0, 1])
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
@@ -2644,9 +2644,9 @@ class TestDataArray(TestCase):
                         [('B', [1, 2, 3]), ('A', list('cdef'))], name='foo')
         expected = arr.to_series()
         actual = arr.to_dataframe()['foo']
-        self.assertArrayEqual(expected.values, actual.values)
-        self.assertArrayEqual(expected.name, actual.name)
-        self.assertArrayEqual(expected.index.values, actual.index.values)
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.name, actual.name)
+        assert_array_equal(expected.index.values, actual.index.values)
 
         # regression test for coords with different dimensions
         arr.coords['C'] = ('B', [-1, -2, -3])
@@ -2654,9 +2654,9 @@ class TestDataArray(TestCase):
         expected['C'] = [-1] * 4 + [-2] * 4 + [-3] * 4
         expected = expected[['C', 'foo']]
         actual = arr.to_dataframe()
-        self.assertArrayEqual(expected.values, actual.values)
-        self.assertArrayEqual(expected.columns.values, actual.columns.values)
-        self.assertArrayEqual(expected.index.values, actual.index.values)
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.columns.values, actual.columns.values)
+        assert_array_equal(expected.index.values, actual.index.values)
 
         arr.name = None  # unnamed
         with raises_regex(ValueError, 'unnamed'):
@@ -2666,8 +2666,8 @@ class TestDataArray(TestCase):
         # coordinate with same name as array
         arr = DataArray([1, 2, 3], dims='x', name='x')
         series = arr.to_series()
-        self.assertArrayEqual([1, 2, 3], series.values)
-        self.assertArrayEqual([0, 1, 2], series.index.values)
+        assert_array_equal([1, 2, 3], series.values)
+        assert_array_equal([0, 1, 2], series.index.values)
         assert 'x' == series.name
         assert 'x' == series.index.name
 
@@ -2678,8 +2678,8 @@ class TestDataArray(TestCase):
     def test_to_and_from_series(self):
         expected = self.dv.to_dataframe()['foo']
         actual = self.dv.to_series()
-        self.assertArrayEqual(expected.values, actual.values)
-        self.assertArrayEqual(expected.index.values, actual.index.values)
+        assert_array_equal(expected.values, actual.values)
+        assert_array_equal(expected.index.values, actual.index.values)
         assert 'foo' == actual.name
         # test roundtrip
         assert_identical(
@@ -2790,17 +2790,17 @@ class TestDataArray(TestCase):
         # Test round trip
         x_masked_2 = da.to_masked_array()
         da_2 = DataArray(x_masked_2)
-        self.assertArrayEqual(x_masked, x_masked_2)
+        assert_array_equal(x_masked, x_masked_2)
         assert_equal(da, da_2)
 
         da_masked_array = da.to_masked_array(copy=True)
         assert isinstance(da_masked_array, np.ma.MaskedArray)
         # Test masks
-        self.assertArrayEqual(da_masked_array.mask, x_masked.mask)
+        assert_array_equal(da_masked_array.mask, x_masked.mask)
         # Test that mask is unpacked correctly
-        self.assertArrayEqual(da.values, x_masked.filled(np.nan))
+        assert_array_equal(da.values, x_masked.filled(np.nan))
         # Test that the underlying data (including nans) hasn't changed
-        self.assertArrayEqual(da_masked_array, x_masked.filled(np.nan))
+        assert_array_equal(da_masked_array, x_masked.filled(np.nan))
 
         # Test that copy=False gives access to values
         masked_array = da.to_masked_array(copy=False)
@@ -2834,12 +2834,12 @@ class TestDataArray(TestCase):
         expected_coords = [IndexVariable('distance', [-2, 2]),
                            IndexVariable('time', [0, 1, 2])]
         actual = original.to_cdms2()
-        self.assertArrayEqual(actual, original)
+        assert_array_equal(actual, original)
         assert actual.id == original.name
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
         for axis, coord in zip(actual.getAxisList(), expected_coords):
             assert axis.id == coord.name
-            self.assertArrayEqual(axis, coord.values)
+            assert_array_equal(axis, coord.values)
         assert actual.baz == original.attrs['baz']
 
         component_times = actual.getAxis(1).asComponentTime()
@@ -2876,7 +2876,7 @@ class TestDataArray(TestCase):
         original.attrs['cell_methods'] = \
             'height: mean (comment: A cell method)'
         actual = original.to_iris()
-        self.assertArrayEqual(actual.data, original.data)
+        assert_array_equal(actual.data, original.data)
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
@@ -2948,7 +2948,7 @@ class TestDataArray(TestCase):
         # Be careful not to trigger the loading of the iris data
         actual_data = actual.core_data() if \
             hasattr(actual, 'core_data') else actual.data
-        self.assertArrayEqual(actual_data, original.data)
+        assert_array_equal(actual_data, original.data)
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)

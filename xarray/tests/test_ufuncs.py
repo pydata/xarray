@@ -8,7 +8,10 @@ import numpy as np
 import xarray.ufuncs as xu
 import xarray as xr
 
-from . import TestCase, raises_regex, assert_equal, assert_identical
+from . import (
+    TestCase, raises_regex, assert_equal, assert_identical, assert_array_equal,
+    assert_equal)
+
 
 
 class TestOps(TestCase):
@@ -17,7 +20,7 @@ class TestOps(TestCase):
         try:
             assert a.identical(b), (a, b)
         except AttributeError:
-            self.assertArrayEqual(a, b)
+            assert_array_equal(a, b)
 
     def test_unary(self):
         args = [0,

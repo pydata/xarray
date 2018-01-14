@@ -8,7 +8,9 @@ import numpy as np
 import pandas as pd
 
 from xarray import Variable, coding
-from . import TestCase, requires_netCDF4, assert_equal, assert_identical
+from . import (
+    TestCase, requires_netCDF4, assert_equal, assert_identical,
+    assert_array_equal)
 import pytest
 
 
@@ -67,7 +69,7 @@ class TestDatetime(TestCase):
                     actual_cmp = actual.astype('M8[us]')
                 else:
                     actual_cmp = actual
-                self.assertArrayEqual(expected, actual_cmp)
+                assert_array_equal(expected, actual_cmp)
                 encoded, _, _ = coding.times.encode_cf_datetime(actual, units,
                                                                 calendar)
                 if '1-1-1' not in units:
@@ -75,7 +77,7 @@ class TestDatetime(TestCase):
                     # units/encoding cannot be preserved in this case:
                     # (Pdb) pd.to_datetime('1-1-1 00:00:0.0')
                     # Timestamp('2001-01-01 00:00:00')
-                    self.assertArrayEqual(num_dates, np.around(encoded, 1))
+                    assert_array_equal(num_dates, np.around(encoded, 1))
                     if (hasattr(num_dates, 'ndim') and num_dates.ndim == 1 and
                             '1000' not in units):
                         # verify that wrapping with a pandas.Index works
@@ -83,7 +85,7 @@ class TestDatetime(TestCase):
                         # non-datetime64 compatible dates into a pandas.Index
                         encoded, _, _ = coding.times.encode_cf_datetime(
                             pd.Index(actual), units, calendar)
-                        self.assertArrayEqual(num_dates, np.around(encoded, 1))
+                        assert_array_equal(num_dates, np.around(encoded, 1))
 
     @requires_netCDF4
     def test_decode_cf_datetime_overflow(self):
@@ -108,7 +110,7 @@ class TestDatetime(TestCase):
         # they cannot be parsed by netcdftime, but pd.Timestamp works
         units = 'hours since 1-1-1970'
         actual = coding.times.decode_cf_datetime(np.arange(100), units)
-        self.assertArrayEqual(actual, expected)
+        assert_array_equal(actual, expected)
 
     @requires_netCDF4
     def test_decode_cf_datetime_non_iso_strings(self):
@@ -120,7 +122,7 @@ class TestDatetime(TestCase):
                  (np.arange(100), 'hours since 2000-01-01 0:00')]
         for num_dates, units in cases:
             actual = coding.times.decode_cf_datetime(num_dates, units)
-            self.assertArrayEqual(actual, expected)
+            assert_array_equal(actual, expected)
 
     @requires_netCDF4
     def test_decode_non_standard_calendar(self):
@@ -197,8 +199,8 @@ class TestDatetime(TestCase):
             actual = coding.times.decode_cf_datetime(mdim_time, units,
                                                      calendar=calendar)
         assert actual.dtype == np.dtype('M8[ns]')
-        self.assertArrayEqual(actual[:, 0], expected1)
-        self.assertArrayEqual(actual[:, 1], expected2)
+        assert_array_equal(actual[:, 0], expected1)
+        assert_array_equal(actual[:, 1], expected2)
 
     @requires_netCDF4
     def test_decode_non_standard_calendar_fallback(self):
@@ -220,7 +222,7 @@ class TestDatetime(TestCase):
                                   str(w[0].message)
 
                 assert actual.dtype == np.dtype('O')
-                self.assertArrayEqual(actual, expected)
+                assert_array_equal(actual, expected)
 
     @requires_netCDF4
     def test_cf_datetime_nan(self):
@@ -235,7 +237,7 @@ class TestDatetime(TestCase):
                 warnings.filterwarnings('ignore', 'All-NaN')
                 actual = coding.times.decode_cf_datetime(num_dates, units)
             expected = np.array(expected_list, dtype='datetime64[ns]')
-            self.assertArrayEqual(expected, actual)
+            assert_array_equal(expected, actual)
 
     @requires_netCDF4
     def test_decoded_cf_datetime_array_2d(self):
@@ -245,7 +247,7 @@ class TestDatetime(TestCase):
         result = coding.times.CFDatetimeCoder().decode(variable)
         assert result.dtype == 'datetime64[ns]'
         expected = pd.date_range('2000-01-01', periods=4).values.reshape(2, 2)
-        self.assertArrayEqual(np.asarray(result), expected)
+        assert_array_equal(np.asarray(result), expected)
 
     def test_infer_datetime_units(self):
         for dates, expected in [(pd.date_range('1900-01-01', periods=5),
@@ -288,18 +290,18 @@ class TestDatetime(TestCase):
 
             expected = numbers
             actual, _ = coding.times.encode_cf_timedelta(timedeltas, units)
-            self.assertArrayEqual(expected, actual)
+            assert_array_equal(expected, actual)
             assert expected.dtype == actual.dtype
 
             if units is not None:
                 expected = timedeltas
                 actual = coding.times.decode_cf_timedelta(numbers, units)
-                self.assertArrayEqual(expected, actual)
+                assert_array_equal(expected, actual)
                 assert expected.dtype == actual.dtype
 
         expected = np.timedelta64('NaT', 'ns')
         actual = coding.times.decode_cf_timedelta(np.array(np.nan), 'days')
-        self.assertArrayEqual(expected, actual)
+        assert_array_equal(expected, actual)
 
     def test_cf_timedelta_2d(self):
         timedeltas = ['1D', '2D', '3D']
@@ -310,7 +312,7 @@ class TestDatetime(TestCase):
         expected = timedeltas
 
         actual = coding.times.decode_cf_timedelta(numbers, units)
-        self.assertArrayEqual(expected, actual)
+        assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
 
     def test_infer_timedelta_units(self):

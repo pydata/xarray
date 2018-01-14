@@ -25,7 +25,8 @@ from xarray.core.common import full_like, zeros_like, ones_like
 from xarray.core.utils import NDArrayMixin
 
 from . import (
-    TestCase, source_ndarray, requires_dask, raises_regex, assert_identical)
+    TestCase, source_ndarray, requires_dask, raises_regex, assert_identical,
+    assert_equal, assert_array_equal)
 
 from xarray.tests import requires_bottleneck
 
@@ -35,7 +36,7 @@ class VariableSubclassTestCases(object):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
         assert v.dims == ('time',)
-        self.assertArrayEqual(v.values, data)
+        assert_array_equal(v.values, data)
         assert v.dtype == float
         assert v.shape == (10,)
         assert v.size == 10
@@ -67,24 +68,24 @@ class VariableSubclassTestCases(object):
 
         v_new = v[dict(x=[0, 1])]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, data[[0, 1]])
+        assert_array_equal(v_new, data[[0, 1]])
 
         v_new = v[dict(x=slice(None))]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, data)
+        assert_array_equal(v_new, data)
 
         v_new = v[dict(x=Variable('a', [0, 1]))]
         assert v_new.dims == ('a', )
-        self.assertArrayEqual(v_new, data[[0, 1]])
+        assert_array_equal(v_new, data[[0, 1]])
 
         v_new = v[dict(x=1)]
         assert v_new.dims == ()
-        self.assertArrayEqual(v_new, data[1])
+        assert_array_equal(v_new, data[1])
 
         # tuple argument
         v_new = v[slice(None)]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, data)
+        assert_array_equal(v_new, data)
 
     def test_getitem_1d_fancy(self):
         v = self.cls(['x'], [0, 1, 2])
@@ -93,7 +94,7 @@ class VariableSubclassTestCases(object):
         v_new = v[ind]
         assert v_new.dims == ('a', 'b')
         expected = np.array(v._data)[([0, 1], [0, 1]), ]
-        self.assertArrayEqual(v_new, expected)
+        assert_array_equal(v_new, expected)
 
         # boolean indexing
         ind = Variable(('x', ), [True, False, True])
@@ -218,9 +219,9 @@ class VariableSubclassTestCases(object):
         listarray = np.empty((1,), dtype=object)
         listarray[0] = [1, 2, 3]
         x = self.cls('x', listarray)
-        self.assertArrayEqual(x.data, listarray)
-        self.assertArrayEqual(x[0].data, listarray.squeeze())
-        self.assertArrayEqual(x.squeeze().data, listarray.squeeze())
+        assert_array_equal(x.data, listarray)
+        assert_array_equal(x[0].data, listarray.squeeze())
+        assert_array_equal(x.squeeze().data, listarray.squeeze())
 
     def test_index_and_concat_datetime(self):
         # regression test for #125
@@ -233,7 +234,7 @@ class VariableSubclassTestCases(object):
                           [expected[[i]] for i in range(10)]]:
                 actual = Variable.concat(times, 't')
                 assert expected.dtype == actual.dtype
-                self.assertArrayEqual(expected, actual)
+                assert_array_equal(expected, actual)
 
     def test_0d_time_data(self):
         # regression test for #105
@@ -251,7 +252,7 @@ class VariableSubclassTestCases(object):
         ]:
             v = self.cls(['t'], values)
             assert v.dtype == np.dtype('datetime64[ns]')
-            self.assertArrayEqual(v.values, times.values)
+            assert_array_equal(v.values, times.values)
             assert v.values.dtype == np.dtype('datetime64[ns]')
             same_source = source_ndarray(v.values) is source_ndarray(values)
             assert preserve_source == same_source
@@ -266,7 +267,7 @@ class VariableSubclassTestCases(object):
         ]:
             v = self.cls(['t'], values)
             assert v.dtype == np.dtype('timedelta64[ns]')
-            self.assertArrayEqual(v.values, times.values)
+            assert_array_equal(v.values, times.values)
             assert v.values.dtype == np.dtype('timedelta64[ns]')
             same_source = source_ndarray(v.values) is source_ndarray(values)
             assert preserve_source == same_source
@@ -300,27 +301,27 @@ class VariableSubclassTestCases(object):
         # unary ops
         assert_identical(base_v, +v)
         assert_identical(base_v, abs(v))
-        self.assertArrayEqual((-v).values, -x)
+        assert_array_equal((-v).values, -x)
         # binary ops with numbers
         assert_identical(base_v, v + 0)
         assert_identical(base_v, 0 + v)
         assert_identical(base_v, v * 1)
         # binary ops with numpy arrays
-        self.assertArrayEqual((v * x).values, x ** 2)
-        self.assertArrayEqual((x * v).values, x ** 2)
-        self.assertArrayEqual(v - y, v - 1)
-        self.assertArrayEqual(y - v, 1 - v)
+        assert_array_equal((v * x).values, x ** 2)
+        assert_array_equal((x * v).values, x ** 2)
+        assert_array_equal(v - y, v - 1)
+        assert_array_equal(y - v, 1 - v)
         # verify attributes are dropped
         v2 = self.cls(['x'], x, {'units': 'meters'})
         assert_identical(base_v, +v2)
         # binary ops with all variables
-        self.assertArrayEqual(v + v, 2 * v)
+        assert_array_equal(v + v, 2 * v)
         w = self.cls(['x'], y, {'foo': 'bar'})
         assert_identical(v + w, self.cls(['x'], x + y).to_base_variable())
-        assert_equal((v * w).values, x * y)
+        assert_array_equal((v * w).values, x * y)
 
         # something complicated
-        self.assertArrayEqual((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
+        assert_array_equal((v ** 2 * w - 1 + x).values, x ** 2 * y - 1 + x)
         # make sure dtype is preserved (for Index objects)
         assert float == (+v).dtype
         assert float == (+v).values.dtype
@@ -343,9 +344,9 @@ class VariableSubclassTestCases(object):
     def test_array_interface(self):
         x = np.arange(5)
         v = self.cls(['x'], x)
-        self.assertArrayEqual(np.asarray(v), x)
+        assert_array_equal(np.asarray(v), x)
         # test patched in methods
-        self.assertArrayEqual(v.astype(float), x.astype(float))
+        assert_array_equal(v.astype(float), x.astype(float))
         # think this is a break, that argsort changes the type
         assert_identical(v.argsort(), v.to_base_variable())
         assert_identical(v.clip(2, 3),
@@ -366,8 +367,8 @@ class VariableSubclassTestCases(object):
 
     def test___array__(self):
         for v, data in self.example_1d_objects():
-            self.assertArrayEqual(v.values, np.asarray(data))
-            self.assertArrayEqual(np.asarray(v), np.asarray(data))
+            assert_array_equal(v.values, np.asarray(data))
+            assert_array_equal(np.asarray(v), np.asarray(data))
             assert v[0].values == np.asarray(data)[0]
             assert np.asarray(v[0]) == np.asarray(data)[0]
 
@@ -495,7 +496,7 @@ class VariableSubclassTestCases(object):
             w = v.copy(deep=deep)
             assert isinstance(w._data, PandasIndexAdapter)
             assert isinstance(w.to_index(), pd.MultiIndex)
-            self.assertArrayEqual(v._data.array, w._data.array)
+            assert_array_equal(v._data.array, w._data.array)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -554,28 +555,28 @@ class VariableSubclassTestCases(object):
         # orthogonal indexing
         v_new = v[([0, 1], [1, 0])]
         assert v_new.dims == ('x', 'y')
-        self.assertArrayEqual(v_new, v_data[[0, 1]][:, [1, 0]])
+        assert_array_equal(v_new, v_data[[0, 1]][:, [1, 0]])
 
         v_new = v[[0, 1]]
         assert v_new.dims == ('x', 'y')
-        self.assertArrayEqual(v_new, v_data[[0, 1]])
+        assert_array_equal(v_new, v_data[[0, 1]])
 
         # with mixed arguments
         ind = Variable(['a'], [0, 1])
         v_new = v[dict(x=[0, 1], y=ind)]
         assert v_new.dims == ('x', 'a')
-        self.assertArrayEqual(v_new, v_data[[0, 1]][:, [0, 1]])
+        assert_array_equal(v_new, v_data[[0, 1]][:, [0, 1]])
 
         # boolean indexing
         v_new = v[dict(x=[True, False], y=[False, True, False])]
         assert v_new.dims == ('x', 'y')
-        self.assertArrayEqual(v_new, v_data[0][1])
+        assert_array_equal(v_new, v_data[0][1])
 
         # with scalar variable
         ind = Variable((), 2)
         v_new = v[dict(y=ind)]
         expected = v[dict(y=2)]
-        self.assertArrayEqual(v_new, expected)
+        assert_array_equal(v_new, expected)
 
         # with boolean variable with wrong shape
         ind = np.array([True, False])
@@ -593,9 +594,9 @@ class VariableSubclassTestCases(object):
         v_data = v.compute().data
 
         v_new = v[np.array([0])]
-        self.assertArrayEqual(v_new, v_data[0])
+        assert_array_equal(v_new, v_data[0])
         v_new = v[np.array([0], dtype="uint64")]
-        self.assertArrayEqual(v_new, v_data[0])
+        assert_array_equal(v_new, v_data[0])
 
     def test_getitem_uint(self):
         # regression test for #1405
@@ -603,12 +604,12 @@ class VariableSubclassTestCases(object):
         v_data = v.compute().data
 
         v_new = v[np.array([0])]
-        self.assertArrayEqual(v_new, v_data[[0], :])
+        assert_array_equal(v_new, v_data[[0], :])
         v_new = v[np.array([0], dtype="uint64")]
-        self.assertArrayEqual(v_new, v_data[[0], :])
+        assert_array_equal(v_new, v_data[[0], :])
 
         v_new = v[np.uint64(0)]
-        self.assertArrayEqual(v_new, v_data[0, :])
+        assert_array_equal(v_new, v_data[0, :])
 
     def test_getitem_0d_array(self):
         # make sure 0d-np.array can be used as an indexer
@@ -616,7 +617,7 @@ class VariableSubclassTestCases(object):
         v_data = v.compute().data
 
         v_new = v[np.array([0])[0]]
-        self.assertArrayEqual(v_new, v_data[0])
+        assert_array_equal(v_new, v_data[0])
 
     def test_getitem_fancy(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
@@ -625,59 +626,59 @@ class VariableSubclassTestCases(object):
         ind = Variable(['a', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
         assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
+        assert_array_equal(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
 
         # It would be ok if indexed with the multi-dimensional array including
         # the same name
         ind = Variable(['x', 'b'], [[0, 1, 1], [1, 1, 0]])
         v_new = v[ind]
         assert v_new.dims == ('x', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
+        assert_array_equal(v_new, v_data[[[0, 1, 1], [1, 1, 0]], :])
 
         ind = Variable(['a', 'b'], [[0, 1, 2], [2, 1, 0]])
         v_new = v[dict(y=ind)]
         assert v_new.dims == ('x', 'a', 'b')
-        self.assertArrayEqual(v_new, v_data[:, ([0, 1, 2], [2, 1, 0])])
+        assert_array_equal(v_new, v_data[:, ([0, 1, 2], [2, 1, 0])])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=[1, 0], y=ind)]
         assert v_new.dims == ('x', 'a', 'b')
-        self.assertArrayEqual(v_new, v_data[[1, 0]][:, ind])
+        assert_array_equal(v_new, v_data[[1, 0]][:, ind])
 
         # along diagonal
         ind = Variable(['a'], [0, 1])
         v_new = v[ind, ind]
         assert v_new.dims == ('a',)
-        self.assertArrayEqual(v_new, v_data[[0, 1], [0, 1]])
+        assert_array_equal(v_new, v_data[[0, 1], [0, 1]])
 
         # with integer
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=0, y=ind)]
         assert v_new.dims == ('a', 'b')
-        self.assertArrayEqual(v_new[0], v_data[0][[0, 0]])
-        self.assertArrayEqual(v_new[1], v_data[0][[1, 1]])
+        assert_array_equal(v_new[0], v_data[0][[0, 0]])
+        assert_array_equal(v_new[1], v_data[0][[1, 1]])
 
         # with slice
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=slice(None), y=ind)]
         assert v_new.dims == ('x', 'a', 'b')
-        self.assertArrayEqual(v_new, v_data[:, [[0, 0], [1, 1]]])
+        assert_array_equal(v_new, v_data[:, [[0, 0], [1, 1]]])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None))]
         assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[[[0, 0], [1, 1]], :])
+        assert_array_equal(v_new, v_data[[[0, 0], [1, 1]], :])
 
         ind = Variable(['a', 'b'], [[0, 0], [1, 1]])
         v_new = v[dict(x=ind, y=slice(None, 1))]
         assert v_new.dims == ('a', 'b', 'y')
-        self.assertArrayEqual(v_new, v_data[[[0, 0], [1, 1]], slice(None, 1)])
+        assert_array_equal(v_new, v_data[[[0, 0], [1, 1]], slice(None, 1)])
 
         # slice matches explicit dimension
         ind = Variable(['y'], [0, 1])
         v_new = v[ind, :2]
         assert v_new.dims == ('y',)
-        self.assertArrayEqual(v_new, v_data[[0, 1], [0, 1]])
+        assert_array_equal(v_new, v_data[[0, 1], [0, 1]])
 
         # with multiple slices
         v = self.cls(['x', 'y', 'z'], [[[1, 2, 3], [4, 5, 6]]])
@@ -734,8 +735,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
     def test_data_and_values(self):
         v = Variable(['time', 'x'], self.d)
-        self.assertArrayEqual(v.data, self.d)
-        self.assertArrayEqual(v.values, self.d)
+        assert_array_equal(v.data, self.d)
+        assert_array_equal(v.values, self.d)
         assert source_ndarray(v.values) is self.d
         with pytest.raises(ValueError):
             # wrong size
@@ -1036,31 +1037,31 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert np.all(v.values == 0)
         # test orthogonal setting
         v[range(10), range(11)] = 1
-        self.assertArrayEqual(v.values, np.ones((10, 11)))
+        assert_array_equal(v.values, np.ones((10, 11)))
 
     def test_getitem_basic(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
 
         v_new = v[dict(x=0)]
         assert v_new.dims == ('y', )
-        self.assertArrayEqual(v_new, v._data[0])
+        assert_array_equal(v_new, v._data[0])
 
         v_new = v[dict(x=0, y=slice(None))]
         assert v_new.dims == ('y', )
-        self.assertArrayEqual(v_new, v._data[0])
+        assert_array_equal(v_new, v._data[0])
 
         v_new = v[dict(x=0, y=1)]
         assert v_new.dims == ()
-        self.assertArrayEqual(v_new, v._data[0, 1])
+        assert_array_equal(v_new, v._data[0, 1])
 
         v_new = v[dict(y=1)]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data[:, 1])
+        assert_array_equal(v_new, v._data[:, 1])
 
         # tuple argument
         v_new = v[(slice(None), 1)]
         assert v_new.dims == ('x', )
-        self.assertArrayEqual(v_new, v._data[:, 1])
+        assert_array_equal(v_new, v._data[:, 1])
 
     def test_getitem_with_mask_2d_input(self):
         v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
@@ -1149,7 +1150,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             for shift in [-3, 0, 1, 7, 11]:
                 expected = np.roll(v.values, shift, axis=axis)
                 actual = v.roll(**{dim: shift}).values
-                self.assertArrayEqual(expected, actual)
+                assert_array_equal(expected, actual)
 
     def test_transpose(self):
         v = Variable(['time', 'x'], self.d)
@@ -1341,7 +1342,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert v is v2
         # since we provided an ndarray for data, it is also modified in-place
         assert source_ndarray(v.values) is x
-        self.assertArrayEqual(v.values, np.arange(5) + 1)
+        assert_array_equal(v.values, np.arange(5) + 1)
 
         with raises_regex(ValueError, 'dimensions cannot change'):
             v += Variable('y', np.arange(5))
@@ -1493,13 +1494,13 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
         v[dict(x=[0, 1])] = 1
-        self.assertArrayEqual(v[[0, 1]], np.ones_like(v[[0, 1]]))
+        assert_array_equal(v[[0, 1]], np.ones_like(v[[0, 1]]))
 
         # boolean indexing
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
         v[dict(x=[True, False])] = 1
 
-        self.assertArrayEqual(v[0], np.ones_like(v[0]))
+        assert_array_equal(v[0], np.ones_like(v[0]))
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
         v[dict(x=[True, False], y=[False, True, False])] = 1
         assert v[0, 1] == 1
@@ -1511,7 +1512,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
             expected[key_x, key_y] = values
             v = Variable(['x', 'y'], array)
             v[dict(x=key_x, y=key_y)] = values
-            self.assertArrayEqual(expected, v)
+            assert_array_equal(expected, v)
 
         # 1d vectorized indexing
         assert_assigned_2d(np.random.randn(4, 3),
@@ -1567,8 +1568,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         v = Variable(['x', 'y'], [[0, 3, 2], [3, 4, 5]])
         ind = Variable(['a'], [0, 1])
         v[dict(x=ind)] = Variable(['a', 'y'], np.ones((2, 3), dtype=int) * 10)
-        self.assertArrayEqual(v[0], np.ones_like(v[0]) * 10)
-        self.assertArrayEqual(v[1], np.ones_like(v[1]) * 10)
+        assert_array_equal(v[0], np.ones_like(v[0]) * 10)
+        assert_array_equal(v[1], np.ones_like(v[1]) * 10)
         assert v.dims == ('x', 'y')  # dimension should not change
 
         # increment
@@ -1647,7 +1648,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         assert isinstance(x._data, PandasIndexAdapter)
         assert isinstance(x.data, np.ndarray)
         assert float == x.dtype
-        self.assertArrayEqual(np.arange(3), x)
+        assert_array_equal(np.arange(3), x)
         assert float == x.values.dtype
         with raises_regex(TypeError, 'cannot be modified'):
             x[:] = 0
@@ -1737,7 +1738,7 @@ class TestAsCompatibleData(TestCase):
     def test_converted_types(self):
         for input_array in [[[0, 1, 2]], pd.DataFrame([[0, 1, 2]])]:
             actual = as_compatible_data(input_array)
-            self.assertArrayEqual(np.asarray(input_array), actual)
+            assert_array_equal(np.asarray(input_array), actual)
             assert np.ndarray == type(actual)
             assert np.asarray(input_array).dtype == actual.dtype
 
@@ -1745,14 +1746,14 @@ class TestAsCompatibleData(TestCase):
         original = np.ma.MaskedArray(np.arange(5))
         expected = np.arange(5)
         actual = as_compatible_data(original)
-        self.assertArrayEqual(expected, actual)
+        assert_array_equal(expected, actual)
         assert np.dtype(int) == actual.dtype
 
         original = np.ma.MaskedArray(np.arange(5), mask=4 * [False] + [True])
         expected = np.arange(5.0)
         expected[-1] = np.nan
         actual = as_compatible_data(original)
-        self.assertArrayEqual(expected, actual)
+        assert_array_equal(expected, actual)
         assert np.dtype(float) == actual.dtype
 
     def test_datetime(self):
@@ -1806,7 +1807,7 @@ class TestAsCompatibleData(TestCase):
             assert actual.dims == orig.dims
             assert actual.attrs == orig.attrs
             assert actual.chunks == orig.chunks
-            self.assertArrayEqual(actual.values, expect_values)
+            assert_array_equal(actual.values, expect_values)
 
         check(full_like(orig, 2),
               orig.dtype, np.full_like(orig.values, 2))

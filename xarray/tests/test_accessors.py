@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import (TestCase, requires_dask, raises_regex, assert_equal,
-               assert_identical, assert_allclose)
+               assert_identical, assert_allclose, assert_array_equal)
 
 
 class TestDatetimeAccessor(TestCase):
@@ -94,4 +94,4 @@ class TestDatetimeAccessor(TestCase):
                    "SON", "SON", "SON", "DJF"]
         seasons = xr.DataArray(seasons)
 
-        self.assertArrayEqual(seasons.values, dates.dt.season.values)
+        assert_array_equal(seasons.values, dates.dt.season.values)

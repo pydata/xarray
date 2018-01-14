@@ -25,7 +25,8 @@ from xarray.plot.utils import (_determine_cmap_params,
                                _color_palette, import_seaborn)
 
 from . import (
-    TestCase, requires_matplotlib, requires_seaborn, raises_regex, assert_equal)
+    TestCase, requires_matplotlib, requires_seaborn, raises_regex, assert_equal,
+    assert_array_equal)
 
 
 @pytest.mark.flaky
@@ -159,10 +160,10 @@ class TestPlot(PlotTestCase):
         self.pass_in_axis(self.darray.plot)
 
     def test__infer_interval_breaks(self):
-        self.assertArrayEqual([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
-        self.assertArrayEqual([-0.5, 0.5, 5.0, 9.5, 10.5],
+        assert_array_equal([-0.5, 0.5, 1.5], _infer_interval_breaks([0, 1]))
+        assert_array_equal([-0.5, 0.5, 5.0, 9.5, 10.5],
                               _infer_interval_breaks([0, 1, 9, 10]))
-        self.assertArrayEqual(
+        assert_array_equal(
             pd.date_range('20000101', periods=4) - np.timedelta64(12, 'h'),
             _infer_interval_breaks(pd.date_range('20000101', periods=3)))
 
@@ -194,7 +195,7 @@ class TestPlot(PlotTestCase):
         d.coords['z'] = list('abcd')
         g = d.plot(x='x', y='y', col='z', col_wrap=2, cmap='cool')
 
-        self.assertArrayEqual(g.axes.shape, [2, 2])
+        assert_array_equal(g.axes.shape, [2, 2])
         for ax in g.axes.flat:
             assert ax.has_data()
 
@@ -251,7 +252,7 @@ class TestPlot(PlotTestCase):
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
         g = d.plot(x='x', y='y', col='columns', row='rows')
 
-        self.assertArrayEqual(g.axes.shape, [3, 2])
+        assert_array_equal(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             assert ax.has_data()
 
@@ -429,7 +430,7 @@ class TestDetermineCmapParams(TestCase):
         for wrap_levels in [list, np.array, pd.Index, DataArray]:
             cmap_params = _determine_cmap_params(
                 data, levels=wrap_levels(orig_levels))
-            self.assertArrayEqual(cmap_params['levels'], orig_levels)
+            assert_array_equal(cmap_params['levels'], orig_levels)
 
     def test_divergentcontrol(self):
         neg = self.data - 0.1
@@ -530,7 +531,7 @@ class TestDiscreteColorMap(TestCase):
             assert ncmap.N == len(levels) - 1
             assert len(ncmap.colors) == len(levels) - 1
             assert cnorm.N == len(levels)
-            self.assertArrayEqual(cnorm.boundaries, levels)
+            assert_array_equal(cnorm.boundaries, levels)
             assert max(levels) == cnorm.vmax
             assert min(levels) == cnorm.vmin
             if filled:
@@ -546,7 +547,7 @@ class TestDiscreteColorMap(TestCase):
                                ('min', [2, 5, 10, 15])]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
-                self.assertArrayEqual(levels, primitive.norm.boundaries)
+                assert_array_equal(levels, primitive.norm.boundaries)
                 assert max(levels) == primitive.norm.vmax
                 assert min(levels) == primitive.norm.vmin
                 if kind != 'contour':
@@ -841,7 +842,7 @@ class Common2dMixin:
         d = DataArray(a, dims=['y', 'x', 'z'])
         g = self.plotfunc(d, x='x', y='y', col='z', col_wrap=2)
 
-        self.assertArrayEqual(g.axes.shape, [2, 2])
+        assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
             assert ax.has_data()
             if x == 0:
@@ -855,7 +856,7 @@ class Common2dMixin:
 
         # Infering labels
         g = self.plotfunc(d, col='z', col_wrap=2)
-        self.assertArrayEqual(g.axes.shape, [2, 2])
+        assert_array_equal(g.axes.shape, [2, 2])
         for (y, x), ax in np.ndenumerate(g.axes):
             assert ax.has_data()
             if x == 0:
@@ -872,7 +873,7 @@ class Common2dMixin:
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
         g = self.plotfunc(d, x='x', y='y', col='columns', row='rows')
 
-        self.assertArrayEqual(g.axes.shape, [3, 2])
+        assert_array_equal(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             assert ax.has_data()
 
@@ -1246,19 +1247,19 @@ class TestFacetGrid(PlotTestCase):
     @pytest.mark.slow
     def test_figure_size(self):
 
-        self.assertArrayEqual(self.g.fig.get_size_inches(), (10, 3))
+        assert_array_equal(self.g.fig.get_size_inches(), (10, 3))
 
         g = xplt.FacetGrid(self.darray, col='z', size=6)
-        self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
+        assert_array_equal(g.fig.get_size_inches(), (19, 6))
 
         g = self.darray.plot.imshow(col='z', size=6)
-        self.assertArrayEqual(g.fig.get_size_inches(), (19, 6))
+        assert_array_equal(g.fig.get_size_inches(), (19, 6))
 
         g = xplt.FacetGrid(self.darray, col='z', size=4, aspect=0.5)
-        self.assertArrayEqual(g.fig.get_size_inches(), (7, 4))
+        assert_array_equal(g.fig.get_size_inches(), (7, 4))
 
         g = xplt.FacetGrid(self.darray, col='z', figsize=(9, 4))
-        self.assertArrayEqual(g.fig.get_size_inches(), (9, 4))
+        assert_array_equal(g.fig.get_size_inches(), (9, 4))
 
         with raises_regex(ValueError, "cannot provide both"):
             g = xplt.plot(self.darray, row=2, col='z', figsize=(6, 4), size=6)

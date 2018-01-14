@@ -8,7 +8,7 @@ import pandas as pd
 
 from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
-from . import TestCase, requires_dask
+from . import TestCase, requires_dask, assert_array_equal
 
 
 class TestAlias(TestCase):
@@ -33,7 +33,7 @@ class TestSafeCastToIndex(TestCase):
                 (pd.Index(td, dtype=object), td.astype(object)),
         ]:
             actual = utils.safe_cast_to_index(array)
-            self.assertArrayEqual(expected, actual)
+            assert_array_equal(expected, actual)
             assert expected.dtype == actual.dtype
 
 

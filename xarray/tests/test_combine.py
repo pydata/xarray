@@ -12,7 +12,7 @@ from xarray import Dataset, DataArray, auto_combine, concat, Variable
 from xarray.core.pycompat import iteritems, OrderedDict
 
 from . import (TestCase, InaccessibleArray, requires_dask, raises_regex,
-               assert_equal, assert_identical)
+               assert_equal, assert_identical, assert_array_equal)
 from .test_dataset import create_test_data
 
 
@@ -63,7 +63,7 @@ class TestConcatDataset(TestCase):
             actual = concat(datasets, data[dim], coords='all')
             expected = np.array([data['extra'].values
                                  for _ in range(data.dims[dim])])
-            self.assertArrayEqual(actual['extra'].values, expected)
+            assert_array_equal(actual['extra'].values, expected)
 
             actual = concat(datasets, data[dim], coords='different')
             assert_equal(data['extra'], actual['extra'])
