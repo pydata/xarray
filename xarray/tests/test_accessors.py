@@ -37,10 +37,10 @@ class TestDatetimeAccessor(TestCase):
         hours = xr.DataArray(self.times.hour, name='hour',
                              coords=[self.times, ], dims=['time', ])
 
-        self.assert_equal(years, self.data.time.dt.year)
-        self.assert_equal(months, self.data.time.dt.month)
-        self.assert_equal(days, self.data.time.dt.day)
-        self.assert_equal(hours, self.data.time.dt.hour)
+        assert_equal(years, self.data.time.dt.year)
+        assert_equal(months, self.data.time.dt.month)
+        assert_equal(days, self.data.time.dt.day)
+        assert_equal(hours, self.data.time.dt.hour)
 
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
@@ -82,10 +82,10 @@ class TestDatetimeAccessor(TestCase):
         assert dask_hour.data.chunks == dask_chunks
 
         # Check the actual output from the accessors
-        self.assert_equal(years, dask_year.compute())
-        self.assert_equal(months, dask_month.compute())
-        self.assert_equal(days, dask_day.compute())
-        self.assert_equal(hours, dask_hour.compute())
+        assert_equal(years, dask_year.compute())
+        assert_equal(months, dask_month.compute())
+        assert_equal(days, dask_day.compute())
+        assert_equal(hours, dask_hour.compute())
 
     def test_seasons(self):
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
