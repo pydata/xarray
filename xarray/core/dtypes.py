@@ -20,13 +20,13 @@ def maybe_promote(dtype):
     fill_value : Valid missing value for the promoted dtype.
     """
     # N.B. these casting rules should match pandas
-    if np.issubdtype(dtype, float):
+    if np.issubdtype(dtype, np.floating):
         fill_value = np.nan
-    elif np.issubdtype(dtype, int):
+    elif np.issubdtype(dtype, np.signedinteger):
         # convert to floating point so NaN is valid
         dtype = float
         fill_value = np.nan
-    elif np.issubdtype(dtype, complex):
+    elif np.issubdtype(dtype, np.complexfloating):
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
         fill_value = np.datetime64('NaT')
