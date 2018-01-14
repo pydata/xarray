@@ -35,6 +35,7 @@ class set_options(object):
 
     >>> xr.set_options(display_width=80)
     """
+
     def __init__(self, **kwargs):
         invalid_options = {k for k in kwargs if k not in OPTIONS}
         if invalid_options:

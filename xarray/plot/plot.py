@@ -49,8 +49,8 @@ def _ensure_plottable(*args):
     other_types = [datetime]
 
     for x in args:
-        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
-                or _valid_other_type(np.array(x), other_types)):
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
+                _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates.')
 
@@ -206,7 +206,7 @@ def line(darray, *args, **kwargs):
         xlabel, = darray.dims
         if x is not None and xlabel != x:
             raise ValueError('Input does not have specified dimension'
-                             + ' {!r}'.format(x))
+                             ' {!r}'.format(x))
 
         x = darray.coords[xlabel]
 

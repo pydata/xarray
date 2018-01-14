@@ -256,7 +256,8 @@ class TestConcatDataArray(TestCase):
         stacked = concat(grouped, ds.indexes['x'])
         self.assertDataArrayIdentical(foo, stacked)
 
-        actual = concat([foo[0], foo[1]], pd.Index([0, 1])).reset_coords(drop=True)
+        actual = concat([foo[0], foo[1]], pd.Index([0, 1])
+                        ).reset_coords(drop=True)
         expected = foo[:2].rename({'x': 'concat_dim'})
         self.assertDataArrayIdentical(expected, actual)
 

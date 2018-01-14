@@ -25,7 +25,7 @@ class TestFormatting(TestCase):
             ((2, 5, 1,), (slice(2), slice(None), slice(None))),
             ((2, 5, 3,), (0, slice(4), slice(None))),
             ((2, 3, 3,), (slice(2), slice(None), slice(None))),
-            ]
+        ]
         for shape, expected in cases:
             actual = formatting._get_indexer_at_least_n_items(shape, 10)
             self.assertEqual(expected, actual)

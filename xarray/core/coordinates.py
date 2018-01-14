@@ -107,7 +107,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
             # don't include indexes in priority_vars, because we didn't align
             # first
             priority_vars = OrderedDict(
-                (k, v) for k, v in self.variables.items() if k not in self.dims)
+                kv for kv in self.variables.items() if kv[0] not in self.dims)
             variables = merge_coords_for_inplace_math(
                 [self.variables, other.variables], priority_vars=priority_vars)
             yield
@@ -152,6 +152,7 @@ class DatasetCoordinates(AbstractCoordinates):
     dimensions and the values given by the corresponding xarray.Coordinate
     objects.
     """
+
     def __init__(self, dataset):
         self._data = dataset
 
@@ -210,6 +211,7 @@ class DataArrayCoordinates(AbstractCoordinates):
     Essentially an OrderedDict with keys given by the array's
     dimensions and the values given by corresponding DataArray objects.
     """
+
     def __init__(self, dataarray):
         self._data = dataarray
 
@@ -256,6 +258,7 @@ class LevelCoordinatesSource(object):
     Used for attribute style lookup with AttrAccessMixin. Not returned directly
     by any public methods.
     """
+
     def __init__(self, data_object):
         self._data = data_object
 
@@ -270,6 +273,7 @@ class LevelCoordinatesSource(object):
 class Indexes(Mapping, formatting.ReprMixin):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """
+
     def __init__(self, variables, sizes):
         """Not for public consumption.
 

@@ -13,8 +13,8 @@ def test_consolidate_slices():
 
     assert _consolidate_slices([slice(3), slice(3, 5)]) == [slice(5)]
     assert _consolidate_slices([slice(2, 3), slice(3, 6)]) == [slice(2, 6)]
-    assert (_consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)])
-          == [slice(2, 6, 1)])
+    assert (_consolidate_slices([slice(2, 3, 1), slice(3, 6, 1)]) ==
+            [slice(2, 6, 1)])
 
     slices = [slice(2, 3), slice(5, 6)]
     assert _consolidate_slices(slices) == slices
@@ -51,15 +51,18 @@ def test_groupby_da_datetime():
     # test groupby with a DataArray of dtype datetime for GH1132
     # create test data
     times = pd.date_range('2000-01-01', periods=4)
-    foo = xr.DataArray([1,2,3,4], coords=dict(time=times), dims='time')
+    foo = xr.DataArray([1, 2, 3, 4], coords=dict(time=times), dims='time')
     # create test index
     dd = times.to_pydatetime()
     reference_dates = [dd[0], dd[2]]
-    labels = reference_dates[0:1]*2 + reference_dates[1:2]*2
-    ind = xr.DataArray(labels, coords=dict(time=times), dims='time', name='reference_date')
+    labels = reference_dates[0:1] * 2 + reference_dates[1:2] * 2
+    ind = xr.DataArray(labels, coords=dict(time=times), dims='time',
+                       name='reference_date')
     g = foo.groupby(ind)
     actual = g.sum(dim='time')
-    expected = xr.DataArray([3,7], coords=dict(reference_date=reference_dates), dims='reference_date')
+    expected = xr.DataArray([3, 7],
+                            coords=dict(reference_date=reference_dates),
+                            dims='reference_date')
     assert actual.equals(expected)
 
 

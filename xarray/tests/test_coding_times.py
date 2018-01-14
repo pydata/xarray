@@ -24,29 +24,29 @@ class TestDatetime(TestCase):
     def test_cf_datetime(self):
         import netCDF4 as nc4
         for num_dates, units in [
-                (np.arange(10), 'days since 2000-01-01'),
-                (np.arange(10).reshape(2, 5), 'days since 2000-01-01'),
-                (12300 + np.arange(5), 'hours since 1680-01-01 00:00:00'),
-                # here we add a couple minor formatting errors to test
-                # the robustness of the parsing algorithm.
-                (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
-                (12300 + np.arange(5), u'Hour  since 1680-01-01 00:00:00'),
-                (12300 + np.arange(5), ' Hour  since  1680-01-01 00:00:00 '),
-                (10, 'days since 2000-01-01'),
-                ([10], 'daYs  since 2000-01-01'),
-                ([[10]], 'days since 2000-01-01'),
-                ([10, 10], 'days since 2000-01-01'),
-                (np.array(10), 'days since 2000-01-01'),
-                (0, 'days since 1000-01-01'),
-                ([0], 'days since 1000-01-01'),
-                ([[0]], 'days since 1000-01-01'),
-                (np.arange(2), 'days since 1000-01-01'),
-                (np.arange(0, 100000, 20000), 'days since 1900-01-01'),
-                (17093352.0, 'hours since 1-1-1 00:00:0.0'),
-                ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
-                (0, 'milliseconds since 2000-01-01T00:00:00'),
-                (0, 'microseconds since 2000-01-01T00:00:00'),
-                ]:
+            (np.arange(10), 'days since 2000-01-01'),
+            (np.arange(10).reshape(2, 5), 'days since 2000-01-01'),
+            (12300 + np.arange(5), 'hours since 1680-01-01 00:00:00'),
+            # here we add a couple minor formatting errors to test
+            # the robustness of the parsing algorithm.
+            (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
+            (12300 + np.arange(5), u'Hour  since 1680-01-01 00:00:00'),
+            (12300 + np.arange(5), ' Hour  since  1680-01-01 00:00:00 '),
+            (10, 'days since 2000-01-01'),
+            ([10], 'daYs  since 2000-01-01'),
+            ([[10]], 'days since 2000-01-01'),
+            ([10, 10], 'days since 2000-01-01'),
+            (np.array(10), 'days since 2000-01-01'),
+            (0, 'days since 1000-01-01'),
+            ([0], 'days since 1000-01-01'),
+            ([[0]], 'days since 1000-01-01'),
+            (np.arange(2), 'days since 1000-01-01'),
+            (np.arange(0, 100000, 20000), 'days since 1900-01-01'),
+            (17093352.0, 'hours since 1-1-1 00:00:0.0'),
+            ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
+            (0, 'milliseconds since 2000-01-01T00:00:00'),
+            (0, 'microseconds since 2000-01-01T00:00:00'),
+        ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(
                     nc4.num2date(num_dates, units, calendar))
@@ -224,12 +224,12 @@ class TestDatetime(TestCase):
     @requires_netCDF4
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
-                ([np.nan], 'days since 2000-01-01', ['NaT']),
-                ([np.nan, 0], 'days since 2000-01-01',
-                 ['NaT', '2000-01-01T00:00:00Z']),
-                ([np.nan, 0, 1], 'days since 2000-01-01',
-                 ['NaT', '2000-01-01T00:00:00Z', '2000-01-02T00:00:00Z']),
-                ]:
+            ([np.nan], 'days since 2000-01-01', ['NaT']),
+            ([np.nan, 0], 'days since 2000-01-01',
+             ['NaT', '2000-01-01T00:00:00Z']),
+            ([np.nan, 0, 1], 'days since 2000-01-01',
+             ['NaT', '2000-01-01T00:00:00Z', '2000-01-02T00:00:00Z']),
+        ]:
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', 'All-NaN')
                 actual = coding.times.decode_cf_datetime(num_dates, units)

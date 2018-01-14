@@ -40,6 +40,7 @@ class NioArrayWrapper(BackendArray):
 class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PyNIO
     """
+
     def __init__(self, filename, mode='r', autoclose=False):
         import Nio
         opener = functools.partial(Nio.open_file, filename, mode=mode)

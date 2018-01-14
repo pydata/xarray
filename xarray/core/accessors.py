@@ -80,6 +80,7 @@ class DatetimeAccessor(object):
      `dayofyear` may not be accurate.
 
      """
+
     def __init__(self, xarray_obj):
         if not is_datetime_like(xarray_obj.dtype):
             raise TypeError("'dt' accessor only available for "

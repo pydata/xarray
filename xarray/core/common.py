@@ -91,7 +91,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         return complex(self.values)
 
     def __long__(self):
-        return long(self.values)
+        return long(self.values)  # flake8: noqa
 
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)
@@ -608,7 +608,7 @@ class BaseDataObject(AttrAccessMixin):
                       "calculations. Instead of passing 'dim' and "
                       "'how=\"{how}\", instead consider using "
                       ".resample({dim}=\"{freq}\").{how}() ".format(
-                            dim=dim, freq=freq, how=how
+                          dim=dim, freq=freq, how=how
                       ), DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):

@@ -1252,7 +1252,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         try:
             from dask.base import tokenize
         except ImportError:
-            import dask  # raise the usual error if dask is entirely missing
+            import dask  # raise the usual error if dask is entirely missing  # flake8: noqa
             raise ImportError('xarray requires dask version 0.6 or newer')
 
         if isinstance(chunks, Number):

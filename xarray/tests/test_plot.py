@@ -110,8 +110,8 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
         self.assertTrue(plt.gca().get_legend())
         # check whether legend title is set
-        self.assertTrue(plt.gca().get_legend().get_title().get_text()
-                        == 'dim_1')
+        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
+                         'dim_1')
 
     def test_2d_line_accepts_x_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0')
@@ -122,12 +122,12 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_hue_kw(self):
         self.darray[:, :, 0].plot.line(hue='dim_0')
-        self.assertTrue(plt.gca().get_legend().get_title().get_text()
-                        == 'dim_0')
+        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
+                         'dim_0')
         plt.cla()
         self.darray[:, :, 0].plot.line(hue='dim_1')
-        self.assertTrue(plt.gca().get_legend().get_title().get_text()
-                        == 'dim_1')
+        self.assertEqual(plt.gca().get_legend().get_title().get_text(),
+                         'dim_1')
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
@@ -786,7 +786,7 @@ class Common2dMixin:
     def test_colorbar_kwargs(self):
         # replace label
         self.darray.name = 'testvar'
-        self.plotmethod(add_colorbar=True, cbar_kwargs={'label':'MyLabel'})
+        self.plotmethod(add_colorbar=True, cbar_kwargs={'label': 'MyLabel'})
         alltxt = text_in_fig()
         self.assertIn('MyLabel', alltxt)
         self.assertNotIn('testvar', alltxt)
@@ -798,7 +798,7 @@ class Common2dMixin:
         # change cbar ax
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, cbar_ax=cax, add_colorbar=True,
-                        cbar_kwargs={'label':'MyBar'})
+                        cbar_kwargs={'label': 'MyBar'})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -807,7 +807,7 @@ class Common2dMixin:
         # note that there are two ways to achieve this
         fig, (ax, cax) = plt.subplots(1, 2)
         self.plotmethod(ax=ax, add_colorbar=True,
-                        cbar_kwargs={'label':'MyBar', 'cax':cax})
+                        cbar_kwargs={'label': 'MyBar', 'cax': cax})
         self.assertTrue(ax.has_data())
         self.assertTrue(cax.has_data())
         alltxt = text_in_fig()
@@ -818,7 +818,7 @@ class Common2dMixin:
         self.assertNotIn('testvar', text_in_fig())
         # check that error is raised
         pytest.raises(ValueError, self.plotmethod,
-                          add_colorbar=False, cbar_kwargs= {'label':'label'})
+                      add_colorbar=False, cbar_kwargs={'label': 'label'})
 
     def test_verbose_facetgrid(self):
         a = easy_array((10, 15, 3))

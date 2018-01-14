@@ -55,6 +55,7 @@ def _open_h5netcdf_group(filename, mode, group):
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
+
     def __init__(self, filename, mode='r', format=None, group=None,
                  writer=None, autoclose=False):
         if format not in [None, 'NETCDF4']:

@@ -507,8 +507,9 @@ def merge(objects, compat='no_conflicts', join='outer'):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    dict_like_objects = [obj.to_dataset() if isinstance(obj, DataArray) else obj
-                         for obj in objects]
+    dict_like_objects = [
+        obj.to_dataset() if isinstance(obj, DataArray) else obj
+        for obj in objects]
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
     merged = Dataset._construct_direct(variables, coord_names, dims)
@@ -549,4 +550,5 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
 
 def dataset_update_method(dataset, other):
     """Guts of the Dataset.update method"""
-    return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes)
+    return merge_core([dataset, other], priority_arg=1,
+                      indexes=dataset.indexes)

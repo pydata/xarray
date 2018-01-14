@@ -21,7 +21,6 @@ from xarray.conventions import decode_cf
 
 
 B = IndexerMaker(indexing.BasicIndexer)
-O = IndexerMaker(indexing.OuterIndexer)
 V = IndexerMaker(indexing.VectorizedIndexer)
 
 
@@ -189,7 +188,7 @@ class TestEncodeCFVariable(TestCase):
             Variable(['t'], pd.to_timedelta(['1 day']), {'units': 'foobar'}),
             Variable(['t'], [0, 1, 2], {'add_offset': 0}, {'add_offset': 2}),
             Variable(['t'], [0, 1, 2], {'_FillValue': 0}, {'_FillValue': 2}),
-            ]
+        ]
         for var in invalid_vars:
             with pytest.raises(ValueError):
                 conventions.encode_cf_variable(var)
@@ -282,12 +281,14 @@ class TestDecodeCF(TestCase):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
             'x': ("x", [9, 8, 7], {'units': 'km'}),
-            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
+            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+                    {'units': 'bar'}),
             'y': ('t', [5, 10, -999], {'_FillValue': -999})
         })
         expected = Dataset({
             't': pd.date_range('2000-01-01', periods=3),
-            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]], {'units': 'bar'}),
+            'foo': (('t', 'x'), [[0, 0, 0], [1, 1, 1], [2, 2, 2]],
+                    {'units': 'bar'}),
             'y': ('t', [5, 10, np.nan])
         })
         actual = conventions.decode_cf(original, drop_variables=("x",))
@@ -337,6 +338,7 @@ class NullWrapper(utils.NDArrayMixin):
     Just for testing, this lets us create a numpy array directly
     but make it look like its not in memory yet.
     """
+
     def __init__(self, array):
         self.array = array
 
