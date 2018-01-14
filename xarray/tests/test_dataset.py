@@ -30,7 +30,7 @@ from xarray.core.common import full_like
 from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
                requires_dask, source_ndarray)
 
-from xarray.tests import (assert_equal, assert_allclose,
+from xarray.tests import (assert_equal, assert_allclose, assert_identical,
                           assert_array_equal, requires_bottleneck,
                           requires_scipy)
 

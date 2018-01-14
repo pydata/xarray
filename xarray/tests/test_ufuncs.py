@@ -8,7 +8,7 @@ import numpy as np
 import xarray.ufuncs as xu
 import xarray as xr
 
-from . import TestCase, raises_regex
+from . import TestCase, raises_regex, assert_equal, assert_identical
 
 
 class TestOps(TestCase):

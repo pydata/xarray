@@ -14,7 +14,8 @@ import xarray as xr
 from xarray import Variable, DataArray, Dataset
 import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress, OrderedDict
-from . import TestCase, assert_frame_equal, raises_regex
+from . import (
+    TestCase, assert_frame_equal, raises_regex, assert_equal, assert_identical)
 
 from xarray.tests import mock
 
