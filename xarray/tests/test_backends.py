@@ -599,7 +599,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
             original.to_netcdf(tmp_file)
             with open_dataset(tmp_file, decode_coords=False) as ds:
                 self.assertTrue(equals_latlon(ds['temp'].attrs['coordinates']))
-                self.assertTrue(equals_latlon(ds['precip'].attrs['coordinates']))
+                self.assertTrue(
+                    equals_latlon(ds['precip'].attrs['coordinates']))
                 self.assertNotIn('coordinates', ds.attrs)
                 self.assertNotIn('coordinates', ds['lat'].attrs)
                 self.assertNotIn('coordinates', ds['lon'].attrs)
@@ -889,7 +890,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 actual_encoding = dict((k, v) for k, v in
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
-                self.assertDictEqual(actual_encoding, expected['time'].encoding)
+                self.assertDictEqual(actual_encoding,
+                                     expected['time'].encoding)
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -914,9 +916,10 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 with create_tmp_file() as tmp_file2:
                     xarray_dataset.to_netcdf(tmp_file2)
                     with nc4.Dataset(tmp_file2, 'r') as ds:
-                        assert ds.variables['time'].getncattr('units') == units
-                        self.assertArrayEqual(ds.variables['time'],
-                                              np.arange(10) + 4)
+                        self.assertEqual(
+                            ds.variables['time'].getncattr('units'), units)
+                        self.assertArrayEqual(
+                            ds.variables['time'], np.arange(10) + 4)
 
     def test_compression_encoding(self):
         data = create_test_data()
@@ -966,7 +969,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
                 actual = nc.variables['x'][:]
-                assert_array_equal(expected, actual)
+                self.assertArrayEqual(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:
@@ -2043,7 +2046,8 @@ class PydapTest(TestCase):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            self.assertDatasetEqual(actual.isel(l=2), expected.isel(l=2))
+            self.assertDatasetEqual(
+                actual.isel(l=2), expected.isel(l=2))  # noqa: E741
 
         with self.create_datasets() as (actual, expected):
             self.assertDatasetEqual(actual.isel(i=0, j=-1),
