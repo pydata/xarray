@@ -1610,10 +1610,10 @@ class OpenMFDatasetManyFilesTest(TestCase):
                 # check that calculation on opened datasets works properly
                 ds = open_mfdataset(tmpfiles, engine=readengine,
                                     autoclose=True)
-                assert_allclose(ds.x.sum().values,
+                self.assertAllClose(ds.x.sum().values,
                                     (nfiles * (nfiles - 1)) / 2)
-                assert_allclose(ds.foo.sum().values, np.sum(randdata))
-                assert_allclose(ds.sum().foo.values, np.sum(randdata))
+                self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
+                self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
                 ds.close()
 
     def validate_open_mfdataset_large_num_files(self, engine):
