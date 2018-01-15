@@ -16,7 +16,7 @@ import xarray.ufuncs as xu
 from xarray.core.pycompat import suppress, OrderedDict
 from . import (
     TestCase, assert_frame_equal, raises_regex, assert_equal, assert_identical,
-    assert_array_equal)
+    assert_array_equal, assert_allclose)
 
 from xarray.tests import mock
 
@@ -244,7 +244,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAnd(expected, actual, assert_identical)
 
     def assertLazyAndAllClose(self, expected, actual):
-        self.assertLazyAnd(expected, actual, self.assertDataArrayAllClose)
+        self.assertLazyAnd(expected, actual, assert_allclose)
 
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_equal)

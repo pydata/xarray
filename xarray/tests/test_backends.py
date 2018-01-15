@@ -182,7 +182,7 @@ class DatasetIOTestCases(object):
             # we need to cf decode the store because it has time and
             # non-dimension coordinates
             with xr.decode_cf(store) as actual:
-                self.assertDatasetAllClose(expected, actual)
+                assert_allclose(expected, actual)
 
     def check_dtypes_roundtripped(self, expected, actual):
         for k in expected.variables:
@@ -534,58 +534,58 @@ class CFEncodedDataTest(DatasetIOTestCases):
             for k in decoded.variables:
                 self.assertEqual(decoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
+            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        self.assertDatasetAllClose(
+        assert_allclose(
             encoded, create_encoded_unsigned_masked_scaled_data())
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
                 self.assertEqual(decoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
+            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 self.assertEqual(encoded.variables[k].dtype,
                                  actual.variables[k].dtype)
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_roundtrip_mask_and_scale(self):
         decoded = create_masked_and_scaled_data()
         encoded = create_encoded_masked_and_scaled_data()
         with self.roundtrip(decoded) as actual:
-            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
+            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        self.assertDatasetAllClose(encoded,
+        assert_allclose(encoded,
                                    create_encoded_masked_and_scaled_data(),
                                    decode_bytes=False)
         with self.roundtrip(encoded) as actual:
-            self.assertDatasetAllClose(decoded, actual, decode_bytes=False)
+            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
-            self.assertDatasetAllClose(encoded, actual, decode_bytes=False)
+            assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
@@ -1931,7 +1931,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
             original.to_netcdf(tmp)
             with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 actual = 1.0 * ds
-                self.assertDatasetAllClose(original, actual,
+                assert_allclose(original, actual,
                                            decode_bytes=False)
 
     def test_open_mfdataset_concat_dim_none(self):
@@ -1993,7 +1993,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         computed = actual.compute()
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
-        self.assertDataArrayAllClose(actual, computed, decode_bytes=False)
+        assert_allclose(actual, computed, decode_bytes=False)
 
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=True)

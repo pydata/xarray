@@ -28,7 +28,7 @@ from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
 from xarray.core.common import full_like
 
 from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask, source_ndarray)
+               requires_dask, source_ndarray, assert_allclose)
 
 from xarray.tests import (assert_equal, assert_allclose, assert_identical,
                           assert_array_equal, requires_bottleneck,
@@ -2518,10 +2518,10 @@ class TestDataset(TestCase):
         expected = data.mean('y')
         expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
         actual = data.groupby('x').mean()
-        self.assertDatasetAllClose(expected, actual)
+        assert_allclose(expected, actual)
 
         actual = data.groupby('x').mean('y')
-        self.assertDatasetAllClose(expected, actual)
+        assert_allclose(expected, actual)
 
         letters = data['letters']
         expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
@@ -2529,7 +2529,7 @@ class TestDataset(TestCase):
                                       .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
         actual = data.groupby('letters').mean()
-        self.assertDatasetAllClose(expected, actual)
+        assert_allclose(expected, actual)
 
     def test_groupby_math(self):
         def reorder_dims(x):

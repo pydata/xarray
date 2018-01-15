@@ -1902,25 +1902,25 @@ class TestDataArray(TestCase):
                                                 self.x[:, 10:].sum(),
                                                 self.x[:, 9:10].sum()]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        self.assertDataArrayAllClose(expected_sum_all, grouped.reduce(np.sum))
-        self.assertDataArrayAllClose(expected_sum_all, grouped.sum())
+        assert_allclose(expected_sum_all, grouped.reduce(np.sum))
+        assert_allclose(expected_sum_all, grouped.sum())
 
         expected = DataArray([array['y'].values[idx].sum() for idx
                               in [slice(9), slice(10, None), slice(9, 10)]],
                              [['a', 'b', 'c']], ['abc'])
         actual = array['y'].groupby('abc').apply(np.sum)
-        self.assertDataArrayAllClose(expected, actual)
+        assert_allclose(expected, actual)
         actual = array['y'].groupby('abc').sum()
-        self.assertDataArrayAllClose(expected, actual)
+        assert_allclose(expected, actual)
 
         expected_sum_axis1 = Dataset(
             {'foo': (['x', 'abc'], np.array([self.x[:, :9].sum(1),
                                              self.x[:, 10:].sum(1),
                                              self.x[:, 9:10].sum(1)]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        self.assertDataArrayAllClose(expected_sum_axis1,
+        assert_allclose(expected_sum_axis1,
                                      grouped.reduce(np.sum, 'y'))
-        self.assertDataArrayAllClose(expected_sum_axis1, grouped.sum('y'))
+        assert_allclose(expected_sum_axis1, grouped.sum('y'))
 
     def test_groupby_count(self):
         array = DataArray(
@@ -1959,7 +1959,7 @@ class TestDataArray(TestCase):
                               center(self.x[:, 10:])])
         expected_ds['foo'] = (['x', 'y'], exp_data)
         expected_centered = expected_ds['foo']
-        self.assertDataArrayAllClose(expected_centered, grouped.apply(center))
+        assert_allclose(expected_centered, grouped.apply(center))
 
     def test_groupby_apply_ndarray(self):
         # regression test for #326
@@ -2005,7 +2005,7 @@ class TestDataArray(TestCase):
         expected_agg = (grouped.mean() - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [('abc', ['a', 'b', 'c'])])
         actual_agg = actual.groupby('abc').mean()
-        self.assertDataArrayAllClose(expected_agg, actual_agg)
+        assert_allclose(expected_agg, actual_agg)
 
         with raises_regex(TypeError, 'only support binary ops'):
             grouped + 1
@@ -2389,7 +2389,7 @@ class TestDataArray(TestCase):
             # Use AllClose because there are some small differences in how
             # we upsample timeseries versus the integer indexing as I've
             # done here due to floating point arithmetic
-            self.assertDataArrayAllClose(expected, actual, rtol=1e-16)
+            assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
@@ -3252,10 +3252,10 @@ class TestDataArray(TestCase):
         assert_equal(ar.rank('dim_1'), expect_1)
         # int
         x = DataArray([3, 2, 1])
-        self.assertDataArrayEqual(x.rank('dim_0'), x)
+        assert_equal(x.rank('dim_0'), x)
         # str
         y = DataArray(['c', 'b', 'a'])
-        self.assertDataArrayEqual(y.rank('dim_0'), x)
+        assert_equal(y.rank('dim_0'), x)
 
         x = DataArray([3.0, 1.0, np.nan, 2.0, 4.0], dims=('z',))
         y = DataArray([0.75, 0.25, np.nan, 0.5, 1.0], dims=('z',))
