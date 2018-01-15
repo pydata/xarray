@@ -29,7 +29,8 @@ from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
                requires_pynio, requires_pathlib, requires_zarr,
                requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, assert_identical, raises_regex, assert_equal)
+               flaky, network, assert_identical, raises_regex, assert_equal,
+               assert_array_equal)
 
 from .test_dataset import create_test_data
 
@@ -918,7 +919,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     with nc4.Dataset(tmp_file2, 'r') as ds:
                         self.assertEqual(
                             ds.variables['time'].getncattr('units'), units)
-                        self.assertArrayEqual(
+                        assert_array_equal(
                             ds.variables['time'], np.arange(10) + 4)
 
     def test_compression_encoding(self):
@@ -969,7 +970,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 expected = np.ma.array([-1, -1, 10, 10.1, 10.2],
                                        mask=[True, True, False, False, False])
                 actual = nc.variables['x'][:]
-                self.assertArrayEqual(expected, actual)
+                assert_array_equal(expected, actual)
 
             # now check xarray
             with open_dataset(tmp_file) as ds:

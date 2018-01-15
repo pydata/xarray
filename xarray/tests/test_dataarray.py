@@ -2884,7 +2884,7 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
-            self.assertArrayEqual(
+            assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
             assert (actual.coord_dims(coord) ==
                     original.get_axis_num(
@@ -2956,7 +2956,7 @@ class TestDataArray(TestCase):
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
             assert coord.var_name == original_coord.name
-            self.assertArrayEqual(
+            assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
             assert (actual.coord_dims(coord) ==
                     original.get_axis_num(

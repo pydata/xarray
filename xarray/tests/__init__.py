@@ -144,10 +144,6 @@ class TestCase(unittest.TestCase):
         __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
 
-    def assertArrayEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_array_equal(a1, a2)
-
     def assertEqual(self, a1, a2):
         __tracebackhide__ = True  # noqa: F841
         assert a1 == a2 or (a1 != a1 and a2 != a2)

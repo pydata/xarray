@@ -28,7 +28,8 @@ from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
 from xarray.core.common import full_like
 
 from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask, source_ndarray, assert_allclose)
+               requires_dask, source_ndarray, assert_allclose,
+               assert_array_equal)
 
 from xarray.tests import (assert_equal, assert_allclose, assert_identical,
                           assert_array_equal, requires_bottleneck,
@@ -1627,7 +1628,7 @@ class TestDataset(TestCase):
 
         left2, right2 = align(left, right, join='outer')
 
-        self.assertArrayEqual(left2['dim3'], union)
+        assert_array_equal(left2['dim3'], union)
         assert_equal(left2['dim3'].variable, right2['dim3'].variable)
 
         assert_identical(left2.sel(dim3=intersection),
@@ -2243,7 +2244,7 @@ class TestDataset(TestCase):
     def test_time_season(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=12, freq='M')})
         seas = ['DJF'] * 2 + ['MAM'] * 3 + ['JJA'] * 3 + ['SON'] * 3 + ['DJF']
-        self.assertArrayEqual(seas, ds['t.season'])
+        assert_array_equal(seas, ds['t.season'])
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
