@@ -156,37 +156,9 @@ class TestCase(unittest.TestCase):
         __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
-    def assertDatasetEqual(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(d1, d2)
-
-    def assertDatasetIdentical(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(d1, d2)
-
-    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08,
-                              decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(d1, d2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
-
     def assertCoordinatesEqual(self, d1, d2):
         __tracebackhide__ = True  # noqa: F841
         assert_equal(d1, d2)
-
-    def assertDataArrayEqual(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(ar1, ar2)
-
-    def assertDataArrayIdentical(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(ar1, ar2)
-
-    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08,
-                                decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(ar1, ar2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
 
 
 @contextmanager
