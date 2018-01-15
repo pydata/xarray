@@ -580,8 +580,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # make sure roundtrip encoding didn't change the
         # original dataset.
         assert_allclose(encoded,
-                                   create_encoded_masked_and_scaled_data(),
-                                   decode_bytes=False)
+                        create_encoded_masked_and_scaled_data(),
+                        decode_bytes=False)
         with self.roundtrip(encoded) as actual:
             assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
@@ -786,7 +786,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             # check equivalent ways to specify group
             for group in 'foo', '/foo', 'foo/', '/foo/':
                 with open_dataset(tmp_file, group=group) as actual:
-                    self.assertVariableEqual(actual['x'], expected['x'])
+                    assert_equal(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
             with pytest.raises(IOError):
@@ -813,7 +813,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             # check equivalent ways to specify group
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
                 with open_dataset(tmp_file, group=group) as actual:
-                    self.assertVariableEqual(actual['x'], expected['x'])
+                    assert_equal(actual['x'], expected['x'])
 
     def test_write_groups(self):
         data1 = create_test_data()
@@ -887,7 +887,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             expected['time'] = ('time', time, {}, encoding)
 
             with open_dataset(tmp_file) as actual:
-                self.assertVariableEqual(actual['time'], expected['time'])
+                assert_equal(actual['time'], expected['time'])
                 actual_encoding = dict((k, v) for k, v in
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
@@ -1932,8 +1932,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
             original.to_netcdf(tmp)
             with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
                 actual = 1.0 * ds
-                assert_allclose(original, actual,
-                                           decode_bytes=False)
+                assert_allclose(original, actual, decode_bytes=False)
 
     def test_open_mfdataset_concat_dim_none(self):
         with create_tmp_file() as tmp1:
@@ -2052,11 +2051,11 @@ class PydapTest(TestCase):
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),
-                                    expected.isel(i=0, j=-1))
+                         expected.isel(i=0, j=-1))
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(j=slice(1, 2)),
-                                    expected.isel(j=slice(1, 2)))
+                         expected.isel(j=slice(1, 2)))
 
     def test_compatible_to_netcdf(self):
         # make sure it can be saved as a netcdf

@@ -1,3 +1,4 @@
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -26,7 +27,7 @@ from xarray.core.utils import NDArrayMixin
 
 from . import (
     TestCase, source_ndarray, requires_dask, raises_regex, assert_identical,
-    assert_array_equal)
+    assert_array_equal, assert_equal, assert_allclose)
 
 from xarray.tests import requires_bottleneck
 
@@ -460,7 +461,7 @@ class VariableSubclassTestCases(object):
             actual = Variable.concat([x, y], 'animal')
             expected = Variable(
                 'animal', np.array(['horse', 'aardvark'], dtype=kind))
-            self.assertVariableEqual(expected, actual)
+            assert_equal(expected, actual)
 
     def test_concat_number_strings(self):
         # regression test for #305
@@ -508,13 +509,13 @@ class VariableSubclassTestCases(object):
 
         expected_abs = self.cls(
             'x', np.sqrt(2 * np.arange(3) ** 2)).to_base_variable()
-        self.assertVariableAllClose(abs(v), expected_abs)
+        assert_allclose(abs(v), expected_abs)
 
     def test_aggregate_complex(self):
         # should skip NaNs
         v = self.cls('x', [1, 2j, np.nan])
         expected = Variable((), 0.5 + 1j)
-        self.assertVariableAllClose(v.mean(), expected)
+        assert_allclose(v.mean(), expected)
 
     def test_pandas_cateogrical_dtype(self):
         data = pd.Categorical(np.arange(10, dtype='int64'))
@@ -1360,7 +1361,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert_identical(
             v.reduce(np.mean, 'x').reduce(np.std, 'y'),
             Variable([], self.d.mean(axis=0).std()))
-        self.assertVariableAllClose(v.mean('x'), v.reduce(np.mean, 'x'))
+        assert_allclose(v.mean('x'), v.reduce(np.mean, 'x'))
 
         with raises_regex(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
@@ -1413,7 +1414,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         # pct
         v = Variable(['x'], [3.0, 1.0, np.nan, 2.0, 4.0])
         v_expect = Variable(['x'], [0.75, 0.25, np.nan, 0.5, 1.0])
-        self.assertVariableEqual(v.rank('x', pct=True), v_expect)
+        assert_equal(v.rank('x', pct=True), v_expect)
         # invalid dim
         with raises_regex(ValueError, 'not found'):
             v.rank('y')

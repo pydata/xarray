@@ -63,13 +63,13 @@ class TestDataArray(TestCase):
         assert expected == repr(self.mda)
 
     def test_properties(self):
-        self.assertVariableEqual(self.dv.variable, self.v)
+        assert_equal(self.dv.variable, self.v)
         assert_array_equal(self.dv.values, self.v.values)
         for attr in ['dims', 'dtype', 'shape', 'size', 'nbytes',
                      'ndim', 'attrs']:
             assert getattr(self.dv, attr) == getattr(self.v, attr)
         assert len(self.dv) == len(self.v)
-        self.assertVariableEqual(self.dv.variable, self.v)
+        assert_equal(self.dv.variable, self.v)
         assert set(self.dv.coords) == set(self.ds.coords)
         for k, v in iteritems(self.dv.coords):
             assert_array_equal(v, self.ds.coords[k])
@@ -440,7 +440,7 @@ class TestDataArray(TestCase):
         for i in [I[:], I[...], I[x.values], I[x.variable], I[x], I[x, y],
                   I[x.values > -1], I[x.variable > -1], I[x > -1],
                   I[x > -1, y > -1]]:
-            self.assertVariableEqual(self.dv, self.dv[i])
+            assert_equal(self.dv, self.dv[i])
         for i in [I[0], I[:, 0], I[:3, :2],
                   I[x.values[:3]], I[x.variable[:3]],
                   I[x[:3]], I[x[:3], y[:4]],
@@ -1652,7 +1652,7 @@ class TestDataArray(TestCase):
         assert_identical(expected, actual)
 
     def test_transpose(self):
-        self.assertVariableEqual(self.dv.variable.transpose(),
+        assert_equal(self.dv.variable.transpose(),
                                  self.dv.transpose().variable)
 
     def test_squeeze(self):
@@ -1767,7 +1767,7 @@ class TestDataArray(TestCase):
         expected = DataArray([0, 0], {'x': coords['x'], 'c': -999}, 'x')
         assert_identical(expected, actual)
 
-        self.assertVariableEqual(self.dv.reduce(np.mean, 'x').variable,
+        assert_equal(self.dv.reduce(np.mean, 'x').variable,
                                  self.v.reduce(np.mean, 'x'))
 
         orig = DataArray([[1, 0, np.nan], [3, 0, 3]], coords, dims=['x', 'y'])

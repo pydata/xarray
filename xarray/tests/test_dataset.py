@@ -28,12 +28,9 @@ from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
 from xarray.core.common import full_like
 
 from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask, source_ndarray, assert_allclose,
-               assert_array_equal)
-
-from xarray.tests import (assert_equal, assert_allclose, assert_identical,
-                          assert_array_equal, requires_bottleneck,
-                          requires_scipy)
+               requires_dask, source_ndarray, assert_array_equal, assert_equal,
+               assert_allclose, assert_identical, requires_bottleneck,
+               requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -1809,13 +1806,13 @@ class TestDataset(TestCase):
         v = data['var1']
         d1 = data['dim1']
         d2 = data['dim2']
-        self.assertVariableEqual(v, v[d1.values])
-        self.assertVariableEqual(v, v[d1])
-        self.assertVariableEqual(v[:3], v[d1 < 3])
-        self.assertVariableEqual(v[:, 3:], v[:, d2 >= 1.5])
-        self.assertVariableEqual(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
-        self.assertVariableEqual(v[:3, :2], v[range(3), range(2)])
-        self.assertVariableEqual(v[:3, :2], v.loc[d1[:3], d2[:2]])
+        assert_equal(v, v[d1.values])
+        assert_equal(v, v[d1])
+        assert_equal(v[:3], v[d1 < 3])
+        assert_equal(v[:, 3:], v[:, d2 >= 1.5])
+        assert_equal(v[:3, 3:], v[d1 < 3, d2 >= 1.5])
+        assert_equal(v[:3, :2], v[range(3), range(2)])
+        assert_equal(v[:3, :2], v.loc[d1[:3], d2[:2]])
 
     def test_drop_variables(self):
         data = create_test_data()
@@ -1889,8 +1886,8 @@ class TestDataset(TestCase):
                 if name in dims:
                     dims[dims.index(name)] = newname
 
-            self.assertVariableEqual(Variable(dims, v.values, v.attrs),
-                                     renamed[k].variable.to_base_variable())
+            assert_equal(Variable(dims, v.values, v.attrs),
+                         renamed[k].variable.to_base_variable())
             assert v.encoding == renamed[k].encoding
             assert type(v) == type(renamed.variables[k])  # noqa: E721
 
@@ -2152,7 +2149,7 @@ class TestDataset(TestCase):
     def test_getitem(self):
         data = create_test_data()
         assert isinstance(data['var1'], DataArray)
-        self.assertVariableEqual(data['var1'].variable, data.variables['var1'])
+        assert_equal(data['var1'].variable, data.variables['var1'])
         with pytest.raises(KeyError):
             data['notfound']
         with pytest.raises(KeyError):
@@ -2248,9 +2245,9 @@ class TestDataset(TestCase):
 
     def test_slice_virtual_variable(self):
         data = create_test_data()
-        self.assertVariableEqual(data['time.dayofyear'][:10].variable,
-                                 Variable(['time'], 1 + np.arange(10)))
-        self.assertVariableEqual(
+        assert_equal(data['time.dayofyear'][:10].variable,
+                     Variable(['time'], 1 + np.arange(10)))
+        assert_equal(
             data['time.dayofyear'][0].variable, Variable([], 1))
 
     def test_setitem(self):
@@ -2286,7 +2283,7 @@ class TestDataset(TestCase):
             data1['dim1'] = data1['dim1'][:5]
         # override an existing value
         data1['A'] = 3 * data2['A']
-        self.assertVariableEqual(data1['A'], 3 * data2['A'])
+        assert_equal(data1['A'], 3 * data2['A'])
 
         with pytest.raises(NotImplementedError):
             data1[{'x': 0}] = 0
@@ -2497,9 +2494,9 @@ class TestDataset(TestCase):
         data = create_test_data()
         for n, (t, sub) in enumerate(list(data.groupby('dim1'))[:3]):
             assert data['dim1'][n] == t
-            self.assertVariableEqual(data['var1'][n], sub['var1'])
-            self.assertVariableEqual(data['var2'][n], sub['var2'])
-            self.assertVariableEqual(data['var3'][:, n], sub['var3'])
+            assert_equal(data['var1'][n], sub['var1'])
+            assert_equal(data['var2'][n], sub['var2'])
+            assert_equal(data['var3'][:, n], sub['var3'])
 
     def test_groupby_errors(self):
         data = create_test_data()

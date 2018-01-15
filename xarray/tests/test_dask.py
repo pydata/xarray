@@ -53,7 +53,7 @@ class TestVariable(DaskTestCase):
         self.assertLazyAnd(expected, actual, assert_identical)
 
     def assertLazyAndAllClose(self, expected, actual):
-        self.assertLazyAnd(expected, actual, self.assertVariableAllClose)
+        self.assertLazyAnd(expected, actual, assert_allclose)
 
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
