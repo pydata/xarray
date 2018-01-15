@@ -3784,8 +3784,8 @@ class TestDataset(TestCase):
         # Test return one DataArray.
         new_ds = ds.filter_by_attrs(
             standard_name='convective_precipitation_flux')
-        assert (new_ds['precipitation'].standard_name
-                == 'convective_precipitation_flux')
+        assert (new_ds['precipitation'].standard_name ==
+                'convective_precipitation_flux')
 
         assert_equal(new_ds['precipitation'], ds['precipitation'])
 
