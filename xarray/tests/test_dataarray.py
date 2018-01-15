@@ -1653,7 +1653,7 @@ class TestDataArray(TestCase):
 
     def test_transpose(self):
         assert_equal(self.dv.variable.transpose(),
-                                 self.dv.transpose().variable)
+                     self.dv.transpose().variable)
 
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)
@@ -1768,7 +1768,7 @@ class TestDataArray(TestCase):
         assert_identical(expected, actual)
 
         assert_equal(self.dv.reduce(np.mean, 'x').variable,
-                                 self.v.reduce(np.mean, 'x'))
+                     self.v.reduce(np.mean, 'x'))
 
         orig = DataArray([[1, 0, np.nan], [3, 0, 3]], coords, dims=['x', 'y'])
         actual = orig.count()
@@ -1918,8 +1918,7 @@ class TestDataArray(TestCase):
                                              self.x[:, 10:].sum(1),
                                              self.x[:, 9:10].sum(1)]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        assert_allclose(expected_sum_axis1,
-                                     grouped.reduce(np.sum, 'y'))
+        assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, 'y'))
         assert_allclose(expected_sum_axis1, grouped.sum('y'))
 
     def test_groupby_count(self):
@@ -2875,11 +2874,11 @@ class TestDataArray(TestCase):
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
-        assert (actual.cell_methods ==
-                iris.coords.CellMethod(method='mean',
-                                       coords=('height',),
-                                       intervals=(),
-                                       comments=('A cell method',)))
+        assert (actual.cell_methods == (iris.coords.CellMethod(
+            method='mean',
+            coords=('height', ),
+            intervals=(),
+            comments=('A cell method', )), ))
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
@@ -2947,11 +2946,11 @@ class TestDataArray(TestCase):
         assert actual.var_name == original.name
         self.assertItemsEqual([d.var_name for d in actual.dim_coords],
                               original.dims)
-        assert (actual.cell_methods ==
-                iris.coords.CellMethod(method='mean',
-                                       coords=('height',),
-                                       intervals=(),
-                                       comments=('A cell method',)))
+        assert (actual.cell_methods == (iris.coords.CellMethod(
+            method='mean',
+            coords=('height', ),
+            intervals=(),
+            comments=('A cell method', )), ))
 
         for coord, orginal_key in zip((actual.coords()), original.coords):
             original_coord = original.coords[orginal_key]
