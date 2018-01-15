@@ -879,7 +879,7 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(array, pd.PeriodIndex):
             with suppress(AttributeError):
                 # this might not be public API
-                array = array.asobject
+                array = array.astype('object')
         return np.asarray(array.values, dtype=dtype)
 
     @property

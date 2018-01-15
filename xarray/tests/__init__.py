@@ -8,14 +8,15 @@ import re
 import importlib
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal  # noqa: F401
 from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
 from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.testing import assert_equal, assert_identical, assert_allclose
+from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
+                            assert_allclose)
 from xarray.plot.utils import import_seaborn
 
 try:
@@ -109,6 +110,9 @@ network = pytest.mark.skipif(
 
 
 class TestCase(unittest.TestCase):
+    """
+    These functions are all deprecated. Instead, use functions in xr.testing
+    """
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2
         # assertItemsEqual
@@ -125,25 +129,9 @@ class TestCase(unittest.TestCase):
         assert len(w) > 0
         assert any(message in str(wi.message) for wi in w)
 
-    def assertVariableEqual(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(v1, v2)
-
-    def assertVariableIdentical(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(v1, v2)
-
-    def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(v1, v2, rtol=rtol, atol=atol)
-
     def assertVariableNotEqual(self, v1, v2):
         __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
-
-    def assertArrayEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_array_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
         __tracebackhide__ = True  # noqa: F841
@@ -152,38 +140,6 @@ class TestCase(unittest.TestCase):
     def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
         __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
-
-    def assertDatasetEqual(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(d1, d2)
-
-    def assertDatasetIdentical(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(d1, d2)
-
-    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08,
-                              decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(d1, d2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
-
-    def assertCoordinatesEqual(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(d1, d2)
-
-    def assertDataArrayEqual(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(ar1, ar2)
-
-    def assertDataArrayIdentical(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(ar1, ar2)
-
-    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08,
-                                decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(ar1, ar2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
 
 
 @contextmanager

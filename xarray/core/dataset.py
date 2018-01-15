@@ -1573,7 +1573,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dim_name = dim
             dim_coord = None
 
-        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
+        reordered = self.transpose(
+            *(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
 
@@ -3383,7 +3384,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Variables that do not depend on `dim` are dropped.
         """
         if dim not in self.dims:
-            raise ValueError('Dataset does not contain the dimension: %s' % dim)
+            raise ValueError(
+                'Dataset does not contain the dimension: %s' % dim)
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):

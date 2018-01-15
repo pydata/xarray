@@ -542,6 +542,7 @@ class HiddenKeyDict(MutableMapping):
     Acts like a normal dictionary, but hides certain keys.
     '''
     # ``__init__`` method required to create instance from class.
+
     def __init__(self, data, hidden_keys):
         self._data = data
         if type(hidden_keys) not in (list, tuple):
