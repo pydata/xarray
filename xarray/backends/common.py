@@ -342,14 +342,15 @@ class AbstractWritableDataStore(AbstractDataStore):
         for v in variables.values():
             dims.update(dict(zip(v.dims, v.shape)))
 
-        for d, l in dims.items():
+        for dim, length in dims.items():
 
-            if d in existing_dims and l != existing_dims[d]:
-                raise ValueError("Unable to update size for existing dimension"
-                                 "%r (%d != %d)" % (d, l, existing_dims[d]))
-            elif d not in existing_dims:
-                is_unlimited = d in unlimited_dims
-                self.set_dimension(d, l, is_unlimited)
+            if dim in existing_dims and length != existing_dims[dim]:
+                raise ValueError(
+                    "Unable to update size for existing dimension"
+                    "%r (%d != %d)" % (dim, length, existing_dims[dim]))
+            elif dim not in existing_dims:
+                is_unlimited = dim in unlimited_dims
+                self.set_dimension(dim, length, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):

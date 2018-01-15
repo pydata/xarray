@@ -1225,7 +1225,7 @@ class BaseZarrTest(CFEncodedDataTest):
                 dims = zarr_group[var].attrs[self.DIMENSION_KEY]
                 assert dims == list(expected[var].dims)
 
-            with xr.decode_cf(store) as actual:
+            with xr.decode_cf(store):
                 # make sure it is hidden
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
@@ -1233,7 +1233,7 @@ class BaseZarrTest(CFEncodedDataTest):
             # put it back and try removing from a variable
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
-                with xr.decode_cf(store) as actual:
+                with xr.decode_cf(store):
                     pass
 
     def test_write_persistence_modes(self):
