@@ -5,7 +5,7 @@ import os.path
 from glob import glob
 from io import BytesIO
 from numbers import Number
-
+import warnings
 
 import numpy as np
 
@@ -281,6 +281,14 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
+            import netCDF4
+            if len( filename_or_obj ) == 88 and float(netCDF4.__version__[:3]) < 1.3:
+                warnings.warn('\nA segmentation fault may occur when the   \n'
+                'file path has exactly 88 characters.  The issue is known  \n'
+                'to occur with version 1.2.4 of netCDF4 and can be  \n'
+                'addressed by upgrading netCDF4 to at least version 1.3.1.  \n'
+                'More details can be found here:  \n'
+                'https://github.com/pydata/xarray/issues/1745  \n')
             store = backends.NetCDF4DataStore.open(filename_or_obj,
                                                    group=group,
                                                    autoclose=autoclose)
