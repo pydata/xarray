@@ -426,6 +426,11 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
         key = BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
+    def rolling(self, axis, window):
+        raise NotImplementedError('Rolling for {} is not implemented.'
+                                  'Load your data first with '
+                                  '.load() or .compute()'.format(type(self)))
+
 
 def unwrap_explicit_indexer(key, target, allow):
     """Unwrap an explicit key into a tuple."""
@@ -815,6 +820,11 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array, key = self._indexing_array_and_key(key)
         array[key] = value
 
+    def rolling(self, axis, window):
+        """
+        """
+        return nputils.rolling()
+
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
@@ -923,3 +933,6 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
+
+    def rolling(self, axis, window):
+        return NumpyIndexingAdapter(self.array.values).rolling(axis, window)
