@@ -32,6 +32,7 @@ pip-log.txt
 .tox
 nosetests.xml
 .cache
+.ropeproject/
 
 # Translations
 *.mo
@@ -50,5 +51,8 @@ nosetests.xml
 doc/_build
 doc/generated
 xarray/version.py
+
+# Sync tools
+Icon*
 
 .ipynb_checkpoints

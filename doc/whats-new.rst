@@ -18,6 +18,13 @@ What's New
 v0.10.1 (unreleased)
 --------------------
 
+Documentation
+~~~~~~~~~~~~~
+
+- New entry `Why don’t aggregations return Python scalars?` in the
+  :doc:`faq` (:issue:`1726`).
+  By `0x0L <https://github.com/0x0L>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -56,6 +63,9 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Fixed encoding of multi-dimensional coordinates in
+  :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
+  By `Mike Neish <https://github.com/neishm>`_.
 
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -73,6 +83,8 @@ Bug fixes
   with size one in some dimension can now be plotted, which is good for
   exploring satellite imagery (:issue:`1780`).
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- Fixed ``UnboundLocalError`` when opening netCDF file `` (:issue:`1781`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``variables``, ``attrs``, and ``dimensions`` properties have been
   deprecated as part of a bug fix addressing an issue where backends were
   unintentionally loading the datastores data and attributes repeatedly during

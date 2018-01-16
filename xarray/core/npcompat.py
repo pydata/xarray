@@ -33,8 +33,8 @@ except ImportError:  # pragma: no cover
             If `a` is of inexact type, return a copy of `a` with the NaNs
             replaced by the fill value, otherwise return `a`.
         mask: {bool, None}
-            If `a` is of inexact type, return a boolean mask marking locations of
-            NaNs, otherwise return None.
+            If `a` is of inexact type, return a boolean mask marking locations
+            of NaNs, otherwise return None.
 
         """
         is_new = not isinstance(a, np.ndarray)
@@ -206,7 +206,7 @@ except ImportError:  # pragma: no cover
         -----
         flip(m, 0) is equivalent to flipud(m).
         flip(m, 1) is equivalent to fliplr(m).
-        flip(m, n) corresponds to ``m[...,::-1,...]`` with ``::-1`` at position n.
+        flip(m, n) corresponds to ``m[...,::-1,...]`` with ``::-1`` at index n.
 
         Examples
         --------

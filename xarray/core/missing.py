@@ -41,6 +41,7 @@ class NumpyInterpolator(BaseInterpolator):
     --------
     numpy.interp
     '''
+
     def __init__(self, xi, yi, method='linear', fill_value=None, **kwargs):
 
         if method != 'linear':
@@ -83,6 +84,7 @@ class ScipyInterpolator(BaseInterpolator):
     --------
     scipy.interpolate.interp1d
     '''
+
     def __init__(self, xi, yi, method=None, fill_value=None,
                  assume_sorted=True, copy=False, bounds_error=False, **kwargs):
         from scipy.interpolate import interp1d
@@ -118,6 +120,7 @@ class SplineInterpolator(BaseInterpolator):
     --------
     scipy.interpolate.UnivariateSpline
     '''
+
     def __init__(self, xi, yi, method='spline', fill_value=None, order=3,
                  **kwargs):
         from scipy.interpolate import UnivariateSpline

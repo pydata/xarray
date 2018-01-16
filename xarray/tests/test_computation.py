@@ -488,10 +488,10 @@ def test_keep_attrs():
     actual = add(a, b, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
-    a = xr.Dataset({'x': ('x', [1, 2]), 'x': [0, 1]})
+    a = xr.Dataset({'x': [0, 1]})
     a.attrs['attr'] = 'ds'
     a.x.attrs['attr'] = 'da'
-    b = xr.Dataset({'x': ('x', [1, 1]), 'x': [0, 1]})
+    b = xr.Dataset({'x': [0, 1]})
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
@@ -666,8 +666,8 @@ def test_apply_dask_multiple_inputs():
     import dask.array as da
 
     def covariance(x, y):
-        return ((x - x.mean(axis=-1, keepdims=True))
-                * (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
+        return ((x - x.mean(axis=-1, keepdims=True)) *
+                (y - y.mean(axis=-1, keepdims=True))).mean(axis=-1)
 
     rs = np.random.RandomState(42)
     array1 = da.from_array(rs.randn(4, 4), chunks=(2, 4))

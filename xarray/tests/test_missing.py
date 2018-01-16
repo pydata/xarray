@@ -62,7 +62,7 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345,
         coords = {'time': (pd.Timestamp('2000-01-01') + deltas).sort_values()}
     else:
         coords = {'time': pd.date_range('2000-01-01', freq='D',
-                  periods=shape[0])}
+                                        periods=shape[0])}
     da = xr.DataArray(vals, dims=('time', 'x'), coords=coords)
     df = da.to_pandas()
 
@@ -254,7 +254,7 @@ def test_interpolate_limits():
 
     actual = da.interpolate_na(dim='x', limit=2)
     expected = xr.DataArray(np.array([1, 2, 3, 4, np.nan, 6],
-                            dtype=np.float64), dims='x')
+                                     dtype=np.float64), dims='x')
 
     assert_equal(actual, expected)
 

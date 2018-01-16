@@ -21,7 +21,6 @@ except ImportError:
 
 from .options import OPTIONS
 from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
-from .indexing import BasicIndexer
 
 
 def pretty_print(x, numchars):
@@ -60,6 +59,7 @@ def ensure_valid_repr(string):
 
 class ReprMixin(object):
     """Mixin that defines __repr__ for a class that already has __unicode__."""
+
     def __repr__(self):
         return ensure_valid_repr(self.__unicode__())
 

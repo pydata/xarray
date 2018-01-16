@@ -5,3 +5,14 @@ from .plot import (plot, line, contourf, contour,
                    hist, imshow, pcolormesh)
 
 from .facetgrid import FacetGrid
+
+__all__ = [
+    'plot',
+    'line',
+    'contour',
+    'contourf',
+    'hist',
+    'imshow',
+    'pcolormesh',
+    'FacetGrid',
+]
