@@ -343,7 +343,6 @@ class AbstractWritableDataStore(AbstractDataStore):
             dims.update(dict(zip(v.dims, v.shape)))
 
         for dim, length in dims.items():
-
             if dim in existing_dims and length != existing_dims[dim]:
                 raise ValueError(
                     "Unable to update size for existing dimension"
@@ -364,10 +363,6 @@ class WritableCFDataStore(AbstractWritableDataStore):
         attributes = OrderedDict([(k, self.encode_attribute(v))
                                   for k, v in attributes.items()])
         return variables, attributes
-
-    def store(self, variables, attributes, *args, **kwargs):
-        AbstractWritableDataStore.store(self, variables, attributes,
-                                        *args, **kwargs)
 
 
 class DataStorePickleMixin(object):
