@@ -68,6 +68,9 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Added warning in api.py of a netCDF4 bug that occurs when
+  the filepath has 88 characters (:issue:`1745`).
+  By `Liam Brannigan <https://github.com/braaannigan>` _.
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
