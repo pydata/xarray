@@ -2132,6 +2132,44 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
+    def rolling_window(self, dim, window, window_dim, center=True):
+        """
+        Make a rolling_window along dim and add a new_dim to the last place.
+
+        Parameters
+        ----------
+        dim: str
+            Dimension over which to compute rolling_window
+        window: int
+            Window size of the rolling
+        window_dim: str
+            New name of the window dimension.
+
+        Returns
+        -------
+        DataArray that is a view of the original array with a added dimension
+        of size w
+
+        Examples
+        --------
+        >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
+
+        >>> da.rolling_window(x, 'b', 4, 'window_dim')
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        Dimensions without coordinates: a, b, window_dim
+
+        >>> da.rolling_window(x, 'b', 4, 'window_dim', center=True)
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
+               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        Dimensions without coordinates: a, b, window_dim
+        """
+        ds = self._to_temp_dataset().rolling_window(dim, window, window_dim,
+                                                    center)
+        return self._from_temp_dataset(ds)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

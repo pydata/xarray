@@ -1487,9 +1487,9 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             ranked /= count
         return Variable(self.dims, ranked)
 
-    def rolling_window(self, dim, window, window_dim):
+    def rolling_window(self, dim, window, window_dim, center=False):
         """
-        Make a rolling_window along dim and add a new_dim to the first place.
+        Make a rolling_window along dim and add a new_dim to the last place.
 
         Parameters
         ----------
@@ -1498,22 +1498,42 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         window: int
             Window size of the rolling
         window_dim: str
-            New name of the rolling dimension.
+            New name of the window dimension.
+        center: boolean. default False.
+            If True, pad np.nan for both ends. Otherwise, pad in the head of
+            the axis.
 
         Returns
         -------
         Variable that is a view of the original array with a added dimension of
-        size w
+        size w.
+        The return dim: self.dims + (window_dim, )
+        The return shape: self.shape + (window, )
 
         Examples
         --------
-        >>> v=Variable(('a', 'b'), np.arange(10).reshape((2,5)))
+        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
         >>> v.rolling_window(x, 'b', 3, 'window_dim')
-        <xarray.Variable (a: 2, b: 3, window_dim: 3)>
-        array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
-               [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
-        """
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
+        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
+               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        """
+        new_dims = self.dims + (window_dim, )
+        if center:
+            start = -int(-window / 2)
+            end = window - 1 - start
+            pads = (start, end)
+        else:
+            pads = (window - 1, 0)
+
+        array = self._pad(value=np.nan, **{dim: pads})
+        return Variable(new_dims, as_indexable(array).rolling_window(
+            self.get_axis_num(dim), window=window))
 
     @property
     def real(self):

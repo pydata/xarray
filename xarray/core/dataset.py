@@ -3399,6 +3399,35 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
+    def rolling_window(self, dim, window, window_dim, center=True):
+        """
+        Make a rolling_window along dim of data_vars.
+
+        Parameters
+        ----------
+        dim: str
+            Dimension over which to compute rolling_window
+        window: int
+            Window size of the rolling
+        window_dim: str
+            New name of the window dimension.
+
+        Returns
+        -------
+        DataArray that is a view of the original array with a added dimension
+        of size w
+
+        See also
+        --------
+        DataArray.rolling_window
+        """
+        variables = self._variables.copy()
+        for k, v in self._variables.items():
+            if dim in v.dims:
+                variables[k] = v.rolling_window(dim, window, window_dim,
+                                                center)
+        return self._replace_vars_and_dims(variables)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)

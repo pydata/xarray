@@ -826,9 +826,9 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         The rolling dimension will be placed at the first dimension.
         """
         axis = nputils._validate_axis(self.array, axis)
-        return np.swap_dims(
-            nputils.rolling_window(np.swap_dims(self.array, axis, -1)),
-            -1, axis)
+        return np.swapaxes(
+            nputils.rolling_window(np.swapaxes(self.array, axis, -1), window),
+            -2, axis)
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
