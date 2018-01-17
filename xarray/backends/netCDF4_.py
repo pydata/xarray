@@ -249,12 +249,15 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         from distutils.version import LooseVersion
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):
-            warnings.warn('\nA segmentation fault may occur when the\n'
+            warnings.warn(
+            '\nA segmentation fault may occur when the\n'
             'file path has exactly 88 characters as it does in this case.\n'
-            'The issue is known to occur with version 1.2.4 of netCDF4 and\n'
-            'can be addressed by upgrading netCDF4 to at least version 1.3.1.\n'
+            'The issue is known to occur with version 1.2.4 of netCDF4 \n'
+            'and can be addressed by upgrading netCDF4 to at\n'
+            'least version 1.3.1.\n'
             'More details can be found here:\n'
-            'https://github.com/pydata/xarray/issues/1745  \n')
+            'https://github.com/pydata/xarray/issues/1745  \n'
+            )
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
