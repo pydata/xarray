@@ -1056,6 +1056,12 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
             except IndexError as err:
                 self.assertIn('first by calling .load', str(err))
 
+    def test_88_character_filename_segmentation_fault(self):
+        # should be fixed in netcdf4 v1.3.1
+        with mock.patch('netCDF4.__version__', '1.2.4'):
+            with pytest.warns(Warning, match='segmentation fault'):
+                xr.Dataset().to_netcdf('a' * 88)
+
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
     autoclose = True
