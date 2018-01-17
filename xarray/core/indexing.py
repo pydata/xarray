@@ -426,8 +426,8 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
         key = BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
-    def rolling(self, axis, window):
-        raise NotImplementedError('Rolling for {} is not implemented.'
+    def rolling_window(self, axis, window):
+        raise NotImplementedError('rolling_windows for {} is not implemented.'
                                   'Load your data first with '
                                   '.load() or .compute()'.format(type(self)))
 
@@ -820,10 +820,15 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array, key = self._indexing_array_and_key(key)
         array[key] = value
 
-    def rolling(self, axis, window):
+    def rolling_window(self, axis, window):
         """
+        Make an ndarray with a rolling window of axis-th dimension.
+        The rolling dimension will be placed at the first dimension.
         """
-        return nputils.rolling()
+        axis = nputils._validate_axis(self.array, axis)
+        return np.swap_dims(
+            nputils.rolling_window(np.swap_dims(self.array, axis, -1)),
+            -1, axis)
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
@@ -934,5 +939,6 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
 
-    def rolling(self, axis, window):
-        return NumpyIndexingAdapter(self.array.values).rolling(axis, window)
+    def rolling_window(self, axis, window):
+        return NumpyIndexingAdapter(self.array.values).rolling_window(
+            axis, window)

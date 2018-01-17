@@ -936,6 +936,37 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             result = result._shift_one_dim(dim, count)
         return result
 
+    def _pad(self, value=np.nan, **pad_widths):
+        """
+        Return a new Variable with paddings.
+
+        Parameters
+        ----------
+        **pad_width: keyword arguments of the form {dim: (before, after)}
+            Number of values padded to the edges of each dimension.
+
+        value:
+            Values to set the padded value.
+        """
+        if isinstance(self.data, dask_array_type):
+            array = self.data
+            for d, pad in pad_widths.items():
+                axis = self.get_axis_num(d)
+                before_shape = tuple(self.shape)
+                before_shape[axis] = pad[0]
+                after_shape = tuple(self.shape)
+                after_shape[axis] = pad[1]
+                array = da.concatenate([da.full(before_shape, value),
+                                        array,
+                                        da.full(after_shape, value)],
+                                       axis)
+            return array
+        else:
+            pads = [(0, 0) if d not in pad_widths else pad_widths[d]
+                    for d in self.dims]
+            return np.pad(self.data, pads, mode='constant',
+                          constant_values=value)
+
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 
@@ -1455,6 +1486,34 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
             ranked /= count
         return Variable(self.dims, ranked)
+
+    def rolling_window(self, dim, window, window_dim):
+        """
+        Make a rolling_window along dim and add a new_dim to the first place.
+
+        Parameters
+        ----------
+        dim: str
+            Dimension over which to compute rolling_window
+        window: int
+            Window size of the rolling
+        window_dim: str
+            New name of the rolling dimension.
+
+        Returns
+        -------
+        Variable that is a view of the original array with a added dimension of
+        size w
+
+        Examples
+        --------
+        >>> v=Variable(('a', 'b'), np.arange(10).reshape((2,5)))
+        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        <xarray.Variable (a: 2, b: 3, window_dim: 3)>
+        array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
+               [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
+        """
+
 
     @property
     def real(self):

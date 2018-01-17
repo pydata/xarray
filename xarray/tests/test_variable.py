@@ -1585,6 +1585,19 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_pad(self):
+        v = Variable(['x', 'y', 'z'], np.arange(4 * 3 * 2).reshape(4, 3, 2))
+
+        xr_args = [{'x': (2, 1)}, {'y': (0, 3)}, {'x': (3, 1), 'z': (2, 0)}]
+        np_args = [((2, 1), (0, 0), (0, 0)), ((0, 0), (0, 3), (0, 0)),
+                   ((3, 1), (0, 0), (2, 0))]
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            for value in [np.nan, 0]:
+                actual = v._pad(value=value, **xr_arg)
+                expected = np.pad(np.array(v.data), np_arg, mode='constant',
+                                  constant_values=value)
+                assert_array_equal(actual, expected)
+
 
 @requires_dask
 class TestVariableWithDask(TestCase, VariableSubclassTestCases):
