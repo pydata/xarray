@@ -203,21 +203,10 @@ class DataArrayRolling(Rolling):
             Array with summarized data.
         """
 
-        windows = [window.reduce(func, dim=self.dim, **kwargs)
-                   for _, window in self]
-
-        # Find valid windows based on count
-        if self.dim in self.obj.coords:
-            concat_dim = self.window_labels
-        else:
-            concat_dim = self.dim
-        counts = concat([window.count(dim=self.dim) for _, window in self],
-                        dim=concat_dim)
-        result = concat(windows, dim=concat_dim)
-        # restore dim order
-        result = result.transpose(*self.obj.dims)
-
-        result = result.where(counts >= self._min_periods)
+        windows = self.obj.rolling_window(self.dim, self.window,
+                                          '_rolling_window_dim', center=False)
+        windows = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
+        result = windows.where(self._valid_windows)
 
         if self.center:
             result = self._center_result(result)
