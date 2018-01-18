@@ -34,6 +34,8 @@ def maybe_promote(dtype):
         fill_value = np.datetime64('NaT')
     elif np.issubdtype(dtype, np.timedelta64):
         fill_value = np.timedelta64('NaT')
+    elif dtype.kind == 'b':
+        fill_value = False
     else:
         dtype = object
         fill_value = np.nan

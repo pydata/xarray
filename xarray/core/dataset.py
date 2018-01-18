@@ -3426,6 +3426,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.rolling
         DataArray.rolling
         """
+        
         variables = self._variables.copy()
         for k, v in self._variables.items():
             if dim in v.dims and k not in self._coord_names:

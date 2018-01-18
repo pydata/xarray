@@ -2171,6 +2171,7 @@ class DataArray(AbstractArray, BaseDataObject):
                [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
         Dimensions without coordinates: a, b, window_dim
         """
+        
         ds = self._to_temp_dataset().rolling_window(dim, window, window_dim,
                                                     center)
         return self._from_temp_dataset(ds)

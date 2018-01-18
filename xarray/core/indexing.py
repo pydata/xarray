@@ -825,6 +825,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         Make an ndarray with a rolling window of axis-th dimension.
         The rolling dimension will be placed at the last dimension.
         """
+        
         axis = nputils._validate_axis(self.array, axis)
         rolling = nputils.rolling_window(np.swapaxes(self.array, axis, -1),
                                          window)
