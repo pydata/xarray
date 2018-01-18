@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import warnings
+from . import npcompat
 
 
 def _validate_axis(data, axis):
@@ -172,4 +173,5 @@ def rolling_window(a, window):
         raise ValueError("`window` is too long. Given : {}".format(window))
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+    return npcompat.as_strided(a, shape=shape, strides=strides,
+                               writeable=False)

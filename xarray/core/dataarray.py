@@ -2134,7 +2134,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     def rolling_window(self, dim, window, window_dim, center=True):
         """
-        Make a rolling_window along dim and add a new_dim to the last place.
+        Make a sliding window along `dim` and stack along `new_dim`.
 
         Parameters
         ----------
@@ -2144,11 +2144,16 @@ class DataArray(AbstractArray, BaseDataObject):
             Window size of the rolling
         window_dim: str
             New name of the window dimension.
+        center : boolean, default False
+            Set the labels at the center of the window.
 
         Returns
         -------
-        DataArray that is a view of the original array with a added dimension
-        of size w
+        DataArray that is a view of the original array.
+
+        Note
+        ----
+        The return array is not writeable.
 
         Examples
         --------

@@ -4139,18 +4139,22 @@ def test_rolling_pandas_compat(center, window, min_periods):
                                ds_rolling['x'].values[:-1])
     np.testing.assert_allclose(df_rolling.index,
                                ds_rolling['index'])
+    # does not use bottleneck
+    ds_rolling_np = ds.rolling(index=window, center=center,
+                               min_periods=min_periods).reduce(np.nanmean)
+    np.testing.assert_allclose(df_rolling['x'].values[:-1],
+                               ds_rolling_np['x'].values[:-1])
+    np.testing.assert_allclose(df_rolling.index,
+                               ds_rolling_np['index'])
 
 
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-@pytest.mark.parametrize('chunk', (False, True))
-def test_rolling_window_pandas_compat(center, window, chunk):
+def test_rolling_window_pandas_compat(center, window):
     df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
                        'time': np.linspace(0, 1, 20)})
 
     ds = Dataset.from_dataframe(df)
-    if chunk:
-        ds = ds.chunk({'index': 4})
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
     ds_rolling = ds.rolling_window(dim='index', window=window,
                                    window_dim='window',

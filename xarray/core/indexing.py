@@ -823,12 +823,11 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def rolling_window(self, axis, window):
         """
         Make an ndarray with a rolling window of axis-th dimension.
-        The rolling dimension will be placed at the first dimension.
+        The rolling dimension will be placed at the last dimension.
         """
         axis = nputils._validate_axis(self.array, axis)
         rolling = nputils.rolling_window(np.swapaxes(self.array, axis, -1),
                                          window)
-        rolling.setflags(write=False)
         return np.swapaxes(rolling, -2, axis)
 
 
@@ -869,7 +868,7 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def rolling_window(self, axis, window):
         """
         Make an ndarray with a rolling window of axis-th dimension.
-        The rolling dimension will be placed at the first dimension.
+        The rolling dimension will be placed at the last dimension.
         """
         import dask.array as da
 

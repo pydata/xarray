@@ -204,7 +204,8 @@ class DataArrayRolling(Rolling):
         """
 
         windows = self.obj.rolling_window(self.dim, self.window,
-                                          '_rolling_window_dim', center=False)
+                                          '_rolling_window_dim',
+                                          center=False)
         windows = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
         result = windows.where(self._valid_windows)
 
