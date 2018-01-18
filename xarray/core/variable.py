@@ -936,7 +936,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             result = result._shift_one_dim(dim, count)
         return result
 
-    def _pad(self, value=np.nan, **pad_widths):
+    def _pad(self, **pad_widths):
         """
         Return a new Variable with paddings.
 
@@ -944,28 +944,34 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         ----------
         **pad_width: keyword arguments of the form {dim: (before, after)}
             Number of values padded to the edges of each dimension.
-
-        value:
-            Values to set the padded value.
         """
+        dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
         if isinstance(self.data, dask_array_type):
             array = self.data
+
             for d, pad in pad_widths.items():
                 axis = self.get_axis_num(d)
-                before_shape = tuple(self.shape)
+                before_shape = list(array.shape)
                 before_shape[axis] = pad[0]
-                after_shape = tuple(self.shape)
+                before_chunks = list(array.chunks)
+                before_chunks[axis] = (pad[0], )
+                after_shape = list(array.shape)
                 after_shape[axis] = pad[1]
-                array = da.concatenate([da.full(before_shape, value),
-                                        array,
-                                        da.full(after_shape, value)],
-                                       axis)
-            return array
+                after_chunks = list(array.chunks)
+                after_chunks[axis] = (pad[1], )
+                array = duck_array_ops.concatenate([
+                    da.full(before_shape, fill_value, dtype=dtype,
+                            chunks=before_chunks),
+                    array,
+                    da.full(after_shape, fill_value, dtype=dtype,
+                            chunks=after_chunks)], axis=axis)
         else:
             pads = [(0, 0) if d not in pad_widths else pad_widths[d]
                     for d in self.dims]
-            return np.pad(self.data, pads, mode='constant',
-                          constant_values=value)
+            array = np.pad(self.data.astype(dtype), pads, mode='constant',
+                           constant_values=fill_value)
+        return type(self)(self.dims, array)
 
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
@@ -1531,8 +1537,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             pads = (window - 1, 0)
 
-        array = self._pad(value=np.nan, **{dim: pads})
-        return Variable(new_dims, as_indexable(array).rolling_window(
+        array = self._pad(**{dim: pads})
+        return Variable(new_dims, as_indexable(array.data).rolling_window(
             self.get_axis_num(dim), window=window))
 
     @property

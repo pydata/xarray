@@ -4143,11 +4143,14 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-def test_rolling_window_pandas_compat(center, window):
+@pytest.mark.parametrize('chunk', (False, True))
+def test_rolling_window_pandas_compat(center, window, chunk):
     df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
                        'time': np.linspace(0, 1, 20)})
 
     ds = Dataset.from_dataframe(df)
+    if chunk:
+        ds = ds.chunk({'index': 4})
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
     ds_rolling = ds.rolling_window(dim='index', window=window,
                                    window_dim='window',

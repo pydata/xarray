@@ -3414,7 +3414,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
         Returns
         -------
-        DataArray that is a view of the original array with a added dimension
+        Dataset that is a view of the original array with a added dimension
         of size w
 
         See also

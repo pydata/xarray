@@ -727,6 +727,41 @@ class VariableSubclassTestCases(object):
         with raises_regex(IndexError, 'Dimensions of indexers mis'):
             v[:, ind]
 
+    def test_pad(self):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
+        v = self.cls(['x', 'y', 'z'], data)
+
+        xr_args = [{'x': (2, 1)}, {'y': (0, 3)}, {'x': (3, 1), 'z': (2, 0)}]
+        np_args = [((2, 1), (0, 0), (0, 0)), ((0, 0), (0, 3), (0, 0)),
+                   ((3, 1), (0, 0), (2, 0))]
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v._pad(**xr_arg)
+            expected = np.pad(np.array(v.data.astype(float)), np_arg,
+                              mode='constant', constant_values=np.nan)
+            assert_array_equal(actual, expected)
+
+    def test_rolling_window(self):
+        # Just a working test. See test_nputils fot the algorithm validation
+        v = self.cls(['x', 'y', 'z'], np.arange(40*30*2).reshape(40, 30, 2))
+        for (d, w) in [('x', 3), ('y', 5)]:
+            v_rolling = v.rolling_window(d, w, d + '_window')
+            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
+            assert v_rolling.shape == v.shape + (w, )
+
+            v_rolling = v.rolling_window(d, w, d + '_window', center=True)
+            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
+            assert v_rolling.shape == v.shape + (w, )
+
+            # dask and numpy result should be the same
+            v_loaded = v.load().rolling_window(d, w, d + '_window',
+                                               center=True)
+            assert_array_equal(v_rolling, v_loaded)
+
+            # numpy backend should not be over-written
+            if isinstance(v._data, np.ndarray):
+                with pytest.raises(ValueError):
+                    v_loaded[0] = 1.0
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -1585,32 +1620,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
-    def test_pad(self):
-        v = Variable(['x', 'y', 'z'], np.arange(4 * 3 * 2).reshape(4, 3, 2))
-
-        xr_args = [{'x': (2, 1)}, {'y': (0, 3)}, {'x': (3, 1), 'z': (2, 0)}]
-        np_args = [((2, 1), (0, 0), (0, 0)), ((0, 0), (0, 3), (0, 0)),
-                   ((3, 1), (0, 0), (2, 0))]
-        for xr_arg, np_arg in zip(xr_args, np_args):
-            for value in [np.nan, 0]:
-                actual = v._pad(value=value, **xr_arg)
-                expected = np.pad(np.array(v.data), np_arg, mode='constant',
-                                  constant_values=value)
-                assert_array_equal(actual, expected)
-
-    def test_rolling_window(self):
-        # Just a working test. See test_nputils fot the algorithm validation
-        v = Variable(['x', 'y', 'z'], np.arange(40 * 30 * 2).reshape(40, 30,
-                                                                     2))
-        for (d, w) in [('x', 3), ('y', 5)]:
-            v_rolling = v.rolling_window(d, w, d + '_window')
-            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
-            assert v_rolling.shape == v.shape + (w, )
-
-            v_rolling = v.rolling_window(d, w, d + '_window', center=True)
-            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
-            assert v_rolling.shape == v.shape + (w, )
-
 
 @requires_dask
 class TestVariableWithDask(TestCase, VariableSubclassTestCases):
@@ -1651,10 +1660,6 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         indexer = Variable(('x', 'y'), [[0, -1], [-1, 2]])
         assert_identical(v._getitem_with_mask(indexer, fill_value=-1),
                          self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
-
-    @pytest.mark.xfail
-    def test_rolling_window(self):
-        super(TestVariableWithDask, self).test_rolling_window()
 
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
@@ -1753,6 +1758,14 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
     @pytest.mark.xfail
     def test_getitem_uint(self):
         super(TestIndexVariable, self).test_getitem_fancy()
+
+    @pytest.mark.xfail
+    def test_pad(self):
+        super(TestIndexVariable, self).test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_rolling_window(self):
+        super(TestIndexVariable, self).test_rolling_window()
 
 
 class TestAsCompatibleData(TestCase):

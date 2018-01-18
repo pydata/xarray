@@ -826,9 +826,10 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         The rolling dimension will be placed at the first dimension.
         """
         axis = nputils._validate_axis(self.array, axis)
-        return np.swapaxes(
-            nputils.rolling_window(np.swapaxes(self.array, axis, -1), window),
-            -2, axis)
+        rolling = nputils.rolling_window(np.swapaxes(self.array, axis, -1),
+                                         window)
+        rolling.setflags(write=False)
+        return np.swapaxes(rolling, -2, axis)
 
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
@@ -864,6 +865,25 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                         'assign to this variable, you must first load it '
                         'into memory explicitly using the .load() '
                         'method or accessing its .values attribute.')
+
+    def rolling_window(self, axis, window):
+        """
+        Make an ndarray with a rolling window of axis-th dimension.
+        The rolling dimension will be placed at the first dimension.
+        """
+        import dask.array as da
+
+        if window < 1:
+            raise ValueError(
+                "`window` must be at least 1. Given : {}".format(window))
+        if window > self.array.shape[axis]:
+            raise ValueError("`window` is too long. Given : {}".format(window))
+
+        axis = nputils._validate_axis(self.array, axis)
+        size = self.array.shape[axis] - window + 1
+        arrays = [self.array[(slice(None), ) * axis + (slice(w, size + w), )]
+                  for w in range(window)]
+        return da.stack(arrays, axis=-1)
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
