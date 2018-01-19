@@ -27,6 +27,8 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
+  By `Alan Snow <https://github.com/snowman2>`_.
 
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
   1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of

@@ -189,6 +189,10 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
+    if hasattr(riods, 'nodatavals'):
+        # The nodata values for the raster bands
+        attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
+                                     for nodataval in riods.nodatavals])
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
