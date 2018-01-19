@@ -1126,6 +1126,26 @@ class TestImshow(Common2dMixin, PlotTestCase):
         with pytest.raises(ValueError):
             arr.plot.imshow(rgb='band')
 
+    def test_normalize_rgb_imshow(self):
+        for kwds in (
+            dict(vmin=-1), dict(vmax=2),
+            dict(vmin=-1, vmax=1), dict(vmin=0, vmax=0),
+            dict(vmin=0, robust=True), dict(vmax=-1, robust=True),
+        ):
+            da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+            arr = da.plot.imshow(**kwds).get_array()
+            assert 0 <= arr.min() <= arr.max() <= 1, kwds
+
+    def test_normalize_rgb_one_arg_error(self):
+        da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+        # If passed one bound that implies all out of range, error:
+        for kwds in [dict(vmax=-1), dict(vmin=2)]:
+            with pytest.raises(ValueError):
+                da.plot.imshow(**kwds)
+        # If passed two that's just moving the range, *not* an error:
+        for kwds in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
+            da.plot.imshow(**kwds)
+
 
 class TestFacetGrid(PlotTestCase):
     def setUp(self):
