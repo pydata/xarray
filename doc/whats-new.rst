@@ -27,7 +27,9 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-
+- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+  arguments. (:issue:`1838`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
   1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
   time) (:issue:`1737`).

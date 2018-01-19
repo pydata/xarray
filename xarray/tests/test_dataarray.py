@@ -1784,6 +1784,24 @@ class TestDataArray(TestCase):
                              dims=['x', 'y']).mean('x')
         assert_equal(actual, expected)
 
+    def test_reduce_dtype(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        for dtype in [np.float32, np.float64, np.float128]:
+            assert orig.astype(float).mean(dtype=dtype).dtype == dtype
+
+    def test_reduce_out(self):
+        coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
+                  'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
+                  'c': -999}
+        orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
+
+        with pytest.raises(ValueError):
+            orig.mean(out=np.ones(orig.shape))
+
     # skip due to bug in older versions of numpy.nanpercentile
     def test_quantile(self):
         for q in [0.25, [0.50], [0.25, 0.75]]:
