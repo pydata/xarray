@@ -181,6 +181,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         if kwargs.pop('out', None) is not None:
             raise ValueError('`out` is not valid for {}'.format(name))
 
+        dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in 'SU':
@@ -193,9 +194,10 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                     % (name, values.dtype))
             nanname = 'nan' + name
             if (isinstance(axis, tuple) or not values.dtype.isnative or
-                    no_bottleneck or kwargs.get('dtype', None) is not None):
+                    no_bottleneck or
+                    (dtype is not None and np.dtype(dtype) != values.dtype)):
                 # bottleneck can't handle multiple axis arguments or non-native
-                # endianness or dtype
+                # endianness
                 if np_compat:
                     eager_module = npcompat
                 else:
