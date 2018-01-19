@@ -203,7 +203,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 else:
                     eager_module = np
             else:
-                kwargs.get('dtype', None)
+                kwargs.pop('dtype', None)
                 eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
             using_numpy_nan_func = (eager_module is np or
