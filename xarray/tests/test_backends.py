@@ -10,6 +10,7 @@ import shutil
 import tempfile
 import unittest
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -1059,8 +1060,11 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
     def test_88_character_filename_segmentation_fault(self):
         # should be fixed in netcdf4 v1.3.1
         with mock.patch('netCDF4.__version__', '1.2.4'):
-            with pytest.warns(Warning, match='segmentation fault'):
-                xr.Dataset().to_netcdf('a' * 88)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                with raises_regex(Warning, 'segmentation fault'):
+                    # Need to construct 88 character filepath
+                    xr.Dataset().to_netcdf('a' * (88 - len(os.getcwd()) - 1))
 
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
