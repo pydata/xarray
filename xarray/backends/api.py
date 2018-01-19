@@ -5,7 +5,7 @@ import os.path
 from glob import glob
 from io import BytesIO
 from numbers import Number
-import warnings
+
 
 import numpy as np
 
@@ -281,14 +281,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
-            import netCDF4
-            if len( filename_or_obj ) == 88 and float(netCDF4.__version__[:3]) < 1.3:
-                warnings.warn('\nA segmentation fault may occur when the   \n'
-                'file path has exactly 88 characters.  The issue is known  \n'
-                'to occur with version 1.2.4 of netCDF4 and can be  \n'
-                'addressed by upgrading netCDF4 to at least version 1.3.1.  \n'
-                'More details can be found here:  \n'
-                'https://github.com/pydata/xarray/issues/1745  \n')
             store = backends.NetCDF4DataStore.open(filename_or_obj,
                                                    group=group,
                                                    autoclose=autoclose)
@@ -321,7 +313,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(*args, **kwargs):
+def open_dataarray(filename_or_obj, group=None, decode_cf=True,
+                   mask_and_scale=True, decode_times=True, autoclose=False,
+                   concat_characters=True, decode_coords=True, engine=None,
+                   chunks=None, lock=None, cache=None, drop_variables=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -402,7 +397,13 @@ def open_dataarray(*args, **kwargs):
     --------
     open_dataset
     """
-    dataset = open_dataset(*args, **kwargs)
+    dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
+                           mask_and_scale=mask_and_scale,
+                           decode_times=decode_times, autoclose=autoclose,
+                           concat_characters=concat_characters,
+                           decode_coords=decode_coords, engine=engine,
+                           chunks=chunks, lock=lock, cache=cache,
+                           drop_variables=drop_variables)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
