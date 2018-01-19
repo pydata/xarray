@@ -3399,7 +3399,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
-    def rolling_window(self, dim, window, window_dim, center=False):
+    def _rolling_window(self, dim, window, window_dim, center=False):
         """
         Make a sliding window along `dim` and stack along `new_dim`.
         This only applies to data variables, not coordinate variables.
@@ -3426,7 +3426,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         Dataset.rolling
         DataArray.rolling
         """
-        
+
         variables = self._variables.copy()
         for k, v in self._variables.items():
             if dim in v.dims and k not in self._coord_names:

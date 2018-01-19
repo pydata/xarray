@@ -7,7 +7,6 @@ from distutils.version import LooseVersion
 
 from .pycompat import OrderedDict, zip, dask_array_type
 from .common import full_like
-from .combine import concat
 from .ops import (inject_bottleneck_rolling_methods,
                   inject_datasetrolling_methods, has_bottleneck, bn)
 from .dask_array_ops import dask_rolling_wrapper
@@ -94,6 +93,34 @@ class Rolling(object):
 
     def __len__(self):
         return self.obj.sizes[self.dim]
+
+    def construct(self, new_dim, center=None):
+        """
+        Make an array object with rolling and stack along `new_dim`.
+        This only applies to only data variables, but not coordinate variables.
+
+        Parameters
+        ----------
+        window_dim: str
+            New name of the window dimension.
+        center: None or boolean.
+            If True, directly construct centered array.
+            If None, self.center will be used.
+
+        Returns
+        -------
+        Variables that is a view of the original data variables with a sliding
+        window applied.
+
+        See also
+        --------
+        DataArray.rolling_window
+        Dataset.rolling
+        DataArray.rolling
+        """
+        center = self.center if center is None else center
+        return self.obj._rolling_window(self.dim, self.window, new_dim,
+                                        center)
 
 
 class DataArrayRolling(Rolling):
@@ -203,9 +230,8 @@ class DataArrayRolling(Rolling):
             Array with summarized data.
         """
 
-        windows = self.obj.rolling_window(self.dim, self.window,
-                                          '_rolling_window_dim',
-                                          center=False)
+        windows = self.construct('_rolling_window_dim',
+                                 center=False)
         windows = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
         result = windows.where(self._valid_windows)
 

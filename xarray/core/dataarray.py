@@ -2132,7 +2132,7 @@ class DataArray(AbstractArray, BaseDataObject):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def rolling_window(self, dim, window, window_dim, center=True):
+    def _rolling_window(self, dim, window, window_dim, center=True):
         """
         Make a sliding window along `dim` and stack along `new_dim`.
 
@@ -2171,9 +2171,9 @@ class DataArray(AbstractArray, BaseDataObject):
                [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
         Dimensions without coordinates: a, b, window_dim
         """
-        
-        ds = self._to_temp_dataset().rolling_window(dim, window, window_dim,
-                                                    center)
+
+        ds = self._to_temp_dataset()._rolling_window(dim, window, window_dim,
+                                                     center)
         return self._from_temp_dataset(ds)
 
 

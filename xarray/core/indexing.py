@@ -426,11 +426,6 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
         key = BasicIndexer((slice(None),) * self.ndim)
         return np.asarray(self[key], dtype=dtype)
 
-    def rolling_window(self, axis, window):
-        raise NotImplementedError('rolling_windows for {} is not implemented.'
-                                  'Load your data first with '
-                                  '.load() or .compute()'.format(type(self)))
-
 
 def unwrap_explicit_indexer(key, target, allow):
     """Unwrap an explicit key into a tuple."""
@@ -820,17 +815,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
         array, key = self._indexing_array_and_key(key)
         array[key] = value
 
-    def rolling_window(self, axis, window):
-        """
-        Make an ndarray with a rolling window of axis-th dimension.
-        The rolling dimension will be placed at the last dimension.
-        """
-        
-        axis = nputils._validate_axis(self.array, axis)
-        rolling = nputils.rolling_window(np.swapaxes(self.array, axis, -1),
-                                         window)
-        return np.swapaxes(rolling, -2, axis)
-
 
 class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     """Wrap a dask array to support explicit indexing."""
@@ -865,25 +849,6 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                         'assign to this variable, you must first load it '
                         'into memory explicitly using the .load() '
                         'method or accessing its .values attribute.')
-
-    def rolling_window(self, axis, window):
-        """
-        Make an ndarray with a rolling window of axis-th dimension.
-        The rolling dimension will be placed at the last dimension.
-        """
-        import dask.array as da
-
-        if window < 1:
-            raise ValueError(
-                "`window` must be at least 1. Given : {}".format(window))
-        if window > self.array.shape[axis]:
-            raise ValueError("`window` is too long. Given : {}".format(window))
-
-        axis = nputils._validate_axis(self.array, axis)
-        size = self.array.shape[axis] - window + 1
-        arrays = [self.array[(slice(None), ) * axis + (slice(w, size + w), )]
-                  for w in range(window)]
-        return da.stack(arrays, axis=-1)
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
@@ -958,7 +923,3 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'
                 % (type(self).__name__, self.array, self.dtype))
-
-    def rolling_window(self, axis, window):
-        return NumpyIndexingAdapter(self.array.values).rolling_window(
-            axis, window)
