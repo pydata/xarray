@@ -175,12 +175,10 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
                            keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggregators
-        # automatically:
-
         if kwargs.pop('out', None) is not None:
             raise ValueError('`out` is not valid for {}'.format(name))
 
+        # If dtype is supplied, we use numpy's method.
         dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
