@@ -4156,9 +4156,8 @@ def test_rolling_window_pandas_compat(center, window):
 
     ds = Dataset.from_dataframe(df)
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
-    ds_rolling = ds.rolling_window(dim='index', window=window,
-                                   window_dim='window',
-                                   center=center).mean('window')
+    ds_rolling = ds.rolling(index=window,
+                            center=center).to_dataset('window').mean('window')
     # pandas does some fancy stuff in the last position,
     # we're not going to do that yet!
     np.testing.assert_allclose(df_rolling['x'].values[:-1],

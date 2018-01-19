@@ -3296,6 +3296,7 @@ def test_rolling_iter(da):
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
+    # TODO valid label seems different from that used in reduce
 
 
 def test_rolling_doc(da):

@@ -3,12 +3,11 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 from distutils.version import LooseVersion
-import functools
 
 
 if LooseVersion(np.__version__) < LooseVersion('1.12'):
     def as_strided(x, shape=None, strides=None, subok=False, writeable=True):
-        array = np.lib.stride_tricks.as_strided(array, shape, strides, subok)
+        array = np.lib.stride_tricks.as_strided(x, shape, strides, subok)
         array.setflags(write=writeable)
         return array
 
