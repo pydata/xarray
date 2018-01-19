@@ -55,6 +55,11 @@ Enhancements
 - :py:func:`~plot.line()` learned to draw multiple lines if provided with a
   2D variable.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Reduce memory usage when decoding a variable with a scale_factor, by
+  converting 8-bit and 16-bit integers to float32 instead of float64
+  (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
+  Correspondingly, encoded variables may also be saved with a smaller dtype.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -74,11 +79,9 @@ Bug fixes
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
-
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
-- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
+- Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`~DataArray.__setitem__` checks
 - Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`DataArray.__setitem__` checks
