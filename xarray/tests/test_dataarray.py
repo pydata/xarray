@@ -1790,7 +1790,7 @@ class TestDataArray(TestCase):
                   'c': -999}
         orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
 
-        for dtype in [np.float32, np.float64, np.float128]:
+        for dtype in [np.float16, np.float32, np.float64]:
             assert orig.astype(float).mean(dtype=dtype).dtype == dtype
 
     def test_reduce_out(self):
