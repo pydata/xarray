@@ -3287,16 +3287,27 @@ def da_dask(seed=123):
     return da
 
 
+@pytest.mark.parametrize('da', (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da['time'])
     assert_identical(rolling_obj.window_labels, da['time'])
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
-    # TODO valid label seems different from that used in reduce
+
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean('time')
+
+        # TODO add assert_allclose_with_nan, which compares nan position
+        # same nan position
+        assert_array_equal(actual.isnull(), expected.isnull())
+        if (~actual.isnull()).sum() > 0:
+            np.allclose(actual.values[actual.values.nonzero()],
+                        expected.values[expected.values.nonzero()])
 
 
 def test_rolling_doc(da):

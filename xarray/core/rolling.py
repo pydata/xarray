@@ -94,35 +94,6 @@ class Rolling(object):
     def __len__(self):
         return self.obj.sizes[self.dim]
 
-    def construct(self, new_dim, center=None):
-        """
-        Make an array object with rolling and stack along `new_dim`.
-        This only applies to only data variables, but not coordinate variables.
-
-        Parameters
-        ----------
-        window_dim: str
-            New name of the window dimension.
-        center: None or boolean.
-            If True, directly construct centered array.
-            If None, self.center will be used.
-
-        Returns
-        -------
-        Variables that is a view of the original data variables with a sliding
-        window applied.
-
-        See also
-        --------
-        DataArray.rolling_window
-        Dataset.rolling
-        DataArray.rolling
-        """
-
-        center = self.center if center is None else center
-        return self.obj._rolling_window(self.dim, self.window, new_dim,
-                                        center)
-
 
 class DataArrayRolling(Rolling):
     """
@@ -155,29 +126,18 @@ class DataArrayRolling(Rolling):
     def __init__(self, obj, min_periods=None, center=False, **windows):
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
-        self._windows = None
-        self._valid_windows = None
         self.window_indices = None
         self.window_labels = None
 
         self._setup_windows()
 
-    @property
-    def windows(self):
-        if self._windows is None:
-            self._windows = OrderedDict(zip(self.window_labels,
-                                            self.window_indices))
-        return self._windows
-
     def __iter__(self):
-        for (label, indices, valid) in zip(self.window_labels,
-                                           self.window_indices,
-                                           self._valid_windows):
-
+        min_periods = self.min_periods if self.min_periods else self.window
+        for (label, indices) in zip(self.window_labels, self.window_indices):
             window = self.obj.isel(**{self.dim: indices})
 
-            if not valid:
-                window = full_like(window, fill_value=True, dtype=bool)
+            counts = window.count(dim=self.dim)
+            window = window.where(counts >= self._min_periods)
 
             yield (label, window)
 
@@ -185,32 +145,15 @@ class DataArrayRolling(Rolling):
         """
         Find the indices and labels for each window
         """
-        from .dataarray import DataArray
-
         self.window_labels = self.obj[self.dim]
-
         window = int(self.window)
-
         dim_size = self.obj[self.dim].size
 
         stops = np.arange(dim_size) + 1
         starts = np.maximum(stops - window, 0)
 
-        if self._min_periods > 1:
-            valid_windows = (stops - starts) >= self._min_periods
-        else:
-            # No invalid windows
-            valid_windows = np.ones(dim_size, dtype=bool)
-        self._valid_windows = DataArray(valid_windows, dims=(self.dim, ),
-                                        coords=self.obj[self.dim].coords)
-
         self.window_indices = [slice(start, stop)
                                for start, stop in zip(starts, stops)]
-
-    def _center_result(self, result):
-        """center result"""
-        shift = (-self.window // 2) + 1
-        return result.shift(**{self.dim: shift})
 
     def to_dataarray(self, window_dim):
         """
