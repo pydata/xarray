@@ -192,7 +192,8 @@ class DataArrayRolling(Rolling):
 
         window = self.obj.variable.rolling_window(self.dim, self.window,
                                                   window_dim, self.center)
-        return DataArray(window, coords=self.obj.coords, fastpath=True)
+        return DataArray(window, dims=self.obj.dims + (window_dim,),
+                         coords=self.obj.coords)
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
