@@ -3303,7 +3303,7 @@ def test_rolling_iter(da):
         expected = window_da.mean('time')
 
         # TODO add assert_allclose_with_nan, which compares nan position
-        # same nan position
+        # as well as the closeness of the values.
         assert_array_equal(actual.isnull(), expected.isnull())
         if (~actual.isnull()).sum() > 0:
             np.allclose(actual.values[actual.values.nonzero()],

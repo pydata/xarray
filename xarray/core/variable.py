@@ -950,6 +950,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         if isinstance(self.data, dask_array_type):
             array = self.data
 
+            # Dask does not yet support pad. We manually implement it.
+            # https://github.com/dask/dask/issues/1926
             for d, pad in pad_widths.items():
                 axis = self.get_axis_num(d)
                 before_shape = list(array.shape)
