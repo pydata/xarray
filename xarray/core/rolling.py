@@ -316,19 +316,24 @@ class DataArrayRolling(Rolling):
 
             axis = self.obj.get_axis_num(self.dim)
 
-            if isinstance(self.obj.data, dask_array_type):
+            padded = self.obj.variable
+            if self.center:
+                shift = (-self.window // 2) + 1
+                padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
+                valid = (slice(None), ) * axis + (slice(-shift, None), )
+
+            if isinstance(padded.data, dask_array_type):
                 values = dask_rolling_wrapper(func, self.obj.data,
                                               window=self.window,
                                               min_count=min_count,
                                               axis=axis)
             else:
-                values = func(self.obj.data, window=self.window,
+                values = func(padded.data, window=self.window,
                               min_count=min_count, axis=axis)
 
-            result = DataArray(values, self.obj.coords)
-
             if self.center:
-                result = self._center_result(result)
+                values = values[valid]
+            result = DataArray(values, self.obj.coords)
 
             return result
         return wrapped_func

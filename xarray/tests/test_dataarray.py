@@ -3377,12 +3377,9 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
                           min_periods=min_periods).mean()
     da_rolling = da.rolling(index=window, center=center,
                             min_periods=min_periods).mean()
-    # pandas does some fancy stuff in the last position,
-    # we're not going to do that yet!
-    np.testing.assert_allclose(s_rolling.values[:-1],
-                               da_rolling.values[:-1])
-    np.testing.assert_allclose(s_rolling.index,
-                               da_rolling['index'])
+
+    np.testing.assert_allclose(s_rolling.values, da_rolling.values)
+    np.testing.assert_allclose(s_rolling.index, da_rolling['index'])
 
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)

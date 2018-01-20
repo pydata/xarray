@@ -4133,19 +4133,9 @@ def test_rolling_pandas_compat(center, window, min_periods):
                             min_periods=min_periods).mean()
     ds_rolling = ds.rolling(index=window, center=center,
                             min_periods=min_periods).mean()
-    # pandas does some fancy stuff in the last position,
-    # we're not going to do that yet!
-    np.testing.assert_allclose(df_rolling['x'].values[:-1],
-                               ds_rolling['x'].values[:-1])
-    np.testing.assert_allclose(df_rolling.index,
-                               ds_rolling['index'])
-    # does not use bottleneck
-    ds_rolling_np = ds.rolling(index=window, center=center,
-                               min_periods=min_periods).reduce(np.nanmean)
-    np.testing.assert_allclose(df_rolling['x'].values[:-1],
-                               ds_rolling_np['x'].values[:-1])
-    np.testing.assert_allclose(df_rolling.index,
-                               ds_rolling_np['index'])
+
+    np.testing.assert_allclose(df_rolling['x'].values, ds_rolling['x'].values)
+    np.testing.assert_allclose(df_rolling.index, ds_rolling['index'])
 
 
 @pytest.mark.parametrize('center', (True, False))
@@ -4158,12 +4148,9 @@ def test_rolling_window_pandas_compat(center, window):
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
     ds_rolling = ds.rolling(index=window,
                             center=center).to_dataset('window').mean('window')
-    # pandas does some fancy stuff in the last position,
-    # we're not going to do that yet!
-    np.testing.assert_allclose(df_rolling['x'].values[:-1],
-                               ds_rolling['x'].values[:-1])
-    np.testing.assert_allclose(df_rolling.index,
-                               ds_rolling['index'])
+
+    np.testing.assert_allclose(df_rolling['x'].values, ds_rolling['x'].values)
+    np.testing.assert_allclose(df_rolling.index, ds_rolling['index'])
 
 
 @pytest.mark.slow

@@ -936,7 +936,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             result = result._shift_one_dim(dim, count)
         return result
 
-    def _pad_with_fill_value(self, **pad_widths):
+    def pad_with_fill_value(self, **pad_widths):
         """
         Return a new Variable with paddings.
 
@@ -1537,7 +1537,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             pads = (window - 1, 0)
 
-        array = self._pad_with_fill_value(**{dim: pads})
+        array = self.pad_with_fill_value(**{dim: pads})
         return Variable(new_dims, duck_array_ops.rolling_window(
             array.data, self.get_axis_num(dim), window=window))
 

@@ -735,7 +735,7 @@ class VariableSubclassTestCases(object):
         np_args = [((2, 1), (0, 0), (0, 0)), ((0, 0), (0, 3), (0, 0)),
                    ((3, 1), (0, 0), (2, 0))]
         for xr_arg, np_arg in zip(xr_args, np_args):
-            actual = v._pad_with_fill_value(**xr_arg)
+            actual = v.pad_with_fill_value(**xr_arg)
             expected = np.pad(np.array(v.data.astype(float)), np_arg,
                               mode='constant', constant_values=np.nan)
             assert_array_equal(actual, expected)
