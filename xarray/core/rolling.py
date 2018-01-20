@@ -6,7 +6,6 @@ import warnings
 from distutils.version import LooseVersion
 
 from .pycompat import OrderedDict, zip, dask_array_type
-from .common import full_like
 from .ops import (inject_bottleneck_rolling_methods,
                   inject_datasetrolling_methods, has_bottleneck, bn)
 from .dask_array_ops import dask_rolling_wrapper
@@ -132,7 +131,6 @@ class DataArrayRolling(Rolling):
         self._setup_windows()
 
     def __iter__(self):
-        min_periods = self.min_periods if self.min_periods else self.window
         for (label, indices) in zip(self.window_labels, self.window_indices):
             window = self.obj.isel(**{self.dim: indices})
 
