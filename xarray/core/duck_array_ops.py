@@ -175,11 +175,11 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
                            keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggregators
-        # automatically:
-        kwargs.pop('dtype', None)
-        kwargs.pop('out', None)
+        if kwargs.pop('out', None) is not None:
+            raise TypeError('`out` is not valid for {}'.format(name))
 
+        # If dtype is supplied, we use numpy's method.
+        dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in 'SU':
@@ -192,7 +192,8 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                     % (name, values.dtype))
             nanname = 'nan' + name
             if (isinstance(axis, tuple) or not values.dtype.isnative or
-                    no_bottleneck):
+                    no_bottleneck or
+                    (dtype is not None and np.dtype(dtype) != values.dtype)):
                 # bottleneck can't handle multiple axis arguments or non-native
                 # endianness
                 if np_compat:
@@ -200,6 +201,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 else:
                     eager_module = np
             else:
+                kwargs.pop('dtype', None)
                 eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
             using_numpy_nan_func = (eager_module is np or
