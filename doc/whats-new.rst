@@ -27,6 +27,13 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Improve :py:func:`~xarray.DataArray.rooling` logic for speed up.
+  :py:func:`~xarray.DataArrayRolling` object now support ``to_dataarray``
+  method that returns a view of the DataArray object with the rolling-window
+  dimension added to the last position. This enables more flexible operation,
+  such as strided rolling, windowed rolling, ND-rolling, and convolution.
+  (:issue:`1831`, :issue:`1142`, :issue:`819`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
   By `Alan Snow <https://github.com/snowman2>`_.
 

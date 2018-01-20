@@ -158,19 +158,30 @@ Aggregation and summary methods can be applied directly to the ``Rolling`` objec
     r.mean()
     r.reduce(np.std)
 
-Note that rolling window aggregations are much faster (both asymptotically and
-because they avoid a loop in Python) when bottleneck_ is installed. Otherwise,
-we fall back to a slower, pure Python implementation.
+Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck/
 
-Finally, we can manually iterate through ``Rolling`` objects:
+We can also manually iterate through ``Rolling`` objects:
 
 .. ipython:: python
 
    @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
+
+Finally, the rolling object has ``to_dataarray`` method, which gives a
+view of the original ``DataArray`` with the windowed dimension is attached to
+the last position.
+You can use this for more advanced rolling operations, such as strided rolling,
+windowed rolling, convolution and short-time FFT.
+
+.. ipython:: python
+
+    rolling_da = r.to_dataarray('window_dim')
+    rolling_da
+    # rolling mean for every 2 points
+    rolling_da.isel(y=slice(None, None, 2)).mean('window_dim')
 
 .. _compute.broadcasting:
 
