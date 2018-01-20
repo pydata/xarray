@@ -176,7 +176,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
-            raise ValueError('`out` is not valid for {}'.format(name))
+            raise TypeError('`out` is not valid for {}'.format(name))
 
         # If dtype is supplied, we use numpy's method.
         dtype = kwargs.get('dtype', None)
