@@ -1799,7 +1799,7 @@ class TestDataArray(TestCase):
                   'c': -999}
         orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords, dims=['x', 'y'])
 
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             orig.mean(out=np.ones(orig.shape))
 
     # skip due to bug in older versions of numpy.nanpercentile
