@@ -412,6 +412,11 @@ class BaseDataObject(AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        core.groupby.DataArrayGroupBy
+        core.groupby.DatasetGroupBy
         """
         return self._groupby_cls(self, group, squeeze=squeeze)
 

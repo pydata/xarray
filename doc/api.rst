@@ -480,21 +480,18 @@ Rolling objects
    core.rolling.DatasetRolling.to_dataset
    core.rolling.DatasetRolling.reduce
 
-**Aggregation**:
-:py:attr:`core.rolling.DataArrayRolling.argmax`
-:py:attr:`core.rolling.DataArrayRolling.argmin`
-:py:attr:`core.rolling.DataArrayRolling.max`
-:py:attr:`core.rolling.DataArrayRolling.min`
-:py:attr:`core.rolling.DataArrayRolling.mean`
-:py:attr:`core.rolling.DataArrayRolling.prod`
-:py:attr:`core.rolling.DataArrayRolling.sum`
-:py:attr:`core.rolling.DataArrayRolling.std`
-:py:attr:`core.rolling.DataArrayRolling.var`
-:py:attr:`core.rolling.DataArrayRolling.median`
-:py:attr:`core.rolling.DataArrayRolling.cumsum`
-:py:attr:`core.rolling.DataArrayRolling.cumprod`
-:py:attr:`core.rolling.DataArrayRolling.count`
+GroupByObjects
+==============
 
+.. autosummary::
+   :toctree: generated/
+
+   core.groupby.DataArrayGroupBy
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DataArrayGroupBy.reduce
+   core.groupby.DatasetGroupBy
+   core.groupby.DatasetGroupBy.apply
+   core.groupby.DatasetGroupBy.reduce
 
 Plotting
 ========
