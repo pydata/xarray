@@ -33,10 +33,11 @@ Enhancements
   dimension added to the last position. This enables more flexible operation,
   such as strided rolling, windowed rolling, ND-rolling, and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
+- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+  arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
   By `Alan Snow <https://github.com/snowman2>`_.
-
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
   1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
   time) (:issue:`1737`).
@@ -73,6 +74,9 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Added warning in api.py of a netCDF4 bug that occurs when
+  the filepath has 88 characters (:issue:`1745`).
+  By `Liam Brannigan <https://github.com/braaannigan>` _.
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
