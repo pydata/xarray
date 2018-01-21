@@ -129,7 +129,13 @@ the first letters of the corresponding months.
 
 You can use these shortcuts with both Datasets and DataArray coordinates.
 
-In addition, xarray supports rounding operations ``floor``, ``ceil``, and ``round``. These operations require you to supply a rounding frequency as a string argument (see list of frequency aliases at http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases).
+In addition, xarray supports rounding operations ``floor``, ``ceil``, and ``round``. These operations require that you supply a `rounding frequency as a string argument.`__
+
+__ http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
+
+.. ipython:: python
+
+    ds['time'].dt.floor('D')
 
 .. _resampling:
 
