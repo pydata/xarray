@@ -98,7 +98,7 @@ class DataArrayRolling(Rolling):
     def __init__(self, obj, min_periods=None, center=False, **windows):
         """
         Moving window object for DataArray.
-        You should use the DataArray.rolling() method to construct this object
+        You should use DataArray.rolling() method to construct this object
         instead of the class constructor.
 
         Parameters
@@ -294,26 +294,11 @@ class DataArrayRolling(Rolling):
 
 
 class DatasetRolling(Rolling):
-    """An object that implements the moving window pattern for Dataset.
-
-    This class has an OrderedDict named self.rollings, that is a collection of
-    DataArrayRollings for all the DataArrays in the Dataset, except for those
-    not depending on rolling dimension.
-
-    reduce() method returns a new Dataset generated from a set of
-    self.rollings[key].reduce().
-
-    See Also
-    --------
-    Dataset.groupby
-    DataArray.groupby
-    Dataset.rolling
-    DataArray.rolling
-    """
-
     def __init__(self, obj, min_periods=None, center=False, **windows):
         """
         Moving window object for Dataset.
+        You should use Dataset.rolling() method to construct this object
+        instead of the class constructor.
 
         Parameters
         ----------
@@ -335,6 +320,13 @@ class DatasetRolling(Rolling):
         Returns
         -------
         rolling : type of input argument
+
+        See Also
+        --------
+        Dataset.rolling
+        DataArray.rolling
+        Dataset.groupby
+        DataArray.groupby
         """
         super(DatasetRolling, self).__init__(obj,
                                              min_periods, center, **windows)
