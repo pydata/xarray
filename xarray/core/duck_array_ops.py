@@ -268,7 +268,7 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, axis, window):
+def rolling_window(array, window, axis=-1):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
@@ -286,4 +286,4 @@ def rolling_window(array, axis, window):
                   for w in range(window)]
         return da.stack(arrays, axis=-1)
     else:  # np.ndarray
-        return nputils.rolling_window(array, axis, window)
+        return nputils.rolling_window(array, window, axis=axis)

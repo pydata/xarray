@@ -136,7 +136,7 @@ class NumpyVIndexAdapter(object):
                                        mixed_positions)
 
 
-def rolling_window(a, axis, window):
+def rolling_window(a, window, axis=-1):
     """
     Make an ndarray with a rolling window along axis.
 

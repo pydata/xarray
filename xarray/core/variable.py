@@ -1544,7 +1544,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         array = self.pad_with_fill_value(**{dim: pads})
         return Variable(new_dims, duck_array_ops.rolling_window(
-            array.data, self.get_axis_num(dim), window=window))
+            array.data, axis=self.get_axis_num(dim), window=window))
 
     @property
     def real(self):
