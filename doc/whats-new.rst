@@ -33,7 +33,7 @@ Enhancements
   dimension added to the last position. This enables more flexible operation,
   such as strided rolling, windowed rolling, ND-rolling, and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
-- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+- reduce methods such as :py:func:`DataArray.sum()` now accept ``dtype``
   arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
@@ -74,6 +74,10 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Rolling aggregation with ``center=True`` option now gives the same result
+  with pandas including the last element (:issue:`1046`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Added warning in api.py of a netCDF4 bug that occurs when
   the filepath has 88 characters (:issue:`1745`).
   By `Liam Brannigan <https://github.com/braaannigan>` _.

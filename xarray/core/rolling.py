@@ -218,14 +218,13 @@ class DataArrayRolling(Rolling):
         result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
 
         # Find valid windows based on count.
-        # We do not use `reduced.count()` because it constructs a larger array
-        # (notice that `windows` is just a view)
-        counts = (~self.obj.isnull()).rolling(
-            center=self.center, **{self.dim: self.window}).to_dataarray(
-                '_rolling_window_dim').sum(dim='_rolling_window_dim')
-        result = result.where(counts >= self._min_periods)
-        # restore dim order
-        return result.transpose(*self.obj.dims)
+        # The following workaround is equivalent to `windows.count()`
+        # but avoids to consume too much memory by using a view.
+        counts = ((~self.obj.isnull()).astype(float)
+                  .rolling(center=self.center, **{self.dim: self.window})
+                  .to_dataarray('_rolling_window_dim')
+                  .sum(dim='_rolling_window_dim'))
+        return result.where(counts > self._min_periods - 0.5)
 
     @classmethod
     def _reduce_method(cls, func):
