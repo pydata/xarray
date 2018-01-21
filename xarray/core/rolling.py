@@ -218,13 +218,16 @@ class DataArrayRolling(Rolling):
         result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
 
         # Find valid windows based on count.
-        # The following workaround is equivalent to `windows.count()`
-        # but avoids to consume too much memory by using a view.
-        counts = ((~self.obj.isnull()).astype(float)
+        counts = self._counts()
+        return result.where(counts >= self._min_periods)
+
+    def _counts(self):
+        """ Number of non-nan entries in each rolling window. """
+        counts = (self.obj.notnull().astype(float)
                   .rolling(center=self.center, **{self.dim: self.window})
                   .to_dataarray('_rolling_window_dim')
                   .sum(dim='_rolling_window_dim'))
-        return result.where(counts > self._min_periods - 0.5)
+        return counts
 
     @classmethod
     def _reduce_method(cls, func):

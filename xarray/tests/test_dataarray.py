@@ -3448,7 +3448,7 @@ def test_rolling_count_correct():
     result = da.rolling(time=11, min_periods=None).count()
     expected = DataArray(
         [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-         np.nan, np.nan, np.nan, np.nan, 8], dims='time')
+         np.nan, np.nan, np.nan, np.nan, np.nan], dims='time')
     assert_equal(result, expected)
 
     result = da.rolling(time=7, min_periods=2).count()
