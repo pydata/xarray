@@ -98,6 +98,8 @@ class DataArrayRolling(Rolling):
     def __init__(self, obj, min_periods=None, center=False, **windows):
         """
         Moving window object for DataArray.
+        You should use the DataArray.rolling() method to construct this object
+        instead of the class constructor.
 
         Parameters
         ----------
@@ -124,8 +126,8 @@ class DataArrayRolling(Rolling):
         --------
         DataArray.rolling
         DataArray.groupby
-        Dataset.groupby
         Dataset.rolling
+        Dataset.groupby
         """
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
@@ -157,7 +159,7 @@ class DataArrayRolling(Rolling):
         self.window_indices = [slice(start, stop)
                                for start, stop in zip(starts, stops)]
 
-    def to_dataarray(self, window_dim, stride=None):
+    def to_dataarray(self, window_dim, stride=1):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -167,7 +169,7 @@ class DataArrayRolling(Rolling):
         window_dim: str
             New name of the window dimension.
         stride: integer, optional
-            size of stride for the rolling window.
+            Size of stride for the rolling window.
 
         Returns
         -------
@@ -392,7 +394,7 @@ class DatasetRolling(Rolling):
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
 
-    def to_dataset(self, window_dim, stride=None):
+    def to_dataset(self, window_dim, stride=1):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension

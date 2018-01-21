@@ -936,7 +936,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             result = result._shift_one_dim(dim, count)
         return result
 
-    def pad_with_fill_value(self, fill_value=None, **pad_widths):
+    def pad_with_fill_value(self, fill_value=dtypes.NA, **pad_widths):
         """
         Return a new Variable with paddings.
 
@@ -945,7 +945,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         **pad_width: keyword arguments of the form {dim: (before, after)}
             Number of values padded to the edges of each dimension.
         """
-        if fill_value is None:
+        if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
@@ -1542,7 +1542,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             pads = (window - 1, 0)
 
-        fill_value = False if self.dtype.kind == 'b' else None
+        fill_value = False if self.dtype.kind == 'b' else dtypes.NA
         array = self.pad_with_fill_value(fill_value=fill_value, **{dim: pads})
         return Variable(new_dims, duck_array_ops.rolling_window(
             array.data, axis=self.get_axis_num(dim), window=window))
