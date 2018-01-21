@@ -3395,7 +3395,7 @@ def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-def test_rolling_pandas_compat(da, center, window, min_periods):
+def test_rolling_pandas_compat(center, window, min_periods):
     s = pd.Series(range(10))
     da = DataArray.from_series(s)
 
@@ -3413,6 +3413,29 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
     np.testing.assert_allclose(s_rolling.index, da_rolling['index'])
     np.testing.assert_allclose(s_rolling.values, da_rolling_np.values)
     np.testing.assert_allclose(s_rolling.index, da_rolling_np['index'])
+
+
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+def test_rolling_to_dataarray(center, window):
+    df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
+                       'time': np.linspace(0, 1, 20)})
+
+    s = pd.Series(range(10))
+    da = DataArray.from_series(s)
+
+    s_rolling = s.rolling(window, center=center, min_periods=1).mean()
+    da_rolling = da.rolling(index=window, center=center, min_periods=1)
+
+    da_rolling_mean = da_rolling.to_dataarray('window').mean('window')
+    np.testing.assert_allclose(s_rolling.values, da_rolling_mean.values)
+    np.testing.assert_allclose(s_rolling.index, da_rolling_mean['index'])
+
+    # with stride
+    da_rolling_mean = da_rolling.to_dataarray('window',
+                                              stride=2).mean('window')
+    np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
+    np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean['index'])
 
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)

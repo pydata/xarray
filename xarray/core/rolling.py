@@ -153,7 +153,7 @@ class DataArrayRolling(Rolling):
         self.window_indices = [slice(start, stop)
                                for start, stop in zip(starts, stops)]
 
-    def to_dataarray(self, window_dim):
+    def to_dataarray(self, window_dim, stride=None):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -162,6 +162,8 @@ class DataArrayRolling(Rolling):
         ----------
         window_dim: str
             New name of the window dimension.
+        stride: integer, optional
+            size of stride for the rolling window.
 
         Returns
         -------
@@ -175,13 +177,15 @@ class DataArrayRolling(Rolling):
         --------
         >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
 
-        >>> da.rolling_window(x, 'b', 4, 'window_dim')
+        >>> rolling = da.rolling(a=3)
+        >>> rolling.to_datarray('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
         array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
         Dimensions without coordinates: a, b, window_dim
 
-        >>> da.rolling_window(x, 'b', 4, 'window_dim', center=True)
+        >>> rolling = da.rolling(a=3, center=True)
+        >>> rolling.to_datarray('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
         array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
                [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
@@ -192,8 +196,9 @@ class DataArrayRolling(Rolling):
 
         window = self.obj.variable.rolling_window(self.dim, self.window,
                                                   window_dim, self.center)
-        return DataArray(window, dims=self.obj.dims + (window_dim,),
-                         coords=self.obj.coords)
+        result = DataArray(window, dims=self.obj.dims + (window_dim,),
+                           coords=self.obj.coords)
+        return result.isel(**{self.dim: slice(None, None, stride)})
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -383,7 +388,7 @@ class DatasetRolling(Rolling):
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
 
-    def to_dataset(self, window_dim):
+    def to_dataset(self, window_dim, stride=None):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -392,6 +397,8 @@ class DatasetRolling(Rolling):
         ----------
         window_dim: str
             New name of the window dimension.
+        stride: integer, optional
+            size of stride for the rolling window.
 
         Returns
         -------
@@ -406,7 +413,8 @@ class DatasetRolling(Rolling):
                 dataset[key] = self.rollings[key].to_dataarray(window_dim)
             else:
                 dataset[key] = da
-        return Dataset(dataset, coords=self.obj.coords)
+        return Dataset(dataset, coords=self.obj.coords).isel(
+            **{self.dim: slice(None, None, stride)})
 
 
 inject_bottleneck_rolling_methods(DataArrayRolling)

@@ -4140,17 +4140,24 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-def test_rolling_window_pandas_compat(center, window):
+def test_rolling_to_dataset(center, window):
     df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
                        'time': np.linspace(0, 1, 20)})
 
     ds = Dataset.from_dataframe(df)
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
-    ds_rolling = ds.rolling(index=window,
-                            center=center).to_dataset('window').mean('window')
+    ds_rolling = ds.rolling(index=window, center=center)
+    
+    ds_rolling_mean = ds_rolling.to_dataset('window').mean('window')
+    np.testing.assert_allclose(df_rolling['x'].values,
+                               ds_rolling_mean['x'].values)
+    np.testing.assert_allclose(df_rolling.index, ds_rolling_mean['index'])
 
-    np.testing.assert_allclose(df_rolling['x'].values, ds_rolling['x'].values)
-    np.testing.assert_allclose(df_rolling.index, ds_rolling['index'])
+    # with stride
+    ds_rolling_mean = ds_rolling.to_dataset('window', stride=2).mean('window')
+    np.testing.assert_allclose(df_rolling['x'][::2].values,
+                               ds_rolling_mean['x'].values)
+    np.testing.assert_allclose(df_rolling.index[::2], ds_rolling_mean['index'])
 
 
 @pytest.mark.slow

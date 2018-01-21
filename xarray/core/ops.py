@@ -228,7 +228,7 @@ def _func_slash_method_wrapper(f, name=None):
 def rolling_count(rolling):
 
     rolling_count = rolling._counts()
-    enough_periods = rolling_count > rolling._min_periods - 0.5
+    enough_periods = rolling_count >= rolling._min_periods
     return rolling_count.where(enough_periods)
 
 
