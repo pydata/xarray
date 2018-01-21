@@ -488,7 +488,8 @@ class BaseDataObject(AttrAccessMixin):
 
         Returns
         -------
-        rolling : type of input argument
+        Rolling object (core.rolling.DataArrayRolling for DataArray,
+        core.rolling.DatasetRolling for Dataset.)
 
         Examples
         --------
