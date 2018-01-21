@@ -4147,7 +4147,7 @@ def test_rolling_to_dataset(center, window):
     ds = Dataset.from_dataframe(df)
     df_rolling = df.rolling(window, center=center, min_periods=1).mean()
     ds_rolling = ds.rolling(index=window, center=center)
-    
+
     ds_rolling_mean = ds_rolling.to_dataset('window').mean('window')
     np.testing.assert_allclose(df_rolling['x'].values,
                                ds_rolling_mean['x'].values)

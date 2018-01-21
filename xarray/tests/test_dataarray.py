@@ -3418,9 +3418,6 @@ def test_rolling_pandas_compat(center, window, min_periods):
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 def test_rolling_to_dataarray(center, window):
-    df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
-                       'time': np.linspace(0, 1, 20)})
-
     s = pd.Series(range(10))
     da = DataArray.from_series(s)
 
