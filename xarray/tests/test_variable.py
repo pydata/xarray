@@ -740,6 +740,15 @@ class VariableSubclassTestCases(object):
                               mode='constant', constant_values=np.nan)
             assert_array_equal(actual, expected)
 
+        # for the boolean array, we pad False
+        data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
+        v = self.cls(['x', 'y', 'z'], data)
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(**xr_arg)
+            expected = np.pad(np.array(v.data), np_arg,
+                              mode='constant', constant_values=False)
+            assert_array_equal(actual, expected)
+
     def test_rolling_window(self):
         # Just a working test. See test_nputils fot the algorithm validation
         v = self.cls(['x', 'y', 'z'], np.arange(40*30*2).reshape(40, 30, 2))

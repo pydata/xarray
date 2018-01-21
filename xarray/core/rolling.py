@@ -223,7 +223,7 @@ class DataArrayRolling(Rolling):
 
     def _counts(self):
         """ Number of non-nan entries in each rolling window. """
-        counts = (self.obj.notnull().astype(float)
+        counts = (self.obj.notnull()
                   .rolling(center=self.center, **{self.dim: self.window})
                   .to_dataarray('_rolling_window_dim')
                   .sum(dim='_rolling_window_dim'))

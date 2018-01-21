@@ -945,7 +945,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         **pad_width: keyword arguments of the form {dim: (before, after)}
             Number of values padded to the edges of each dimension.
         """
-        dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        if self.dtype.kind == 'b':
+            dtype, fill_value = self.dtype, False
+        else:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
 
         if isinstance(self.data, dask_array_type):
             array = self.data
