@@ -95,34 +95,38 @@ class Rolling(object):
 
 
 class DataArrayRolling(Rolling):
-    """
-    This class adds the following class methods;
-    + _reduce_method(cls, func)
-    + _bottleneck_reduce(cls, func)
-
-    These class methods will be used to inject numpy or bottleneck function
-    by doing
-
-    >>> func = cls._reduce_method(f)
-    >>> func.__name__ = name
-    >>> setattr(cls, name, func)
-
-    in ops.inject_bottleneck_rolling_methods.
-
-    After the injection, the Rolling object will have `name` (such as `mean` or
-    `median`) methods,
-    e.g. it enables the following call,
-    >>> data.rolling().mean()
-
-    If bottleneck is installed, some bottleneck methods will be used instdad of
-    the numpy method.
-
-    see also
-    + rolling.DataArrayRolling
-    + ops.inject_bottleneck_rolling_methods
-    """
-
     def __init__(self, obj, min_periods=None, center=False, **windows):
+        """
+        Moving window object for DataArray.
+
+        Parameters
+        ----------
+        obj : DataArray
+            Object to window.
+        min_periods : int, default None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default, None, is equivalent to
+            setting min_periods equal to the size of the window.
+        center : boolean, default False
+            Set the labels at the center of the window.
+        **windows : dim=window
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+
+        Returns
+        -------
+        rolling : type of input argument
+
+        See Also
+        --------
+        DataArray.rolling
+        DataArray.groupby
+        Dataset.groupby
+        Dataset.rolling
+        """
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
         self.window_indices = None
@@ -176,14 +180,14 @@ class DataArrayRolling(Rolling):
         Examples
         --------
         >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
-
+        >>>
         >>> rolling = da.rolling(a=3)
         >>> rolling.to_datarray('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
         array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
                [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
         Dimensions without coordinates: a, b, window_dim
-
+        >>>
         >>> rolling = da.rolling(a=3, center=True)
         >>> rolling.to_datarray('window_dim')
         <xarray.DataArray (a: 2, b: 4, window_dim: 3)>

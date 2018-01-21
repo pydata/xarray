@@ -467,6 +467,35 @@ DataArray methods
    DataArray.load
    DataArray.chunk
 
+Rolling objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayRolling
+   core.rolling.DataArrayRolling.to_dataarray
+   core.rolling.DataArrayRolling.reduce
+   core.rolling.DatasetRolling
+   core.rolling.DatasetRolling.to_dataset
+   core.rolling.DatasetRolling.reduce
+
+**Aggregation**:
+:py:attr:`core.rolling.DataArrayRolling.argmax`
+:py:attr:`core.rolling.DataArrayRolling.argmin`
+:py:attr:`core.rolling.DataArrayRolling.max`
+:py:attr:`core.rolling.DataArrayRolling.min`
+:py:attr:`core.rolling.DataArrayRolling.mean`
+:py:attr:`core.rolling.DataArrayRolling.prod`
+:py:attr:`core.rolling.DataArrayRolling.sum`
+:py:attr:`core.rolling.DataArrayRolling.std`
+:py:attr:`core.rolling.DataArrayRolling.var`
+:py:attr:`core.rolling.DataArrayRolling.median`
+:py:attr:`core.rolling.DataArrayRolling.cumsum`
+:py:attr:`core.rolling.DataArrayRolling.cumprod`
+:py:attr:`core.rolling.DataArrayRolling.count`
+
+
 Plotting
 ========
 

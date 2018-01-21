@@ -471,9 +471,6 @@ class BaseDataObject(AttrAccessMixin):
         """
         Rolling window object.
 
-        Rolling window aggregations are much faster when bottleneck is
-        installed.
-
         Parameters
         ----------
         min_periods : int, default None
@@ -519,6 +516,11 @@ class BaseDataObject(AttrAccessMixin):
         array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
         Coordinates:
           * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
+
+        See Also
+        --------
+        core.rolling.DataArrayRolling
+        core.rolling.DatasetRolling
         """
 
         return self._rolling_cls(self, min_periods=min_periods,
