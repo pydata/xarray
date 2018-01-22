@@ -23,7 +23,7 @@ import importlib
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
-             'cartopy netCDF4 rasterio').split():
+             'cartopy netCDF4 rasterio zarr').split():
     try:
         module = importlib.import_module(name)
         if name == 'matplotlib':
@@ -323,4 +323,5 @@ intersphinx_mapping = {
     'iris': ('http://scitools.org.uk/iris/docs/latest/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'numba': ('https://numba.pydata.org/numba-doc/latest/', None),
+    'matplotlib': ('https://matplotlib.org/', None),
 }

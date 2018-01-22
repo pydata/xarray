@@ -6,7 +6,6 @@ import unicodedata
 import numpy as np
 
 from .. import conventions, Variable
-from ..core import duck_array_ops
 from ..core.pycompat import basestring, unicode_type, OrderedDict
 
 

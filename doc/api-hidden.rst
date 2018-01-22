@@ -46,6 +46,7 @@
    Dataset.T
    Dataset.cumsum
    Dataset.cumprod
+   Dataset.rank
 
    DataArray.ndim
    DataArray.shape
@@ -91,6 +92,7 @@
    DataArray.T
    DataArray.cumsum
    DataArray.cumprod
+   DataArray.rank
 
    ufuncs.angle
    ufuncs.arccos

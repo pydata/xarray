@@ -18,31 +18,91 @@ What's New
 v0.10.1 (unreleased)
 --------------------
 
+Documentation
+~~~~~~~~~~~~~
+
+- New entry `Why don’t aggregations return Python scalars?` in the
+  :doc:`faq` (:issue:`1726`).
+  By `0x0L <https://github.com/0x0L>`_.
+
 Enhancements
 ~~~~~~~~~~~~
-
+- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+  arguments. (:issue:`1838`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
+  By `Alan Snow <https://github.com/snowman2>`_.
 - :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
   1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
   time) (:issue:`1737`).
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Added :py:meth:`DataArray.to_iris <xray.DataArray.to_iris>` and :py:meth:`DataArray.from_iris <xray.DataArray.from_iris>` for
+  converting data arrays to and from Iris_ Cubes with the same data and coordinates (:issue:`621` and :issue:`37`).
+  By `Neil Parley <https://github.com/nparley>`_ and `Duncan Watson-Parris <https://github.com/duncanwp>`_.
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support for using `Zarr`_ as storage layer for xarray.
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
+- :func:`xarray.plot.imshow` now handles RGB and RGBA images.
+  Saturation can be adjusted with ``vmin`` and ``vmax``, or with ``robust=True``.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- Experimental support for parsing ENVI metadata to coordinates and attributes
+  in :py:func:`xarray.open_rasterio`.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
+- :py:func:`~plot()` learned to rotate x-axis ticks if x-axis is time.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`~plot.line()` learned to draw multiple lines if provided with a
+  2D variable.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
+.. _Zarr: http://zarr.readthedocs.io/
+
+.. _Iris: http://scitools.org.uk/iris
+
+**New functions/methods**
+
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~
+- Added warning in api.py of a netCDF4 bug that occurs when
+  the filepath has 88 characters (:issue:`1745`).
+  By `Liam Brannigan <https://github.com/braaannigan>` _.
+- Fixed encoding of multi-dimensional coordinates in
+  :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
+  By `Mike Neish <https://github.com/neishm>`_.
+
+- Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
   Now item assignment to :py:meth:`~DataArray.__setitem__` checks
+- Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
+  Now item assignment to :py:meth:`DataArray.__setitem__` checks
   coordinates of target, destination and keys. If there are any conflict among
   these coordinates, ``IndexError`` will be raised.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
+- Properly point :py:meth:`DataArray.__dask_scheduler__` to
+  ``dask.threaded.get``.  By `Matthew Rocklin <https://github.com/mrocklin>`_.
+- Bug fixes in :py:meth:`DataArray.plot.imshow`: all-NaN arrays and arrays
+  with size one in some dimension can now be plotted, which is good for
+  exploring satellite imagery (:issue:`1780`).
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- Fixed ``UnboundLocalError`` when opening netCDF file `` (:issue:`1781`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- The ``variables``, ``attrs``, and ``dimensions`` properties have been
+  deprecated as part of a bug fix addressing an issue where backends were
+  unintentionally loading the datastores data and attributes repeatedly during
+  writes (:issue:`1798`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
+  (:issue:`1813`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.0:
-
-- Properly point DataArray.__dask_scheduler__ to dask.threaded.get
 
 v0.10.0 (20 November 2017)
 --------------------------
