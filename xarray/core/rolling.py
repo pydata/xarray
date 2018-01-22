@@ -228,6 +228,13 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
+        # Reduce functions usually assumes numeric type.
+        # For non-number array such as bool, We cast them to float
+        if self.obj.dtype.kind not in 'iufcm':
+            return DataArrayRolling(
+                self.obj.astype(float), center=self.center,
+                min_periods=self.min_periods,
+                **{self.dim: self.window}).reduce(func, **kwargs)
 
         windows = self.to_dataarray('_rolling_window_dim')
         result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)

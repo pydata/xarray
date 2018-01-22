@@ -3293,6 +3293,11 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+    if request.param == 3:  # boolean array
+        return DataArray(
+            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+            dims='time').isnull()
+
 
 @pytest.fixture
 def da_dask(seed=123):
@@ -3441,7 +3446,7 @@ def test_rolling_to_dataarray(center, window):
     assert (da_rolling_mean == 0.0).sum() >= 0
 
 
-@pytest.mark.parametrize('da', (1, 2), indirect=True)
+@pytest.mark.parametrize('da', (1, 2, 3), indirect=True)
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
