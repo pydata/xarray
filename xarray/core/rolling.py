@@ -228,11 +228,7 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
-        fill_value = dtypes.NA
-        # Reduce functions usually assumes numeric type.
-        # For non-number array such as bool, We cast them to float
-        if self.obj.dtype.kind == 'b':
-            fill_value = False
+        fill_value = dtypes.reduceable_fill_value(self.obj.dtype)
         windows = self.to_dataarray('_rolling_window_dim',
                                     fill_value=fill_value)
         result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
@@ -282,6 +278,12 @@ class DataArrayRolling(Rolling):
             padded = self.obj.variable
             if self.center:
                 shift = (-self.window // 2) + 1
+
+                if (LooseVersion(np.__version__) < LooseVersion('1.13') and
+                        self.obj.dtype.kind == 'b'):
+                    # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
+                    # mixed array correctly. We cast boolean array to float.
+                    padded = padded.astype(float)
                 padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
                 valid = (slice(None), ) * axis + (slice(-shift, None), )
 

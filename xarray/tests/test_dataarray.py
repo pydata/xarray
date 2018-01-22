@@ -3293,11 +3293,6 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
-    if request.param == 3:  # boolean array
-        return DataArray(
-            [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
-            dims='time').isnull()
-
 
 @pytest.fixture
 def da_dask(seed=123):
@@ -3456,6 +3451,10 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
+    if da.isnull().sum() > 1 and window == 1:
+        # this causes all nan slices
+        window = 2
+
     rolling_obj = da.rolling(time=window, center=center,
                              min_periods=min_periods)
 
@@ -3466,12 +3465,13 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@pytest.mark.parametrize('da', (3, ), indirect=True)
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 @pytest.mark.parametrize('name', ('sum', 'max'))
-def test_rolling_reduce_nonnumeric(da, center, min_periods, window, name):
+def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
+    da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                dims='time').isnull()
 
     if min_periods is not None and window < min_periods:
         min_periods = window

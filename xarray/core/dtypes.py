@@ -60,3 +60,13 @@ def is_datetime_like(dtype):
     """
     return (np.issubdtype(dtype, np.datetime64) or
             np.issubdtype(dtype, np.timedelta64))
+
+
+def reduceable_fill_value(dtype):
+    """ Fill value that can be calculated with dtype. """
+    if dtype.kind == 'b':
+        return False
+    promoted_dtype, _ = maybe_promote(dtype)
+    if promoted_dtype == object:
+        raise TypeError('dtype {} is not reduceable.'.format(dtype))
+    return NA
