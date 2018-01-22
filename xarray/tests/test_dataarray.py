@@ -3446,12 +3446,32 @@ def test_rolling_to_dataarray(center, window):
     assert (da_rolling_mean == 0.0).sum() >= 0
 
 
-@pytest.mark.parametrize('da', (1, 2, 3), indirect=True)
+@pytest.mark.parametrize('da', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 @pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'max'))
 def test_rolling_reduce(da, center, min_periods, window, name):
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    rolling_obj = da.rolling(time=window, center=center,
+                             min_periods=min_periods)
+
+    # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
+    expected = getattr(rolling_obj, name)()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+
+@pytest.mark.parametrize('da', (3, ), indirect=True)
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+@pytest.mark.parametrize('name', ('sum', 'max'))
+def test_rolling_reduce_nonnumeric(da, center, min_periods, window, name):
 
     if min_periods is not None and window < min_periods:
         min_periods = window
