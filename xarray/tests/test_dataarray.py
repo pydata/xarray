@@ -3434,6 +3434,12 @@ def test_rolling_to_dataarray(center, window):
     np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
     np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean['index'])
 
+    # with fill_value
+    da_rolling_mean = da_rolling.to_dataarray(
+        'window', stride=2, fill_value=0.0).mean('window')
+    assert da_rolling_mean.isnull().sum() == 0
+    assert (da_rolling_mean == 0.0).sum() >= 0
+
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
 @pytest.mark.parametrize('center', (True, False))

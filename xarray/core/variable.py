@@ -1498,7 +1498,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             ranked /= count
         return Variable(self.dims, ranked)
 
-    def rolling_window(self, dim, window, window_dim, center=False):
+    def rolling_window(self, dim, window, window_dim, center=False,
+                       fill_value=dtypes.NA):
         """
         Make a rolling_window along dim and add a new_dim to the last place.
 
@@ -1513,6 +1514,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         center: boolean. default False.
             If True, pad np.nan for both ends. Otherwise, pad in the head of
             the axis.
+
 
         Returns
         -------
@@ -1542,7 +1544,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             pads = (window - 1, 0)
 
-        fill_value = False if self.dtype.kind == 'b' else dtypes.NA
         array = self.pad_with_fill_value(fill_value=fill_value, **{dim: pads})
         return Variable(new_dims, duck_array_ops.rolling_window(
             array.data, axis=self.get_axis_num(dim), window=window))

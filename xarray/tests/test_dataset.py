@@ -4158,6 +4158,11 @@ def test_rolling_to_dataset(center, window):
     np.testing.assert_allclose(df_rolling['x'][::2].values,
                                ds_rolling_mean['x'].values)
     np.testing.assert_allclose(df_rolling.index[::2], ds_rolling_mean['index'])
+    # with fill_value
+    ds_rolling_mean = ds_rolling.to_dataset(
+        'window', stride=2, fill_value=0.0).mean('window')
+    assert ds_rolling_mean.isnull().sum() == 0
+    assert (ds_rolling_mean['x'] == 0.0).sum() >= 0
 
 
 @pytest.mark.slow

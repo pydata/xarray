@@ -9,6 +9,7 @@ from .pycompat import OrderedDict, zip, dask_array_type
 from .ops import (inject_bottleneck_rolling_methods,
                   inject_datasetrolling_methods, has_bottleneck, bn)
 from .dask_array_ops import dask_rolling_wrapper
+from . import dtypes
 
 
 class Rolling(object):
@@ -159,7 +160,7 @@ class DataArrayRolling(Rolling):
         self.window_indices = [slice(start, stop)
                                for start, stop in zip(starts, stops)]
 
-    def to_dataarray(self, window_dim, stride=1):
+    def to_dataarray(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -170,6 +171,8 @@ class DataArrayRolling(Rolling):
             New name of the window dimension.
         stride: integer, optional
             Size of stride for the rolling window.
+        fill_value: optional. Default dtypes.NA
+            Filling value to match the dimension size.
 
         Returns
         -------
@@ -201,7 +204,8 @@ class DataArrayRolling(Rolling):
         from .dataarray import DataArray
 
         window = self.obj.variable.rolling_window(self.dim, self.window,
-                                                  window_dim, self.center)
+                                                  window_dim, self.center,
+                                                  fill_value=fill_value)
         result = DataArray(window, dims=self.obj.dims + (window_dim,),
                            coords=self.obj.coords)
         return result.isel(**{self.dim: slice(None, None, stride)})
@@ -236,7 +240,7 @@ class DataArrayRolling(Rolling):
         """ Number of non-nan entries in each rolling window. """
         counts = (self.obj.notnull()
                   .rolling(center=self.center, **{self.dim: self.window})
-                  .to_dataarray('_rolling_window_dim')
+                  .to_dataarray('_rolling_window_dim', fill_value=False)
                   .sum(dim='_rolling_window_dim'))
         return counts
 
@@ -386,7 +390,7 @@ class DatasetRolling(Rolling):
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
 
-    def to_dataset(self, window_dim, stride=1):
+    def to_dataset(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
@@ -397,6 +401,8 @@ class DatasetRolling(Rolling):
             New name of the window dimension.
         stride: integer, optional
             size of stride for the rolling window.
+        fill_value: optional. Default dtypes.NA
+            Filling value to match the dimension size.
 
         Returns
         -------
@@ -408,7 +414,8 @@ class DatasetRolling(Rolling):
         dataset = OrderedDict()
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
-                dataset[key] = self.rollings[key].to_dataarray(window_dim)
+                dataset[key] = self.rollings[key].to_dataarray(
+                    window_dim, fill_value=fill_value)
             else:
                 dataset[key] = da
         return Dataset(dataset, coords=self.obj.coords).isel(
