@@ -17,7 +17,7 @@ except ImportError:
     # pandas < 0.20
     from pandas.tslib import OutOfBoundsDatetime
 
-from .variables import (SerializationWarning, VariableCoder,
+from .variables import (VariableCoder,
                         lazy_elemwise_func, pop_to, safe_setitem,
                         unpack_for_decoding, unpack_for_encoding)
 from ..core import indexing
@@ -222,7 +222,7 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, reference_date)
-        
+
 
 def infer_timedelta_units(deltas):
     """Given an array of timedeltas, returns a CF compatible time-unit from

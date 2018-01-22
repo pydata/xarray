@@ -19,7 +19,7 @@ def _season_from_months(months):
 
 
 def _access_through_netcdftimeindex(values, name):
-    """Coerce an array of datetime-like values to a NetCDFTimeIndex 
+    """Coerce an array of datetime-like values to a NetCDFTimeIndex
     and access requested datetime component
     """
     from ..coding.netcdftimeindex import NetCDFTimeIndex

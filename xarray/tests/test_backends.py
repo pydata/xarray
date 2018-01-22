@@ -1859,7 +1859,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 expected_t = np.array(times)
                 abs_diff = abs(actual.t.values - expected_t)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
-                
+
                 expected_t0 = np.array([date_type(1, 1, 1)])
                 abs_diff = abs(actual.t0.values - expected_t0)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
