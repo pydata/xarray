@@ -16,61 +16,47 @@ import xarray as xr
 from . import randn, randint, requires_dask
 
 
-class Indexing(object):
-    def setup(self):
-        self.nx = 300
-        self.ny = 200
-        self.nt = 100
-        var1 = randn((self.nx, self.ny), frac_nan=0.1)
-        var2 = randn((self.nx, self.nt))
-        var3 = randn(self.nt)
-        self.x = np.arange(self.nx)
-        self.y = np.linspace(0, 1, self.ny)
-        self.t = pd.date_range('1970-01-01', periods=self.nt, freq='D')
-        self.x_coords = np.linspace(0, 1, self.nx)
-        self.ds = xr.Dataset({'var1': (('x', 'y'), var1),
-                              'var2': (('x', 't'), var2),
-                              'var3': (('t', ), var3)},
-                             coords={'x': self.x, 'y': self.y, 't': self.t,
-                                     'x_coords': ('x', self.x_coords)})
+nx = 300
+ny = 200
+nt = 100
+ds = xr.Dataset({'var1': (('x', 'y'), randn((nx, ny), frac_nan=0.1)),
+                 'var2': (('x', 't'), randn((nx, nt))),
+                 'var3': (('t', ), randn(nt))},
+                coords={'x': np.arange(nx),
+                        'y': np.linspace(0, 1, ny),
+                        't': pd.date_range('1970-01-01', periods=nt, freq='D'),
+                        'x_coords': ('x', np.linspace(1.1, 2.1, nx))})
 
-        self.outer_indexes = [
-            (randint(0, self.nx, 400), ),
-            (randint(0, self.nx, 500), randint(0, self.ny, 400))]
 
-    def time_outer_indexing(self):
-        for ind in self.outer_indexes:
-            ind_x = xr.DataArray(ind[-1], dims='y',
-                                 coords={'y': self.x[ind[0]]})
-            self.ds['var1'][(ind_x,) + ind[1:]]
+vectorized_indexes = [
+    {'x': xr.DataArray(randint(0, nx, 400), dims='a')},
+    {'x': xr.DataArray(randint(0, nx, 400), dims='a'),
+     'y': xr.DataArray(randint(0, ny, 400), dims='a')},
+    {'x': xr.DataArray(randint(0, nx, 400).reshape(4, 100), dims=['a', 'b']),
+     'y': xr.DataArray(randint(0, ny, 400).reshape(4, 100), dims=['a', 'b']),
+     't': xr.DataArray(randint(0, nt, 400).reshape(4, 100), dims=['a', 'b'])},
+]
 
-    def time_outer_assignment(self):
-        inds = self.outer_indexes()
-        for ind in inds:
-            self.ds['var1'][ind] = xr.DataArray(np.ones(400), dims='y')
 
-    def time_vectorized_indexing(self):
-        inds = [(xr.DataArray(randint(0, self.nx, self.ny), dims=['y']), ),
-                (xr.DataArray(randint(0, self.nx, 500), dims=['a']),
-                 xr.DataArray(randint(0, self.ny, 500), dims=['a'])),
-                (xr.DataArray(randint(0, self.ny, 500).reshape(25, 20)),
-                 xr.DataArray(randint(0, self.ny, 500).reshape(25, 20)))]
-        for ind in inds:
-            self.ds['var1'][ind]
+def time_basic_indexing(index):
+    ds.isel(index)
 
-    def time_vectorized_indexing_coords(self):
-        ind = randint(0, self.nx, self.ny)
-        inds = [(xr.DataArray(ind, dims=['y'], coords={'y': self.y}), ),
-                (xr.DataArray(randint(0, self.nx, 500), dims=['a'],
-                              coords={'a': np.linspace(0, 1, 500)}),
-                 xr.DataArray(randint(0, self.ny, 500), dims=['a'],
-                              coords={'a': np.linspace(0, 1, 500)})),
-                (xr.DataArray(randint(0, self.ny, 500).reshape(25, 20),
-                              dims=['a', 'b'],
-                              coords={'a': np.arange(25), 'b': np.arange(20)}),
-                 xr.DataArray(randint(0, self.ny, 500).reshape(25, 20),
-                              dims=['a', 'b'],
-                              coords={'a': np.arange(25), 'b': np.arange(20)}))
-                ]
-        for ind in inds:
-            self.ds['var1'][ind]
+
+time_basic_indexing.param_names = ['index']
+time_basic_indexing.params = [
+    {'x': slice(0, 3)},
+    {'x': 0, 'y': slice(0, None, 3)},
+    {'x': slice(3, -3, 3), 'y': 1, 't': slice(None, -3, 3)},
+]
+
+
+def time_outer_indexing(index):
+    ds.isel(index)
+
+
+time_outer_indexing.param_names = ['index']
+time_outer_indexing.params = [
+    {'x': randint(0, nx, 400)},
+    {'x': randint(0, nx, 500), 'y': randint(0, ny, 400)},
+    {'x': randint(0, nx, 100), 'y': 1, 't': randint(0, nt, 400)},
+]
