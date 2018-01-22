@@ -3471,7 +3471,7 @@ def test_rolling_reduce(da, center, min_periods, window, name):
 @pytest.mark.parametrize('name', ('sum', 'max'))
 def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
     da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
-                dims='time').isnull()
+                   dims='time').isnull()
 
     if min_periods is not None and window < min_periods:
         min_periods = window
