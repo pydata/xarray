@@ -40,7 +40,7 @@ def alias(obj, old_name):
 def _maybe_cast_to_netcdftimeindex(index):
     try:
         from netcdftime._netcdftime import datetime as ncdatetime
-        from ..conventions.netcdftimeindex import NetCDFTimeIndex
+        from ..coding.netcdftimeindex import NetCDFTimeIndex
         if len(index):
             if isinstance(index[0], ncdatetime):
                 index = NetCDFTimeIndex(index)
