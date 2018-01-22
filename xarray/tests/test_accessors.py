@@ -6,7 +6,8 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
-from . import TestCase, requires_dask
+from . import (TestCase, requires_dask, raises_regex, assert_equal,
+               assert_array_equal)
 
 
 class TestDatetimeAccessor(TestCase):
@@ -36,16 +37,16 @@ class TestDatetimeAccessor(TestCase):
         hours = xr.DataArray(self.times.hour, name='hour',
                              coords=[self.times, ], dims=['time', ])
 
-        self.assertDataArrayEqual(years, self.data.time.dt.year)
-        self.assertDataArrayEqual(months, self.data.time.dt.month)
-        self.assertDataArrayEqual(days, self.data.time.dt.day)
-        self.assertDataArrayEqual(hours, self.data.time.dt.hour)
+        assert_equal(years, self.data.time.dt.year)
+        assert_equal(months, self.data.time.dt.month)
+        assert_equal(days, self.data.time.dt.day)
+        assert_equal(hours, self.data.time.dt.hour)
 
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype('int8')
         nontime_data['time'].values = int_data
-        with self.assertRaisesRegexp(TypeError, 'dt'):
+        with raises_regex(TypeError, 'dt'):
             nontime_data.time.dt
 
     @requires_dask
@@ -75,16 +76,16 @@ class TestDatetimeAccessor(TestCase):
 
         # Double check that outcome chunksize is unchanged
         dask_chunks = dask_times_2d.chunks
-        self.assertEqual(dask_year.data.chunks, dask_chunks)
-        self.assertEqual(dask_month.data.chunks, dask_chunks)
-        self.assertEqual(dask_day.data.chunks, dask_chunks)
-        self.assertEqual(dask_hour.data.chunks, dask_chunks)
+        assert dask_year.data.chunks == dask_chunks
+        assert dask_month.data.chunks == dask_chunks
+        assert dask_day.data.chunks == dask_chunks
+        assert dask_hour.data.chunks == dask_chunks
 
         # Check the actual output from the accessors
-        self.assertDataArrayEqual(years, dask_year.compute())
-        self.assertDataArrayEqual(months, dask_month.compute())
-        self.assertDataArrayEqual(days, dask_day.compute())
-        self.assertDataArrayEqual(hours, dask_hour.compute())
+        assert_equal(years, dask_year.compute())
+        assert_equal(months, dask_month.compute())
+        assert_equal(days, dask_day.compute())
+        assert_equal(hours, dask_hour.compute())
 
     def test_seasons(self):
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
@@ -93,4 +94,4 @@ class TestDatetimeAccessor(TestCase):
                    "SON", "SON", "SON", "DJF"]
         seasons = xr.DataArray(seasons)
 
-        self.assertArrayEqual(seasons.values, dates.dt.season.values)
+        assert_array_equal(seasons.values, dates.dt.season.values)

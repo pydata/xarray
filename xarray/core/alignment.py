@@ -4,13 +4,14 @@ from __future__ import print_function
 import functools
 import operator
 from collections import defaultdict
+import warnings
 
 import numpy as np
 
 from . import duck_array_ops
 from . import dtypes
 from . import utils
-from .indexing import get_indexer
+from .indexing import get_indexer_nd
 from .pycompat import iteritems, OrderedDict, suppress
 from .utils import is_full_slice, is_dict_like
 from .variable import Variable, IndexVariable
@@ -164,6 +165,7 @@ def align(*objects, **kwargs):
             new_obj = obj.copy(deep=copy)
         else:
             new_obj = obj.reindex(copy=copy, **valid_indexers)
+        new_obj.encoding = obj.encoding
         result.append(new_obj)
 
     return tuple(result)
@@ -301,6 +303,8 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     reindexed : OrderedDict
         Another dict, with the items in variables but replaced indexes.
     """
+    from .dataarray import DataArray
+
     # build up indexers for assignment along each dimension
     to_indexers = {}
     from_indexers = {}
@@ -314,10 +318,10 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                 raise ValueError(
                     'cannot reindex or align along dimension %r because the '
                     'index has duplicate values' % name)
-            indexer = get_indexer(index, target, method, tolerance)
+            indexer = get_indexer_nd(index, target, method, tolerance)
 
             new_sizes[name] = len(target)
-            # Note pandas uses negative values from get_indexer to signify
+            # Note pandas uses negative values from get_indexer_nd to signify
             # values that are missing in the index
             # The non-negative values thus indicate the non-missing values
             to_indexers[name] = indexer >= 0
@@ -354,6 +358,14 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     reindexed = OrderedDict()
 
     for dim, indexer in indexers.items():
+        if isinstance(indexer, DataArray) and indexer.dims != (dim, ):
+            warnings.warn(
+                "Indexer has dimensions {0:s} that are different "
+                "from that to be indexed along {1:s}. "
+                "This will behave differently in the future.".format(
+                    str(indexer.dims), dim),
+                FutureWarning, stacklevel=3)
+
         if dim in variables:
             var = variables[dim]
             args = (var.attrs, var.encoding)

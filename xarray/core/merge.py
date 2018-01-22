@@ -113,7 +113,7 @@ def merge_variables(
         list_of_variables_dicts,  # type: List[Mapping[Any, Variable]]
         priority_vars=None,       # type: Optional[Mapping[Any, Variable]]
         compat='minimal',         # type: str
-        ):
+):
     # type: (...) -> OrderedDict[Any, Variable]
     """Merge dicts of variables, while resolving conflicts appropriately.
 
@@ -180,7 +180,7 @@ def expand_variable_dicts(list_of_variable_dicts):
     Parameters
     ----------
     list_of_variable_dicts : list of dict or Dataset objects
-        The each value for the mappings must be of the following types:
+        Each value for the mappings must be of the following types:
         - an xarray.Variable
         - a tuple `(dims, data[, attrs[, encoding]])` that can be converted in
           an xarray.Variable
@@ -365,6 +365,20 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     return merge_core(objs, compat, join, explicit_coords=explicit_coords)
 
 
+def assert_valid_explicit_coords(variables, dims, explicit_coords):
+    """Validate explicit coordinate names/dims.
+
+    Raise a MergeError if an explicit coord shares a name with a dimension
+    but is comprised of arbitrary dimensions.
+    """
+    for coord_name in explicit_coords:
+        if coord_name in dims and variables[coord_name].dims != (coord_name,):
+            raise MergeError(
+                'coordinate %s shares a name with a dataset dimension, but is '
+                'not a 1D variable along that dimension. This is disallowed '
+                'by the xarray data model.' % coord_name)
+
+
 def merge_core(objs,
                compat='broadcast_equals',
                join='outer',
@@ -414,14 +428,15 @@ def merge_core(objs,
 
     coord_names, noncoord_names = determine_coords(coerced)
 
-    if explicit_coords is not None:
-        coord_names.update(explicit_coords)
-
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
     assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
+
+    if explicit_coords is not None:
+        assert_valid_explicit_coords(variables, dims, explicit_coords)
+        coord_names.update(explicit_coords)
 
     for dim, size in dims.items():
         if dim in variables:
@@ -492,8 +507,9 @@ def merge(objects, compat='no_conflicts', join='outer'):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    dict_like_objects = [obj.to_dataset() if isinstance(obj, DataArray) else obj
-                         for obj in objects]
+    dict_like_objects = [
+        obj.to_dataset() if isinstance(obj, DataArray) else obj
+        for obj in objects]
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
     merged = Dataset._construct_direct(variables, coord_names, dims)
@@ -534,4 +550,5 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
 
 def dataset_update_method(dataset, other):
     """Guts of the Dataset.update method"""
-    return merge_core([dataset, other], priority_arg=1, indexes=dataset.indexes)
+    return merge_core([dataset, other], priority_arg=1,
+                      indexes=dataset.indexes)

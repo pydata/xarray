@@ -8,8 +8,8 @@ from setuptools import setup, find_packages
 from setuptools import Command
 
 MAJOR = 0
-MINOR = 9
-MICRO = 6
+MINOR = 10
+MICRO = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -35,8 +35,10 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.7', 'pandas >= 0.15.0']
+INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
+if sys.version_info[0] < 3:
+    TESTS_REQUIRE.append('mock')
 
 DESCRIPTION = "N-D labeled arrays and datasets in Python"
 LONG_DESCRIPTION = """
@@ -103,10 +105,13 @@ if not ISRELEASED:
             # partial clone, manually construct version string
             # this is the format before we started using git-describe
             # to get an ordering on dev version strings.
-            rev = "v%s.dev-%s" % (VERSION, rev)
+            rev = "v%s+dev.%s" % (VERSION, rev)
 
         # Strip leading v from tags format "vx.y.z" to get th version string
         FULLVERSION = rev.lstrip('v')
+
+        # make sure we respect PEP 440
+        FULLVERSION = FULLVERSION.replace("-", "+dev", 1).replace("-", ".")
 
 else:
     FULLVERSION += QUALIFIER

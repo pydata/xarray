@@ -14,6 +14,7 @@ Top-level functions
 .. autosummary::
    :toctree: generated/
 
+   apply_ufunc
    align
    broadcast
    concat
@@ -105,8 +106,6 @@ Indexing
    Dataset.loc
    Dataset.isel
    Dataset.sel
-   Dataset.isel_points
-   Dataset.sel_points
    Dataset.squeeze
    Dataset.reindex
    Dataset.reindex_like
@@ -149,6 +148,9 @@ Computation
 :py:attr:`~Dataset.count`
 :py:attr:`~Dataset.dropna`
 :py:attr:`~Dataset.fillna`
+:py:attr:`~Dataset.ffill`
+:py:attr:`~Dataset.bfill`
+:py:attr:`~Dataset.interpolate_na`
 :py:attr:`~Dataset.where`
 
 **ndarray methods**:
@@ -159,9 +161,9 @@ Computation
 :py:attr:`~Dataset.imag`
 :py:attr:`~Dataset.round`
 :py:attr:`~Dataset.real`
-:py:attr:`~Dataset.T`
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
+:py:attr:`~Dataset.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -247,8 +249,6 @@ Indexing
    DataArray.loc
    DataArray.isel
    DataArray.sel
-   DataArray.isel_points
-   DataArray.sel_points
    DataArray.squeeze
    DataArray.reindex
    DataArray.reindex_like
@@ -302,6 +302,9 @@ Computation
 :py:attr:`~DataArray.count`
 :py:attr:`~DataArray.dropna`
 :py:attr:`~DataArray.fillna`
+:py:attr:`~DataArray.ffill`
+:py:attr:`~DataArray.bfill`
+:py:attr:`~DataArray.interpolate_na`
 :py:attr:`~DataArray.where`
 
 **ndarray methods**:
@@ -316,6 +319,7 @@ Computation
 :py:attr:`~DataArray.T`
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
+:py:attr:`~DataArray.rank`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
@@ -419,10 +423,13 @@ Dataset methods
    open_dataset
    open_mfdataset
    open_rasterio
+   open_zarr
    Dataset.to_netcdf
+   Dataset.to_zarr
    save_mfdataset
    Dataset.to_array
    Dataset.to_dataframe
+   Dataset.to_dask_dataframe
    Dataset.to_dict
    Dataset.from_dataframe
    Dataset.from_dict
@@ -449,6 +456,8 @@ DataArray methods
    DataArray.to_index
    DataArray.to_masked_array
    DataArray.to_cdms2
+   DataArray.to_iris
+   DataArray.from_iris
    DataArray.to_dict
    DataArray.from_series
    DataArray.from_cdms2
@@ -490,6 +499,7 @@ Exceptions
    :toctree: generated/
 
    MergeError
+   SerializationWarning
 
 Advanced API
 ============

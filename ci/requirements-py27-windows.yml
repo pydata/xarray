@@ -9,10 +9,14 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
+  - pathlib2
   - pytest
+  - flake8
+  - mock
   - numpy
   - pandas
   - scipy
   - seaborn
   - toolz
   - rasterio
+  - zarr

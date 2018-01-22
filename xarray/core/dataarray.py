@@ -12,6 +12,7 @@ from ..plot.plot import _PlotMethods
 from . import duck_array_ops
 from . import indexing
 from . import groupby
+from . import resample
 from . import rolling
 from . import ops
 from . import utils
@@ -19,7 +20,8 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes)
+                          Indexes, assert_coordinate_consistent,
+                          remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .pycompat import iteritems, basestring, OrderedDict, zip, range
 from .variable import (as_variable, Variable, as_compatible_data,
@@ -47,15 +49,15 @@ def _infer_coords_and_dims(shape, coords, dims):
         if coords is not None and len(coords) == len(shape):
             # try to infer dimensions from coords
             if utils.is_dict_like(coords):
-                warnings.warn('inferring DataArray dimensions from dictionary '
-                              'like ``coords`` has been deprecated. Use an '
-                              'explicit list of ``dims`` instead.',
-                              FutureWarning, stacklevel=3)
-                dims = list(coords.keys())
-            else:
-                for n, (dim, coord) in enumerate(zip(dims, coords)):
-                    coord = as_variable(coord, name=dims[n]).to_index_variable()
-                    dims[n] = coord.name
+                # deprecated in GH993, removed in GH1539
+                raise ValueError('inferring DataArray dimensions from '
+                                 'dictionary like ``coords`` is no longer '
+                                 'supported. Use an explicit list of '
+                                 '``dims`` instead.')
+            for n, (dim, coord) in enumerate(zip(dims, coords)):
+                coord = as_variable(coord,
+                                    name=dims[n]).to_index_variable()
+                dims[n] = coord.name
         dims = tuple(dims)
     else:
         for d in dims:
@@ -86,6 +88,12 @@ def _infer_coords_and_dims(shape, coords, dims):
                                  'length %s on the data but length %s on '
                                  'coordinate %r' % (d, sizes[d], s, k))
 
+        if k in sizes and v.shape != (sizes[k],):
+            raise ValueError('coordinate %r is a DataArray dimension, but '
+                             'it has shape %r rather than expected shape %r '
+                             'matching the dimension size'
+                             % (k, v.shape, (sizes[k],)))
+
     assert_unique_multiindex_level_names(new_coords)
 
     return new_coords, dims
@@ -95,28 +103,26 @@ class _LocIndexer(object):
     def __init__(self, data_array):
         self.data_array = data_array
 
-    def _remap_key(self, key):
+    def __getitem__(self, key):
         if not utils.is_dict_like(key):
             # expand the indexer so we can handle Ellipsis
             labels = indexing.expanded_indexer(key, self.data_array.ndim)
             key = dict(zip(self.data_array.dims, labels))
-        return indexing.remap_label_indexers(self.data_array, key)
-
-    def __getitem__(self, key):
-        pos_indexers, new_indexes = self._remap_key(key)
-        return self.data_array[pos_indexers]._replace_indexes(new_indexes)
+        return self.data_array.sel(**key)
 
     def __setitem__(self, key, value):
-        pos_indexers, _ = self._remap_key(key)
+        if not utils.is_dict_like(key):
+            # expand the indexer so we can handle Ellipsis
+            labels = indexing.expanded_indexer(key, self.data_array.ndim)
+            key = dict(zip(self.data_array.dims, labels))
+
+        pos_indexers, _ = remap_label_indexers(self.data_array, **key)
         self.data_array[pos_indexers] = value
 
 
-class _ThisArray(object):
-    """An instance of this object is used as the key corresponding to the
-    variable when converting arbitrary DataArray objects to datasets
-    """
-    def __repr__(self):
-        return '<this-array>'
+# Used as the key corresponding to a DataArray's variable when converting
+# arbitrary DataArray objects to datasets
+_THIS_ARRAY = utils.ReprObject('<this-array>')
 
 
 class DataArray(AbstractArray, BaseDataObject):
@@ -159,6 +165,8 @@ class DataArray(AbstractArray, BaseDataObject):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _resample_cls = resample.DataArrayResample
+
     dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
@@ -275,14 +283,12 @@ class DataArray(AbstractArray, BaseDataObject):
             obj = obj.rename(dim_names)
         return obj
 
-    __this_array = _ThisArray()
-
     def _to_temp_dataset(self):
-        return self._to_dataset_whole(name=self.__this_array,
+        return self._to_dataset_whole(name=_THIS_ARRAY,
                                       shallow_copy=False)
 
     def _from_temp_dataset(self, dataset, name=__default):
-        variable = dataset._variables.pop(self.__this_array)
+        variable = dataset._variables.pop(_THIS_ARRAY)
         coords = dataset._variables
         return self._replace(variable, coords, name)
 
@@ -310,7 +316,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if name in self.coords:
             raise ValueError('cannot create a Dataset from a DataArray with '
                              'the same name as one of its coordinates')
-        # use private APIs here for speed: this is called by _to_temp_dataset(),
+        # use private APIs for speed: this is called by _to_temp_dataset(),
         # which is used in the guts of a lot of operations (e.g., reindex)
         variables = self._coords.copy()
         variables[name] = self.variable
@@ -422,9 +428,9 @@ class DataArray(AbstractArray, BaseDataObject):
     def dims(self):
         """Tuple of dimension names associated with this array.
 
-        Note that the type of this property is inconsistent with `Dataset.dims`.
-        See `Dataset.sizes` and `DataArray.sizes` for consistently named
-        properties.
+        Note that the type of this property is inconsistent with
+        `Dataset.dims`.  See `Dataset.sizes` and `DataArray.sizes` for
+        consistently named properties.
         """
         return self.variable.dims
 
@@ -447,8 +453,8 @@ class DataArray(AbstractArray, BaseDataObject):
         """
         level_coords = OrderedDict()
         for cname, var in self._coords.items():
-            if var.ndim == 1:
-                level_names = var.to_index_variable().level_names
+            if var.ndim == 1 and isinstance(var, IndexVariable):
+                level_names = var.level_names
                 if level_names is not None:
                     dim, = var.dims
                     level_coords.update({lname: dim for lname in level_names})
@@ -470,14 +476,22 @@ class DataArray(AbstractArray, BaseDataObject):
         if isinstance(key, basestring):
             return self._getitem_coord(key)
         else:
-            # orthogonal array indexing
+            # xarray-style array indexing
             return self.isel(**self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
             self.coords[key] = value
         else:
-            # orthogonal array indexing
+            # Coordinates in key, value and self[key] should be consistent.
+            # TODO Coordinate consistency in key is checked here, but it
+            # causes unnecessary indexing. It should be optimized.
+            obj = self[key]
+            if isinstance(value, DataArray):
+                assert_coordinate_consistent(value, obj.coords.variables)
+            # DataArray key -> Variable key
+            key = {k: v.variable if isinstance(v, DataArray) else v
+                   for k, v in self._item_key_to_dict(key).items()}
             self.variable[key] = value
 
     def __delitem__(self, key):
@@ -486,9 +500,19 @@ class DataArray(AbstractArray, BaseDataObject):
     @property
     def _attr_sources(self):
         """List of places to look-up items for attribute-style access"""
-        return [self.coords, LevelCoordinatesSource(self), self.attrs]
+        return self._item_sources + [self.attrs]
+
+    @property
+    def _item_sources(self):
+        """List of places to look-up items for key-completion"""
+        return [self.coords, {d: self[d] for d in self.dims},
+                LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
+        warnings.warn(
+            'xarray.DataArray.__contains__ currently checks membership in '
+            'DataArray.coords, but in xarray v0.11 will change to check '
+            'membership in array values.', FutureWarning, stacklevel=2)
         return key in self._coords
 
     @property
@@ -565,7 +589,36 @@ class DataArray(AbstractArray, BaseDataObject):
             dataset[self.name] = self.variable
             return dataset
 
-    def load(self):
+    def __dask_graph__(self):
+        return self._to_temp_dataset().__dask_graph__()
+
+    def __dask_keys__(self):
+        return self._to_temp_dataset().__dask_keys__()
+
+    @property
+    def __dask_optimize__(self):
+        return self._to_temp_dataset().__dask_optimize__
+
+    @property
+    def __dask_scheduler__(self):
+        return self._to_temp_dataset().__dask_scheduler__
+
+    def __dask_postcompute__(self):
+        func, args = self._to_temp_dataset().__dask_postcompute__()
+        return self._dask_finalize, (func, args, self.name)
+
+    def __dask_postpersist__(self):
+        func, args = self._to_temp_dataset().__dask_postpersist__()
+        return self._dask_finalize, (func, args, self.name)
+
+    @staticmethod
+    def _dask_finalize(results, func, args, name):
+        ds = func(results, *args)
+        variable = ds._variables.pop(_THIS_ARRAY)
+        coords = ds._variables
+        return DataArray(variable, coords, name=name, fastpath=True)
+
+    def load(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return this array.
 
@@ -573,14 +626,23 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
-        ds = self._to_temp_dataset().load()
+        ds = self._to_temp_dataset().load(**kwargs)
         new = self._from_temp_dataset(ds)
         self._variable = new._variable
         self._coords = new._coords
         return self
 
-    def compute(self):
+    def compute(self, **kwargs):
         """Manually trigger loading of this array's data from disk or a
         remote source into memory and return a new array. The original is
         left unaltered.
@@ -589,18 +651,36 @@ class DataArray(AbstractArray, BaseDataObject):
         because all xarray functions should either work on deferred data or
         load data automatically. However, this method can be necessary when
         working with many file objects on disk.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.array.compute``.
+
+        See Also
+        --------
+        dask.array.compute
         """
         new = self.copy(deep=False)
-        return new.load()
+        return new.load(**kwargs)
 
-    def persist(self):
+    def persist(self, **kwargs):
         """ Trigger computation in constituent dask arrays
 
         This keeps them as dask arrays but encourages them to keep data in
         memory.  This is particularly useful when on a distributed machine.
         When on a single machine consider using ``.compute()`` instead.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments passed on to ``dask.persist``.
+
+        See Also
+        --------
+        dask.persist
         """
-        ds = self._to_temp_dataset().persist()
+        ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
     def copy(self, deep=True):
@@ -690,11 +770,9 @@ class DataArray(AbstractArray, BaseDataObject):
         Dataset.sel
         DataArray.isel
         """
-        pos_indexers, new_indexes = indexing.remap_label_indexers(
-            self, indexers, method=method, tolerance=tolerance
-        )
-        result = self.isel(drop=drop, **pos_indexers)
-        return result._replace_indexes(new_indexes)
+        ds = self._to_temp_dataset().sel(drop=drop, method=method,
+                                         tolerance=tolerance, **indexers)
+        return self._from_temp_dataset(ds)
 
     def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
@@ -790,12 +868,11 @@ class DataArray(AbstractArray, BaseDataObject):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         **indexers : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate values
-            will be filled in with NaN, and any mis-matched dimension names will
-            simply be ignored.
+            arrays of coordinates tick labels. Any mis-matched coordinate
+            values will be filled in with NaN, and any mis-matched dimension
+            names will simply be ignored.
 
         Returns
         -------
@@ -865,8 +942,8 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def expand_dims(self, dim, axis=None):
-        """Return a new object with an additional axis (or axes) inserted at the
-        corresponding position in the array shape.
+        """Return a new object with an additional axis (or axes) inserted at
+        the corresponding position in the array shape.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -892,7 +969,8 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def set_index(self, append=False, inplace=False, **indexes):
-        """Set DataArray (multi-)indexes using one or more existing coordinates.
+        """Set DataArray (multi-)indexes using one or more existing
+        coordinates.
 
         Parameters
         ----------
@@ -900,8 +978,8 @@ class DataArray(AbstractArray, BaseDataObject):
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
         inplace : bool, optional
-            If True, set new index(es) in-place. Otherwise, return a new DataArray
-            object.
+            If True, set new index(es) in-place. Otherwise, return a new
+            DataArray object.
         **indexes : {dim: index, ...}
             Keyword arguments with names matching dimensions and values given
             by (lists of) the names of existing coordinates or variables to set
@@ -910,7 +988,7 @@ class DataArray(AbstractArray, BaseDataObject):
         Returns
         -------
         obj : DataArray
-            Another dataarray, with this dataarray's data but replaced coordinates.
+            Another dataarray, with this data but replaced coordinates.
 
         See Also
         --------
@@ -1149,6 +1227,97 @@ class DataArray(AbstractArray, BaseDataObject):
         out = ops.fillna(self, value)
         return out
 
+    def interpolate_na(self, dim=None, method='linear', limit=None,
+                       use_coordinate=True,
+                       **kwargs):
+        """Interpolate values according to different methods.
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to interpolate.
+        method : {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+                  'polynomial', 'barycentric', 'krog', 'pchip',
+                  'spline', 'akima'}, optional
+            String indicating which method to use for interpolation:
+
+            - 'linear': linear interpolation (Default). Additional keyword
+              arguments are passed to ``numpy.interp``
+            - 'nearest', 'zero', 'slinear', 'quadratic', 'cubic',
+              'polynomial': are passed to ``scipy.interpolate.interp1d``. If
+              method=='polynomial', the ``order`` keyword argument must also be
+              provided.
+            - 'barycentric', 'krog', 'pchip', 'spline', and `akima`: use their
+              respective``scipy.interpolate`` classes.
+        use_coordinate : boolean or str, default True
+            Specifies which index to use as the x values in the interpolation
+            formulated as `y = f(x)`. If False, values are treated as if
+            eqaully-spaced along `dim`. If True, the IndexVariable `dim` is
+            used. If use_coordinate is a string, it specifies the name of a
+            coordinate variariable to use as the index.
+        limit : int, default None
+            Maximum number of consecutive NaNs to fill. Must be greater than 0
+            or None for no limit.
+
+        Returns
+        -------
+        DataArray
+
+        See also
+        --------
+        numpy.interp
+        scipy.interpolate
+        """
+        from .missing import interp_na
+        return interp_na(self, dim=dim, method=method, limit=limit,
+                         use_coordinate=use_coordinate, **kwargs)
+
+    def ffill(self, dim, limit=None):
+        '''Fill NaN values by propogating values forward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to forward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
+        from .missing import ffill
+        return ffill(self, dim, limit=limit)
+
+    def bfill(self, dim, limit=None):
+        '''Fill NaN values by propogating values backward
+
+        *Requires bottleneck.*
+
+        Parameters
+        ----------
+        dim : str
+            Specifies the dimension along which to propagate values when
+            filling.
+        limit : int, default None
+            The maximum number of consecutive NaN values to backward fill. In
+            other words, if there is a gap with more than this number of
+            consecutive NaNs, it will only be partially filled. Must be greater
+            than 0 or None for no limit.
+
+        Returns
+        -------
+        DataArray
+        '''
+        from .missing import bfill
+        return bfill(self, dim, limit=limit)
+
     def combine_first(self, other):
         """Combine two DataArray objects, with union of coordinates.
 
@@ -1286,7 +1455,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         Parameters
         ----------
-        path : str, optional
+        path : str or Path, optional
             Path to which to save this dataset. If no path is provided, this
             function returns the resulting netCDF file as a bytes object; in
             this case, we need to use scipy.io.netcdf, which does not support
@@ -1294,7 +1463,8 @@ class DataArray(AbstractArray, BaseDataObject):
         mode : {'w', 'a'}, optional
             Write ('w') or append ('a') mode. If mode='w', any existing file at
             this location will be overwritten.
-        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+        format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+                  'NETCDF3_CLASSIC'}, optional
             File format for the resulting netCDF file:
 
             * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -1324,7 +1494,8 @@ class DataArray(AbstractArray, BaseDataObject):
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
-            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1, 'zlib': True}, ...}``
+            ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+               'zlib': True}, ...}``
 
         Notes
         -----
@@ -1350,7 +1521,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        dataset.to_netcdf(*args, **kwargs)
+        return dataset.to_netcdf(*args, **kwargs)
 
     def to_dict(self):
         """
@@ -1436,9 +1607,9 @@ class DataArray(AbstractArray, BaseDataObject):
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
-        tensor product of one-dimensional coordinates (filling in missing values
-        with NaN). Thus this operation should be the inverse of the `to_series`
-        method.
+        tensor product of one-dimensional coordinates (filling in missing
+        values with NaN). Thus this operation should be the inverse of the
+        `to_series` method.
         """
         # TODO: add a 'name' parameter
         name = series.name
@@ -1459,10 +1630,25 @@ class DataArray(AbstractArray, BaseDataObject):
         from ..convert import from_cdms2
         return from_cdms2(variable)
 
+    def to_iris(self):
+        """Convert this array into a iris.cube.Cube
+        """
+        from ..convert import to_iris
+        return to_iris(self)
+
+    @classmethod
+    def from_iris(cls, cube):
+        """Convert a iris.cube.Cube into an xarray.DataArray
+        """
+        from ..convert import from_iris
+        return from_iris(cube)
+
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
+
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
+
         return (utils.dict_equiv(self.coords, other.coords, compat=compat) and
                 compat(self, other))
 
@@ -1535,7 +1721,10 @@ class DataArray(AbstractArray, BaseDataObject):
     def _unary_op(f):
         @functools.wraps(f)
         def func(self, *args, **kwargs):
-            return self.__array_wrap__(f(self.variable.data, *args, **kwargs))
+            with np.errstate(all='ignore'):
+                return self.__array_wrap__(f(self.variable.data, *args,
+                                             **kwargs))
+
         return func
 
     @staticmethod
@@ -1545,7 +1734,8 @@ class DataArray(AbstractArray, BaseDataObject):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
             if hasattr(other, 'indexes'):
-                align_type = OPTIONS['arithmetic_join'] if join is None else join
+                align_type = (OPTIONS['arithmetic_join']
+                              if join is None else join)
                 self, other = align(self, other, join=align_type, copy=False)
             other_variable = getattr(other, 'variable', other)
             other_coords = getattr(other, 'coords', None)
@@ -1557,6 +1747,7 @@ class DataArray(AbstractArray, BaseDataObject):
             name = self._result_name(other)
 
             return self._replace(variable, coords, name)
+
         return func
 
     @staticmethod
@@ -1575,6 +1766,7 @@ class DataArray(AbstractArray, BaseDataObject):
             with self.coords._merge_inplace(other_coords):
                 f(self.variable, other_variable)
             return self
+
         return func
 
     def _copy_attrs_from(self, other):
@@ -1800,7 +1992,7 @@ class DataArray(AbstractArray, BaseDataObject):
         new_dims = ([d for d in self.dims if d not in dims] +
                     [d for d in other.dims if d not in dims])
 
-        return type(self)(new_data, new_coords, new_dims)
+        return type(self)(new_data, new_coords.variables, new_dims)
 
     def sortby(self, variables, ascending=True):
         """
@@ -1833,6 +2025,24 @@ class DataArray(AbstractArray, BaseDataObject):
         sorted: DataArray
             A new dataarray where all the specified dims are sorted by dim
             labels.
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.random.rand(5),
+        ...                   coords=[pd.date_range('1/1/2000', periods=5)],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 5)>
+        array([ 0.965471,  0.615637,  0.26532 ,  0.270962,  0.552878])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+
+        >>> da.sortby(da)
+        <xarray.DataArray (time: 5)>
+        array([ 0.26532 ,  0.270962,  0.552878,  0.615637,  0.965471])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-03 2000-01-04 2000-01-05 ...
         """
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
@@ -1879,8 +2089,47 @@ class DataArray(AbstractArray, BaseDataObject):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
         """
 
-        ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
-                                              interpolation=interpolation)
+        ds = self._to_temp_dataset().quantile(
+            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
+        return self._from_temp_dataset(ds)
+
+    def rank(self, dim, pct=False, keep_attrs=False):
+        """Ranks the data.
+
+        Equal values are assigned a rank that is the average of the ranks that
+        would have been otherwise assigned to all of the values within that
+        set.  Ranks begin at 1, not 0. If pct, computes percentage ranks.
+
+        NaNs in the input array are returned as NaNs.
+
+        The `bottleneck` library is required.
+
+        Parameters
+        ----------
+        dim : str
+            Dimension over which to compute rank.
+        pct : bool, optional
+            If True, compute percentage ranks, otherwise compute integer ranks.
+        keep_attrs : bool, optional
+            If True, the dataset's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
+
+        Returns
+        -------
+        ranked : DataArray
+            DataArray with the same coordinates and dtype 'float64'.
+
+        Examples
+        --------
+
+        >>> arr = xr.DataArray([5, 6, 7], dims='x')
+        >>> arr.rank('x')
+        <xarray.DataArray (x: 3)>
+        array([ 1.,   2.,   3.])
+        Dimensions without coordinates: x
+        """
+        ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
 

@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import functools
-import warnings
 
 from .. import Variable
 from ..core import indexing
@@ -16,6 +15,8 @@ from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
+        key = indexing.unwrap_explicit_indexer(
+            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
 
@@ -54,6 +55,7 @@ def _open_h5netcdf_group(filename, mode, group):
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
+
     def __init__(self, filename, mode='r', format=None, group=None,
                  writer=None, autoclose=False):
         if format not in [None, 'NETCDF4']:
@@ -106,9 +108,20 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             return self.ds.dimensions
 
-    def set_dimension(self, name, length):
+    def get_encoding(self):
+        with self.ensure_open(autoclose=True):
+            encoding = {}
+            encoding['unlimited_dims'] = {
+                k for k, v in self.ds.dimensions.items() if v is None}
+        return encoding
+
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            self.ds.createDimension(name, size=length)
+            if is_unlimited:
+                self.ds.createDimension(name, size=None)
+                self.ds.resize_dimension(name, length)
+            else:
+                self.ds.createDimension(name, size=length)
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
@@ -120,18 +133,21 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         attrs = variable.attrs.copy()
         variable, dtype = _nc4_values_and_dtype(variable)
-        if dtype is str:
-            dtype = h5py.special_dtype(vlen=unicode_type)
 
-        if unlimited_dims is not None:
-            warnings.warn('h5netcdf does not support unlimited dimensions, '
-                          'got: %s.' % unlimited_dims)
-            unlimited_dims = None
         self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         fill_value = attrs.pop('_FillValue', None)
-        if fill_value in ['\x00']:
-            fill_value = None
+        if dtype is str and fill_value is not None:
+            raise NotImplementedError(
+                'h5netcdf does not yet support setting a fill value for '
+                'variable-length strings '
+                '(https://github.com/shoyer/h5netcdf/issues/37). '
+                "Either remove '_FillValue' from encoding on variable %r "
+                "or set {'dtype': 'S1'} in encoding to use the fixed width "
+                'NC_CHAR type.' % name)
+
+        if dtype is str:
+            dtype = h5py.special_dtype(vlen=unicode_type)
 
         encoding = _extract_h5nc_encoding(variable,
                                           raise_on_invalid=check_encoding)
@@ -141,9 +157,11 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                     'chunksizes', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-
-        nc4_var = self.ds.createVariable(name, dtype, variable.dims,
-                                         fill_value=fill_value, **kwargs)
+        if name not in self.ds.variables:
+            nc4_var = self.ds.createVariable(name, dtype, variable.dims,
+                                             fill_value=fill_value, **kwargs)
+        else:
+            nc4_var = self.ds.variables[name]
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)

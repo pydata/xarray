@@ -8,13 +8,13 @@ import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping, Iterable
+from collections import Mapping, MutableMapping, MutableSet, Iterable
 
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops
-from .pycompat import iteritems, OrderedDict, basestring, bytes_type
+from .pycompat import (iteritems, OrderedDict, basestring, bytes_type,
+                       dask_array_type)
 
 
 def alias_message(old_name, new_name):
@@ -111,6 +111,8 @@ def equivalent(first, second):
     """Compare two objects for equivalence (identity or equality), using
     array_equiv if either object is an ndarray
     """
+    # TODO: refactor to avoid circular import
+    from . import duck_array_ops
     if isinstance(first, np.ndarray) or isinstance(second, np.ndarray):
         return duck_array_ops.array_equiv(first, second)
     else:
@@ -200,7 +202,7 @@ def is_scalar(value):
     return (
         getattr(value, 'ndim', None) == 0 or
         isinstance(value, (basestring, bytes_type)) or not
-        isinstance(value, Iterable))
+        isinstance(value, (Iterable, ) + dask_array_type))
 
 
 def is_valid_numpy_dtype(dtype):
@@ -282,6 +284,7 @@ class SingleSlotPickleMixin(object):
     """Mixin class to add the ability to pickle objects whose state is defined
     by a single __slots__ attribute. Only necessary under Python 2.
     """
+
     def __getstate__(self):
         return getattr(self, self.__slots__[0])
 
@@ -391,6 +394,44 @@ class ChainMap(MutableMapping, SingleSlotPickleMixin):
         raise len(iter(self))
 
 
+class OrderedSet(MutableSet):
+    """A simple ordered set.
+
+    The API matches the builtin set, but it preserves insertion order of
+    elements, like an OrderedDict.
+    """
+
+    def __init__(self, values=None):
+        self._ordered_dict = OrderedDict()
+        if values is not None:
+            self |= values
+
+    # Required methods for MutableSet
+
+    def __contains__(self, value):
+        return value in self._ordered_dict
+
+    def __iter__(self):
+        return iter(self._ordered_dict)
+
+    def __len__(self):
+        return len(self._ordered_dict)
+
+    def add(self, value):
+        self._ordered_dict[value] = None
+
+    def discard(self, value):
+        del self._ordered_dict[value]
+
+    # Additional methods
+
+    def update(self, values):
+        self |= values
+
+    def __repr__(self):
+        return '%s(%r)' % (type(self).__name__, list(self))
+
+
 class NdimSizeLenMixin(object):
     """Mixin class that extends a class that defines a ``shape`` property to
     one that also defines ``ndim``, ``size`` and ``__len__``.
@@ -411,12 +452,7 @@ class NdimSizeLenMixin(object):
             raise TypeError('len() of unsized object')
 
 
-class DunderArrayMixin(object):
-    def __array__(self, dtype=None):
-        return np.asarray(self[...], dtype=dtype)
-
-
-class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
+class NDArrayMixin(NdimSizeLenMixin):
     """Mixin class for making wrappers of N-dimensional arrays that conform to
     the ndarray interface required for the data argument to Variable objects.
 
@@ -436,6 +472,16 @@ class NDArrayMixin(NdimSizeLenMixin, DunderArrayMixin):
 
     def __repr__(self):
         return '%s(array=%r)' % (type(self).__name__, self.array)
+
+
+class ReprObject(object):
+    """Object that prints as the given value, for use with sentinel values."""
+
+    def __init__(self, value):  # type: str
+        self._value = value
+
+    def __repr__(self):
+        return self._value
 
 
 @contextlib.contextmanager
@@ -502,3 +548,42 @@ def ensure_us_time_resolution(val):
     elif np.issubdtype(val.dtype, np.timedelta64):
         val = val.astype('timedelta64[us]')
     return val
+
+
+class HiddenKeyDict(MutableMapping):
+    '''
+    Acts like a normal dictionary, but hides certain keys.
+    '''
+    # ``__init__`` method required to create instance from class.
+
+    def __init__(self, data, hidden_keys):
+        self._data = data
+        if type(hidden_keys) not in (list, tuple):
+            raise TypeError("hidden_keys must be a list or tuple")
+        self._hidden_keys = hidden_keys
+
+    def _raise_if_hidden(self, key):
+        if key in self._hidden_keys:
+            raise KeyError('Key `%r` is hidden.' % key)
+
+    # The next five methods are requirements of the ABC.
+    def __setitem__(self, key, value):
+        self._raise_if_hidden(key)
+        self._data[key] = value
+
+    def __getitem__(self, key):
+        self._raise_if_hidden(key)
+        return self._data[key]
+
+    def __delitem__(self, key):
+        self._raise_if_hidden(key)
+        del self._data[key]
+
+    def __iter__(self):
+        for k in self._data:
+            if k not in self._hidden_keys:
+                yield k
+
+    def __len__(self):
+        num_hidden = sum([k in self._hidden_keys for k in self._data])
+        return len(self._data) - num_hidden

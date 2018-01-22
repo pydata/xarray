@@ -59,6 +59,7 @@ def ensure_valid_repr(string):
 
 class ReprMixin(object):
     """Mixin that defines __repr__ for a class that already has __unicode__."""
+
     def __repr__(self):
         return ensure_valid_repr(self.__unicode__())
 
@@ -68,38 +69,39 @@ def _get_indexer_at_least_n_items(shape, n_desired):
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0, ) * (len(shape) - 1 - n_steps) + (slice(stop), ) +
-               (slice(None), ) * n_steps)
+    indexer = ((0,) * (len(shape) - 1 - n_steps) +
+               (slice(stop),) +
+               (slice(None),) * n_steps)
     return indexer
 
 
-def first_n_items(x, n_desired):
+def first_n_items(array, n_desired):
     """Returns the first n_desired items of an array"""
-    # Unfortunately, we can't just do x.flat[:n_desired] here because x might
-    # not be a numpy.ndarray. Moreover, access to elements of x could be very
-    # expensive (e.g. if it's only available over DAP), so go out of our way to
-    # get them in a single call to __getitem__ using only slices.
+    # Unfortunately, we can't just do array.flat[:n_desired] here because it
+    # might not be a numpy.ndarray. Moreover, access to elements of the array
+    # could be very expensive (e.g. if it's only available over DAP), so go out
+    # of our way to get them in a single call to __getitem__ using only slices.
     if n_desired < 1:
         raise ValueError('must request at least one item')
 
-    if x.size == 0:
+    if array.size == 0:
         # work around for https://github.com/numpy/numpy/issues/5195
         return []
 
-    if n_desired < x.size:
-        indexer = _get_indexer_at_least_n_items(x.shape, n_desired)
-        x = x[indexer]
-    return np.asarray(x).flat[:n_desired]
+    if n_desired < array.size:
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired)
+        array = array[indexer]
+    return np.asarray(array).flat[:n_desired]
 
 
-def last_item(x):
+def last_item(array):
     """Returns the last item of an array in a list or an empty list."""
-    if x.size == 0:
+    if array.size == 0:
         # work around for https://github.com/numpy/numpy/issues/5195
         return []
 
-    indexer = (slice(-1, None),) * x.ndim
-    return np.ravel(x[indexer]).tolist()
+    indexer = (slice(-1, None),) * array.ndim
+    return np.ravel(array[indexer]).tolist()
 
 
 def format_timestamp(t):
@@ -173,19 +175,18 @@ def format_items(x):
     return formatted
 
 
-def format_array_flat(items_ndarray, max_width):
+def format_array_flat(array, max_width):
     """Return a formatted string for as many items in the flattened version of
-    items_ndarray that will fit within max_width characters
+    array that will fit within max_width characters.
     """
     # every item will take up at least two characters, but we always want to
     # print at least one item
     max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
-    relevant_items = first_n_items(items_ndarray, max_possibly_relevant)
+    relevant_items = first_n_items(array, max_possibly_relevant)
     pprint_items = format_items(relevant_items)
 
     cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
-    if (max_possibly_relevant < items_ndarray.size or
-            (cum_len > max_width).any()):
+    if (max_possibly_relevant < array.size or (cum_len > max_width).any()):
         end_padding = u' ...'
         count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
         pprint_items = pprint_items[:count]
@@ -196,8 +197,8 @@ def format_array_flat(items_ndarray, max_width):
     return pprint_str
 
 
-def _summarize_var_or_coord(name, var, col_width, show_values=True,
-                            marker=' ', max_width=None):
+def summarize_variable(name, var, col_width, show_values=True,
+                       marker=' ', max_width=None):
     if max_width is None:
         max_width = OPTIONS['display_width']
     first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
@@ -208,6 +209,8 @@ def _summarize_var_or_coord(name, var, col_width, show_values=True,
     front_str = u'%s%s%s ' % (first_col, dims_str, var.dtype)
     if show_values:
         values_str = format_array_flat(var, max_width - len(front_str))
+    elif isinstance(var._data, dask_array_type):
+        values_str = short_dask_repr(var, show_dtype=False)
     else:
         values_str = u'...'
 
@@ -222,30 +225,20 @@ def _summarize_coord_multiindex(coord, col_width, marker):
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
     relevant_coord = coord[:30]
     return u'\n'.join(
-        [_summarize_var_or_coord(lname,
-                                 relevant_coord.get_level_variable(lname),
-                                 col_width, marker=marker)
+        [summarize_variable(lname,
+                            relevant_coord.get_level_variable(lname),
+                            col_width, marker=marker)
          for lname in coord.level_names])
 
 
-def _not_remote(var):
-    """Helper function to identify if array is positively identifiable as
-    coming from a remote source.
-    """
-    source = var.encoding.get('source')
-    if source and source.startswith('http') and not var._in_memory:
-        return False
-    return True
-
-
-def summarize_var(name, var, col_width):
-    show_values = _not_remote(var)
-    return _summarize_var_or_coord(name, var, col_width, show_values)
+def summarize_datavar(name, var, col_width):
+    show_values = var._in_memory
+    return summarize_variable(name, var.variable, col_width, show_values)
 
 
 def summarize_coord(name, var, col_width):
     is_index = name in var.dims
-    show_values = is_index or _not_remote(var)
+    show_values = var._in_memory
     marker = u'*' if is_index else u' '
     if is_index:
         coord = var.variable.to_index_variable()
@@ -253,7 +246,8 @@ def summarize_coord(name, var, col_width):
             return u'\n'.join(
                 [_summarize_coord_multiindex(coord, col_width, marker),
                  _summarize_coord_levels(coord, col_width)])
-    return _summarize_var_or_coord(name, var, col_width, show_values, marker)
+    return summarize_variable(
+        name, var.variable, col_width, show_values, marker)
 
 
 def summarize_attr(key, value, col_width=None):
@@ -307,7 +301,7 @@ def _mapping_repr(mapping, title, summarizer, col_width=None):
 
 
 data_vars_repr = functools.partial(_mapping_repr, title=u'Data variables',
-                                   summarizer=summarize_var)
+                                   summarizer=summarize_datavar)
 
 
 attrs_repr = functools.partial(_mapping_repr, title=u'Attributes',
@@ -370,6 +364,19 @@ def short_array_repr(array):
         return repr(array)
 
 
+def short_dask_repr(array, show_dtype=True):
+    """Similar to dask.array.DataArray.__repr__, but without
+    redundant information that's already printed by the repr
+    function of the xarray wrapper.
+    """
+    chunksize = tuple(c[0] for c in array.chunks)
+    if show_dtype:
+        return 'dask.array<shape=%s, dtype=%s, chunksize=%s>' % (
+            array.shape, array.dtype, chunksize)
+    else:
+        return 'dask.array<shape=%s, chunksize=%s>' % (array.shape, chunksize)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
@@ -381,7 +388,7 @@ def array_repr(arr):
                % (type(arr).__name__, name_str, dim_summary(arr))]
 
     if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
-        summary.append(repr(arr.data))
+        summary.append(short_dask_repr(arr))
     elif arr._in_memory or arr.size < 1e5:
         summary.append(short_array_repr(arr.values))
     else:
@@ -404,7 +411,7 @@ def array_repr(arr):
 def dataset_repr(ds):
     summary = [u'<xarray.%s>' % type(ds).__name__]
 
-    col_width = _calculate_col_width(_get_col_items(ds))
+    col_width = _calculate_col_width(_get_col_items(ds.variables))
 
     dims_start = pretty_print(u'Dimensions:', col_width)
     summary.append(u'%s(%s)' % (dims_start, dim_summary(ds)))

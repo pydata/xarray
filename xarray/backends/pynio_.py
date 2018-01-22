@@ -7,14 +7,13 @@ import functools
 import numpy as np
 
 from .. import Variable
-from ..core.utils import (FrozenOrderedDict, Frozen,
-                          NdimSizeLenMixin, DunderArrayMixin)
+from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
-from .common import AbstractDataStore, DataStorePickleMixin
+from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
 
 
-class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class NioArrayWrapper(BackendArray):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -28,6 +27,9 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
+        key = indexing.unwrap_explicit_indexer(
+            key, target=self, allow=indexing.BasicIndexer)
+
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
             if key == () and self.ndim == 0:
@@ -38,6 +40,7 @@ class NioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
 class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PyNIO
     """
+
     def __init__(self, filename, mode='r', autoclose=False):
         import Nio
         opener = functools.partial(Nio.open_file, filename, mode=mode)
@@ -57,7 +60,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     def get_variables(self):
         with self.ensure_open(autoclose=False):
             return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.iteritems())
+                                     for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         with self.ensure_open(autoclose=True):

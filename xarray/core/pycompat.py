@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -12,7 +14,7 @@ if PY3:  # pragma: no cover
     basestring = str
     unicode_type = str
     bytes_type = bytes
-    integer_types = (int, np.integer)
+    native_int_types = (int,)
 
     def iteritems(d):
         return iter(d.items())
@@ -25,12 +27,13 @@ if PY3:  # pragma: no cover
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
+    from inspect import getfullargspec as getargspec
 else:  # pragma: no cover
     # Python 2
     basestring = basestring  # noqa
     unicode_type = unicode  # noqa
     bytes_type = str
-    integer_types = (int, long, np.integer)  # noqa
+    native_int_types = (int, long)  # noqa
 
     def iteritems(d):
         return d.iteritems()
@@ -43,6 +46,9 @@ else:  # pragma: no cover
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
+    from inspect import getargspec
+
+integer_types = native_int_types + (np.integer,)
 
 try:
     from cyordereddict import OrderedDict
@@ -58,6 +64,16 @@ try:
     dask_array_type = (dask.array.Array,)
 except ImportError:  # pragma: no cover
     dask_array_type = ()
+
+try:
+    try:
+        from pathlib import Path
+    except ImportError as e:
+        from pathlib2 import Path
+    path_type = (Path, )
+except ImportError as e:
+    path_type = ()
+
 
 try:
     from contextlib import suppress
@@ -112,6 +128,7 @@ except ImportError:
                 # in the list raise an exception
 
         """
+
         def __init__(self):
             self._exit_callbacks = deque()
 
@@ -147,7 +164,7 @@ except ImportError:
                 self._exit_callbacks.append(exit)
             else:
                 self._push_cm_exit(exit, exit_method)
-            return exit # Allow use as a decorator
+            return exit  # Allow use as a decorator
 
         def callback(self, callback, *args, **kwds):
             """Registers an arbitrary callback and arguments.
@@ -160,7 +177,7 @@ except ImportError:
             # setting __wrapped__ may still help with introspection
             _exit_wrapper.__wrapped__ = callback
             self.push(_exit_wrapper)
-            return callback # Allow use as a decorator
+            return callback  # Allow use as a decorator
 
         def enter_context(self, cm):
             """Enters the supplied context manager
@@ -188,7 +205,7 @@ except ImportError:
             # We manipulate the exception state so it behaves as though
             # we were actually nesting multiple with statements
             frame_exc = sys.exc_info()[1]
-            
+
             def _fix_exception_context(new_exc, old_exc):
                 # Context may not be correct, so find the end of the chain
                 while 1:

@@ -2,20 +2,19 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import os.path
-from distutils.version import LooseVersion
 from glob import glob
 from io import BytesIO
 from numbers import Number
 
+
 import numpy as np
 
-from .. import backends
+from .. import backends, conventions, Dataset
 from .common import ArrayWriter, GLOBAL_LOCK
-from ..conventions import coding
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
-from ..core.pycompat import basestring
+from ..core.pycompat import basestring, path_type
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -28,18 +27,18 @@ def _get_default_engine(path, allow_remote=False):
             engine = 'netcdf4'
         except ImportError:
             try:
-                import pydap
+                import pydap  # flake8: noqa
                 engine = 'pydap'
             except ImportError:
                 raise ValueError('netCDF4 or pydap is required for accessing '
                                  'remote datasets via OPeNDAP')
     else:
         try:
-            import netCDF4
+            import netCDF4  # flake8: noqa
             engine = 'netcdf4'
         except ImportError:  # pragma: no cover
             try:
-                import scipy.io.netcdf
+                import scipy.io.netcdf  # flake8: noqa
                 engine = 'scipy'
             except ImportError:
                 raise ValueError('cannot read or write netCDF files without '
@@ -87,7 +86,7 @@ def _validate_dataset_names(dataset):
             raise TypeError('DataArray.name or Dataset key must be either a '
                             'string or None for serialization to netCDF files')
 
-    for k in dataset:
+    for k in dataset.variables:
         check_name(k)
 
 
@@ -140,12 +139,12 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Path objects are interpreted as a path to a netCDF file
+        or an OpenDAP URL and opened with python-netCDF4, unless the filename
+        ends with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -220,7 +219,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         cache = chunks is None
 
     def maybe_decode_store(store, lock=False):
-        ds = coding.decode_cf(
+        ds = conventions.decode_cf(
             store, mask_and_scale=mask_and_scale, decode_times=decode_times,
             concat_characters=concat_characters, decode_coords=decode_coords,
             drop_variables=drop_variables)
@@ -254,6 +253,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
         return ds2
 
+    if isinstance(filename_or_obj, path_type):
+        filename_or_obj = str(filename_or_obj)
+
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
     elif isinstance(filename_or_obj, basestring):
@@ -279,13 +281,14 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
-            store = backends.NetCDF4DataStore(filename_or_obj, group=group,
-                                              autoclose=autoclose)
+            store = backends.NetCDF4DataStore.open(filename_or_obj,
+                                                   group=group,
+                                                   autoclose=autoclose)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj,
                                             autoclose=autoclose)
         elif engine == 'pydap':
-            store = backends.PydapDataStore(filename_or_obj)
+            store = backends.PydapDataStore.open(filename_or_obj)
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                            autoclose=autoclose)
@@ -310,7 +313,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(*args, **kwargs):
+def open_dataarray(filename_or_obj, group=None, decode_cf=True,
+                   mask_and_scale=True, decode_times=True, autoclose=False,
+                   concat_characters=True, decode_coords=True, engine=None,
+                   chunks=None, lock=None, cache=None, drop_variables=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -318,12 +324,12 @@ def open_dataarray(*args, **kwargs):
 
     Parameters
     ----------
-    filename_or_obj : str, file or xarray.backends.*DataStore
-        Strings are interpreted as a path to a netCDF file or an OpenDAP URL
-        and opened with python-netCDF4, unless the filename ends with .gz, in
-        which case the file is gunzipped and opened with scipy.io.netcdf (only
-        netCDF3 supported). File-like objects are opened with scipy.io.netcdf
-        (only netCDF3 supported).
+    filename_or_obj : str, Path, file or xarray.backends.*DataStore
+        Strings and Paths are interpreted as a path to a netCDF file or an
+        OpenDAP URL and opened with python-netCDF4, unless the filename ends
+        with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -391,7 +397,13 @@ def open_dataarray(*args, **kwargs):
     --------
     open_dataset
     """
-    dataset = open_dataset(*args, **kwargs)
+    dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
+                           mask_and_scale=mask_and_scale,
+                           decode_times=decode_times, autoclose=autoclose,
+                           concat_characters=concat_characters,
+                           decode_coords=decode_coords, engine=engine,
+                           chunks=chunks, lock=lock, cache=cache,
+                           drop_variables=drop_variables)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -428,7 +440,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, **kwargs):
+                   lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed.  Attributes from the first dataset file
@@ -438,7 +450,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open.
+        list of files to open.  Paths can be given as strings or as pathlib
+        Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -483,6 +496,32 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         default, a per-variable lock is used when reading data from netCDF
         files with the netcdf4 and h5netcdf engines to avoid issues with
         concurrent access when using dask's multithreaded backend.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        These data variables will be concatenated together:
+          * 'minimal': Only data variables in which the dimension already
+            appears are included.
+          * 'different': Data variables which are not equal (ignoring
+            attributes) across all datasets are also concatenated (as well as
+            all for which dimension already appears). Beware: this option may
+            load the data payload of data variables into memory if they are not
+            already loaded.
+          * 'all': All data variables will be concatenated.
+          * list of str: The listed data variables will be concatenated, in
+            addition to the 'minimal' data variables.
+    coords : {'minimal', 'different', 'all' o list of str}, optional
+        These coordinate variables will be concatenated together:
+          * 'minimal': Only coordinates in which the dimension already appears
+            are included.
+          * 'different': Coordinates which are not equal (ignoring attributes)
+            across all datasets are also concatenated (as well as all for which
+            dimension already appears). Beware: this option may load the data
+            payload of coordinate variables into memory if they are not already
+            loaded.
+          * 'all': All coordinate variables will be concatenated, except
+            those corresponding to other dimensions.
+          * list of str: The listed coordinate variables will be concatenated,
+            in addition the 'minimal' coordinates.
+
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -497,6 +536,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     """
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
+    else:
+        paths = [str(p) if isinstance(p, path_type) else p for p in paths]
+
     if not paths:
         raise IOError('no files to open')
 
@@ -509,17 +551,26 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
-    if concat_dim is _CONCAT_DIM_DEFAULT:
-        combined = auto_combine(datasets, compat=compat)
-    else:
-        combined = auto_combine(datasets, concat_dim=concat_dim, compat=compat)
+    # close datasets in case of a ValueError
+    try:
+        if concat_dim is _CONCAT_DIM_DEFAULT:
+            combined = auto_combine(datasets, compat=compat,
+                                    data_vars=data_vars, coords=coords)
+        else:
+            combined = auto_combine(datasets, concat_dim=concat_dim,
+                                    compat=compat,
+                                    data_vars=data_vars, coords=coords)
+    except ValueError:
+        for ds in datasets:
+            ds.close()
+        raise
+
     combined._file_obj = _MultiFileCloser(file_objs)
     combined.attrs = datasets[0].attrs
-
     return combined
 
 
-WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore,
+WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
                     'scipy': backends.ScipyDataStore,
                     'h5netcdf': backends.H5NetCDFStore}
 
@@ -533,6 +584,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     The ``writer`` argument is only for the private use of save_mfdataset.
     """
+    if isinstance(path_or_file, path_type):
+        path_or_file = str(path_or_file)
     if encoding is None:
         encoding = {}
     if path_or_file is None:
@@ -554,7 +607,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     _validate_attrs(dataset)
 
     try:
-        store_cls = WRITEABLE_STORES[engine]
+        store_open = WRITEABLE_STORES[engine]
     except KeyError:
         raise ValueError('unrecognized engine for to_netcdf: %r' % engine)
 
@@ -565,7 +618,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     sync = writer is None
 
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_cls(target, mode, format, group, writer)
+    store = store_open(target, mode, format, group, writer)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
@@ -597,12 +650,14 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     ----------
     datasets : list of xarray.Dataset
         List of datasets to save.
-    paths : list of str
+    paths : list of str or list of Paths
         List of paths to which to save each corresponding dataset.
     mode : {'w', 'a'}, optional
         Write ('w') or append ('a') mode. If mode='w', any existing file at
         these locations will be overwritten.
-    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT', 'NETCDF3_CLASSIC'}, optional
+    format : {'NETCDF4', 'NETCDF4_CLASSIC', 'NETCDF3_64BIT',
+              'NETCDF3_CLASSIC'}, optional
+
         File format for the resulting netCDF file:
 
         * NETCDF4: Data is stored in an HDF5 file, using netCDF4 API
@@ -644,6 +699,11 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         raise ValueError("cannot use mode='w' when writing multiple "
                          'datasets to the same path')
 
+    for obj in datasets:
+        if not isinstance(obj, Dataset):
+            raise TypeError('save_mfdataset only supports writing Dataset '
+                            'objects, recieved type %s' % type(obj))
+
     if groups is None:
         groups = [None] * len(datasets)
 
@@ -662,3 +722,29 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     finally:
         for store in stores:
             store.close()
+
+
+def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
+            encoding=None):
+    """This function creates an appropriate datastore for writing a dataset to
+    a zarr ztore
+
+    See `Dataset.to_zarr` for full API docs.
+    """
+    if isinstance(store, path_type):
+        store = str(store)
+    if encoding is None:
+        encoding = {}
+
+    # validate Dataset keys, DataArray names, and attr keys/values
+    _validate_dataset_names(dataset)
+    _validate_attrs(dataset)
+
+    store = backends.ZarrStore.open_group(store=store, mode=mode,
+                                          synchronizer=synchronizer,
+                                          group=group, writer=None)
+
+    # I think zarr stores should always be sync'd immediately
+    # TODO: figure out how to properly handle unlimited_dims
+    dataset.dump_to_store(store, sync=True, encoding=encoding)
+    return store

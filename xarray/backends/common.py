@@ -7,10 +7,11 @@ import time
 import traceback
 import contextlib
 from collections import Mapping
-from distutils.version import LooseVersion
+import warnings
 
-from ..conventions.coding import cf_encoder
-from ..core.utils import FrozenOrderedDict
+from ..conventions import cf_encoder
+from ..core import indexing
+from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
 
 try:
@@ -76,6 +77,13 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
             time.sleep(1e-3 * next_delay)
 
 
+class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
+
+    def __array__(self, dtype=None):
+        key = indexing.BasicIndexer((slice(None),) * self.ndim)
+        return np.asarray(self[key], dtype=dtype)
+
+
 class AbstractDataStore(Mapping):
     _autoclose = False
 
@@ -125,24 +133,25 @@ class AbstractDataStore(Mapping):
 
     @property
     def variables(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
+        warnings.warn('The ``variables`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         variables, _ = self.load()
         return variables
 
     @property
     def attrs(self):
-        # Because encoding/decoding might happen which may require both the
-        # attributes and the variables, and because a store may be updated
-        # we need to load both the attributes and variables
-        # anytime either one is requested.
-        _, attributes = self.load()
-        return attributes
+        warnings.warn('The ``attrs`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
+        _, attrs = self.load()
+        return attrs
 
     @property
     def dimensions(self):
+        warnings.warn('The ``dimensions`` property has been deprecated and '
+                      'will be removed in xarray v0.11.',
+                      FutureWarning, stacklevel=2)
         return self.get_dimensions()
 
     def close(self):
@@ -156,9 +165,10 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self):
+    def __init__(self, lock=GLOBAL_LOCK):
         self.sources = []
         self.targets = []
+        self.lock = lock
 
     def add(self, source, target):
         if isinstance(source, dask_array_type):
@@ -174,11 +184,7 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            import dask
-            if LooseVersion(dask.__version__) > LooseVersion('0.8.1'):
-                da.store(self.sources, self.targets, lock=GLOBAL_LOCK)
-            else:
-                da.store(self.sources, self.targets)
+            da.store(self.sources, self.targets, lock=self.lock)
             self.sources = []
             self.targets = []
 
@@ -225,19 +231,21 @@ class AbstractWritableDataStore(AbstractDataStore):
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
                 name, v, check, unlimited_dims=unlimited_dims)
+
             self.writer.add(source, target)
 
     def set_necessary_dimensions(self, variable, unlimited_dims=None):
         if unlimited_dims is None:
             unlimited_dims = set()
+        dims = self.get_dimensions()
         for d, l in zip(variable.dims, variable.shape):
-            if d not in self.dimensions:
-                if d in unlimited_dims:
-                    l = None
-                self.set_dimension(d, l)
+            if d not in dims:
+                is_unlimited = d in unlimited_dims
+                self.set_dimension(d, l, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
+
     def store(self, variables, attributes, *args, **kwargs):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.

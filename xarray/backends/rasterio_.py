@@ -1,11 +1,11 @@
 import os
 from collections import OrderedDict
-from distutils.version import LooseVersion
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import DunderArrayMixin, NdimSizeLenMixin, is_scalar
+from ..core.utils import is_scalar
 from ..core import indexing
+from .common import BackendArray
 try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
@@ -18,8 +18,9 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'first.')
 
 
-class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
+
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds
         self._shape = (rasterio_ds.count, rasterio_ds.height,
@@ -38,9 +39,8 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self._shape
 
     def __getitem__(self, key):
-
-        # make our job a bit easier
-        key = indexing.canonicalize_indexer(key, self._ndims)
+        key = indexing.unwrap_explicit_indexer(
+            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
 
         # bands cannot be windowed but they can be listed
         band_key = key[0]
@@ -64,9 +64,9 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
-                squeeze_axis.append(i+1)
+                squeeze_axis.append(i + 1)
                 start = k
-                stop = k+1
+                stop = k + 1
             else:
                 k = np.asarray(k)
                 start = k[0]
@@ -76,10 +76,41 @@ class RasterioArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
                     raise IndexError(_ERROR_MSG)
             window.append((start, stop))
 
-        out = self.rasterio_ds.read(band_key, window=window)
+        out = self.rasterio_ds.read(band_key, window=tuple(window))
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
         return out
+
+
+def _parse_envi(meta):
+    """Parse ENVI metadata into Python data structures.
+
+    See the link for information on the ENVI header file format:
+    http://www.harrisgeospatial.com/docs/enviheaderfiles.html
+
+    Parameters
+    ----------
+    meta : dict
+        Dictionary of keys and str values to parse, as returned by the rasterio
+        tags(ns='ENVI') call.
+
+    Returns
+    -------
+    parsed_meta : dict
+        Dictionary containing the original keys and the parsed values
+
+    """
+
+    def parsevec(s):
+        return np.fromstring(s.strip('{}'), dtype='float', sep=',')
+
+    def default(s):
+        return s.strip('{}')
+
+    parse = {'wavelength': parsevec,
+             'fwhm': parsevec}
+    parsed_meta = {k: parse.get(k, default)(v) for k, v in meta.items()}
+    return parsed_meta
 
 
 def open_rasterio(filename, chunks=None, cache=None, lock=None):
@@ -135,16 +166,17 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
     dx, dy = riods.res[0], -riods.res[1]
     x0 = riods.bounds.right if dx < 0 else riods.bounds.left
     y0 = riods.bounds.top if dy < 0 else riods.bounds.bottom
-    coords['y'] = np.linspace(start=y0 + dy/2, num=ny,
-                              stop=(y0 + (ny - 1) * dy) + dy/2)
-    coords['x'] = np.linspace(start=x0 + dx/2, num=nx,
-                              stop=(x0 + (nx - 1) * dx) + dx/2)
+    coords['y'] = np.linspace(start=y0 + dy / 2, num=ny,
+                              stop=(y0 + (ny - 1) * dy) + dy / 2)
+    coords['x'] = np.linspace(start=x0 + dx / 2, num=nx,
+                              stop=(x0 + (nx - 1) * dx) + dx / 2)
 
     # Attributes
     attrs = {}
-    if hasattr(riods, 'crs'):
+    if hasattr(riods, 'crs') and riods.crs:
         # CRS is a dict-like object specific to rasterio
-        # We convert it back to a PROJ4 string using rasterio itself
+        # If CRS is not None, we convert it back to a PROJ4 string using
+        # rasterio itself
         attrs['crs'] = riods.crs.to_string()
     if hasattr(riods, 'res'):
         # (width, height) tuple of pixels in units of CRS
@@ -157,6 +189,25 @@ def open_rasterio(filename, chunks=None, cache=None, lock=None):
         # Affine transformation matrix (tuple of floats)
         # Describes coefficients mapping pixel coordinates to CRS
         attrs['transform'] = tuple(riods.transform)
+    if hasattr(riods, 'nodatavals'):
+        # The nodata values for the raster bands
+        attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
+                                     for nodataval in riods.nodatavals])
+
+    # Parse extra metadata from tags, if supported
+    parsers = {'ENVI': _parse_envi}
+
+    driver = riods.driver
+    if driver in parsers:
+        meta = parsers[driver](riods.tags(ns=driver))
+
+        for k, v in meta.items():
+            # Add values as coordinates if they match the band count,
+            # as attributes otherwise
+            if isinstance(v, (list, np.ndarray)) and len(v) == riods.count:
+                coords[k] = ('band', np.asarray(v))
+            else:
+                attrs[k] = v
 
     data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
 

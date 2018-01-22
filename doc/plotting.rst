@@ -174,14 +174,36 @@ entire figure (as for matplotlib's ``figsize`` argument).
 
 .. _not equivalent to matplotlib's: https://github.com/mwaskom/seaborn/issues/746
 
+
+.. _plotting.multiplelines:
+
+Multiple lines showing variation along a dimension
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to make line plots of two-dimensional data by calling :py:func:`xarray.plot.line`
+with appropriate arguments. Consider the 3D variable ``air`` defined above. We can use line
+plots to check the variation of air temperature at three different latitudes along a longitude line:
+
+.. ipython:: python
+
+    @savefig plotting_example_multiple_lines_x_kwarg.png
+    air.isel(lon=10, lat=[19,21,22]).plot.line(x='time')
+
+It is required to explicitly specify either
+
+1. ``x``: the dimension to be used for the x-axis, or
+2. ``hue``: the dimension you want to represent by multiple lines.
+
+Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
+If required, the automatic legend can be turned off using ``add_legend=False``.
+
 Two Dimensions
 --------------
 
 Simple Example
 ~~~~~~~~~~~~~~
 
-The default method :py:meth:`xarray.DataArray.plot` sees that the data is
-2 dimensional and calls :py:func:`xarray.plot.pcolormesh`.
+The default method :py:meth:`xarray.DataArray.plot` calls :py:func:`xarray.plot.pcolormesh` by default when the data is two-dimensional.
 
 .. ipython:: python
 
@@ -282,6 +304,8 @@ example, consider the original data in Kelvins rather than Celsius:
 
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
+
+.. _robust-plotting:
 
 Robust
 ~~~~~~

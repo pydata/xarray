@@ -60,6 +60,9 @@ To convert the ``DataFrame`` to any other convenient representation,
 use ``DataFrame`` methods like :py:meth:`~pandas.DataFrame.reset_index`,
 :py:meth:`~pandas.DataFrame.stack` and :py:meth:`~pandas.DataFrame.unstack`.
 
+For datasets containing dask arrays where the data should be lazily loaded, see the
+:py:meth:`Dataset.to_dask_dataframe() <xarray.Dataset.to_dask_dataframe>` method.
+
 To create a ``Dataset`` from a ``DataFrame``, use the
 :py:meth:`~xarray.Dataset.from_dataframe` class method or the equivalent
 :py:meth:`pandas.DataFrame.to_xarray <DataFrame.to_xarray>` method (pandas

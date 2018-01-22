@@ -38,18 +38,22 @@ module:
 
     pickle.loads(pkl)
 
-Pickle support is important because it doesn't require any external libraries
+Pickling is important because it doesn't require any external libraries
 and lets you use xarray objects with Python modules like
-:py:mod:`multiprocessing`. However, there are two important caveats:
+:py:mod:`multiprocessing` or :ref:`Dask <dask>`. However, pickling is
+**not recommended for long-term storage**.
 
-1. To simplify serialization, xarray's support for pickle currently loads all
-   array values into memory before dumping an object. This means it is not
-   suitable for serializing datasets too big to load into memory (e.g., from
-   netCDF or OPeNDAP).
-2. Pickle will only work as long as the internal data structure of xarray objects
-   remains unchanged. Because the internal design of xarray is still being
-   refined, we make no guarantees (at this point) that objects pickled with
-   this version of xarray will work in future versions.
+Restoring a pickle requires that the internal structure of the types for the
+pickled data remain unchanged. Because the internal design of xarray is still
+being refined, we make no guarantees (at this point) that objects pickled with
+this version of xarray will work in future versions.
+
+.. note::
+
+  When pickling an object opened from a NetCDF file, the pickle file will
+  contain a reference to the file on disk. If you want to store the actual
+  array values, load it into memory first with :py:meth:`~xarray.Dataset.load`
+  or :py:meth:`~xarray.Dataset.compute`.
 
 .. _dictionary io:
 
@@ -172,6 +176,10 @@ for dealing with datasets too big to fit into memory. Instead, xarray integrates
 with dask.array (see :ref:`dask`), which provides a fully featured engine for
 streaming computation.
 
+It is possible to append or overwrite netCDF variables using the ``mode='a'``
+argument. When using this option, all variables in the dataset will be written
+to the original netCDF file, regardless if they exist in the original dataset.
+
 .. _io.encoding:
 
 Reading encoded data
@@ -251,7 +259,7 @@ These encoding options work on any version of the netCDF file format:
   saved on disk. This is important when converting floating point with missing values
   to integers on disk, because ``NaN`` is not a valid value for integer dtypes. As a
   default, variables with float types are attributed a ``_FillValue`` of ``NaN`` in the
-  output file.
+  output file, unless explicitly disabled with an encoding ``{'_FillValue': None}``.
 - ``scale_factor`` and ``add_offset``: Used to convert from encoded data on disk to
   to the decoded data in memory, according to the formula
   ``decoded = scale_factor * encoded + add_offset``.
@@ -262,6 +270,42 @@ converting ``NaN`` to ``-9999``, we would use
 ``encoding={'foo': {'dtype': 'int16', 'scale_factor': 0.1, '_FillValue': -9999}}``.
 Compression and decompression with such discretization is extremely fast.
 
+.. _io.string-encoding:
+
+String encoding
+...............
+
+xarray can write unicode strings to netCDF files in two ways:
+
+- As variable length strings. This is only supported on netCDF4 (HDF5) files.
+- By encoding strings into bytes, and writing encoded bytes as a character
+  array. The default encoding is UTF-8.
+
+By default, we use variable length strings for compatible files and fall-back
+to using encoded character arrays. Character arrays can be selected even for
+netCDF4 files by setting the ``dtype`` field in ``encoding`` to ``S1``
+(corresponding to NumPy's single-character bytes dtype).
+
+If character arrays are used, the string encoding that was used is stored on
+disk in the ``_Encoding`` attribute, which matches an ad-hoc convention
+`adopted by the netCDF4-Python library <https://github.com/Unidata/netcdf4-python/pull/665>`_.
+At the time of this writing (October 2017), a standard convention for indicating
+string encoding for character arrays in netCDF files was
+`still under discussion <https://github.com/Unidata/netcdf-c/issues/402>`_.
+Technically, you can use
+`any string encoding recognized by Python <https://docs.python.org/3/library/codecs.html#standard-encodings>`_ if you feel the need to deviate from UTF-8,
+by setting the ``_Encoding`` field in ``encoding``. But
+`we don't recommend it <http://utf8everywhere.org/>`_.
+
+.. warning::
+
+  Missing values in bytes or unicode string arrays (represented by ``NaN`` in
+  xarray) are currently written to disk as empty strings ``''``. This means
+  missing values will not be restored when data is loaded from disk.
+  This behavior is likely to change in the future (:issue:`1647`).
+  Unfortunately, explicitly setting a ``_FillValue`` for string arrays to handle
+  missing values doesn't work yet either, though we also hope to fix this in the
+  future.
 
 Chunk based compression
 .......................
@@ -293,6 +337,38 @@ supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'nol
 
 By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
+
+.. _io.iris:
+
+Iris
+----
+
+The Iris_ tool allows easy reading of common meteorological and climate model formats
+(including GRIB and UK MetOffice PP files) into ``Cube`` objects which are in many ways very
+similar to ``DataArray`` objects, while enforcing a CF-compliant data model. If iris is
+installed xarray can convert a ``DataArray`` into a ``Cube`` using
+:py:meth:`~xarray.DataArray.to_iris`:
+
+.. ipython:: python
+
+    da = xr.DataArray(np.random.rand(4, 5), dims=['x', 'y'],
+                      coords=dict(x=[10, 20, 30, 40],
+                                  y=pd.date_range('2000-01-01', periods=5)))
+
+    cube = da.to_iris()
+    cube
+
+Conversely, we can create a new ``DataArray`` object from a ``Cube`` using
+:py:meth:`~xarray.DataArray.from_iris`:
+
+.. ipython:: python
+
+    da_cube = xr.DataArray.from_iris(cube)
+    da_cube
+
+
+.. _Iris: http://scitools.org.uk/iris
+
 
 OPeNDAP
 -------
@@ -384,6 +460,38 @@ over the network until we look at particular values:
 
 .. image:: _static/opendap-prism-tmax.png
 
+Some servers require authentication before we can access the data. For this
+purpose we can explicitly create a :py:class:`~xarray.backends.PydapDataStore`
+and pass in a `Requests`__ session object. For example for
+HTTP Basic authentication::
+
+    import xarray as xr
+    import requests
+
+    session = requests.Session()
+    session.auth = ('username', 'password')
+
+    store = xr.backends.PydapDataStore.open('http://example.com/data',
+                                            session=session)
+    ds = xr.open_dataset(store)
+
+`Pydap's cas module`__ has functions that generate custom sessions for
+servers that use CAS single sign-on. For example, to connect to servers
+that require NASA's URS authentication::
+
+  import xarray as xr
+  from pydata.cas.urs import setup_session
+
+  ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
+
+  session = setup_session('username', 'password', check_url=ds_url)
+  store = xr.backends.PydapDataStore.open(ds_url, session=session)
+
+  ds = xr.open_dataset(store)
+
+__ http://docs.python-requests.org
+__ http://pydap.readthedocs.io/en/latest/client.html#authentication
+
 .. _io.rasterio:
 
 Rasterio
@@ -426,6 +534,103 @@ longitudes and latitudes.
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/jswhit/pyproj
 
+.. _io.zarr:
+
+Zarr
+----
+
+`Zarr`_ is a Python package providing an implementation of chunked, compressed,
+N-dimensional arrays.
+Zarr has the ability to store arrays in a range of ways, including in memory,
+in files, and in cloud-based object storage such as `Amazon S3`_ and
+`Google Cloud Storage`_.
+Xarray's Zarr backend allows xarray to leverage these capabilities.
+
+.. warning::
+
+    Zarr support is still an experimental feature. Please report any bugs or
+    unexepected behavior via github issues.
+
+Xarray can't open just any zarr dataset, because xarray requires special
+metadata (attributes) describing the dataset dimensions and coordinates.
+At this time, xarray can only open zarr datasets that have been written by
+xarray. To write a dataset with zarr, we use the
+:py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method.
+To write to a local directory, we pass a path to a directory
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf path/to/directory.zarr
+
+.. ipython:: python
+
+    ds = xr.Dataset({'foo': (('x', 'y'), np.random.rand(4, 5))},
+                    coords={'x': [10, 20, 30, 40],
+                            'y': pd.date_range('2000-01-01', periods=5),
+                            'z': ('x', list('abcd'))})
+    ds.to_zarr('path/to/directory.zarr')
+
+(The suffix ``.zarr`` is optional--just a reminder that a zarr store lives
+there.) If the directory does not exist, it will be created. If a zarr
+store is already present at that path, an error will be raised, preventing it
+from being overwritten. To override this behavior and overwrite an existing
+store, add ``mode='w'`` when invoking ``to_zarr``.
+
+To read back a zarr dataset that has been created this way, we use the
+:py:func:`~xarray.open_zarr` method:
+
+.. ipython:: python
+
+    ds_zarr = xr.open_zarr('path/to/directory.zarr')
+    ds_zarr
+
+Cloud Storage Buckets
+~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to read and write xarray datasets directly from / to cloud
+storage buckets using zarr. This example uses the `gcsfs`_ package to provide
+a ``MutableMapping`` interface to `Google Cloud Storage`_, which we can then
+pass to xarray::
+
+    import gcsfs
+    fs = gcsfs.GCSFileSystem(project='<project-name>', token=None)
+    gcsmap = gcsfs.mapping.GCSMap('<bucket-name>', gcs=fs, check=True, create=False)
+    # write to the bucket
+    ds.to_zarr(store=gcsmap)
+    # read it back
+    ds_gcs = xr.open_zarr(gcsmap, mode='r')
+
+.. _Zarr: http://zarr.readthedocs.io/
+.. _Amazon S3: https://aws.amazon.com/s3/
+.. _Google Cloud Storage: https://cloud.google.com/storage/
+.. _gcsfs: https://github.com/dask/gcsfs
+
+Zarr Compressors and Filters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are many different options for compression and filtering possible with
+zarr. These are described in the
+`zarr documentation <http://zarr.readthedocs.io/en/stable/tutorial.html#compressors>`_.
+These options can be passed to the ``to_zarr`` method as variable encoding.
+For example:
+
+.. ipython:: python
+   :suppress:
+
+    ! rm -rf foo.zarr
+
+.. ipython:: python
+
+    import zarr
+    compressor = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
+    ds.to_zarr('foo.zarr', encoding={'foo': {'compressor': compressor}})
+
+.. note::
+
+    Not all native zarr compression and filtering options have been tested with
+    xarray.
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -437,7 +642,7 @@ if PyNIO is installed. To use PyNIO to read such files, supply
 
 We recommend installing PyNIO via conda::
 
-    conda install -c dbrown pynio
+    conda install -c conda-forge pynio
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
@@ -451,6 +656,7 @@ For more options (tabular formats and CSV files in particular), consider
 exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
+
 
 
 Combining multiple files

@@ -4,7 +4,7 @@ import pandas as pd
 import xarray as xr
 
 from datetime import timedelta
-from xarray.conventions.netcdftimeindex import (
+from xarray.coding.netcdftimeindex import (
     parse_iso8601, NetCDFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical

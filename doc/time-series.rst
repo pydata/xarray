@@ -15,6 +15,7 @@ core functionality.
     import numpy as np
     import pandas as pd
     import xarray as xr
+
     np.random.seed(123456)
 
 Creating datetime64 data
@@ -95,8 +96,8 @@ given ``DataArray`` can be quickly computed using a special ``.dt`` accessor.
 
 .. ipython:: python
 
-    time = time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
-    ds = xr.Dataset({'foo': ('time', np.arange(365 * 24)), 'time': time})
+    time = pd.date_range('2000-01-01', freq='6H', periods=365 * 4)
+    ds = xr.Dataset({'foo': ('time', np.arange(365 * 4)), 'time': time})
     ds.time.dt.hour
     ds.time.dt.dayofweek
 
@@ -128,6 +129,8 @@ the first letters of the corresponding months.
 
 You can use these shortcuts with both Datasets and DataArray coordinates.
 
+.. _resampling:
+
 Resampling and grouped operations
 ---------------------------------
 
@@ -150,17 +153,38 @@ For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
 
-    ds.resample('6H', dim='time', how='mean')
+    ds.resample(time='6H')
 
-Resample also works for upsampling, in which case intervals without any
-values are marked by ``NaN``:
+This will create a specialized ``Resample`` object which saves information
+necessary for resampling. All of the reduction methods which work with
+``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
 
-    ds.resample('30Min', 'time')
+   ds.resample(time='6H').mean()
 
-Of course, all of these resampling and groupby operation work on both Dataset
-and DataArray objects with any number of additional dimensions.
+You can also supply an arbitrary reduction function to aggregate over each
+resampling group:
+
+.. ipython:: python
+
+   ds.resample(time='6H').reduce(np.mean)
+
+For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
+and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
+supports all of its schemes. All of these resampling operations work on both
+Dataset and DataArray objects with an arbitrary number of dimensions.
+
+.. note::
+
+   The ``resample`` api was updated in version 0.10.0 to reflect similar
+   updates in pandas ``resample`` api to be more groupby-like. Older style
+   calls to ``resample`` will still be supported for a short period:
+
+   .. ipython:: python
+
+    ds.resample('6H', dim='time', how='mean')
+
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.

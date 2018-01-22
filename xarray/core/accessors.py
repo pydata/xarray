@@ -22,7 +22,7 @@ def _access_through_netcdftimeindex(values, name):
     """Coerce an array of datetime-like values to a NetCDFTimeIndex 
     and access requested datetime component
     """
-    from ..conventions.netcdftimeindex import NetCDFTimeIndex
+    from ..coding.netcdftimeindex import NetCDFTimeIndex
     values_as_netcdftimeindex = NetCDFTimeIndex(values)
     if name == 'season':
         months = values_as_netcdftimeindex.month
@@ -99,6 +99,7 @@ class DatetimeAccessor(object):
      `dayofyear` may not be accurate.
 
      """
+
     def __init__(self, xarray_obj):
         if not _contains_datetime_like_objects(xarray_obj):
             raise TypeError("'dt' accessor only available for "

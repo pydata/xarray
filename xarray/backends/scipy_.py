@@ -9,11 +9,10 @@ import warnings
 
 from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
-from ..core.utils import (Frozen, FrozenOrderedDict, NdimSizeLenMixin,
-                          DunderArrayMixin)
+from ..core.utils import (Frozen, FrozenOrderedDict)
 from ..core.indexing import NumpyIndexingAdapter
 
-from .common import WritableCFDataStore, DataStorePickleMixin
+from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
 from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
                       encode_nc3_variable)
 
@@ -31,7 +30,7 @@ def _decode_attrs(d):
                        for (k, v) in iteritems(d))
 
 
-class ScipyArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class ScipyArrayWrapper(BackendArray):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -164,12 +163,13 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             k for k, v in self.ds.dimensions.items() if v is None}
         return encoding
 
-    def set_dimension(self, name, length):
+    def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            if name in self.dimensions:
+            if name in self.ds.dimensions:
                 raise ValueError('%s does not support modifying dimensions'
                                  % type(self).__name__)
-            self.ds.createDimension(name, length)
+            dim_length = length if not is_unlimited else None
+            self.ds.createDimension(name, dim_length)
 
     def _validate_attr_key(self, key):
         if not is_valid_nc3_name(key):
@@ -196,7 +196,8 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support
         # incremental writes.
-        self.ds.createVariable(name, data.dtype, variable.dims)
+        if name not in self.ds.variables:
+            self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)

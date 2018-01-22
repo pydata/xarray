@@ -13,7 +13,7 @@ matrix:
   - python: 2.7
     env: CONDA_ENV=py27-min
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio
+    env: CONDA_ENV=py27-cdat+iris+pynio
   - python: 3.4
     env: CONDA_ENV=py34
   - python: 3.5
@@ -39,6 +39,12 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
   allow_failures:
   - python: 3.6
     env:
@@ -59,6 +65,12 @@ matrix:
     env: CONDA_ENV=py36-bottleneck-dev
   - python: 3.6
     env: CONDA_ENV=py36-condaforge-rc
+  - python: 3.6
+    env: CONDA_ENV=py36-pynio-dev
+  - python: 3.6
+    env: CONDA_ENV=py36-rasterio1.0alpha
+  - python: 3.6
+    env: CONDA_ENV=py36-zarr-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -76,15 +88,14 @@ before_install:
 install:
   - conda env create --file ci/requirements-$CONDA_ENV.yml
   - source activate test_env
-  # scipy should not have been installed, but it's included in older versions of
-  # the conda pandas package
-  - if [[ "$CONDA_ENV" == "py27-min" ]]; then
-      conda remove scipy;
-    fi
+  - conda list
   - python setup.py install
+  - python xarray/util/print_versions.py
 
 script:
-  - py.test xarray --cov=xarray --cov-report term-missing --verbose $EXTRA_FLAGS
+  - flake8 -j auto xarray
+  - python -OO -c "import xarray"
+  - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
 
 after_success:
   - coveralls

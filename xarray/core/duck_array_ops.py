@@ -40,9 +40,11 @@ def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
     """Create a function that dispatches to dask for dask array inputs."""
     if has_dask:
         def f(*args, **kwargs):
-            dispatch_args = args[0] if list_of_args else args
-            if any(isinstance(a, da.Array)
-                   for a in dispatch_args[:n_array_args]):
+            if list_of_args:
+                dispatch_args = args[0]
+            else:
+                dispatch_args = args[:n_array_args]
+            if any(isinstance(a, da.Array) for a in dispatch_args):
                 module = da
             else:
                 module = eager_module
@@ -83,10 +85,10 @@ transpose = _dask_or_eager_func('transpose')
 where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
-broadcast_to = _dask_or_eager_func('broadcast_to', npcompat)
+broadcast_to = _dask_or_eager_func('broadcast_to')
 
 concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
-stack = _dask_or_eager_func('stack', npcompat, list_of_args=True)
+stack = _dask_or_eager_func('stack', list_of_args=True)
 
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
@@ -173,24 +175,25 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
                            keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggregators
-        # automatically:
-        kwargs.pop('dtype', None)
-        kwargs.pop('out', None)
+        if kwargs.pop('out', None) is not None:
+            raise TypeError('`out` is not valid for {}'.format(name))
 
+        # If dtype is supplied, we use numpy's method.
+        dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
         if skipna or (skipna is None and values.dtype.kind in 'cf'):
-            if values.dtype.kind not in ['i', 'f', 'c']:
+            if values.dtype.kind not in ['u', 'i', 'f', 'c']:
                 raise NotImplementedError(
                     'skipna=True not yet implemented for %s with dtype %s'
                     % (name, values.dtype))
             nanname = 'nan' + name
             if (isinstance(axis, tuple) or not values.dtype.isnative or
-                    no_bottleneck):
+                    no_bottleneck or
+                    (dtype is not None and np.dtype(dtype) != values.dtype)):
                 # bottleneck can't handle multiple axis arguments or non-native
                 # endianness
                 if np_compat:
@@ -198,6 +201,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 else:
                     eager_module = np
             else:
+                kwargs.pop('dtype', None)
                 eager_module = bn
             func = _dask_or_eager_func(nanname, eager_module)
             using_numpy_nan_func = (eager_module is np or
@@ -232,8 +236,7 @@ mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, np_compat=True,
-                              no_bottleneck=True)
+prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
 cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
                                  no_bottleneck=True, keep_dims=True)
 cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,

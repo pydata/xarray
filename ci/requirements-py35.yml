@@ -10,12 +10,14 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - flake8
   - numpy
   - pandas
   - scipy
   - seaborn
   - toolz
   - rasterio
+  - zarr
   - pip:
     - coveralls
     - pytest-cov
