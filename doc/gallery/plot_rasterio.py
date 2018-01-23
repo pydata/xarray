@@ -44,13 +44,10 @@ lat = np.asarray(lat).reshape((ny, nx))
 da.coords['lon'] = (('y', 'x'), lon)
 da.coords['lat'] = (('y', 'x'), lat)
 
-# Compute a greyscale out of the rgb image
-greyscale = da.mean(dim='band')
-
 # Plot on a map
 ax = plt.subplot(projection=ccrs.PlateCarree())
-greyscale.plot(ax=ax, x='lon', y='lat', transform=ccrs.PlateCarree(),
-               cmap='Greys_r', add_colorbar=False)
+da.plot.imshow(ax=ax, x='lon', y='lat', rgb='band',
+               transform=ccrs.PlateCarree())
 ax.coastlines('10m', color='r')
 plt.show()
 

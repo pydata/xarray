@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 import functools
 import operator
+import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -218,6 +220,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
+
     def __init__(self, netcdf4_dataset, mode='r', writer=None, opener=None,
                  autoclose=False):
 
@@ -243,6 +246,17 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
              writer=None, clobber=True, diskless=False, persist=False,
              autoclose=False):
+        import netCDF4 as nc4
+        if (len(filename) == 88 and
+                LooseVersion(nc4.__version__) < "1.3.1"):
+            warnings.warn(
+                '\nA segmentation fault may occur when the\n'
+                'file path has exactly 88 characters as it does.\n'
+                'in this case. The issue is known to occur with\n'
+                'version 1.2.4 of netCDF4 and can be addressed by\n'
+                'upgrading netCDF4 to at least version 1.3.1.\n'
+                'More details can be found here:\n'
+                'https://github.com/pydata/xarray/issues/1745  \n')
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
