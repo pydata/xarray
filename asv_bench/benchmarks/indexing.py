@@ -1,13 +1,12 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from functools import partial
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
-from . import randn, randint
+from . import randn, randint, requires_dask
 
 
 nx = 3000
@@ -122,13 +121,8 @@ class Assignment(Base):
     time_assignment_vectorized.params = [list(vectorized_indexes.keys())]
 
 
-try:
-    import dask
-
-    class IndexingDask(Indexing):
-        def setUp(self, key):
-            super(IndexingDask, self).setup(self)
-            self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})
-
-except ImportError:
-    pass
+class IndexingDask(Indexing):
+    def setup(self, key):
+        requires_dask()
+        super(IndexingDask, self).setup(key)
+        self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})
