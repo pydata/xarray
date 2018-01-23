@@ -96,7 +96,7 @@ not show any seasonal cycle.
 .. _standardized monthly anomalies:
 
 Calculate standardized monthly anomalies
----------------------------
+----------------------------------------
 
 You can create standardized anomalies where the difference between the
 observations and the climatological monthly mean is
