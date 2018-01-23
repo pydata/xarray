@@ -21,6 +21,8 @@ v0.10.1 (unreleased)
 Documentation
 ~~~~~~~~~~~~~
 
+- Added apply_ufunc example to toy weather data page (:issue:`1844`).
+  By `Liam Brannigan <https://github.com/braaannigan>` _.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
