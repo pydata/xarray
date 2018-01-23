@@ -126,7 +126,7 @@ try:
     import dask
 
     class IndexingDask(Indexing):
-        def setUp(self):
+        def setUp(self, key):
             super(IndexingDask, self).setup(self)
             self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})
 
