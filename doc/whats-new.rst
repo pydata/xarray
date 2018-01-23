@@ -21,6 +21,8 @@ v0.10.1 (unreleased)
 Documentation
 ~~~~~~~~~~~~~
 
+- Added apply_ufunc example to toy weather data page (:issue:`1844`).
+  By `Liam Brannigan <https://github.com/braaannigan>` _.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
@@ -79,6 +81,9 @@ Bug fixes
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
+- Fixed chunking with non-file-based rasterio datasets (:issue:`1816`) and
+  refactored rasterio test suite.
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
