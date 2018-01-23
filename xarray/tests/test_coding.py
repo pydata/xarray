@@ -1,5 +1,7 @@
 import numpy as np
 
+import pytest
+
 import xarray as xr
 from xarray.core.pycompat import suppress
 from xarray.coding import variables
@@ -36,3 +38,15 @@ def test_coder_roundtrip():
     coder = variables.CFMaskCoder()
     roundtripped = coder.decode(coder.encode(original))
     assert_identical(original, roundtripped)
+
+
+@pytest.mark.parametrize('dtype', 'u1 u2 i1 i2 f2 f4'.split())
+def test_scaling_converts_to_float32(dtype):
+    original = xr.Variable(('x',), np.arange(10, dtype=dtype),
+                           encoding=dict(scale_factor=10))
+    coder = variables.CFScaleOffsetCoder()
+    encoded = coder.encode(original)
+    assert encoded.dtype == np.float32
+    roundtripped = coder.decode(encoded)
+    assert_identical(original, roundtripped)
+    assert roundtripped.dtype == np.float32
