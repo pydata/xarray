@@ -378,6 +378,16 @@ class DatasetRolling(Rolling):
                 reduced[key] = self.obj[key]
         return Dataset(reduced, coords=self.obj.coords)
 
+    def _counts(self):
+        from .dataset import Dataset
+        reduced = OrderedDict()
+        for key, da in self.obj.data_vars.items():
+            if self.dim in da.dims:
+                reduced[key] = self.rollings[key]._counts()
+            else:
+                reduced[key] = self.obj[key]
+        return Dataset(reduced, coords=self.obj.coords)
+
     @classmethod
     def _reduce_method(cls, func):
         """

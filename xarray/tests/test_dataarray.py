@@ -3491,21 +3491,23 @@ def test_rolling_count_correct():
     da = DataArray(
         [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
 
-    result = da.rolling(time=11, min_periods=1).count()
-    expected = DataArray(
-        [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time')
-    assert_equal(result, expected)
+    kwargs = [{'time': 11, 'min_periods': 1},
+              {'time': 11, 'min_periods': None},
+              {'time': 7, 'min_periods': 2}]
+    expecteds = [DataArray(
+                    [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time'),
+                 DataArray(
+                    [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+                     np.nan, np.nan, np.nan, np.nan, np.nan], dims='time'),
+                 DataArray(
+                    [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')]
 
-    result = da.rolling(time=11, min_periods=None).count()
-    expected = DataArray(
-        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-         np.nan, np.nan, np.nan, np.nan, np.nan], dims='time')
-    assert_equal(result, expected)
+    for kwarg, expected in zip(kwargs, expecteds):
+        result = da.rolling(**kwarg).count()
+        assert_equal(result, expected)
 
-    result = da.rolling(time=7, min_periods=2).count()
-    expected = DataArray(
-        [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')
-    assert_equal(result, expected)
+        result = da.to_dataset(name='var1').rolling(**kwarg).count()['var1']
+        assert_equal(result, expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():
