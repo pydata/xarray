@@ -34,6 +34,9 @@ nosetests.xml
 .cache
 .ropeproject/
 
+# asv environments
+.asv
+
 # Translations
 *.mo
 
