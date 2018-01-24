@@ -728,6 +728,16 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.open(tmp_file) as actual:
                 assert_identical(data, actual)
 
+    def test_append_with_invalid_dim_raises(self):
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            self.save(data, tmp_file, mode='w')
+            data['var9'] = data['var2'] * 3
+            data = data.isel(dim1=slice(2, 6))  # modify one dimension
+            with raises_regex(ValueError,
+                              'Unable to update size for existing dimension'):
+                self.save(data, tmp_file, mode='a')
+
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
@@ -1109,12 +1119,26 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(store_target, mode='w')
 
+    def save(self, dataset, store_target, **kwargs):
+        dataset.to_zarr(store=store_target, **kwargs)
+
+    @contextlib.contextmanager
+    def open(self, store_target, **kwargs):
+        with xr.open_zarr(store_target, **kwargs) as ds:
+            yield ds
+
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with self.create_zarr_target() as store_target:
-            data.to_zarr(store=store_target, **save_kwargs)
-            yield xr.open_zarr(store_target, **open_kwargs)
+            self.save(data, store_target, **save_kwargs)
+            with self.open(store_target, **open_kwargs) as ds:
+                yield ds
+
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        pytest.skip("zarr backend does not support appending")
 
     def test_auto_chunk(self):
         original = create_test_data().chunk()
@@ -1205,33 +1229,22 @@ class BaseZarrTest(CFEncodedDataTest):
             expected.dump_to_store(store)
             zarr_group = store.ds
 
-            # check that the global hidden attribute is present
-            assert self.DIMENSION_KEY in zarr_group.attrs
-
             # check that a variable hidden attribute is present and correct
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
             for var in expected.variables.keys():
-                assert (zarr_group[var].attrs[self.DIMENSION_KEY] ==
-                        list(expected[var].dims))
+                dims = zarr_group[var].attrs[self.DIMENSION_KEY]
+                assert dims == list(expected[var].dims)
 
-            with xr.decode_cf(store) as actual:
+            with xr.decode_cf(store):
                 # make sure it is hidden
-                assert self.DIMENSION_KEY not in actual.attrs
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            # verify that the dataset fails to open if dimension key is missing
-            del zarr_group.attrs[self.DIMENSION_KEY]
-            with pytest.raises(KeyError):
-                with xr.decode_cf(store) as actual:
-                    pass
-
             # put it back and try removing from a variable
-            zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
-                with xr.decode_cf(store) as actual:
+                with xr.decode_cf(store):
                     pass
 
     def test_write_persistence_modes(self):
@@ -1247,13 +1260,13 @@ class BaseZarrTest(CFEncodedDataTest):
 
         # make sure overwriting works as expected
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
+            self.save(original, store)
             # should overwrite with no error
-            original.to_zarr(store, mode='w')
-            actual = xr.open_zarr(store)
-            assert_identical(original, actual)
-            with pytest.raises(ValueError):
-                original.to_zarr(store, mode='w-')
+            self.save(original, store, mode='w')
+            with self.open(store) as actual:
+                assert_identical(original, actual)
+                with pytest.raises(ValueError):
+                    self.save(original, store, mode='w-')
 
         # check that we can't use other persistence modes
         # TODO: reconsider whether other persistence modes should be supported
@@ -1268,7 +1281,7 @@ class BaseZarrTest(CFEncodedDataTest):
         blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
         save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
         with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
-            assert actual.var1.encoding['compressor'] == blosc_comp
+            assert repr(actual.var1.encoding['compressor']) == repr(blosc_comp)
 
     def test_group(self):
         original = create_test_data()
@@ -1276,10 +1289,6 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(original, save_kwargs={'group': group},
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
-        with pytest.raises(KeyError):
-            with self.roundtrip(original,
-                                save_kwargs={'group': group}) as actual:
-                assert_identical(original, actual)
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
@@ -1304,6 +1313,18 @@ class BaseZarrTest(CFEncodedDataTest):
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
         super(CFEncodedDataTest, self).test_dataset_caching()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_write(self):
+        super(CFEncodedDataTest, self).test_append_write()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_overwrite_values(self):
+        super(CFEncodedDataTest, self).test_append_overwrite_values()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_with_invalid_dim_raises(self):
+        super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
 
 
 @requires_zarr

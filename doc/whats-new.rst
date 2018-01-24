@@ -44,6 +44,9 @@ Enhancements
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support for using `Zarr`_ as storage layer for xarray. (:issue:`1223`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
 - Support for using `Zarr`_ as storage layer for xarray.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :func:`xarray.plot.imshow` now handles RGB and RGBA images.
