@@ -1,6 +1,14 @@
 Frequently Asked Questions
 ==========================
 
+.. ipython:: python
+   :suppress:
+
+    import numpy as np
+    import pandas as pd
+    import xarray as xr
+    np.random.seed(123456)
+
 Why is pandas not enough?
 -------------------------
 
@@ -56,6 +64,38 @@ multi-dimensional data-structures.
 That said, you should only bother with xarray if some aspect of data is
 fundamentally multi-dimensional. If your data is unstructured or
 one-dimensional, stick with pandas.
+
+
+Why don't aggregations return Python scalars?
+---------------------------------------------
+
+xarray tries hard to be self-consistent: operations on a ``DataArray`` (resp.
+``Dataset``) return another ``DataArray`` (resp. ``Dataset``) object. In
+particular, operations returning scalar values (e.g. indexing or aggregations
+like ``mean`` or ``sum`` applied to all axes) will also return xarray objects.
+
+Unfortunately, this means we sometimes have to explicitly cast our results from
+xarray when using them in other libraries. As an illustration, the following
+code fragment
+
+.. ipython:: python
+
+    arr = xr.DataArray([1, 2, 3])
+    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()})
+
+does not yield the pandas DataFrame we expected. We need to specify the type
+conversion ourselves:
+
+.. ipython:: python
+
+    pd.Series({'x': arr[0], 'mean': arr.mean(), 'std': arr.std()}, dtype=float)
+
+Alternatively, we could use the ``item`` method or the ``float`` constructor to
+convert values one at a time
+
+.. ipython:: python
+
+    pd.Series({'x': arr[0].item(), 'mean': float(arr.mean())})
 
 
 .. _approach to metadata:

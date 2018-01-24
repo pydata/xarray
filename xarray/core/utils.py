@@ -271,6 +271,7 @@ class SingleSlotPickleMixin(object):
     """Mixin class to add the ability to pickle objects whose state is defined
     by a single __slots__ attribute. Only necessary under Python 2.
     """
+
     def __getstate__(self):
         return getattr(self, self.__slots__[0])
 
@@ -386,6 +387,7 @@ class OrderedSet(MutableSet):
     The API matches the builtin set, but it preserves insertion order of
     elements, like an OrderedDict.
     """
+
     def __init__(self, values=None):
         self._ordered_dict = OrderedDict()
         if values is not None:
@@ -540,6 +542,7 @@ class HiddenKeyDict(MutableMapping):
     Acts like a normal dictionary, but hides certain keys.
     '''
     # ``__init__`` method required to create instance from class.
+
     def __init__(self, data, hidden_keys):
         self._data = data
         if type(hidden_keys) not in (list, tuple):

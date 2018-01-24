@@ -205,6 +205,25 @@ def _scale_offset_decoding(data, scale_factor, add_offset, dtype):
     return data
 
 
+def _choose_float_dtype(dtype, has_offset):
+    """Return a float dtype that can losslessly represent `dtype` values."""
+    # Keep float32 as-is.  Upcast half-precision to single-precision,
+    # because float16 is "intended for storage but not computation"
+    if dtype.itemsize <= 4 and np.issubdtype(dtype, np.floating):
+        return np.float32
+    # float32 can exactly represent all integers up to 24 bits
+    if dtype.itemsize <= 2 and np.issubdtype(dtype, np.integer):
+        # A scale factor is entirely safe (vanishing into the mantissa),
+        # but a large integer offset could lead to loss of precision.
+        # Sensitivity analysis can be tricky, so we just use a float64
+        # if there's any offset at all - better unoptimised than wrong!
+        if not has_offset:
+            return np.float32
+    # For all other types and circumstances, we just use float64.
+    # (safe because eg. complex numbers are not supported in NetCDF)
+    return np.float64
+
+
 class CFScaleOffsetCoder(VariableCoder):
     """Scale and offset variables according to CF conventions.
 
@@ -216,7 +235,8 @@ class CFScaleOffsetCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         if 'scale_factor' in encoding or 'add_offset' in encoding:
-            data = data.astype(dtype=np.float64, copy=True)
+            dtype = _choose_float_dtype(data.dtype, 'add_offset' in encoding)
+            data = data.astype(dtype=dtype, copy=True)
             if 'add_offset' in encoding:
                 data -= pop_to(encoding, attrs, 'add_offset', name=name)
             if 'scale_factor' in encoding:
@@ -230,7 +250,7 @@ class CFScaleOffsetCoder(VariableCoder):
         if 'scale_factor' in attrs or 'add_offset' in attrs:
             scale_factor = pop_to(attrs, encoding, 'scale_factor', name=name)
             add_offset = pop_to(attrs, encoding, 'add_offset', name=name)
-            dtype = np.float64
+            dtype = _choose_float_dtype(data.dtype, 'add_offset' in attrs)
             transform = partial(_scale_offset_decoding,
                                 scale_factor=scale_factor,
                                 add_offset=add_offset,

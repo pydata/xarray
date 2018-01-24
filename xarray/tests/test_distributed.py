@@ -6,8 +6,9 @@ import xarray as xr
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 import dask
-from distributed.utils_test import gen_cluster, cluster, loop
-from distributed.client import futures_of, Client
+from distributed.utils_test import cluster, gen_cluster
+from distributed.utils_test import loop  # flake8: noqa
+from distributed.client import futures_of
 
 from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
 from xarray.tests.test_dataset import create_test_data

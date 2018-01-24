@@ -11,6 +11,9 @@ from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 
 
+ROBUST_PERCENTILE = 2.0
+
+
 def _load_default_cmap(fname='default_colormap.csv'):
     """
     Returns viridis color map
@@ -165,7 +168,6 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    ROBUST_PERCENTILE = 2.0
     import matplotlib as mpl
 
     calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
@@ -244,7 +246,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels = np.linspace(vmin, vmax, levels)
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = mpl.ticker.MaxNLocator(levels-1)
+                ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 

@@ -305,6 +305,8 @@ example, consider the original data in Kelvins rather than Celsius:
 The Celsius data contain 0, so a diverging color map was used. The
 Kelvins do not have 0, so the default color map was used.
 
+.. _robust-plotting:
+
 Robust
 ~~~~~~
 

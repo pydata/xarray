@@ -25,6 +25,7 @@ class StackedBytesArray(indexing.ExplicitlyIndexedNDArrayMixin):
     array('abc',
           dtype='|S3')
     """
+
     def __init__(self, array):
         """
         Parameters
@@ -70,6 +71,7 @@ class BytesToStringArray(indexing.ExplicitlyIndexedNDArrayMixin):
     array(['abc'],
           dtype=object)
     """
+
     def __init__(self, array, encoding='utf-8'):
         """
         Parameters
@@ -120,6 +122,7 @@ class NativeEndiannessArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> NativeEndianArray(x)[:].dtype
     dtype('int16')
     """
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
 
@@ -148,6 +151,7 @@ class BoolTypeArray(indexing.ExplicitlyIndexedNDArrayMixin):
     >>> BoolTypeArray(x)[:].dtype
     dtype('bool')
     """
+
     def __init__(self, array):
         self.array = indexing.as_indexable(array)
 
@@ -351,7 +355,7 @@ def ensure_dtype_not_object(var, name=None):
                 fill_value = u''
             else:
                 # insist on using float for numeric values
-                if not np.issubdtype(inferred_dtype, float):
+                if not np.issubdtype(inferred_dtype, np.floating):
                     inferred_dtype = np.dtype(float)
                 fill_value = inferred_dtype.type(np.nan)
 

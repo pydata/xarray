@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 import contextlib
-from collections import Mapping
+from collections import Mapping, OrderedDict
 import warnings
 
 from ..conventions import cf_encoder
@@ -95,6 +95,9 @@ class AbstractDataStore(Mapping):
 
     def __len__(self):
         return len(self.variables)
+
+    def get_dimensions(self):  # pragma: no cover
+        raise NotImplementedError
 
     def get_attrs(self):  # pragma: no cover
         raise NotImplementedError
@@ -191,6 +194,37 @@ class AbstractWritableDataStore(AbstractDataStore):
             writer = ArrayWriter()
         self.writer = writer
 
+    def encode(self, variables, attributes):
+        """
+        Encode the variables and attributes in this store
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        attributes : dict-like
+            Dictionary of key/value (attribute name / attribute) pairs
+
+        Returns
+        -------
+        variables : dict-like
+        attributes : dict-like
+
+        """
+        variables = OrderedDict([(k, self.encode_variable(v))
+                                 for k, v in variables.items()])
+        attributes = OrderedDict([(k, self.encode_attribute(v))
+                                  for k, v in attributes.items()])
+        return variables, attributes
+
+    def encode_variable(self, v):
+        """encode one variable"""
+        return v
+
+    def encode_attribute(self, a):
+        """encode one attribute"""
+        return a
+
     def set_dimension(self, d, l):  # pragma: no cover
         raise NotImplementedError
 
@@ -204,24 +238,74 @@ class AbstractWritableDataStore(AbstractDataStore):
         self.writer.sync()
 
     def store_dataset(self, dataset):
-        # in stores variables are all variables AND coordinates
-        # in xarray.Dataset variables are variables NOT coordinates,
-        # so here we pass the whole dataset in instead of doing
-        # dataset.variables
+        """
+        in stores, variables are all variables AND coordinates
+        in xarray.Dataset variables are variables NOT coordinates,
+        so here we pass the whole dataset in instead of doing
+        dataset.variables
+        """
         self.store(dataset, dataset.attrs)
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
               unlimited_dims=None):
+        """
+        Top level method for putting data on this store, this method:
+          - encodes variables/attributes
+          - sets dimensions
+          - sets variables
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        attributes : dict-like
+            Dictionary of key/value (attribute name / attribute) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+        """
+
+        variables, attributes = self.encode(variables, attributes)
+
         self.set_attributes(attributes)
+        self.set_dimensions(variables, unlimited_dims=unlimited_dims)
         self.set_variables(variables, check_encoding_set,
                            unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
+        """
+        This provides a centralized method to set the dataset attributes on the
+        data store.
+
+        Parameters
+        ----------
+        attributes : dict-like
+            Dictionary of key/value (attribute name / attribute) pairs
+        """
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
     def set_variables(self, variables, check_encoding_set,
                       unlimited_dims=None):
+        """
+        This provides a centralized method to set the variables on the data
+        store.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        check_encoding_set : list-like
+            List of variables that should be checked for invalid encoding
+            values
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+        """
+
         for vn, v in iteritems(variables):
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
@@ -230,24 +314,51 @@ class AbstractWritableDataStore(AbstractDataStore):
 
             self.writer.add(source, target)
 
-    def set_necessary_dimensions(self, variable, unlimited_dims=None):
+    def set_dimensions(self, variables, unlimited_dims=None):
+        """
+        This provides a centralized method to set the dimensions on the data
+        store.
+
+        Parameters
+        ----------
+        variables : dict-like
+            Dictionary of key/value (variable name / xr.Variable) pairs
+        unlimited_dims : list-like
+            List of dimension names that should be treated as unlimited
+            dimensions.
+        """
         if unlimited_dims is None:
             unlimited_dims = set()
-        dims = self.get_dimensions()
-        for d, l in zip(variable.dims, variable.shape):
-            if d not in dims:
-                is_unlimited = d in unlimited_dims
-                self.set_dimension(d, l, is_unlimited)
+
+        existing_dims = self.get_dimensions()
+
+        dims = OrderedDict()
+        for v in unlimited_dims:  # put unlimited_dims first
+            dims[v] = None
+        for v in variables.values():
+            dims.update(dict(zip(v.dims, v.shape)))
+
+        for dim, length in dims.items():
+            if dim in existing_dims and length != existing_dims[dim]:
+                raise ValueError(
+                    "Unable to update size for existing dimension"
+                    "%r (%d != %d)" % (dim, length, existing_dims[dim]))
+            elif dim not in existing_dims:
+                is_unlimited = dim in unlimited_dims
+                self.set_dimension(dim, length, is_unlimited)
 
 
 class WritableCFDataStore(AbstractWritableDataStore):
 
-    def store(self, variables, attributes, *args, **kwargs):
+    def encode(self, variables, attributes):
         # All NetCDF files get CF encoded by default, without this attempting
         # to write times, for example, would fail.
-        cf_variables, cf_attrs = cf_encoder(variables, attributes)
-        AbstractWritableDataStore.store(self, cf_variables, cf_attrs,
-                                        *args, **kwargs)
+        variables, attributes = cf_encoder(variables, attributes)
+        variables = OrderedDict([(k, self.encode_variable(v))
+                                 for k, v in variables.items()])
+        attributes = OrderedDict([(k, self.encode_attribute(v))
+                                  for k, v in attributes.items()])
+        return variables, attributes
 
 
 class DataStorePickleMixin(object):

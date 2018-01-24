@@ -363,7 +363,7 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
                 "Indexer has dimensions {0:s} that are different "
                 "from that to be indexed along {1:s}. "
                 "This will behave differently in the future.".format(
-                                            str(indexer.dims), dim),
+                    str(indexer.dims), dim),
                 FutureWarning, stacklevel=3)
 
         if dim in variables:

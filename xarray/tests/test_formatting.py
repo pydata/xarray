@@ -25,10 +25,10 @@ class TestFormatting(TestCase):
             ((2, 5, 1,), (slice(2), slice(None), slice(None))),
             ((2, 5, 3,), (0, slice(4), slice(None))),
             ((2, 3, 3,), (slice(2), slice(None), slice(None))),
-            ]
+        ]
         for shape, expected in cases:
             actual = formatting._get_indexer_at_least_n_items(shape, 10)
-            self.assertEqual(expected, actual)
+            assert expected == actual
 
     def test_first_n_items(self):
         array = np.arange(100).reshape(10, 5, 2)
@@ -48,7 +48,7 @@ class TestFormatting(TestCase):
 
         for r in reshape:
             result = formatting.last_item(array.reshape(r))
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_format_item(self):
         cases = [
@@ -67,7 +67,7 @@ class TestFormatting(TestCase):
         ]
         for item, expected in cases:
             actual = formatting.format_item(item)
-            self.assertEqual(expected, actual)
+            assert expected == actual
 
     def test_format_items(self):
         cases = [
@@ -85,62 +85,62 @@ class TestFormatting(TestCase):
         ]
         for item, expected in cases:
             actual = ' '.join(formatting.format_items(item))
-            self.assertEqual(expected, actual)
+            assert expected == actual
 
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 13)
         expected = '0 1 2 3 4 ...'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 11)
         expected = '0.0 1.0 ...'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 1)
         expected = '0.0 ...'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(3), 5)
         expected = '0 1 2'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4.0), 11)
         expected = '0.0 1.0 ...'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4), 0)
         expected = '0 ...'
-        self.assertEqual(expected, actual)
+        assert expected == actual
 
     def test_pretty_print(self):
-        self.assertEqual(formatting.pretty_print('abcdefghij', 8), 'abcde...')
-        self.assertEqual(formatting.pretty_print(u'ß', 1), u'ß')
+        assert formatting.pretty_print('abcdefghij', 8) == 'abcde...'
+        assert formatting.pretty_print(u'ß', 1) == u'ß'
 
     def test_maybe_truncate(self):
-        self.assertEqual(formatting.maybe_truncate(u'ß', 10), u'ß')
+        assert formatting.maybe_truncate(u'ß', 10) == u'ß'
 
     def test_format_timestamp_out_of_bounds(self):
         from datetime import datetime
         date = datetime(1300, 12, 1)
         expected = '1300-12-01'
         result = formatting.format_timestamp(date)
-        self.assertEqual(result, expected)
+        assert result == expected
 
         date = datetime(2300, 12, 1)
         expected = '2300-12-01'
         result = formatting.format_timestamp(date)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_attribute_repr(self):
         short = formatting.summarize_attr(u'key', u'Short string')
         long = formatting.summarize_attr(u'key', 100 * u'Very long string ')
         newlines = formatting.summarize_attr(u'key', u'\n\n\n')
         tabs = formatting.summarize_attr(u'key', u'\t\t\t')
-        self.assertEqual(short, '    key: Short string')
-        self.assertLessEqual(len(long), 80)
-        self.assertTrue(long.endswith(u'...'))
-        self.assertNotIn(u'\n', newlines)
-        self.assertNotIn(u'\t', tabs)
+        assert short == '    key: Short string'
+        assert len(long) <= 80
+        assert long.endswith(u'...')
+        assert u'\n' not in newlines
+        assert u'\t' not in tabs
 
 
 def test_set_numpy_options():
