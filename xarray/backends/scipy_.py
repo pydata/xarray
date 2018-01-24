@@ -181,16 +181,15 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             value = encode_nc3_attr_value(value)
             setattr(self.ds, key, value)
 
+    def encode_variable(self, variable):
+        variable = encode_nc3_variable(variable)
+        return variable
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
-        variable = encode_nc3_variable(variable)
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
-
-        if unlimited_dims is not None and len(unlimited_dims) > 1:
-            raise ValueError('NETCDF3 only supports one unlimited dimension')
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
