@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from . import randn, requires_dask
+from . import parameterized, randn, requires_dask
 
 nx = 3000
 ny = 2000
@@ -25,25 +25,22 @@ class Rolling(object):
                     't': pd.date_range('1970-01-01', periods=nt, freq='D'),
                     'x_coords': ('x', np.linspace(1.1, 2.1, nx))})
 
+    @parameterized(['func', 'center'],
+                   (['mean', 'count'], [True, False]))
     def time_rolling(self, func, center):
         getattr(self.ds.rolling(x=window, center=center), func)()
 
-    time_rolling.param_names = ['func', 'center']
-    time_rolling.params = (['mean', 'count'], [True, False])
-
+    @parameterized(['window_', 'min_periods'],
+                   ([20, 40], [5, None]))
     def time_rolling_np(self, window_, min_periods):
         self.ds.rolling(x=window_, center=False,
                         min_periods=min_periods).reduce(getattr(np, 'nanmean'))
 
-    time_rolling_np.param_names = ['window_', 'min_periods']
-    time_rolling_np.params = ([20, 40], [5, None])
-
+    @parameterized(['center', 'stride'],
+                   ([True, False], [1, 200]))
     def time_rolling_to_dataset(self, center, stride):
         self.ds.rolling(x=window, center=center).to_dataset(
             'window_dim', stride=stride).mean(dim='window_dim')
-
-    time_rolling_to_dataset.param_names = ['center', 'stride']
-    time_rolling_to_dataset.params = ([True, False], [1, 200])
 
 
 class RollingDask(Rolling):
