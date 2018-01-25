@@ -18,27 +18,42 @@ from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
                requires_zarr)
 
 
-ENGINES = []
-if has_scipy:
-    ENGINES.append('scipy')
-if has_netCDF4:
-    ENGINES.append('netcdf4')
-if has_h5netcdf:
-    ENGINES.append('h5netcdf')
+@gen_cluster(client=True, timeout=None)
+def test_dask_distributed_netcdf_integration_test_scipy(c, s, a, b):
+    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
+    original = create_test_data().chunk(chunks)
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
+        original.to_netcdf(filename, engine='scipy')
+        with xr.open_dataset(filename, chunks=chunks,
+                             engine='scipy') as restored:
+            assert isinstance(restored.var1.data, da.Array)
+            computed = restored.compute()
+            assert_allclose(original, computed)
+
+@gen_cluster(client=True, timeout=None)
+def test_dask_distributed_netcdf_integration_test_netcdf4(c, s, a, b):
+    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
+    original = create_test_data().chunk(chunks)
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
+        original.to_netcdf(filename, engine='netcdf4')
+        with xr.open_dataset(filename, chunks=chunks,
+                             engine='netcdf4') as restored:
+            assert isinstance(restored.var1.data, da.Array)
+            computed = restored.compute()
+            assert_allclose(original, computed)
 
 
 @gen_cluster(client=True, timeout=None)
-def test_dask_distributed_netcdf_integration_test(c, s, a, b):
+def test_dask_distributed_netcdf_integration_test_h5netcdf(c, s, a, b):
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
-    for engine in ENGINES:
-        original = create_test_data().chunk(chunks)
-        with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-            original.to_netcdf(filename, engine=engine)
-            with xr.open_dataset(filename, chunks=3,
-                                 engine=engine) as restored:
-                assert isinstance(restored.var1.data, da.Array)
-                computed = restored.compute()
-                assert_allclose(original, computed)
+    original = create_test_data().chunk(chunks)
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
+        original.to_netcdf(filename, engine='h5netcdf')
+        with xr.open_dataset(filename, chunks=chunks,
+                             engine='h5netcdf') as restored:
+            assert isinstance(restored.var1.data, da.Array)
+            computed = restored.compute()
+            assert_allclose(original, computed)
 
 
 @requires_zarr
