@@ -6,6 +6,7 @@ import xarray as xr
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 import dask
+from dask.distributed import Client
 from distributed.utils_test import cluster, gen_cluster
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
@@ -26,9 +27,6 @@ if has_h5netcdf:
     ENGINES.append('h5netcdf')
 
 
-@pytest.mark.xfail(sys.platform == 'win32',
-                   reason='https://github.com/pydata/xarray/issues/1738')
-# @pytest.mark.parametrize('engine', ENGINES)
 @gen_cluster(client=True, timeout=None)
 def test_dask_distributed_netcdf_integration_test(c, s, a, b):
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
