@@ -57,7 +57,7 @@ class ScipyArrayWrapper(BackendArray):
 
     def __setitem__(self, key, value):
         with self.datastore.ensure_open(autoclose=True):
-            data = self.get_array()
+            data = self.datastore.ds.variables[self.variable_name]
             try:
                 data[key] = value
             except TypeError:
