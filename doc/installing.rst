@@ -83,3 +83,16 @@ To run the test suite after installing xarray, first install (via pypi or conda)
 
 and run
 ``py.test --pyargs xarray``.
+
+
+Performance Monitoring
+~~~~~~~~~~~~~~~~~~~~~~
+
+A fixed-point performance monitoring of (a part of) our codes can be seen on
+`this page <https://tomaugspurger.github.io/asv-collection/xarray/>`__.
+
+To run these benchmark tests in a local machine, first install
+- `airspeed-velocity <https://asv.readthedocs.io/en/latest/>`__: a tool for benchmarking Python packages over their lifetime.
+
+and run
+``asv run  # this will install some conda environments in ./.asv/envs``
