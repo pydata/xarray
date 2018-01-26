@@ -9,7 +9,7 @@ from ..core.utils import FrozenOrderedDict, close_on_error
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore, DataStorePickleMixin, find_root
-from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
+from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
                        _extract_nc4_variable_encoding, BaseNetCDF4Array)
 
 
@@ -55,6 +55,7 @@ def _open_h5netcdf_group(filename, mode, group):
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
+
     def __init__(self, filename, mode='r', format=None, group=None,
                  writer=None, autoclose=False):
         if format not in [None, 'NETCDF4']:
@@ -126,14 +127,15 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             self.ds.setncattr(key, value)
 
+    def encode_variable(self, variable):
+        return _encode_nc4_variable(variable)
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
         import h5py
 
         attrs = variable.attrs.copy()
-        variable, dtype = _nc4_values_and_dtype(variable)
-
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
+        dtype = _get_datatype(variable)
 
         fill_value = attrs.pop('_FillValue', None)
         if dtype is str and fill_value is not None:
@@ -156,8 +158,11 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                     'chunksizes', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-        nc4_var = self.ds.createVariable(name, dtype, variable.dims,
-                                         fill_value=fill_value, **kwargs)
+        if name not in self.ds.variables:
+            nc4_var = self.ds.createVariable(name, dtype, variable.dims,
+                                             fill_value=fill_value, **kwargs)
+        else:
+            nc4_var = self.ds.variables[name]
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)

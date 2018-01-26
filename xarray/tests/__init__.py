@@ -8,21 +8,22 @@ import re
 import importlib
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal  # noqa: F401
 from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
 from xarray.core import utils
 from xarray.core.pycompat import PY3
 from xarray.core.indexing import ExplicitlyIndexed
-from xarray.testing import assert_equal, assert_identical, assert_allclose
+from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
+                            assert_allclose)
 from xarray.plot.utils import import_seaborn
 
 try:
     from pandas.testing import assert_frame_equal
 except ImportError:
     # old location, for pandas < 0.20
-    from pandas.util.testing import assert_frame_equal
+    from pandas.util.testing import assert_frame_equal  # noqa: F401
 
 try:
     import unittest2 as unittest
@@ -32,7 +33,7 @@ except ImportError:
 try:
     from unittest import mock
 except ImportError:
-    import mock
+    import mock  # noqa: F401
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -71,7 +72,8 @@ has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
-has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2.0')
+has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
+has_np112, requires_np112 = _importorskip('numpy', minversion='1.12.0')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -85,7 +87,7 @@ if has_dask:
 try:
     import_seaborn()
     has_seaborn = True
-except:
+except ImportError:
     has_seaborn = False
 requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
 
@@ -108,6 +110,9 @@ network = pytest.mark.skipif(
 
 
 class TestCase(unittest.TestCase):
+    """
+    These functions are all deprecated. Instead, use functions in xr.testing
+    """
     if PY3:
         # Python 3 assertCountEqual is roughly equivalent to Python 2
         # assertItemsEqual
@@ -124,25 +129,9 @@ class TestCase(unittest.TestCase):
         assert len(w) > 0
         assert any(message in str(wi.message) for wi in w)
 
-    def assertVariableEqual(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(v1, v2)
-
-    def assertVariableIdentical(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(v1, v2)
-
-    def assertVariableAllClose(self, v1, v2, rtol=1e-05, atol=1e-08):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(v1, v2, rtol=rtol, atol=atol)
-
     def assertVariableNotEqual(self, v1, v2):
         __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
-
-    def assertArrayEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_array_equal(a1, a2)
 
     def assertEqual(self, a1, a2):
         __tracebackhide__ = True  # noqa: F841
@@ -151,38 +140,6 @@ class TestCase(unittest.TestCase):
     def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
         __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
-
-    def assertDatasetEqual(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(d1, d2)
-
-    def assertDatasetIdentical(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(d1, d2)
-
-    def assertDatasetAllClose(self, d1, d2, rtol=1e-05, atol=1e-08,
-                              decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(d1, d2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
-
-    def assertCoordinatesEqual(self, d1, d2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(d1, d2)
-
-    def assertDataArrayEqual(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_equal(ar1, ar2)
-
-    def assertDataArrayIdentical(self, ar1, ar2):
-        __tracebackhide__ = True  # noqa: F841
-        assert_identical(ar1, ar2)
-
-    def assertDataArrayAllClose(self, ar1, ar2, rtol=1e-05, atol=1e-08,
-                                decode_bytes=True):
-        __tracebackhide__ = True  # noqa: F841
-        assert_allclose(ar1, ar2, rtol=rtol, atol=atol,
-                        decode_bytes=decode_bytes)
 
 
 @contextmanager

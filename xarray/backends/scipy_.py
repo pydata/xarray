@@ -165,7 +165,7 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
-            if name in self.dimensions:
+            if name in self.ds.dimensions:
                 raise ValueError('%s does not support modifying dimensions'
                                  % type(self).__name__)
             dim_length = length if not is_unlimited else None
@@ -181,22 +181,22 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             value = encode_nc3_attr_value(value)
             setattr(self.ds, key, value)
 
+    def encode_variable(self, variable):
+        variable = encode_nc3_variable(variable)
+        return variable
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
-        variable = encode_nc3_variable(variable)
         if check_encoding and variable.encoding:
             raise ValueError('unexpected encoding for scipy backend: %r'
                              % list(variable.encoding))
-
-        if unlimited_dims is not None and len(unlimited_dims) > 1:
-            raise ValueError('NETCDF3 only supports one unlimited dimension')
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
         # don't write the data yet; scipy.io.netcdf does not not support
         # incremental writes.
-        self.ds.createVariable(name, data.dtype, variable.dims)
+        if name not in self.ds.variables:
+            self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)

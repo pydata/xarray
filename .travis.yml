@@ -13,7 +13,7 @@ matrix:
   - python: 2.7
     env: CONDA_ENV=py27-min
   - python: 2.7
-    env: CONDA_ENV=py27-cdat+pynio
+    env: CONDA_ENV=py27-cdat+iris+pynio
   - python: 3.4
     env: CONDA_ENV=py34
   - python: 3.5
@@ -93,9 +93,9 @@ install:
   - python xarray/util/print_versions.py
 
 script:
+  - flake8 -j auto xarray
   - python -OO -c "import xarray"
   - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
-  - git diff upstream/master **/*py | flake8 --diff --exit-zero || true
 
 after_success:
   - coveralls

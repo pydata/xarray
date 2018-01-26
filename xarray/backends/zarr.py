@@ -6,6 +6,7 @@ from base64 import b64encode
 
 import numpy as np
 
+from .. import coding
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
@@ -43,15 +44,6 @@ def _ensure_valid_fill_value(value, dtype):
     return _encode_zarr_attr_value(valid)
 
 
-def _decode_zarr_attr_value(value):
-    return value
-
-
-def _decode_zarr_attrs(attrs):
-    return OrderedDict([(k, _decode_zarr_attr_value(v))
-                        for k, v in attrs.items()])
-
-
 def _replace_slices_with_arrays(key, shape):
     """Replace slice objects in vindex with equivalent ndarray objects."""
     num_slices = sum(1 for k in key if isinstance(k, slice))
@@ -70,8 +62,8 @@ def _replace_slices_with_arrays(key, shape):
             slice_count += 1
         else:
             assert isinstance(k, np.ndarray)
-            k = k[(slice(None),) * array_subspace_size
-                  + (np.newaxis,) * num_slices]
+            k = k[(slice(None),) * array_subspace_size +
+                  (np.newaxis,) * num_slices]
         new_key.append(k)
     return tuple(new_key)
 
@@ -259,13 +251,13 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
         raise NotImplementedError("Variable `%s` is an object. Zarr "
                                   "store can't yet encode objects." % name)
 
-    var = conventions.maybe_encode_datetime(var, name=name)
-    var = conventions.maybe_encode_timedelta(var, name=name)
-    var, needs_copy = conventions.maybe_encode_offset_and_scale(var,
-                                                                needs_copy,
-                                                                name=name)
-    var, needs_copy = conventions.maybe_encode_fill_value(var, needs_copy,
-                                                          name=name)
+    for coder in [coding.times.CFDatetimeCoder(),
+                  coding.times.CFTimedeltaCoder(),
+                  coding.variables.CFScaleOffsetCoder(),
+                  coding.variables.CFMaskCoder(),
+                  coding.variables.UnsignedIntegerCoder()]:
+        var = coder.encode(var, name=name)
+
     var = conventions.maybe_encode_nonstring_dtype(var, name=name)
     var = conventions.maybe_default_fill_value(var)
     var = conventions.maybe_encode_bools(var)
@@ -292,15 +284,6 @@ class ZarrStore(AbstractWritableDataStore):
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
 
-        if _DIMENSION_KEY not in self.ds.attrs:
-            if self._read_only:
-                raise KeyError("Zarr group can't be read by xarray because "
-                               "it is missing the `%s` attribute." %
-                               _DIMENSION_KEY)
-            else:
-                # initialize hidden dimension attribute
-                self.ds.attrs[_DIMENSION_KEY] = {}
-
         if writer is None:
             # by default, we should not need a lock for writing zarr because
             # we do not (yet) allow overlapping chunks during write
@@ -315,7 +298,7 @@ class ZarrStore(AbstractWritableDataStore):
         data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
-        attributes = _decode_zarr_attrs(attributes)
+        attributes = OrderedDict(attributes)
         encoding = {'chunks': zarr_array.chunks,
                     'compressor': zarr_array.compressor,
                     'filters': zarr_array.filters}
@@ -331,29 +314,40 @@ class ZarrStore(AbstractWritableDataStore):
                                  for k, v in self.ds.arrays())
 
     def get_attrs(self):
-        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-        return _decode_zarr_attrs(attributes)
+        attributes = OrderedDict(self.ds.attrs.asdict())
+        return attributes
 
     def get_dimensions(self):
-        dimensions, _ = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
+        dimensions = OrderedDict()
+        for k, v in self.ds.arrays():
+            try:
+                for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
+                    if d in dimensions and dimensions[d] != s:
+                        raise ValueError(
+                            'found conflicting lengths for dimension %s '
+                            '(%d != %d)' % (d, s, dimensions[d]))
+                    dimensions[d] = s
+
+            except KeyError:
+                raise KeyError("Zarr object is missing the attribute `%s`, "
+                               "which is required for xarray to determine "
+                               "variable dimensions." % (_DIMENSION_KEY))
         return dimensions
 
-    def set_dimension(self, name, length, is_unlimited=False):
-        if is_unlimited:
+    def set_dimensions(self, variables, unlimited_dims=None):
+        if unlimited_dims is not None:
             raise NotImplementedError(
                 "Zarr backend doesn't know how to handle unlimited dimensions")
-        # consistency check
-        if name in self.ds.attrs[_DIMENSION_KEY]:
-            if self.ds.attrs[_DIMENSION_KEY][name] != length:
-                raise ValueError("Pre-existing array dimensions %r "
-                                 "encoded in Zarr attributes are incompatible "
-                                 "with newly specified dimension `%s`: %g" %
-                                 (self.ds.attrs[_DIMENSION_KEY], name, length))
-        self.ds.attrs[_DIMENSION_KEY][name] = length
 
-    def set_attribute(self, key, value):
-        _, attributes = _get_zarr_dims_and_attrs(self.ds, _DIMENSION_KEY)
-        attributes[key] = _encode_zarr_attr_value(value)
+    def set_attributes(self, attributes):
+        self.ds.attrs.put(attributes)
+
+    def encode_variable(self, variable):
+        variable = encode_zarr_variable(variable)
+        return variable
+
+    def encode_attribute(self, a):
+        return _encode_zarr_attr_value(a)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -363,69 +357,27 @@ class ZarrStore(AbstractWritableDataStore):
         dtype = variable.dtype
         shape = variable.shape
 
-        # TODO: figure out how zarr should deal with unlimited dimensions
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
-
         fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
                                               dtype)
 
-        # TODO: figure out what encoding is needed for zarr
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
 
-        # arguments for zarr.create:
-        # zarr.creation.create(shape, chunks=None, dtype=None,
-        # compressor='default', fill_value=0, order='C', store=None,
-        # synchronizer=None, overwrite=False, path=None, chunk_store=None,
-        # filters=None, cache_metadata=True, **kwargs)
+        encoded_attrs = OrderedDict()
+        # the magic for storing the hidden dimension data
+        encoded_attrs[_DIMENSION_KEY] = dims
+        for k, v in iteritems(attrs):
+            encoded_attrs[k] = self.encode_attribute(v)
+
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)
-        # decided not to explicity enumerate encoding options because we
-        # risk overriding zarr's defaults (e.g. if we specificy
-        # cache_metadata=None instead of True). Alternative is to have lots of
-        # logic in _extract_zarr_variable encoding to duplicate zarr defaults.
-        #                            chunks=encoding.get('chunks'),
-        #                            compressor=encoding.get('compressor'),
-        #                            filters=encodings.get('filters'),
-        #                            cache_metadata=encoding.get('cache_metadata'))
-
-        # the magic for storing the hidden dimension data
-        zarr_array.attrs[_DIMENSION_KEY] = dims
-        _, attributes = _get_zarr_dims_and_attrs(zarr_array, _DIMENSION_KEY)
-
-        for k, v in iteritems(attrs):
-            attributes[k] = _encode_zarr_attr_value(v)
+        zarr_array.attrs.put(encoded_attrs)
 
         return zarr_array, variable.data
 
     def store(self, variables, attributes, *args, **kwargs):
-        new_vars = OrderedDict((k, encode_zarr_variable(v, name=k))
-                               for k, v in iteritems(variables))
-        AbstractWritableDataStore.store(self, new_vars, attributes,
+        AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
-    # sync() and close() methods should not be needed with zarr
-
-
-# from zarr docs
-
-# Zarr arrays can be used as either the source or sink for data in parallel
-# computations. Both multi-threaded and multi-process parallelism are
-# supported. The Python global interpreter lock (GIL) is released for both
-# compression and decompression operations, so Zarr will not block other Python
-# threads from running.
-#
-# A Zarr array can be read concurrently by multiple threads or processes. No
-# synchronization (i.e., locking) is required for concurrent reads.
-#
-# A Zarr array can also be written to concurrently by multiple threads or
-# processes. Some synchronization may be required, depending on the way the
-# data is being written.
-
-# If each worker in a parallel computation is writing to a separate region of
-# the array, and if region boundaries are perfectly aligned with chunk
-# boundaries, then no synchronization is required. However, if region and chunk
-# boundaries are not perfectly aligned, then synchronization is required to
-# avoid two workers attempting to modify the same chunk at the same time.
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

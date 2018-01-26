@@ -22,6 +22,7 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
+
     def __init__(self, rasterio_ds):
         self.rasterio_ds = rasterio_ds
         self._shape = (rasterio_ds.count, rasterio_ds.height,
@@ -65,9 +66,9 @@ class RasterioArrayWrapper(BackendArray):
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
-                squeeze_axis.append(i+1)
+                squeeze_axis.append(i + 1)
                 start = k
-                stop = k+1
+                stop = k + 1
             else:
                 k = np.asarray(k)
                 start = k[0]
@@ -222,6 +223,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
         attrs['is_tiled'] = np.uint8(riods.is_tiled)
+    if hasattr(riods, 'transform'):
+        # Affine transformation matrix (tuple of floats)
+        # Describes coefficients mapping pixel coordinates to CRS
+        attrs['transform'] = tuple(riods.transform)
+    if hasattr(riods, 'nodatavals'):
+        # The nodata values for the raster bands
+        attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
+                                     for nodataval in riods.nodatavals])
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
@@ -251,7 +260,11 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     if chunks is not None:
         from dask.base import tokenize
         # augment the token with the file modification time
-        mtime = os.path.getmtime(filename)
+        try:
+            mtime = os.path.getmtime(filename)
+        except OSError:
+            # the filename is probably an s3 bucket rather than a regular file
+            mtime = None
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
         if lock is None:

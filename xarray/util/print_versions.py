@@ -25,7 +25,7 @@ def get_sys_info():
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
             so, serr = pipe.communicate()
-        except:
+        except Exception:
             pass
         else:
             if pipe.returncode == 0:
@@ -55,7 +55,7 @@ def get_sys_info():
             ("LOCALE", "%s.%s" % locale.getlocale()),
 
         ])
-    except:
+    except Exception:
         pass
 
     return blob
@@ -75,9 +75,11 @@ def show_versions(as_json=False):
         # ("pydap", lambda mod: mod.version.version),
         ("h5netcdf", lambda mod: mod.__version__),
         ("Nio", lambda mod: mod.__version__),
+        ("zarr", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("cyordereddict", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
+        ("distributed", lambda mod: mod.__version__),
         ("matplotlib", lambda mod: mod.__version__),
         ("cartopy", lambda mod: mod.__version__),
         ("seaborn", lambda mod: mod.__version__),
@@ -100,13 +102,13 @@ def show_versions(as_json=False):
                 mod = importlib.import_module(modname)
             ver = ver_f(mod)
             deps_blob.append((modname, ver))
-        except:
+        except Exception:
             deps_blob.append((modname, None))
 
     if (as_json):
         try:
             import json
-        except:
+        except Exception:
             import simplejson as json
 
         j = dict(system=dict(sys_info), dependencies=dict(deps_blob))

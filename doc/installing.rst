@@ -24,7 +24,7 @@ For netCDF and IO
   reading and writing netCDF4 files that does not use the netCDF-C libraries
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
-- `zarr <http://zarr.readthedocs.io/`__: for chunked, compressed, N-dimensional arrays.
+- `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -83,3 +83,16 @@ To run the test suite after installing xarray, first install (via pypi or conda)
 
 and run
 ``py.test --pyargs xarray``.
+
+
+Performance Monitoring
+~~~~~~~~~~~~~~~~~~~~~~
+
+A fixed-point performance monitoring of (a part of) our codes can be seen on
+`this page <https://tomaugspurger.github.io/asv-collection/xarray/>`__.
+
+To run these benchmark tests in a local machine, first install
+- `airspeed-velocity <https://asv.readthedocs.io/en/latest/>`__: a tool for benchmarking Python packages over their lifetime.
+
+and run
+``asv run  # this will install some conda environments in ./.asv/envs``
