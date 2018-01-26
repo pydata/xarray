@@ -2227,14 +2227,49 @@ class TestRasterio(TestCase):
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
+
+            # Check no parse coords
+            with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+
+    def test_non_rectilinear(self):
+        import rasterio
+        from rasterio.transform import from_origin
+
+        # Create a geotiff file with 2d coordinates
+        with create_tmp_file(suffix='.tif') as tmp_file:
+            # data
+            nx, ny, nz = 4, 3, 3
+            data = np.arange(nx*ny*nz,
+                             dtype=rasterio.float32).reshape(nz, ny, nx)
+            transform = from_origin(0, 3, 1, 1).rotation(45)
+            with rasterio.open(
+                    tmp_file, 'w',
+                    driver='GTiff', height=ny, width=nx, count=nz,
+                    transform=transform,
+                    dtype=rasterio.float32) as s:
+                s.write(data)
+
+            # Default is to not parse coords
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+                assert 'crs' not in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert isinstance(rioda.attrs['transform'], tuple)
+
+            # See if a warning is raised if we force it
+            with self.assertWarns("transformation isn't rectilinear"):
+                with xr.open_rasterio(tmp_file,
+                                      parse_coordinates=True) as rioda:
+                    assert 'x' not in rioda.coords
+                    assert 'y' not in rioda.coords
 
     def test_platecarree(self):
         with create_tmp_geotiff(8, 10, 1, transform_args=[1, 2, 0.5, 2.],
@@ -2242,14 +2277,45 @@ class TestRasterio(TestCase):
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
+
+    def test_notransform(self):
+        # regression test for https://github.com/pydata/xarray/issues/1686
+        import rasterio
+        import warnings
+
+        # Create a geotiff file
+        with warnings.catch_warnings():
+            # rasterio throws a NotGeoreferencedWarning here, which is
+            # expected since we test rasterio's defaults in this case.
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message='Dataset has no geotransform set')
+            with create_tmp_file(suffix='.tif') as tmp_file:
+                # data
+                nx, ny, nz = 4, 3, 3
+                data = np.arange(nx*ny*nz,
+                                 dtype=rasterio.float32).reshape(nz, ny, nx)
+                with rasterio.open(
+                        tmp_file, 'w',
+                        driver='GTiff', height=ny, width=nx, count=nz,
+                        dtype=rasterio.float32) as s:
+                    s.write(data)
+
+                # Tests
+                expected = DataArray(data,
+                                     dims=('band', 'y', 'x'),
+                                     coords={'band': [1, 2, 3],
+                                             'y': [0.5, 1.5, 2.5],
+                                             'x': [0.5, 1.5, 2.5, 3.5],
+                                             })
+                with xr.open_rasterio(tmp_file) as rioda:
+                    assert_allclose(rioda, expected)
+                    assert isinstance(rioda.attrs['res'], tuple)
+                    assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                    assert isinstance(rioda.attrs['transform'], tuple)
 
     def test_indexing(self):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
