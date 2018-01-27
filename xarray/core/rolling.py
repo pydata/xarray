@@ -228,9 +228,7 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
-        fill_value = dtypes.reduceable_fill_value(self.obj.dtype)
-        windows = self.to_dataarray('_rolling_window_dim',
-                                    fill_value=fill_value)
+        windows = self.to_dataarray('_rolling_window_dim')
         result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
 
         # Find valid windows based on count.

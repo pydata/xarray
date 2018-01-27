@@ -27,6 +27,13 @@ def _data_allclose_or_equiv(arr1, arr2, rtol=1e-05, atol=1e-08,
             arr1, arr2, rtol=rtol, atol=atol)
 
 
+def _data_allclose_or_equiv_nan(arr1, arr2, rtol=1e-05, atol=1e-08,
+                                decode_bytes=True):
+    index = (~arr1.isnull()).nonzero()
+    assert index == (~arr2.isnull()).nonzero()
+    _data_allclose_or_equiv(arr1[index], arr2[index], rtol, atol, decode_bytes)
+
+
 def assert_equal(a, b):
     """Like :py:func:`numpy.testing.assert_array_equal`, but for xarray
     objects.
@@ -136,6 +143,60 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
         assert set(a.coords) == set(b.coords)
         for k in list(a.variables) + list(a.coords):
             assert_allclose(a[k], b[k], **kwargs)
+
+    else:
+        raise TypeError('{} not supported by assertion comparison'
+                        .format(type(a)))
+
+
+def assert_allclose_with_nan(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
+    """Like assert_allclose, but except for nan.
+
+    Raises an AssertionError if two objects are not equal up to desired
+    tolerance.
+
+    Parameters
+    ----------
+    a : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The first object to compare.
+    b : xarray.Dataset, xarray.DataArray or xarray.Variable
+        The second object to compare.
+    rtol : float, optional
+        Relative tolerance.
+    atol : float, optional
+        Absolute tolerance.
+    decode_bytes : bool, optional
+        Whether byte dtypes should be decoded to strings as UTF-8 or not.
+        This is useful for testing serialization methods on Python 3 that
+        return saved strings as bytes.
+
+    See also
+    --------
+    assert_identical, assert_equal, numpy.testing.assert_allclose
+    """
+    import xarray as xr
+    # __tracebackhide__ = True  # noqa: F841
+    assert type(a) == type(b)
+    kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
+    if isinstance(a, xr.Variable):
+        assert a.dims == b.dims
+        allclose = _data_allclose_or_equiv_nan(a.values, b.values, **kwargs)
+        assert allclose, '{}\n{}'.format(a.values, b.values)
+    elif isinstance(a, xr.DataArray):
+        assert_allclose(a.variable, b.variable, **kwargs)
+        assert set(a.coords) == set(b.coords)
+        for v in a.coords.variables:
+            # can't recurse with this function as coord is sometimes a
+            # DataArray, so call into _data_allclose_or_equiv directly
+            allclose = _data_allclose_or_equiv_nan(
+                a.coords[v].values, b.coords[v].values, **kwargs)
+            assert allclose, '{}\n{}'.format(a.coords[v].values,
+                                             b.coords[v].values)
+    elif isinstance(a, xr.Dataset):
+        assert set(a.data_vars) == set(b.data_vars)
+        assert set(a.coords) == set(b.coords)
+        for k in list(a.variables) + list(a.coords):
+            assert_allclose_with_nan(a[k], b[k], **kwargs)
 
     else:
         raise TypeError('{} not supported by assertion comparison'
