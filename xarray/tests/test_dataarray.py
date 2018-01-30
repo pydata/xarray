@@ -16,6 +16,7 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.coding.times import CFDatetimeCoder
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
+from xarray.core import npcompat
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
@@ -3480,7 +3481,7 @@ def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
                              min_periods=min_periods)
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
-    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
+    actual = rolling_obj.reduce(getattr(npcompat, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims

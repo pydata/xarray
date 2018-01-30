@@ -200,7 +200,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                     raise NotImplementedError(
                         'skipna=True not yet implemented for %s with dtype %s'
                         % (name, values.dtype))
-                eager_module = np
+                eager_module = npcompat if np_compat else np
 
             elif (isinstance(axis, tuple) or not values.dtype.isnative or
                     no_bottleneck or
@@ -240,11 +240,11 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
 
 argmax = _create_nan_agg_method('argmax', coerce_strings=True)
 argmin = _create_nan_agg_method('argmin', coerce_strings=True)
-max = _create_nan_agg_method('max', coerce_strings=True,
+max = _create_nan_agg_method('max', coerce_strings=True, np_compat=True,
                              support_object_type=True)
-min = _create_nan_agg_method('min', coerce_strings=True,
+min = _create_nan_agg_method('min', coerce_strings=True, np_compat=True,
                              support_object_type=True)
-sum = _create_nan_agg_method('sum', numeric_only=True,
+sum = _create_nan_agg_method('sum', numeric_only=True, np_compat=True,
                              support_object_type=True)
 mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)

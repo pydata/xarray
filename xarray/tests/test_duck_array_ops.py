@@ -9,8 +9,9 @@ from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
 from xarray import DataArray
+from xarray.core import npcompat
 
-from . import TestCase, raises_regex
+from . import TestCase, raises_regex, has_dask
 
 
 class TestOps(TestCase):
@@ -119,7 +120,7 @@ def construct_dataarray(dtype, contains_nan, dask):
 
     if contains_nan:
         da = da.reindex(x=np.arange(20))
-    if dask:
+    if dask and has_dask:
         da = da.chunk({'x': 5, 'y': 10})
 
     return da
@@ -142,10 +143,13 @@ def test_reduce(dtype, dask, func, skipna, dim):
     da = construct_dataarray(dtype, contains_nan=True, dask=dask)
     axis = None if dim is None else da.get_axis_num(dim)
 
+    if dask and not has_dask:
+        return
+
     if skipna:
         try:  # TODO currently, we only support methods that numpy supports
-            expected = getattr(np, 'nan{}'.format(func))(da.values,
-                                                         axis=axis)
+            expected = getattr(npcompat, 'nan{}'.format(func))(da.values,
+                                                               axis=axis)
         except (TypeError, AttributeError):
             with pytest.raises(NotImplementedError):
                 actual = getattr(da, func)(skipna=skipna, dim=dim)
@@ -158,6 +162,8 @@ def test_reduce(dtype, dask, func, skipna, dim):
 
     # compatible with pandas
     se = da.to_dataframe()
+    print(da)
+    print(da.reduce(npcompat.nansum))
     actual = getattr(da, func)(skipna=skipna)
     expected = getattr(se, func)(skipna=skipna)
     assert_allclose_with_nan(actual.values, np.array(expected))
@@ -166,4 +172,4 @@ def test_reduce(dtype, dask, func, skipna, dim):
     da = construct_dataarray(dtype, contains_nan=False, dask=dask)
     expected = getattr(np, 'nan{}'.format(func))(da.values)
     actual = getattr(da, func)(skipna=skipna)
-    assert np.allclose(actual.values, np.array(expected), atol=1.0e-10)
+    assert np.allclose(actual.values, np.array(expected))

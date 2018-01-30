@@ -5,14 +5,326 @@ import numpy as np
 from distutils.version import LooseVersion
 
 
-if LooseVersion(np.__version__) < LooseVersion('1.12'):
+if LooseVersion(np.__version__) >= LooseVersion('1.12'):
+    as_strided = np.lib.stride_tricks.as_strided
+else:
     def as_strided(x, shape=None, strides=None, subok=False, writeable=True):
         array = np.lib.stride_tricks.as_strided(x, shape, strides, subok)
         array.setflags(write=writeable)
         return array
 
+
+if LooseVersion(np.__version__) >= LooseVersion('1.13'):
+    nanmin = np.nanmin
+    nanmax = np.nanmax
+    nansum = np.nansum
+
 else:
-    as_strided = np.lib.stride_tricks.as_strided
+    def _replace_nan(a, val):
+        """
+        If `a` is of inexact type, make a copy of `a`, replace NaNs with
+        the `val` value, and return the copy together with a boolean mask
+        marking the locations where NaNs were present. If `a` is not of
+        inexact type, do nothing and return `a` together with a mask of None.
+        Note that scalars will end up as array scalars, which is important
+        for using the result as the value of the out argument in some
+        operations.
+        Parameters
+        ----------
+        a : array-like
+            Input array.
+        val : float
+            NaN values are set to val before doing the operation.
+        Returns
+        -------
+        y : ndarray
+            If `a` is of inexact type, return a copy of `a` with the NaNs
+            replaced by the fill value, otherwise return `a`.
+        mask: {bool, None}
+            If `a` is of inexact type, return a boolean mask marking locations of
+            NaNs, otherwise return None.
+        """
+        a = np.array(a, subok=True, copy=True)
+
+        if a.dtype == np.object_:
+            # object arrays do not support `isnan` (gh-9009), so make a guess
+            mask = a != a
+        elif issubclass(a.dtype.type, np.inexact):
+            mask = np.isnan(a)
+        else:
+            mask = None
+
+        if mask is not None:
+            np.copyto(a, val, where=mask)
+
+        return a, mask
+
+
+    def nanmin(a, axis=None, out=None, keepdims=np._NoValue):
+        """
+        Return minimum of an array or minimum along an axis, ignoring any NaNs.
+        When all-NaN slices are encountered a ``RuntimeWarning`` is raised and
+        Nan is returned for that slice.
+        Parameters
+        ----------
+        a : array_like
+            Array containing numbers whose minimum is desired. If `a` is not an
+            array, a conversion is attempted.
+        axis : int, optional
+            Axis along which the minimum is computed. The default is to compute
+            the minimum of the flattened array.
+        out : ndarray, optional
+            Alternate output array in which to place the result.  The default
+            is ``None``; if provided, it must have the same shape as the
+            expected output, but the type will be cast if necessary.  See
+            `doc.ufuncs` for details.
+            .. versionadded:: 1.8.0
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `min` method
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+            .. versionadded:: 1.8.0
+        Returns
+        -------
+        nanmin : ndarray
+            An array with the same shape as `a`, with the specified axis
+            removed.  If `a` is a 0-d array, or if axis is None, an ndarray
+            scalar is returned.  The same dtype as `a` is returned.
+        See Also
+        --------
+        nanmax :
+            The maximum value of an array along a given axis, ignoring any NaNs.
+        amin :
+            The minimum value of an array along a given axis, propagating any NaNs.
+        fmin :
+            Element-wise minimum of two arrays, ignoring any NaNs.
+        minimum :
+            Element-wise minimum of two arrays, propagating any NaNs.
+        isnan :
+            Shows which elements are Not a Number (NaN).
+        isfinite:
+            Shows which elements are neither NaN nor infinity.
+        amax, fmax, maximum
+        Notes
+        -----
+        NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic
+        (IEEE 754). This means that Not a Number is not equivalent to infinity.
+        Positive infinity is treated as a very large number and negative
+        infinity is treated as a very small (i.e. negative) number.
+        If the input has a integer type the function is equivalent to np.min.
+        Examples
+        --------
+        >>> a = np.array([[1, 2], [3, np.nan]])
+        >>> np.nanmin(a)
+        1.0
+        >>> np.nanmin(a, axis=0)
+        array([ 1.,  2.])
+        >>> np.nanmin(a, axis=1)
+        array([ 1.,  3.])
+        When positive infinity and negative infinity are present:
+        >>> np.nanmin([1, 2, np.nan, np.inf])
+        1.0
+        >>> np.nanmin([1, 2, np.nan, np.NINF])
+        -inf
+        """
+        kwargs = {}
+        if keepdims is not np._NoValue:
+            kwargs['keepdims'] = keepdims
+        if type(a) is np.ndarray and a.dtype != np.object_:
+            # Fast, but not safe for subclasses of ndarray, or object arrays,
+            # which do not implement isnan (gh-9009), or fmin correctly (gh-8975)
+            res = np.fmin.reduce(a, axis=axis, out=out, **kwargs)
+            if np.isnan(res).any():
+                warnings.warn("All-NaN slice encountered", RuntimeWarning, stacklevel=2)
+        else:
+            # Slow, but safe for subclasses of ndarray
+            a, mask = _replace_nan(a, +np.inf)
+            res = np.amin(a, axis=axis, out=out, **kwargs)
+            if mask is None:
+                return res
+
+            # Check for all-NaN axis
+            mask = np.all(mask, axis=axis, **kwargs)
+            if np.any(mask):
+                res = _copyto(res, np.nan, mask)
+                warnings.warn("All-NaN axis encountered", RuntimeWarning, stacklevel=2)
+        return res
+
+
+    def nanmax(a, axis=None, out=None, keepdims=np._NoValue):
+        """
+        Return the maximum of an array or maximum along an axis, ignoring any
+        NaNs.  When all-NaN slices are encountered a ``RuntimeWarning`` is
+        raised and NaN is returned for that slice.
+        Parameters
+        ----------
+        a : array_like
+            Array containing numbers whose maximum is desired. If `a` is not an
+            array, a conversion is attempted.
+        axis : int, optional
+            Axis along which the maximum is computed. The default is to compute
+            the maximum of the flattened array.
+        out : ndarray, optional
+            Alternate output array in which to place the result.  The default
+            is ``None``; if provided, it must have the same shape as the
+            expected output, but the type will be cast if necessary.  See
+            `doc.ufuncs` for details.
+            .. versionadded:: 1.8.0
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `max` method
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+            .. versionadded:: 1.8.0
+        Returns
+        -------
+        nanmax : ndarray
+            An array with the same shape as `a`, with the specified axis removed.
+            If `a` is a 0-d array, or if axis is None, an ndarray scalar is
+            returned.  The same dtype as `a` is returned.
+        See Also
+        --------
+        nanmin :
+            The minimum value of an array along a given axis, ignoring any NaNs.
+        amax :
+            The maximum value of an array along a given axis, propagating any NaNs.
+        fmax :
+            Element-wise maximum of two arrays, ignoring any NaNs.
+        maximum :
+            Element-wise maximum of two arrays, propagating any NaNs.
+        isnan :
+            Shows which elements are Not a Number (NaN).
+        isfinite:
+            Shows which elements are neither NaN nor infinity.
+        amin, fmin, minimum
+        Notes
+        -----
+        NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic
+        (IEEE 754). This means that Not a Number is not equivalent to infinity.
+        Positive infinity is treated as a very large number and negative
+        infinity is treated as a very small (i.e. negative) number.
+        If the input has a integer type the function is equivalent to np.max.
+        Examples
+        --------
+        >>> a = np.array([[1, 2], [3, np.nan]])
+        >>> np.nanmax(a)
+        3.0
+        >>> np.nanmax(a, axis=0)
+        array([ 3.,  2.])
+        >>> np.nanmax(a, axis=1)
+        array([ 2.,  3.])
+        When positive infinity and negative infinity are present:
+        >>> np.nanmax([1, 2, np.nan, np.NINF])
+        2.0
+        >>> np.nanmax([1, 2, np.nan, np.inf])
+        inf
+        """
+        kwargs = {}
+        if keepdims is not np._NoValue:
+            kwargs['keepdims'] = keepdims
+        if type(a) is np.ndarray and a.dtype != np.object_:
+            # Fast, but not safe for subclasses of ndarray, or object arrays,
+            # which do not implement isnan (gh-9009), or fmax correctly (gh-8975)
+            res = np.fmax.reduce(a, axis=axis, out=out, **kwargs)
+            if np.isnan(res).any():
+                warnings.warn("All-NaN slice encountered", RuntimeWarning, stacklevel=2)
+        else:
+            # Slow, but safe for subclasses of ndarray
+            a, mask = _replace_nan(a, -np.inf)
+            res = np.amax(a, axis=axis, out=out, **kwargs)
+            if mask is None:
+                return res
+
+            # Check for all-NaN axis
+            mask = np.all(mask, axis=axis, **kwargs)
+            if np.any(mask):
+                res = _copyto(res, np.nan, mask)
+                warnings.warn("All-NaN axis encountered", RuntimeWarning, stacklevel=2)
+        return res
+
+    def nansum(a, axis=None, dtype=None, out=None, keepdims=np._NoValue):
+        """
+        Return the sum of array elements over a given axis treating Not a
+        Numbers (NaNs) as zero.
+        In NumPy versions <= 1.8.0 Nan is returned for slices that are all-NaN or
+        empty. In later versions zero is returned.
+        Parameters
+        ----------
+        a : array_like
+            Array containing numbers whose sum is desired. If `a` is not an
+            array, a conversion is attempted.
+        axis : int, optional
+            Axis along which the sum is computed. The default is to compute the
+            sum of the flattened array.
+        dtype : data-type, optional
+            The type of the returned array and of the accumulator in which the
+            elements are summed.  By default, the dtype of `a` is used.  An
+            exception is when `a` has an integer type with less precision than
+            the platform (u)intp. In that case, the default will be either
+            (u)int32 or (u)int64 depending on whether the platform is 32 or 64
+            bits. For inexact inputs, dtype must be inexact.
+            .. versionadded:: 1.8.0
+        out : ndarray, optional
+            Alternate output array in which to place the result.  The default
+            is ``None``. If provided, it must have the same shape as the
+            expected output, but the type will be cast if necessary.  See
+            `doc.ufuncs` for details. The casting of NaN to integer can yield
+            unexpected results.
+            .. versionadded:: 1.8.0
+        keepdims : bool, optional
+            If this is set to True, the axes which are reduced are left
+            in the result as dimensions with size one. With this option,
+            the result will broadcast correctly against the original `a`.
+            If the value is anything but the default, then
+            `keepdims` will be passed through to the `mean` or `sum` methods
+            of sub-classes of `ndarray`.  If the sub-classes methods
+            does not implement `keepdims` any exceptions will be raised.
+            .. versionadded:: 1.8.0
+        Returns
+        -------
+        nansum : ndarray.
+            A new array holding the result is returned unless `out` is
+            specified, in which it is returned. The result has the same
+            size as `a`, and the same shape as `a` if `axis` is not None
+            or `a` is a 1-d array.
+        See Also
+        --------
+        numpy.sum : Sum across array propagating NaNs.
+        isnan : Show which elements are NaN.
+        isfinite: Show which elements are not NaN or +/-inf.
+        Notes
+        -----
+        If both positive and negative infinity are present, the sum will be Not
+        A Number (NaN).
+        Examples
+        --------
+        >>> np.nansum(1)
+        1
+        >>> np.nansum([1])
+        1
+        >>> np.nansum([1, np.nan])
+        1.0
+        >>> a = np.array([[1, 1], [1, np.nan]])
+        >>> np.nansum(a)
+        3.0
+        >>> np.nansum(a, axis=0)
+        array([ 2.,  1.])
+        >>> np.nansum([1, np.nan, np.inf])
+        inf
+        >>> np.nansum([1, np.nan, np.NINF])
+        -inf
+        >>> np.nansum([1, np.nan, np.inf, -np.inf]) # both +/- infinity present
+        nan
+        """
+        a, mask = _replace_nan(a, 0)
+        return np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
 
 try:
