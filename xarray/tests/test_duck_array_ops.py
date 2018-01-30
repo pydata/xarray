@@ -115,7 +115,8 @@ class TestArrayNotNullEquiv():
 
 
 def construct_dataarray(dtype, contains_nan, dask):
-    da = DataArray(np.random.randn(15, 30), dims=('x', 'y'),
+    rng = np.random.RandomState(0)
+    da = DataArray(rng.randn(15, 30), dims=('x', 'y'),
                    coords={'x': np.arange(15)}).astype(dtype)
 
     if contains_nan:

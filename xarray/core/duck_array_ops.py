@@ -184,14 +184,8 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         values = asarray(values)
 
         # dask requires dtype argument for object dtype
-        if (values.dtype == 'object' and name in ['sum', 'mean']):
+        if (values.dtype == 'object' and name in ['sum',]):
             kwargs['dtype'] = values.dtype if dtype is None else dtype
-
-        # dask can't compute std for object dtype with skipna==False
-        if values.dtype == 'object' and name in ['std', 'var'] and not skipna:
-            raise NotImplementedError(
-                '%s for %s-dtype is not yet implemented on dask arrays'
-                % (name, values.dtype))
 
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
