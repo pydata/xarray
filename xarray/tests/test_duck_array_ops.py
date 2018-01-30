@@ -1,15 +1,18 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from pytest import mark
+import pytest
 import numpy as np
 from numpy import array, nan
 from . import assert_array_equal
 from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
+from xarray.core.ops import NAN_REDUCE_METHODS
+from xarray import DataArray
 
 from . import TestCase, raises_regex
+from xarray.testing import assert_allclose
 
 
 class TestOps(TestCase):
@@ -81,7 +84,7 @@ class TestOps(TestCase):
 
 
 class TestArrayNotNullEquiv():
-    @mark.parametrize("arr1, arr2", [
+    @pytest.mark.parametrize("arr1, arr2", [
         (np.array([1, 2, 3]), np.array([1, 2, 3])),
         (np.array([1, 2, np.nan]), np.array([1, np.nan, 3])),
         (np.array([np.nan, 2, np.nan]), np.array([1, np.nan, np.nan])),
@@ -99,7 +102,7 @@ class TestArrayNotNullEquiv():
         b = np.array([[1, 2], [np.nan, 4]])
         assert not array_notnull_equiv(a, b)
 
-    @mark.parametrize("val1, val2, val3, null", [
+    @pytest.mark.parametrize("val1, val2, val3, null", [
         (1, 2, 3, None),
         (1., 2., 3., np.nan),
         (1., 2., 3., None),
@@ -109,3 +112,51 @@ class TestArrayNotNullEquiv():
         arr1 = np.array([val1, null, val3, null])
         arr2 = np.array([val1, val2, null, null])
         assert array_notnull_equiv(arr1, arr2)
+
+
+def construct_dataarray(dtype, contains_nan, dask):
+    da = DataArray(np.random.randn(15, 30), dims=('x', 'y'),
+                   coords={'x': np.arange(15)}).astype(dtype)
+
+    if contains_nan:
+        da = da.reindex(x=np.arange(20))
+    if dask:
+        da = da.chunk({'x': 5, 'y': 10})
+
+    return da
+
+
+def assert_allclose_with_nan(a, b, **kwargs):
+    """ Extension of np.allclose with nan-including array """
+    index = ~np.isnan(a)
+    assert index == ~np.isnan(b)
+    assert np.allclose(a[index], b[index], **kwargs)
+
+
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('func', ['sum', 'min', 'max'])  # TODO support more
+@pytest.mark.parametrize('skipna', [False, True])
+@pytest.mark.parametrize('dim', [None, 'x', ('x', 'y')])
+def test_reduce(dtype, dask, func, skipna, dim):
+
+    da = construct_dataarray(dtype, contains_nan=True, dask=dask)
+
+    if skipna:
+        try:  # TODO currently, we only support methods that numpy supports
+            expected = getattr(np, 'nan{}'.format(func))(da.values)
+        except (TypeError, AttributeError):
+            with pytest.raises(NotImplementedError):
+                actual = getattr(da, func)(skipna=skipna)
+            return
+    else:
+        expected = getattr(np, func)(da.values)
+
+    actual = getattr(da, func)(skipna=skipna)
+    assert_allclose_with_nan(actual.values, np.array(expected))
+
+    # without nan
+    da = construct_dataarray(dtype, contains_nan=False, dask=dask)
+    expected = getattr(np, 'nan{}'.format(func))(da.values)
+    actual = getattr(da, func)(skipna=skipna)
+    assert np.allclose(actual.values, np.array(expected), atol=1.0e-10)

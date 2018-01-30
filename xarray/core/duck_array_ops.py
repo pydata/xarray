@@ -183,17 +183,30 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
+        # dask requires dtype argument for object dtype
+        if (values.dtype == 'object' and name in ['sum', 'mean']):
+            kwargs['dtype'] = values.dtype if dtype is None else dtype
+
+        # dask can't compute std for object dtype with skipna==False
+        if values.dtype == 'object' and name in ['std', 'var'] and not skipna:
+            raise NotImplementedError(
+                '%s for %s-dtype is not yet implemented on dask arrays'
+                % (name, values.dtype))
+
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
         if skipna or (skipna is None and values.dtype.kind in 'cf'):
-            if (not support_object_type and
-                    values.dtype.kind not in ['u', 'i', 'f', 'c']):
-                raise NotImplementedError(
-                    'skipna=True not yet implemented for %s with dtype %s'
-                    % (name, values.dtype))
             nanname = 'nan' + name
-            if (isinstance(axis, tuple) or not values.dtype.isnative or
+            if values.dtype.kind not in ['u', 'i', 'f', 'c']:
+
+                if not support_object_type:
+                    raise NotImplementedError(
+                        'skipna=True not yet implemented for %s with dtype %s'
+                        % (name, values.dtype))
+                eager_module = np
+
+            elif (isinstance(axis, tuple) or not values.dtype.isnative or
                     no_bottleneck or
                     (dtype is not None and np.dtype(dtype) != values.dtype)):
                 # bottleneck can't handle multiple axis arguments or non-native
@@ -214,7 +227,8 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         with _ignore_warnings_if(using_numpy_nan_func):
             try:
                 return func(values, axis=axis, **kwargs)
-            except AttributeError:
+            except AttributeError as e:
+                print(e)
                 if isinstance(values, dask_array_type):
                     msg = '%s is not yet implemented on dask arrays' % name
                 else:
@@ -229,26 +243,19 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
     return f
 
 
-argmax = _create_nan_agg_method('argmax', coerce_strings=True,
-                                support_object_type=True)
-argmin = _create_nan_agg_method('argmin', coerce_strings=True,
-                                support_object_type=True)
+argmax = _create_nan_agg_method('argmax', coerce_strings=True)
+argmin = _create_nan_agg_method('argmin', coerce_strings=True)
 max = _create_nan_agg_method('max', coerce_strings=True,
                              support_object_type=True)
 min = _create_nan_agg_method('min', coerce_strings=True,
                              support_object_type=True)
 sum = _create_nan_agg_method('sum', numeric_only=True,
                              support_object_type=True)
-mean = _create_nan_agg_method('mean', numeric_only=True,
-                              support_object_type=True)
-std = _create_nan_agg_method('std', numeric_only=True,
-                             support_object_type=True)
-var = _create_nan_agg_method('var', numeric_only=True,
-                             support_object_type=True)
-median = _create_nan_agg_method('median', numeric_only=True,
-                                support_object_type=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True,
-                              support_object_type=True)
+mean = _create_nan_agg_method('mean', numeric_only=True)
+std = _create_nan_agg_method('std', numeric_only=True)
+var = _create_nan_agg_method('var', numeric_only=True)
+median = _create_nan_agg_method('median', numeric_only=True)
+prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
 cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
                                  no_bottleneck=True, keep_dims=True)
 cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
