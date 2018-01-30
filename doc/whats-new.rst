@@ -112,6 +112,9 @@ Bug fixes
 - Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix indexing with lists for arrays loaded from netCDF files with
+  ``engine='h5netcdf`` (:issue:`1864`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
 
