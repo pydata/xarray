@@ -251,8 +251,7 @@ class DataArrayRolling(Rolling):
         """
 
         def wrapped_func(self, **kwargs):
-            skipna = kwargs.pop('skipna', True)
-            return self.reduce(func, skipna=skipna, **kwargs)
+            return self.reduce(func, **kwargs)
         return wrapped_func
 
     @classmethod

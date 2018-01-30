@@ -8,11 +8,9 @@ from . import assert_array_equal
 from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
-from xarray.core.ops import NAN_REDUCE_METHODS
 from xarray import DataArray
 
 from . import TestCase, raises_regex
-from xarray.testing import assert_allclose
 
 
 class TestOps(TestCase):
@@ -117,7 +115,7 @@ class TestArrayNotNullEquiv():
 def construct_dataarray(dtype, contains_nan, dask):
     rng = np.random.RandomState(0)
     da = DataArray(rng.randn(15, 30), dims=('x', 'y'),
-                   coords={'x': np.arange(15)}).astype(dtype)
+                   coords={'x': np.arange(15)}, name='da').astype(dtype)
 
     if contains_nan:
         da = da.reindex(x=np.arange(20))
@@ -129,31 +127,39 @@ def construct_dataarray(dtype, contains_nan, dask):
 
 def assert_allclose_with_nan(a, b, **kwargs):
     """ Extension of np.allclose with nan-including array """
-    index = ~np.isnan(a)
-    assert index == ~np.isnan(b)
-    assert np.allclose(a[index], b[index], **kwargs)
+    for a1, b1 in zip(a.ravel(), b.ravel()):
+        assert (np.isnan(a1) and np.isnan(b1)) or np.allclose(a1, b1,
+                                                              **kwargs)
 
 
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
 @pytest.mark.parametrize('func', ['sum', 'min', 'max'])  # TODO support more
 @pytest.mark.parametrize('skipna', [False, True])
-@pytest.mark.parametrize('dim', [None, 'x', ('x', 'y')])
+@pytest.mark.parametrize('dim', [None, 'x', 'y'])
 def test_reduce(dtype, dask, func, skipna, dim):
 
     da = construct_dataarray(dtype, contains_nan=True, dask=dask)
+    axis = None if dim is None else da.get_axis_num(dim)
 
     if skipna:
         try:  # TODO currently, we only support methods that numpy supports
-            expected = getattr(np, 'nan{}'.format(func))(da.values)
+            expected = getattr(np, 'nan{}'.format(func))(da.values,
+                                                         axis=axis)
         except (TypeError, AttributeError):
             with pytest.raises(NotImplementedError):
-                actual = getattr(da, func)(skipna=skipna)
+                actual = getattr(da, func)(skipna=skipna, dim=dim)
             return
     else:
-        expected = getattr(np, func)(da.values)
+        expected = getattr(np, func)(da.values, axis=axis)
 
+    actual = getattr(da, func)(skipna=skipna, dim=dim)
+    assert_allclose_with_nan(actual.values, np.array(expected))
+
+    # compatible with pandas
+    se = da.to_dataframe()
     actual = getattr(da, func)(skipna=skipna)
+    expected = getattr(se, func)(skipna=skipna)
     assert_allclose_with_nan(actual.values, np.array(expected))
 
     # without nan
