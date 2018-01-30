@@ -1572,11 +1572,16 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     def test_orthogonal_indexing(self):
-        # doesn't work for h5py (without using dask as an intermediate layer)
-        pass
+        # simplified version for h5netcdf
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual.load())
 
     def test_array_type_after_indexing(self):
-        # pynio also does not support list-like indexing
+        # h5netcdf does not support multiple list-like indexers
         pass
 
     def test_complex(self):
