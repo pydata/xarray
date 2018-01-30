@@ -704,6 +704,25 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(ds) as actual:
             assert '_FillValue' not in actual.x.encoding
 
+    def test_explicitly_omit_fill_value_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])})
+        ds.x.encoding['_FillValue'] = None
+        kwargs = dict(encoding={'x': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                assert '_FillValue' not in actual.x.encoding
+
+    def test_explicitly_omit_fill_value_in_coord(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        ds.y.encoding['_FillValue'] = None
+        with self.roundtrip(ds) as actual:
+            assert '_FillValue' not in actual.y.encoding
+
+    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        kwargs = dict(encoding={'y': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                assert '_FillValue' not in actual.y.encoding
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
