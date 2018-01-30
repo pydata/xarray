@@ -191,8 +191,8 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
             values = values.astype(object)
 
         if (skipna or (skipna is None and values.dtype.kind in 'cf') or
-                (skipna is None and values.dtype == object
-                 and support_object_type)):
+                (skipna is None and values.dtype == object and
+                 support_object_type)):
             nanname = 'nan' + name
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
 
