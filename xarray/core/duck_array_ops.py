@@ -222,7 +222,6 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
             try:
                 return func(values, axis=axis, **kwargs)
             except AttributeError as e:
-                print(e)
                 if isinstance(values, dask_array_type):
                     msg = '%s is not yet implemented on dask arrays' % name
                 else:
