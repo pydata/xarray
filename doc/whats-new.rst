@@ -15,8 +15,8 @@ What's New
 
 .. warning::
 
-  Xarray is dropping support for Python 2 at the end of 2018. For more
-  information see the following references:
+    Xarray plans to drop support at the end of 2018. For more information see
+    the following references
 
   - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
