@@ -277,16 +277,6 @@ Some other important things to know about the docs:
   Every method should be included in a ``toctree`` in ``api.rst``, else Sphinx
   will emit a warning.
 
-.. note::
-
-    The ``.rst`` files are used to automatically generate Markdown and HTML versions
-    of the docs. For this reason, please do not edit ``CONTRIBUTING.md`` directly,
-    but instead make any changes to ``doc/source/contributing.rst``. Then, to
-    generate ``CONTRIBUTING.md``, use `pandoc <http://johnmacfarlane.net/pandoc/>`_
-    with the following command::
-
-      pandoc doc/contributing.rst -t markdown_github > CONTRIBUTING.md
-
 
 How to build the *xarray* documentation
 ---------------------------------------
