@@ -185,7 +185,7 @@ You want your master branch to reflect only production-ready code, so create a
 feature branch for making your changes. For example::
 
     git branch shiny-new-feature
-    git checkout -b shiny-new-feature
+    git checkout shiny-new-feature
 
 The above can be simplified to::
 
@@ -362,28 +362,7 @@ unused function. However, style-checking the diff will not catch this because
 the actual import is not part of the diff. Thus, for completeness, you should
 run this command, though it will take longer::
 
-   git diff master --name-only -- "*.py" | grep "xarray/" | xargs -r flake8
-
-Note that on OSX, the ``-r`` flag is not available, so you have to omit it and
-run this slightly modified command::
-
-   git diff master --name-only -- "*.py" | grep "xarray/" | xargs flake8
-
-Note that on Windows, these commands are unfortunately not possible because
-commands like ``grep`` and ``xargs`` are not available natively. To imitate the
-behavior with the commands above, you should run::
-
-    git diff master --name-only -- "*.py"
-
-This will list all of the Python files that have been modified. The only ones
-that matter during linting are any whose directory filepath begins with "xarray."
-For each filepath, copy and paste it after the ``flake8`` command as shown below:
-
-    flake8 <python-filepath>
-
-Alternatively, you can install the ``grep`` and ``xargs`` commands via the
-`MinGW <http://www.mingw.org/>`__ toolchain, and it will allow you to run the
-commands above.
+   flake8 xarray
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -755,6 +734,12 @@ Now you can commit your changes in your local repository::
 Combining commits
 -----------------
 
+.. note::
+
+   GitHub now supports squashing commits when merging pull requests. Unless
+   there is a specific reason for squashing/rebasing your feature branch, we
+   recommend letting Github do the work.
+
 If you have multiple commits, you may want to combine them into one commit, often
 referred to as "squashing" or "rebasing".  This is a common request by package maintainers
 when submitting a pull request as it maintains a more compact commit history.  To rebase
@@ -776,12 +761,6 @@ Then you will need to push the branch (see below) forcefully to replace the curr
 commits with the new ones::
 
     git push origin shiny-new-feature -f
-
-.. note::
-
-   GitHub now supports squashing commits when merging pull requests. Unless
-   there is a specific reason for squashing/rebasing your feature branch, we
-   recommend letting Github do the work.
 
 Pushing your changes
 --------------------
