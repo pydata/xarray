@@ -13,6 +13,15 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. warning::
+
+  Xarray is dropping support for Python 2 at the end of 2018. For more
+  information see the following references:
+
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Python 3 Statement <http://www.python3statement.org/>`__
+  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
+
 .. _whats-new.0.10.1:
 
 v0.10.1 (unreleased)
