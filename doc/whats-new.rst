@@ -15,8 +15,11 @@ What's New
 
 .. warning::
 
-    Xarray plans to drop support at the end of 2018. For more information see
-    the following references
+    Xarray plans to drop support for python 2.7 at the end of 2018. This
+    means that new releases of xarray published after this date will only be
+    installable on python 3+ environments, but older versions of xarray will
+    always be available to python 2.7 users. For more information see the
+    following references
 
   - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
