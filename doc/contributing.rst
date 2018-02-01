@@ -28,7 +28,7 @@ where you could start out. Once you've found an interesting issue, you can
 return here to get your development environment setup.
 
 Feel free to ask questions on the `mailing list
-<https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!forum/xarray>`_ or on `Gitter`_.
+<https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!forum/xarray>`_.
 
 .. _contributing.bug_reports:
 
@@ -807,6 +807,3 @@ branch has not actually been merged.
 The branch will still exist on GitHub, so to delete it there do::
 
     git push origin --delete shiny-new-feature
-
-
-.. _Gitter: https://gitter.im/pydata/xarray
