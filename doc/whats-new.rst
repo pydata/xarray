@@ -13,6 +13,18 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. warning::
+
+    Xarray plans to drop support for python 2.7 at the end of 2018. This
+    means that new releases of xarray published after this date will only be
+    installable on python 3+ environments, but older versions of xarray will
+    always be available to python 2.7 users. For more information see the
+    following references
+
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Python 3 Statement <http://www.python3statement.org/>`__
+  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
+
 .. _whats-new.0.10.1:
 
 v0.10.1 (unreleased)
