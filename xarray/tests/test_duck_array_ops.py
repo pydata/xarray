@@ -139,8 +139,7 @@ def construct_dataarray(dtype, contains_nan, dask):
 def assert_allclose_with_nan(a, b, **kwargs):
     """ Extension of np.allclose with nan-including array """
     for a1, b1 in zip(a.ravel(), b.ravel()):
-        assert (np.isnan(a1) and np.isnan(b1)) or np.allclose(a1, b1,
-                                                              **kwargs)
+        assert (np.isnan(a1) and np.isnan(b1)) or np.allclose(a1, b1, **kwargs)
 
 
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])

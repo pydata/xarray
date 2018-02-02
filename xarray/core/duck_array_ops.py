@@ -172,13 +172,13 @@ def _ignore_warnings_if(condition):
 
 
 def _nansum(value, axis=None, **kwargs):
-    """ Our in house nansum. This is used for object array """
+    """ In house nansum. This is used for object array """
     value = fillna(value, 0.0)
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
-def _nanmin_or_nansum(func, fill_value, value, axis=None, **kwargs):
-    """ Our in house nansum. This is used for object array """
+def _nanmin_or_nanmax(func, fill_value, value, axis=None, **kwargs):
+    """ In house nanmin or nanmax. This is used for object array """
     nan_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
@@ -189,8 +189,8 @@ def _nanmin_or_nansum(func, fill_value, value, axis=None, **kwargs):
 
 
 _nan_funcs = {'sum': _nansum,
-              'min': partial(_nanmin_or_nansum, 'min', np.inf),
-              'max': partial(_nanmin_or_nansum, 'max', -np.inf),
+              'min': partial(_nanmin_or_nanmax, 'min', np.inf),
+              'max': partial(_nanmin_or_nanmax, 'max', -np.inf),
               }
 
 
