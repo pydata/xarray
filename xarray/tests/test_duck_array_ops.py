@@ -6,10 +6,9 @@ import numpy as np
 from numpy import array, nan
 from . import assert_array_equal
 from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv, _nansum
+    first, last, count, mean, array_notnull_equiv,
 )
 from xarray import DataArray
-from xarray.core import npcompat
 
 from . import TestCase, raises_regex, has_dask
 
