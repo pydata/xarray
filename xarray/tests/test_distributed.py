@@ -17,47 +17,34 @@ from xarray.tests.test_dataset import create_test_data
 from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
                requires_zarr)
 
+ENGINES = []
+if has_scipy:
+    ENGINES.append('scipy')
+if has_netCDF4:
+    ENGINES.append('netcdf4')
+if has_h5netcdf:
+    ENGINES.append('h5netcdf')
 
-def test_dask_distributed_netcdf_integration_test_scipy(loop):
+
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason='https://github.com/pydata/xarray/issues/1738')
+@pytest.mark.parametrize('engine', ENGINES)
+def test_dask_distributed_netcdf_integration_test(loop, engine):
+
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
-    original = create_test_data().chunk(chunks)
+
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        original.to_netcdf(filename, engine='scipy')
         with cluster() as (s, [a, b]):
             with Client(s['address'], loop=loop) as c:
+
+                original = create_test_data().chunk(chunks)
+                original.to_netcdf(filename, engine=engine)
+
                 with xr.open_dataset(filename, chunks=chunks,
-                                     engine='scipy') as restored:
+                                     engine=engine) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
-
-def test_dask_distributed_netcdf_integration_test_netcdf4(loop):
-    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
-    original = create_test_data().chunk(chunks)
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        original.to_netcdf(filename, engine='netcdf4')
-        with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
-                with xr.open_dataset(filename, chunks=chunks,
-                                     engine='netcdf4') as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
-
-
-def test_dask_distributed_netcdf_integration_test_h5netcdf(loop):
-    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
-    original = create_test_data().chunk(chunks)
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        original.to_netcdf(filename, engine='h5netcdf')
-        with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
-                with xr.open_dataset(filename, chunks=chunks,
-                                     engine='h5netcdf') as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
-
 
 @requires_zarr
 def test_dask_distributed_zarr_integration_test(loop):
