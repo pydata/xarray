@@ -27,6 +27,8 @@ class TestDatetime(TestCase):
         import netCDF4 as nc4
         for num_dates, units in [
             (np.arange(10), 'days since 2000-01-01'),
+            (np.arange(10).astype('float64'), 'days since 2000-01-01'),
+            (np.arange(10).astype('float32'), 'days since 2000-01-01'),
             (np.arange(10).reshape(2, 5), 'days since 2000-01-01'),
             (12300 + np.arange(5), 'hours since 1680-01-01 00:00:00'),
             # here we add a couple minor formatting errors to test
