@@ -171,6 +171,29 @@ def _ignore_warnings_if(condition):
         yield
 
 
+def _nansum(value, axis=None, **kwargs):
+    """ Our in house nansum. This is used for object array """
+    value = fillna(value, 0.0)
+    return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
+
+
+def _nanmin_or_nansum(func, fill_value, value, axis=None, **kwargs):
+    """ Our in house nansum. This is used for object array """
+    nan_count = count(value, axis=axis)
+    value = fillna(value, fill_value)
+    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
+    if not hasattr(data, 'dtype'):  # scalar case
+        return np.nan if data == fill_value else data
+    # convert all nan part axis to nan
+    return where_method(data, nan_count != 0)
+
+
+_nan_funcs = {'sum': _nansum,
+              'min': partial(_nanmin_or_nansum, 'min', np.inf),
+              'max': partial(_nanmin_or_nansum, 'max', -np.inf),
+              }
+
+
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
                            keep_dims=False):
@@ -185,27 +208,31 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
-        if skipna or (skipna is None and values.dtype.kind in 'cf'):
+        if skipna or (skipna is None and values.dtype.kind in 'cfo'):
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
-                raise NotImplementedError(
-                    'skipna=True not yet implemented for %s with dtype %s'
-                    % (name, values.dtype))
-            nanname = 'nan' + name
-            if (isinstance(axis, tuple) or not values.dtype.isnative or
-                    no_bottleneck or
-                    (dtype is not None and np.dtype(dtype) != values.dtype)):
-                # bottleneck can't handle multiple axis arguments or non-native
-                # endianness
-                if np_compat:
-                    eager_module = npcompat
-                else:
-                    eager_module = np
+                func = _nan_funcs.get(name, None)
+                using_numpy_nan_func = True
+                if func is None:
+                    raise NotImplementedError(
+                        'skipna=True not yet implemented for %s with dtype %s'
+                        % (name, values.dtype))
             else:
-                kwargs.pop('dtype', None)
-                eager_module = bn
-            func = _dask_or_eager_func(nanname, eager_module)
-            using_numpy_nan_func = (eager_module is np or
-                                    eager_module is npcompat)
+                nanname = 'nan' + name
+                if (isinstance(axis, tuple) or not values.dtype.isnative or
+                        no_bottleneck or (dtype is not None and
+                                          np.dtype(dtype) != values.dtype)):
+                    # bottleneck can't handle multiple axis arguments or
+                    # non-native endianness
+                    if np_compat:
+                        eager_module = npcompat
+                    else:
+                        eager_module = np
+                else:
+                    kwargs.pop('dtype', None)
+                    eager_module = bn
+                func = _dask_or_eager_func(nanname, eager_module)
+                using_numpy_nan_func = (eager_module is np or
+                                        eager_module is npcompat)
         else:
             func = _dask_or_eager_func(name)
             using_numpy_nan_func = False
@@ -214,7 +241,11 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 return func(values, axis=axis, **kwargs)
             except AttributeError:
                 if isinstance(values, dask_array_type):
-                    msg = '%s is not yet implemented on dask arrays' % name
+                    try:  # dask needs dtype argument for some cases
+                        return func(values, axis=axis, dtype=values.dtype,
+                                    **kwargs)
+                    except AttributeError:
+                        msg = '%s is not yet implemented on dask arrays' % name
                 else:
                     assert using_numpy_nan_func
                     msg = ('%s is not available with skipna=False with the '
