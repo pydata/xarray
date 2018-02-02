@@ -29,14 +29,13 @@ da = xr.open_rasterio('RGB.byte.tif')
 # Normalize the image
 da = da / 255
 
-# The data is in UTM projection
-# Until https://github.com/SciTools/cartopy/issues/813 is implemented
-# we have to do this manually
+# The data is in UTM projection. We have to set it manually until
+# https://github.com/SciTools/cartopy/issues/813 is implemented
 crs = ccrs.UTM('18N')
 
 # Plot on a map
 ax = plt.subplot(projection=crs)
-da.plot.imshow(ax=ax, transform=crs)
+da.plot.imshow(ax=ax, rgb='band', transform=crs)
 ax.coastlines('10m', color='r')
 plt.show()
 
