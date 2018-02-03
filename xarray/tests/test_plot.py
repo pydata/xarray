@@ -178,6 +178,10 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(xref, x)
         np.testing.assert_allclose(yref, y)
 
+        # test that warning is raised for non-monotonic inputs
+        with pytest.warns(UserWarning):
+            _infer_interval_breaks(np.array([0, 2, 1]))
+
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
