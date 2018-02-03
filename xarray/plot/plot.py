@@ -745,6 +745,23 @@ def contourf(x, y, z, ax, **kwargs):
     return primitive
 
 
+def _is_monotonic(coord, axis=0):
+    """
+    >>> _is_monotonic(np.array([0, 1, 2]))
+    True
+    >>> _is_monotonic(np.array([2, 1, 0]))
+    True
+    >>> _is_monotonic(np.array([0, 2, 1]))
+    False
+    """
+    if coord.shape[axis] < 3:
+        return True
+    else:
+        delta = np.diff(coord, axis=axis)
+        # This ensures all the deltas have the same sign
+        return np.abs(delta).sum() == np.abs(delta.sum())
+
+
 def _infer_interval_breaks(coord, axis=0):
     """
     >>> _infer_interval_breaks(np.arange(5))
@@ -755,10 +772,11 @@ def _infer_interval_breaks(coord, axis=0):
     """
     coord = np.asarray(coord)
 
-    if any(np.diff(coord, axis=axis) < 0):
-        warnings.warn("The input coordinate is not sorted in increasing order along axis %d. "
-                      "This can lead to unexpected results. Consider calling the "
-                      "`sortby` method on the input DataArray."%axis)
+    if not _is_monotonic(coord, axis=axis):
+        warnings.warn("The input coordinate is not sorted in increasing order "
+                      "along axis %d. This can lead to unexpected results. "
+                      "Consider calling the `sortby` method on the input "
+                      "DataArray."%axis)
 
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
