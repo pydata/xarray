@@ -754,6 +754,12 @@ def _infer_interval_breaks(coord, axis=0):
            [ 2.5,  3.5,  4.5]])
     """
     coord = np.asarray(coord)
+
+    if any(np.diff(coord, axis=axis) < 0):
+        warnings.warn("The input coordinate is not sorted in increasing order along axis %d. "
+                      "This can lead to unexpected results. Consider calling the "
+                      "`sortby` method on the input DataArray."%axis)
+
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
         deltas = np.array(0.0)
