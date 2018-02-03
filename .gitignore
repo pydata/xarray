@@ -33,6 +33,7 @@ pip-log.txt
 nosetests.xml
 .cache
 .ropeproject/
+.tags*
 
 # asv environments
 .asv
