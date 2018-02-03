@@ -4035,15 +4035,19 @@ def data_set(seed=None):
     return create_test_data(seed)
 
 
-def test_constructor_aligns_to_explicit_coords():
+@pytest.mark.parametrize('unaligned_coords', (
+    {'x': range(2, -1, -1)},
+    {'x': (['x'], np.asarray([2, 1, 0]))},
+))
+def test_constructor_aligns_to_explicit_coords(unaligned_coords):
 
     coords = {'x': range(3)}
-    a = xr.DataArray([1, 2, 3], dims=['x'], coords={'x': range(2, -1, -1)})
-
-    result = xr.Dataset({'a': a}, coords=coords)
+    a = xr.DataArray([1, 2, 3], dims=['x'], coords=coords)
 
     expected = xr.Dataset(coords=coords)
     expected['a'] = a
+
+    result = xr.Dataset({'a': a}, coords=unaligned_coords)
 
     assert_equal(expected, result)
 
