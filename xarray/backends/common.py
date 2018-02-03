@@ -14,11 +14,6 @@ from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
 
-try:
-    from dask.utils import SerializableLock as Lock
-except ImportError:
-    from threading import Lock
-
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -27,8 +22,41 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = '__values__'
 
 
-# dask.utils.SerializableLock if available, otherwise just a threading.Lock
-GLOBAL_LOCK = Lock()
+def get_scheduler(get=None, collection=None):
+    try:
+        from dask.utils import effective_get
+        actual_get = effective_get(get, collection)
+        try:
+            from dask.distributed import Client
+            if isinstance(actual_get.__self__, Client):
+                return 'distributed'
+        except (ImportError, AttributeError):
+            import dask.multiprocessing
+            if actual_get == dask.multiprocessing.get:
+                return 'multiprocessing'
+            else:
+                return 'threaded'
+    except ImportError:
+        return None
+
+
+def get_scheduler_lock(scheduler):
+    if scheduler == 'distributed':
+        from dask.distributed import Lock
+        return Lock
+    elif scheduler == 'multiprocessing':
+        import multiprocessing as mp
+        return mp.Manager().Lock
+    elif scheduler == 'threaded':
+        from dask.utils import SerializableLock
+        return SerializableLock
+    else:
+        from threading import Lock
+        return Lock
+
+
+SCHEDULER = get_scheduler()
+GLOBAL_LOCK = get_scheduler_lock(SCHEDULER)()
 
 
 def _encode_variable_name(name):
@@ -183,15 +211,16 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
+            print('self.lock == ', self.lock)
             da.store(self.sources, self.targets, lock=self.lock)
             self.sources = []
             self.targets = []
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None):
+    def __init__(self, writer=None, lock=GLOBAL_LOCK):
         if writer is None:
-            writer = ArrayWriter()
+            writer = ArrayWriter(lock=lock)
         self.writer = writer
 
     def encode(self, variables, attributes):

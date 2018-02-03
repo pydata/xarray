@@ -617,8 +617,15 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
+    # TODO Move this logic outside of this function
+    from .common import get_scheduler, get_scheduler_lock
+    scheduler = get_scheduler()
+    lock = get_scheduler_lock(scheduler)(path_or_file)
+    autoclose = scheduler == 'distributed'
+
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_open(target, mode, format, group, writer)
+    store = store_open(target, mode, format, group, writer,
+                       autoclose=autoclose, lock=lock)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
