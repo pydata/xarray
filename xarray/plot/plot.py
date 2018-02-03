@@ -776,7 +776,7 @@ def _infer_interval_breaks(coord, axis=0):
         warnings.warn("The input coordinate is not sorted in increasing order "
                       "along axis %d. This can lead to unexpected results. "
                       "Consider calling the `sortby` method on the input "
-                      "DataArray."%axis)
+                      "DataArray." % axis)
 
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
