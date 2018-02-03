@@ -4060,7 +4060,7 @@ def test_dir_non_string(data_set):
     # add a numbered key to ensure this doesn't break dir
     data_set[5] = 'foo'
     result = dir(data_set)
-    assert not (5 in result)
+    assert 5 not in result
 
 
 def test_dir_unicode(data_set):
