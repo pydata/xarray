@@ -443,8 +443,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
-    Requires dask to be installed.  Attributes from the first dataset file
-    are used for the combined dataset.
+    Requires dask to be installed. See documentation for details on dask [1].  
+    Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
     ----------
@@ -458,7 +458,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         If int, chunk each dimension by ``chunks``.
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
-        full documentation for more details.
+        full documentation for more details [2].
     concat_dim : None, str, DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
@@ -533,6 +533,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     --------
     auto_combine
     open_dataset
+
+    References
+    ----------
+    .. [1] http://xarray.pydata.org/en/stable/dask.html
+    .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))
