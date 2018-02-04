@@ -112,25 +112,19 @@ class TestArrayNotNullEquiv():
         assert array_notnull_equiv(arr1, arr2)
 
 
-def test_nansum():
+def construct_dataarray(dim_num, dtype, contains_nan, dask):
+    # dimnum <= 3
     rng = np.random.RandomState(0)
-    array = rng.randn(15, 30).astype(bool).astype(object)
-    array[1, 3] = np.nan
-    array[3, 10] = np.nan
-    reduced = _nansum(array)
-    reference = np.nansum(array)
-    array_notnull_equiv(reduced, reference)
-
-
-def construct_dataarray(dtype, contains_nan, dask):
-    rng = np.random.RandomState(0)
-    da = DataArray(rng.randn(15, 30), dims=('x', 'y'),
+    shapes = [15, 30, 10][:dim_num]
+    dims = ('x', 'y', 'z')[:dim_num]
+    da = DataArray(rng.randn(*shapes), dims=dims,
                    coords={'x': np.arange(15)}, name='da').astype(dtype)
 
     if contains_nan:
         da = da.reindex(x=np.arange(20))
     if dask and has_dask:
-        da = da.chunk({'x': 5, 'y': 10})
+        chunks = {d: 5 for d in dims}
+        da = da.chunk(chunks)
 
     return da
 
@@ -141,40 +135,46 @@ def assert_allclose_with_nan(a, b, **kwargs):
         assert (np.isnan(a1) and np.isnan(b1)) or np.allclose(a1, b1, **kwargs)
 
 
+@pytest.mark.parametrize('dim_num', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
-@pytest.mark.parametrize('func', ['sum', 'min', 'max'])  # TODO support more
+@pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean'])
 @pytest.mark.parametrize('skipna', [False, True])
-@pytest.mark.parametrize('dim', [None, 'x', 'y'])
-def test_reduce(dtype, dask, func, skipna, dim):
+@pytest.mark.parametrize('aggdim', [None, 'x', 'y'])
+def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
+    if aggdim == 'y' and dim_num < 2:
+        return
 
-    da = construct_dataarray(dtype, contains_nan=True, dask=dask)
-    axis = None if dim is None else da.get_axis_num(dim)
+    if dtype == np.bool_ and func == 'mean':
+        return  # numpy does not support this
+
+    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    axis = None if aggdim is None else da.get_axis_num(aggdim)
 
     if dask and not has_dask:
         return
 
     if skipna:
-        try:  # TODO currently, we only support methods that numpy supports
+        try:
             expected = getattr(np, 'nan{}'.format(func))(da.values, axis=axis)
         except (TypeError, AttributeError):
-            with pytest.raises(NotImplementedError):
-                actual = getattr(da, func)(skipna=skipna, dim=dim)
+            # TODO currently, numpy does not support nanmean for object dtype
             return
     else:
         expected = getattr(np, func)(da.values, axis=axis)
 
-    actual = getattr(da, func)(skipna=skipna, dim=dim)
-    assert_allclose_with_nan(actual.values, np.array(expected))
+    actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+    assert_allclose_with_nan(actual.values, np.array(expected), rtol=1.0e-4)
 
-    # compatible with pandas
-    se = da.to_dataframe()
-    actual = getattr(da, func)(skipna=skipna)
-    expected = getattr(se, func)(skipna=skipna)
-    assert_allclose_with_nan(actual.values, np.array(expected))
+    # compatible with pandas for 1d case
+    if dim_num == 1:
+        se = da.to_dataframe()
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+        expected = getattr(se, func)(skipna=skipna)
+        assert_allclose_with_nan(actual.values, np.array(expected))
 
     # without nan
-    da = construct_dataarray(dtype, contains_nan=False, dask=dask)
+    da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
     expected = getattr(np, 'nan{}'.format(func))(da.values)
     actual = getattr(da, func)(skipna=skipna)
     assert np.allclose(actual.values, np.array(expected))

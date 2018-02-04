@@ -179,18 +179,41 @@ def _nansum(value, axis=None, **kwargs):
 
 def _nanmin_or_nanmax(func, fill_value, value, axis=None, **kwargs):
     """ In house nanmin or nanmax. This is used for object array """
-    nan_count = count(value, axis=axis)
+    valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
         return np.nan if data == fill_value else data
     # convert all nan part axis to nan
-    return where_method(data, nan_count != 0)
+    return where_method(data, valid_count != 0)
+
+
+def _nanmean(value, axis=None, **kwargs):
+    """ In house nanmean. This is used for object array """
+    valid_count = count(value, axis=axis)
+    value = fillna(value, 0.0)
+    # TODO numpy does not support object-type array, so we cast them to float
+    dtype = kwargs.get('dtype', None)
+    if dtype is None:
+        dtype = value.dtype if value.dtype.kind in ['cf'] else float
+    data = _dask_or_eager_func('mean')(value, axis=axis, dtype=dtype, **kwargs)
+    if not hasattr(data, 'dtype'):  # scalar case
+        return np.nan if data == 0.0 else data
+
+    # adjust the sample size
+    if axis is None:
+        size = data.size
+    else:
+        size = np.prod(data.shape[axis])
+    data = data / valid_count * size
+    # convert all nan part axis to nan
+    return where_method(data, valid_count != 0)
 
 
 _nan_funcs = {'sum': _nansum,
               'min': partial(_nanmin_or_nanmax, 'min', np.inf),
               'max': partial(_nanmin_or_nanmax, 'max', -np.inf),
+              'mean': _nanmean,
               }
 
 
@@ -241,7 +264,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 return func(values, axis=axis, **kwargs)
             except AttributeError:
                 if isinstance(values, dask_array_type):
-                    try:  # dask needs dtype argument for some cases
+                    try:  # dask/dask#3133 dask sometimes needs dtype argument
                         return func(values, axis=axis, dtype=values.dtype,
                                     **kwargs)
                     except AttributeError:
