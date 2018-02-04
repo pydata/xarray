@@ -188,8 +188,8 @@ def _nanmin_or_nanmax(func, fill_value, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-def _nanmean(value, axis=None, **kwargs):
-    """ In house nanmean. This is used for object array """
+def _nanmean_ddof(ddof, value, axis=None, **kwargs):
+    """ In house nanmean. ddof argument will be used in _nanvar method """
     valid_count = count(value, axis=axis)
     value = fillna(value, 0.0)
     # TODO numpy does not support object-type array, so we cast them to float
@@ -197,23 +197,37 @@ def _nanmean(value, axis=None, **kwargs):
     if dtype is None:
         dtype = value.dtype if value.dtype.kind in ['cf'] else float
     data = _dask_or_eager_func('mean')(value, axis=axis, dtype=dtype, **kwargs)
-    if not hasattr(data, 'dtype'):  # scalar case
-        return np.nan if data == 0.0 else data
 
     # adjust the sample size
     if axis is None:
-        size = data.size
+        size = value.size
     else:
-        size = np.prod(data.shape[axis])
-    data = data / valid_count * size
+        size = np.prod(value.shape[axis])
+    data = data / (valid_count - ddof) * size
     # convert all nan part axis to nan
     return where_method(data, valid_count != 0)
+
+
+def _nanvar(value, axis=None, **kwargs):
+    ddof = kwargs.pop('ddof', 0)
+    kwargs_mean = kwargs.copy()
+    kwargs_mean.pop('keepdims', None)
+    value_mean = _nanmean_ddof(0, value, axis=axis, keepdims=True, **kwargs)
+    squared = _dask_or_eager_func('square')(value.astype(value_mean.dtype) -
+                                            value_mean)
+    return _nanmean_ddof(ddof, squared, axis=axis, **kwargs)
+
+
+def _nanstd(value, axis=None, **kwargs):
+    return _dask_or_eager_func('sqrt')(_nanvar(value, axis=axis, **kwargs))
 
 
 _nan_funcs = {'sum': _nansum,
               'min': partial(_nanmin_or_nanmax, 'min', np.inf),
               'max': partial(_nanmin_or_nanmax, 'max', -np.inf),
-              'mean': _nanmean,
+              'mean': partial(_nanmean_ddof, 0),
+              'var': _nanvar,
+              'std': _nanstd,
               }
 
 
@@ -235,7 +249,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
                 func = _nan_funcs.get(name, None)
                 using_numpy_nan_func = True
-                if func is None:
+                if func is None or values.dtype.kind != 'o':
                     raise NotImplementedError(
                         'skipna=True not yet implemented for %s with dtype %s'
                         % (name, values.dtype))

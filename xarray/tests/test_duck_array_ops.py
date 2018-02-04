@@ -138,7 +138,7 @@ def assert_allclose_with_nan(a, b, **kwargs):
 @pytest.mark.parametrize('dim_num', [1, 2, 3])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
-@pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean'])
+@pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean', 'var', 'std'])
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', [None, 'x', 'y'])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
@@ -155,6 +155,10 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         return
 
+    if dask and not skipna and func in ['var', 'std'] and dtype == np.bool_:
+        # TODO this might be dask's bug
+        return
+
     try:
         if skipna:
             expected = getattr(np, 'nan{}'.format(func))(da.values, axis=axis)
@@ -164,7 +168,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         actual = getattr(da, func)(skipna=skipna, dim=aggdim)
         assert_allclose_with_nan(actual.values, np.array(expected),
                                  rtol=1.0e-4)
-    except (TypeError, AttributeError):
+    except (TypeError, AttributeError, ZeroDivisionError):
         # TODO currently, numpy does not support nanmean for object dtype
         pass
 
@@ -172,7 +176,10 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dim_num == 1 or aggdim is None:
         se = da.to_dataframe()
         actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-        expected = getattr(se, func)(skipna=skipna)
+        if func in ['var', 'std']:
+            expected = getattr(se, func)(skipna=skipna, ddof=0)
+        else:
+            expected = getattr(se, func)(skipna=skipna)
         assert_allclose_with_nan(actual.values, np.array(expected))
 
     # without nan
