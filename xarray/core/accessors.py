@@ -192,13 +192,50 @@ class DatetimeAccessor(object):
                         coords=self._obj.coords, dims=self._obj.dims)
 
     def floor(self, freq):
-        ''' Round timestamp downward. '''
+        '''
+        Round timestamps downward to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        floor-ed timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
+
         return self._tslib_round_accessor("floor", freq)
 
     def ceil(self, freq):
-        ''' Round timestamp upward. '''
+        '''
+        Round timestamps upward to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        ceil-ed timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
         return self._tslib_round_accessor("ceil", freq)
 
     def round(self, freq):
-        ''' Round timestamp. '''
+        '''
+        Round timestamps to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        rounded timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
         return self._tslib_round_accessor("round", freq)
