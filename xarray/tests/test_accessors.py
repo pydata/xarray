@@ -57,6 +57,9 @@ class TestDatetimeAccessor(TestCase):
         months = self.times_data.dt.month
         hours = self.times_data.dt.hour
         days = self.times_data.dt.day
+        floor = self.times_data.dt.floor('D')
+        ceil = self.times_data.dt.ceil('D')
+        round = self.times_data.dt.round('D')
 
         dask_times_arr = da.from_array(self.times_arr, chunks=(5, 5, 50))
         dask_times_2d = xr.DataArray(dask_times_arr,
@@ -67,6 +70,9 @@ class TestDatetimeAccessor(TestCase):
         dask_month = dask_times_2d.dt.month
         dask_day = dask_times_2d.dt.day
         dask_hour = dask_times_2d.dt.hour
+        dask_floor = dask_times_2d.dt.floor('D')
+        dask_ceil = dask_times_2d.dt.ceil('D')
+        dask_round = dask_times_2d.dt.round('D')
 
         # Test that the data isn't eagerly evaluated
         assert isinstance(dask_year.data, da.Array)
@@ -86,6 +92,9 @@ class TestDatetimeAccessor(TestCase):
         assert_equal(months, dask_month.compute())
         assert_equal(days, dask_day.compute())
         assert_equal(hours, dask_hour.compute())
+        assert_equal(floor, dask_floor.compute())
+        assert_equal(ceil, dask_ceil.compute())
+        assert_equal(round, dask_round.compute())
 
     def test_seasons(self):
         dates = pd.date_range(start="2000/01/01", freq="M", periods=12)
