@@ -245,11 +245,11 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
-        if skipna or (skipna is None and values.dtype.kind in 'cfo'):
+        if skipna or (skipna is None and values.dtype.kind in 'cfO'):
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
                 func = _nan_funcs.get(name, None)
                 using_numpy_nan_func = True
-                if func is None or values.dtype.kind != 'o':
+                if func is None or values.dtype.kind not in 'Ob':
                     raise NotImplementedError(
                         'skipna=True not yet implemented for %s with dtype %s'
                         % (name, values.dtype))
