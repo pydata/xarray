@@ -836,7 +836,8 @@ def apply_ufunc(func, *args, **kwargs):
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
     numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
-    works well with numba's vectorize and guvectorize.
+    works well with numba's vectorize and guvectorize. Further explanation with
+    examples are provided in the xarray documentation [3].
 
     See also
     --------
@@ -848,6 +849,7 @@ def apply_ufunc(func, *args, **kwargs):
     ----------
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
+    .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
     """  # noqa: E501  # don't error on that URL one line up
     from .groupby import GroupBy
     from .dataarray import DataArray
