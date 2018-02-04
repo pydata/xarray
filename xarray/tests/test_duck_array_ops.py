@@ -142,6 +142,7 @@ def assert_allclose_with_nan(a, b, **kwargs):
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', [None, 'x', 'y'])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
+
     if aggdim == 'y' and dim_num < 2:
         return
 
@@ -154,20 +155,21 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         return
 
-    if skipna:
-        try:
+    try:
+        if skipna:
             expected = getattr(np, 'nan{}'.format(func))(da.values, axis=axis)
-        except (TypeError, AttributeError):
-            # TODO currently, numpy does not support nanmean for object dtype
-            return
-    else:
-        expected = getattr(np, func)(da.values, axis=axis)
+        else:
+            expected = getattr(np, func)(da.values, axis=axis)
 
-    actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-    assert_allclose_with_nan(actual.values, np.array(expected), rtol=1.0e-4)
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+        assert_allclose_with_nan(actual.values, np.array(expected),
+                                 rtol=1.0e-4)
+    except (TypeError, AttributeError):
+        # TODO currently, numpy does not support nanmean for object dtype
+        pass
 
     # compatible with pandas for 1d case
-    if dim_num == 1:
+    if dim_num == 1 or aggdim is None:
         se = da.to_dataframe()
         actual = getattr(da, func)(skipna=skipna, dim=aggdim)
         expected = getattr(se, func)(skipna=skipna)
