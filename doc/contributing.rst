@@ -593,7 +593,7 @@ Running the performance test suite
 ----------------------------------
 
 Performance matters and it is worth considering whether your code has introduced
-performance regressions.  *xarray* is starting to write a suite of benmarking tests
+performance regressions.  *xarray* is starting to write a suite of benchmarking tests
 using `asv <https://github.com/spacetelescope/asv>`__
 to enable easy monitoring of the performance of critical *xarray* operations.
 These benchmarks are all found in the ``xarray/asv_bench`` directory.  asv
