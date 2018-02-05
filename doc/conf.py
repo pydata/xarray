@@ -20,6 +20,8 @@ import os
 import datetime
 import importlib
 
+allowed_failures = []
+
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
@@ -32,6 +34,11 @@ for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
         print("%s: %s, %s" % (name, module.__version__, fname))
     except ImportError:
         print("no %s" % name)
+        if name == 'rasterio':
+            # not having rasterio should not break the build process
+            allowed_failures = ['gallery/plot_rasterio_rgb.py',
+                                'gallery/plot_rasterio.py'
+                                ]
 
 import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
@@ -62,7 +69,8 @@ extlinks = {'issue': ('https://github.com/pydata/xarray/issues/%s', 'GH'),
 
 sphinx_gallery_conf = {'examples_dirs': 'gallery',
                        'gallery_dirs': 'auto_gallery',
-                       'backreferences_dir': False
+                       'backreferences_dir': False,
+                       'expected_failing_examples': allowed_failures
                        }
 
 autosummary_generate = True
