@@ -177,15 +177,34 @@ def _nansum(value, axis=None, **kwargs):
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
-def _nanmin_or_nanmax(func, fill_value, value, axis=None, **kwargs):
-    """ In house nanmin or nanmax. This is used for object array """
+def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
+    """ In house nan-reduce used for nanmin, nanmax. This is used for object
+    array """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
-        return np.nan if data == fill_value else data
+        value = np.nan if valid_count == 0 else data
+        return np.array(value)  # return 0d-array
     # convert all nan part axis to nan
     return where_method(data, valid_count != 0)
+
+
+def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
+    """ In house nan-reduce used for nanargmin, nanargmax. This is used for
+    object array. This always return integer type """
+    valid_count = count(value, axis=axis)
+    value = fillna(value, fill_value)
+    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
+    # dask seems return non-integer
+    if isinstance(value, dask_array_type):
+        data = data.astype(int)
+    if not hasattr(data, 'dtype'):  # scalar case
+        # TODO should we raise ValueError if all-nan slice encountered?
+        value = -1 if valid_count == 0 else int(data)
+        return np.array(value)  # return 0d-array
+    # convert all nan part axis to nan
+    return where_method(data, valid_count != 0, -1)
 
 
 def _nanmean_ddof(ddof, value, axis=None, **kwargs):
@@ -223,8 +242,10 @@ def _nanstd(value, axis=None, **kwargs):
 
 
 _nan_funcs = {'sum': _nansum,
-              'min': partial(_nanmin_or_nanmax, 'min', np.inf),
-              'max': partial(_nanmin_or_nanmax, 'max', -np.inf),
+              'min': partial(_nan_minmax, 'min', np.inf),
+              'max': partial(_nan_minmax, 'max', -np.inf),
+              'argmin': partial(_nan_argminmax, 'argmin', np.inf),
+              'argmax': partial(_nan_argminmax, 'argmax', -np.inf),
               'mean': partial(_nanmean_ddof, 0),
               'var': _nanvar,
               'std': _nanstd,
