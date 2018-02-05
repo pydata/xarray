@@ -110,11 +110,11 @@ You will need your own fork to work on the code. Go to the `xarray project
 page <https://github.com/pydata/xarray>`_ and hit the ``Fork`` button. You will
 want to clone your fork to your machine::
 
-    git clone https://github.com/your-user-name/xarray.git xarray-yourname
-    cd xarray-yourname
+    git clone https://github.com/your-user-name/xarray.git
+    cd xarray
     git remote add upstream https://github.com/pydata/xarray.git
 
-This creates the directory `xarray-yourname` and connects your repository to
+This creates the directory `xarray` and connects your repository to
 the upstream (main project) *xarray* repository.
 
 .. _contributing.dev_env:
@@ -162,8 +162,8 @@ At this point you should be able to import xarray from your locally built versio
 
    $ python  # start an interpreter
    >>> import xarray
-   >>> print(xarray.__version__)
-   0.22.0.dev0+29.g4ad6d4d74
+   >>> xarray.__version__
+   '0.10.0+dev46.g015daca'
 
 This will create the new environment, and not touch any of your existing environments,
 nor any existing Python installation.
@@ -593,8 +593,8 @@ Running the performance test suite
 ----------------------------------
 
 Performance matters and it is worth considering whether your code has introduced
-performance regressions.  *xarray* is in the process of migrating to
-`asv benchmarks <https://github.com/spacetelescope/asv>`__
+performance regressions.  *xarray* is starting to write a suite of benmarking tests
+using `asv <https://github.com/spacetelescope/asv>`__
 to enable easy monitoring of the performance of critical *xarray* operations.
 These benchmarks are all found in the ``xarray/asv_bench`` directory.  asv
 supports both python2 and python3.
@@ -621,7 +621,7 @@ environments. If you want to use virtualenv instead, write::
 The ``-E virtualenv`` option should be added to all ``asv`` commands
 that run benchmarks. The default value is defined in ``asv.conf.json``.
 
-Running the full test suite can take up to one hour and use up to 3GB of RAM.
+Running the full benchmark suite can take up to one hour and use up a few GBs of RAM.
 Usually it is sufficient to paste only a subset of the results into the pull
 request to show that the committed changes do not cause unexpected performance
 regressions.  You can run specific benchmarks using the ``-b`` flag, which
@@ -777,10 +777,10 @@ release.  To submit a pull request:
 
 This request then goes to the repository maintainers, and they will review
 the code. If you need to make more changes, you can make them in
-your branch, push them to GitHub, and the pull request will be automatically
-updated.  Pushing them to GitHub again is done by::
+your branch, add them to a new commit, push them to GitHub, and the pull request
+will be automatically updated.  Pushing them to GitHub again is done by::
 
-    git push -f origin shiny-new-feature
+    git push origin shiny-new-feature
 
 This will automatically update your pull request with the latest code and restart the
 :ref:`Continuous Integration <contributing.ci>` tests.
