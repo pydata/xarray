@@ -35,7 +35,6 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   whats-new
    why-xarray
    faq
    examples
@@ -53,6 +52,8 @@ Documentation
    plotting
    api
    internals
+   contributing
+   whats-new
 
 See also
 --------
