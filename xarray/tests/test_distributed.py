@@ -1,4 +1,5 @@
 import sys
+import pickle
 
 import pytest
 import xarray as xr
@@ -6,14 +7,14 @@ import xarray as xr
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 import dask
-from dask.distributed import Client
+from dask.distributed import Client, Lock
 from distributed.utils_test import cluster, gen_cluster
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
 
 from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
 from xarray.tests.test_dataset import create_test_data
-from xarray.backends.common import HDF5_LOCK
+from xarray.backends.common import HDF5_LOCK, CombinedLock
 
 from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
                requires_zarr)
@@ -25,10 +26,6 @@ if has_netCDF4:
     ENGINES.append('netcdf4')
 if has_h5netcdf:
     ENGINES.append('h5netcdf')
-
-
-def test_hdf5_lock():
-    assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
 @pytest.mark.xfail(sys.platform == 'win32',
@@ -94,3 +91,25 @@ def test_async(c, s, a, b):
     assert_allclose(x + 10, w)
 
     assert s.tasks
+
+
+def test_hdf5_lock():
+    assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
+
+
+@gen_cluster(client=True)
+def test_serializable_locks(c, s, a, b):
+    def f(x, lock=None):
+        with lock:
+            return x + 1
+
+    # note, the creation of Lock needs to be done inside a cluster
+    for lock in [HDF5_LOCK, Lock(), Lock('filename.nc'),
+                 CombinedLock([HDF5_LOCK]),
+                 CombinedLock([HDF5_LOCK, Lock('filename.nc')])]:
+
+        futures = c.map(f, range(10), lock=lock)
+        yield c.gather(futures)
+
+        lock2 = pickle.loads(pickle.dumps(lock))
+        assert type(lock) == type(lock2)
