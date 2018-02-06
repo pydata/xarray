@@ -156,7 +156,7 @@ We'll now kick off a two-step process:
    source activate test_env
 
    # Build and install xarray
-   python setup.py develop
+   pip install -e .
 
 At this point you should be able to import xarray from your locally built version::
 
