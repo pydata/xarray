@@ -65,7 +65,7 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 
 around = _dask_or_eager_func('around')
-isclose = _dask_or_eager_func('isclose')
+isclose = _dask_or_eager_func('isclose', npcompat)
 notnull = _dask_or_eager_func('notnull', pd)
 _isnull = _dask_or_eager_func('isnull', pd)
 

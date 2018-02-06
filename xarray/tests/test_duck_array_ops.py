@@ -4,6 +4,7 @@ from __future__ import print_function
 import pytest
 import numpy as np
 from numpy import array, nan
+from distutils.version import LooseVersion
 from . import assert_array_equal
 from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
@@ -160,18 +161,23 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         # TODO this might be dask's bug
         return
 
-    try:
-        if skipna:
-            expected = getattr(np, 'nan{}'.format(func))(da.values, axis=axis)
-        else:
-            expected = getattr(np, func)(da.values, axis=axis)
+    if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
+            da.dtype.kind == 'O' and skipna):
+        # Numpy < 1.13 does not handle object-type for
+        try:
+            if skipna:
+                expected = getattr(np, 'nan{}'.format(func))(da.values,
+                                                             axis=axis)
+            else:
+                expected = getattr(np, func)(da.values, axis=axis)
 
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-        assert_allclose_with_nan(actual.values, np.array(expected),
-                                 rtol=1.0e-4)
-    except (TypeError, AttributeError, ZeroDivisionError):
-        # TODO currently, numpy does not support nanmean for object dtype
-        pass
+            actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+            assert_allclose_with_nan(actual.values, np.array(expected),
+                                     rtol=1.0e-4)
+        except (TypeError, AttributeError, ZeroDivisionError):
+            # TODO currently, numpy does not support some methods such as
+            # nanmean for object dtype
+            pass
 
     # compatible with pandas for 1d case
     if dim_num == 1 or aggdim is None:
@@ -205,8 +211,8 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', ['x', 'y'])
 def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
-    # Due to #****, we does not check consistency with pandas
-    # just make sure da[da.argmin   ()] == da.min()
+    # pandas-dev/pandas#16830, we does not check consistency with pandas
+    # just make sure da[da.argmin()] == da.min()
 
     if aggdim == 'y' and dim_num < 2:
         return
