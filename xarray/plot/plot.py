@@ -757,9 +757,9 @@ def _is_monotonic(coord, axis=0):
     if coord.shape[axis] < 3:
         return True
     else:
-        delta = np.diff(coord, axis=axis)
-        # This ensures all the deltas have the same sign
-        return np.abs(delta).sum() == np.abs(delta.sum())
+        n = coord.shape[axis]
+        delta_pos = coord.take(np.arange(1, n), axis=axis) >= coord.take(np.arange(0, n-1), axis=axis)
+        return np.all(delta_pos) or np.all(~delta_pos)
 
 
 def _infer_interval_breaks(coord, axis=0):
