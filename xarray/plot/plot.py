@@ -759,7 +759,8 @@ def _is_monotonic(coord, axis=0):
     else:
         n = coord.shape[axis]
         delta_pos = coord.take(np.arange(1, n), axis=axis) >= coord.take(np.arange(0, n-1), axis=axis)
-        return np.all(delta_pos) or np.all(~delta_pos)
+        delta_neg = coord.take(np.arange(1, n), axis=axis) <= coord.take(np.arange(0, n-1), axis=axis)
+        return np.all(delta_pos) or np.all(delta_neg)
 
 
 def _infer_interval_breaks(coord, axis=0):
