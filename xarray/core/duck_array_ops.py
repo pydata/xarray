@@ -65,7 +65,7 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 
 around = _dask_or_eager_func('around')
-isclose = _dask_or_eager_func('isclose', npcompat)
+isclose = _dask_or_eager_func('isclose')
 notnull = _dask_or_eager_func('notnull', pd)
 _isnull = _dask_or_eager_func('isnull', pd)
 
@@ -181,11 +181,11 @@ def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
     """ In house nan-reduce used for nanmin, nanmax. This is used for object
     array """
     valid_count = count(value, axis=axis)
-    value = fillna(value, fill_value)
-    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
+    filled_value = fillna(value, fill_value)
+    data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
-        value = np.nan if valid_count == 0 else data
-        return np.array(value)  # return 0d-array
+        data = np.nan if valid_count == 0 else data
+        return np.array(data, dtype=value.dtype)  # return 0d-array
     # convert all nan part axis to nan
     return where_method(data, valid_count != 0)
 
@@ -201,8 +201,8 @@ def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
         data = data.astype(int)
     if not hasattr(data, 'dtype'):  # scalar case
         # TODO should we raise ValueError if all-nan slice encountered?
-        value = -1 if valid_count == 0 else int(data)
-        return np.array(value)  # return 0d-array
+        data = -1 if valid_count == 0 else int(data)
+        return np.array(data)  # return 0d-array
     # convert all nan part axis to nan
     return where_method(data, valid_count != 0, -1)
 
@@ -213,7 +213,7 @@ def _nanmean_ddof(ddof, value, axis=None, **kwargs):
     value = fillna(value, 0.0)
     # TODO numpy does not support object-type array, so we cast them to float
     dtype = kwargs.get('dtype', None)
-    if dtype is None:
+    if dtype is None and value.dtype.kind == 'O':
         dtype = value.dtype if value.dtype.kind in ['cf'] else float
     data = _dask_or_eager_func('mean')(value, axis=axis, dtype=dtype, **kwargs)
 

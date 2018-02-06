@@ -10,6 +10,7 @@ from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv,
 )
 from xarray import DataArray
+from xarray.testing import assert_allclose
 
 from . import TestCase, raises_regex, has_dask
 
@@ -131,10 +132,11 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     return da
 
 
-def assert_allclose_with_nan(a, b, **kwargs):
-    """ Extension of np.allclose with nan-including array """
-    for a1, b1 in zip(a.ravel(), b.ravel()):
-        assert (np.isnan(a1) and np.isnan(b1)) or np.allclose(a1, b1, **kwargs)
+def from_series_or_scalar(se):
+    try:
+        return DataArray.from_series(se)
+    except AttributeError:  # scalar case
+        return DataArray(se)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2, 3])
@@ -172,8 +174,8 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
                 expected = getattr(np, func)(da.values, axis=axis)
 
             actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-            assert_allclose_with_nan(actual.values, np.array(expected),
-                                     rtol=1.0e-4)
+            assert np.allclose(actual.values, np.array(expected), rtol=1.0e-4,
+                               equal_nan=True)
         except (TypeError, AttributeError, ZeroDivisionError):
             # TODO currently, numpy does not support some methods such as
             # nanmean for object dtype
@@ -181,20 +183,21 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     # compatible with pandas for 1d case
     if dim_num == 1 or aggdim is None:
-        se = da.to_dataframe()
+        se = da.to_series()
         actual = getattr(da, func)(skipna=skipna, dim=aggdim)
         assert isinstance(actual, DataArray)
         if func in ['var', 'std']:
-            expected = getattr(se, func)(skipna=skipna, ddof=0)
-
-            assert_allclose_with_nan(actual.values, np.array(expected))
+            expected = from_series_or_scalar(
+                getattr(se, func)(skipna=skipna, ddof=0))
+            assert_allclose(actual, expected)
             # also check ddof!=0 case
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
-            expected = getattr(se, func)(skipna=skipna, ddof=5)
-            assert_allclose_with_nan(actual.values, np.array(expected))
+            expected = from_series_or_scalar(
+                getattr(se, func)(skipna=skipna, ddof=5))
+            assert_allclose(actual, expected)
         else:
-            expected = getattr(se, func)(skipna=skipna)
-            assert_allclose_with_nan(actual.values, np.array(expected))
+            expected = from_series_or_scalar(getattr(se, func)(skipna=skipna))
+            assert_allclose(actual, expected)
 
     # without nan
     da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
@@ -227,8 +230,7 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
 
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)
-    actual = da.isel(**{aggdim:
-                        getattr(da, 'arg'+func)(dim=aggdim,
-                                                skipna=skipna).compute()})
+    actual = da.isel(**{
+        aggdim: getattr(da, 'arg'+func)(dim=aggdim, skipna=skipna).compute()})
     expected = getattr(da, func)(dim=aggdim, skipna=skipna)
-    assert_allclose_with_nan(actual.values, expected.values)
+    assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
