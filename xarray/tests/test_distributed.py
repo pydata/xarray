@@ -13,7 +13,7 @@ from distributed.client import futures_of
 
 from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
 from xarray.tests.test_dataset import create_test_data
-from xarray.backends.common import GLOBAL_LOCK
+from xarray.backends.common import HDF5_LOCK
 
 from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
                requires_zarr)
@@ -25,6 +25,10 @@ if has_netCDF4:
     ENGINES.append('netcdf4')
 if has_h5netcdf:
     ENGINES.append('h5netcdf')
+
+
+def test_hdf5_lock():
+    assert isinstance(HDF5_LOCK, dask.utils.SerializableLock)
 
 
 @pytest.mark.xfail(sys.platform == 'win32',

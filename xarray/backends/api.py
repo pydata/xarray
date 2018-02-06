@@ -10,7 +10,7 @@ from numbers import Number
 import numpy as np
 
 from .. import backends, conventions, Dataset
-from .common import ArrayWriter, GLOBAL_LOCK
+from .common import ArrayWriter, HDF5_LOCK, CombinedLock
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
@@ -66,9 +66,9 @@ def _default_lock(filename, engine):
             else:
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
-                lock = GLOBAL_LOCK
+                lock = HDF5_LOCK
         elif engine in {'h5netcdf', 'pynio'}:
-            lock = GLOBAL_LOCK
+            lock = HDF5_LOCK
         else:
             lock = False
     return lock
@@ -620,7 +620,10 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     # TODO Move this logic outside of this function
     from .common import get_scheduler, get_scheduler_lock
     scheduler = get_scheduler()
-    lock = get_scheduler_lock(scheduler)(path_or_file)
+    # I think we want to include the filename here to support concurrent writes
+    # using save_mfdataset
+    file_lock = get_scheduler_lock(scheduler)(path_or_file)
+    lock = CombinedLock([HDF5_LOCK, file_lock])
     autoclose = scheduler == 'distributed'
 
     target = path_or_file if path_or_file is not None else BytesIO()

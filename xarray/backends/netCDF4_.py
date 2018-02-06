@@ -16,7 +16,7 @@ from ..core.utils import (FrozenOrderedDict, close_on_error, is_remote_uri)
 from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
 
 from .common import (WritableCFDataStore, robust_getitem, BackendArray,
-                     DataStorePickleMixin, find_root, GLOBAL_LOCK)
+                     DataStorePickleMixin, find_root, HDF5_LOCK)
 from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
 
 # This lookup table maps from dtype.byteorder to a readable endian
@@ -236,7 +236,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, netcdf4_dataset, mode='r', writer=None, opener=None,
-                 autoclose=False, lock=GLOBAL_LOCK):
+                 autoclose=False, lock=HDF5_LOCK):
 
         if autoclose and opener is None:
             raise ValueError('autoclose requires an opener')
@@ -259,7 +259,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     @classmethod
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
              writer=None, clobber=True, diskless=False, persist=False,
-             autoclose=False, lock=GLOBAL_LOCK):
+             autoclose=False, lock=HDF5_LOCK):
         import netCDF4 as nc4
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):

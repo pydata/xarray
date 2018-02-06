@@ -8,12 +8,20 @@ import traceback
 import contextlib
 from collections import Mapping, OrderedDict
 import warnings
+import multiprocessing
+import threading
 
 from ..conventions import cf_encoder
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 from ..core.pycompat import iteritems, dask_array_type
 
+# Import default lock
+try:
+    from dask.utils import SerializableLock
+    HDF5_LOCK = SerializableLock()
+except ImportError:
+    HDF5_LOCK = threading.Lock()
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -31,10 +39,13 @@ def get_scheduler(get=None, collection=None):
             if isinstance(actual_get.__self__, Client):
                 return 'distributed'
         except (ImportError, AttributeError):
-            import dask.multiprocessing
-            if actual_get == dask.multiprocessing.get:
-                return 'multiprocessing'
-            else:
+            try:
+                import dask.multiprocessing
+                if actual_get == dask.multiprocessing.get:
+                    return 'multiprocessing'
+                else:
+                    return 'threaded'
+            except ImportError:
                 return 'threaded'
     except ImportError:
         return None
@@ -45,18 +56,12 @@ def get_scheduler_lock(scheduler):
         from dask.distributed import Lock
         return Lock
     elif scheduler == 'multiprocessing':
-        import multiprocessing as mp
-        return mp.Manager().Lock
+        return multiprocessing.Lock
     elif scheduler == 'threaded':
         from dask.utils import SerializableLock
         return SerializableLock
     else:
-        from threading import Lock
-        return Lock
-
-
-SCHEDULER = get_scheduler()
-GLOBAL_LOCK = get_scheduler_lock(SCHEDULER)()
+        return threading.Lock
 
 
 def _encode_variable_name(name):
@@ -103,6 +108,38 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
                    (next_delay, max_retries - n, traceback.format_exc()))
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
+
+
+class CombinedLock(object):
+    """A combination of multiple locks.
+
+    Like a locked door, a CombinedLock is locked if any of its constituent
+    locks are locked.
+    """
+    def __init__(self, locks):
+        self.locks = locks
+
+    def acquire(self, *args):
+        return all(lock.acquire(*args) for lock in self.locks)
+
+    def release(self, *args):
+        for lock in self.locks:
+            lock.release(*args)
+
+    def __enter__(self):
+        for lock in self.locks:
+            lock.__enter__()
+
+    def __exit__(self, *args):
+        for lock in self.locks:
+            lock.__exit__(*args)
+
+    @property
+    def locked(self):
+        return any(lock.locked for lock in self.locks)
+
+    def __repr__(self):
+        return "CombinedLock(%s)" % [repr(lock) for lock in self.locks]
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
@@ -196,7 +233,7 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self, lock=GLOBAL_LOCK):
+    def __init__(self, lock=HDF5_LOCK):
         self.sources = []
         self.targets = []
         self.lock = lock
@@ -211,14 +248,13 @@ class ArrayWriter(object):
     def sync(self):
         if self.sources:
             import dask.array as da
-            print('self.lock == ', self.lock)
             da.store(self.sources, self.targets, lock=self.lock)
             self.sources = []
             self.targets = []
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None, lock=GLOBAL_LOCK):
+    def __init__(self, writer=None, lock=HDF5_LOCK):
         if writer is None:
             writer = ArrayWriter(lock=lock)
         self.writer = writer
