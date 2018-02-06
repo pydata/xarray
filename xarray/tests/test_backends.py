@@ -2271,7 +2271,7 @@ class TestRasterio(TestCase):
     def test_platecarree(self):
         with create_tmp_geotiff(8, 10, 1, transform_args=[1, 2, 0.5, 2.],
                                 crs='+proj=latlong',
-                                open_kwargs={'nodata':-9765}) \
+                                open_kwargs={'nodata': -9765}) \
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
