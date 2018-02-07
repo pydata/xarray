@@ -185,8 +185,7 @@ def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
     data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
         data = np.nan if valid_count == 0 else data
-        return np.array(data, dtype=value.dtype)  # return 0d-array
-    # convert all nan part axis to nan
+        return np.array(data, dtype=value.dtype)
     return where_method(data, valid_count != 0)
 
 
@@ -196,14 +195,13 @@ def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
-    # dask seems return non-integer
+    # dask seems return non-integer type
     if isinstance(value, dask_array_type):
         data = data.astype(int)
     if not hasattr(data, 'dtype'):  # scalar case
         # TODO should we raise ValueError if all-nan slice encountered?
         data = -1 if valid_count == 0 else int(data)
-        return np.array(data)  # return 0d-array
-    # convert all nan part axis to nan
+        return np.array(data)
     return where_method(data, valid_count != 0, -1)
 
 
@@ -211,7 +209,7 @@ def _nanmean_ddof(ddof, value, axis=None, **kwargs):
     """ In house nanmean. ddof argument will be used in _nanvar method """
     valid_count = count(value, axis=axis)
     value = fillna(value, 0.0)
-    # TODO numpy does not support object-type array, so we cast them to float
+    # TODO numpy's mean does not support object-type array, so we assume float
     dtype = kwargs.get('dtype', None)
     if dtype is None and value.dtype.kind == 'O':
         dtype = value.dtype if value.dtype.kind in ['cf'] else float
@@ -223,7 +221,6 @@ def _nanmean_ddof(ddof, value, axis=None, **kwargs):
     else:
         size = np.prod(value.shape[axis])
     data = data / (valid_count - ddof) * size
-    # convert all nan part axis to nan
     return where_method(data, valid_count != 0)
 
 

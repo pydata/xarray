@@ -165,7 +165,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
             da.dtype.kind == 'O' and skipna):
-        # Numpy < 1.13 does not handle object-type for
+        # Numpy < 1.13 does not handle object-type array.
         try:
             if skipna:
                 expected = getattr(np, 'nan{}'.format(func))(da.values,
@@ -223,10 +223,13 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     if dask and not has_dask:
         return
 
-    if (contains_nan and (dtype == np.bool_ and not skipna and contains_nan) or
-            dtype in [float, int, np.float32]):
-        # numpy's argmin does not handle object-dtype
-        return
+    if contains_nan:
+        if not skipna:
+            # numpy's argmin (not nanargmin) does not handle object-dtype
+            return
+        if skipna and np.dtype(dtype).kind in 'iufc':
+            # numpy's nanargmin raises ValueError for all nan axis
+            return
 
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)

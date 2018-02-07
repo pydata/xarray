@@ -41,7 +41,16 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+- Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
+
+  .. ipython:: python
+
+    da = xray.DataArray(np.array([True, False, np.nan], dtype=object), dims='x')
+    da.sum()
+
+  (:issue:`1866`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
   arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
