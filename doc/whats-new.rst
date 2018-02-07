@@ -112,6 +112,9 @@ Bug fixes
 - Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Bug fix in encoding coordinates with ``{'_FillValue': None}`` in netCDF
+  metadata (:issue:`1865`).
+  By `Chris Roth <https://github.com/czr137>`_.
 
 .. _whats-new.0.10.0:
 
