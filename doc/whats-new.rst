@@ -34,10 +34,12 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Added apply_ufunc example to toy weather data page (:issue:`1844`).
-  By `Liam Brannigan <https://github.com/braaannigan>` _.
+  By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
+- Added a new contributors guide (:issue:`640`)
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -136,6 +138,12 @@ Bug fixes
 - Fix indexing with lists for arrays loaded from netCDF files with
   ``engine='h5netcdf`` (:issue:`1864`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Corrected a bug with incorrect coordinates for non-georeferenced geotiff
+  files (:issue:`1686`). Internally, we now use the rasterio coordinate
+  transform tool instead of doing the computations ourselves. A
+  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  (set to ``True`` per default).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.10.0:
 
