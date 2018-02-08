@@ -45,7 +45,7 @@ Enhancements
 
   .. ipython:: python
 
-    da = xray.DataArray(np.array([True, False, np.nan], dtype=object), dims='x')
+    da = xr.DataArray(np.array([True, False, np.nan], dtype=object), dims='x')
     da.sum()
 
   (:issue:`1866`)

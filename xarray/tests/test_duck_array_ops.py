@@ -203,7 +203,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             # nanmean for object dtype
             pass
 
-    # make sure the compatiblility with pandas
+    # make sure the compatiblility with pandas' results.
     actual = getattr(da, func)(skipna=skipna, dim=aggdim)
     if func == 'var':
         expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
@@ -231,7 +231,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', ['x', 'y'])
 def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
-    # pandas-dev/pandas#16830, we does not check consistency with pandas
+    # pandas-dev/pandas#16830, we do not check consistency with pandas but
     # just make sure da[da.argmin()] == da.min()
 
     if aggdim == 'y' and dim_num < 2:
