@@ -172,14 +172,13 @@ def _ignore_warnings_if(condition):
 
 
 def _nansum(value, axis=None, **kwargs):
-    """ In house nansum. This is used for object array """
+    """ In house nansum for object array """
     value = fillna(value, 0.0)
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
 def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
-    """ In house nan-reduce used for nanmin, nanmax. This is used for object
-    array """
+    """ In house nanmin and nanmax for object array """
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
@@ -190,8 +189,8 @@ def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
 
 
 def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
-    """ In house nan-reduce used for nanargmin, nanargmax. This is used for
-    object array. This always return integer type """
+    """ In house nanargmin, nanargmax for object arrays. Always return integer
+    type """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
@@ -228,14 +227,11 @@ def _nanvar(value, axis=None, **kwargs):
     ddof = kwargs.pop('ddof', 0)
     kwargs_mean = kwargs.copy()
     kwargs_mean.pop('keepdims', None)
-    value_mean = _nanmean_ddof(0, value, axis=axis, keepdims=True, **kwargs)
+    value_mean = _nanmean_ddof(ddof=0, value=value, axis=axis, keepdims=True,
+                               **kwargs_mean)
     squared = _dask_or_eager_func('square')(value.astype(value_mean.dtype) -
                                             value_mean)
     return _nanmean_ddof(ddof, squared, axis=axis, **kwargs)
-
-
-def _nanstd(value, axis=None, **kwargs):
-    return _dask_or_eager_func('sqrt')(_nanvar(value, axis=axis, **kwargs))
 
 
 _nan_funcs = {'sum': _nansum,
@@ -245,7 +241,6 @@ _nan_funcs = {'sum': _nansum,
               'argmax': partial(_nan_argminmax, 'argmax', -np.inf),
               'mean': partial(_nanmean_ddof, 0),
               'var': _nanvar,
-              'std': _nanstd,
               }
 
 
@@ -294,7 +289,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         with _ignore_warnings_if(using_numpy_nan_func):
             try:
                 return func(values, axis=axis, **kwargs)
-            except AttributeError:
+            except AttributeError as e:
                 if isinstance(values, dask_array_type):
                     try:  # dask/dask#3133 dask sometimes needs dtype argument
                         return func(values, axis=axis, dtype=values.dtype,

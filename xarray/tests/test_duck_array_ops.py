@@ -11,6 +11,7 @@ from xarray.core.duck_array_ops import (
 )
 from xarray import DataArray
 from xarray.testing import assert_allclose
+from xarray import concat
 
 from . import TestCase, raises_regex, has_dask
 
@@ -117,16 +118,16 @@ class TestArrayNotNullEquiv():
 def construct_dataarray(dim_num, dtype, contains_nan, dask):
     # dimnum <= 3
     rng = np.random.RandomState(0)
-    shapes = [15, 30, 10][:dim_num]
+    shapes = [16, 8, 4][:dim_num]
     dims = ('x', 'y', 'z')[:dim_num]
 
     da = DataArray(rng.randn(*shapes), dims=dims,
-                   coords={'x': np.arange(15)}, name='da').astype(dtype)
+                   coords={'x': np.arange(16)}, name='da').astype(dtype)
 
     if contains_nan:
         da = da.reindex(x=np.arange(20))
     if dask and has_dask:
-        chunks = {d: 5 for d in dims}
+        chunks = {d: 4 for d in dims}
         da = da.chunk(chunks)
 
     return da
@@ -139,12 +140,31 @@ def from_series_or_scalar(se):
         return DataArray(se)
 
 
-@pytest.mark.parametrize('dim_num', [1, 2, 3])
+def series_reduce(da, func, dim, **kwargs):
+    """ convert DataArray to pd.Series, apply pd.func, then convert back to
+    a DataArray. Multiple dims cannot be specified."""
+    if dim is None or da.ndim == 1:
+        se = da.to_series()
+        return from_series_or_scalar(getattr(se, func)(**kwargs))
+    else:
+        da1 = []
+        dims = list(da.dims)
+        dims.remove(dim)
+        d = dims[0]
+        for i in range(len(da[d])):
+            da1.append(series_reduce(da.isel(**{d: i}), func, dim, **kwargs))
+
+        if d in da.coords:
+            return concat(da1, dim=da[d])
+        return concat(da1, dim=d)
+
+
+@pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
-@pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean', 'var', 'std'])
+@pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean', 'var'])
 @pytest.mark.parametrize('skipna', [False, True])
-@pytest.mark.parametrize('aggdim', [None, 'x', 'y'])
+@pytest.mark.parametrize('aggdim', [None, 'x'])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     if aggdim == 'y' and dim_num < 2:
@@ -155,6 +175,8 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     if dask and not has_dask:
         return
+
+    rtol = 1e-04 if dtype == np.float32 else 1e-05
 
     da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
     axis = None if aggdim is None else da.get_axis_num(aggdim)
@@ -181,29 +203,24 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             # nanmean for object dtype
             pass
 
-    # compatible with pandas for 1d case
-    if dim_num == 1 or aggdim is None:
-        se = da.to_series()
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-        assert isinstance(actual, DataArray)
-        if func in ['var', 'std']:
-            expected = from_series_or_scalar(
-                getattr(se, func)(skipna=skipna, ddof=0))
-            assert_allclose(actual, expected)
-            # also check ddof!=0 case
-            actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
-            expected = from_series_or_scalar(
-                getattr(se, func)(skipna=skipna, ddof=5))
-            assert_allclose(actual, expected)
-        else:
-            expected = from_series_or_scalar(getattr(se, func)(skipna=skipna))
-            assert_allclose(actual, expected)
+    # make sure the compatiblility with pandas
+    actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+    if func == 'var':
+        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
+        assert_allclose(actual, expected, rtol=rtol)
+        # also check ddof!=0 case
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
+        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=5)
+        assert_allclose(actual, expected, rtol=rtol)
+    else:
+        expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
+        assert_allclose(actual, expected, rtol=rtol)
 
     # without nan
     da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
     actual = getattr(da, func)(skipna=skipna)
     expected = getattr(np, 'nan{}'.format(func))(da.values)
-    assert np.allclose(actual.values, np.array(expected))
+    assert np.allclose(actual.values, np.array(expected), rtol=rtol)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
