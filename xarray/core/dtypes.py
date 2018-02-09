@@ -65,11 +65,10 @@ def is_datetime_like(dtype):
 def result_type(*arrays_and_dtypes):
     """Like np.result_type, but number + string -> object (not string).
 
-    Unlike np.result_type, all arguments must be dtypes, not arrays.
-
     Parameters
     ----------
-    *dtypes : castable to np.dtype
+    *arrays_and_dtypes : list of arrays and dtypes
+        The dtype is extracted from both numpy and dask arrays.
 
     Returns
     -------

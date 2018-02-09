@@ -24,3 +24,24 @@ def test_result_type(args, expected):
 def test_result_type_scalar():
     actual = dtypes.result_type(np.arange(3, dtype=np.float32), np.nan)
     assert actual == np.float32
+
+
+def test_result_type_dask_array():
+    # verify it works without evaluating dask arrays
+    da = pytest.importorskip('dask.array')
+    dask = pytest.importorskip('dask')
+
+    def error():
+        raise RuntimeError
+
+    array = da.from_delayed(dask.delayed(error)(), (), np.float64)
+    with pytest.raises(RuntimeError):
+        array.compute()
+
+    actual = dtypes.result_type(array)
+    assert actual == np.float64
+
+    # note that this differs from the behavior for scalar numpy arrays, which
+    # would get promoted to float32
+    actual = dtypes.result_type(array, np.array([0.5, 1.0], dtype=np.float32))
+    assert actual == np.float64

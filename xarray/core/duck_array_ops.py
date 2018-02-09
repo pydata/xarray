@@ -155,8 +155,10 @@ def where(condition, x, y):
     """Three argument where() with better dtype promotion rules."""
     x = asarray(x)
     y = asarray(y)
-    # pass arrays directly instead of dtypes to result_type so Python scalars
+    # Pass arrays directly instead of dtypes to result_type so Python scalars
     # get handled properly.
+    # Note that result_type() safely gets the dtype from dask arrays without
+    # evaluating them.
     out_type = dtypes.result_type(x, y)
     x = x.astype(out_type, copy=False)
     y = y.astype(out_type, copy=False)
