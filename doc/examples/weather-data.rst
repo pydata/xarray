@@ -93,6 +93,27 @@ not show any seasonal cycle.
     @savefig examples_anomalies_plot.png
     anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
 
+.. _standardized monthly anomalies:
+
+Calculate standardized monthly anomalies
+----------------------------------------
+
+You can create standardized anomalies where the difference between the
+observations and the climatological monthly mean is
+divided by the climatological standard deviation.
+
+.. ipython:: python
+
+    climatology_mean = ds.groupby('time.month').mean('time')
+    climatology_std = ds.groupby('time.month').std('time')
+    stand_anomalies = xr.apply_ufunc(
+                                     lambda x, m, s: (x - m) / s,
+                                     ds.groupby('time.month'),
+                                     climatology_mean, climatology_std)
+
+    @savefig examples_standardized_anomalies_plot.png
+    stand_anomalies.mean('location').to_dataframe()[['tmin', 'tmax']].plot()
+
 .. _fill with climatology:
 
 Fill missing values with climatology

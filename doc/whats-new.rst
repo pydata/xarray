@@ -13,6 +13,18 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. warning::
+
+    Xarray plans to drop support for python 2.7 at the end of 2018. This
+    means that new releases of xarray published after this date will only be
+    installable on python 3+ environments, but older versions of xarray will
+    always be available to python 2.7 users. For more information see the
+    following references
+
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Python 3 Statement <http://www.python3statement.org/>`__
+  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
+
 .. _whats-new.0.10.1:
 
 v0.10.1 (unreleased)
@@ -21,9 +33,13 @@ v0.10.1 (unreleased)
 Documentation
 ~~~~~~~~~~~~~
 
+- Added apply_ufunc example to toy weather data page (:issue:`1844`).
+  By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
+- Added a new contributors guide (:issue:`640`)
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -42,6 +58,9 @@ Enhancements
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Support for using `Zarr`_ as storage layer for xarray. (:issue:`1223`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
 - Support for using `Zarr`_ as storage layer for xarray.
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :func:`xarray.plot.imshow` now handles RGB and RGBA images.
@@ -55,6 +74,11 @@ Enhancements
 - :py:func:`~plot.line()` learned to draw multiple lines if provided with a
   2D variable.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Reduce memory usage when decoding a variable with a scale_factor, by
+  converting 8-bit and 16-bit integers to float32 instead of float64
+  (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
+  Correspondingly, encoded variables may also be saved with a smaller dtype.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -74,11 +98,12 @@ Bug fixes
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
-
+- Fixed chunking with non-file-based rasterio datasets (:issue:`1816`) and
+  refactored rasterio test suite.
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - Bug fix in open_dataset(engine='pydap') (:issue:`1775`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
-- Bug fix in vectorized assignment  (:issue:`1743`, `1744`).
+- Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`~DataArray.__setitem__` checks
 - Bug fix in vectorized assignment  (:issue:`1743`, :issue:`1744`).
   Now item assignment to :py:meth:`DataArray.__setitem__` checks
@@ -101,6 +126,15 @@ Bug fixes
 - Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Fix indexing with lists for arrays loaded from netCDF files with
+  ``engine='h5netcdf`` (:issue:`1864`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Corrected a bug with incorrect coordinates for non-georeferenced geotiff
+  files (:issue:`1686`). Internally, we now use the rasterio coordinate
+  transform tool instead of doing the computations ourselves. A
+  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  (set to ``True`` per default).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.10.0:
 
