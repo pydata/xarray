@@ -62,7 +62,7 @@ def is_datetime_like(dtype):
             np.issubdtype(dtype, np.timedelta64))
 
 
-def result_type(*dtypes):
+def result_type(*arrays_and_dtypes):
     """Like np.result_type, but number + string -> object (not string).
 
     Unlike np.result_type, all arguments must be dtypes, not arrays.
@@ -75,9 +75,12 @@ def result_type(*dtypes):
     -------
     numpy.dtype for the result.
     """
-    types = [np.dtype(t).type for t in dtypes]
-    if (any(issubclass(t, np.number) for t in types) and
-            any(issubclass(t, np.flexible) for t in types)):
+    types = [np.result_type(t).type for t in arrays_and_dtypes]
+
+    # For reference, see the NumPy type hierarchy:
+    # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
+    if (any(issubclass(t, (np.number, np.bool_)) for t in types) and
+            any(issubclass(t, np.character) for t in types)):
         return np.dtype(object)
     else:
-        return np.result_type(*dtypes)
+        return np.result_type(*arrays_and_dtypes)

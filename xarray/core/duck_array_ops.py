@@ -152,10 +152,12 @@ def count(data, axis=None):
 
 
 def where(condition, x, y):
-    """Three argument where with better dtype promotion rules."""
+    """Three argument where() with better dtype promotion rules."""
     x = asarray(x)
     y = asarray(y)
-    out_type = dtypes.result_type(x.dtype, y.dtype)
+    # pass arrays directly instead of dtypes to result_type so Python scalars
+    # get handled properly.
+    out_type = dtypes.result_type(x, y)
     x = x.astype(out_type, copy=False)
     y = y.astype(out_type, copy=False)
     return raw_where(condition, x, y)

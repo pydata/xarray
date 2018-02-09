@@ -76,9 +76,13 @@ class TestOps(TestCase):
         expected = array([[1, 2, 3], [3, 2, 1]])
         assert_array_equal(expected, count(self.x, axis=-1))
 
-    def test_where(self):
+    def test_where_type_promotion(self):
         result = where([True, False], [1, 2], ['a', 'b'])
         assert_array_equal(result, np.array([1, 'b'], dtype=object))
+
+        result = where([True, False], np.array([1, 2], np.float32), np.nan)
+        assert result.dtype == np.float32
+        assert_array_equal(result, np.array([1, np.nan], dtype=np.float32))
 
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
