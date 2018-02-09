@@ -79,6 +79,9 @@ Enhancements
   (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
   Correspondingly, encoded variables may also be saved with a smaller dtype.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- Speed of reindexing/alignment with dask array is orders of magnitude faster
+  when inserting missing values  (:issue:`1847`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -135,6 +138,9 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- :py:meth:`DataArray.where` with string data now fills with ``np.NaN`` like
+  pandas, not the string ``'nan'`` (:issue:`1847`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
 
