@@ -485,13 +485,6 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         self.key = key
 
     def _updated_key(self, new_key):
-        # TODO should suport VectorizedIndexer
-        if isinstance(new_key, VectorizedIndexer):
-            raise NotImplementedError(
-                'Vectorized indexing for {} is not implemented. Load your '
-                'data first with .load() or .compute(), or disable caching by '
-                'setting cache=False in open_dataset.'.format(type(self)))
-
         iter_new_key = iter(expanded_indexer(new_key.tuple, self.ndim))
         full_key = []
         for size, k in zip(self.array.shape, self.key.tuple):
@@ -520,9 +513,46 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, indexer):
+        if isinstance(indexer, VectorizedIndexer):
+            return type(self)(LazilyVectorizedIndexedArray(self, indexer))
         return type(self)(self.array, self._updated_key(indexer))
 
     def __setitem__(self, key, value):
+        full_key = self._updated_key(key)
+        self.array[full_key] = value
+
+    def __repr__(self):
+        return ('%s(array=%r, key=%r)' %
+                (type(self).__name__, self.array, self.key))
+
+
+class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
+    """Wrap an array to make vectorized indexing lazy.
+    """
+
+    def __init__(self, array, key):
+        """
+        Parameters
+        ----------
+        array : array_like
+            Array like object to index.
+        key : VectorizedIndexer
+        """
+        self.array = as_indexable(array)
+        self.key = key
+        raise NotImplementedError
+        # TODO compute shape from array.shape and key
+        self.shape = None
+
+    def __array__(self, dtype=None):
+        array = as_indexable(self.array)
+        return np.asarray(array[self.key], dtype=None)
+
+    def __getitem__(self, indexer):
+        return type(self)(self, indexer)
+
+    def __setitem__(self, key, value):
+        raise NotImplementedError
         full_key = self._updated_key(key)
         self.array[full_key] = value
 
