@@ -6,7 +6,7 @@ import numpy as np
 from numpy import array, nan
 from . import assert_array_equal
 from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv,
+    first, last, count, mean, array_notnull_equiv, where
 )
 
 from . import TestCase, raises_regex
@@ -75,6 +75,10 @@ class TestOps(TestCase):
 
         expected = array([[1, 2, 3], [3, 2, 1]])
         assert_array_equal(expected, count(self.x, axis=-1))
+
+    def test_where(self):
+        result = where([True, False], [1, 2], ['a', 'b'])
+        assert_array_equal(result, np.array([1, 'b'], dtype=object))
 
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))

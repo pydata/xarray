@@ -82,7 +82,7 @@ def isnull(data):
 
 
 transpose = _dask_or_eager_func('transpose')
-where = _dask_or_eager_func('where', n_array_args=3)
+raw_where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
@@ -149,6 +149,16 @@ def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
     """
     return sum(~isnull(data), axis=axis)
+
+
+def where(condition, x, y):
+    """Three argument where with better dtype promotion rules."""
+    x = asarray(x)
+    y = asarray(y)
+    out_type = dtypes.result_type(x.dtype, y.dtype)
+    x = x.astype(out_type, copy=False)
+    y = y.astype(out_type, copy=False)
+    return raw_where(condition, x, y)
 
 
 def where_method(data, cond, other=dtypes.NA):

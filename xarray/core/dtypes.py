@@ -60,3 +60,24 @@ def is_datetime_like(dtype):
     """
     return (np.issubdtype(dtype, np.datetime64) or
             np.issubdtype(dtype, np.timedelta64))
+
+
+def result_type(*dtypes):
+    """Like np.result_type, but number + string -> object (not string).
+
+    Unlike np.result_type, all arguments must be dtypes, not arrays.
+
+    Parameters
+    ----------
+    *dtypes : castable to np.dtype
+
+    Returns
+    -------
+    numpy.dtype for the result.
+    """
+    types = [np.dtype(t).type for t in dtypes]
+    if (any(issubclass(t, np.number) for t in types) and
+            any(issubclass(t, np.flexible) for t in types)):
+        return np.dtype(object)
+    else:
+        return np.result_type(*dtypes)
