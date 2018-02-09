@@ -427,9 +427,26 @@ class VectorizedIndexer(ExplicitIndexer):
             ind = sl.indices(size)
             return (ind[1] - ind[0] + ind[2] - 1) // ind[2]
 
-        slice_shape = tuple([slice_size(k, s) for (k, s) in zip(self._key, shape)
-                             if isinstance(k, slice)])
+        slice_shape = tuple([slice_size(k, s) for (k, s) in
+                             zip(self._key, shape) if isinstance(k, slice)])
         return vindex_shape + slice_shape
+
+    def decompose(self, shape):
+        """ Decompose vectorized indexer to outer and vectorized indexers,
+        array[self] == array[oindex][vindex]
+        such that array[oindex].shape becomes smallest.
+        """
+        oindex = []
+        vindex = []
+        for k, s in zip(self._key, shape):
+            if isinstance(k, slice):
+                oindex.append(k)
+                vindex.append(slice(None))
+            else:  # np.ndarray
+                k = np.where(k < 0, s - k, k)
+                oindex.append(slice(np.min(k), np.max(k) + 1))
+                vindex.append(k - np.min(k))
+        return OuterIndexer(tuple(oindex)), VectorizedIndexer(tuple(vindex))
 
 
 class ExplicitlyIndexed(object):
@@ -527,8 +544,7 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def transpose(self, order):
         if isinstance(self.array, LazilyVectorizedIndexedArray):
             return type(self)(self.array.transpose(order))
-        raise NotImplementedError(
-            'transpose can only be used for vectorized-indexing.')
+        raise AttributeError
 
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
@@ -564,29 +580,27 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             Array like object to index.
         key : VectorizedIndexer
         """
-        self.array = as_indexable(array)
-        self.key = key
-        self._shape = key.infer_shape_of(self.array.shape)
-        self.order = None
+        oindex, vindex = key.decompose(array.shape)
+        self.array = as_indexable(array)[oindex]
+        self.key = vindex
+        self._shape = self.key.infer_shape_of(self.array.shape)
+        self.order = np.arange(self.ndim)
 
     @property
     def shape(self):
         return self._shape
 
     def transpose(self, order):
-        if self.order is None:
-            self.order = order
-        else:
-            self.order = np.array(self.order)[order]
+        self.order = np.array(self.order)[order]
         return self
 
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
-        return np.asarray(array, dtype=None)[self.key].transpose(*self.order)
+        return np.asarray(array, dtype=None)[self.key.tuple].transpose(*self.order)
 
     def __getitem__(self, indexer):
-        array = as_indexable(self.array)
-        return np.asarray(array, dtype=None)[self.key.tuple][indexer.tuple]
+        # note this is not lazy
+        return np.asarray(self)[indexer.tuple]
 
     def __setitem__(self, key, value):
         raise NotImplementedError

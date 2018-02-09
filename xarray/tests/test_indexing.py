@@ -367,7 +367,7 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-def test_vectorized_indexer_infer_shape_of():
+def test_vectorized_indexer_utils():
     data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
     indexers = [np.array([[0, 3, 2], ]), np.array([[0, 3, 3], [4, 6, 7]]),
                 slice(2, -2, 2), slice(2, -2, 3), slice(None)]
@@ -377,6 +377,10 @@ def test_vectorized_indexer_infer_shape_of():
         expected = data[vindex].shape
         actual = vindex.infer_shape_of(data.shape)
         assert expected == actual
+
+        oind, vind = vindex.decompose(data.shape)
+        np.testing.assert_array_equal(
+            data[vindex], indexing.NumpyIndexingAdapter(data[oind])[vind])
 
 
 def test_unwrap_explicit_indexer():
