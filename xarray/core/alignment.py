@@ -8,13 +8,11 @@ import warnings
 
 import numpy as np
 
-from . import duck_array_ops
-from . import dtypes
 from . import utils
 from .indexing import get_indexer_nd
 from .pycompat import iteritems, OrderedDict, suppress
 from .utils import is_full_slice, is_dict_like
-from .variable import Variable, IndexVariable
+from .variable import IndexVariable
 
 
 def _get_joiner(join):
