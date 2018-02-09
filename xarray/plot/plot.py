@@ -710,8 +710,12 @@ def imshow(x, y, z, ax, **kwargs):
         # missing data transparent.  We therefore add an alpha channel if
         # there isn't one, and set it to transparent where data is masked.
         if z.shape[-1] == 3:
-            z = np.ma.concatenate((z, np.ma.ones(z.shape[:2] + (1,))), 2)
-        z = z.copy()
+            alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
+            if np.issubdtype(z.dtype, np.integer):
+                alpha *= 255
+            z = np.ma.concatenate((z, alpha), 2)
+        else:
+            z = z.copy()
         z[np.any(z.mask, axis=-1), -1] = 0
 
     primitive = ax.imshow(z, **defaults)
