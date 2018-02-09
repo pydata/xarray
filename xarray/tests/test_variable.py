@@ -1893,8 +1893,7 @@ class TestBackendIndexing(TestCase):
     def test_LazilyIndexedArray(self):
         v = Variable(dims=('x', 'y'), data=LazilyIndexedArray(self.d))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
         # doubly wrapping
         v = Variable(dims=('x', 'y'),
                      data=LazilyIndexedArray(LazilyIndexedArray(self.d)))
@@ -1912,8 +1911,7 @@ class TestBackendIndexing(TestCase):
         v = Variable(dims=('x', 'y'),
                      data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
 
     def test_MemoryCachedArray(self):
         v = Variable(dims=('x', 'y'), data=MemoryCachedArray(self.d))

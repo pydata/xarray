@@ -196,6 +196,39 @@ class TestLazyArray(TestCase):
             assert isinstance(actual._data.array,
                               indexing.NumpyIndexingAdapter)
 
+    def test_vectorized_lazily_indexed_array(self):
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        lazy = indexing.LazilyIndexedArray(x)
+        v_lazy = Variable(['i', 'j', 'k'], lazy)
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+
+        def check_indexing(va, indexers):
+            for indexer in indexers:
+                actual = va[indexer]
+                indexer = tuple(getattr(ind, 'data', ind) for ind in indexer)
+                expected = np.asarray(va)[indexer]
+                assert expected.shape == actual.shape
+                assert isinstance(actual._data, indexing.LazilyIndexedArray)
+                assert_array_equal(expected, actual)
+                va = actual
+
+        # test orthogonal indexing
+        indexers = [(I[:], 0, 1), (Variable('i', [0, 1]), )]
+        check_indexing(v_lazy, indexers)
+
+        # vectorized indexing
+        indexers = [
+            (Variable('i', [0, 1]), Variable('i', [0, 1]), slice(None)),
+            (slice(1, 3, 2), 0)]
+        check_indexing(v_lazy, indexers)
+
+        indexers = [
+            (slice(None, None, 2), 0, slice(None, 10)),
+            (Variable('i', [3, 2, 4]), Variable('i', [3, 2, 1])),
+            (slice(0, -1, 2), )]
+        check_indexing(v_lazy, indexers)
+
 
 class TestCopyOnWriteArray(TestCase):
     def test_setitem(self):
@@ -332,6 +365,18 @@ def test_vectorized_indexer():
     with raises_regex(ValueError, 'numbers of dimensions'):
         indexing.VectorizedIndexer((np.array(1, dtype=np.int64),
                                     np.arange(5, dtype=np.int64)))
+
+
+def test_vectorized_indexer_infer_shape_of():
+    data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
+    indexers = [np.array([[0, 3, 2], ]), np.array([[0, 3, 3], [4, 6, 7]]),
+                slice(2, -2, 2), slice(2, -2, 3), slice(None)]
+
+    for i, j, k in itertools.product(indexers, repeat=3):
+        vindex = indexing.VectorizedIndexer((i, j, k))
+        expected = data[vindex].shape
+        actual = vindex.infer_shape_of(data.shape)
+        assert expected == actual
 
 
 def test_unwrap_explicit_indexer():

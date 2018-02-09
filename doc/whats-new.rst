@@ -43,6 +43,8 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Lazy vectorized-indexing support. (:issue:`1897`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
   arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.

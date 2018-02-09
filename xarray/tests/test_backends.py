@@ -411,7 +411,7 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-    def _test_vectorized_indexing(self, vindex_support=True):
+    def test_vectorized_indexing(self):
         # Make sure vectorized_indexing works or at least raises
         # NotImplementedError
         in_memory = create_test_data()
@@ -419,20 +419,12 @@ class DatasetIOTestCases(object):
             indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
                         'dim2': DataArray([0, 2, 3], dims='a')}
             expected = in_memory.isel(**indexers)
-            if vindex_support:
-                actual = on_disk.isel(**indexers)
-                assert_identical(expected, actual)
-                # do it twice, to make sure we're switched from
-                # orthogonal -> numpy when we cached the values
-                actual = on_disk.isel(**indexers)
-                assert_identical(expected, actual)
-            else:
-                with raises_regex(NotImplementedError, 'Vectorized indexing '):
-                    actual = on_disk.isel(**indexers)
-
-    def test_vectorized_indexing(self):
-        # This test should be overwritten if vindex is supported
-        self._test_vectorized_indexing(vindex_support=False)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
+            # do it twice, to make sure we're switched from
+            # orthogonal -> numpy when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
@@ -737,9 +729,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with raises_regex(ValueError,
                               'Unable to update size for existing dimension'):
                 self.save(data, tmp_file, mode='a')
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=False)
 
     def test_multiindex_not_implemented(self):
         ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
@@ -1101,9 +1090,6 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
-
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -1219,9 +1205,6 @@ class BaseZarrTest(CFEncodedDataTest):
         with pytest.raises(NotImplementedError):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
@@ -2030,9 +2013,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         assert_allclose(actual, computed, decode_bytes=False)
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
 
 
 class DaskTestAutocloseTrue(DaskTest):

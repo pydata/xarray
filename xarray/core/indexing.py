@@ -415,6 +415,22 @@ class VectorizedIndexer(ExplicitIndexer):
 
         super(VectorizedIndexer, self).__init__(new_key)
 
+    def infer_shape_of(self, shape):
+        """ Infer the shape of the array after indexing. """
+        vindexes = [k for k in self._key if isinstance(k, np.ndarray)]
+        if len(vindexes) != 0:
+            vindex_shape = np.broadcast(*vindexes).shape
+        else:
+            vindex_shape = ()
+
+        def slice_size(sl, size):
+            ind = sl.indices(size)
+            return (ind[1] - ind[0] + ind[2] - 1) // ind[2]
+
+        slice_shape = tuple([slice_size(k, s) for (k, s) in zip(self._key, shape)
+                             if isinstance(k, slice)])
+        return vindex_shape + slice_shape
+
 
 class ExplicitlyIndexed(object):
     """Mixin to mark support for Indexer subclasses in indexing."""
@@ -508,6 +524,12 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape.append(k.size)
         return tuple(shape)
 
+    def transpose(self, order):
+        if isinstance(self.array, LazilyVectorizedIndexedArray):
+            return type(self)(self.array.transpose(order))
+        raise NotImplementedError(
+            'transpose can only be used for vectorized-indexing.')
+
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
@@ -518,6 +540,10 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array, self._updated_key(indexer))
 
     def __setitem__(self, key, value):
+        if isinstance(key, VectorizedIndexer):
+            raise NotImplementedError(
+                'Lazy item assignment with the vectorized indexer is not yet '
+                'implemented. Load your data first by .load() or compute().')
         full_key = self._updated_key(key)
         self.array[full_key] = value
 
@@ -540,21 +566,30 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         """
         self.array = as_indexable(array)
         self.key = key
-        raise NotImplementedError
-        # TODO compute shape from array.shape and key
-        self.shape = None
+        self._shape = key.infer_shape_of(self.array.shape)
+        self.order = None
+
+    @property
+    def shape(self):
+        return self._shape
+
+    def transpose(self, order):
+        if self.order is None:
+            self.order = order
+        else:
+            self.order = np.array(self.order)[order]
+        return self
 
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
-        return np.asarray(array[self.key], dtype=None)
+        return np.asarray(array, dtype=None)[self.key].transpose(*self.order)
 
     def __getitem__(self, indexer):
-        return type(self)(self, indexer)
+        array = as_indexable(self.array)
+        return np.asarray(array, dtype=None)[self.key.tuple][indexer.tuple]
 
     def __setitem__(self, key, value):
         raise NotImplementedError
-        full_key = self._updated_key(key)
-        self.array[full_key] = value
 
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
