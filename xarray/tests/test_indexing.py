@@ -199,35 +199,38 @@ class TestLazyArray(TestCase):
     def test_vectorized_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
+        v_eager = Variable(['i', 'j', 'k'], x)
         lazy = indexing.LazilyIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
 
-        def check_indexing(va, indexers):
+        def check_indexing(v_eager, v_lazy, indexers):
             for indexer in indexers:
-                actual = va[indexer]
-                indexer = tuple(getattr(ind, 'data', ind) for ind in indexer)
-                expected = np.asarray(va)[indexer]
+                actual = v_lazy[indexer]
+                expected = v_eager[indexer]
                 assert expected.shape == actual.shape
-                assert isinstance(actual._data, indexing.LazilyIndexedArray)
+                assert isinstance(actual._data,
+                                  (indexing.LazilyVectorizedIndexedArray,
+                                   indexing.LazilyIndexedArray))
                 assert_array_equal(expected, actual)
-                va = actual
+                v_eager = expected
+                v_lazy = actual
 
         # test orthogonal indexing
         indexers = [(I[:], 0, 1), (Variable('i', [0, 1]), )]
-        check_indexing(v_lazy, indexers)
+        check_indexing(v_eager, v_lazy, indexers)
 
         # vectorized indexing
         indexers = [
             (Variable('i', [0, 1]), Variable('i', [0, 1]), slice(None)),
             (slice(1, 3, 2), 0)]
-        check_indexing(v_lazy, indexers)
+        check_indexing(v_eager, v_lazy, indexers)
 
         indexers = [
             (slice(None, None, 2), 0, slice(None, 10)),
-            (Variable('i', [3, 2, 4]), Variable('i', [3, 2, 1])),
-            (slice(0, -1, 2), )]
-        check_indexing(v_lazy, indexers)
+            (Variable('i', [3, 2, 4, 3]), Variable('i', [3, 2, 1, 0])),
+            (Variable(['i', 'j'], [[0, 1], [1, 2]]), )]
+        check_indexing(v_eager, v_lazy, indexers)
 
 
 class TestCopyOnWriteArray(TestCase):
@@ -367,20 +370,28 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-def test_vectorized_indexer_utils():
-    data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
-    indexers = [np.array([[0, 3, 2], ]), np.array([[0, 3, 3], [4, 6, 7]]),
-                slice(2, -2, 2), slice(2, -2, 3), slice(None)]
+class Test_vectorized_indexer(TestCase):
+    def setUp(self):
+        self.data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
+        self.indexers = [np.array([[0, 3, 2], ]),
+                         np.array([[0, 3, 3], [4, 6, 7]]),
+                         slice(2, -2, 2), slice(2, -2, 3), slice(None)]
 
-    for i, j, k in itertools.product(indexers, repeat=3):
-        vindex = indexing.VectorizedIndexer((i, j, k))
-        expected = data[vindex].shape
-        actual = vindex.infer_shape_of(data.shape)
-        assert expected == actual
+    def test_decompose_vectorized_indexer(self):
+        for i, j, k in itertools.product(self.indexers, repeat=3):
+            vindex = indexing.VectorizedIndexer((i, j, k))
+            oind, vind = indexing._decompose_vectorized_indexer(vindex)
+            np.testing.assert_array_equal(
+                self.data[vindex],
+                indexing.NumpyIndexingAdapter(self.data[oind])[vind])
 
-        oind, vind = vindex.decompose()
-        np.testing.assert_array_equal(
-            data[vindex], indexing.NumpyIndexingAdapter(data[oind])[vind])
+    def test_arrayize_vectorized_indexer(self):
+        for i, j, k in itertools.product(self.indexers, repeat=3):
+            vindex = indexing.VectorizedIndexer((i, j, k))
+            vindex_array = indexing._arrayize_vectorized_indexer(
+                vindex, self.data.shape)
+            np.testing.assert_array_equal(
+                self.data[vindex], self.data[vindex_array],)
 
 
 def test_unwrap_explicit_indexer():

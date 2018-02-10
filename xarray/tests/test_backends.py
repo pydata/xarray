@@ -412,15 +412,15 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
 
     def test_vectorized_indexing(self):
-        # Make sure vectorized_indexing works or at least raises
-        # NotImplementedError
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
                         'dim2': DataArray([0, 2, 3], dims='a')}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            assert_identical(expected, actual)
+            # make sure the array is not yet loaded
+            assert not actual['var1'].variable._in_memory
+            assert_identical(expected, actual.load())
             # do it twice, to make sure we're switched from
             # orthogonal -> numpy when we cached the values
             actual = on_disk.isel(**indexers)

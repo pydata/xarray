@@ -415,39 +415,6 @@ class VectorizedIndexer(ExplicitIndexer):
 
         super(VectorizedIndexer, self).__init__(new_key)
 
-    def infer_shape_of(self, shape):
-        """ Infer the shape of the array after indexing. """
-        vindexes = [k for k in self._key if isinstance(k, np.ndarray)]
-        if len(vindexes) != 0:
-            vindex_shape = np.broadcast(*vindexes).shape
-        else:
-            vindex_shape = ()
-
-        def slice_size(sl, size):
-            ind = sl.indices(size)
-            return (ind[1] - ind[0] + ind[2] - 1) // ind[2]
-
-        slice_shape = tuple([slice_size(k, s) for (k, s) in
-                             zip(self._key, shape) if isinstance(k, slice)])
-        return vindex_shape + slice_shape
-
-    def decompose(self):
-        """ Decompose vectorized indexer to outer and vectorized indexers,
-        array[self] == array[oindex][vindex]
-        such that array[oindex].shape becomes smallest.
-        """
-        oindex = []
-        vindex = []
-        for k in self._key:
-            if isinstance(k, slice):
-                oindex.append(k)
-                vindex.append(slice(None))
-            else:  # np.ndarray
-                oind, vind = np.unique(k, return_inverse=True)
-                oindex.append(oind)
-                vindex.append(vind.reshape(*k.shape))
-        return OuterIndexer(tuple(oindex)), VectorizedIndexer(tuple(vindex))
-
 
 class ExplicitlyIndexed(object):
     """Mixin to mark support for Indexer subclasses in indexing."""
@@ -541,18 +508,14 @@ class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
                 shape.append(k.size)
         return tuple(shape)
 
-    def transpose(self, order):
-        if isinstance(self.array, LazilyVectorizedIndexedArray):
-            return type(self)(self.array.transpose(order))
-        raise AttributeError
-
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
 
     def __getitem__(self, indexer):
         if isinstance(indexer, VectorizedIndexer):
-            return type(self)(LazilyVectorizedIndexedArray(self, indexer))
+            array = LazilyVectorizedIndexedArray(self.array, self.key)
+            return array[indexer]
         return type(self)(self.array, self._updated_key(indexer))
 
     def __setitem__(self, key, value):
@@ -580,27 +543,39 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             Array like object to index.
         key : VectorizedIndexer
         """
-        oindex, vindex = key.decompose()
-        self.array = as_indexable(array)[oindex]
-        self.key = vindex
-        self._shape = self.key.infer_shape_of(self.array.shape)
+        if isinstance(key, (BasicIndexer, OuterIndexer)):
+            self.key = VectorizedIndexer(
+                _outer_to_vectorized_indexer(key.tuple, array.shape))
+        else:
+            self.key = _arrayize_vectorized_indexer(key, array.shape)
+        self.array = as_indexable(array)
         self.order = np.arange(self.ndim)
 
     @property
     def shape(self):
-        return self._shape
-
-    def transpose(self, order):
-        self.order = np.array(self.order)[order]
-        return self
+        return np.broadcast(*self.key.tuple).shape
 
     def __array__(self, dtype=None):
-        array = as_indexable(self.array)
-        return np.asarray(array, dtype=None)[self.key.tuple].transpose(*self.order)
+        try:
+            array = np.asarray(self.array[self.key], dtype=None)
+        except NotImplementedError:
+            # if vectorized indexing is not supported
+            oind, vind = _decompose_vectorized_indexer(self.key)
+            array = NumpyIndexingAdapter(np.asarray(self.array[oind],
+                                                    dtype=None))[vind]
+        return array
+
+    def _updated_key(self, new_key):
+        return VectorizedIndexer(
+            tuple(o[new_key.tuple] for o in np.broadcast_arrays(*self.key.tuple)))
 
     def __getitem__(self, indexer):
-        # note this is not lazy
-        return np.asarray(self)[indexer.tuple]
+        return type(self)(self.array, self._updated_key(indexer))
+
+    def transpose(self, order):
+        key = VectorizedIndexer(tuple(
+            k.transpose(order) for k in self.key.tuple))
+        return type(self)(self.array, key)
 
     def __setitem__(self, key, value):
         raise NotImplementedError
@@ -681,7 +656,7 @@ def _outer_to_vectorized_indexer(key, shape):
     Parameters
     ----------
     key : tuple
-        Tuple from an OuterIndexer to convert.
+        Tuple from an Basic/OuterIndexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
 
@@ -689,15 +664,15 @@ def _outer_to_vectorized_indexer(key, shape):
     -------
     tuple
         Tuple suitable for use to index a NumPy array with vectorized indexing.
-        Each element is an integer or array: broadcasting them together gives
-        the shape of the result.
+        Each element is array: broadcasting them together gives the shape of
+        the result.
     """
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
     new_key = []
     for k, size in zip(key, shape):
         if isinstance(k, integer_types):
-            new_key.append(k)
+            new_key.append(np.array(k).reshape((1,) * n_dim))
         else:  # np.ndarray or slice
             if isinstance(k, slice):
                 k = np.arange(*k.indices(size))
@@ -731,6 +706,45 @@ def _outer_to_numpy_indexer(key, shape):
         return tuple(key)
     else:
         return _outer_to_vectorized_indexer(key, shape)
+
+
+def _decompose_vectorized_indexer(indexer):
+    """ Decompose vectorized indexer to outer and vectorized indexers,
+    array[indexer] == array[oindex][vindex]
+    such that array[oindex].shape becomes smallest.
+    """
+    oindex = []
+    vindex = []
+    for k in indexer.tuple:
+        if isinstance(k, slice):
+            oindex.append(k)
+            vindex.append(slice(None))
+        else:  # np.ndarray
+            oind, vind = np.unique(k, return_inverse=True)
+            oindex.append(oind)
+            vindex.append(vind.reshape(*k.shape))
+    return OuterIndexer(tuple(oindex)), VectorizedIndexer(tuple(vindex))
+
+
+def _arrayize_vectorized_indexer(indexer, shape):
+    """ Return an identical vindex but slices are replaced by arrays """
+    slices = [v for v in indexer.tuple if isinstance(v, slice)]
+    if len(slices) == 0:
+        return indexer
+
+    arrays = [v for v in indexer.tuple if isinstance(v, np.ndarray)]
+    n_dim = arrays[0].ndim if len(arrays) > 0 else 0
+    i_dim = 0
+    new_key = []
+    for v, size in zip(indexer.tuple, shape):
+        if isinstance(v, np.ndarray):
+            new_key.append(np.reshape(v, v.shape + (1, ) * len(slices)))
+        else:  # slice
+            shape = ((1,) * (n_dim + i_dim) + (-1,) +
+                     (1,) * (len(slices) - i_dim - 1))
+            new_key.append(np.arange(*v.indices(size)).reshape(shape))
+            i_dim += 1
+    return VectorizedIndexer(tuple(new_key))
 
 
 def _dask_array_with_chunks_hint(array, chunks):
