@@ -431,21 +431,21 @@ class VectorizedIndexer(ExplicitIndexer):
                              zip(self._key, shape) if isinstance(k, slice)])
         return vindex_shape + slice_shape
 
-    def decompose(self, shape):
+    def decompose(self):
         """ Decompose vectorized indexer to outer and vectorized indexers,
         array[self] == array[oindex][vindex]
         such that array[oindex].shape becomes smallest.
         """
         oindex = []
         vindex = []
-        for k, s in zip(self._key, shape):
+        for k in self._key:
             if isinstance(k, slice):
                 oindex.append(k)
                 vindex.append(slice(None))
             else:  # np.ndarray
-                k = np.where(k < 0, s - k, k)
-                oindex.append(slice(np.min(k), np.max(k) + 1))
-                vindex.append(k - np.min(k))
+                oind, vind = np.unique(k, return_inverse=True)
+                oindex.append(oind)
+                vindex.append(vind.reshape(*k.shape))
         return OuterIndexer(tuple(oindex)), VectorizedIndexer(tuple(vindex))
 
 
@@ -580,7 +580,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
             Array like object to index.
         key : VectorizedIndexer
         """
-        oindex, vindex = key.decompose(array.shape)
+        oindex, vindex = key.decompose()
         self.array = as_indexable(array)[oindex]
         self.key = vindex
         self._shape = self.key.infer_shape_of(self.array.shape)

@@ -378,7 +378,7 @@ def test_vectorized_indexer_utils():
         actual = vindex.infer_shape_of(data.shape)
         assert expected == actual
 
-        oind, vind = vindex.decompose(data.shape)
+        oind, vind = vindex.decompose()
         np.testing.assert_array_equal(
             data[vindex], indexing.NumpyIndexingAdapter(data[oind])[vind])
 
