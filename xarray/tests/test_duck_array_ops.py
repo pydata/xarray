@@ -6,12 +6,18 @@ import numpy as np
 from numpy import array, nan
 from . import assert_array_equal
 from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv,
+    first, last, count, mean, array_notnull_equiv, rolling_window
 )
 from xarray import DataArray
 from xarray.core import npcompat
 
+from . import requires_dask
 from . import TestCase, raises_regex, has_dask
+
+try:
+    import dask.array as da
+except ImportError:
+    pass
 
 
 class TestOps(TestCase):
@@ -162,8 +168,6 @@ def test_reduce(dtype, dask, func, skipna, dim):
 
     # compatible with pandas
     se = da.to_dataframe()
-    print(da)
-    print(da.reduce(npcompat.nansum))
     actual = getattr(da, func)(skipna=skipna)
     expected = getattr(se, func)(skipna=skipna)
     assert_allclose_with_nan(actual.values, np.array(expected))
@@ -173,3 +177,17 @@ def test_reduce(dtype, dask, func, skipna, dim):
     expected = getattr(np, 'nan{}'.format(func))(da.values)
     actual = getattr(da, func)(skipna=skipna)
     assert np.allclose(actual.values, np.array(expected))
+
+
+@requires_dask
+@pytest.mark.parametrize('axis', [0, -1])
+@pytest.mark.parametrize('window', [3, 8, 11])
+def test_dask_rolling(axis, window):
+    x = np.array(np.random.randn(100, 40), dtype=float)
+    dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
+
+    expected = rolling_window(x, axis=axis, window=window)
+    actual = rolling_window(dx, axis=axis, window=window)
+    assert isinstance(actual, da.Array)
+    assert_array_equal(actual, expected)
+    assert actual.shape == expected.shape

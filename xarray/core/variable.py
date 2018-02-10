@@ -965,12 +965,17 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
                 after_shape[axis] = pad[1]
                 after_chunks = list(array.chunks)
                 after_chunks[axis] = (pad[1], )
-                array = duck_array_ops.concatenate([
-                    da.full(before_shape, fill_value, dtype=dtype,
-                            chunks=before_chunks),
-                    array,
-                    da.full(after_shape, fill_value, dtype=dtype,
-                            chunks=after_chunks)], axis=axis)
+
+                arrays = []
+                if pad[0] > 0:
+                    arrays.append(da.full(before_shape, fill_value,
+                                          dtype=dtype, chunks=before_chunks))
+                arrays.append(array)
+                if pad[1] > 0:
+                    arrays.append(da.full(after_shape, fill_value,
+                                          dtype=dtype, chunks=after_chunks))
+                if len(arrays) > 1:
+                    array = da.concatenate(arrays, axis=axis)
         else:
             pads = [(0, 0) if d not in pad_widths else pad_widths[d]
                     for d in self.dims]
