@@ -135,6 +135,9 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- The colors of discrete colormaps are now the same regardless if `seaborn`
+  is installed or not (:issue:`1896`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.10.0:
 
