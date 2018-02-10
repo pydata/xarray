@@ -713,7 +713,7 @@ def imshow(x, y, z, ax, **kwargs):
             alpha = np.ma.ones(z.shape[:2] + (1,), dtype=z.dtype)
             if np.issubdtype(z.dtype, np.integer):
                 alpha *= 255
-            z = np.ma.concatenate((z, alpha), 2)
+            z = np.ma.concatenate((z, alpha), axis=2)
         else:
             z = z.copy()
         z[np.any(z.mask, axis=-1), -1] = 0
