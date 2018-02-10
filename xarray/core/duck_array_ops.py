@@ -18,6 +18,7 @@ import pandas as pd
 from . import npcompat
 from . import nputils
 from . import dtypes
+from . import dask_array_ops
 from .pycompat import dask_array_type
 from .nputils import nanfirst, nanlast
 
@@ -287,16 +288,6 @@ def rolling_window(array, window, axis=-1):
     The rolling dimension will be placed at the last dimension.
     """
     if isinstance(array, dask_array_type):
-        if window < 1:
-            raise ValueError(
-                "`window` must be at least 1. Given : {}".format(window))
-        if window > array.shape[axis]:
-            raise ValueError("`window` is too long. Given : {}".format(window))
-
-        axis = nputils._validate_axis(array, axis)
-        size = array.shape[axis] - window + 1
-        arrays = [array[(slice(None), ) * axis + (slice(w, size + w), )]
-                  for w in range(window)]
-        return da.stack(arrays, axis=-1)
+        return dask_array_ops.rolling_window(array, window, axis=axis)
     else:  # np.ndarray
         return nputils.rolling_window(array, window, axis=axis)
