@@ -566,8 +566,8 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return array
 
     def _updated_key(self, new_key):
-        return VectorizedIndexer(
-            tuple(o[new_key.tuple] for o in np.broadcast_arrays(*self.key.tuple)))
+        return VectorizedIndexer(tuple(o[new_key.tuple] for o in
+                                 np.broadcast_arrays(*self.key.tuple)))
 
     def __getitem__(self, indexer):
         return type(self)(self.array, self._updated_key(indexer))
