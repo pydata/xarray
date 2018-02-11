@@ -10,11 +10,12 @@ from xarray.core import dtypes
 
 @pytest.mark.parametrize("args, expected", [
     ([np.bool], np.bool),
-    ([np.bool, np.string_], np.object),
+    ([np.bool, np.string_], np.object_),
     ([np.float32, np.float64], np.float64),
-    ([np.float32, np.string_], np.object),
-    ([np.unicode_, np.int64], np.object),
+    ([np.float32, np.string_], np.object_),
+    ([np.unicode_, np.int64], np.object_),
     ([np.unicode_, np.unicode_], np.unicode_),
+    ([np.bytes_, np.unicode_], np.object_),
 ])
 def test_result_type(args, expected):
     actual = dtypes.result_type(*args)

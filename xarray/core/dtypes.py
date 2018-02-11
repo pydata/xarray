@@ -7,6 +7,17 @@ from . import utils
 NA = utils.ReprObject('<NA>')
 
 
+# Pairs of types that, if both found, should be promoted to object dtype
+# instead of following NumPy's own type-promotion rules. These type promotion
+# rules match pandas instead. For reference, see the NumPy type hierarchy:
+# https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
+PROMOTE_TO_OBJECT = [
+    {np.number, np.character},  # numpy promotes to character
+    {np.bool_, np.character},  # numpy promotes to character
+    {np.bytes_, np.unicode_},  # numpy promotes to unicode
+]
+
+
 def maybe_promote(dtype):
     """Simpler equivalent of pandas.core.common._maybe_promote
 
@@ -63,7 +74,11 @@ def is_datetime_like(dtype):
 
 
 def result_type(*arrays_and_dtypes):
-    """Like np.result_type, but number + string -> object (not string).
+    """Like np.result_type, but with type promotion rules matching pandas.
+
+    Examples of changed behavior:
+    number + string -> object (not string)
+    bytes + unicode -> object (not unicode)
 
     Parameters
     ----------
@@ -74,12 +89,11 @@ def result_type(*arrays_and_dtypes):
     -------
     numpy.dtype for the result.
     """
-    types = [np.result_type(t).type for t in arrays_and_dtypes]
+    types = {np.result_type(t).type for t in arrays_and_dtypes}
 
-    # For reference, see the NumPy type hierarchy:
-    # https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.scalars.html
-    if (any(issubclass(t, (np.number, np.bool_)) for t in types) and
-            any(issubclass(t, np.character) for t in types)):
-        return np.dtype(object)
-    else:
-        return np.result_type(*arrays_and_dtypes)
+    for left, right in PROMOTE_TO_OBJECT:
+        if (any(issubclass(t, left) for t in types) and
+                any(issubclass(t, right) for t in types)):
+            return np.dtype(object)
+
+    return np.result_type(*arrays_and_dtypes)

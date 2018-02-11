@@ -138,8 +138,9 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
-- :py:meth:`DataArray.where` with string data now fills with ``np.NaN`` like
-  pandas, not the string ``'nan'`` (:issue:`1847`).
+- Fixed dtype promotion rules in :py:func:`where` and :py:func:`concat` to
+  match pandas (:issue:`1847`). A combination of strings/numbers or
+  unicode/bytes now promote to object dtype, instead of strings or unicode.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
