@@ -43,6 +43,8 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- added backend for many Atmospheric data formats ranging including GEOS-Chem,
+  CAMx, NOAA arlpacked bit and many others.
 - reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
   arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
