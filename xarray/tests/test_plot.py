@@ -1146,6 +1146,13 @@ class TestImshow(Common2dMixin, PlotTestCase):
         for kwds in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
             da.plot.imshow(**kwds)
 
+    def test_imshow_rgb_values_in_valid_range(self):
+        da = DataArray(np.arange(75, dtype='uint8').reshape((5, 5, 3)))
+        _, ax = plt.subplots()
+        out = da.plot.imshow(ax=ax).get_array()
+        assert out.dtype == np.uint8
+        assert (out[..., :3] == da.values).all()  # Compare without added alpha
+
 
 class TestFacetGrid(PlotTestCase):
     def setUp(self):
