@@ -174,7 +174,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'pnc'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -294,6 +294,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                                            autoclose=autoclose)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj,
+                                          autoclose=autoclose)
+        elif engine == 'pnc':
+            store = backends.PncDataStore(filename_or_obj,
                                           autoclose=autoclose)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
