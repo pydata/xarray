@@ -1,10 +1,35 @@
 import numpy as np
+import functools
 
 from . import utils
 
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject('<NA>')
+
+
+@functools.total_ordering
+class AlwaysLessThan(object):
+    def __lt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+INF = AlwaysLessThan()
+
+
+@functools.total_ordering
+class AlwaysGreaterThan(object):
+    def __gt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+NINF = AlwaysGreaterThan()
 
 
 def maybe_promote(dtype):
@@ -40,7 +65,7 @@ def maybe_promote(dtype):
     return np.dtype(dtype), fill_value
 
 
-def get_fill_value(dtype):
+def get_fill_value(dtype, fill_value_typ=None):
     """Return an appropriate fill value for this dtype.
 
     Parameters
@@ -51,8 +76,14 @@ def get_fill_value(dtype):
     -------
     fill_value : Missing value corresponding to this dtype.
     """
-    _, fill_value = maybe_promote(dtype)
-    return fill_value
+    if fill_value_typ is None:
+        _, fill_value = maybe_promote(dtype)
+        return fill_value
+
+    if np.issubdtype(dtype, np.floating):
+        return np.inf if fill_value_typ == '+inf' else -np.inf
+
+    return INF if fill_value_typ == '+inf' else NINF
 
 
 def is_datetime_like(dtype):

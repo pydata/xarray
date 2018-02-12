@@ -171,13 +171,13 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _nansum(value, axis=None, **kwargs):
+def _nansum_object(value, axis=None, **kwargs):
     """ In house nansum for object array """
     value = fillna(value, 0.0)
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
-def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
+def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
     """ In house nanmin and nanmax for object array """
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
@@ -188,9 +188,10 @@ def _nan_minmax(func, fill_value, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
+def _nan_argminmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
     type """
+    fill_value = dtypes.get_fill_value(fill_value_typ)
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
@@ -204,7 +205,7 @@ def _nan_argminmax(func, fill_value, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0, -1)
 
 
-def _nanmean_ddof(ddof, value, axis=None, **kwargs):
+def _nanmean_ddof_object(ddof, fill_value_typ, axis=None, **kwargs):
     """ In house nanmean. ddof argument will be used in _nanvar method """
     valid_count = count(value, axis=axis)
     value = fillna(value, 0.0)
@@ -223,25 +224,26 @@ def _nanmean_ddof(ddof, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-def _nanvar(value, axis=None, **kwargs):
+def _nanvar_object(value, axis=None, **kwargs):
     ddof = kwargs.pop('ddof', 0)
     kwargs_mean = kwargs.copy()
     kwargs_mean.pop('keepdims', None)
-    value_mean = _nanmean_ddof(ddof=0, value=value, axis=axis, keepdims=True,
-                               **kwargs_mean)
+    value_mean = _nanmean_ddof_object(ddof=0, value=value, axis=axis,
+                                      keepdims=True, **kwargs_mean)
     squared = _dask_or_eager_func('square')(value.astype(value_mean.dtype) -
                                             value_mean)
-    return _nanmean_ddof(ddof, squared, axis=axis, **kwargs)
+    return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
 
 
-_nan_funcs = {'sum': _nansum,
-              'min': partial(_nan_minmax, 'min', np.inf),
-              'max': partial(_nan_minmax, 'max', -np.inf),
-              'argmin': partial(_nan_argminmax, 'argmin', np.inf),
-              'argmax': partial(_nan_argminmax, 'argmax', -np.inf),
-              'mean': partial(_nanmean_ddof, 0),
-              'var': _nanvar,
-              }
+_nan_object_funcs = {
+    'sum': _nansum_object,
+    'min': partial(_nan_minmax_object, 'min', fill_value_typ='+inf'),
+    'max': partial(_nan_minmax_object, 'max', fill_value_typ='-inf'),
+    'argmin': partial(_nan_argminmax_object, 'argmin', fill_value_typ='+inf'),
+    'argmax': partial(_nan_argminmax_object, 'argmax', fill_value_typ='-inf'),
+    'mean': partial(_nanmean_ddof_object, 0),
+    'var': _nanvar_object,
+}
 
 
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
@@ -260,7 +262,7 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
 
         if skipna or (skipna is None and values.dtype.kind in 'cfO'):
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
-                func = _nan_funcs.get(name, None)
+                func = _nan_object_funcs.get(name, None)
                 using_numpy_nan_func = True
                 if func is None or values.dtype.kind not in 'Ob':
                     raise NotImplementedError(
