@@ -81,4 +81,4 @@ def test_async(c, s, a, b):
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
 
-    assert s.task_state
+    assert s.tasks
