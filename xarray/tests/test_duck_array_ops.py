@@ -121,8 +121,17 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
     shapes = [16, 8, 4][:dim_num]
     dims = ('x', 'y', 'z')[:dim_num]
 
-    da = DataArray(rng.randn(*shapes), dims=dims,
-                   coords={'x': np.arange(16)}, name='da').astype(dtype)
+    if np.issubdtype(dtype, np.floating):
+        array = rng.randn(*shapes).astype(dtype)
+    elif np.issubdtype(dtype, np.integer):
+        array = rng.randint(0, 10, size=shapes).astype(dtype)
+    elif np.issubdtype(dtype, np.bool_):
+        array = rng.randint(0, 1, size=shapes).astype(dtype)
+    elif dtype == str:
+        array = rng.choice(['a', 'b', 'c', 'd'], size=shapes)
+    else:
+        raise ValueError
+    da = DataArray(array, dims=dims, coords={'x': np.arange(16)}, name='da')
 
     if contains_nan:
         da = da.reindex(x=np.arange(20))
@@ -216,6 +225,11 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
         assert_allclose(actual, expected, rtol=rtol)
 
+    # make sure the dtype argument
+    if func not in ['max', 'min']:
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
+        assert actual.dtype == float
+
     # without nan
     da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
     actual = getattr(da, func)(skipna=skipna)
@@ -224,7 +238,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
-@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_, str])
 @pytest.mark.parametrize('contains_nan', [True, False])
 @pytest.mark.parametrize('dask', [False, True])
 @pytest.mark.parametrize('func', ['min', 'max'])

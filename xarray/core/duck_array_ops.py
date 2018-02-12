@@ -173,17 +173,18 @@ def _ignore_warnings_if(condition):
 
 def _nansum_object(value, axis=None, **kwargs):
     """ In house nansum for object array """
-    value = fillna(value, 0.0)
+    value = fillna(value, 0)
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
-def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
+def _nan_minmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     """ In house nanmin and nanmax for object array """
+    fill_value = dtypes.get_fill_value(value.dtype, fill_value_typ)
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
     if not hasattr(data, 'dtype'):  # scalar case
-        data = np.nan if valid_count == 0 else data
+        data = dtypes.fill_value(value.dtype) if valid_count == 0 else data
         return np.array(data, dtype=value.dtype)
     return where_method(data, valid_count != 0)
 
@@ -191,7 +192,7 @@ def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
 def _nan_argminmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
     type """
-    fill_value = dtypes.get_fill_value(fill_value_typ)
+    fill_value = dtypes.get_fill_value(value.dtype, fill_value_typ)
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
@@ -205,22 +206,17 @@ def _nan_argminmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0, -1)
 
 
-def _nanmean_ddof_object(ddof, fill_value_typ, axis=None, **kwargs):
+def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
     """ In house nanmean. ddof argument will be used in _nanvar method """
     valid_count = count(value, axis=axis)
-    value = fillna(value, 0.0)
-    # TODO numpy's mean does not support object-type array, so we assume float
-    dtype = kwargs.get('dtype', None)
+    value = fillna(value, 0)
+    # As dtype inference is impossible for object dtype, we assume float
+    dtype = kwargs.pop('dtype', None)
     if dtype is None and value.dtype.kind == 'O':
         dtype = value.dtype if value.dtype.kind in ['cf'] else float
-    data = _dask_or_eager_func('mean')(value, axis=axis, dtype=dtype, **kwargs)
 
-    # adjust the sample size
-    if axis is None:
-        size = value.size
-    else:
-        size = np.prod(value.shape[axis])
-    data = data / (valid_count - ddof) * size
+    data = _dask_or_eager_func('sum')(value, axis=axis, dtype=dtype, **kwargs)
+    data = data / (valid_count - ddof)
     return where_method(data, valid_count != 0)
 
 
@@ -230,17 +226,16 @@ def _nanvar_object(value, axis=None, **kwargs):
     kwargs_mean.pop('keepdims', None)
     value_mean = _nanmean_ddof_object(ddof=0, value=value, axis=axis,
                                       keepdims=True, **kwargs_mean)
-    squared = _dask_or_eager_func('square')(value.astype(value_mean.dtype) -
-                                            value_mean)
+    squared = (value.astype(value_mean.dtype) - value_mean)**2
     return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
 
 
 _nan_object_funcs = {
     'sum': _nansum_object,
-    'min': partial(_nan_minmax_object, 'min', fill_value_typ='+inf'),
-    'max': partial(_nan_minmax_object, 'max', fill_value_typ='-inf'),
-    'argmin': partial(_nan_argminmax_object, 'argmin', fill_value_typ='+inf'),
-    'argmax': partial(_nan_argminmax_object, 'argmax', fill_value_typ='-inf'),
+    'min': partial(_nan_minmax_object, 'min', '+inf'),
+    'max': partial(_nan_minmax_object, 'max', '-inf'),
+    'argmin': partial(_nan_argminmax_object, 'argmin', '+inf'),
+    'argmax': partial(_nan_argminmax_object, 'argmax', '-inf'),
     'mean': partial(_nanmean_ddof_object, 0),
     'var': _nanvar_object,
 }

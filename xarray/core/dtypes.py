@@ -9,18 +9,6 @@ NA = utils.ReprObject('<NA>')
 
 
 @functools.total_ordering
-class AlwaysLessThan(object):
-    def __lt__(self, other):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, type(self))
-
-
-INF = AlwaysLessThan()
-
-
-@functools.total_ordering
 class AlwaysGreaterThan(object):
     def __gt__(self, other):
         return True
@@ -29,7 +17,18 @@ class AlwaysGreaterThan(object):
         return isinstance(other, type(self))
 
 
-NINF = AlwaysGreaterThan()
+@functools.total_ordering
+class AlwaysLessThan(object):
+    def __lt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+# Equivalence to np.inf (-np.inf) for object-type
+INF = AlwaysGreaterThan()
+NINF = AlwaysLessThan()
 
 
 def maybe_promote(dtype):
