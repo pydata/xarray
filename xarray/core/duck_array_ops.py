@@ -179,7 +179,10 @@ def _nansum_object(value, axis=None, **kwargs):
 
 def _nan_minmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     """ In house nanmin and nanmax for object array """
-    fill_value = dtypes.get_fill_value(value.dtype, fill_value_typ)
+    if fill_value_typ == '+inf':
+        fill_value = dtypes.get_pos_infinity(value.dtype)
+    else:
+        fill_value = dtypes.get_neg_infinity(value.dtype)
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
@@ -192,18 +195,21 @@ def _nan_minmax_object(func, fill_value_typ, value, axis=None, **kwargs):
 def _nan_argminmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
     type """
-    fill_value = dtypes.get_fill_value(value.dtype, fill_value_typ)
+    if fill_value_typ == '+inf':
+        fill_value = dtypes.get_pos_infinity(value.dtype)
+    else:
+        fill_value = dtypes.get_neg_infinity(value.dtype)
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
     # dask seems return non-integer type
     if isinstance(value, dask_array_type):
         data = data.astype(int)
-    if not hasattr(data, 'dtype'):  # scalar case
-        # TODO should we raise ValueError if all-nan slice encountered?
-        data = -1 if valid_count == 0 else int(data)
-        return np.array(data)
-    return where_method(data, valid_count != 0, -1)
+
+    if (valid_count == 0).any():
+        raise ValueError('All-NaN slice encountered')
+
+    return np.array(data, dtype=int)
 
 
 def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
@@ -211,6 +217,7 @@ def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
     valid_count = count(value, axis=axis)
     value = fillna(value, 0)
     # As dtype inference is impossible for object dtype, we assume float
+    # https://github.com/dask/dask/issues/3162
     dtype = kwargs.pop('dtype', None)
     if dtype is None and value.dtype.kind == 'O':
         dtype = value.dtype if value.dtype.kind in ['cf'] else float

@@ -264,6 +264,14 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
 
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)
+
+    if aggdim == 'y' and contains_nan and skipna:
+        with pytest.raises(ValueError):
+            actual = da.isel(**{
+                aggdim: getattr(da, 'arg'+func)(dim=aggdim,
+                                                skipna=skipna).compute()})
+        return
+
     actual = da.isel(**{
         aggdim: getattr(da, 'arg'+func)(dim=aggdim, skipna=skipna).compute()})
     expected = getattr(da, func)(dim=aggdim, skipna=skipna)

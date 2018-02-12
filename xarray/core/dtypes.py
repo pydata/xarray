@@ -64,7 +64,7 @@ def maybe_promote(dtype):
     return np.dtype(dtype), fill_value
 
 
-def get_fill_value(dtype, fill_value_typ=None):
+def get_fill_value(dtype):
     """Return an appropriate fill value for this dtype.
 
     Parameters
@@ -75,14 +75,42 @@ def get_fill_value(dtype, fill_value_typ=None):
     -------
     fill_value : Missing value corresponding to this dtype.
     """
-    if fill_value_typ is None:
-        _, fill_value = maybe_promote(dtype)
-        return fill_value
+    _, fill_value = maybe_promote(dtype)
+    return fill_value
 
+
+def get_pos_infinity(dtype):
+    """Return an appropriate positive infinity for this dtype.
+
+    Parameters
+    ----------
+    dtype : np.dtype
+
+    Returns
+    -------
+    fill_value : positive infinity value corresponding to this dtype.
+    """
     if np.issubdtype(dtype, np.floating):
-        return np.inf if fill_value_typ == '+inf' else -np.inf
+        return np.inf
 
-    return INF if fill_value_typ == '+inf' else NINF
+    return INF
+
+
+def get_neg_infinity(dtype):
+    """Return an appropriate positive infinity for this dtype.
+
+    Parameters
+    ----------
+    dtype : np.dtype
+
+    Returns
+    -------
+    fill_value : positive infinity value corresponding to this dtype.
+    """
+    if np.issubdtype(dtype, np.floating):
+        return -np.inf
+
+    return NINF
 
 
 def is_datetime_like(dtype):
