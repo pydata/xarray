@@ -188,8 +188,9 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
         if check_encoding and variable.encoding:
-            raise ValueError('unexpected encoding for scipy backend: %r'
-                             % list(variable.encoding))
+            if variable.encoding != {'_FillValue': None}:
+                raise ValueError('unexpected encoding for scipy backend: %r'
+                                 % list(variable.encoding))
 
         data = variable.data
         # nb. this still creates a numpy array in all memory, even though we
