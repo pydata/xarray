@@ -90,6 +90,7 @@ before_install:
 install:
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda env create -n test_env --file doc/environment.yml;
+      conda install -c conda-forge sphinx_rtd_theme;
     else
       conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml;
     fi
