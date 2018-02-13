@@ -102,9 +102,9 @@ script:
   - flake8 -j auto xarray
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
-      sphinx-build -nW -b html -d _build/doctrees doc _build/html
+      sphinx-build -nW -b html -d _build/doctrees doc _build/html;
     else
-      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
+      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
     fi
 
 after_success:
