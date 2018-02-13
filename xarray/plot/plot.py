@@ -758,8 +758,10 @@ def _is_monotonic(coord, axis=0):
         return True
     else:
         n = coord.shape[axis]
-        delta_pos = coord.take(np.arange(1, n), axis=axis) >= coord.take(np.arange(0, n-1), axis=axis)
-        delta_neg = coord.take(np.arange(1, n), axis=axis) <= coord.take(np.arange(0, n-1), axis=axis)
+        delta_pos = (coord.take(np.arange(1, n), axis=axis)
+                     >= coord.take(np.arange(0, n-1), axis=axis))
+        delta_neg = (coord.take(np.arange(1, n), axis=axis)
+                     <= coord.take(np.arange(0, n-1), axis=axis))
         return np.all(delta_pos) or np.all(delta_neg)
 
 
@@ -774,10 +776,10 @@ def _infer_interval_breaks(coord, axis=0):
     coord = np.asarray(coord)
 
     if not _is_monotonic(coord, axis=axis):
-        warnings.warn("The input coordinate is not sorted in increasing order "
-                      "along axis %d. This can lead to unexpected results. "
-                      "Consider calling the `sortby` method on the input "
-                      "DataArray." % axis)
+        raise ValueError("The input coordinate is not sorted in increasing "
+                         "order along axis %d. This can lead to unexpected "
+                         "results. Consider calling the `sortby` method on "
+                         "the input DataArray." % axis)
 
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
