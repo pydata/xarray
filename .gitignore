@@ -33,6 +33,7 @@ pip-log.txt
 nosetests.xml
 .cache
 .ropeproject/
+dask-worker-space/
 
 # asv environments
 .asv
