@@ -28,7 +28,7 @@ from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
 
 from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
                requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, requires_pathlib, requires_zarr,
+               requires_pynio, requires_pnc, requires_pathlib, requires_zarr,
                requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
                flaky, network, assert_identical, raises_regex, assert_equal,
                assert_array_equal)
@@ -1679,6 +1679,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
+
     # These tests below are marked as flaky (and skipped by default) because
     # they fail sometimes on Travis-CI, for no clear reason.
 
@@ -2172,6 +2173,38 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 
 class TestPyNioAutocloseTrue(TestPyNio):
+    autoclose = True
+
+
+@requires_scipy
+@requires_pnc
+class TestPnc(NetCDF3Only, TestCase):
+    def test_write_store(self):
+        # pnc is read-only for now
+        pass
+
+    @contextlib.contextmanager
+    def open(self, path, **kwargs):
+        with open_dataset(path, engine='pnc', autoclose=self.autoclose,
+                          **kwargs) as ds:
+            yield ds
+
+    def save(self, dataset, path, **kwargs):
+        dataset.to_netcdf(path, engine='scipy', **kwargs)
+
+    def test_weakrefs(self):
+        example = Dataset({'foo': ('x', np.arange(5.0))})
+        expected = example.rename({'foo': 'bar', 'x': 'y'})
+
+        with create_tmp_file() as tmp_file:
+            example.to_netcdf(tmp_file, engine='scipy')
+            on_disk = open_dataset(tmp_file, engine='pnc')
+            actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
+            del on_disk  # trigger garbage collection
+            assert_identical(actual, expected)
+
+
+class TestPncAutocloseTrue(TestPnc):
     autoclose = True
 
 
