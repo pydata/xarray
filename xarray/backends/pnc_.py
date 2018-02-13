@@ -7,14 +7,13 @@ import functools
 import numpy as np
 
 from .. import Variable
-from ..core.utils import (FrozenOrderedDict, Frozen,
-                          NdimSizeLenMixin, DunderArrayMixin)
+from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
-from .common import AbstractDataStore, DataStorePickleMixin
+from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
 
 
-class PncArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
+class PncArrayWrapper(BackendArray):
 
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -28,7 +27,9 @@ class PncArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key = indexing.to_tuple(key)
+        key = indexing.unwrap_explicit_indexer(
+            key, target=self, allow=indexing.BasicIndexer)
+
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
             if key == () and self.ndim == 0:
@@ -39,6 +40,7 @@ class PncArrayWrapper(NdimSizeLenMixin, DunderArrayMixin):
 class PncDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PseudoNetCDF
     """
+
     def __init__(self, filename, mode='r', autoclose=False):
         from PseudoNetCDF import pncopen
         try:
