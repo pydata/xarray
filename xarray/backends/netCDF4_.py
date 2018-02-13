@@ -50,9 +50,8 @@ class BaseNetCDF4Array(BackendArray):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
-
+        key, np_inds = indexing.decompose_indexer(key, self.shape,
+                                                  mode='outer')
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:
@@ -60,7 +59,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
 
         with self.datastore.ensure_open(autoclose=True):
             try:
-                data = getitem(self.get_array(), key)
+                array = getitem(self.get_array(), key.tuple)
             except IndexError:
                 # Catch IndexError in netCDF4 and return a more informative
                 # error message.  This is most often called when an unsorted
@@ -73,7 +72,10 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                     msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
                 raise IndexError(msg)
 
-        return data
+        for ind in np_inds:
+            array = indexing.NumpyIndexingAdapter(array)[ind]
+
+        return array
 
 
 def _encode_nc4_variable(var):

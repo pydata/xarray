@@ -17,37 +17,19 @@ from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
-
-        # Convert array-indexers to slice except most effective one.
-        key = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
-               for k, s in zip(key, self.shape)]
-        gains = [(np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
-                 if isinstance(k, np.ndarray) else 0 for k in key]
-        array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
-        proper_key, eager_key = [], []
-        for i, k in enumerate(key):
-            if isinstance(k, np.ndarray) and i != array_index:
-                proper_key.append(slice(np.min(k), np.max(k) + 1))
-                eager_key.append(k - np.min(k))
-            elif isinstance(k, np.ndarray):
-                # h5py requires increasing, non-duplicated key
-                pkey, ekey = np.unique(k, return_inverse=True)
-                # h5py requires using lists for fancy indexing:
-                # https://github.com/h5py/h5py/issues/992
-                proper_key.append(list(pkey))
-                eager_key.append(ekey)
-            else:
-                proper_key.append(k)
-                eager_key.append(slice(None))
+        key, np_inds = indexing.decompose_indexer(key, self.shape,
+                                                  mode='outer_1vector')
+        # h5py requires using lists for fancy indexing:
+        # https://github.com/h5py/h5py/issues/992
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
 
         with self.datastore.ensure_open(autoclose=True):
-            array = np.asarray(self.get_array()[tuple(proper_key)],
+            array = np.asarray(self.get_array()[key.tuple],
                                dtype=self.dtype)
+        for ind in np_inds:
+            array = indexing.NumpyIndexingAdapter(array)[ind]
 
-        key = indexing._outer_to_numpy_indexer(tuple(eager_key), self.shape)
-        return array[key]
+        return array
 
 
 def maybe_decode_bytes(txt):

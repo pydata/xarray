@@ -427,23 +427,6 @@ class ExplicitlyIndexedNDArrayMixin(utils.NDArrayMixin, ExplicitlyIndexed):
         return np.asarray(self[key], dtype=dtype)
 
 
-def unwrap_explicit_indexer(key, target, allow):
-    """Unwrap an explicit key into a tuple."""
-    if not isinstance(key, ExplicitIndexer):
-        raise TypeError('unexpected key type: {}'.format(key))
-    if not isinstance(key, allow):
-        key_type_name = {
-            BasicIndexer: 'Basic',
-            OuterIndexer: 'Outer',
-            VectorizedIndexer: 'Vectorized'
-        }[type(key)]
-        raise NotImplementedError(
-            '{} indexing for {} is not implemented. Load your data first with '
-            '.load(), .compute() or .persist(), or disable caching by setting '
-            'cache=False in open_dataset.'.format(key_type_name, type(target)))
-    return key.tuple
-
-
 class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
     """Wrap an array, converting tuples into the indicated explicit indexer."""
 
@@ -556,14 +539,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.broadcast(*self.key.tuple).shape
 
     def __array__(self, dtype=None):
-        try:
-            array = np.asarray(self.array[self.key], dtype=None)
-        except NotImplementedError:
-            # if vectorized indexing is not supported
-            oind, vind = _decompose_vectorized_indexer(self.key)
-            array = NumpyIndexingAdapter(np.asarray(self.array[oind],
-                                                    dtype=None))[vind]
-        return array
+        return np.asarray(self.array[self.key], dtype=None)
 
     def _updated_key(self, new_key):
         return VectorizedIndexer(tuple(o[new_key.tuple] for o in
@@ -578,7 +554,9 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return type(self)(self.array, key)
 
     def __setitem__(self, key, value):
-        raise NotImplementedError
+        raise NotImplementedError(
+            'Lazy item assignment with the vectorized indexer is not yet '
+            'implemented. Load your data first by .load() or compute().')
 
     def __repr__(self):
         return ('%s(array=%r, key=%r)' %
@@ -708,22 +686,162 @@ def _outer_to_numpy_indexer(key, shape):
         return _outer_to_vectorized_indexer(key, shape)
 
 
-def _decompose_vectorized_indexer(indexer):
-    """ Decompose vectorized indexer to outer and vectorized indexers,
-    array[indexer] == array[oindex][vindex]
-    such that array[oindex].shape becomes smallest.
+def decompose_indexer(indexer, shape, mode):
+    if isinstance(indexer, VectorizedIndexer):
+        return _decompose_vectorized_indexer(indexer, shape, mode)
+    if isinstance(indexer, OuterIndexer):
+        return _decompose_outer_indexer(indexer, shape, mode)
+    if isinstance(indexer, BasicIndexer):
+        return indexer, ()
+    raise TypeError('unexpected key type: {}'.format(indexer))
+
+
+def _decompose_vectorized_indexer(indexer, shape, mode):
     """
-    oindex = []
-    vindex = []
-    for k in indexer.tuple:
+    Decompose vectorized indexer to the successive two indexers, where the
+    first indexer will be used to index backend arrays, while the second one
+    is used to index loaded on-memory np.ndarray.
+
+    Parameters
+    ----------
+    indexer: VectorizedIndexer
+    mode: str, one of ['basic' | 'outer' | 'outer_1vector' | 'vectorized']
+        basic: for backends that support onle basic indexer
+        outer: for backends that support basic / outer indexer
+        outer_1vector: for backends that support outer indexer inluding at most
+                       1 vector.
+        vectorized: for backends that support full vectorized indexer.
+
+    Returns
+    -------
+    backend_indexer: OuterIndexer or BasicIndexer
+    np_indexers: a sequence of vectorizedIndexer
+
+    Note
+    ----
+    This function is used to realize the vectorized indexing for the backend
+    arrays that only support basic or outer indexing.
+
+    As an example, let us consider to index a few elements from a backend array
+    with a vectorized indexer ([0, 3, 1], [2, 3, 2]).
+    Even if the backend array only supports outer indexing, it is more
+    efficient to load a subslice of the array than loading the entire array,
+
+    >>> backend_indexer = OuterIndexer([0, 1, 3], [2, 3])
+    >>> array = array[backend_indexer]  # load subslice of the array
+    >>> np_indexer = VectorizedIndexer([0, 2, 1], [0, 1, 0])
+    >>> array[np_indexer]  # vectorized indexing for on-memory np.ndarray.
+    """
+    assert isinstance(indexer, VectorizedIndexer)
+
+    if mode == 'vectorized':
+        return indexer, ()
+
+    backend_indexer = []
+    np_indexer = []
+    # posify
+    indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
+               for k, s in zip(indexer.tuple, shape)]
+
+    for k in indexer:
         if isinstance(k, slice):
-            oindex.append(k)
-            vindex.append(slice(None))
+            backend_indexer.append(k)
+            np_indexer.append(slice(None))
         else:  # np.ndarray
             oind, vind = np.unique(k, return_inverse=True)
-            oindex.append(oind)
-            vindex.append(vind.reshape(*k.shape))
-    return OuterIndexer(tuple(oindex)), VectorizedIndexer(tuple(vindex))
+            backend_indexer.append(oind)
+            np_indexer.append(vind.reshape(*k.shape))
+
+    backend_indexer = OuterIndexer(tuple(backend_indexer))
+    np_indexer = VectorizedIndexer(tuple(np_indexer))
+
+    if mode == 'outer':
+        return backend_indexer, (np_indexer, )
+
+    shape = tuple(s if isinstance(k, slice) else len(k) for k, s in
+                  zip(backend_indexer.tuple, shape))
+    backend_indexer, np_indexers = _decompose_outer_indexer(
+        backend_indexer, shape, mode)
+    return backend_indexer, (np_indexers[0], np_indexer)
+
+
+def _decompose_outer_indexer(indexer, shape, mode):
+    """
+    Decompose ouer indexer to the successive two indexers, where the
+    first indexer will be used to index backend arrays, while the second one
+    is ised to index the loaded on-memory np.ndarray.
+    Note
+    ----
+    This function is used to realize the vectorized indexing for the backend
+    arrays that only support basic or outer indexing.
+
+    As an example, let us consider to index a few elements from a backend array
+    with a orthogonal indexer ([0, 3, 1], [2, 3, 2]).
+    Even if the backend array only supports basic indexing, it is more
+    efficient to load a subslice of the array than loading the entire array,
+
+    >>> backend_indexer = BasicIndexer(slice(0, 3), slice(2, 3))
+    >>> array = array[backend_indexer]  # load subslice of the array
+    >>> np_indexer = OuterIndexer([0, 2, 1], [0, 1, 0])
+    >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
+    """
+    if mode in ['outer', 'vectorized']:
+        return indexer, ()
+    assert isinstance(indexer, OuterIndexer)
+
+    backend_indexer = []
+    np_indexer = []
+    # posify
+    indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
+               for k, s in zip(indexer.tuple, shape)]
+
+    if mode == 'outer_1vector':
+        # some backends such as h5py supports only 1 vector in indexers
+        # We choose the most efficient axis
+        gains = [(np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
+                 if isinstance(k, np.ndarray) else 0 for k in indexer]
+        array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
+
+        for i, k in enumerate(indexer):
+            if isinstance(k, np.ndarray) and i != array_index:
+                backend_indexer.append(slice(np.min(k), np.max(k) + 1))
+                np_indexer.append(k - np.min(k))
+            elif isinstance(k, np.ndarray):
+                pkey, ekey = np.unique(k, return_inverse=True)
+                backend_indexer.append(pkey)
+                np_indexer.append(ekey)
+            else:
+                backend_indexer.append(k)
+                np_indexer.append(slice(None))
+
+        return (OuterIndexer(tuple(backend_indexer)),
+                (OuterIndexer(tuple(np_indexer)), ))
+
+    if mode == 'outer_sorted':
+        for k in indexer:
+            if (isinstance(k, integer_types + (slice, )) or
+                    (np.diff(k) >= 0).all()):
+                backend_indexer.append(k)
+                np_indexer.append(slice(None))
+            else:  # not sorted np.ndarray indexer
+                oind, vind = np.unique(k, return_inverse=True)
+                backend_indexer.append(oind)
+                np_indexer.append(vind.reshape(*k.shape))
+
+        return (OuterIndexer(tuple(backend_indexer)),
+                (OuterIndexer(tuple(np_indexer)), ))
+
+    # basic
+    for i, k in enumerate(indexer):
+        if isinstance(k, np.ndarray):
+            backend_indexer.append(slice(np.min(k), np.max(k) + 1))
+            np_indexer.append(k - np.min(k))
+        else:
+            backend_indexer.append(k)
+            np_indexer.append(slice(None))
+
+    return (BasicIndexer(tuple(backend_indexer)),
+            (OuterIndexer(tuple(np_indexer)), ))
 
 
 def _arrayize_vectorized_indexer(indexer, shape):

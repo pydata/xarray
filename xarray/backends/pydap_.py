@@ -24,18 +24,22 @@ class PydapArrayWrapper(BackendArray):
         return self.array.dtype
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        key, np_inds = indexing.decompose_indexer(key, self.shape,
+                                                  mode='basic')
 
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
         array = getattr(self.array, 'array', self.array)
-        result = robust_getitem(array, key, catch=ValueError)
+        result = robust_getitem(array, key.tuple, catch=ValueError)
         # pydap doesn't squeeze axes automatically like numpy
-        axis = tuple(n for n, k in enumerate(key)
+        axis = tuple(n for n, k in enumerate(key.tuple)
                      if isinstance(k, integer_types))
         if len(axis) > 0:
             result = np.squeeze(result, axis)
+
+        for ind in np_inds:
+            result = indexing.NumpyIndexingAdapter(result)[ind]
+
         return result
 
 

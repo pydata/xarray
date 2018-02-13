@@ -41,8 +41,10 @@ class RasterioArrayWrapper(BackendArray):
         return self._shape
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+        # TODO support indexing.decompose_indexer
+        if isinstance(key, indexing.VectorizedIndexer):
+            raise NotImplementedError
+        key = key.tuple
 
         # bands cannot be windowed but they can be listed
         band_key = key[0]

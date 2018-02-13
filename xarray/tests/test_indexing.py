@@ -377,14 +377,6 @@ class Test_vectorized_indexer(TestCase):
                          np.array([[0, 3, 3], [4, 6, 7]]),
                          slice(2, -2, 2), slice(2, -2, 3), slice(None)]
 
-    def test_decompose_vectorized_indexer(self):
-        for i, j, k in itertools.product(self.indexers, repeat=3):
-            vindex = indexing.VectorizedIndexer((i, j, k))
-            oind, vind = indexing._decompose_vectorized_indexer(vindex)
-            np.testing.assert_array_equal(
-                self.data[vindex],
-                indexing.NumpyIndexingAdapter(self.data[oind])[vind])
-
     def test_arrayize_vectorized_indexer(self):
         for i, j, k in itertools.product(self.indexers, repeat=3):
             vindex = indexing.VectorizedIndexer((i, j, k))
@@ -394,21 +386,44 @@ class Test_vectorized_indexer(TestCase):
                 self.data[vindex], self.data[vindex_array],)
 
 
-def test_unwrap_explicit_indexer():
-    indexer = indexing.BasicIndexer((1, 2))
-    target = None
+def get_indexers(shape, mode):
+    if mode == 'vectorized':
+        indexed_shape = (3, 4)
+        indexer = tuple(np.random.randint(0, s, size=indexed_shape)
+                        for s in shape)
+        return indexing.VectorizedIndexer(indexer)
 
-    unwrapped = indexing.unwrap_explicit_indexer(
-        indexer, target, allow=indexing.BasicIndexer)
-    assert unwrapped == (1, 2)
+    elif mode == 'outer':
+        indexer = tuple(np.random.randint(0, s, s + 2) for s in shape)
+        return indexing.OuterIndexer(indexer)
 
-    with raises_regex(NotImplementedError, 'Load your data'):
-        indexing.unwrap_explicit_indexer(
-            indexer, target, allow=indexing.OuterIndexer)
+    elif mode == 'outer1vec':
+        indexer = [slice(2, -3) for s in shape]
+        indexer[1] = np.random.randint(0, shape[1], shape[1] + 2)
+        return indexing.OuterIndexer(tuple(indexer))
 
-    with raises_regex(TypeError, 'unexpected key type'):
-        indexing.unwrap_explicit_indexer(
-            indexer.tuple, target, allow=indexing.OuterIndexer)
+    else:  # basic indexer
+        indexer = [slice(2, -3) for s in shape]
+        indexer[0] = 3
+        return indexing.BasicIndexer(tuple(indexer))
+
+
+@pytest.mark.parametrize('shape', [(10, 5, 8), (10, 3)])
+@pytest.mark.parametrize('indexer_mode', ['vectorized', 'outer', 'outer1vec'])
+@pytest.mark.parametrize('decompose_mode',
+                         ['vectorized', 'outer', 'outer_1vector', 'basic'])
+def test_decompose_indexers(shape, indexer_mode, decompose_mode):
+    data = np.random.randn(*shape)
+    indexer = get_indexers(shape, indexer_mode)
+
+    backend_ind, np_ind = indexing.decompose_indexer(indexer, shape,
+                                                     mode=decompose_mode)
+
+    expected = indexing.NumpyIndexingAdapter(data)[indexer]
+    array = indexing.NumpyIndexingAdapter(data)[backend_ind]
+    for ind in np_ind:
+        array = indexing.NumpyIndexingAdapter(array)[ind]
+    np.testing.assert_array_equal(expected, array)
 
 
 def test_implicit_indexing_adapter():
