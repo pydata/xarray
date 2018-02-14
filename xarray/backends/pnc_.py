@@ -44,13 +44,14 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
     def __init__(self, filename, mode='r', autoclose=False):
         from PseudoNetCDF import pncopen
         try:
-            opener = functools.partial(pncopen, filename, mode=mode, format = 'netcdf')
+            opener = functools.partial(pncopen, filename,
+                                       mode=mode, format='netcdf')
             self.ds = opener()
-        except:
+        except Exception as e:
             try:
                 opener = functools.partial(pncopen, filename, mode=mode)
                 self.ds = opener()
-            except:
+            except Exception as e:
                 opener = functools.partial(pncopen, filename)
                 self.ds = opener()
         self._autoclose = autoclose
@@ -60,7 +61,8 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
-        return Variable(var.dimensions, data, dict([(k, getattr(var, k)) for k in var.ncattrs()]))
+        return Variable(var.dimensions, data, dict([(k, getattr(var, k))
+                                                    for k in var.ncattrs()]))
 
     def get_variables(self):
         with self.ensure_open(autoclose=False):
@@ -69,7 +71,8 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
 
     def get_attrs(self):
         with self.ensure_open(autoclose=True):
-            return Frozen(dict([(k, getattr(self.ds, k)) for k in self.ds.ncattrs()]))
+            return Frozen(dict([(k, getattr(self.ds, k))
+                                for k in self.ds.ncattrs()]))
 
     def get_dimensions(self):
         with self.ensure_open(autoclose=True):
@@ -78,7 +81,8 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
     def get_encoding(self):
         encoding = {}
         encoding['unlimited_dims'] = set(
-            [k for k in self.ds.dimensions if self.ds.dimensions[k].isunlimited()])
+            [k for k in self.ds.dimensions
+             if self.ds.dimensions[k].isunlimited()])
         return encoding
 
     def close(self):

@@ -1679,10 +1679,8 @@ class OpenMFDatasetManyFilesTest(TestCase):
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
-
     # These tests below are marked as flaky (and skipped by default) because
     # they fail sometimes on Travis-CI, for no clear reason.
-
     @requires_dask
     @requires_netCDF4
     @flaky
