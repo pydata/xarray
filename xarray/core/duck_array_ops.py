@@ -82,13 +82,13 @@ def isnull(data):
 
 
 transpose = _dask_or_eager_func('transpose')
-where = _dask_or_eager_func('where', n_array_args=3)
+_where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
 
-concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
-stack = _dask_or_eager_func('stack', list_of_args=True)
+_concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
+_stack = _dask_or_eager_func('stack', list_of_args=True)
 
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
@@ -98,6 +98,17 @@ tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
 
 def asarray(data):
     return data if isinstance(data, dask_array_type) else np.asarray(data)
+
+
+def as_shared_dtype(scalars_or_arrays):
+    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    arrays = [asarray(x) for x in scalars_or_arrays]
+    # Pass arrays directly instead of dtypes to result_type so scalars
+    # get handled properly.
+    # Note that result_type() safely gets the dtype from dask arrays without
+    # evaluating them.
+    out_type = dtypes.result_type(*arrays)
+    return [x.astype(out_type, copy=False) for x in arrays]
 
 
 def as_like_arrays(*data):
@@ -151,6 +162,11 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
+def where(condition, x, y):
+    """Three argument where() with better dtype promotion rules."""
+    return _where(condition, *as_shared_dtype([x, y]))
+
+
 def where_method(data, cond, other=dtypes.NA):
     if other is dtypes.NA:
         other = dtypes.get_fill_value(data.dtype)
@@ -159,6 +175,16 @@ def where_method(data, cond, other=dtypes.NA):
 
 def fillna(data, other):
     return where(isnull(data), other, data)
+
+
+def concatenate(arrays, axis=0):
+    """concatenate() with better dtype promotion rules."""
+    return _concatenate(as_shared_dtype(arrays), axis=axis)
+
+
+def stack(arrays, axis=0):
+    """stack() with better dtype promotion rules."""
+    return _stack(as_shared_dtype(arrays), axis=axis)
 
 
 @contextlib.contextmanager

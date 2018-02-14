@@ -468,10 +468,17 @@ class VariableSubclassTestCases(object):
         a = self.cls('x', ['0', '1', '2'])
         b = self.cls('x', ['3', '4'])
         actual = Variable.concat([a, b], dim='x')
-        expected = Variable('x', np.arange(5).astype(str).astype(object))
+        expected = Variable('x', np.arange(5).astype(str))
         assert_identical(expected, actual)
-        assert expected.dtype == object
-        assert type(expected.values[0]) == str
+        assert actual.dtype.kind == expected.dtype.kind
+
+    def test_concat_mixed_dtypes(self):
+        a = self.cls('x', [0, 1])
+        b = self.cls('x', ['two'])
+        actual = Variable.concat([a, b], dim='x')
+        expected = Variable('x', np.array([0, 1, 'two'], dtype=object))
+        assert_identical(expected, actual)
+        assert actual.dtype == object
 
     def test_copy(self):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})

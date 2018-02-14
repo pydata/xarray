@@ -1273,8 +1273,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         arrays = [v.data for v in variables]
 
-        # TODO: use our own type promotion rules to ensure that
-        # [str, float] -> object, not str like numpy
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims

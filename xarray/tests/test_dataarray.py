@@ -1717,6 +1717,12 @@ class TestDataArray(TestCase):
         actual = arr.where(arr.x < 2, drop=True)
         assert_identical(actual, expected)
 
+    def test_where_string(self):
+        array = DataArray(['a', 'b'])
+        expected = DataArray(np.array(['a', np.nan], dtype=object))
+        actual = array.where([True, False])
+        assert_identical(actual, expected)
+
     def test_cumops(self):
         coords = {'x': [-1, -2], 'y': ['ab', 'cd', 'ef'],
                   'lat': (['x', 'y'], [[1, 2, 3], [-1, -2, -3]]),
