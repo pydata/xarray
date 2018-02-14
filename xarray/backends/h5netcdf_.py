@@ -19,13 +19,14 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
         key, np_inds = indexing.decompose_indexer(key, self.shape,
                                                   mode='outer_1vector')
+
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
-
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in
+                    key.tuple)
         with self.datastore.ensure_open(autoclose=True):
-            array = np.asarray(self.get_array()[key.tuple],
-                               dtype=self.dtype)
+            array = np.asarray(self.get_array()[key], dtype=self.dtype)
+
         for ind in np_inds:
             array = indexing.NumpyIndexingAdapter(array)[ind]
 

@@ -43,7 +43,9 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-- Lazy vectorized-indexing support. (:issue:`1897`)
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. (:issue:`1897`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
   arguments. (:issue:`1838`)
