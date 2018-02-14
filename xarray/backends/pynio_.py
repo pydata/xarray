@@ -28,13 +28,14 @@ class NioArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         key, np_inds = indexing.decompose_indexer(key, self.shape,
-                                                  mode='outer')
+                                                  mode='basic')
 
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
-            if key == () and self.ndim == 0:
+            if key.tuple == () and self.ndim == 0:
                 return array.get_value()
 
+            array = array[key.tuple]
             for ind in np_inds:
                 array = indexing.NumpyIndexingAdapter(array)[ind]
 

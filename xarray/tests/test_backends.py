@@ -405,6 +405,8 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
+            # make sure the array is not yet loaded into memory
+            assert not actual['var1'].variable._in_memory
             assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
@@ -418,11 +420,11 @@ class DatasetIOTestCases(object):
                         'dim2': DataArray([0, 2, 3], dims='a')}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
-            # make sure the array is not yet loaded
+            # make sure the array is not yet loaded into memory
             assert not actual['var1'].variable._in_memory
             assert_identical(expected, actual.load())
             # do it twice, to make sure we're switched from
-            # orthogonal -> numpy when we cached the values
+            # vectorized -> numpy when we cached the values
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
@@ -1554,19 +1556,6 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
-    def test_orthogonal_indexing(self):
-        # simplified version for h5netcdf
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {'dim3': np.arange(5)}
-            expected = in_memory.isel(**indexers)
-            actual = on_disk.isel(**indexers)
-            assert_identical(expected, actual.load())
-
-    def test_array_type_after_indexing(self):
-        # h5netcdf does not support multiple list-like indexers
-        pass
-
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -2115,19 +2104,6 @@ class PydapOnlineTest(PydapTest):
 class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
-        pass
-
-    def test_orthogonal_indexing(self):
-        # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Outer indexing'):
-            super(TestPyNio, self).test_orthogonal_indexing()
-
-    def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Outer indexing'):
-            super(TestPyNio, self).test_isel_dataarray()
-
-    def test_array_type_after_indexing(self):
-        # pynio also does not support list-like indexing
         pass
 
     @contextlib.contextmanager

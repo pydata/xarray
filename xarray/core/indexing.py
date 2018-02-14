@@ -706,10 +706,10 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
     ----------
     indexer: VectorizedIndexer
     mode: str, one of ['basic' | 'outer' | 'outer_1vector' | 'vectorized']
-        basic: for backends that support onle basic indexer
+        basic: for backends that support only basic indexer
         outer: for backends that support basic / outer indexer
-        outer_1vector: for backends that support outer indexer inluding at most
-                       1 vector.
+        outer_1vector: for backends that support outer indexer including
+                at most 1 vector.
         vectorized: for backends that support full vectorized indexer.
 
     Returns
@@ -739,12 +739,14 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
 
     backend_indexer = []
     np_indexer = []
-    # posify
+    # convert negative indices
     indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
                for k, s in zip(indexer.tuple, shape)]
 
     for k in indexer:
         if isinstance(k, slice):
+            # If it is a slice, then we will slice it as-is (k) in the backend,
+            # and then use all of it (slice(None)) for the in-memory portion.
             backend_indexer.append(k)
             np_indexer.append(slice(None))
         else:  # np.ndarray
@@ -767,9 +769,25 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
 
 def _decompose_outer_indexer(indexer, shape, mode):
     """
-    Decompose ouer indexer to the successive two indexers, where the
+    Decompose outer indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
-    is ised to index the loaded on-memory np.ndarray.
+    is used to index the loaded on-memory np.ndarray.
+
+    Parameters
+    ----------
+    indexer: VectorizedIndexer
+    mode: str, one of ['basic' | 'outer' | 'outer_1vector' | 'vectorized']
+        basic: for backends that support onle basic indexer
+        outer: for backends that support basic / outer indexer
+        outer_1vector: for backends that support outer indexer including
+                at most 1 vector.
+        vectorized: for backends that support full vectorized indexer.
+
+    Returns
+    -------
+    backend_indexer: OuterIndexer or BasicIndexer
+    np_indexers: a sequence of OuterIndexer
+
     Note
     ----
     This function is used to realize the vectorized indexing for the backend
