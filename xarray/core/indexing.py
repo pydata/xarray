@@ -642,8 +642,8 @@ def _outer_to_vectorized_indexer(key, shape):
     -------
     tuple
         Tuple suitable for use to index a NumPy array with vectorized indexing.
-        Each element is array: broadcasting them together gives the shape of
-        the result.
+        Each element is an array: broadcasting them together gives the shape
+        of the result.
     """
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
