@@ -232,6 +232,11 @@ class TestLazyArray(TestCase):
             (Variable(['i', 'j'], [[0, 1], [1, 2]]), )]
         check_indexing(v_eager, v_lazy, indexers)
 
+        indexers = [
+            (Variable('i', [3, 2, 4, 3]), Variable('i', [3, 2, 1, 0])),
+            (Variable(['i', 'j'], [[0, 1], [1, 2]]), )]
+        check_indexing(v_eager, v_lazy, indexers)
+
 
 class TestCopyOnWriteArray(TestCase):
     def test_setitem(self):

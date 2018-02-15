@@ -532,7 +532,6 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         else:
             self.key = _arrayize_vectorized_indexer(key, array.shape)
         self.array = as_indexable(array)
-        self.order = np.arange(self.ndim)
 
     @property
     def shape(self):
@@ -542,6 +541,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[self.key], dtype=None)
 
     def _updated_key(self, new_key):
+        new_key = _arrayize_vectorized_indexer(new_key, self.shape)
         return VectorizedIndexer(tuple(o[new_key.tuple] for o in
                                  np.broadcast_arrays(*self.key.tuple)))
 
@@ -587,6 +587,9 @@ class CopyOnWriteArray(ExplicitlyIndexedNDArrayMixin):
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
 
+    def transpose(self, order):
+        return self.array.transpose(order)
+
     def __setitem__(self, key, value):
         self._ensure_copied()
         self.array[key] = value
@@ -606,6 +609,9 @@ class MemoryCachedArray(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(self, key):
         return type(self)(_wrap_numpy_scalars(self.array[key]))
+
+    def transpose(self, order):
+        return self.array.transpose(order)
 
     def __setitem__(self, key, value):
         self.array[key] = value

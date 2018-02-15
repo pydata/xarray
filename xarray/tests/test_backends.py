@@ -428,6 +428,33 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
+        # make sure lazy indexing certainly works.
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {
+                'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+                'dim3': DataArray([[0, 4], [1, 3], [2, 2]], dims=['a', 'b']),
+                'dim2': slice(None, 10)}
+            expected = in_memory.isel(**indexers)['var3']
+            actual = on_disk.isel(**indexers)['var3']
+            # make sure the array is not yet loaded into memory
+            assert not actual.variable._in_memory
+            indexers = {'a': DataArray([0, 1], dims=['c']),
+                        'b': DataArray([0, 1], dims=['c'])}
+            expected = expected.isel(**indexers)
+            actual = actual.isel(**indexers)
+            assert not actual.variable._in_memory
+            assert_identical(expected, actual.load())
+
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {
+                'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+                'dim2': slice(None, 10)}
+            expected = in_memory.isel(**indexers)['var3']
+            actual = on_disk.isel(**indexers)['var3']
+            # make sure the array is not yet loaded into memory
+            assert not actual.variable._in_memory
+            assert_identical(expected, actual.load())
+
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
         in_memory = create_test_data()
@@ -504,7 +531,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoding = {'_FillValue': b'X', 'dtype': 'S1'}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
-        print(original)
         with self.roundtrip(original) as actual:
             assert_identical(expected, actual)
 
