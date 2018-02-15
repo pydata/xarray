@@ -1450,8 +1450,7 @@ class DataArray(AbstractArray, BaseDataObject):
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
-        """
-        Write DataArray contents to a netCDF file.
+        """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------
@@ -1507,6 +1506,62 @@ class DataArray(AbstractArray, BaseDataObject):
 
         All parameters are passed directly to `xarray.Dataset.to_netcdf`.
         """
+        dataset = self._to_dataset_for_nc_or_hdf5()
+        return dataset.to_netcdf(*args, **kwargs)
+
+    def to_hdf5(self, *args, **kwargs):
+        """Write DataArray contents to a HDF5 file.
+
+        The output file will be actually mostly compatible with NetCDF, and in fact it
+        uses the h5netcdf library, but in addition supports a few features that are not
+        available with to_netcdf - namely, at the moment of writing, this is the only
+        way to use a compression algorithm other than gzip.
+
+        Parameters
+        ----------
+        path : str or Path
+            Path to which to save this DataArray.
+        mode : {'w', 'a'}, optional
+            Write ('w') or append ('a') mode. If mode='w', any existing file at
+            this location will be overwritten. If mode='a', existing variables
+            will be overwritten.
+        group : str, optional
+            Path to the HDF5 group in the given file to open.
+            The group(s) will be created if necessary.
+        encoding : dict, optional
+            Nested dictionary with variable names as keys and dictionaries of
+            variable specific encodings as values, to be passed to
+            `h5netcdf.Group.create_variable`. Note that the syntax slightly
+            differs from the one of to_netcdf, which instead matches that
+            of NetCDF4-python. Namely, to_netcdf accepts
+            ``'zlib': True, 'complevel': 9``, whereas the same in to_hdf5 will be
+            ``'compression': 'gzip', 'compression_opts': 9``
+
+            e.g.: ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
+                     'compression': 'gzip'}, ...}``
+
+        unlimited_dims : sequence of str, optional
+            Dimension(s) that should be serialized as unlimited dimensions.
+            By default, no dimensions are treated as unlimited dimensions.
+            Note that unlimited_dims may also be set via
+            ``dataset.encoding['unlimited_dims']``.
+
+        Notes
+        -----
+        Only xarray.Dataset objects can be written to netCDF files, so
+        the xarray.DataArray is converted to a xarray.Dataset object
+        containing a single variable. If the DataArray has no name, or if the
+        name is the same as a co-ordinate name, then it is given the name
+        '__xarray_dataarray_variable__'.
+
+        All parameters are passed directly to `xarray.Dataset.to_hdf5`.
+        """
+        dataset = self._to_dataset_for_nc_or_hdf5()
+        return dataset.to_hdf5(*args, **kwargs)
+
+    def _to_dataset_for_nc_or_hdf5(self):
+        """Helper function of to_netcdf and to_hdf5
+        """
         from ..backends.api import DATAARRAY_NAME, DATAARRAY_VARIABLE
 
         if self.name is None:
@@ -1521,7 +1576,7 @@ class DataArray(AbstractArray, BaseDataObject):
             # No problems with the name - so we're fine!
             dataset = self.to_dataset()
 
-        return dataset.to_netcdf(*args, **kwargs)
+        return dataset
 
     def to_dict(self):
         """
