@@ -410,14 +410,17 @@ def get_indexers(shape, mode):
 
 @pytest.mark.parametrize('shape', [(10, 5, 8), (10, 3)])
 @pytest.mark.parametrize('indexer_mode', ['vectorized', 'outer', 'outer1vec'])
-@pytest.mark.parametrize('decompose_mode',
-                         ['vectorized', 'outer', 'outer_1vector', 'basic'])
-def test_decompose_indexers(shape, indexer_mode, decompose_mode):
+@pytest.mark.parametrize('indexing_support',
+                         [indexing.IndexingSupport.BASIC,
+                          indexing.IndexingSupport.OUTER,
+                          indexing.IndexingSupport.OUTER_1VECTOR,
+                          indexing.IndexingSupport.VECTORIZED])
+def test_decompose_indexers(shape, indexer_mode, indexing_support):
     data = np.random.randn(*shape)
     indexer = get_indexers(shape, indexer_mode)
 
-    backend_ind, np_ind = indexing.decompose_indexer(indexer, shape,
-                                                     mode=decompose_mode)
+    backend_ind, np_ind = indexing.decompose_indexer(
+        indexer, shape, indexing_support)
 
     expected = indexing.NumpyIndexingAdapter(data)[indexer]
     array = indexing.NumpyIndexingAdapter(data)[backend_ind]
