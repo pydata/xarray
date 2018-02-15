@@ -63,7 +63,7 @@
         "netcdf4": [""],
         "scipy": [""],
         "bottleneck": ["", null],
-        "dask": ["", null],
+        "dask": [""],
     },
 
 

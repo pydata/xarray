@@ -704,6 +704,26 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(ds) as actual:
             assert '_FillValue' not in actual.x.encoding
 
+    def test_explicitly_omit_fill_value_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])})
+        kwargs = dict(encoding={'x': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert '_FillValue' not in actual.x.encoding
+        self.assertEqual(ds.y.encoding, {})
+
+    def test_explicitly_omit_fill_value_in_coord(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        ds.y.encoding['_FillValue'] = None
+        with self.roundtrip(ds) as actual:
+            assert '_FillValue' not in actual.y.encoding
+
+    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        kwargs = dict(encoding={'y': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert '_FillValue' not in actual.y.encoding
+        self.assertEqual(ds.y.encoding, {})
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
@@ -727,6 +747,16 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.save(data[['var2', 'var9']], tmp_file, mode='a')
             with self.open(tmp_file) as actual:
                 assert_identical(data, actual)
+
+    def test_append_with_invalid_dim_raises(self):
+        data = create_test_data()
+        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
+            self.save(data, tmp_file, mode='w')
+            data['var9'] = data['var2'] * 3
+            data = data.isel(dim1=slice(2, 6))  # modify one dimension
+            with raises_regex(ValueError,
+                              'Unable to update size for existing dimension'):
+                self.save(data, tmp_file, mode='a')
 
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
@@ -1109,12 +1139,26 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.create_zarr_target() as store_target:
             yield backends.ZarrStore.open_group(store_target, mode='w')
 
+    def save(self, dataset, store_target, **kwargs):
+        dataset.to_zarr(store=store_target, **kwargs)
+
+    @contextlib.contextmanager
+    def open(self, store_target, **kwargs):
+        with xr.open_zarr(store_target, **kwargs) as ds:
+            yield ds
+
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with self.create_zarr_target() as store_target:
-            data.to_zarr(store=store_target, **save_kwargs)
-            yield xr.open_zarr(store_target, **open_kwargs)
+            self.save(data, store_target, **save_kwargs)
+            with self.open(store_target, **open_kwargs) as ds:
+                yield ds
+
+    @contextlib.contextmanager
+    def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
+                         allow_cleanup_failure=False):
+        pytest.skip("zarr backend does not support appending")
 
     def test_auto_chunk(self):
         original = create_test_data().chunk()
@@ -1205,33 +1249,22 @@ class BaseZarrTest(CFEncodedDataTest):
             expected.dump_to_store(store)
             zarr_group = store.ds
 
-            # check that the global hidden attribute is present
-            assert self.DIMENSION_KEY in zarr_group.attrs
-
             # check that a variable hidden attribute is present and correct
             # JSON only has a single array type, which maps to list in Python.
             # In contrast, dims in xarray is always a tuple.
             for var in expected.variables.keys():
-                assert (zarr_group[var].attrs[self.DIMENSION_KEY] ==
-                        list(expected[var].dims))
+                dims = zarr_group[var].attrs[self.DIMENSION_KEY]
+                assert dims == list(expected[var].dims)
 
-            with xr.decode_cf(store) as actual:
+            with xr.decode_cf(store):
                 # make sure it is hidden
-                assert self.DIMENSION_KEY not in actual.attrs
                 for var in expected.variables.keys():
                     assert self.DIMENSION_KEY not in expected[var].attrs
 
-            # verify that the dataset fails to open if dimension key is missing
-            del zarr_group.attrs[self.DIMENSION_KEY]
-            with pytest.raises(KeyError):
-                with xr.decode_cf(store) as actual:
-                    pass
-
             # put it back and try removing from a variable
-            zarr_group.attrs[self.DIMENSION_KEY] = {}
             del zarr_group.var2.attrs[self.DIMENSION_KEY]
             with pytest.raises(KeyError):
-                with xr.decode_cf(store) as actual:
+                with xr.decode_cf(store):
                     pass
 
     def test_write_persistence_modes(self):
@@ -1247,13 +1280,13 @@ class BaseZarrTest(CFEncodedDataTest):
 
         # make sure overwriting works as expected
         with self.create_zarr_target() as store:
-            original.to_zarr(store)
+            self.save(original, store)
             # should overwrite with no error
-            original.to_zarr(store, mode='w')
-            actual = xr.open_zarr(store)
-            assert_identical(original, actual)
-            with pytest.raises(ValueError):
-                original.to_zarr(store, mode='w-')
+            self.save(original, store, mode='w')
+            with self.open(store) as actual:
+                assert_identical(original, actual)
+                with pytest.raises(ValueError):
+                    self.save(original, store, mode='w-')
 
         # check that we can't use other persistence modes
         # TODO: reconsider whether other persistence modes should be supported
@@ -1268,7 +1301,7 @@ class BaseZarrTest(CFEncodedDataTest):
         blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
         save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
         with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
-            assert actual.var1.encoding['compressor'] == blosc_comp
+            assert repr(actual.var1.encoding['compressor']) == repr(blosc_comp)
 
     def test_group(self):
         original = create_test_data()
@@ -1276,10 +1309,6 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(original, save_kwargs={'group': group},
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
-        with pytest.raises(KeyError):
-            with self.roundtrip(original,
-                                save_kwargs={'group': group}) as actual:
-                assert_identical(original, actual)
 
     # TODO: implement zarr object encoding and make these tests pass
     @pytest.mark.xfail(reason="Zarr object encoding not implemented")
@@ -1304,6 +1333,18 @@ class BaseZarrTest(CFEncodedDataTest):
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
         super(CFEncodedDataTest, self).test_dataset_caching()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_write(self):
+        super(CFEncodedDataTest, self).test_append_write()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_overwrite_values(self):
+        super(CFEncodedDataTest, self).test_append_overwrite_values()
+
+    @pytest.mark.xfail(reason="Zarr stores can not be appended to")
+    def test_append_with_invalid_dim_raises(self):
+        super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
 
 
 @requires_zarr
@@ -1551,11 +1592,16 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
     def test_orthogonal_indexing(self):
-        # doesn't work for h5py (without using dask as an intermediate layer)
-        pass
+        # simplified version for h5netcdf
+        in_memory = create_test_data()
+        with self.roundtrip(in_memory) as on_disk:
+            indexers = {'dim3': np.arange(5)}
+            expected = in_memory.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual.load())
 
     def test_array_type_after_indexing(self):
-        # pynio also does not support list-like indexing
+        # h5netcdf does not support multiple list-like indexers
         pass
 
     def test_complex(self):
@@ -2152,9 +2198,11 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 @contextlib.contextmanager
 def create_tmp_geotiff(nx=4, ny=3, nz=3,
+                       transform=None,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
-                            'proj': 'utm', 'zone': 18}):
+                            'proj': 'utm', 'zone': 18},
+                       open_kwargs={}):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -2166,15 +2214,16 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
         else:
             data_shape = nz, ny, nx
             write_kwargs = {}
-        data = np.arange(nz*ny*nx,
-                         dtype=rasterio.float32).reshape(*data_shape)
-        transform = from_origin(*transform_args)
+        data = np.arange(nz*ny*nx, dtype=rasterio.float32).reshape(*data_shape)
+        if transform is None:
+            transform = from_origin(*transform_args)
         with rasterio.open(
                 tmp_file, 'w',
                 driver='GTiff', height=ny, width=nx, count=nz,
                 crs=crs,
                 transform=transform,
-                dtype=rasterio.float32) as s:
+                dtype=rasterio.float32,
+                **open_kwargs) as s:
             s.write(data, **write_kwargs)
             dx, dy = s.res[0], -s.res[1]
 
@@ -2206,29 +2255,87 @@ class TestRasterio(TestCase):
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
+                                              [np.NaN, np.NaN, np.NaN])
+
+            # Check no parse coords
+            with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+
+    def test_non_rectilinear(self):
+        from rasterio.transform import from_origin
+        # Create a geotiff file with 2d coordinates
+        with create_tmp_geotiff(transform=from_origin(0, 3, 1, 1).rotation(45),
+                                crs=None) as (tmp_file, _):
+            # Default is to not parse coords
+            with xr.open_rasterio(tmp_file) as rioda:
+                assert 'x' not in rioda.coords
+                assert 'y' not in rioda.coords
+                assert 'crs' not in rioda.attrs
+                assert isinstance(rioda.attrs['res'], tuple)
+                assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                assert isinstance(rioda.attrs['transform'], tuple)
+
+            # See if a warning is raised if we force it
+            with self.assertWarns("transformation isn't rectilinear"):
+                with xr.open_rasterio(tmp_file,
+                                      parse_coordinates=True) as rioda:
+                    assert 'x' not in rioda.coords
+                    assert 'y' not in rioda.coords
 
     def test_platecarree(self):
         with create_tmp_geotiff(8, 10, 1, transform_args=[1, 2, 0.5, 2.],
-                                crs='+proj=latlong') \
+                                crs='+proj=latlong',
+                                open_kwargs={'nodata': -9765}) \
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert 'crs' in rioda.attrs
                 assert isinstance(rioda.attrs['crs'], basestring)
-                assert 'res' in rioda.attrs
                 assert isinstance(rioda.attrs['res'], tuple)
-                assert 'is_tiled' in rioda.attrs
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
-                assert 'transform' in rioda.attrs
                 assert isinstance(rioda.attrs['transform'], tuple)
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
+                                              [-9765.])
+
+    def test_notransform(self):
+        # regression test for https://github.com/pydata/xarray/issues/1686
+        import rasterio
+        import warnings
+
+        # Create a geotiff file
+        with warnings.catch_warnings():
+            # rasterio throws a NotGeoreferencedWarning here, which is
+            # expected since we test rasterio's defaults in this case.
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message='Dataset has no geotransform set')
+            with create_tmp_file(suffix='.tif') as tmp_file:
+                # data
+                nx, ny, nz = 4, 3, 3
+                data = np.arange(nx*ny*nz,
+                                 dtype=rasterio.float32).reshape(nz, ny, nx)
+                with rasterio.open(
+                        tmp_file, 'w',
+                        driver='GTiff', height=ny, width=nx, count=nz,
+                        dtype=rasterio.float32) as s:
+                    s.write(data)
+
+                # Tests
+                expected = DataArray(data,
+                                     dims=('band', 'y', 'x'),
+                                     coords={'band': [1, 2, 3],
+                                             'y': [0.5, 1.5, 2.5],
+                                             'x': [0.5, 1.5, 2.5, 3.5],
+                                             })
+                with xr.open_rasterio(tmp_file) as rioda:
+                    assert_allclose(rioda, expected)
+                    assert isinstance(rioda.attrs['res'], tuple)
+                    assert isinstance(rioda.attrs['is_tiled'], np.uint8)
+                    assert isinstance(rioda.attrs['transform'], tuple)
 
     def test_indexing(self):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
