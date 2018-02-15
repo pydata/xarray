@@ -203,12 +203,9 @@ def _nansum_object(value, axis=None, **kwargs):
     return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
 
 
-def _nan_minmax_object(func, fill_value_typ, value, axis=None, **kwargs):
+def _nan_minmax_object(func, get_fill_value, value, axis=None, **kwargs):
     """ In house nanmin and nanmax for object array """
-    if fill_value_typ == '+inf':
-        fill_value = dtypes.get_pos_infinity(value.dtype)
-    else:
-        fill_value = dtypes.get_neg_infinity(value.dtype)
+    fill_value = get_fill_value(value.dtype)
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
@@ -218,13 +215,10 @@ def _nan_minmax_object(func, fill_value_typ, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-def _nan_argminmax_object(func, fill_value_typ, value, axis=None, **kwargs):
+def _nan_argminmax_object(func, get_fill_value, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
     type """
-    if fill_value_typ == '+inf':
-        fill_value = dtypes.get_pos_infinity(value.dtype)
-    else:
-        fill_value = dtypes.get_neg_infinity(value.dtype)
+    fill_value = get_fill_value(value.dtype)
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
@@ -265,10 +259,12 @@ def _nanvar_object(value, axis=None, **kwargs):
 
 _nan_object_funcs = {
     'sum': _nansum_object,
-    'min': partial(_nan_minmax_object, 'min', '+inf'),
-    'max': partial(_nan_minmax_object, 'max', '-inf'),
-    'argmin': partial(_nan_argminmax_object, 'argmin', '+inf'),
-    'argmax': partial(_nan_argminmax_object, 'argmax', '-inf'),
+    'min': partial(_nan_minmax_object, 'min', dtypes.get_pos_infinity),
+    'max': partial(_nan_minmax_object, 'max', dtypes.get_neg_infinity),
+    'argmin': partial(_nan_argminmax_object, 'argmin',
+                      dtypes.get_pos_infinity),
+    'argmax': partial(_nan_argminmax_object, 'argmax',
+                      dtypes.get_neg_infinity),
     'mean': partial(_nanmean_ddof_object, 0),
     'var': _nanvar_object,
 }

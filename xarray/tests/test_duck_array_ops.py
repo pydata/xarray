@@ -250,7 +250,10 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
     actual = getattr(da, func)(skipna=skipna)
     expected = getattr(np, 'nan{}'.format(func))(da.values)
-    assert np.allclose(actual.values, np.array(expected), rtol=rtol)
+    if actual.dtype == object:
+        assert actual.values == np.array(expected)
+    else:
+        assert np.allclose(actual.values, np.array(expected), rtol=rtol)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
@@ -292,3 +295,9 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
         aggdim: getattr(da, 'arg'+func)(dim=aggdim, skipna=skipna).compute()})
     expected = getattr(da, func)(dim=aggdim, skipna=skipna)
     assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
+
+
+def test_argmin_max_error():
+    da = construct_dataarray(2, np.bool_, contains_nan=True, dask=False)
+    with pytest.raises(ValueError):
+        da.argmin(dim='y')
