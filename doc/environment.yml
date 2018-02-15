@@ -18,3 +18,4 @@ dependencies:
   - sphinx-gallery
   - zarr
   - iris
+  - flake8
