@@ -27,8 +27,8 @@ class NioArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(key, self.shape,
-                                                  mode='basic')
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.BASIC)
 
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()

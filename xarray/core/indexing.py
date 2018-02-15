@@ -686,17 +686,28 @@ def _outer_to_numpy_indexer(key, shape):
         return _outer_to_vectorized_indexer(key, shape)
 
 
-def decompose_indexer(indexer, shape, mode):
+class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
+    # for backends that support only basic indexer
+    BASIC = 'BASIC'
+    # for backends that support basic / outer indexer
+    OUTER = 'OUTER'
+    # for backends that support outer indexer including at most 1 vector.
+    OUTER_1VECTOR = 'OUTER_1VECTOR'
+    # for backends that support full vectorized indexer.
+    VECTORIZED = 'VECTORIZED'
+
+
+def decompose_indexer(indexer, shape, indexing_support):
     if isinstance(indexer, VectorizedIndexer):
-        return _decompose_vectorized_indexer(indexer, shape, mode)
+        return _decompose_vectorized_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, OuterIndexer):
-        return _decompose_outer_indexer(indexer, shape, mode)
+        return _decompose_outer_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, BasicIndexer):
         return indexer, ()
     raise TypeError('unexpected key type: {}'.format(indexer))
 
 
-def _decompose_vectorized_indexer(indexer, shape, mode):
+def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     """
     Decompose vectorized indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -705,12 +716,7 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
     Parameters
     ----------
     indexer: VectorizedIndexer
-    mode: str, one of ['basic' | 'outer' | 'outer_1vector' | 'vectorized']
-        basic: for backends that support only basic indexer
-        outer: for backends that support basic / outer indexer
-        outer_1vector: for backends that support outer indexer including
-                at most 1 vector.
-        vectorized: for backends that support full vectorized indexer.
+    indexing_support: one of IndexerSupport entries
 
     Returns
     -------
@@ -734,7 +740,7 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
     """
     assert isinstance(indexer, VectorizedIndexer)
 
-    if mode == 'vectorized':
+    if indexing_support is IndexingSupport.VECTORIZED:
         return indexer, ()
 
     backend_indexer = []
@@ -757,17 +763,17 @@ def _decompose_vectorized_indexer(indexer, shape, mode):
     backend_indexer = OuterIndexer(tuple(backend_indexer))
     np_indexer = VectorizedIndexer(tuple(np_indexer))
 
-    if mode == 'outer':
+    if indexing_support is IndexingSupport.OUTER:
         return backend_indexer, (np_indexer, )
 
     shape = tuple(s if isinstance(k, slice) else len(k) for k, s in
                   zip(backend_indexer.tuple, shape))
     backend_indexer, np_indexers = _decompose_outer_indexer(
-        backend_indexer, shape, mode)
+        backend_indexer, shape, indexing_support)
     return backend_indexer, (np_indexers[0], np_indexer)
 
 
-def _decompose_outer_indexer(indexer, shape, mode):
+def _decompose_outer_indexer(indexer, shape, indexing_support):
     """
     Decompose outer indexer to the successive two indexers, where the
     first indexer will be used to index backend arrays, while the second one
@@ -776,12 +782,7 @@ def _decompose_outer_indexer(indexer, shape, mode):
     Parameters
     ----------
     indexer: VectorizedIndexer
-    mode: str, one of ['basic' | 'outer' | 'outer_1vector' | 'vectorized']
-        basic: for backends that support onle basic indexer
-        outer: for backends that support basic / outer indexer
-        outer_1vector: for backends that support outer indexer including
-                at most 1 vector.
-        vectorized: for backends that support full vectorized indexer.
+    indexing_support: One of the entries of IndexingSupport
 
     Returns
     -------
@@ -803,7 +804,7 @@ def _decompose_outer_indexer(indexer, shape, mode):
     >>> np_indexer = OuterIndexer([0, 2, 1], [0, 1, 0])
     >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
     """
-    if mode in ['outer', 'vectorized']:
+    if indexing_support in [IndexingSupport.OUTER, IndexingSupport.VECTORIZED]:
         return indexer, ()
     assert isinstance(indexer, OuterIndexer)
 
@@ -813,7 +814,7 @@ def _decompose_outer_indexer(indexer, shape, mode):
     indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
                for k, s in zip(indexer.tuple, shape)]
 
-    if mode == 'outer_1vector':
+    if indexing_support is IndexingSupport.OUTER_1VECTOR:
         # some backends such as h5py supports only 1 vector in indexers
         # We choose the most efficient axis
         gains = [(np.max(k) - np.min(k) + 1.0) / len(np.unique(k))
@@ -835,7 +836,7 @@ def _decompose_outer_indexer(indexer, shape, mode):
         return (OuterIndexer(tuple(backend_indexer)),
                 (OuterIndexer(tuple(np_indexer)), ))
 
-    if mode == 'outer_sorted':
+    if indexing_support == IndexingSupport.OUTER:
         for k in indexer:
             if (isinstance(k, integer_types + (slice, )) or
                     (np.diff(k) >= 0).all()):

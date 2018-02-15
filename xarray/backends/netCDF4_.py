@@ -50,8 +50,8 @@ class BaseNetCDF4Array(BackendArray):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(key, self.shape,
-                                                  mode='outer')
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER)
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:

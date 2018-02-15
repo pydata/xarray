@@ -24,8 +24,8 @@ class PydapArrayWrapper(BackendArray):
         return self.array.dtype
 
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(key, self.shape,
-                                                  mode='basic')
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.BASIC)
 
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice

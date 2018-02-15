@@ -17,8 +17,8 @@ from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(key, self.shape,
-                                                  mode='outer_1vector')
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
 
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
