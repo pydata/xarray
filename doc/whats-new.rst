@@ -88,6 +88,11 @@ Enhancements
   (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
   Correspondingly, encoded variables may also be saved with a smaller dtype.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- `.dt` accessor can now ceil, floor and round timestamps to specified frequency.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Speed of reindexing/alignment with dask array is orders of magnitude faster
+  when inserting missing values  (:issue:`1847`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -103,7 +108,7 @@ Bug fixes
 ~~~~~~~~~
 - Added warning in api.py of a netCDF4 bug that occurs when
   the filepath has 88 characters (:issue:`1745`).
-  By `Liam Brannigan <https://github.com/braaannigan>` _.
+  By `Liam Brannigan <https://github.com/braaannigan>`_.
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
@@ -135,6 +140,9 @@ Bug fixes
 - Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Bug fix in encoding coordinates with ``{'_FillValue': None}`` in netCDF
+  metadata (:issue:`1865`).
+  By `Chris Roth <https://github.com/czr137>`_.
 - Fix indexing with lists for arrays loaded from netCDF files with
   ``engine='h5netcdf`` (:issue:`1864`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -144,6 +152,10 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- Fixed dtype promotion rules in :py:func:`where` and :py:func:`concat` to
+  match pandas (:issue:`1847`). A combination of strings/numbers or
+  unicode/bytes now promote to object dtype, instead of strings or unicode.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
 
