@@ -51,6 +51,7 @@ def rolling_window(a, window, axis=-1):
     boundary = {d: np.nan for d in range(a.ndim)}
     # create ghosted arrays
     ag = da.ghost.ghost(a, depth=depth, boundary=boundary)
+
     # apply rolling func
     def func(x, window, axis=-1):
         x = np.asarray(x)

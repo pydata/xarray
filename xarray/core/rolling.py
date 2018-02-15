@@ -12,6 +12,24 @@ from .dask_array_ops import dask_rolling_wrapper
 from . import dtypes
 
 
+def _get_new_dimname(dims, new_dim):
+    """ Get an new dimension name based on new_dim, that is not used in dims.
+    If the same name exists, we add an underscore(s) in the head.
+
+    Example1:
+        dims: ['a', 'b', 'c']
+        new_dim: ['_rolling']
+        -> ['_rolling']
+    Example2:
+        dims: ['a', 'b', 'c', '_rolling']
+        new_dim: ['_rolling']
+        -> ['__rolling']
+    """
+    while new_dim in dims:
+        new_dim = '_' + new_dim
+    return new_dim
+
+
 class Rolling(object):
     """A object that implements the moving window pattern.
 
@@ -228,8 +246,9 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
-        windows = self.to_dataarray('_rolling_window_dim')
-        result = windows.reduce(func, dim='_rolling_window_dim', **kwargs)
+        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        windows = self.to_dataarray(rolling_dim)
+        result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
         # Find valid windows based on count.
         counts = self._counts()
@@ -237,10 +256,16 @@ class DataArrayRolling(Rolling):
 
     def _counts(self):
         """ Number of non-nan entries in each rolling window. """
+
+        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        # We use False as the fill_value instead of np.nan, since boolean
+        # array is faster to be reduced than object array.
+        # The use of skipna==False is also faster since it does not need to
+        # copy the strided array.
         counts = (self.obj.notnull()
                   .rolling(center=self.center, **{self.dim: self.window})
-                  .to_dataarray('_rolling_window_dim', fill_value=False)
-                  .sum(dim='_rolling_window_dim'))
+                  .to_dataarray(rolling_dim, fill_value=False)
+                  .sum(dim=rolling_dim, skipna=False))
         return counts
 
     @classmethod
