@@ -46,3 +46,9 @@ def test_result_type_dask_array():
     # would get promoted to float32
     actual = dtypes.result_type(array, np.array([0.5, 1.0], dtype=np.float32))
     assert actual == np.float64
+
+
+@pytest.mark.parametrize('obj', [1.0, np.inf, 'ab', 1.0 + 1.0j, True])
+def test_inf(obj):
+    assert dtypes.INF > obj
+    assert dtypes.NINF < obj

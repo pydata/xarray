@@ -1,10 +1,34 @@
 import numpy as np
+import functools
 
 from . import utils
 
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject('<NA>')
+
+
+@functools.total_ordering
+class AlwaysGreaterThan(object):
+    def __gt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+@functools.total_ordering
+class AlwaysLessThan(object):
+    def __lt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+# Equivalence to np.inf (-np.inf) for object-type
+INF = AlwaysGreaterThan()
+NINF = AlwaysLessThan()
 
 
 # Pairs of types that, if both found, should be promoted to object dtype
@@ -16,6 +40,29 @@ PROMOTE_TO_OBJECT = [
     {np.bool_, np.character},  # numpy promotes to character
     {np.bytes_, np.unicode_},  # numpy promotes to unicode
 ]
+
+
+@functools.total_ordering
+class AlwaysGreaterThan(object):
+    def __gt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+@functools.total_ordering
+class AlwaysLessThan(object):
+    def __lt__(self, other):
+        return True
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
+
+# Equivalence to np.inf (-np.inf) for object-type
+INF = AlwaysGreaterThan()
+NINF = AlwaysLessThan()
 
 
 def maybe_promote(dtype):
@@ -64,6 +111,46 @@ def get_fill_value(dtype):
     """
     _, fill_value = maybe_promote(dtype)
     return fill_value
+
+
+def get_pos_infinity(dtype):
+    """Return an appropriate positive infinity for this dtype.
+
+    Parameters
+    ----------
+    dtype : np.dtype
+
+    Returns
+    -------
+    fill_value : positive infinity value corresponding to this dtype.
+    """
+    if issubclass(dtype.type, (np.floating, np.integer)):
+        return np.inf
+
+    if issubclass(dtype.type, np.complexfloating):
+        return np.inf + 1j * np.inf
+
+    return INF
+
+
+def get_neg_infinity(dtype):
+    """Return an appropriate positive infinity for this dtype.
+
+    Parameters
+    ----------
+    dtype : np.dtype
+
+    Returns
+    -------
+    fill_value : positive infinity value corresponding to this dtype.
+    """
+    if issubclass(dtype.type, (np.floating, np.integer)):
+        return -np.inf
+
+    if issubclass(dtype.type, np.complexfloating):
+        return -np.inf - 1j * np.inf
+
+    return NINF
 
 
 def is_datetime_like(dtype):
