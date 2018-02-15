@@ -663,13 +663,11 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         return store
 
 def to_hdf5(dataset, path_or_file=None, mode='w', group=None,
-            writer=None, encoding=None, unlimited_dims=None):
+            encoding=None, unlimited_dims=None):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a HDF5 file
 
     See `Dataset.to_hdf5` for full API docs.
-
-    The ``writer`` argument is only for the private use of `save_mfdataset_hdf5`.
     """
     to_netcdf(dataset, path_or_file, mode=mode, format='NETCDF4',
               group=group, engine='hdf5', encoding=encoding,
@@ -677,14 +675,14 @@ def to_hdf5(dataset, path_or_file=None, mode='w', group=None,
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None):
-    """Write multiple datasets to disk as netCDF files simultaneously.
+    """Write multiple datasets to disk as netCDF or HDF5 files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
     objects, in which case it can write the multiple datasets to disk
     simultaneously using a shared thread pool.
 
-    When not using dask, it is no different than calling ``to_netcdf``
-    repeatedly.
+    When not using dask, it is no different than calling ``to_netcdf`` or
+    ``to_hdf5`` repeatedly.
 
     Parameters
     ----------
@@ -721,7 +719,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Paths to the netCDF4 group in each corresponding file to which to save
         datasets (only works for format='NETCDF4'). The groups will be created
         if necessary.
-    engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+    engine : {'netcdf4', 'scipy', 'h5netcdf', 'hdf5'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
@@ -762,42 +760,6 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     finally:
         for store in stores:
             store.close()
-
-def save_mfdataset_hdf5(datasets, paths, mode='w', groups=None, engine=None):
-    """Write multiple datasets to disk as HDF5 files simultaneously.
-
-    This function is intended for use with datasets consisting of dask.array
-    objects, in which case it can write the multiple datasets to disk
-    simultaneously using a shared thread pool.
-
-    When not using dask, it is no different than calling ``to_hdf5``
-    repeatedly.
-
-    Parameters
-    ----------
-    datasets : list of xarray.Dataset
-        List of datasets to save.
-    paths : list of str or list of Paths
-        List of paths to which to save each corresponding dataset.
-    mode : {'w', 'a'}, optional
-        Write ('w') or append ('a') mode. If mode='w', any existing file at
-        these locations will be overwritten.
-    groups : list of str, optional
-        Paths to the HDF5 group in each corresponding file to which to save
-        datasets. The groups will be created if necessary.
-
-    Examples
-    --------
-
-    Save a dataset into one HDF5 per year of data:
-
-    >>> years, datasets = zip(*ds.groupby('time.year'))
-    >>> paths = ['%s.h5' % y for y in years]
-    >>> xr.save_mfdataset_hdf5(datasets, paths)
-    """
-    save_mfdataset(datasets, paths, mode='w', format='NETCDF4', groups=None,
-                   engine='hdf5')
-
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
             encoding=None):
