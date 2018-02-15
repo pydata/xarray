@@ -1,5 +1,7 @@
 linters:
   flake8:
+    max-line-length: 79
     fixer: true
+  py3k:
 fixers:
   enable: true
