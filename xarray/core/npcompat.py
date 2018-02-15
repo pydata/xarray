@@ -59,7 +59,6 @@ else:
 
         return a, mask
 
-
     def nanmin(a, axis=None, out=None, keepdims=np._NoValue):
         """
         Return minimum of an array or minimum along an axis, ignoring any NaNs.
@@ -139,7 +138,8 @@ else:
             # which do not implement isnan (gh-9009), or fmin correctly (gh-8975)
             res = np.fmin.reduce(a, axis=axis, out=out, **kwargs)
             if np.isnan(res).any():
-                warnings.warn("All-NaN slice encountered", RuntimeWarning, stacklevel=2)
+                warnings.warn("All-NaN slice encountered",
+                              RuntimeWarning, stacklevel=2)
         else:
             # Slow, but safe for subclasses of ndarray
             a, mask = _replace_nan(a, +np.inf)
@@ -151,9 +151,9 @@ else:
             mask = np.all(mask, axis=axis, **kwargs)
             if np.any(mask):
                 res = _copyto(res, np.nan, mask)
-                warnings.warn("All-NaN axis encountered", RuntimeWarning, stacklevel=2)
+                warnings.warn("All-NaN axis encountered",
+                              RuntimeWarning, stacklevel=2)
         return res
-
 
     def nanmax(a, axis=None, out=None, keepdims=np._NoValue):
         """
@@ -234,7 +234,8 @@ else:
             # which do not implement isnan (gh-9009), or fmax correctly (gh-8975)
             res = np.fmax.reduce(a, axis=axis, out=out, **kwargs)
             if np.isnan(res).any():
-                warnings.warn("All-NaN slice encountered", RuntimeWarning, stacklevel=2)
+                warnings.warn("All-NaN slice encountered",
+                              RuntimeWarning, stacklevel=2)
         else:
             # Slow, but safe for subclasses of ndarray
             a, mask = _replace_nan(a, -np.inf)
@@ -246,7 +247,8 @@ else:
             mask = np.all(mask, axis=axis, **kwargs)
             if np.any(mask):
                 res = _copyto(res, np.nan, mask)
-                warnings.warn("All-NaN axis encountered", RuntimeWarning, stacklevel=2)
+                warnings.warn("All-NaN axis encountered",
+                              RuntimeWarning, stacklevel=2)
         return res
 
     def nansum(a, axis=None, dtype=None, out=None, keepdims=np._NoValue):

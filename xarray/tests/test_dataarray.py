@@ -3502,12 +3502,12 @@ def test_rolling_count_correct():
               {'time': 11, 'min_periods': None},
               {'time': 7, 'min_periods': 2}]
     expecteds = [DataArray(
-                    [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time'),
-                 DataArray(
-                    [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-                     np.nan, np.nan, np.nan, np.nan, np.nan], dims='time'),
-                 DataArray(
-                    [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')]
+        [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time'),
+        DataArray(
+        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
+         np.nan, np.nan, np.nan, np.nan, np.nan], dims='time'),
+        DataArray(
+        [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')]
 
     for kwarg, expected in zip(kwargs, expecteds):
         result = da.rolling(**kwarg).count()
