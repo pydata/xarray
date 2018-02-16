@@ -3,7 +3,6 @@ from numpy.testing import assert_array_equal
 
 from xarray.core.nputils import (_is_contiguous, NumpyVIndexAdapter,
                                  rolling_window)
-from xarray.core import dask_array_ops
 
 
 def test_is_contiguous():

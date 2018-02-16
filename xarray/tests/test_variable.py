@@ -746,7 +746,7 @@ class VariableSubclassTestCases(object):
             expected = np.pad(np.array(v.data.astype(float)), np_arg,
                               mode='constant', constant_values=np.nan)
             assert_array_equal(actual, expected)
-            assert type(actual._data) == type(v._data)
+            assert isinstance(actual._data, type(v._data))
 
         # for the boolean array, we pad False
         data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)

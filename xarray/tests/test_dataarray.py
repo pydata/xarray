@@ -2716,7 +2716,7 @@ class TestDataArray(TestCase):
         if not hasattr(pd, 'CategoricalIndex'):
             raise unittest.SkipTest('requires pandas with CategoricalIndex')
 
-        s = pd.Series(range(5), index=pd.CategoricalIndex(list('aabbc')))
+        s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list('aabbc')))
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
@@ -3403,7 +3403,7 @@ def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 def test_rolling_pandas_compat(center, window, min_periods):
-    s = pd.Series(range(10))
+    s = pd.Series(np.arange(10))
     da = DataArray.from_series(s)
 
     if min_periods is not None and window < min_periods:
@@ -3425,7 +3425,7 @@ def test_rolling_pandas_compat(center, window, min_periods):
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 def test_rolling_to_dataarray(center, window):
-    s = pd.Series(range(10))
+    s = pd.Series(np.arange(10))
     da = DataArray.from_series(s)
 
     s_rolling = s.rolling(window, center=center, min_periods=1).mean()
