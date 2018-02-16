@@ -3471,6 +3471,9 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13'),
+                    reason='Old numpy does not support nansum / nanmax for '
+                    'object typed arrays.')
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
