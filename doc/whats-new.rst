@@ -492,6 +492,9 @@ Bug fixes
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Fix COMPAT: MultiIndex checking is fragile
+  (:issue:`1833`). By `Florian Pinault <https://github.com/floriankrb>`_.
+
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.
 
