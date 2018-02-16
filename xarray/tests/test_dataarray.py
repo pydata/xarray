@@ -16,7 +16,6 @@ from xarray import (align, broadcast, Dataset, DataArray,
 from xarray.coding.times import CFDatetimeCoder
 from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
-from xarray.core import npcompat
 from xarray.tests import (
     TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
     assert_identical, assert_equal, assert_allclose, assert_array_equal,
