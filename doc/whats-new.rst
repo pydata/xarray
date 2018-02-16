@@ -152,6 +152,9 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- The colors of discrete colormaps are now the same regardless if `seaborn`
+  is installed or not (:issue:`1896`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 - Fixed dtype promotion rules in :py:func:`where` and :py:func:`concat` to
   match pandas (:issue:`1847`). A combination of strings/numbers or
   unicode/bytes now promote to object dtype, instead of strings or unicode.
