@@ -26,9 +26,6 @@ urllib.request.urlretrieve(url, 'RGB.byte.tif')
 # Read the data
 da = xr.open_rasterio('RGB.byte.tif')
 
-# Normalize the image
-da = da / 255
-
 # The data is in UTM projection. We have to set it manually until
 # https://github.com/SciTools/cartopy/issues/813 is implemented
 crs = ccrs.UTM('18N')

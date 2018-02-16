@@ -162,7 +162,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
     safe_to_drop = set(['source', 'original_shape'])
     valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
-                           'chunksizes', 'shuffle'])
+                           'chunksizes', 'shuffle', '_FillValue'])
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 

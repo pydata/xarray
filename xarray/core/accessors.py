@@ -58,6 +58,43 @@ def _get_date_field(values, name, dtype):
         return _access_through_series(values, name)
 
 
+def _round_series(values, name, freq):
+    """Coerce an array of datetime-like values to a pandas Series and
+    apply requested rounding
+    """
+    values_as_series = pd.Series(values.ravel())
+    method = getattr(values_as_series.dt, name)
+    field_values = method(freq=freq).values
+
+    return field_values.reshape(values.shape)
+
+
+def _round_field(values, name, freq):
+    """Indirectly access pandas rounding functions by wrapping data
+    as a Series and calling through `.dt` attribute.
+
+    Parameters
+    ----------
+    values : np.ndarray or dask.array-like
+        Array-like container of datetime-like values
+    name : str (ceil, floor, round)
+        Name of rounding function
+    freq : a freq string indicating the rounding resolution
+
+    Returns
+    -------
+    rounded timestamps : same type as values
+        Array-like of datetime fields accessed for each element in values
+
+    """
+    if isinstance(values, dask_array_type):
+        from dask.array import map_blocks
+        return map_blocks(_round_series,
+                          values, name, freq=freq, dtype=np.datetime64)
+    else:
+        return _round_series(values, name, freq)
+
+
 class DatetimeAccessor(object):
     """Access datetime fields for DataArrays with datetime-like dtypes.
 
@@ -147,3 +184,58 @@ class DatetimeAccessor(object):
     time = _tslib_field_accessor(
         "time", "Timestamps corresponding to datetimes", object
     )
+
+    def _tslib_round_accessor(self, name, freq):
+        obj_type = type(self._obj)
+        result = _round_field(self._obj.data, name, freq)
+        return obj_type(result, name=name,
+                        coords=self._obj.coords, dims=self._obj.dims)
+
+    def floor(self, freq):
+        '''
+        Round timestamps downward to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        floor-ed timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
+
+        return self._tslib_round_accessor("floor", freq)
+
+    def ceil(self, freq):
+        '''
+        Round timestamps upward to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        ceil-ed timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
+        return self._tslib_round_accessor("ceil", freq)
+
+    def round(self, freq):
+        '''
+        Round timestamps to specified frequency resolution.
+
+        Parameters
+        ----------
+        freq : a freq string indicating the rounding resolution
+            e.g. 'D' for daily resolution
+
+        Returns
+        -------
+        rounded timestamps : same type as values
+            Array-like of datetime fields accessed for each element in values
+        '''
+        return self._tslib_round_accessor("round", freq)
