@@ -93,6 +93,8 @@ Enhancements
 - Speed of reindexing/alignment with dask array is orders of magnitude faster
   when inserting missing values  (:issue:`1847`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix ``axis`` keyword ignored when applying ``np.squeeze`` to ``DataArray`` (:issue:`1487`).
+  By `Florian Pinault <https://github.com/floriankrb>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
