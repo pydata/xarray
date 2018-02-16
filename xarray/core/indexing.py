@@ -737,7 +737,7 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     Returns
     -------
     backend_indexer: OuterIndexer or BasicIndexer
-    np_indexers: a sequence of vectorizedIndexer
+    np_indexers: an ExplicitIndexer (VectorizedIndexer / BasicIndexer)
 
     Note
     ----
@@ -809,7 +809,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     Returns
     -------
     backend_indexer: OuterIndexer or BasicIndexer
-    np_indexers: a sequence of OuterIndexer
+    np_indexers: an ExplicitIndexer (OuterIndexer / BasicIndexer)
 
     Note
     ----
