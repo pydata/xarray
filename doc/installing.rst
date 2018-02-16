@@ -78,6 +78,7 @@ Testing
 -------
 
 To run the test suite after installing xarray, first install (via pypi or conda)
+
 - `py.test <https://pytest.org>`__: Simple unit testing library
 - `mock <https://pypi.python.org/pypi/mock>`__: additional testing library required for python version 2
 
