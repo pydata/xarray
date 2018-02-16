@@ -47,7 +47,6 @@ Enhancements
   as orthogonal/vectorized indexing, becomes possible for all the backend
   arrays. (:issue:`1897`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
 - Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
 
   .. ipython:: python
