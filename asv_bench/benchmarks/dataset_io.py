@@ -77,7 +77,7 @@ class IOSingleNetCDF(object):
                       'lon': randint(0, self.nx, 20),
                       'lat': randint(0, self.ny, 10)}
         self.vinds = {'time': xr.DataArray(randint(0, self.nt, 120),
-                                          dims='x'),
+                                           dims='x'),
                       'lon': xr.DataArray(randint(0, self.nx, 120),
                                           dims='x'),
                       'lat': slice(3, 20)}
