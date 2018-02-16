@@ -115,32 +115,23 @@ def _color_palette(cmap, n_colors):
     colors_i = np.linspace(0, 1., n_colors)
     if isinstance(cmap, (list, tuple)):
         # we have a list of colors
-        try:
-            sns = import_seaborn()
-        except ImportError:
-            # if that fails, use matplotlib
-            # in this case, is there any difference between mpl and seaborn?
-            cmap = ListedColormap(cmap, N=n_colors)
-            pal = cmap(colors_i)
-        else:
-            # first try to turn it into a palette with seaborn
-            pal = sns.color_palette(cmap, n_colors=n_colors)
+        cmap = ListedColormap(cmap, N=n_colors)
+        pal = cmap(colors_i)
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
-            # first try to turn it into a palette with seaborn
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
-        except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap
-            # (e.g. jet). If that fails, use matplotlib
+            # is this a matplotlib cmap?
+            cmap = plt.get_cmap(cmap)
+            pal = cmap(colors_i)
+        except ValueError:
+            # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
-                # is this a matplotlib cmap?
-                cmap = plt.get_cmap(cmap)
-            except ValueError:
+                from seaborn.apionly import color_palette
+                pal = color_palette(cmap, n_colors=n_colors)
+            except (ValueError, ImportError):
                 # or maybe we just got a single color as a string
                 cmap = ListedColormap([cmap], N=n_colors)
-            pal = cmap(colors_i)
+                pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
         pal = cmap(colors_i)
