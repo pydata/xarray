@@ -766,7 +766,9 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
             # and then use all of it (slice(None)) for the in-memory portion.
             backend_indexer.append(k)
             np_indexer.append(slice(None))
-        else:  # np.ndarray
+        else:
+            # If it is a (multidimensional) np.ndarray, just pickup the used
+            # keys without duplication and store them as a 1d-np.ndarray.
             oind, vind = np.unique(k, return_inverse=True)
             backend_indexer.append(oind)
             np_indexer.append(vind.reshape(*k.shape))
@@ -777,6 +779,8 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     if indexing_support is IndexingSupport.OUTER:
         return backend_indexer, (np_indexer, )
 
+    # If the backend does not support outer indexing,
+    # backend_indexer (OuterIndexer) is also decomposed.
     shape = tuple(s if isinstance(k, slice) else len(k) for k, s in
                   zip(backend_indexer.tuple, shape))
     backend_indexer, np_indexers = _decompose_outer_indexer(
@@ -834,13 +838,19 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
 
         for i, k in enumerate(indexer):
             if isinstance(k, np.ndarray) and i != array_index:
+                # np.ndarray key is converted to slice that covers the entire
+                # entries of this key.
                 backend_indexer.append(slice(np.min(k), np.max(k) + 1))
                 np_indexer.append(k - np.min(k))
             elif isinstance(k, np.ndarray):
+                # Remove duplicates and sort them in the increasing order
                 pkey, ekey = np.unique(k, return_inverse=True)
                 backend_indexer.append(pkey)
                 np_indexer.append(ekey)
             else:
+                # If it is a slice or an integer, then we will slice it
+                # as-is (k) in the backend, and then use all of it
+                # slice(None)) for the in-memory portion.
                 backend_indexer.append(k)
                 np_indexer.append(slice(None))
 
@@ -853,7 +863,8 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                     (np.diff(k) >= 0).all()):
                 backend_indexer.append(k)
                 np_indexer.append(slice(None))
-            else:  # not sorted np.ndarray indexer
+            else:
+                # Remove duplicates and sort them in the increasing order
                 oind, vind = np.unique(k, return_inverse=True)
                 backend_indexer.append(oind)
                 np_indexer.append(vind.reshape(*k.shape))
@@ -864,9 +875,11 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     # basic
     for i, k in enumerate(indexer):
         if isinstance(k, np.ndarray):
+            # np.ndarray key is converted to slice that covers the entire
+            # entries of this key.
             backend_indexer.append(slice(np.min(k), np.max(k) + 1))
             np_indexer.append(k - np.min(k))
-        else:
+        else:  # integer or slice
             backend_indexer.append(k)
             np_indexer.append(slice(None))
 
