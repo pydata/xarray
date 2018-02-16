@@ -46,16 +46,17 @@ def _import_netcdftime():
     package
     '''
     try:
-        # in netCDF4 the num2date/date2num function are top-level api
-        import netCDF4 as nctime
+        # Try importing netcdftime directly
+        import netcdftime as nctime
+        if not hasattr(nctime, 'num2date'):
+            # must have gotten an old version from netcdf4-python
+            raise ImportError
     except ImportError:
-        # fallback if netCDF4-python is not installed. Try importing netcdftime
-        # directly
+        # in netCDF4 the num2date/date2num function are top-level api
         try:
-            import netcdftime as nctime
-        except:
-            raise ImportError(
-                "Either the netcdftime or the netCDF4 package is required")
+            import netCDF4 as nctime
+        except ImportError:
+            raise ImportError("Failed to import netcdftime")
     return nctime
 
 
