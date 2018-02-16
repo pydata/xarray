@@ -27,8 +27,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()[key]
 
-        for ind in np_inds:
-            array = indexing.NumpyIndexingAdapter(array)[ind]
+        if len(np_inds.tuple) > 0:
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
 
         return array
 

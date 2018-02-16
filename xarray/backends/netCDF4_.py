@@ -72,8 +72,8 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                     msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
                 raise IndexError(msg)
 
-        for ind in np_inds:
-            array = indexing.NumpyIndexingAdapter(array)[ind]
+        if len(np_inds.tuple) > 0:
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
 
         return array
 

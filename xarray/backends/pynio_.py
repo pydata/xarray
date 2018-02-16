@@ -36,8 +36,8 @@ class NioArrayWrapper(BackendArray):
                 return array.get_value()
 
             array = array[key.tuple]
-            for ind in np_inds:
-                array = indexing.NumpyIndexingAdapter(array)[ind]
+            if len(np_inds.tuple) > 0:
+                array = indexing.NumpyIndexingAdapter(array)[np_inds]
 
             return array
 

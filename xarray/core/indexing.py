@@ -540,12 +540,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[self.key], dtype=None)
 
     def _updated_key(self, new_key):
-        if isinstance(new_key, VectorizedIndexer):
-            new_key = _arrayize_vectorized_indexer(new_key, self.shape)
-        else:
-            new_key = _outer_to_vectorized_indexer(new_key, self.shape)
-        return VectorizedIndexer(tuple(o[new_key.tuple] for o in
-                                       np.broadcast_arrays(*self.key.tuple)))
+        return _combine_indexers(self.key, self.shape, new_key)
 
     def __getitem__(self, indexer):
         return type(self)(self.array, self._updated_key(indexer))
@@ -642,7 +637,7 @@ def _outer_to_vectorized_indexer(key, shape):
     Parameters
     ----------
     key : Outer/Basic Indexer
-        Tuple from an Basic/OuterIndexer to convert.
+        An indexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
 
@@ -653,8 +648,7 @@ def _outer_to_vectorized_indexer(key, shape):
         Each element is an array: broadcasting them together gives the shape
         of the result.
     """
-    if isinstance(key, ExplicitIndexer):
-        key = key.tuple
+    key = key.tuple
 
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
@@ -678,8 +672,8 @@ def _outer_to_numpy_indexer(key, shape):
 
     Parameters
     ----------
-    key : tuple
-        Tuple from an OuterIndexer to convert.
+    key : Basic/OuterIndexer
+        An indexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
 
@@ -688,13 +682,24 @@ def _outer_to_numpy_indexer(key, shape):
     tuple
         Tuple suitable for use to index a NumPy array.
     """
-    if len([k for k in key if not isinstance(k, slice)]) <= 1:
+    if len([k for k in key.tuple if not isinstance(k, slice)]) <= 1:
         # If there is only one vector and all others are slice,
         # it can be safely used in mixed basic/advanced indexing.
         # Boolean index should already be converted to integer array.
-        return tuple(key)
+        return key.tuple
     else:
         return _outer_to_vectorized_indexer(key, shape).tuple
+
+
+def _combine_indexers(old_key, old_shape, new_key):
+    """ Combine two indexers. old_key should be a VectorizedIndexer consisting
+    of all np.ndarray, while new_key can be all the indxer types."""
+    if isinstance(new_key, VectorizedIndexer):
+        new_key = _arrayize_vectorized_indexer(new_key, old_shape)
+    else:
+        new_key = _outer_to_vectorized_indexer(new_key, old_shape)
+    return VectorizedIndexer(tuple(o[new_key.tuple] for o in
+                                   np.broadcast_arrays(*old_key.tuple)))
 
 
 class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
@@ -714,7 +719,7 @@ def decompose_indexer(indexer, shape, indexing_support):
     if isinstance(indexer, OuterIndexer):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
     if isinstance(indexer, BasicIndexer):
-        return indexer, ()
+        return indexer, BasicIndexer(())
     raise TypeError('unexpected key type: {}'.format(indexer))
 
 
@@ -752,7 +757,7 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     assert isinstance(indexer, VectorizedIndexer)
 
     if indexing_support is IndexingSupport.VECTORIZED:
-        return indexer, ()
+        return indexer, BasicIndexer(())
 
     backend_indexer = []
     np_indexer = []
@@ -777,15 +782,17 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     np_indexer = VectorizedIndexer(tuple(np_indexer))
 
     if indexing_support is IndexingSupport.OUTER:
-        return backend_indexer, (np_indexer, )
+        return backend_indexer, np_indexer
 
     # If the backend does not support outer indexing,
     # backend_indexer (OuterIndexer) is also decomposed.
     shape = tuple(s if isinstance(k, slice) else len(k) for k, s in
                   zip(backend_indexer.tuple, shape))
-    backend_indexer, np_indexers = _decompose_outer_indexer(
+    backend_indexer, np_indexer1 = _decompose_outer_indexer(
         backend_indexer, shape, indexing_support)
-    return backend_indexer, (np_indexers[0], np_indexer)
+    np_indexer = _combine_indexers(
+        _outer_to_vectorized_indexer(np_indexer1, shape), shape, np_indexer)
+    return backend_indexer, np_indexer
 
 
 def _decompose_outer_indexer(indexer, shape, indexing_support):
@@ -820,7 +827,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
     """
     if indexing_support in [IndexingSupport.OUTER, IndexingSupport.VECTORIZED]:
-        return indexer, ()
+        return indexer, BasicIndexer(())
     assert isinstance(indexer, OuterIndexer)
 
     backend_indexer = []
@@ -855,7 +862,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 np_indexer.append(slice(None))
 
         return (OuterIndexer(tuple(backend_indexer)),
-                (OuterIndexer(tuple(np_indexer)), ))
+                OuterIndexer(tuple(np_indexer)))
 
     if indexing_support == IndexingSupport.OUTER:
         for k in indexer:
@@ -870,7 +877,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 np_indexer.append(vind.reshape(*k.shape))
 
         return (OuterIndexer(tuple(backend_indexer)),
-                (OuterIndexer(tuple(np_indexer)), ))
+                OuterIndexer(tuple(np_indexer)))
 
     # basic
     for i, k in enumerate(indexer):
@@ -884,7 +891,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
             np_indexer.append(slice(None))
 
     return (BasicIndexer(tuple(backend_indexer)),
-            (OuterIndexer(tuple(np_indexer)), ))
+            OuterIndexer(tuple(np_indexer)))
 
 
 def _arrayize_vectorized_indexer(indexer, shape):
@@ -954,7 +961,7 @@ def create_mask(indexer, shape, chunks_hint=None):
         same shape as the indexing result.
     """
     if isinstance(indexer, OuterIndexer):
-        key = _outer_to_vectorized_indexer(indexer.tuple, shape).tuple
+        key = _outer_to_vectorized_indexer(indexer, shape).tuple
         assert not any(isinstance(k, slice) for k in key)
         mask = _masked_result_drop_slice(key, chunks_hint)
 
@@ -1049,7 +1056,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
     def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
             array = self.array
-            key = _outer_to_numpy_indexer(key.tuple, self.array.shape)
+            key = _outer_to_numpy_indexer(key, self.array.shape)
         elif isinstance(key, VectorizedIndexer):
             array = nputils.NumpyVIndexAdapter(self.array)
             key = key.tuple

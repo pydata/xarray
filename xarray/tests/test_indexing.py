@@ -429,8 +429,8 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support):
 
     expected = indexing.NumpyIndexingAdapter(data)[indexer]
     array = indexing.NumpyIndexingAdapter(data)[backend_ind]
-    for ind in np_ind:
-        array = indexing.NumpyIndexingAdapter(array)[ind]
+    if len(np_ind.tuple) > 0:
+        array = indexing.NumpyIndexingAdapter(array)[np_ind]
     np.testing.assert_array_equal(expected, array)
 
 
@@ -468,7 +468,8 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
             expected_data = np.moveaxis(expected_data, old_order,
                                         new_order)
 
-        outer_index = (nonzero(i), nonzero(j), nonzero(k))
+        outer_index = indexing.OuterIndexer((nonzero(i), nonzero(j),
+                                             nonzero(k)))
         actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
         actual_data = v.data[actual]
         np.testing.assert_array_equal(actual_data, expected_data)

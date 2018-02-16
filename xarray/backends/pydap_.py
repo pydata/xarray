@@ -37,7 +37,7 @@ class PydapArrayWrapper(BackendArray):
         if len(axis) > 0:
             result = np.squeeze(result, axis)
 
-        for ind in np_inds:
+        if len(np_inds.tuple) > 0:
             result = indexing.NumpyIndexingAdapter(result)[ind]
 
         return result
