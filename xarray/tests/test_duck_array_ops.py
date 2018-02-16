@@ -14,7 +14,6 @@ from xarray import DataArray
 from xarray.testing import assert_allclose
 from xarray import concat
 
-from . import requires_dask
 from . import TestCase, raises_regex, has_dask
 
 try:
@@ -310,7 +309,7 @@ def test_argmin_max_error():
         da.argmin(dim='y')
 
 
-@requires_dask
+@pytest.mark.skipif(not has_dask, reason='This is for dask.')
 @pytest.mark.parametrize('axis', [0, -1])
 @pytest.mark.parametrize('window', [3, 8, 11])
 def test_dask_rolling(axis, window):

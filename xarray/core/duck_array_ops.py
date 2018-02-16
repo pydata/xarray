@@ -342,12 +342,9 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
 
 argmax = _create_nan_agg_method('argmax', coerce_strings=True)
 argmin = _create_nan_agg_method('argmin', coerce_strings=True)
-max = _create_nan_agg_method('max', coerce_strings=True, np_compat=True,
-                             support_object_type=True)
-min = _create_nan_agg_method('min', coerce_strings=True, np_compat=True,
-                             support_object_type=True)
-sum = _create_nan_agg_method('sum', numeric_only=True, np_compat=True,
-                             support_object_type=True)
+max = _create_nan_agg_method('max', coerce_strings=True)
+min = _create_nan_agg_method('min', coerce_strings=True)
+sum = _create_nan_agg_method('sum', numeric_only=True)
 mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
