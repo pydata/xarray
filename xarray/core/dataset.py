@@ -2752,7 +2752,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         idx = dataframe.index
         obj = cls()
 
-        if hasattr(idx, 'levels'):
+        if isinstance(idx, pd.MultiIndex):
             # it's a multi-index
             # expand the DataFrame to include the product of all levels
             full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
