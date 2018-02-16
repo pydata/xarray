@@ -3487,7 +3487,7 @@ def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
                              min_periods=min_periods)
 
     # add nan prefix to numpy methods to get similar behavior as bottleneck
-    actual = rolling_obj.reduce(getattr(npcompat, 'nan%s' % name))
+    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
     assert actual.dims == expected.dims
