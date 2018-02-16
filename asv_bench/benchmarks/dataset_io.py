@@ -205,11 +205,6 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
                              chunks=self.block_chunks)
         ds = ds.isel(**self.vinds).load()
 
-    def time_load_dataset_scipy_with_block_chunks(self):
-        with dask.set_options(get=dask.multiprocessing.get):
-            xr.open_dataset(self.filepath, engine='scipy',
-                            chunks=self.block_chunks).load()
-
     def time_load_dataset_scipy_with_time_chunks(self):
         with dask.set_options(get=dask.multiprocessing.get):
             xr.open_dataset(self.filepath, engine='scipy',
