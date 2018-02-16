@@ -527,8 +527,7 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         key : VectorizedIndexer
         """
         if isinstance(key, (BasicIndexer, OuterIndexer)):
-            self.key = VectorizedIndexer(
-                _outer_to_vectorized_indexer(key.tuple, array.shape))
+            self.key = _outer_to_vectorized_indexer(key, array.shape)
         else:
             self.key = _arrayize_vectorized_indexer(key, array.shape)
         self.array = as_indexable(array)
@@ -541,7 +540,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return np.asarray(self.array[self.key], dtype=None)
 
     def _updated_key(self, new_key):
-        new_key = _arrayize_vectorized_indexer(new_key, self.shape)
+        if isinstance(new_key, VectorizedIndexer):
+            new_key = _arrayize_vectorized_indexer(new_key, self.shape)
+        else:
+            new_key = _outer_to_vectorized_indexer(new_key, self.shape)
         return VectorizedIndexer(tuple(o[new_key.tuple] for o in
                                  np.broadcast_arrays(*self.key.tuple)))
 
@@ -639,18 +641,21 @@ def _outer_to_vectorized_indexer(key, shape):
 
     Parameters
     ----------
-    key : tuple
+    key : Outer/Basic Indexer
         Tuple from an Basic/OuterIndexer to convert.
     shape : tuple
         Shape of the array subject to the indexing.
 
     Returns
     -------
-    tuple
+    VectorizedInexer
         Tuple suitable for use to index a NumPy array with vectorized indexing.
         Each element is an array: broadcasting them together gives the shape
         of the result.
     """
+    if isinstance(key, ExplicitIndexer):
+        key = key.tuple
+
     n_dim = len([k for k in key if not isinstance(k, integer_types)])
     i_dim = 0
     new_key = []
@@ -665,7 +670,7 @@ def _outer_to_vectorized_indexer(key, shape):
                      (1,) * (n_dim - i_dim - 1)]
             new_key.append(k.reshape(*shape))
             i_dim += 1
-    return tuple(new_key)
+    return VectorizedIndexer(tuple(new_key))
 
 
 def _outer_to_numpy_indexer(key, shape):
@@ -689,7 +694,7 @@ def _outer_to_numpy_indexer(key, shape):
         # Boolean index should already be converted to integer array.
         return tuple(key)
     else:
-        return _outer_to_vectorized_indexer(key, shape)
+        return _outer_to_vectorized_indexer(key, shape).tuple
 
 
 class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
@@ -936,7 +941,7 @@ def create_mask(indexer, shape, chunks_hint=None):
         same shape as the indexing result.
     """
     if isinstance(indexer, OuterIndexer):
-        key = _outer_to_vectorized_indexer(indexer.tuple, shape)
+        key = _outer_to_vectorized_indexer(indexer.tuple, shape).tuple
         assert not any(isinstance(k, slice) for k in key)
         mask = _masked_result_drop_slice(key, chunks_hint)
 
