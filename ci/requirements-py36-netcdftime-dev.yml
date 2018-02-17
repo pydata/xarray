@@ -10,4 +10,4 @@ dependencies:
   - pip:
     - coveralls
     - pytest-cov
-    - git+https://github.com/nidata/netcdftime.git
+    - git+https://github.com/Unidata/netcdftime.git
