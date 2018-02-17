@@ -47,11 +47,11 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
             opener = functools.partial(pncopen, filename,
                                        mode=mode, format='netcdf')
             self.ds = opener()
-        except Exception as e:
+        except Exception:
             try:
                 opener = functools.partial(pncopen, filename, mode=mode)
                 self.ds = opener()
-            except Exception as e:
+            except Exception:
                 opener = functools.partial(pncopen, filename)
                 self.ds = opener()
         self._autoclose = autoclose
