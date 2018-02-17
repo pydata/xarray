@@ -274,7 +274,7 @@ _nan_object_funcs = {
 
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
-                           keep_dims=False, support_object_type=False):
+                           keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
             raise TypeError('`out` is not valid for {}'.format(name))

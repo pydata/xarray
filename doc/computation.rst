@@ -182,12 +182,18 @@ windowed rolling, convolution, short-time FFT, etc.
     rolling_da = r.to_dataarray('window_dim')
     rolling_da
     # rolling mean with 2-point stride
-    rolling_da.isel(y=slice(None, None, 2)).mean('window_dim')
+    rolling_da.isel(y=slice(None, None, 2)).mean('window_dim', skipna=False)
 
-Note that although the ``DataArray`` obtained by
-``r.to_dataarray('window_dim')`` has an additional dimension,
-it does not consume too much memory as it is just a view of
-the original array.
+Because the ``DataArray`` given by ``r.to_dataarray('window_dim')`` is a view
+of the original array, it is memory efficient.
+
+.. note::
+  numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
+  In xarray, we internally use these functions in our aggregation methods
+  (such as ``.sum()``) if ``skipna`` argument is not specified or set to True.
+  This means ``rolling_da.mean('window_dim')`` is memory inefficient.
+  To avoid this, use ``skipna=False`` as the above example.
+
 
 .. _compute.broadcasting:
 
