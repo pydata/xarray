@@ -779,7 +779,9 @@ def _infer_interval_breaks(coord, axis=0):
         raise ValueError("The input coordinate is not sorted in increasing "
                          "order along axis %d. This can lead to unexpected "
                          "results. Consider calling the `sortby` method on "
-                         "the input DataArray." % axis)
+                         "the input DataArray. To plot data with categorical "
+                         "axes, consider using the `heatmap` function from "
+                         "the `seaborn` statistical plotting library." % axis)
 
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
