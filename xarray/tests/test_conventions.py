@@ -13,8 +13,8 @@ from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
 from xarray.testing import assert_identical
 from . import (
-    TestCase, requires_netcdftime, unittest, raises_regex, IndexerMaker,
-    assert_array_equal)
+    TestCase, requires_netCDF4, requires_netcdftime, unittest, raises_regex,
+    IndexerMaker, assert_array_equal)
 from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
@@ -358,7 +358,7 @@ def null_wrap(ds):
     return InMemoryDataStore(variables=variables, attributes=ds.attrs)
 
 
-@requires_netcdftime
+@requires_netCDF4
 class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     @contextlib.contextmanager
     def create_store(self):
