@@ -691,13 +691,29 @@ def _outer_to_numpy_indexer(key, shape):
         return _outer_to_vectorized_indexer(key, shape).tuple
 
 
-def _combine_indexers(old_key, old_shape, new_key):
-    """ Combine two indexers. old_key should be a VectorizedIndexer consisting
-    of all np.ndarray, while new_key can be all the indxer types."""
+def _combine_indexers(old_key, shape, new_key):
+    """ Combine two indexers.
+
+    Parameters
+    ----------
+    old_key: ExplicitIndexer
+        The first indexer for the original array
+    shape: tuple of ints
+        Shape of the original array to be indexed by old_key
+    new_key:
+        The second indexer for indexing original[old_key]
+    """
+    if not isinstance(old_key, VectorizedIndexer):
+        old_key = _outer_to_vectorized_indexer(old_key, shape)
+    if len(old_key.tuple) == 0:
+        return new_key
+
+    new_shape = np.broadcast(*old_key.tuple).shape
     if isinstance(new_key, VectorizedIndexer):
-        new_key = _arrayize_vectorized_indexer(new_key, old_shape)
+        new_key = _arrayize_vectorized_indexer(new_key, new_shape)
     else:
-        new_key = _outer_to_vectorized_indexer(new_key, old_shape)
+        new_key = _outer_to_vectorized_indexer(new_key, new_shape)
+
     return VectorizedIndexer(tuple(o[new_key.tuple] for o in
                                    np.broadcast_arrays(*old_key.tuple)))
 
@@ -786,12 +802,9 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
 
     # If the backend does not support outer indexing,
     # backend_indexer (OuterIndexer) is also decomposed.
-    shape = tuple(s if isinstance(k, slice) else len(k) for k, s in
-                  zip(backend_indexer.tuple, shape))
     backend_indexer, np_indexer1 = _decompose_outer_indexer(
         backend_indexer, shape, indexing_support)
-    np_indexer = _combine_indexers(
-        _outer_to_vectorized_indexer(np_indexer1, shape), shape, np_indexer)
+    np_indexer = _combine_indexers(np_indexer1, shape, np_indexer)
     return backend_indexer, np_indexer
 
 
@@ -826,15 +839,22 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     >>> np_indexer = OuterIndexer([0, 2, 1], [0, 1, 0])
     >>> array[np_indexer]  # outer indexing for on-memory np.ndarray.
     """
-    if indexing_support in [IndexingSupport.OUTER, IndexingSupport.VECTORIZED]:
+    if indexing_support == IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
     assert isinstance(indexer, OuterIndexer)
 
     backend_indexer = []
     np_indexer = []
-    # posify
-    indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
-               for k, s in zip(indexer.tuple, shape)]
+    # make indexer positive
+    pos_indexer = []
+    for k, s in zip(indexer.tuple, shape):
+        if isinstance(k, np.ndarray):
+            pos_indexer.append(np.where(k < 0, k + s, k))
+        elif isinstance(k, integer_types) and k < 0:
+            pos_indexer.append(k + s)
+        else:
+            pos_indexer.append(k)
+    indexer = pos_indexer
 
     if indexing_support is IndexingSupport.OUTER_1VECTOR:
         # some backends such as h5py supports only 1 vector in indexers
@@ -854,6 +874,8 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 pkey, ekey = np.unique(k, return_inverse=True)
                 backend_indexer.append(pkey)
                 np_indexer.append(ekey)
+            elif isinstance(k, integer_types):
+                backend_indexer.append(k)
             else:
                 # If it is a slice or an integer, then we will slice it
                 # as-is (k) in the backend, and then use all of it
@@ -866,10 +888,12 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
 
     if indexing_support == IndexingSupport.OUTER:
         for k in indexer:
-            if (isinstance(k, integer_types + (slice, )) or
-                    (np.diff(k) >= 0).all()):
+            if (isinstance(k, slice) or
+                    (isinstance(k, np.ndarray) and (np.diff(k) >= 0).all())):
                 backend_indexer.append(k)
                 np_indexer.append(slice(None))
+            elif isinstance(k, integer_types):
+                backend_indexer.append(k)
             else:
                 # Remove duplicates and sort them in the increasing order
                 oind, vind = np.unique(k, return_inverse=True)
@@ -880,13 +904,15 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 OuterIndexer(tuple(np_indexer)))
 
     # basic
-    for i, k in enumerate(indexer):
+    for k in indexer:
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
             backend_indexer.append(slice(np.min(k), np.max(k) + 1))
             np_indexer.append(k - np.min(k))
-        else:  # integer or slice
+        elif isinstance(k, integer_types):
+            backend_indexer.append(k)
+        else:  # slice
             backend_indexer.append(k)
             np_indexer.append(slice(None))
 

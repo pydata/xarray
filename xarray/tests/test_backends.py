@@ -2327,17 +2327,46 @@ class TestRasterio(TestCase):
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
+                assert not actual.variable._in_memory
 
-                # Slicing
-                ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
-                ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
-                assert_allclose(ac, ex)
+                # Basic indexer
+                ind = {'x': slice(2, 5), 'y': slice(5, 7)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
 
-                ex = expected.isel(band=slice(1, 2), x=slice(2, 5),
-                                   y=slice(5, 7))
-                ac = actual.isel(band=slice(1, 2), x=slice(2, 5),
-                                 y=slice(5, 7))
-                assert_allclose(ac, ex)
+                ind = {'band': slice(1, 2), 'x': slice(2, 5), 'y': slice(5, 7)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': slice(1, 2), 'x': slice(2, 5), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # orthogonal indexer
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': np.array([1, 0]), 'y': np.array([0, 2])}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': np.array([1, 0]), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # vectorized indexer
+                ind = {'band': DataArray([2, 1, 0], dims='a'),
+                       'x': DataArray([1, 0, 0], dims='a'),
+                       'y': np.array([0, 2])}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {
+                    'band': DataArray([[2, 1, 0], [1, 0, 2]], dims=['a', 'b']),
+                    'x': DataArray([[1, 0, 0], [0, 1, 0]], dims=['a', 'b']),
+                    'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
 
                 # Selecting lists of bands is fine
                 ex = expected.isel(band=[1, 2])
@@ -2347,15 +2376,6 @@ class TestRasterio(TestCase):
                 ac = actual.isel(band=[0, 2])
                 assert_allclose(ac, ex)
 
-                # but on x and y only windowed operations are allowed, more
-                # exotic slicing should raise an error
-                err_msg = 'not valid on rasterio'
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[2, 4], y=[1, 3]).values
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[4, 2]).values
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=slice(5, 2, -1)).values
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)
@@ -2392,11 +2412,6 @@ class TestRasterio(TestCase):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
-
-                # Without cache an error is raised
-                err_msg = 'not valid on rasterio'
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[2, 4]).values
 
                 # This should cache everything
                 assert_allclose(actual, expected)

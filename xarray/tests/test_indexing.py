@@ -402,19 +402,37 @@ def get_indexers(shape, mode):
         indexer = tuple(np.random.randint(0, s, s + 2) for s in shape)
         return indexing.OuterIndexer(indexer)
 
+    elif mode == 'outer_scalar':
+        indexer = (np.random.randint(0, 3, 4), 0, slice(None, None, 2))
+        return indexing.OuterIndexer(indexer[:len(shape)])
+
+    elif mode == 'outer_scalar2':
+        indexer = (np.random.randint(0, 3, 4), -2, slice(None, None, 2))
+        return indexing.OuterIndexer(indexer[:len(shape)])
+
     elif mode == 'outer1vec':
         indexer = [slice(2, -3) for s in shape]
         indexer[1] = np.random.randint(0, shape[1], shape[1] + 2)
         return indexing.OuterIndexer(tuple(indexer))
 
-    else:  # basic indexer
+    elif mode == 'basic':  # basic indexer
         indexer = [slice(2, -3) for s in shape]
         indexer[0] = 3
         return indexing.BasicIndexer(tuple(indexer))
 
+    elif mode == 'basic1':  # basic indexer
+        return indexing.BasicIndexer((3, ))
+
+    elif mode == 'basic2':  # basic indexer
+        indexer = [0, 2, 4]
+        return indexing.BasicIndexer(tuple(indexer[:len(shape)]))
+
 
 @pytest.mark.parametrize('shape', [(10, 5, 8), (10, 3)])
-@pytest.mark.parametrize('indexer_mode', ['vectorized', 'outer', 'outer1vec'])
+@pytest.mark.parametrize('indexer_mode',
+                         ['vectorized', 'outer', 'outer_scalar',
+                          'outer_scalar2', 'outer1vec',
+                          'basic', 'basic1'])
 @pytest.mark.parametrize('indexing_support',
                          [indexing.IndexingSupport.BASIC,
                           indexing.IndexingSupport.OUTER,
@@ -432,6 +450,11 @@ def test_decompose_indexers(shape, indexer_mode, indexing_support):
     if len(np_ind.tuple) > 0:
         array = indexing.NumpyIndexingAdapter(array)[np_ind]
     np.testing.assert_array_equal(expected, array)
+
+    if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
+        combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
+        array = indexing.NumpyIndexingAdapter(data)[combined_ind]
+        np.testing.assert_array_equal(expected, array)
 
 
 def test_implicit_indexing_adapter():
