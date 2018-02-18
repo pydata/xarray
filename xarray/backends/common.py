@@ -435,6 +435,7 @@ class DataStorePickleMixin(object):
     def __getstate__(self):
         state = self.__dict__.copy()
         del state['ds']
+        state['_isopen'] = False
         if self._mode == 'w':
             # file has already been created, don't override when restoring
             state['_mode'] = 'a'
@@ -442,7 +443,11 @@ class DataStorePickleMixin(object):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.ds = self._opener(mode=self._mode)
+        if self._autoclose:
+            with self.ensure_open(True):
+                self.ds = self._opener(mode=self._mode)
+        else:
+            self.ds = self._opener(mode=self._mode)
 
     @contextlib.contextmanager
     def ensure_open(self, autoclose):
@@ -452,7 +457,7 @@ class DataStorePickleMixin(object):
 
         Use requires `autoclose=True` argument to `open_mfdataset`.
         """
-        if self._autoclose and not self._isopen:
+        if autoclose and not self._isopen:
             try:
                 self.ds = self._opener()
                 self._isopen = True
