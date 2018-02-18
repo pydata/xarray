@@ -1253,7 +1253,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             from dask.base import tokenize
         except ImportError:
             import dask  # raise the usual error if dask is entirely missing  # flake8: noqa
-            raise ImportError('xarray requires dask version 0.6 or newer')
+            raise ImportError('xarray requires dask version 0.9 or newer')
 
         if isinstance(chunks, Number):
             chunks = dict.fromkeys(self.dims, chunks)
@@ -2752,7 +2752,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         idx = dataframe.index
         obj = cls()
 
-        if hasattr(idx, 'levels'):
+        if isinstance(idx, pd.MultiIndex):
             # it's a multi-index
             # expand the DataFrame to include the product of all levels
             full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)

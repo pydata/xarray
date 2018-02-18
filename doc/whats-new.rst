@@ -156,6 +156,9 @@ Bug fixes
   ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
   (set to ``True`` per default).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- The colors of discrete colormaps are now the same regardless if `seaborn`
+  is installed or not (:issue:`1896`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 - Fixed dtype promotion rules in :py:func:`where` and :py:func:`concat` to
   match pandas (:issue:`1847`). A combination of strings/numbers or
   unicode/bytes now promote to object dtype, instead of strings or unicode.
@@ -495,6 +498,9 @@ Bug fixes
 - Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix COMPAT: MultiIndex checking is fragile
+  (:issue:`1833`). By `Florian Pinault <https://github.com/floriankrb>`_.
 
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.

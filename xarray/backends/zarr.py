@@ -482,7 +482,7 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
             if (var.ndim > 0) and (chunks is not None):
                 # does this cause any data to be read?
                 token2 = tokenize(name, var._data)
-                name2 = 'zarr-%s-%s' % (name, token2)
+                name2 = 'zarr-%s' % token2
                 return var.chunk(chunks, name=name2, lock=None)
             else:
                 return var
