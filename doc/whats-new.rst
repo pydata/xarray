@@ -106,6 +106,8 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Support indexing with a 0d-np.ndarray (:issue:`1921`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added warning in api.py of a netCDF4 bug that occurs when
   the filepath has 88 characters (:issue:`1745`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
