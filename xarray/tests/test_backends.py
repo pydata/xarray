@@ -428,32 +428,49 @@ class DatasetIOTestCases(object):
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-        # make sure lazy indexing certainly works.
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {
-                'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
-                'dim3': DataArray([[0, 4], [1, 3], [2, 2]], dims=['a', 'b']),
-                'dim2': slice(None, 10)}
-            expected = in_memory.isel(**indexers)['var3']
-            actual = on_disk.isel(**indexers)['var3']
-            # make sure the array is not yet loaded into memory
-            assert not actual.variable._in_memory
-            indexers = {'a': DataArray([0, 1], dims=['c']),
-                        'b': DataArray([0, 1], dims=['c'])}
-            expected = expected.isel(**indexers)
-            actual = actual.isel(**indexers)
-            assert not actual.variable._in_memory
-            assert_identical(expected, actual.load())
+        def multiple_indexing(indexers):
+            # make sure a sequence of lazy indexings certainly works.
+            with self.roundtrip(in_memory) as on_disk:
+                actual = on_disk['var3']
+                expected = in_memory['var3']
+                for ind in indexers:
+                    actual = actual.isel(**ind)
+                    expected = expected.isel(**ind)
+                    # make sure the array is not yet loaded into memory
+                    assert not actual.variable._in_memory
+                assert_identical(expected, actual.load())
 
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {
-                'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
-                'dim2': slice(None, 10)}
-            expected = in_memory.isel(**indexers)['var3']
-            actual = on_disk.isel(**indexers)['var3']
-            # make sure the array is not yet loaded into memory
-            assert not actual.variable._in_memory
-            assert_identical(expected, actual.load())
+        # two-staged vectorized-indexing
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': DataArray([[0, 4], [1, 3], [2, 2]], dims=['a', 'b'])},
+            {'a': DataArray([0, 1], dims=['c']),
+             'b': DataArray([0, 1], dims=['c'])}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-slice mixed
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(None, 10)}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-integer mixed
+        indexers = [
+            {'dim3': 0},
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b'])},
+            {'a': slice(None, None, 2)}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-integer mixed
+        indexers = [
+            {'dim3': 0},
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b'])},
+            {'a': 1, 'b': 0}
+        ]
+        multiple_indexing(indexers)
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
