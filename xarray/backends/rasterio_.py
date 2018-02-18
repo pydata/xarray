@@ -71,7 +71,7 @@ class RasterioArrayWrapper(BackendArray):
             band_key = np.arange(start, stop, step)
         # be sure we give out a list
         band_key = (np.asarray(band_key) + 1).tolist()
-        if hasattr(band_key, '__len__'):  # if band_key is not a scalar
+        if isinstance(band_key, list):  # if band_key is not a scalar
             new_shape.append(len(band_key))
             np_inds2.append(slice(None))
 
@@ -81,7 +81,11 @@ class RasterioArrayWrapper(BackendArray):
         for i, (k, n) in enumerate(zip(key.tuple[1:], self.shape[1:])):
             if isinstance(k, slice):
                 start, stop, step = k.indices(n)
-                np_inds2.append(slice(None, None, step))
+                if step > 0:
+                    np_inds2.append(slice(None, None, step))
+                else:
+                    start, stop = stop + 1, start + 1
+                    np_inds2.append(slice(-1, None, step))
                 new_shape.append(stop - start)
             elif is_scalar(k):
                 # windowed operations will always return an array

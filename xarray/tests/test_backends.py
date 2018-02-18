@@ -472,6 +472,13 @@ class DatasetIOTestCases(object):
         ]
         multiple_indexing(indexers)
 
+        # with negative step slice.
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(-1, 1, -2)},
+        ]
+        multiple_indexing(indexers)
+
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
         in_memory = create_test_data()
@@ -2367,6 +2374,23 @@ class TestRasterio(TestCase):
 
                 ind = {'band': np.array([2, 1, 0]),
                        'x': np.array([1, 0]), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # minus-stepped slice
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': slice(-1, None, -1), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': 1, 'y': slice(-1, 1, -2)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # None is selected
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': 1, 'y': slice(2, 2, 1)}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
