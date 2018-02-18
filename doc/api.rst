@@ -474,10 +474,10 @@ Rolling objects
    :toctree: generated/
 
    core.rolling.DataArrayRolling
-   core.rolling.DataArrayRolling.to_dataarray
+   core.rolling.DataArrayRolling.construct
    core.rolling.DataArrayRolling.reduce
    core.rolling.DatasetRolling
-   core.rolling.DatasetRolling.to_dataset
+   core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
 
 GroupByObjects

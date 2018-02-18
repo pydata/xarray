@@ -178,10 +178,10 @@ windowed rolling, convolution, short-time FFT, etc.
 
 .. ipython:: python
 
-    rolling_da = r.construct('window_dim')
+    # rolling with 2-point stride
+    rolling_da = r.construct('window_dim', stride=2)
     rolling_da
-    # rolling mean with 2-point stride
-    rolling_da.isel(y=slice(None, None, 2)).mean('window_dim', skipna=False)
+    rolling_da.mean('window_dim', skipna=False)
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
