@@ -627,6 +627,12 @@ class VariableSubclassTestCases(object):
         v_new = v[np.array([0])[0]]
         assert_array_equal(v_new, v_data[0])
 
+        v_new = v[np.array(0)]
+        assert_array_equal(v_new, v_data[0])
+
+        v_new = v[Variable((), np.array(0))]
+        assert_array_equal(v_new, v_data[0])
+
     def test_getitem_fancy(self):
         v = self.cls(['x', 'y'], [[0, 1, 2], [3, 4, 5]])
         v_data = v.compute().data
