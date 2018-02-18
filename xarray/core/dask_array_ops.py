@@ -49,7 +49,9 @@ def rolling_window(a, window, axis=-1):
             "more evenly divides the shape of your array." %
             (window, min(a.chunks[axis])))
 
-    boundary = {d: np.nan for d in range(a.ndim)}
+    # We temporary use `reflect` boundary here, but the edge portion is
+    # truncated later.
+    boundary = {d: 'reflect' for d in range(a.ndim)}
     # create ghosted arrays
     ag = da.ghost.ghost(a, depth=depth, boundary=boundary)
 
