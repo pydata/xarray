@@ -3436,7 +3436,7 @@ def test_rolling_construct(center, window):
 
     # with stride
     da_rolling_mean = da_rolling.construct('window',
-                                              stride=2).mean('window')
+                                           stride=2).mean('window')
     np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
     np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean['index'])
 
