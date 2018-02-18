@@ -2367,7 +2367,6 @@ class TestRasterio(TestCase):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-
                 # Selecting lists of bands is fine
                 ex = expected.isel(band=[1, 2])
                 ac = actual.isel(band=[1, 2])
