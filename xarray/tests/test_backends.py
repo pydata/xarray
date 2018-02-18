@@ -704,6 +704,26 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(ds) as actual:
             assert '_FillValue' not in actual.x.encoding
 
+    def test_explicitly_omit_fill_value_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])})
+        kwargs = dict(encoding={'x': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert '_FillValue' not in actual.x.encoding
+        self.assertEqual(ds.y.encoding, {})
+
+    def test_explicitly_omit_fill_value_in_coord(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        ds.y.encoding['_FillValue'] = None
+        with self.roundtrip(ds) as actual:
+            assert '_FillValue' not in actual.y.encoding
+
+    def test_explicitly_omit_fill_value_in_coord_via_encoding_kwarg(self):
+        ds = Dataset({'x': ('y', [np.pi, -np.pi])}, coords={'y': [0.0, 1.0]})
+        kwargs = dict(encoding={'y': {'_FillValue': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert '_FillValue' not in actual.y.encoding
+        self.assertEqual(ds.y.encoding, {})
+
     def test_encoding_same_dtype(self):
         ds = Dataset({'x': ('y', np.arange(10.0, dtype='f4'))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
@@ -2178,9 +2198,11 @@ class TestPyNioAutocloseTrue(TestPyNio):
 @requires_rasterio
 @contextlib.contextmanager
 def create_tmp_geotiff(nx=4, ny=3, nz=3,
+                       transform=None,
                        transform_args=[5000, 80000, 1000, 2000.],
                        crs={'units': 'm', 'no_defs': True, 'ellps': 'WGS84',
-                            'proj': 'utm', 'zone': 18}):
+                            'proj': 'utm', 'zone': 18},
+                       open_kwargs={}):
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
@@ -2192,15 +2214,16 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
         else:
             data_shape = nz, ny, nx
             write_kwargs = {}
-        data = np.arange(nz*ny*nx,
-                         dtype=rasterio.float32).reshape(*data_shape)
-        transform = from_origin(*transform_args)
+        data = np.arange(nz*ny*nx, dtype=rasterio.float32).reshape(*data_shape)
+        if transform is None:
+            transform = from_origin(*transform_args)
         with rasterio.open(
                 tmp_file, 'w',
                 driver='GTiff', height=ny, width=nx, count=nz,
                 crs=crs,
                 transform=transform,
-                dtype=rasterio.float32) as s:
+                dtype=rasterio.float32,
+                **open_kwargs) as s:
             s.write(data, **write_kwargs)
             dx, dy = s.res[0], -s.res[1]
 
@@ -2236,6 +2259,8 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
+                                              [np.NaN, np.NaN, np.NaN])
 
             # Check no parse coords
             with xr.open_rasterio(tmp_file, parse_coordinates=False) as rioda:
@@ -2243,23 +2268,10 @@ class TestRasterio(TestCase):
                 assert 'y' not in rioda.coords
 
     def test_non_rectilinear(self):
-        import rasterio
         from rasterio.transform import from_origin
-
         # Create a geotiff file with 2d coordinates
-        with create_tmp_file(suffix='.tif') as tmp_file:
-            # data
-            nx, ny, nz = 4, 3, 3
-            data = np.arange(nx*ny*nz,
-                             dtype=rasterio.float32).reshape(nz, ny, nx)
-            transform = from_origin(0, 3, 1, 1).rotation(45)
-            with rasterio.open(
-                    tmp_file, 'w',
-                    driver='GTiff', height=ny, width=nx, count=nz,
-                    transform=transform,
-                    dtype=rasterio.float32) as s:
-                s.write(data)
-
+        with create_tmp_geotiff(transform=from_origin(0, 3, 1, 1).rotation(45),
+                                crs=None) as (tmp_file, _):
             # Default is to not parse coords
             with xr.open_rasterio(tmp_file) as rioda:
                 assert 'x' not in rioda.coords
@@ -2278,7 +2290,8 @@ class TestRasterio(TestCase):
 
     def test_platecarree(self):
         with create_tmp_geotiff(8, 10, 1, transform_args=[1, 2, 0.5, 2.],
-                                crs='+proj=latlong') \
+                                crs='+proj=latlong',
+                                open_kwargs={'nodata': -9765}) \
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
@@ -2286,6 +2299,8 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
+                                              [-9765.])
 
     def test_notransform(self):
         # regression test for https://github.com/pydata/xarray/issues/1686

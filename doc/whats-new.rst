@@ -34,14 +34,25 @@ Documentation
 ~~~~~~~~~~~~~
 
 - Added apply_ufunc example to toy weather data page (:issue:`1844`).
-  By `Liam Brannigan <https://github.com/braaannigan>` _.
+  By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
+- Added a new contributors guide (:issue:`640`)
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
-- reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
+- Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
+
+  .. ipython:: python
+
+    da = xr.DataArray(np.array([True, False, np.nan], dtype=object), dims='x')
+    da.sum()
+
+  (:issue:`1866`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
   arguments. (:issue:`1838`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
@@ -77,6 +88,11 @@ Enhancements
   (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
   Correspondingly, encoded variables may also be saved with a smaller dtype.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- `.dt` accessor can now ceil, floor and round timestamps to specified frequency.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Speed of reindexing/alignment with dask array is orders of magnitude faster
+  when inserting missing values  (:issue:`1847`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
@@ -90,9 +106,11 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Support indexing with a 0d-np.ndarray (:issue:`1921`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added warning in api.py of a netCDF4 bug that occurs when
   the filepath has 88 characters (:issue:`1745`).
-  By `Liam Brannigan <https://github.com/braaannigan>` _.
+  By `Liam Brannigan <https://github.com/braaannigan>`_.
 - Fixed encoding of multi-dimensional coordinates in
   :py:meth:`~Dataset.to_netcdf` (:issue:`1763`).
   By `Mike Neish <https://github.com/neishm>`_.
@@ -126,8 +144,24 @@ Bug fixes
   By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed to_netcdf when using dask distributed (:issue:`1464`).
   By `Joe Hamman <https://github.com/jhamman>`_..
+- Bug fix in encoding coordinates with ``{'_FillValue': None}`` in netCDF
+  metadata (:issue:`1865`).
+  By `Chris Roth <https://github.com/czr137>`_.
 - Fix indexing with lists for arrays loaded from netCDF files with
   ``engine='h5netcdf`` (:issue:`1864`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Corrected a bug with incorrect coordinates for non-georeferenced geotiff
+  files (:issue:`1686`). Internally, we now use the rasterio coordinate
+  transform tool instead of doing the computations ourselves. A
+  ``parse_coordinates`` kwarg has beed added to :py:func:`~open_rasterio`
+  (set to ``True`` per default).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+- The colors of discrete colormaps are now the same regardless if `seaborn`
+  is installed or not (:issue:`1896`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+- Fixed dtype promotion rules in :py:func:`where` and :py:func:`concat` to
+  match pandas (:issue:`1847`). A combination of strings/numbers or
+  unicode/bytes now promote to object dtype, instead of strings or unicode.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.0:
@@ -464,6 +498,9 @@ Bug fixes
 - Fix ``seaborn`` import warning for Seaborn versions 0.8 and newer when the
   ``apionly`` module was deprecated.
   (:issue:`1633`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fix COMPAT: MultiIndex checking is fragile
+  (:issue:`1833`). By `Florian Pinault <https://github.com/floriankrb>`_.
 
 - Fix ``rasterio`` backend for Rasterio versions 1.0alpha10 and newer.
   (:issue:`1641`). By `Chris Holden <https://github.com/ceholden>`_.

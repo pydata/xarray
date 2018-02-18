@@ -463,9 +463,13 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         key = self._item_key_to_tuple(key)  # key is a tuple
         # key is a tuple of full size
         key = indexing.expanded_indexer(key, self.ndim)
-        # Convert a scalar Variable as an integer
+        # Convert a scalar Variable to an integer
         key = tuple(
             k.data.item() if isinstance(k, Variable) and k.ndim == 0 else k
+            for k in key)
+        # Convert a 0d-array to an integer
+        key = tuple(
+            k.item() if isinstance(k, np.ndarray) and k.ndim == 0 else k
             for k in key)
 
         if all(isinstance(k, BASIC_INDEXING_TYPES) for k in key):
@@ -1273,8 +1277,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
 
         arrays = [v.data for v in variables]
 
-        # TODO: use our own type promotion rules to ensure that
-        # [str, float] -> object, not str like numpy
         if dim in first_var.dims:
             axis = first_var.get_axis_num(dim)
             dims = first_var.dims
