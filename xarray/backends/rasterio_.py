@@ -80,12 +80,9 @@ class RasterioArrayWrapper(BackendArray):
         squeeze_axis = []
         for i, (k, n) in enumerate(zip(key.tuple[1:], self.shape[1:])):
             if isinstance(k, slice):
+                # step is always positive. see indexing.decompose_indexer
                 start, stop, step = k.indices(n)
-                if step > 0:
-                    np_inds2.append(slice(None, None, step))
-                else:
-                    start, stop = stop + 1, start + 1
-                    np_inds2.append(slice(-1, None, step))
+                np_inds2.append(slice(None, None, step))
                 new_shape.append(stop - start)
             elif is_scalar(k):
                 # windowed operations will always return an array

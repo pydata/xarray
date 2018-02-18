@@ -139,16 +139,18 @@ class TestIndexers(TestCase):
 class TestLazyArray(TestCase):
     def test_slice_slice(self):
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
-        x = np.arange(100)
-        slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
-                  I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
-                  I[4:4:4], I[:4:-4]]
-        for i in slices:
-            for j in slices:
-                expected = x[i][j]
-                new_slice = indexing.slice_slice(i, j, size=100)
-                actual = x[new_slice]
-                assert_array_equal(expected, actual)
+        for size in [100, 99]:
+            # We test even/odd size cases
+            x = np.arange(size)
+            slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
+                      I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
+                      I[4:4:4], I[:4:-4]]
+            for i in slices:
+                for j in slices:
+                    expected = x[i][j]
+                    new_slice = indexing.slice_slice(i, j, size=100)
+                    actual = x[new_slice]
+                    assert_array_equal(expected, actual)
 
     def test_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
@@ -427,12 +429,29 @@ def get_indexers(shape, mode):
         indexer = [0, 2, 4]
         return indexing.BasicIndexer(tuple(indexer[:len(shape)]))
 
+    elif mode == 'basic3':  # basic indexer
+        indexer = [slice(None) for s in shape]
+        indexer[0] = slice(-2, 2, -2)
+        indexer[1] = slice(1, -1, 2)
+        return indexing.BasicIndexer(tuple(indexer[:len(shape)]))
+
+
+@pytest.mark.parametrize('size', [100, 99])
+@pytest.mark.parametrize('sl', [slice(1, -1, 1), slice(None, -1, 2),
+                                slice(-1, 1, -1), slice(-1, 1, -2)])
+def test_decompose_slice(size, sl):
+    x = np.arange(size)
+    slice1, slice2 = indexing._decompose_slice(sl, size)
+    expected = x[sl]
+    actual = x[slice1][slice2]
+    assert_array_equal(expected, actual)
+
 
 @pytest.mark.parametrize('shape', [(10, 5, 8), (10, 3)])
 @pytest.mark.parametrize('indexer_mode',
                          ['vectorized', 'outer', 'outer_scalar',
                           'outer_scalar2', 'outer1vec',
-                          'basic', 'basic1'])
+                          'basic', 'basic1', 'basic2', 'basic3'])
 @pytest.mark.parametrize('indexing_support',
                          [indexing.IndexingSupport.BASIC,
                           indexing.IndexingSupport.OUTER,

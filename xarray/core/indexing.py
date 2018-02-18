@@ -736,11 +736,25 @@ class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
 def decompose_indexer(indexer, shape, indexing_support):
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
-    if isinstance(indexer, OuterIndexer):
+    if isinstance(indexer, (BasicIndexer, OuterIndexer)):
         return _decompose_outer_indexer(indexer, shape, indexing_support)
-    if isinstance(indexer, BasicIndexer):
-        return indexer, BasicIndexer(())
     raise TypeError('unexpected key type: {}'.format(indexer))
+
+
+def _decompose_slice(key, size):
+    """ convert a slice to successive two slices. The first slice always has
+    a positive step.
+    """
+    start, stop, step = key.indices(size)
+    if step > 0:
+        # If key already has a positive step, use it as is in the backend
+        return key, slice(None)
+    else:
+        # determine stop precisely for step > 1 case
+        # e.g. [98:2:-2] -> [98:3:-2]
+        stop = start + int((stop - start - 1) / step) * step + 1
+        start, stop = stop + 1, start + 1
+        return slice(start, stop, -step), slice(None, None, -1)
 
 
 def _decompose_vectorized_indexer(indexer, shape, indexing_support):
@@ -785,12 +799,14 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     indexer = [np.where(k < 0, k + s, k) if isinstance(k, np.ndarray) else k
                for k, s in zip(indexer.tuple, shape)]
 
-    for k in indexer:
+    for k, s in zip(indexer, shape):
         if isinstance(k, slice):
-            # If it is a slice, then we will slice it as-is (k) in the backend,
+            # If it is a slice, then we will slice it as-is
+            # (but make its step positive) in the backend,
             # and then use all of it (slice(None)) for the in-memory portion.
-            backend_indexer.append(k)
-            np_indexer.append(slice(None))
+            bk_slice, np_slice = _decompose_slice(k, s)
+            backend_indexer.append(bk_slice)
+            np_indexer.append(np_slice)
         else:
             # If it is a (multidimensional) np.ndarray, just pickup the used
             # keys without duplication and store them as a 1d-np.ndarray.
@@ -845,7 +861,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     """
     if indexing_support == IndexingSupport.VECTORIZED:
         return indexer, BasicIndexer(())
-    assert isinstance(indexer, OuterIndexer)
+    assert isinstance(indexer, (OuterIndexer, BasicIndexer))
 
     backend_indexer = []
     np_indexer = []
@@ -867,7 +883,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                  if isinstance(k, np.ndarray) else 0 for k in indexer]
         array_index = np.argmax(np.array(gains)) if len(gains) > 0 else None
 
-        for i, k in enumerate(indexer):
+        for i, (k, s) in enumerate(zip(indexer, shape)):
             if isinstance(k, np.ndarray) and i != array_index:
                 # np.ndarray key is converted to slice that covers the entire
                 # entries of this key.
@@ -880,24 +896,26 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 np_indexer.append(ekey)
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
-            else:
-                # If it is a slice or an integer, then we will slice it
-                # as-is (k) in the backend, and then use all of it
-                # slice(None)) for the in-memory portion.
-                backend_indexer.append(k)
-                np_indexer.append(slice(None))
+            else:  # slice:  convert positive step slice for backend
+                bk_slice, np_slice = _decompose_slice(k, s)
+                backend_indexer.append(bk_slice)
+                np_indexer.append(np_slice)
 
         return (OuterIndexer(tuple(backend_indexer)),
                 OuterIndexer(tuple(np_indexer)))
 
     if indexing_support == IndexingSupport.OUTER:
-        for k in indexer:
-            if (isinstance(k, slice) or
-                    (isinstance(k, np.ndarray) and (np.diff(k) >= 0).all())):
-                backend_indexer.append(k)
-                np_indexer.append(slice(None))
+        for k, s in zip(indexer, shape):
+            if isinstance(k, slice):
+                # slice:  convert positive step slice for backend
+                bk_slice, np_slice = _decompose_slice(k, s)
+                backend_indexer.append(bk_slice)
+                np_indexer.append(np_slice)
             elif isinstance(k, integer_types):
                 backend_indexer.append(k)
+            elif isinstance(k, np.ndarray) and (np.diff(k) >= 0).all():
+                backend_indexer.append(k)
+                np_indexer.append(slice(None))
             else:
                 # Remove duplicates and sort them in the increasing order
                 oind, vind = np.unique(k, return_inverse=True)
@@ -908,7 +926,7 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
                 OuterIndexer(tuple(np_indexer)))
 
     # basic
-    for k in indexer:
+    for k, s in zip(indexer, shape):
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire
             # entries of this key.
@@ -916,9 +934,10 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
             np_indexer.append(k - np.min(k))
         elif isinstance(k, integer_types):
             backend_indexer.append(k)
-        else:  # slice
-            backend_indexer.append(k)
-            np_indexer.append(slice(None))
+        else:  # slice:  convert positive step slice for backend
+            bk_slice, np_slice = _decompose_slice(k, s)
+            backend_indexer.append(bk_slice)
+            np_indexer.append(np_slice)
 
     return (BasicIndexer(tuple(backend_indexer)),
             OuterIndexer(tuple(np_indexer)))

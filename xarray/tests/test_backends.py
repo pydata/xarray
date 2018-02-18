@@ -475,6 +475,13 @@ class DatasetIOTestCases(object):
         # with negative step slice.
         indexers = [
             {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(-1, 1, -1)},
+        ]
+        multiple_indexing(indexers)
+
+        # with negative step slice.
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
              'dim3': slice(-1, 1, -2)},
         ]
         multiple_indexing(indexers)
