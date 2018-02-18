@@ -330,8 +330,8 @@ def _get_valid_fill_mask(arr, dim, limit):
     '''helper function to determine values that can be filled when limit is not
     None'''
     kw = {dim: limit + 1}
-    # we explicitly use to_dataarray method to avoid copy.
+    # we explicitly use construct method to avoid copy.
     new_dim = rolling._get_new_dimname(arr.dims, '_window')
     return (arr.isnull().rolling(min_periods=1, **kw)
-            .to_dataarray(new_dim, fill_value=False)
+            .construct(new_dim, fill_value=False)
             .sum(new_dim, skipna=False)) <= limit

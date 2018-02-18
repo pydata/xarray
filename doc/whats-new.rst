@@ -44,11 +44,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 - Improve :py:func:`~xarray.DataArray.rooling` logic.
-  :py:func:`~xarray.DataArrayRolling` object now supports ``to_dataarray``
-  method that returns a view of the DataArray object with the rolling-window
-  dimension added to the last position. This enables more flexible operation,
-  such as strided rolling, windowed rolling, ND-rolling, and convolution.
-  (:issue:`1831`, :issue:`1142`, :issue:`819`)
+  :py:func:`~xarray.DataArrayRolling` object now supports ``construct``
+  method that returns a view of the DataArray / Dataset object with the
+  rolling-window dimension added to the last position. This enables more
+  flexible operation, such as strided rolling, windowed rolling, ND-rolling,
+  and convolution. (:issue:`1831`, :issue:`1142`, :issue:`819`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
 
   .. ipython:: python

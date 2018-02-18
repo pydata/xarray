@@ -178,7 +178,7 @@ class DataArrayRolling(Rolling):
         self.window_indices = [slice(start, stop)
                                for start, stop in zip(starts, stops)]
 
-    def to_dataarray(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.DataArray,
         where the window dimension is stacked as a new dimension
@@ -247,7 +247,7 @@ class DataArrayRolling(Rolling):
             Array with summarized data.
         """
         rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
-        windows = self.to_dataarray(rolling_dim)
+        windows = self.construct(rolling_dim)
         result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
         # Find valid windows based on count.
@@ -264,7 +264,7 @@ class DataArrayRolling(Rolling):
         # copy the strided array.
         counts = (self.obj.notnull()
                   .rolling(center=self.center, **{self.dim: self.window})
-                  .to_dataarray(rolling_dim, fill_value=False)
+                  .construct(rolling_dim, fill_value=False)
                   .sum(dim=rolling_dim, skipna=False))
         return counts
 
@@ -454,7 +454,7 @@ class DatasetRolling(Rolling):
         dataset = OrderedDict()
         for key, da in self.obj.data_vars.items():
             if self.dim in da.dims:
-                dataset[key] = self.rollings[key].to_dataarray(
+                dataset[key] = self.rollings[key].construct(
                     window_dim, fill_value=fill_value)
             else:
                 dataset[key] = da

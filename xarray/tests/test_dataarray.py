@@ -3423,25 +3423,25 @@ def test_rolling_pandas_compat(center, window, min_periods):
 
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-def test_rolling_to_dataarray(center, window):
+def test_rolling_construct(center, window):
     s = pd.Series(np.arange(10))
     da = DataArray.from_series(s)
 
     s_rolling = s.rolling(window, center=center, min_periods=1).mean()
     da_rolling = da.rolling(index=window, center=center, min_periods=1)
 
-    da_rolling_mean = da_rolling.to_dataarray('window').mean('window')
+    da_rolling_mean = da_rolling.construct('window').mean('window')
     np.testing.assert_allclose(s_rolling.values, da_rolling_mean.values)
     np.testing.assert_allclose(s_rolling.index, da_rolling_mean['index'])
 
     # with stride
-    da_rolling_mean = da_rolling.to_dataarray('window',
+    da_rolling_mean = da_rolling.construct('window',
                                               stride=2).mean('window')
     np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
     np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean['index'])
 
     # with fill_value
-    da_rolling_mean = da_rolling.to_dataarray(
+    da_rolling_mean = da_rolling.construct(
         'window', stride=2, fill_value=0.0).mean('window')
     assert da_rolling_mean.isnull().sum() == 0
     assert (da_rolling_mean == 0.0).sum() >= 0
