@@ -430,7 +430,7 @@ class DatasetRolling(Rolling):
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
 
-    def to_dataset(self, window_dim, stride=1, fill_value=dtypes.NA):
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
         Convert this rolling object to xr.Dataset,
         where the window dimension is stacked as a new dimension
