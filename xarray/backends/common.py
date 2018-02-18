@@ -116,6 +116,7 @@ class CombinedLock(object):
     Like a locked door, a CombinedLock is locked if any of its constituent
     locks are locked.
     """
+
     def __init__(self, locks):
         self.locks = locks
 

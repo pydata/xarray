@@ -29,10 +29,9 @@ if has_h5netcdf:
 
 NC_FORMATS = {'netcdf4': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT_OFFSET',
                           'NETCDF3_64BIT_DATA', 'NETCDF4_CLASSIC', 'NETCDF4'],
-             'scipy': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT'],
-             'h5netcdf': ['NETCDF4']}
+              'scipy': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT'],
+              'h5netcdf': ['NETCDF4']}
 TEST_FORMATS = ['NETCDF3_CLASSIC', 'NETCDF4_CLASSIC', 'NETCDF4']
-
 
 
 @pytest.mark.xfail(sys.platform == 'win32',
