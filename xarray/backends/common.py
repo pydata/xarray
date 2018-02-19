@@ -150,7 +150,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 
 class AbstractDataStore(Mapping):
-    _autoclose = False
+    _autoclose = None
 
     def __iter__(self):
         return iter(self.variables)
@@ -300,6 +300,9 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError
 
     def sync(self):
+        if self._isopen and self._autoclose:
+            # datastore will be reopened during write
+            self.close()
         self.writer.sync()
 
     def store_dataset(self, dataset):
@@ -434,8 +437,8 @@ class DataStorePickleMixin(object):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['ds']
-        state['_isopen'] = False
+        del state['_ds']
+        del state['_isopen']
         if self._mode == 'w':
             # file has already been created, don't override when restoring
             state['_mode'] = 'a'
@@ -443,23 +446,32 @@ class DataStorePickleMixin(object):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        if self._autoclose:
-            with self.ensure_open(True):
-                self.ds = self._opener(mode=self._mode)
-        else:
-            self.ds = self._opener(mode=self._mode)
+        self._ds = None
+        self._isopen = False
+
+    @property
+    def ds(self):
+        if self._ds is not None and self._isopen:
+            return self._ds
+        ds = self._opener(mode=self._mode)
+        self._isopen = True
+        return ds
 
     @contextlib.contextmanager
-    def ensure_open(self, autoclose):
+    def ensure_open(self, autoclose=None):
         """
         Helper function to make sure datasets are closed and opened
         at appropriate times to avoid too many open file errors.
 
         Use requires `autoclose=True` argument to `open_mfdataset`.
         """
-        if autoclose and not self._isopen:
+
+        if autoclose is None:
+            autoclose = self._autoclose
+
+        if not self._isopen:
             try:
-                self.ds = self._opener()
+                self._ds = self._opener()
                 self._isopen = True
                 yield
             finally:

@@ -243,7 +243,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
         _disable_auto_decode_group(netcdf4_dataset)
 
-        self.ds = netcdf4_dataset
+        self._ds = netcdf4_dataset
         self._autoclose = autoclose
         self._isopen = True
         self.format = self.ds.data_model
