@@ -3,9 +3,11 @@ from __future__ import division
 from __future__ import print_function
 import functools
 from io import BytesIO
+from distutils.version import LooseVersion
+import warnings
 
 import numpy as np
-import warnings
+
 
 from .. import Variable
 from ..core.pycompat import iteritems, OrderedDict, basestring
@@ -117,11 +119,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, autoclose=False):
+                 writer=None, mmap=None, autoclose=False, lock=None):
         import scipy
         import scipy.io
 
-        if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
+        if (mode != 'r' and
+                scipy.__version__ < LooseVersion('0.13')):  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
@@ -143,13 +146,13 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         opener = functools.partial(_open_scipy_netcdf,
                                    filename=filename_or_obj,
                                    mode=mode, mmap=mmap, version=version)
-        self.ds = opener()
+        self._ds = opener()
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
         self._mode = mode
 
-        super(ScipyDataStore, self).__init__(writer)
+        super(ScipyDataStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
@@ -238,4 +241,5 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             # seek to the start of the file so scipy can read it
             filename.seek(0)
         super(ScipyDataStore, self).__setstate__(state)
-        self._isopen = True
+        self._ds = None
+        self._isopen = False

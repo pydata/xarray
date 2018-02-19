@@ -45,6 +45,9 @@ def test_dask_distributed_netcdf_integration_test(loop, engine, autoclose,
     if nc_format not in NC_FORMATS[engine]:
         pytest.skip("invalid format for engine")
 
+    if engine == 'h5netcdf':
+        pytest.xfail("h5netcdf does not support autoclose")
+
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
     with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:

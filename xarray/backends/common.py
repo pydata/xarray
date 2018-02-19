@@ -152,6 +152,8 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 class AbstractDataStore(Mapping):
     _autoclose = None
+    _ds = None
+    _isopen = False
 
     def __iter__(self):
         return iter(self.variables)
