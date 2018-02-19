@@ -758,16 +758,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
                               'Unable to update size for existing dimension'):
                 self.save(data, tmp_file, mode='a')
 
-    def test_append_with_invalid_dim_raises(self):
-        data = create_test_data()
-        with create_tmp_file(allow_cleanup_failure=False) as tmp_file:
-            self.save(data, tmp_file, mode='w')
-            data['var9'] = data['var2'] * 3
-            data = data.isel(dim1=slice(2, 6))  # modify one dimension
-            with raises_regex(ValueError,
-                              'Unable to update size for existing dimension'):
-                self.save(data, tmp_file, mode='a')
-
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=False)
 
@@ -836,7 +826,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
-        # Create a netCDF file with a dataset stored within a group within a group
+        # Create a netCDF file with a dataset stored within a group within a
+        # group
         with create_tmp_file() as tmp_file:
             rootgrp = nc4.Dataset(tmp_file, 'w')
             foogrp = rootgrp.createGroup('foo')

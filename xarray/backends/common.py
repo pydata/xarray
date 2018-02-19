@@ -202,19 +202,6 @@ class AbstractWritableDataStore(AbstractDataStore):
         self.futures = None
 
     def encode(self, variables, attributes):
-        variables = OrderedDict([(k, self.encode_variable(v))
-                                 for k, v in variables.items()])
-        attributes = OrderedDict([(k, self.encode_attribute(v))
-                                  for k, v in attributes.items()])
-        return variables, attributes
-
-    def encode_variable(self, v):
-        return v
-
-    def encode_attribute(self, a):
-        return a
-
-    def encode(self, variables, attributes):
         """
         Encode the variables and attributes in this store
 

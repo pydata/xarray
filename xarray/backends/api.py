@@ -443,7 +443,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
-    Requires dask to be installed. See documentation for details on dask [1].  
+    Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
@@ -642,7 +642,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=None):
+                   engine=None, compute=True):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
@@ -691,7 +691,9 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
-
+    compute: boolean
+        If true compute immediately, otherwise return dask.delayed.Delayed
+        in `store.futures`.
     Examples
     --------
 
@@ -729,7 +731,8 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         for store in stores:
             store.close()
 
-    return stores
+    if sync or not compute:
+        return stores
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
