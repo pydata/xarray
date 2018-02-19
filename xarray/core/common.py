@@ -227,7 +227,8 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
         if isinstance(axis, tuple):
             for a in axis:
                 if not isinstance(a, int):
-                    raise ValueError('parameter `axis` must be int or tuple of int.')
+                    raise ValueError(
+                        'parameter `axis` must be int or tuple of int.')
             alldims = list(xarray_obj.sizes.keys())
             dim = [alldims[a] for a in axis]
         if any(xarray_obj.sizes[k] > 1 for k in dim):
