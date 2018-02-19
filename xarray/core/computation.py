@@ -1,12 +1,11 @@
-"""Functions for applying functions that act on arrays to xarray's labeled data.
+"""
+Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOT PUBLIC API.
 """
-import collections
 import functools
 import itertools
 import operator
-import re
 
 import numpy as np
 
@@ -36,6 +35,7 @@ class _UFuncSignature(object):
     output_core_dims : tuple[tuple]
         Core dimension names on each output variable.
     """
+
     def __init__(self, input_core_dims, output_core_dims=((),)):
         self.input_core_dims = tuple(tuple(a) for a in input_core_dims)
         self.output_core_dims = tuple(tuple(a) for a in output_core_dims)
@@ -248,8 +248,8 @@ def assert_and_return_exact_match(all_keys):
     for keys in all_keys[1:]:
         if keys != first_keys:
             raise ValueError(
-                'exact match required for all data variable names, but %r != %r'
-                % (keys, first_keys))
+                'exact match required for all data variable names, '
+                'but %r != %r' % (keys, first_keys))
     return first_keys
 
 
@@ -483,9 +483,10 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
     set_old_dims = set(old_dims)
     missing_core_dims = [d for d in core_dims if d not in set_old_dims]
     if missing_core_dims:
-        raise ValueError('operand to apply_ufunc has required core dimensions '
-                         '%r, but some of these are missing on the input '
-                         'variable:  %r' % (list(core_dims), missing_core_dims))
+        raise ValueError(
+            'operand to apply_ufunc has required core dimensions %r, but '
+            'some of these are missing on the input variable:  %r'
+            % (list(core_dims), missing_core_dims))
 
     set_new_dims = set(new_dims)
     unexpected_dims = [d for d in old_dims if d not in set_new_dims]
@@ -552,9 +553,11 @@ def apply_variable_ufunc(func, *args, **kwargs):
             input_dims = [broadcast_dims + dims
                           for dims in signature.input_core_dims]
             numpy_func = func
-            func = lambda *arrays: _apply_with_dask_atop(
-                numpy_func, arrays, input_dims, output_dims, signature,
-                output_dtypes, output_sizes)
+
+            def func(*arrays):
+                return _apply_with_dask_atop(
+                    numpy_func, arrays, input_dims, output_dims,
+                    signature, output_dtypes, output_sizes)
         elif dask == 'allowed':
             pass
         else:
@@ -598,8 +601,8 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
     new_dims = signature.all_output_core_dims - signature.all_input_core_dims
     if any(dim not in output_sizes for dim in new_dims):
         raise ValueError("when using dask='parallelized' with apply_ufunc, "
-                         'output core dimensions not found on inputs must have '
-                         'explicitly set sizes with ``output_sizes``: {}'
+                         'output core dimensions not found on inputs must '
+                         'have explicitly set sizes with ``output_sizes``: {}'
                          .format(new_dims))
 
     for n, (data, core_dims) in enumerate(
@@ -763,9 +766,9 @@ def apply_ufunc(func, *args, **kwargs):
     output_dtypes : list of dtypes, optional
         Optional list of output dtypes. Only used if dask='parallelized'.
     output_sizes : dict, optional
-        Optional mapping from dimension names to sizes for outputs. Only used if
-        dask='parallelized' and new dimensions (not found on inputs) appear on
-        outputs.
+        Optional mapping from dimension names to sizes for outputs. Only used
+        if dask='parallelized' and new dimensions (not found on inputs) appear
+        on outputs.
 
     Returns
     -------
@@ -833,7 +836,8 @@ def apply_ufunc(func, *args, **kwargs):
     Most of NumPy's builtin functions already broadcast their inputs
     appropriately for use in `apply`. You may find helper functions such as
     numpy.broadcast_arrays helpful in writing your function. `apply_ufunc` also
-    works well with numba's vectorize and guvectorize.
+    works well with numba's vectorize and guvectorize. Further explanation with
+    examples are provided in the xarray documentation [3].
 
     See also
     --------
@@ -845,7 +849,8 @@ def apply_ufunc(func, *args, **kwargs):
     ----------
     .. [1] http://docs.scipy.org/doc/numpy/reference/ufuncs.html
     .. [2] http://docs.scipy.org/doc/numpy/reference/c-api.generalized-ufuncs.html
-    """
+    .. [3] http://xarray.pydata.org/en/stable/computation.html#wrapping-custom-computation
+    """  # noqa: E501  # don't error on that URL one line up
     from .groupby import GroupBy
     from .dataarray import DataArray
     from .variable import Variable

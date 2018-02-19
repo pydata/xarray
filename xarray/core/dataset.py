@@ -1259,8 +1259,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         try:
             from dask.base import tokenize
         except ImportError:
-            import dask  # raise the usual error if dask is entirely missing
-            raise ImportError('xarray requires dask version 0.6 or newer')
+            import dask  # raise the usual error if dask is entirely missing  # flake8: noqa
+            raise ImportError('xarray requires dask version 0.9 or newer')
 
         if isinstance(chunks, Number):
             chunks = dict.fromkeys(self.dims, chunks)
@@ -1580,7 +1580,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             dim_name = dim
             dim_coord = None
 
-        reordered = self.transpose(*(list(indexer_dims) + list(non_indexed_dims)))
+        reordered = self.transpose(
+            *(list(indexer_dims) + list(non_indexed_dims)))
 
         variables = OrderedDict()
 
@@ -2758,7 +2759,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         idx = dataframe.index
         obj = cls()
 
-        if hasattr(idx, 'levels'):
+        if isinstance(idx, pd.MultiIndex):
             # it's a multi-index
             # expand the DataFrame to include the product of all levels
             full_idx = pd.MultiIndex.from_product(idx.levels, names=idx.names)
@@ -3390,7 +3391,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Variables that do not depend on `dim` are dropped.
         """
         if dim not in self.dims:
-            raise ValueError('Dataset does not contain the dimension: %s' % dim)
+            raise ValueError(
+                'Dataset does not contain the dimension: %s' % dim)
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):

@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 import functools
 
+import numpy as np
+
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error
@@ -17,6 +19,11 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
         key = indexing.unwrap_explicit_indexer(
             key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+        # h5py requires using lists for fancy indexing:
+        # https://github.com/h5py/h5py/issues/992
+        # OuterIndexer only holds 1D integer ndarrays, so it's safe to convert
+        # them to lists.
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
 
@@ -55,6 +62,7 @@ def _open_h5netcdf_group(filename, mode, group):
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
+
     def __init__(self, filename, mode='r', format=None, group=None,
                  writer=None, autoclose=False):
         if format not in [None, 'NETCDF4']:

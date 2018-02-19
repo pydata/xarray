@@ -2,13 +2,13 @@ import sys
 
 import pytest
 import xarray as xr
-from xarray.core.pycompat import suppress
 
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 import dask
-from distributed.utils_test import cluster, loop, gen_cluster
-from distributed.client import futures_of, wait
+from distributed.utils_test import cluster, gen_cluster
+from distributed.utils_test import loop  # flake8: noqa
+from distributed.client import futures_of
 
 from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
 from xarray.tests.test_dataset import create_test_data
@@ -40,6 +40,7 @@ def test_dask_distributed_netcdf_integration_test(loop, engine):
                     computed = restored.compute()
                     assert_allclose(original, computed)
 
+
 @requires_zarr
 def test_dask_distributed_zarr_integration_test(loop):
     with cluster() as (s, _):
@@ -51,6 +52,7 @@ def test_dask_distributed_zarr_integration_test(loop):
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
+
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',
                     reason='Need recent distributed version to clean up get')
@@ -79,4 +81,4 @@ def test_async(c, s, a, b):
     assert not dask.is_dask_collection(w)
     assert_allclose(x + 10, w)
 
-    assert s.task_state
+    assert s.tasks

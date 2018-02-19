@@ -19,7 +19,6 @@ from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
-from .computation import apply_ufunc
 from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
                           Indexes, assert_coordinate_consistent,
                           remap_label_indexers)
@@ -317,7 +316,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if name in self.coords:
             raise ValueError('cannot create a Dataset from a DataArray with '
                              'the same name as one of its coordinates')
-        # use private APIs here for speed: this is called by _to_temp_dataset(),
+        # use private APIs for speed: this is called by _to_temp_dataset(),
         # which is used in the guts of a lot of operations (e.g., reindex)
         variables = self._coords.copy()
         variables[name] = self.variable
@@ -429,9 +428,9 @@ class DataArray(AbstractArray, BaseDataObject):
     def dims(self):
         """Tuple of dimension names associated with this array.
 
-        Note that the type of this property is inconsistent with `Dataset.dims`.
-        See `Dataset.sizes` and `DataArray.sizes` for consistently named
-        properties.
+        Note that the type of this property is inconsistent with
+        `Dataset.dims`.  See `Dataset.sizes` and `DataArray.sizes` for
+        consistently named properties.
         """
         return self.variable.dims
 
@@ -869,12 +868,11 @@ class DataArray(AbstractArray, BaseDataObject):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-            Requires pandas>=0.17.
         **indexers : dict
             Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate values
-            will be filled in with NaN, and any mis-matched dimension names will
-            simply be ignored.
+            arrays of coordinates tick labels. Any mis-matched coordinate
+            values will be filled in with NaN, and any mis-matched dimension
+            names will simply be ignored.
 
         Returns
         -------
@@ -944,8 +942,8 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def expand_dims(self, dim, axis=None):
-        """Return a new object with an additional axis (or axes) inserted at the
-        corresponding position in the array shape.
+        """Return a new object with an additional axis (or axes) inserted at
+        the corresponding position in the array shape.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -971,7 +969,8 @@ class DataArray(AbstractArray, BaseDataObject):
         return self._from_temp_dataset(ds)
 
     def set_index(self, append=False, inplace=False, **indexes):
-        """Set DataArray (multi-)indexes using one or more existing coordinates.
+        """Set DataArray (multi-)indexes using one or more existing
+        coordinates.
 
         Parameters
         ----------
@@ -979,8 +978,8 @@ class DataArray(AbstractArray, BaseDataObject):
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
         inplace : bool, optional
-            If True, set new index(es) in-place. Otherwise, return a new DataArray
-            object.
+            If True, set new index(es) in-place. Otherwise, return a new
+            DataArray object.
         **indexes : {dim: index, ...}
             Keyword arguments with names matching dimensions and values given
             by (lists of) the names of existing coordinates or variables to set
@@ -989,7 +988,7 @@ class DataArray(AbstractArray, BaseDataObject):
         Returns
         -------
         obj : DataArray
-            Another dataarray, with this dataarray's data but replaced coordinates.
+            Another dataarray, with this data but replaced coordinates.
 
         See Also
         --------
@@ -1608,9 +1607,9 @@ class DataArray(AbstractArray, BaseDataObject):
         """Convert a pandas.Series into an xarray.DataArray.
 
         If the series's index is a MultiIndex, it will be expanded into a
-        tensor product of one-dimensional coordinates (filling in missing values
-        with NaN). Thus this operation should be the inverse of the `to_series`
-        method.
+        tensor product of one-dimensional coordinates (filling in missing
+        values with NaN). Thus this operation should be the inverse of the
+        `to_series` method.
         """
         # TODO: add a 'name' parameter
         name = series.name
@@ -2090,16 +2089,16 @@ class DataArray(AbstractArray, BaseDataObject):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
         """
 
-        ds = self._to_temp_dataset().quantile(q, dim=dim, keep_attrs=keep_attrs,
-                                              interpolation=interpolation)
+        ds = self._to_temp_dataset().quantile(
+            q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
     def rank(self, dim, pct=False, keep_attrs=False):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
-        would have been otherwise assigned to all of the values within that set.
-        Ranks begin at 1, not 0. If pct is True, computes percentage ranks.
+        would have been otherwise assigned to all of the values within that
+        set.  Ranks begin at 1, not 0. If pct, computes percentage ranks.
 
         NaNs in the input array are returned as NaNs.
 

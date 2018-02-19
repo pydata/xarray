@@ -1,3 +1,5 @@
+# flake8: noqa
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -126,6 +128,7 @@ except ImportError:
                 # in the list raise an exception
 
         """
+
         def __init__(self):
             self._exit_callbacks = deque()
 
@@ -161,7 +164,7 @@ except ImportError:
                 self._exit_callbacks.append(exit)
             else:
                 self._push_cm_exit(exit, exit_method)
-            return exit # Allow use as a decorator
+            return exit  # Allow use as a decorator
 
         def callback(self, callback, *args, **kwds):
             """Registers an arbitrary callback and arguments.
@@ -174,7 +177,7 @@ except ImportError:
             # setting __wrapped__ may still help with introspection
             _exit_wrapper.__wrapped__ = callback
             self.push(_exit_wrapper)
-            return callback # Allow use as a decorator
+            return callback  # Allow use as a decorator
 
         def enter_context(self, cm):
             """Enters the supplied context manager

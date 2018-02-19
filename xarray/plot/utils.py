@@ -11,6 +11,9 @@ from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 
 
+ROBUST_PERCENTILE = 2.0
+
+
 def _load_default_cmap(fname='default_colormap.csv'):
     """
     Returns viridis color map
@@ -112,32 +115,23 @@ def _color_palette(cmap, n_colors):
     colors_i = np.linspace(0, 1., n_colors)
     if isinstance(cmap, (list, tuple)):
         # we have a list of colors
-        try:
-            sns = import_seaborn()
-        except ImportError:
-            # if that fails, use matplotlib
-            # in this case, is there any difference between mpl and seaborn?
-            cmap = ListedColormap(cmap, N=n_colors)
-            pal = cmap(colors_i)
-        else:
-            # first try to turn it into a palette with seaborn
-            pal = sns.color_palette(cmap, n_colors=n_colors)
+        cmap = ListedColormap(cmap, N=n_colors)
+        pal = cmap(colors_i)
     elif isinstance(cmap, basestring):
         # we have some sort of named palette
         try:
-            # first try to turn it into a palette with seaborn
-            from seaborn.apionly import color_palette
-            pal = color_palette(cmap, n_colors=n_colors)
-        except (ImportError, ValueError):
-            # ValueError is raised when seaborn doesn't like a colormap
-            # (e.g. jet). If that fails, use matplotlib
+            # is this a matplotlib cmap?
+            cmap = plt.get_cmap(cmap)
+            pal = cmap(colors_i)
+        except ValueError:
+            # ValueError happens when mpl doesn't like a colormap, try seaborn
             try:
-                # is this a matplotlib cmap?
-                cmap = plt.get_cmap(cmap)
-            except ValueError:
+                from seaborn.apionly import color_palette
+                pal = color_palette(cmap, n_colors=n_colors)
+            except (ValueError, ImportError):
                 # or maybe we just got a single color as a string
                 cmap = ListedColormap([cmap], N=n_colors)
-            pal = cmap(colors_i)
+                pal = cmap(colors_i)
     else:
         # cmap better be a LinearSegmentedColormap (e.g. viridis)
         pal = cmap(colors_i)
@@ -165,7 +159,6 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     cmap_params : dict
         Use depends on the type of the plotting function
     """
-    ROBUST_PERCENTILE = 2.0
     import matplotlib as mpl
 
     calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
@@ -244,7 +237,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels = np.linspace(vmin, vmax, levels)
             else:
                 # N in MaxNLocator refers to bins, not ticks
-                ticker = mpl.ticker.MaxNLocator(levels-1)
+                ticker = mpl.ticker.MaxNLocator(levels - 1)
                 levels = ticker.tick_values(vmin, vmax)
         vmin, vmax = levels[0], levels[-1]
 
@@ -258,12 +251,65 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
                 levels=levels, norm=norm)
 
 
-def _infer_xy_labels(darray, x, y):
+def _infer_xy_labels_3d(darray, x, y, rgb):
+    """
+    Determine x and y labels for showing RGB images.
+
+    Attempts to infer which dimension is RGB/RGBA by size and order of dims.
+
+    """
+    assert rgb is None or rgb != x
+    assert rgb is None or rgb != y
+    # Start by detecting and reporting invalid combinations of arguments
+    assert darray.ndim == 3
+    not_none = [a for a in (x, y, rgb) if a is not None]
+    if len(set(not_none)) < len(not_none):
+        raise ValueError(
+            'Dimension names must be None or unique strings, but imshow was '
+            'passed x=%r, y=%r, and rgb=%r.' % (x, y, rgb))
+    for label in not_none:
+        if label not in darray.dims:
+            raise ValueError('%r is not a dimension' % (label,))
+
+    # Then calculate rgb dimension if certain and check validity
+    could_be_color = [label for label in darray.dims
+                      if darray[label].size in (3, 4) and label not in (x, y)]
+    if rgb is None and not could_be_color:
+        raise ValueError(
+            'A 3-dimensional array was passed to imshow(), but there is no '
+            'dimension that could be color.  At least one dimension must be '
+            'of size 3 (RGB) or 4 (RGBA), and not given as x or y.')
+    if rgb is None and len(could_be_color) == 1:
+        rgb = could_be_color[0]
+    if rgb is not None and darray[rgb].size not in (3, 4):
+        raise ValueError('Cannot interpret dim %r of size %s as RGB or RGBA.'
+                         % (rgb, darray[rgb].size))
+
+    # If rgb dimension is still unknown, there must be two or three dimensions
+    # in could_be_color.  We therefore warn, and use a heuristic to break ties.
+    if rgb is None:
+        assert len(could_be_color) in (2, 3)
+        rgb = could_be_color[-1]
+        warnings.warn(
+            'Several dimensions of this array could be colors.  Xarray '
+            'will use the last possible dimension (%r) to match '
+            'matplotlib.pyplot.imshow.  You can pass names of x, y, '
+            'and/or rgb dimensions to override this guess.' % rgb)
+    assert rgb is not None
+
+    # Finally, we pick out the red slice and delegate to the 2D version:
+    return _infer_xy_labels(darray.isel(**{rgb: 0}).squeeze(), x, y)
+
+
+def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     """
     Determine x and y labels. For use in _plot2d
 
-    darray must be a 2 dimensional data array.
+    darray must be a 2 dimensional data array, or 3d for imshow only.
     """
+    assert x is None or x != y
+    if imshow and darray.ndim == 3:
+        return _infer_xy_labels_3d(darray, x, y, rgb)
 
     if x is None and y is None:
         if darray.ndim != 2:

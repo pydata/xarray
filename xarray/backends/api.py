@@ -27,18 +27,18 @@ def _get_default_engine(path, allow_remote=False):
             engine = 'netcdf4'
         except ImportError:
             try:
-                import pydap
+                import pydap  # flake8: noqa
                 engine = 'pydap'
             except ImportError:
                 raise ValueError('netCDF4 or pydap is required for accessing '
                                  'remote datasets via OPeNDAP')
     else:
         try:
-            import netCDF4
+            import netCDF4  # flake8: noqa
             engine = 'netcdf4'
         except ImportError:  # pragma: no cover
             try:
-                import scipy.io.netcdf
+                import scipy.io.netcdf  # flake8: noqa
                 engine = 'scipy'
             except ImportError:
                 raise ValueError('cannot read or write netCDF files without '
@@ -313,7 +313,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(*args, **kwargs):
+def open_dataarray(filename_or_obj, group=None, decode_cf=True,
+                   mask_and_scale=True, decode_times=True, autoclose=False,
+                   concat_characters=True, decode_coords=True, engine=None,
+                   chunks=None, lock=None, cache=None, drop_variables=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -394,7 +397,13 @@ def open_dataarray(*args, **kwargs):
     --------
     open_dataset
     """
-    dataset = open_dataset(*args, **kwargs)
+    dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
+                           mask_and_scale=mask_and_scale,
+                           decode_times=decode_times, autoclose=autoclose,
+                           concat_characters=concat_characters,
+                           decode_coords=decode_coords, engine=engine,
+                           chunks=chunks, lock=lock, cache=cache,
+                           drop_variables=drop_variables)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '
@@ -434,8 +443,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
-    Requires dask to be installed.  Attributes from the first dataset file
-    are used for the combined dataset.
+    Requires dask to be installed. See documentation for details on dask [1].  
+    Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
     ----------
@@ -449,7 +458,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         If int, chunk each dimension by ``chunks``.
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
-        full documentation for more details.
+        full documentation for more details [2].
     concat_dim : None, str, DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
@@ -524,6 +533,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     --------
     auto_combine
     open_dataset
+
+    References
+    ----------
+    .. [1] http://xarray.pydata.org/en/stable/dask.html
+    .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, basestring):
         paths = sorted(glob(paths))

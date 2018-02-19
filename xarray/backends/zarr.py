@@ -6,6 +6,7 @@ from base64 import b64encode
 
 import numpy as np
 
+from .. import coding
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
@@ -61,8 +62,8 @@ def _replace_slices_with_arrays(key, shape):
             slice_count += 1
         else:
             assert isinstance(k, np.ndarray)
-            k = k[(slice(None),) * array_subspace_size
-                  + (np.newaxis,) * num_slices]
+            k = k[(slice(None),) * array_subspace_size +
+                  (np.newaxis,) * num_slices]
         new_key.append(k)
     return tuple(new_key)
 
@@ -250,13 +251,13 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
         raise NotImplementedError("Variable `%s` is an object. Zarr "
                                   "store can't yet encode objects." % name)
 
-    var = conventions.maybe_encode_datetime(var, name=name)
-    var = conventions.maybe_encode_timedelta(var, name=name)
-    var, needs_copy = conventions.maybe_encode_offset_and_scale(var,
-                                                                needs_copy,
-                                                                name=name)
-    var, needs_copy = conventions.maybe_encode_fill_value(var, needs_copy,
-                                                          name=name)
+    for coder in [coding.times.CFDatetimeCoder(),
+                  coding.times.CFTimedeltaCoder(),
+                  coding.variables.CFScaleOffsetCoder(),
+                  coding.variables.CFMaskCoder(),
+                  coding.variables.UnsignedIntegerCoder()]:
+        var = coder.encode(var, name=name)
+
     var = conventions.maybe_encode_nonstring_dtype(var, name=name)
     var = conventions.maybe_default_fill_value(var)
     var = conventions.maybe_encode_bools(var)
@@ -321,7 +322,12 @@ class ZarrStore(AbstractWritableDataStore):
         for k, v in self.ds.arrays():
             try:
                 for d, s in zip(v.attrs[_DIMENSION_KEY], v.shape):
+                    if d in dimensions and dimensions[d] != s:
+                        raise ValueError(
+                            'found conflicting lengths for dimension %s '
+                            '(%d != %d)' % (d, s, dimensions[d]))
                     dimensions[d] = s
+
             except KeyError:
                 raise KeyError("Zarr object is missing the attribute `%s`, "
                                "which is required for xarray to determine "
@@ -334,13 +340,14 @@ class ZarrStore(AbstractWritableDataStore):
                 "Zarr backend doesn't know how to handle unlimited dimensions")
 
     def set_attributes(self, attributes):
-        encoded_attrs = OrderedDict((k, _encode_zarr_attr_value(v))
-                                    for k, v in iteritems(attributes))
-        self.ds.attrs.put(encoded_attrs)
+        self.ds.attrs.put(attributes)
 
     def encode_variable(self, variable):
         variable = encode_zarr_variable(variable)
         return variable
+
+    def encode_attribute(self, a):
+        return _encode_zarr_attr_value(a)
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
@@ -360,7 +367,7 @@ class ZarrStore(AbstractWritableDataStore):
         # the magic for storing the hidden dimension data
         encoded_attrs[_DIMENSION_KEY] = dims
         for k, v in iteritems(attrs):
-            encoded_attrs[k] = _encode_zarr_attr_value(v)
+            encoded_attrs[k] = self.encode_attribute(v)
 
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,
                                     fill_value=fill_value, **encoding)
@@ -475,7 +482,7 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
             if (var.ndim > 0) and (chunks is not None):
                 # does this cause any data to be read?
                 token2 = tokenize(name, var._data)
-                name2 = 'zarr-%s-%s' % (name, token2)
+                name2 = 'zarr-%s' % token2
                 return var.chunk(chunks, name=name2, lock=None)
             else:
                 return var

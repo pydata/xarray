@@ -82,13 +82,13 @@ def isnull(data):
 
 
 transpose = _dask_or_eager_func('transpose')
-where = _dask_or_eager_func('where', n_array_args=3)
+_where = _dask_or_eager_func('where', n_array_args=3)
 insert = _dask_or_eager_func('insert')
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
 
-concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
-stack = _dask_or_eager_func('stack', list_of_args=True)
+_concatenate = _dask_or_eager_func('concatenate', list_of_args=True)
+_stack = _dask_or_eager_func('stack', list_of_args=True)
 
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
@@ -98,6 +98,17 @@ tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
 
 def asarray(data):
     return data if isinstance(data, dask_array_type) else np.asarray(data)
+
+
+def as_shared_dtype(scalars_or_arrays):
+    """Cast a arrays to a shared dtype using xarray's type promotion rules."""
+    arrays = [asarray(x) for x in scalars_or_arrays]
+    # Pass arrays directly instead of dtypes to result_type so scalars
+    # get handled properly.
+    # Note that result_type() safely gets the dtype from dask arrays without
+    # evaluating them.
+    out_type = dtypes.result_type(*arrays)
+    return [x.astype(out_type, copy=False) for x in arrays]
 
 
 def as_like_arrays(*data):
@@ -151,6 +162,11 @@ def count(data, axis=None):
     return sum(~isnull(data), axis=axis)
 
 
+def where(condition, x, y):
+    """Three argument where() with better dtype promotion rules."""
+    return _where(condition, *as_shared_dtype([x, y]))
+
+
 def where_method(data, cond, other=dtypes.NA):
     if other is dtypes.NA:
         other = dtypes.get_fill_value(data.dtype)
@@ -159,6 +175,16 @@ def where_method(data, cond, other=dtypes.NA):
 
 def fillna(data, other):
     return where(isnull(data), other, data)
+
+
+def concatenate(arrays, axis=0):
+    """concatenate() with better dtype promotion rules."""
+    return _concatenate(as_shared_dtype(arrays), axis=axis)
+
+
+def stack(arrays, axis=0):
+    """stack() with better dtype promotion rules."""
+    return _stack(as_shared_dtype(arrays), axis=axis)
 
 
 @contextlib.contextmanager
@@ -171,39 +197,118 @@ def _ignore_warnings_if(condition):
         yield
 
 
+def _nansum_object(value, axis=None, **kwargs):
+    """ In house nansum for object array """
+    value = fillna(value, 0)
+    return _dask_or_eager_func('sum')(value, axis=axis, **kwargs)
+
+
+def _nan_minmax_object(func, get_fill_value, value, axis=None, **kwargs):
+    """ In house nanmin and nanmax for object array """
+    fill_value = get_fill_value(value.dtype)
+    valid_count = count(value, axis=axis)
+    filled_value = fillna(value, fill_value)
+    data = _dask_or_eager_func(func)(filled_value, axis=axis, **kwargs)
+    if not hasattr(data, 'dtype'):  # scalar case
+        data = dtypes.fill_value(value.dtype) if valid_count == 0 else data
+        return np.array(data, dtype=value.dtype)
+    return where_method(data, valid_count != 0)
+
+
+def _nan_argminmax_object(func, get_fill_value, value, axis=None, **kwargs):
+    """ In house nanargmin, nanargmax for object arrays. Always return integer
+    type """
+    fill_value = get_fill_value(value.dtype)
+    valid_count = count(value, axis=axis)
+    value = fillna(value, fill_value)
+    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
+    # dask seems return non-integer type
+    if isinstance(value, dask_array_type):
+        data = data.astype(int)
+
+    if (valid_count == 0).any():
+        raise ValueError('All-NaN slice encountered')
+
+    return np.array(data, dtype=int)
+
+
+def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
+    """ In house nanmean. ddof argument will be used in _nanvar method """
+    valid_count = count(value, axis=axis)
+    value = fillna(value, 0)
+    # As dtype inference is impossible for object dtype, we assume float
+    # https://github.com/dask/dask/issues/3162
+    dtype = kwargs.pop('dtype', None)
+    if dtype is None and value.dtype.kind == 'O':
+        dtype = value.dtype if value.dtype.kind in ['cf'] else float
+
+    data = _dask_or_eager_func('sum')(value, axis=axis, dtype=dtype, **kwargs)
+    data = data / (valid_count - ddof)
+    return where_method(data, valid_count != 0)
+
+
+def _nanvar_object(value, axis=None, **kwargs):
+    ddof = kwargs.pop('ddof', 0)
+    kwargs_mean = kwargs.copy()
+    kwargs_mean.pop('keepdims', None)
+    value_mean = _nanmean_ddof_object(ddof=0, value=value, axis=axis,
+                                      keepdims=True, **kwargs_mean)
+    squared = (value.astype(value_mean.dtype) - value_mean)**2
+    return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
+
+
+_nan_object_funcs = {
+    'sum': _nansum_object,
+    'min': partial(_nan_minmax_object, 'min', dtypes.get_pos_infinity),
+    'max': partial(_nan_minmax_object, 'max', dtypes.get_neg_infinity),
+    'argmin': partial(_nan_argminmax_object, 'argmin',
+                      dtypes.get_pos_infinity),
+    'argmax': partial(_nan_argminmax_object, 'argmax',
+                      dtypes.get_neg_infinity),
+    'mean': partial(_nanmean_ddof_object, 0),
+    'var': _nanvar_object,
+}
+
+
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            no_bottleneck=False, coerce_strings=False,
                            keep_dims=False):
     def f(values, axis=None, skipna=None, **kwargs):
-        # ignore keyword args inserted by np.mean and other numpy aggregators
-        # automatically:
-        kwargs.pop('dtype', None)
-        kwargs.pop('out', None)
+        if kwargs.pop('out', None) is not None:
+            raise TypeError('`out` is not valid for {}'.format(name))
 
+        # If dtype is supplied, we use numpy's method.
+        dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
-        if skipna or (skipna is None and values.dtype.kind in 'cf'):
+        if skipna or (skipna is None and values.dtype.kind in 'cfO'):
             if values.dtype.kind not in ['u', 'i', 'f', 'c']:
-                raise NotImplementedError(
-                    'skipna=True not yet implemented for %s with dtype %s'
-                    % (name, values.dtype))
-            nanname = 'nan' + name
-            if (isinstance(axis, tuple) or not values.dtype.isnative or
-                    no_bottleneck):
-                # bottleneck can't handle multiple axis arguments or non-native
-                # endianness
-                if np_compat:
-                    eager_module = npcompat
-                else:
-                    eager_module = np
+                func = _nan_object_funcs.get(name, None)
+                using_numpy_nan_func = True
+                if func is None or values.dtype.kind not in 'Ob':
+                    raise NotImplementedError(
+                        'skipna=True not yet implemented for %s with dtype %s'
+                        % (name, values.dtype))
             else:
-                eager_module = bn
-            func = _dask_or_eager_func(nanname, eager_module)
-            using_numpy_nan_func = (eager_module is np or
-                                    eager_module is npcompat)
+                nanname = 'nan' + name
+                if (isinstance(axis, tuple) or not values.dtype.isnative or
+                        no_bottleneck or (dtype is not None and
+                                          np.dtype(dtype) != values.dtype)):
+                    # bottleneck can't handle multiple axis arguments or
+                    # non-native endianness
+                    if np_compat:
+                        eager_module = npcompat
+                    else:
+                        eager_module = np
+                else:
+                    kwargs.pop('dtype', None)
+                    eager_module = bn
+                func = _dask_or_eager_func(nanname, eager_module)
+                using_numpy_nan_func = (eager_module is np or
+                                        eager_module is npcompat)
         else:
             func = _dask_or_eager_func(name)
             using_numpy_nan_func = False
@@ -212,7 +317,11 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                 return func(values, axis=axis, **kwargs)
             except AttributeError:
                 if isinstance(values, dask_array_type):
-                    msg = '%s is not yet implemented on dask arrays' % name
+                    try:  # dask/dask#3133 dask sometimes needs dtype argument
+                        return func(values, axis=axis, dtype=values.dtype,
+                                    **kwargs)
+                    except AttributeError:
+                        msg = '%s is not yet implemented on dask arrays' % name
                 else:
                     assert using_numpy_nan_func
                     msg = ('%s is not available with skipna=False with the '
