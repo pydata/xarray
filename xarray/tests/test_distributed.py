@@ -122,7 +122,7 @@ def test_serializable_locks(c, s, a, b):
                  CombinedLock([HDF5_LOCK]),
                  CombinedLock([HDF5_LOCK, Lock('filename.nc')])]:
 
-        futures = c.map(f, range(10), lock=lock)
+        futures = c.map(f, list(range(10)), lock=lock)
         yield c.gather(futures)
 
         lock2 = pickle.loads(pickle.dumps(lock))
