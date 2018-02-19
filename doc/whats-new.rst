@@ -93,6 +93,10 @@ Enhancements
 - Speed of reindexing/alignment with dask array is orders of magnitude faster
   when inserting missing values  (:issue:`1847`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Add ``netcdftime`` as an optional dependency of xarray. This allows for
+  encoding/decoding of datetimes with non-standard calendars without the
+  netCDF4 dependency (:issue:`1084`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 

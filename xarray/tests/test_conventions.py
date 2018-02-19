@@ -13,8 +13,8 @@ from xarray import conventions, Variable, Dataset, open_dataset
 from xarray.core import utils, indexing
 from xarray.testing import assert_identical
 from . import (
-    TestCase, requires_netCDF4, unittest, raises_regex, IndexerMaker,
-    assert_array_equal)
+    TestCase, requires_netCDF4, requires_netcdftime, unittest, raises_regex,
+    IndexerMaker, assert_array_equal)
 from .test_backends import CFEncodedDataTest
 from xarray.core.pycompat import iteritems
 from xarray.backends.memory import InMemoryDataStore
@@ -181,7 +181,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
     assert_identical(actual, expected)
 
 
-@requires_netCDF4
+@requires_netcdftime
 class TestEncodeCFVariable(TestCase):
     def test_incompatible_attributes(self):
         invalid_vars = [
@@ -237,7 +237,7 @@ class TestEncodeCFVariable(TestCase):
         assert 'coordinates' not in attrs
 
 
-@requires_netCDF4
+@requires_netcdftime
 class TestDecodeCF(TestCase):
     def test_dataset(self):
         original = Dataset({
@@ -303,7 +303,7 @@ class TestDecodeCF(TestCase):
         with raises_regex(ValueError, 'unable to decode time'):
             decode_cf(ds)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_dataset_repr_with_netcdf4_datetimes(self):
         # regression test for #347
         attrs = {'units': 'days since 0001-01-01', 'calendar': 'noleap'}
@@ -316,7 +316,7 @@ class TestDecodeCF(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         assert '(time) datetime64[ns]' in repr(ds)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime

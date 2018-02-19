@@ -443,7 +443,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
-    Requires dask to be installed. See documentation for details on dask [1].  
+    Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
