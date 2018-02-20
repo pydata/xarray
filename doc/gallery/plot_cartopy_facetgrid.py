@@ -27,7 +27,7 @@ map_proj = ccrs.LambertConformal(central_longitude=-95, central_latitude=45)
 
 p = air.plot(transform=ccrs.PlateCarree(),  # the data's projection
              col='time', col_wrap=1,  # multiplot settings
-             aspect=ds.dims['lon']/ds.dims['lat'],  # for a sensible figsize
+             aspect=ds.dims['lon'] / ds.dims['lat'],  # for a sensible figsize
              subplot_kws={'projection': map_proj})  # the plot's projection
 
 # We have to set the map's options on all four axes

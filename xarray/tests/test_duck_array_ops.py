@@ -17,14 +17,15 @@ from . import TestCase, raises_regex, has_dask
 
 
 class TestOps(TestCase):
-    def setUp(self):
-        self.x = array([[[nan,  nan,   2.,  nan],
-                         [nan,   5.,   6.,  nan],
-                         [8.,   9.,  10.,  nan]],
 
-                        [[nan,  13.,  14.,  15.],
-                         [nan,  17.,  18.,  nan],
-                         [nan,  21.,  nan,  nan]]])
+    def setUp(self):
+        self.x = array([[[nan, nan, 2., nan],
+                         [nan, 5., 6., nan],
+                         [8., 9., 10., nan]],
+
+                        [[nan, 13., 14., 15.],
+                         [nan, 17., 18., nan],
+                         [nan, 21., nan, nan]]])
 
     def test_first(self):
         expected_results = [array([[nan, 13, 2, 15],
@@ -287,12 +288,12 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     if aggdim == 'y' and contains_nan and skipna:
         with pytest.raises(ValueError):
             actual = da.isel(**{
-                aggdim: getattr(da, 'arg'+func)(dim=aggdim,
-                                                skipna=skipna).compute()})
+                aggdim: getattr(da, 'arg' + func)(dim=aggdim,
+                                                  skipna=skipna).compute()})
         return
 
-    actual = da.isel(**{
-        aggdim: getattr(da, 'arg'+func)(dim=aggdim, skipna=skipna).compute()})
+    actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
+                        (dim=aggdim, skipna=skipna).compute()})
     expected = getattr(da, func)(dim=aggdim, skipna=skipna)
     assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
 
