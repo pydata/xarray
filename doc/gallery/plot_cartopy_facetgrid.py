@@ -12,7 +12,9 @@ and aspect ratio.
 For more details see `this discussion`_ on github.
 
 .. _this discussion: https://github.com/pydata/xarray/issues/1397#issuecomment-299190567
-"""
+"""  # noqa
+
+from __future__ import division
 
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -28,7 +30,7 @@ map_proj = ccrs.LambertConformal(central_longitude=-95, central_latitude=45)
 
 p = air.plot(transform=ccrs.PlateCarree(),  # the data's projection
              col='time', col_wrap=1,  # multiplot settings
-             aspect=ds.dims['lon']/ds.dims['lat'],  # for a sensible figsize
+             aspect=ds.dims['lon'] / ds.dims['lat'],  # for a sensible figsize
              subplot_kws={'projection': map_proj})  # the plot's projection
 
 # We have to set the map's options on all four axes

@@ -290,7 +290,7 @@ class ExplicitIndexer(object):
     """
 
     def __init__(self, key):
-        if type(self) is ExplicitIndexer:
+        if type(self) is ExplicitIndexer:  # noqa
             raise TypeError('cannot instantiate base ExplicitIndexer objects')
         self._key = tuple(key)
 

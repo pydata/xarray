@@ -12,7 +12,7 @@ from . import TestCase, assert_array_equal, assert_identical, raises_regex
 
 class TestOps(TestCase):
     def assert_identical(self, a, b):
-        assert type(a) is type(b) or (float(a) == float(b))
+        assert type(a) is type(b) or (float(a) == float(b))  # noqa
         try:
             assert a.identical(b), (a, b)
         except AttributeError:

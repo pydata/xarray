@@ -7,7 +7,7 @@ import xarray as xr
 from . import randn, requires_dask
 
 try:
-    import dask
+    import dask  # noqa
 except ImportError:
     pass
 
@@ -17,7 +17,7 @@ except ImportError:
 def make_bench_data(shape, frac_nan, chunks):
     vals = randn(shape, frac_nan)
     coords = {'time': pd.date_range('2000-01-01', freq='D',
-              periods=shape[0])}
+                                    periods=shape[0])}
     da = xr.DataArray(vals, dims=('time', 'x', 'y'), coords=coords)
 
     if chunks is not None:
