@@ -1,16 +1,12 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import warnings
 from collections import defaultdict
 
 import numpy as np
-
 import pandas as pd
 
-from .coding import times
-from .coding import variables
+from .coding import times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
 from .core.pycompat import OrderedDict, basestring, iteritems

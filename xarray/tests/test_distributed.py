@@ -1,20 +1,22 @@
 import sys
 
 import pytest
+
+import dask
 import xarray as xr
+from distributed.client import futures_of
+from distributed.utils_test import loop  # flake8: noqa
+from distributed.utils_test import cluster, gen_cluster
+from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
+from xarray.tests.test_dataset import create_test_data
+
+from . import (
+    assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr)
 
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
-import dask
-from distributed.utils_test import cluster, gen_cluster
-from distributed.utils_test import loop  # flake8: noqa
-from distributed.client import futures_of
 
-from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
-from xarray.tests.test_dataset import create_test_data
 
-from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
-               requires_zarr)
 
 
 ENGINES = []

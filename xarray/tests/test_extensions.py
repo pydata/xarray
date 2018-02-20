@@ -1,15 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import pytest
+
+import xarray as xr
+
+from . import TestCase, raises_regex
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-import xarray as xr
 
-from . import TestCase, raises_regex
-import pytest
 
 
 @xr.register_dataset_accessor('example_accessor')

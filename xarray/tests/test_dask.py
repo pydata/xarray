@@ -1,28 +1,26 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import pickle
+from distutils.version import LooseVersion
 from textwrap import dedent
 
-from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 import pytest
 
-import xarray as xr
-from xarray import Variable, DataArray, Dataset
-import xarray.ufuncs as xu
-from xarray.core.pycompat import suppress, OrderedDict
-from . import (
-    TestCase, assert_frame_equal, raises_regex, assert_equal, assert_identical,
-    assert_array_equal, assert_allclose)
-
-from xarray.tests import mock
-
-dask = pytest.importorskip('dask')
 import dask.array as da  # noqa: E402  # allow importorskip call above this
 import dask.dataframe as dd  # noqa: E402
+import xarray as xr
+import xarray.ufuncs as xu
+from xarray import DataArray, Dataset, Variable
+from xarray.core.pycompat import OrderedDict, suppress
+from xarray.tests import mock
+
+from . import (
+    TestCase, assert_allclose, assert_array_equal, assert_equal,
+    assert_frame_equal, assert_identical, raises_regex)
+
+dask = pytest.importorskip('dask')
 
 
 class DaskTestCase(TestCase):

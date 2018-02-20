@@ -1,9 +1,29 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 from copy import copy, deepcopy
+from distutils.version import LooseVersion
+from io import StringIO
 from textwrap import dedent
+
+import numpy as np
+import pandas as pd
+import pytest
+
+import xarray as xr
+from xarray import (
+    DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
+    broadcast, open_dataset, set_options)
+from xarray.core import indexing, utils
+from xarray.core.common import full_like
+from xarray.core.pycompat import (
+    OrderedDict, integer_types, iteritems, unicode_type)
+
+from . import (
+    InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
+    assert_array_equal, assert_equal, assert_identical, raises_regex,
+    requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -12,25 +32,9 @@ try:
     import dask.array as da
 except ImportError:
     pass
-from io import StringIO
-from distutils.version import LooseVersion
 
-import numpy as np
-import pandas as pd
-import xarray as xr
-import pytest
 
-from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
-                    IndexVariable, open_dataset, set_options, MergeError)
-from xarray.core import indexing, utils
-from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
-                                  integer_types)
-from xarray.core.common import full_like
 
-from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask, source_ndarray, assert_array_equal, assert_equal,
-               assert_allclose, assert_identical, requires_bottleneck,
-               requires_scipy)
 
 
 def create_test_data(seed=None):

@@ -1,6 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import inspect
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import pytest
+
+import xarray.plot as xplt
+from xarray import DataArray
+from xarray.plot.plot import _infer_interval_breaks
+from xarray.plot.utils import (
+    _build_discrete_cmap, _color_palette, _determine_cmap_params,
+    import_seaborn)
+
+from . import (
+    TestCase, assert_array_equal, assert_equal, raises_regex,
+    requires_matplotlib, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -9,22 +25,10 @@ try:
 except ImportError:
     pass
 
-import inspect
 
-import numpy as np
-import pandas as pd
-from datetime import datetime
-import pytest
 
-from xarray import DataArray
 
-import xarray.plot as xplt
-from xarray.plot.plot import _infer_interval_breaks
-from xarray.plot.utils import (_determine_cmap_params, _build_discrete_cmap,
-                               _color_palette, import_seaborn)
 
-from . import (TestCase, requires_matplotlib, requires_seaborn, raises_regex,
-               assert_equal, assert_array_equal)
 
 
 @pytest.mark.flaky

@@ -1,16 +1,14 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from xarray import Variable, coding
-from . import (
-    TestCase, requires_netCDF4, assert_array_equal)
-import pytest
+
+from . import TestCase, assert_array_equal, requires_netCDF4
 
 
 @np.vectorize

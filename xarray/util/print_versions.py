@@ -2,14 +2,14 @@
 
 
 see pandas/pandas/util/_print_versions.py'''
+import codecs
+import importlib
+import locale
 import os
 import platform
-import sys
 import struct
 import subprocess
-import codecs
-import locale
-import importlib
+import sys
 
 
 def get_sys_info():

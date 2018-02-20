@@ -14,9 +14,10 @@ For more details see `this discussion`_ on github.
 .. _this discussion: https://github.com/pydata/xarray/issues/1397#issuecomment-299190567
 """
 
-import xarray as xr
-import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+
+import cartopy.crs as ccrs
+import xarray as xr
 
 # Load the data
 ds = xr.tutorial.load_dataset('air_temperature')

@@ -1,43 +1,37 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
+import sys
+import warnings
 from collections import Mapping, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-import warnings
-
-import sys
 
 import numpy as np
 import pandas as pd
 
-from . import ops
-from . import utils
-from . import groupby
-from . import resample
-from . import rolling
-from . import indexing
-from . import alignment
-from . import formatting
-from . import duck_array_ops
+import xarray as xr
+
+from . import (
+    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
+    rolling, utils)
 from .. import conventions
 from .alignment import align
-from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
-                          assert_coordinate_consistent, remap_label_indexers)
-from .common import ImplementsDatasetReduce, BaseDataObject
+from .common import BaseDataObject, ImplementsDatasetReduce
+from .coordinates import (
+    DatasetCoordinates, Indexes, LevelCoordinatesSource,
+    assert_coordinate_consistent, remap_label_indexers)
 from .dtypes import is_datetime_like
-from .merge import (dataset_update_method, dataset_merge_method,
-                    merge_data_and_coords, merge_variables)
-from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
-from .variable import (Variable, as_variable, IndexVariable,
-                       broadcast_variables)
-from .pycompat import (iteritems, basestring, OrderedDict,
-                       integer_types, dask_array_type, range)
+from .merge import (
+    dataset_merge_method, dataset_update_method, merge_data_and_coords,
+    merge_variables)
 from .options import OPTIONS
-
-import xarray as xr
+from .pycompat import (
+    OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
+from .utils import (
+    Frozen, SortedKeysDict, decode_numpy_dict_values,
+    ensure_us_time_resolution, hashable, maybe_wrap_array)
+from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
