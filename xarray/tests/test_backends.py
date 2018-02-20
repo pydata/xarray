@@ -1384,6 +1384,7 @@ def test_replace_slices_with_arrays():
 
 
 @requires_scipy
+@requires_dask
 class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     engine = 'scipy'
 
@@ -1405,6 +1406,7 @@ class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             assert_identical(unpickled, data)
 
 
+@requires_dask
 class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
     autoclose = True
 
@@ -1438,6 +1440,7 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 
 @requires_scipy
+@requires_dask
 class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     engine = 'scipy'
 
@@ -1515,6 +1518,7 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
@@ -1650,6 +1654,7 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
 
+@requires_dask
 class OpenMFDatasetManyFilesTest(TestCase):
     def validate_open_mfdataset_autoclose(self, engine, nfiles=10):
         randdata = np.random.randn(nfiles)
@@ -1735,6 +1740,7 @@ class OpenMFDatasetManyFilesTest(TestCase):
 
 
 @requires_scipy_or_netCDF4
+@requires_dask
 class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
     coord_name = 'lon'
     var_name = 'v1'
