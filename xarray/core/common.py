@@ -211,14 +211,26 @@ class AttrAccessMixin(object):
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj, dim):
+def get_squeeze_dims(xarray_obj, dim, axis=None):
     """Get a list of dimensions to squeeze out.
     """
-    if dim is None:
+    if not dim is None and not axis is None:
+        raise ValueError('cannot use both parameters `axis` and `dim`')
+
+    if dim is None and axis is None:
         dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
     else:
         if isinstance(dim, basestring):
             dim = [dim]
+        if isinstance(axis, int):
+            axis = (axis, )
+        if isinstance(axis, tuple):
+            for a in axis:
+                if not isinstance(a, int):
+                    raise ValueError(
+                        'parameter `axis` must be int or tuple of int.')
+            alldims = list(xarray_obj.sizes.keys())
+            dim = [alldims[a] for a in axis]
         if any(xarray_obj.sizes[k] > 1 for k in dim):
             raise ValueError('cannot select a dimension to squeeze out '
                              'which has length greater than one')
@@ -228,7 +240,7 @@ def get_squeeze_dims(xarray_obj, dim):
 class BaseDataObject(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim=None, drop=False):
+    def squeeze(self, dim=None, drop=False, axis=None):
         """Return a new object with squeezed data.
 
         Parameters
@@ -240,6 +252,8 @@ class BaseDataObject(AttrAccessMixin):
         drop : bool, optional
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
+        axis : int, optional
+            Select the dimension to squeeze. Added for compatibility reasons.
 
         Returns
         -------
@@ -251,7 +265,7 @@ class BaseDataObject(AttrAccessMixin):
         --------
         numpy.squeeze
         """
-        dims = get_squeeze_dims(self, dim)
+        dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def get_index(self, key):
