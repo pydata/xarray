@@ -4036,7 +4036,7 @@ def data_set(seed=None):
 
 
 @pytest.mark.parametrize('unaligned_coords', (
-    {'x': range(2, -1, -1)},
+    {'x': [2, 1, 0]},
     {'x': (['x'], np.asarray([2, 1, 0]))},
     {'x': (['x'], np.asarray([1, 2, 0]))},
     {'x': pd.Index([2, 1, 0])},
@@ -4044,7 +4044,7 @@ def data_set(seed=None):
 ))
 def test_constructor_aligns_to_explicit_coords(unaligned_coords):
 
-    coords = {'x': range(3)}
+    coords = {'x': [0, 1, 2]}
     a = xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
 
     expected = xr.Dataset(coords=coords)
