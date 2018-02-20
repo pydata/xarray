@@ -14,6 +14,8 @@ For more details see `this discussion`_ on github.
 .. _this discussion: https://github.com/pydata/xarray/issues/1397#issuecomment-299190567
 """
 
+from __future__ import division
+
 import xarray as xr
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt

@@ -115,7 +115,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)  # noqa 
+    assert type(a) == type(b)  # noqa
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims
