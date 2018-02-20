@@ -224,13 +224,13 @@ def line(darray, *args, **kwargs):
         if x is not None and y is not None and x == y:
             raise ValueError('Cannot make a plot with x=%r and y=%r' % (x, y))
 
-        if (x is None and y is None) or x == dim or y is darray.name:
+        if (x is None and y is None) or x == dim or y == darray.name:
             xplt = darray.coords[dim]
             yplt = darray
             xlabel = dim
             ylabel = darray.name
 
-        elif y == dim or x is darray.name:
+        elif y == dim or x == darray.name:
             yplt = darray.coords[dim]
             xplt = darray
             xlabel = darray.name
