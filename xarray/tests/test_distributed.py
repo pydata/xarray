@@ -39,7 +39,8 @@ def test_dask_distributed_netcdf_integration_test(loop, engine):
             original = create_test_data()
             with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
                 original.to_netcdf(filename, engine=engine)
-                with xr.open_dataset(filename, chunks=3, engine=engine) as restored:
+                with xr.open_dataset(
+                        filename, chunks=3, engine=engine) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
@@ -70,7 +71,7 @@ def test_async(c, s, a, b):
     assert dask.is_dask_collection(y.var2)
 
     z = y.persist()
-    assert str(z)
+    assert str(z)©
 
     assert dask.is_dask_collection(z)
     assert dask.is_dask_collection(z.var1)
