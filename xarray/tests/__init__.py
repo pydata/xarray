@@ -68,11 +68,12 @@ has_pydap, requires_pydap = _importorskip('pydap.client')
 has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
 has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
+has_netcdftime, requires_netcdftime = _importorskip('netcdftime')
 has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
-has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2.0')
+has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np112, requires_np112 = _importorskip('numpy', minversion='1.12.0')
 
 # some special cases

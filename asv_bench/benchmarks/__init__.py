@@ -2,30 +2,40 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import itertools
-import random
 
 import numpy as np
 
-np.random.seed(10)
 _counter = itertools.count()
 
 
 def requires_dask():
     try:
-        import dask
+        import dask  # noqa
     except ImportError:
         raise NotImplementedError
 
 
-def randn(shape, frac_nan=None, chunks=None):
+def randn(shape, frac_nan=None, chunks=None, seed=0):
+    rng = np.random.RandomState(seed)
     if chunks is None:
-        x = np.random.standard_normal(shape)
+        x = rng.standard_normal(shape)
     else:
         import dask.array as da
-        x = da.random.standard_normal(shape, chunks=chunks)
+        rng = da.random.RandomState(seed)
+        x = rng.standard_normal(shape, chunks=chunks)
 
     if frac_nan is not None:
-        inds = random.sample(range(x.size), int(x.size * frac_nan))
+        inds = rng.choice(range(x.size), int(x.size * frac_nan))
         x.flat[inds] = np.nan
+
+    return x
+
+
+def randint(low, high=None, size=None, frac_minus=None, seed=0):
+    rng = np.random.RandomState(seed)
+    x = rng.randint(low, high, size)
+    if frac_minus is not None:
+        inds = rng.choice(range(x.size), int(x.size * frac_minus))
+        x.flat[inds] = -1
 
     return x

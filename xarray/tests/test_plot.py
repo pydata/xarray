@@ -178,6 +178,10 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(xref, x)
         np.testing.assert_allclose(yref, y)
 
+        # test that warning is raised for non-monotonic inputs
+        with pytest.raises(ValueError):
+            _infer_interval_breaks(np.array([0, 2, 1]))
+
     def test_datetime_dimension(self):
         nrow = 3
         ncol = 4
@@ -1145,6 +1149,13 @@ class TestImshow(Common2dMixin, PlotTestCase):
         # If passed two that's just moving the range, *not* an error:
         for kwds in [dict(vmax=-1, vmin=-1.2), dict(vmin=2, vmax=2.1)]:
             da.plot.imshow(**kwds)
+
+    def test_imshow_rgb_values_in_valid_range(self):
+        da = DataArray(np.arange(75, dtype='uint8').reshape((5, 5, 3)))
+        _, ax = plt.subplots()
+        out = da.plot.imshow(ax=ax).get_array()
+        assert out.dtype == np.uint8
+        assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
 
 class TestFacetGrid(PlotTestCase):

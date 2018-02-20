@@ -3,13 +3,15 @@ from __future__ import division
 from __future__ import print_function
 import functools
 
+import numpy as np
+
 from .. import Variable
 from ..core import indexing
 from ..core.utils import FrozenOrderedDict, close_on_error
 from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
 
 from .common import WritableCFDataStore, DataStorePickleMixin, find_root
-from .netCDF4_ import (_nc4_group, _nc4_values_and_dtype,
+from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
                        _extract_nc4_variable_encoding, BaseNetCDF4Array)
 
 
@@ -17,6 +19,11 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
         key = indexing.unwrap_explicit_indexer(
             key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+        # h5py requires using lists for fancy indexing:
+        # https://github.com/h5py/h5py/issues/992
+        # OuterIndexer only holds 1D integer ndarrays, so it's safe to convert
+        # them to lists.
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.ensure_open(autoclose=True):
             return self.get_array()[key]
 
@@ -127,14 +134,15 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             self.ds.setncattr(key, value)
 
+    def encode_variable(self, variable):
+        return _encode_nc4_variable(variable)
+
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
         import h5py
 
         attrs = variable.attrs.copy()
-        variable, dtype = _nc4_values_and_dtype(variable)
-
-        self.set_necessary_dimensions(variable, unlimited_dims=unlimited_dims)
+        dtype = _get_datatype(variable)
 
         fill_value = attrs.pop('_FillValue', None)
         if dtype is str and fill_value is not None:

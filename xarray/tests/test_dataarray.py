@@ -1668,6 +1668,21 @@ class TestDataArray(TestCase):
         actual = array.squeeze(drop=False)
         assert_identical(expected, actual)
 
+        array = DataArray([[[0., 1.]]], dims=['dim_0', 'dim_1', 'dim_2'])
+        expected = DataArray([[0., 1.]], dims=['dim_1', 'dim_2'])
+        actual = array.squeeze(axis=0)
+        assert_identical(expected, actual)
+
+        array = DataArray([[[[0., 1.]]]], dims=[
+                          'dim_0', 'dim_1', 'dim_2', 'dim_3'])
+        expected = DataArray([[0., 1.]], dims=['dim_1', 'dim_3'])
+        actual = array.squeeze(axis=(0, 2))
+        assert_identical(expected, actual)
+
+        array = DataArray([[[0., 1.]]], dims=['dim_0', 'dim_1', 'dim_2'])
+        with pytest.raises(ValueError):
+            array.squeeze(axis=0, dim='dim_1')
+
     def test_drop_coordinates(self):
         expected = DataArray(np.random.randn(2, 3), dims=['x', 'y'])
         arr = expected.copy()
@@ -1715,6 +1730,12 @@ class TestDataArray(TestCase):
         arr = DataArray(np.arange(4), dims='x')
         expected = arr.sel(x=slice(2))
         actual = arr.where(arr.x < 2, drop=True)
+        assert_identical(actual, expected)
+
+    def test_where_string(self):
+        array = DataArray(['a', 'b'])
+        expected = DataArray(np.array(['a', np.nan], dtype=object))
+        actual = array.where([True, False])
         assert_identical(actual, expected)
 
     def test_cumops(self):

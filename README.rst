@@ -11,6 +11,8 @@ xarray: N-D labeled arrays and datasets
    :target: https://pypi.python.org/pypi/xarray/
 .. image:: https://zenodo.org/badge/13221727.svg
   :target: https://zenodo.org/badge/latestdoi/13221727
+.. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
+  :target: https://tomaugspurger.github.io/asv-collection/xarray/
 
 **xarray** (formerly **xray**) is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
