@@ -2,6 +2,8 @@
 
 
 see pandas/pandas/util/_print_versions.py'''
+from __future__ import absolute_import
+
 import codecs
 import importlib
 import locale
