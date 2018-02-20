@@ -23,7 +23,6 @@ from . import (
 # `isort:skip` in retrospect
 
 
-
 da = pytest.importorskip('dask.array')
 
 
