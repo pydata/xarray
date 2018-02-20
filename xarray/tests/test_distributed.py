@@ -1,10 +1,6 @@
 import sys
 
-import dask
 import pytest
-from distributed.client import futures_of
-from distributed.utils_test import loop  # flake8: noqa
-from distributed.utils_test import cluster, gen_cluster
 
 import xarray as xr
 from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
@@ -13,9 +9,17 @@ from xarray.tests.test_dataset import create_test_data
 from . import (
     assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr)
 
+# this is to stop isort throwing errors. May have been easier to just use
+# `isort:skip` in retrospect
+
+dask = pytest.importorskip('dask')
 distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 
+futures_of = distributed.client.futures_of
+loop = distributed.utils_test.loop
+cluster = distributed.utils_test.cluster
+gen_cluster = distributed.utils_test.gen_cluster
 
 ENGINES = []
 if has_scipy:

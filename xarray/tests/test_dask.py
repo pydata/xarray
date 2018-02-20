@@ -4,8 +4,6 @@ import pickle
 from distutils.version import LooseVersion
 from textwrap import dedent
 
-import dask.array as da  # noqa: E402  # allow importorskip call above this
-import dask.dataframe as dd  # noqa: E402
 import numpy as np
 import pandas as pd
 import pytest
@@ -21,6 +19,8 @@ from . import (
     assert_frame_equal, assert_identical, raises_regex)
 
 dask = pytest.importorskip('dask')
+da = pytest.importorskip('dask.array')
+dd = pytest.importorskip('dask.dataframe')
 
 
 class DaskTestCase(TestCase):
