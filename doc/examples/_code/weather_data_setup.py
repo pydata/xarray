@@ -3,7 +3,6 @@ import pandas as pd
 
 import xarray as xr
 
-
 np.random.seed(123)
 
 times = pd.date_range('2000-01-01', '2001-12-31', name='time')
