@@ -212,7 +212,7 @@ class AttrAccessMixin(object):
 def get_squeeze_dims(xarray_obj, dim, axis=None):
     """Get a list of dimensions to squeeze out.
     """
-    if not dim is None and not axis is None:
+    if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
 
     if dim is None and axis is None:
