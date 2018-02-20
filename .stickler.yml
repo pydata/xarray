@@ -2,7 +2,7 @@ linters:
   flake8:
     max-line-length: 79
     fixer: true
-    ignore: I002
+    ignore: 
     exclude:
       - 'doc/'
   py3k:
