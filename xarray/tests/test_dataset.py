@@ -34,9 +34,6 @@ except ImportError:
     pass
 
 
-
-
-
 def create_test_data(seed=None):
     rs = np.random.RandomState(seed)
     _vars = {'var1': ['dim1', 'dim2'],

@@ -17,8 +17,6 @@ distributed = pytest.importorskip('distributed')
 da = pytest.importorskip('dask.array')
 
 
-
-
 ENGINES = []
 if has_scipy:
     ENGINES.append('scipy')

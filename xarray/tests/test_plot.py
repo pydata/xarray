@@ -26,11 +26,6 @@ except ImportError:
     pass
 
 
-
-
-
-
-
 @pytest.mark.flaky
 @pytest.mark.skip(reason='maybe flaky')
 def text_in_fig():

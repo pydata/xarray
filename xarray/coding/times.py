@@ -24,7 +24,6 @@ except ImportError:
     from pandas.tslib import OutOfBoundsDatetime
 
 
-
 # standard calendars recognized by netcdftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 

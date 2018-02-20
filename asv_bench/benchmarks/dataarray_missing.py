@@ -12,8 +12,6 @@ except ImportError:
     pass
 
 
-
-
 def make_bench_data(shape, frac_nan, chunks):
     vals = randn(shape, frac_nan)
     coords = {'time': pd.date_range('2000-01-01', freq='D',

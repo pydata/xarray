@@ -14,8 +14,6 @@ except ImportError:
     pass
 
 
-
-
 class IOSingleNetCDF(object):
     """
     A few examples that benchmark reading/writing a single netCDF file with

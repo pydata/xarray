@@ -12,8 +12,6 @@ except ImportError:
     import pickle
 
 
-
-
 @xr.register_dataset_accessor('example_accessor')
 @xr.register_dataarray_accessor('example_accessor')
 class ExampleAccessor(object):
