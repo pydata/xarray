@@ -14,7 +14,7 @@ from . import (
 
 class TestOps(TestCase):
     def assert_identical(self, a, b):
-        assert type(a) is type(b) or (float(a) == float(b))
+        assert type(a) is type(b) or (float(a) == float(b))  # noqa
         try:
             assert a.identical(b), (a, b)
         except AttributeError:

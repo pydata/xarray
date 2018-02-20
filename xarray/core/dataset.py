@@ -1516,7 +1516,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # Note: remove helper function when once when numpy
             # supports vindex https://github.com/numpy/numpy/pull/6075
             if hasattr(variable.data, 'vindex'):
-                # Special case for dask backed arrays to use vectorised list indexing
+                # Special case for dask backed arrays to use vectorised list
+                # indexing
                 sel = variable.data.vindex[slices]
             else:
                 # Otherwise assume backend is numpy array with 'fancy' indexing
@@ -1579,7 +1580,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         variables = OrderedDict()
 
         for name, var in reordered.variables.items():
-            if name in indexers_dict or any(d in indexer_dims for d in var.dims):
+            if name in indexers_dict or any(
+                    d in indexer_dims for d in var.dims):
                 # slice if var is an indexer or depends on an indexed dim
                 slc = [indexers_dict[k]
                        if k in indexers_dict

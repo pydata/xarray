@@ -1,5 +1,6 @@
 import xarray as xr
 
+
 @xr.register_dataset_accessor('geo')
 class GeoAccessor(object):
     def __init__(self, xarray_obj):

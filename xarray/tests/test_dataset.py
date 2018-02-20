@@ -407,7 +407,7 @@ class TestDataset(TestCase):
         # change them inadvertently:
         assert isinstance(ds.dims, utils.Frozen)
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
-        assert type(ds.dims.mapping.mapping) is dict
+        assert type(ds.dims.mapping.mapping) is dict  # noqa
 
         with pytest.warns(FutureWarning):
             self.assertItemsEqual(ds, list(ds.variables))
