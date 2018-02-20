@@ -1,12 +1,12 @@
 import sys
 
-import pytest
-
 import dask
-import xarray as xr
+import pytest
 from distributed.client import futures_of
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.utils_test import cluster, gen_cluster
+
+import xarray as xr
 from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
 from xarray.tests.test_dataset import create_test_data
 

@@ -16,9 +16,9 @@ transformation.
 import os
 import urllib.request
 
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 
-import cartopy.crs as ccrs
 import xarray as xr
 
 # Download the file from rasterio's repository

@@ -4,12 +4,12 @@ import pickle
 from distutils.version import LooseVersion
 from textwrap import dedent
 
+import dask.array as da  # noqa: E402  # allow importorskip call above this
+import dask.dataframe as dd  # noqa: E402
 import numpy as np
 import pandas as pd
 import pytest
 
-import dask.array as da  # noqa: E402  # allow importorskip call above this
-import dask.dataframe as dd  # noqa: E402
 import xarray as xr
 import xarray.ufuncs as xu
 from xarray import DataArray, Dataset, Variable
