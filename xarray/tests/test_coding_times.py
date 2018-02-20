@@ -167,7 +167,11 @@ class TestDatetime(TestCase):
         nctime = _import_netcdftime()
 
         units = 'days since 0001-01-01'
-        dt = nctime.netcdftime.datetime(2001, 2, 29)
+        try:
+            dt = nctime.netcdftime.datetime(2001, 2, 29)
+        except AttributeError:
+            # Must be using standalone netcdftime library
+            dt = nctime.datetime(2001, 2, 29)
         for calendar in ['360_day', 'all_leap', '366_day']:
             num_time = nctime.date2num(dt, units, calendar)
             with pytest.warns(Warning, match='Unable to decode time axis'):
