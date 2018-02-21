@@ -29,7 +29,7 @@ def _encode_zarr_attr_value(value):
         encoded = value.item()
         # np.string_('X').item() returns a type `bytes`
         # zarr still doesn't like that
-        if type(encoded) is bytes:
+        if type(encoded) is bytes:  # noqa
             encoded = b64encode(encoded)
     else:
         encoded = value
@@ -37,7 +37,7 @@ def _encode_zarr_attr_value(value):
 
 
 def _ensure_valid_fill_value(value, dtype):
-    if dtype.type == np.string_ and type(value) == bytes:
+    if dtype.type == np.string_ and type(value) == bytes:  # noqa
         valid = b64encode(value)
     else:
         valid = value
