@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import itertools
-import random
 
 import numpy as np
 
@@ -11,7 +10,7 @@ _counter = itertools.count()
 
 def requires_dask():
     try:
-        import dask
+        import dask  # noqa
     except ImportError:
         raise NotImplementedError
 
