@@ -99,21 +99,23 @@ class TestPlot(PlotTestCase):
         da = DataArray(np.cos(z), dims=['z'], coords=[z], name='f')
 
         xy = [[None, None],
-              [None, 'f'],
               [None, 'z'],
-              ['f', None],
-              ['z', None],
-              ['z', 'f'],
-              ['f', 'z']]
+              ['z', None]]
 
         f, ax = plt.subplots(2, 4)
 
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
-            ax.flat[aa].set_title('x=' + str(x) + ' | '+'y='+str(y))
+            ax.flat[aa].set_title('x=' + str(x) + ' | ' + 'y=' + str(y))
 
-        with raises_regex(ValueError, 'Cannot'):
+        with raises_regex(ValueError, 'cannot'):
             da.plot(x='z', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='f', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='z', y='f')
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
@@ -125,7 +127,7 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_0', hue='dim_1')
         self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1')
 
-        with raises_regex(ValueError, 'Cannot'):
+        with raises_regex(ValueError, 'cannot'):
             self.darray[:, :, 0].plot.line(x='dim_1', y='dim_0', hue='dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
@@ -322,7 +324,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_xlabel_is_data_name(self):
         self.darray.name = 'temperature'
-        self.darray.plot(x=self.darray.name)
+        self.darray.plot(y='period')
         self.assertEqual(self.darray.name, plt.gca().get_xlabel())
 
     def test_format_string(self):

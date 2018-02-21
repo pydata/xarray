@@ -178,11 +178,8 @@ def line(darray, *args, **kwargs):
     hue : string, optional
         Coordinate for which you want multiple lines plotted
         (2D DataArrays only).
-    x : string, optional
-        1D and 2D DataArrays: Coordinate for x axis.
-    y : string, optional
-        1D DataArray: Can be coordinate name or DataArray.name
-        2D DataArray: Coordinate for y axis.
+    x, y : string, optional
+        Coordinates for x, y axis. Only one of these may be specified.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -208,29 +205,28 @@ def line(darray, *args, **kwargs):
 
     ax = get_axis(figsize, size, aspect, ax)
 
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join(['\'' + dd + '\'' for dd in darray.dims])))
+
+    if x is not None and x not in darray.dims:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs.')
+
     if ndims == 1:
         dim, = darray.dims  # get the only dimension name
 
-        error_msg = 'must be either None or %r' % dim
-        if darray.name:
-            error_msg += ' or %r.' % darray.name
-
-        if x not in [None, dim, darray.name]:
-            raise ValueError('x ' + error_msg)
-
-        if y not in [None, dim, darray.name]:
-            raise ValueError('y ' + error_msg)
-
-        if x is not None and y is not None and x == y:
-            raise ValueError('Cannot make a plot with x=%r and y=%r' % (x, y))
-
-        if (x is None and y is None) or x == dim or y == darray.name:
+        if (x is None and y is None) or x == dim:
             xplt = darray.coords[dim]
             yplt = darray
             xlabel = dim
             ylabel = darray.name
 
-        elif y == dim or x == darray.name:
+        else:
             yplt = darray.coords[dim]
             xplt = darray
             xlabel = darray.name
@@ -247,10 +243,6 @@ def line(darray, *args, **kwargs):
             yplt = darray.transpose(xlabel, huelabel)
 
         else:
-            if x is not None and x is not darray.name:
-                raise ValueError('Cannot make a plot with x=%r and y=%r '
-                                 % (x, y))
-
             ylabel, huelabel = _infer_xy_labels(darray=darray, x=y, y=hue)
             xlabel = darray.name
             xplt = darray.transpose(ylabel, huelabel)
