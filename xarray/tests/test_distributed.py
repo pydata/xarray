@@ -1,3 +1,4 @@
+import os
 import sys
 import pickle
 
@@ -33,6 +34,8 @@ NC_FORMATS = {'netcdf4': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT_OFFSET',
               'h5netcdf': ['NETCDF4']}
 TEST_FORMATS = ['NETCDF3_CLASSIC', 'NETCDF4_CLASSIC', 'NETCDF4']
 
+
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 @pytest.mark.xfail(sys.platform == 'win32',
                    reason='https://github.com/pydata/xarray/issues/1738')
