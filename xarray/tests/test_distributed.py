@@ -76,7 +76,7 @@ def test_async(c, s, a, b):
     assert dask.is_dask_collection(y.var2)
 
     z = y.persist()
-    assert str(z)©
+    assert str(z)
 
     assert dask.is_dask_collection(z)
     assert dask.is_dask_collection(z.var1)
