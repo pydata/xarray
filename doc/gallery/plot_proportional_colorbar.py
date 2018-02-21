@@ -21,12 +21,13 @@ air2d = air.isel(time=500)
 f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
 
 # Different levels
-levels = [200,210,220,230,240,250,260,270,280,290,320]
+levels = [200, 210, 220, 230, 240, 250, 260,270,280,290,320]
 
 # Plot data
-air2d.plot(ax=ax1, levels = levels)
-air2d.plot(ax=ax2, levels = levels, cbar_kwargs={'ticks':levels})
-air2d.plot(ax=ax3, levels = levels, cbar_kwargs={'ticks':levels, 'spacing':'proportional'})
+air2d.plot(ax=ax1, levels=levels)
+air2d.plot(ax=ax2, levels=levels, cbar_kwargs={'ticks': levels})
+air2d.plot(ax=ax3, levels=levels, cbar_kwargs={
+           'ticks': levels, 'spacing': 'proportional'})
 
 # Show plots
 plt.tight_layout()
