@@ -1134,7 +1134,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
-                         unlimited_dims=unlimited_dims)
+                         unlimited_dims=unlimited_dims,
+                         compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
                 encoding=None, compute=True):

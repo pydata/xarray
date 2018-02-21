@@ -204,10 +204,11 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             setattr(scipy_var, k, v)
         return scipy_var, data
 
-    def sync(self):
+    def sync(self, compute=True):
         with self.ensure_open(autoclose=True):
-            super(ScipyDataStore, self).sync()
+            futures = super(ScipyDataStore, self).sync(compute=compute)
             self.ds.flush()
+        return futures
 
     def close(self):
         self.ds.close()

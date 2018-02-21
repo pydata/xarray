@@ -1125,6 +1125,21 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_vectorized_indexing(self):
         self._test_vectorized_indexing(vindex_support=True)
 
+    def test_to_netcdf_compute_false(self):
+        from dask.delayed import Delayed
+
+        original = create_test_data().chunk()
+
+        with create_tmp_file() as tmp_file:
+            store = original.to_netcdf(tmp_file, engine='h5netcdf',
+                                       compute=False)
+            assert isinstance(store.futures, Delayed)
+            store.futures.compute()
+
+            with open_dataset(tmp_file, autoclose=self.autoclose) as actual:
+                assert_identical(original.load(), actual.load())
+
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
