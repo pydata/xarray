@@ -292,7 +292,7 @@ Building the documentation
 
 So how do you build the docs? 
 
-Firstly, make sure you have `sphinx` and `sphinx_rtd_theme` installed::
+Firstly, make sure you have ``sphinx`` and ``sphinx_rtd_theme`` installed::
 
     conda install -c anaconda sphinx sphinx_rtd_theme
 
