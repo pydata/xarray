@@ -290,7 +290,13 @@ First, you need to have a development environment to be able to build xarray
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-So how do you build the docs? Navigate to your local
+So how do you build the docs? 
+
+Firstly, make sure you have `sphinx` and `sphinx_rtd_theme` installed::
+
+    conda install -c anaconda sphinx sphinx_rtd_theme
+
+Next vavigate to your local
 ``xarray/doc/`` directory in the console and run::
 
     make html
