@@ -7,7 +7,7 @@ Proportional colorbar for discrete colormaps
 Use ``cbar_kwargs`` keyword to specify the number of ticks.
 ``spacing`` can be used to draw the ticks proportional too.
 """
-
+from __future__ import absolute_import
 import xarray as xr
 import matplotlib.pyplot as plt
 
