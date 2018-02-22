@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import pickle
+import tempfile
 
 import pytest
 import xarray as xr
@@ -19,7 +20,7 @@ from xarray.tests.test_dataset import create_test_data
 from xarray.backends.common import HDF5_LOCK, CombinedLock
 
 from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
-               requires_zarr)
+               requires_zarr, raises_regex)
 
 ENGINES = []
 if has_scipy:
@@ -36,21 +37,15 @@ NC_FORMATS = {'netcdf4': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT_OFFSET',
 TEST_FORMATS = ['NETCDF3_CLASSIC', 'NETCDF4_CLASSIC', 'NETCDF4']
 
 
+# Does this belong elsewhere?
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 @pytest.mark.xfail(sys.platform == 'win32',
                    reason='https://github.com/pydata/xarray/issues/1738')
-@pytest.mark.parametrize('engine', ENGINES)
+@pytest.mark.parametrize('engine', ['netcdf4'])
 @pytest.mark.parametrize('autoclose', [True, False])
 @pytest.mark.parametrize('nc_format', TEST_FORMATS)
-def test_dask_distributed_netcdf_integration_test(loop, engine, autoclose,
-                                                  nc_format):
-
-    if nc_format not in NC_FORMATS[engine]:
-        pytest.skip("invalid format for engine")
-
-    if engine == 'h5netcdf':
-        pytest.xfail("h5netcdf does not support autoclose")
+def test_dask_distributed_netcdf_roundtrip(loop, engine, autoclose, nc_format):
 
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
@@ -68,6 +63,53 @@ def test_dask_distributed_netcdf_integration_test(loop, engine, autoclose,
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
+
+
+@pytest.mark.xfail(sys.platform == 'win32',
+                   reason='https://github.com/pydata/xarray/issues/1738')
+@pytest.mark.parametrize('engine', ENGINES)
+@pytest.mark.parametrize('autoclose', [True, False])
+@pytest.mark.parametrize('nc_format', TEST_FORMATS)
+def test_dask_distributed_read_netcdf_integration_test(loop, engine, autoclose,
+                                                       nc_format):
+
+    if engine == 'h5netcdf' and autoclose:
+        pytest.skip('h5netcdf does not support autoclose')
+
+    if nc_format not in NC_FORMATS[engine]:
+        pytest.skip('invalid format for engine')
+
+    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
+
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
+        with cluster() as (s, [a, b]):
+            with Client(s['address'], loop=loop) as c:
+
+                original = create_test_data()
+                original.to_netcdf(filename, engine=engine, format=nc_format)
+
+                with xr.open_dataset(filename,
+                                     chunks=chunks,
+                                     engine=engine,
+                                     autoclose=autoclose) as restored:
+                    assert isinstance(restored.var1.data, da.Array)
+                    computed = restored.compute()
+                    assert_allclose(original, computed)
+
+
+@pytest.mark.parametrize('engine', ['h5netcdf', 'scipy'])
+def test_dask_distributed_netcdf_integration_test_not_implemented(loop, engine):
+    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
+
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
+        with cluster() as (s, [a, b]):
+            with Client(s['address'], loop=loop) as c:
+
+                original = create_test_data().chunk(chunks)
+
+                with raises_regex(NotImplementedError, 'distributed'):
+                    original.to_netcdf(filename, engine=engine)
+
 
 @requires_zarr
 def test_dask_distributed_zarr_integration_test(loop):

@@ -31,6 +31,14 @@ NONE_VAR_NAME = '__values__'
 
 
 def get_scheduler(get=None, collection=None):
+    """ Determine the dask scheduler that is being used.
+
+    None is returned if not dask scheduler is active.
+
+    See also
+    --------
+    dask.utils.effective_get
+    """
     try:
         from dask.utils import effective_get
         actual_get = effective_get(get, collection)
@@ -52,6 +60,14 @@ def get_scheduler(get=None, collection=None):
 
 
 def get_scheduler_lock(scheduler):
+    """ Get the appropriate lock for a certain situation based onthe dask
+       scheduler used.
+
+    See Also
+    --------
+    dask.utils.get_scheduler_lock
+    """
+
     if scheduler == 'distributed':
         from dask.distributed import Lock
         return Lock

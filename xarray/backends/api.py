@@ -10,7 +10,8 @@ from numbers import Number
 import numpy as np
 
 from .. import backends, conventions, Dataset
-from .common import ArrayWriter, HDF5_LOCK, CombinedLock
+from .common import (ArrayWriter, get_scheduler, get_scheduler_lock,
+                     HDF5_LOCK, CombinedLock)
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.utils import close_on_error, is_remote_uri
@@ -129,6 +130,32 @@ def _protect_dataset_variables_inplace(dataset, cache):
             if cache:
                 data = indexing.MemoryCachedArray(data)
             variable.data = data
+
+
+def _get_lock(engine, scheduler, format, path_or_file):
+    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
+
+    locks = []
+    SchedulerLock = get_scheduler_lock(scheduler)
+    if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
+        locks.append(HDF5_LOCK)
+
+    try:
+        # per file lock
+        # Dask locks take a name argument (e.g. filename)
+        locks.append(SchedulerLock(path_or_file))
+    except TypeError:
+        # threading/multiprocessing lock
+        locks.append(SchedulerLock())
+
+    # When we have more than one lock, use the CombinedLock wrapper class
+    lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
+
+    # Question: Should we be dropping one of these two locks when they are they
+    # are basically the same. For instance, when using netcdf4 and dask is not
+    # installed, locks will be [threading.Lock(), threading.Lock()]
+
+    return lock
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -622,14 +649,16 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
-    # TODO Move this logic outside of this function
-    from .common import get_scheduler, get_scheduler_lock
+    # handle scheduler specific logic
     scheduler = get_scheduler()
-    # I think we want to include the filename here to support concurrent writes
-    # using save_mfdataset
-    file_lock = get_scheduler_lock(scheduler)(path_or_file)
-    lock = CombinedLock([HDF5_LOCK, file_lock])
-    autoclose = scheduler == 'distributed'
+    if (dataset.chunks and scheduler in ['distributed', 'multiprocessing'] and
+            engine != 'netcdf4'):
+        raise NotImplementedError("Writing netCDF files with the %s backend "
+                                  "is not currently supported with dask's %s "
+                                  "scheduler" % (engine, scheduler))
+    lock = _get_lock(engine, scheduler, format, path_or_file)
+    autoclose = (dataset.chunks and
+                 scheduler in ['distributed', 'multiprocessing'])
 
     target = path_or_file if path_or_file is not None else BytesIO()
     store = store_open(target, mode, format, group, writer,
