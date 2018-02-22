@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-=================================
+============================================
 Proportional colorbar for discrete colormaps
-=================================
+============================================
 
-While plotting a discrete colormap you may wish to label every colorbar ticks. By default, the tick labels are limited to a number of 10.
-However, you can use the ``cbar_kwargs`` keyword to specify the number of ticks. It is also possible to arrange the spacing between ticks if ``levels`` are not regular.
-
+Use ``cbar_kwargs`` keyword to specify the number of ticks.
+``spacing`` can be used to draw the ticks proportional too.
 """
 
 import xarray as xr
@@ -20,7 +19,7 @@ air2d = air.isel(time=500)
 # Prepare the figure
 f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
 
-# Different levels
+# Levels increment by 10 except last value to show a proportional colorbar
 levels = [200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 320]
 
 # Plot data
