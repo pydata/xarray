@@ -52,7 +52,7 @@ attribute like ``'days since 2000-01-01'``).
    When decoding/encoding datetimes for non-standard calendars or for dates
    before year 1678 or after year 2262, xarray uses the `netcdftime`_ library.
    ``netcdftime`` was previously packaged with the ``netcdf4-python`` package but
-   is now diestributed separately. ``netcdftime`` is an
+   is now distributed separately. ``netcdftime`` is an
    :ref:`optional dependency<installing>` of xarray.
 
 .. _netcdftime: https://unidata.github.io/netcdftime
