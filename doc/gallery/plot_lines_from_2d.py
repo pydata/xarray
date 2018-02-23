@@ -15,8 +15,9 @@ See :ref:`plotting.multiplelines` for more details.
 import xarray as xr
 import matplotlib.pyplot as plt
 
-def   badly(spaced   ):
-   1+1
+
+def badly(spaced):
+    1 + 1
 
 
 # Load the data
