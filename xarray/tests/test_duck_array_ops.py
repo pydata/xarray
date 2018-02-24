@@ -312,12 +312,17 @@ def test_argmin_max_error():
 @pytest.mark.skipif(not has_dask, reason='This is for dask.')
 @pytest.mark.parametrize('axis', [0, -1])
 @pytest.mark.parametrize('window', [3, 8, 11])
-def test_dask_rolling(axis, window):
+@pytest.mark.parametrize('center', [True, False])
+def test_dask_rolling(axis, window, center):
     x = np.array(np.random.randn(100, 40), dtype=float)
     dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
 
-    expected = rolling_window(x, axis=axis, window=window)
-    actual = rolling_window(dx, axis=axis, window=window)
+    expected = rolling_window(x, axis=axis, window=window, center=center,
+                              fill_value=np.nan)
+    actual = rolling_window(dx, axis=axis, window=window, center=center,
+                            fill_value=np.nan)
     assert isinstance(actual, da.Array)
+    print(actual.compute()[0, :5])
+    print(expected[0, :5])
     assert_array_equal(actual, expected)
     assert actual.shape == expected.shape

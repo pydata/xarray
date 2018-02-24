@@ -1684,6 +1684,17 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         assert_identical(v._getitem_with_mask(indexer, fill_value=-1),
                          self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
 
+    def test_rolling_window_chunk(self):
+        # we need to take care of window size if chunk size is small
+        import dask.array as da
+        v = Variable(['x'], da.arange(100, chunks=20))
+        # should not raise
+        rw = v.rolling_window(dim='x', window=10, window_dim='x_w',
+                              center=True)
+        # window/2 should be smaller than the smallest chunk size.
+        with pytest.raises(ValueError):
+            rw = v.rolling_window(dim='x', window=100, window_dim='x_w',
+                                  center=True)
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)

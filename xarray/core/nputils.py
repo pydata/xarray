@@ -136,7 +136,20 @@ class NumpyVIndexAdapter(object):
                                        mixed_positions)
 
 
-def rolling_window(a, window, axis=-1):
+def rolling_window(a, axis, window, center, fill_value):
+    """ rolling window with padding. """
+    pads = [(0, 0) for s in a.shape]
+    if center:
+        start = int(window / 2)  # 10 -> 5,  9 -> 4
+        end = window - 1 - start
+        pads[axis] = (start, end)
+    else:
+        pads[axis] = (window - 1, 0)
+    a = np.pad(a, pads, mode='constant', constant_values=fill_value)
+    return _rolling_window(a, window, axis)
+
+
+def _rolling_window(a, window, axis=-1):
     """
     Make an ndarray with a rolling window along axis.
 

@@ -32,15 +32,24 @@ def test_vindex():
 
 
 def test_rolling():
-    x = np.array([0, 1, 2, 3, 4], dtype=float)
+    x = np.array([1, 2, 3, 4], dtype=float)
 
-    actual = rolling_window(x, axis=-1, window=3)
-    expected = np.array([[0, 1, 2],
+    actual = rolling_window(x, axis=-1, window=3, center=True,
+                            fill_value=np.nan)
+    expected = np.array([[np.nan, 1, 2],
+                         [1, 2, 3],
+                         [2, 3, 4],
+                         [3, 4, np.nan]], dtype=float)
+    assert_array_equal(actual, expected)
+
+    actual = rolling_window(x, axis=-1, window=3, center=False, fill_value=0.0)
+    expected = np.array([[0, 0, 1],
+                         [0, 1, 2],
                          [1, 2, 3],
                          [2, 3, 4]], dtype=float)
     assert_array_equal(actual, expected)
 
     x = np.stack([x, x * 1.1])
-    actual = rolling_window(x, axis=-1, window=3)
+    actual = rolling_window(x, axis=-1, window=3, center=False, fill_value=0.0)
     expected = np.stack([expected, expected * 1.1], axis=0)
     assert_array_equal(actual, expected)

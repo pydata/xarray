@@ -380,12 +380,14 @@ def last(values, axis, skipna=None):
     return take(values, -1, axis=axis)
 
 
-def rolling_window(array, window, axis=-1):
+def rolling_window(array, axis, window, center, fill_value):
     """
     Make an ndarray with a rolling window of axis-th dimension.
     The rolling dimension will be placed at the last dimension.
     """
     if isinstance(array, dask_array_type):
-        return dask_array_ops.rolling_window(array, window, axis=axis)
+        return dask_array_ops.rolling_window(
+            array, axis, window, center, fill_value)
     else:  # np.ndarray
-        return nputils.rolling_window(array, window, axis=axis)
+        return nputils.rolling_window(
+            array, axis, window, center, fill_value)

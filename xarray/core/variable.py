@@ -1519,9 +1519,10 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         window_dim: str
             New name of the window dimension.
         center: boolean. default False.
-            If True, pad np.nan for both ends. Otherwise, pad in the head of
-            the axis.
-
+            If True, pad fill_value for both ends. Otherwise, pad in the head
+            of the axis.
+        fill_value:
+            value to be filled.
 
         Returns
         -------
@@ -1535,25 +1536,25 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
         >>> v.rolling_window(x, 'b', 3, 'window_dim')
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
-               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
 
         >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
         <xarray.Variable (a: 2, b: 4, window_dim: 3)>
-        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
-               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
+               [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
         """
-        new_dims = self.dims + (window_dim, )
-        if center:
-            start = -int(-window / 2)
-            end = window - 1 - start
-            pads = (start, end)
+        if fill_value is dtypes.NA:  # np.nan is passed
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+            array = self.astype(dtype).data
         else:
-            pads = (window - 1, 0)
+            dtype = self.dtype
+            array = self.data
 
-        array = self.pad_with_fill_value(fill_value=fill_value, **{dim: pads})
+        new_dims = self.dims + (window_dim, )
         return Variable(new_dims, duck_array_ops.rolling_window(
-            array.data, axis=self.get_axis_num(dim), window=window))
+            array, axis=self.get_axis_num(dim), window=window,
+            center=center, fill_value=fill_value))
 
     @property
     def real(self):

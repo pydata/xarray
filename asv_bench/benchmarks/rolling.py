@@ -38,8 +38,8 @@ class Rolling(object):
 
     @parameterized(['center', 'stride'],
                    ([True, False], [1, 200]))
-    def time_rolling_to_dataset(self, center, stride):
-        self.ds.rolling(x=window, center=center).to_dataset(
+    def time_rolling_construct(self, center, stride):
+        self.ds.rolling(x=window, center=center).construct(
             'window_dim', stride=stride).mean(dim='window_dim')
 
 
