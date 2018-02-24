@@ -1693,8 +1693,8 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
                               center=True)
         # window/2 should be smaller than the smallest chunk size.
         with pytest.raises(ValueError):
-            rw = v.rolling_window(dim='x', window=100, window_dim='x_w',
-                                  center=True)
+            v.rolling_window(dim='x', window=100, window_dim='x_w',
+                             center=True)
 
 class TestIndexVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(IndexVariable)
