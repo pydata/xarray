@@ -326,3 +326,9 @@ def test_dask_rolling(axis, window, center):
     print(expected[0, :5])
     assert_array_equal(actual, expected)
     assert actual.shape == expected.shape
+
+    # we need to take care of window size if chunk size is small
+    # window/2 should be smaller than the smallest chunk size.
+    with pytest.raises(ValueError):
+        rolling_window(dx, axis=axis, window=100, center=center,
+                       fill_value=np.nan)
