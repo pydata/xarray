@@ -765,7 +765,8 @@ class VariableSubclassTestCases(object):
 
     def test_rolling_window(self):
         # Just a working test. See test_nputils for the algorithm validation
-        v = self.cls(['x', 'y', 'z'], np.arange(40*30*2).reshape(40, 30, 2))
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
         for (d, w) in [('x', 3), ('y', 5)]:
             v_rolling = v.rolling_window(d, w, d + '_window')
             assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
