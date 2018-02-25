@@ -4,7 +4,7 @@ linters:
     fixer: true
     ignore: I002
     exclude:
-      - 'doc'
+      - doc
   py3k:
 fixers:
   enable: true
