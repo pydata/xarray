@@ -15,12 +15,6 @@ See :ref:`plotting.multiplelines` for more details.
 import xarray as xr
 import matplotlib.pyplot as plt
 
-
-def badly_spaced_again( spaced ):
-    badName = 1
-    return badName
-
-
 # Load the data
 ds = xr.tutorial.load_dataset('air_temperature')
 air = ds.air - 273.15  # to celsius
