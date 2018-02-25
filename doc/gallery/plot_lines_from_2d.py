@@ -16,7 +16,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 
-def badly(spaced):
+def badly_spaced_again( spaced ):
     badName = 1
     return badName
 
