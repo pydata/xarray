@@ -36,32 +36,8 @@ def rolling_window(a, axis, window, center, fill_value):
         axis = a.ndim + axis
     depth = {d: 0 for d in range(a.ndim)}
     depth[axis] = int(window / 2)
-
+    # For evenly sized window, we need to crop the first point of each block.
     offset = 1 if window % 2 == 0 else 0
-
-    # pad the original array before the operation in order to avoid copying
-    # the output array (output array is just a view).
-    if center:
-        start = int(window / 2)  # 10 -> 5,  9 -> 4
-        end = window - 1 - start
-    else:
-        start, end = window - 1, 0
-
-    drop_size = depth[axis] - offset - np.maximum(start, end)
-    if drop_size < 0:
-        # ghosting requires each chunk should be larger than depth.
-        if -drop_size < depth[axis]:
-            pad_size = depth[axis]
-            drop_size = depth[axis] + drop_size
-        else:
-            pad_size = -drop_size
-            drop_size = 0
-        shape = list(a.shape)
-        shape[axis] = pad_size
-        chunks = list(a.chunks)
-        chunks[axis] = (pad_size, )
-        fill_array = da.full(shape, fill_value, dtype=a.dtype, chunks=chunks)
-        a = da.concatenate([fill_array, a], axis=axis)
 
     if depth[axis] > min(a.chunks[axis]):
         raise ValueError(
@@ -71,8 +47,32 @@ def rolling_window(a, axis, window, center, fill_value):
             "more evenly divides the shape of your array." %
             (window, depth[axis], min(a.chunks[axis])))
 
-    # We temporary use `reflect` boundary here, but the edge portion is
-    # truncated later.
+    # Although dask.ghost pads values to boundaries of the array,
+    # the size of the generated array is smaller than what we want
+    # if center == False.
+    if center:
+        start = int(window / 2)  # 10 -> 5,  9 -> 4
+        end = window - 1 - start
+    else:
+        start, end = window - 1, 0
+    pad_size = max(start, end) + offset - depth[axis]
+    drop_size = 0
+    # pad_size becomes more than 0 when the ghosted array is smaller than
+    # needed. In this case, we need to enlarge the original array by padding
+    # before ghosting.
+    if pad_size > 0:
+        if pad_size < depth[axis]:
+            # Ghosting requires each chunk larger than depth. If pad_size is
+            # smaller than the depth, we enlarge this and truncate it later.
+            drop_size = depth[axis] - pad_size
+            pad_size = depth[axis]
+        shape = list(a.shape)
+        shape[axis] = pad_size
+        chunks = list(a.chunks)
+        chunks[axis] = (pad_size, )
+        fill_array = da.full(shape, fill_value, dtype=a.dtype, chunks=chunks)
+        a = da.concatenate([fill_array, a], axis=axis)
+
     boundary = {d: fill_value for d in range(a.ndim)}
 
     # create ghosted arrays
@@ -89,7 +89,7 @@ def rolling_window(a, axis, window, center, fill_value):
     out = ag.map_blocks(func, dtype=a.dtype, new_axis=a.ndim, chunks=chunks,
                         window=window, axis=axis)
 
-    # crop the edge points
+    # crop boundary.
     index = (slice(None),) * axis + (slice(drop_size,
                                            drop_size + orig_shape[axis]), )
     return out[index]

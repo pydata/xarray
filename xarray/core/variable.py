@@ -983,8 +983,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         else:
             pads = [(0, 0) if d not in pad_widths else pad_widths[d]
                     for d in self.dims]
-            array = np.pad(self.data.astype(dtype), pads, mode='constant',
-                           constant_values=fill_value)
+            array = np.pad(self.data.astype(dtype, copy=False), pads,
+                           mode='constant', constant_values=fill_value)
         return type(self)(self.dims, array)
 
     def _roll_one_dim(self, dim, count):
@@ -1546,7 +1546,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
-            array = self.astype(dtype).data
+            array = self.astype(dtype, copy=False).data
         else:
             dtype = self.dtype
             array = self.data

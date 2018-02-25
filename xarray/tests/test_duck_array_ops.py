@@ -322,8 +322,6 @@ def test_dask_rolling(axis, window, center):
     actual = rolling_window(dx, axis=axis, window=window, center=center,
                             fill_value=np.nan)
     assert isinstance(actual, da.Array)
-    print(actual.compute()[0, :5])
-    print(expected[0, :5])
     assert_array_equal(actual, expected)
     assert actual.shape == expected.shape
 
