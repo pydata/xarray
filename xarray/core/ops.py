@@ -319,7 +319,8 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
     for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(duck_array_ops, name), name=name)
+        f = _func_slash_method_wrapper(
+            getattr(duck_array_ops, name), name=name)
         setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name='round')
