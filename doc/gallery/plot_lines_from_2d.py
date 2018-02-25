@@ -16,8 +16,8 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 
-def badly(spaced):
-    1 + 1 / 2
+def badly( spaced ):
+    1+1/2
 
 
 # Load the data
