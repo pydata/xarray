@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 
 
 def badly(spaced):
-    1 + 1 / 2
+    badName = 1
+    return badName
 
 
 # Load the data
