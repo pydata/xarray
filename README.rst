@@ -84,6 +84,11 @@ Documentation
 
 The official documentation is hosted on ReadTheDocs at http://xarray.pydata.org/
 
+Contributing
+------------
+
+You can find information about contributing to xarray at our `Contributing page <http://xarray.pydata.org/en/latest/contributing.html#>`_.
+
 Get in touch
 ------------
 
