@@ -2139,6 +2139,17 @@ class PydapTest(TestCase):
             assert_equal(actual.isel(j=slice(1, 2)),
                          expected.isel(j=slice(1, 2)))
 
+        with self.create_datasets() as (actual, expected):
+            indexers = {'i': [1, 0, 0], 'j': [1, 2, 0, 1]}
+            assert_equal(actual.isel(**indexers),
+                         expected.isel(**indexers))
+
+        with self.create_datasets() as (actual, expected):
+            indexers = {'i': DataArray([0, 1, 0], dims='a'),
+                        'j': DataArray([0, 2, 1], dims='a')}
+            assert_equal(actual.isel(**indexers),
+                         expected.isel(**indexers))
+
     def test_compatible_to_netcdf(self):
         # make sure it can be saved as a netcdf
         with self.create_datasets() as (actual, expected):
