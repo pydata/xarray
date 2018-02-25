@@ -256,7 +256,7 @@ def slice_slice(old_slice, applied_slice, size):
     items = _expand_slice(old_slice, size)[applied_slice]
     if len(items) > 0:
         start = items[0]
-        stop = items[-1] + step
+        stop = items[-1] + int(np.sign(step))
         if stop < 0:
             stop = None
     else:

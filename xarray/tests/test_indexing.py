@@ -144,11 +144,11 @@ class TestLazyArray(TestCase):
             x = np.arange(size)
             slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
                       I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
-                      I[4:4:4], I[:4:-4]]
+                      I[4:4:4], I[:4:-4], I[::-2]]
             for i in slices:
                 for j in slices:
                     expected = x[i][j]
-                    new_slice = indexing.slice_slice(i, j, size=100)
+                    new_slice = indexing.slice_slice(i, j, size=size)
                     actual = x[new_slice]
                     assert_array_equal(expected, actual)
 
