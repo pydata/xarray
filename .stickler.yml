@@ -4,8 +4,7 @@ linters:
     fixer: true
     ignore: I002
     exclude:
-      - doc/examples
-      - doc/gallery
+      - doc/*
   py3k:
 fixers:
   enable: true
