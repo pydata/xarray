@@ -167,6 +167,9 @@ Bug fixes
   match pandas (:issue:`1847`). A combination of strings/numbers or
   unicode/bytes now promote to object dtype, instead of strings or unicode.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+  - Fixed bug where :py:meth:`~xarray.DataArray.isnull` was loading data
+  stored as dask arrays (:issue:`1937`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.0:
 
