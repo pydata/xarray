@@ -9,11 +9,12 @@ from . import assert_array_equal
 from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv, where, stack, concatenate
 )
+from xarray.core.pycompat import dask_array_type
 from xarray import DataArray
-from xarray.testing import assert_allclose
+from xarray.testing import assert_allclose, assert_equal
 from xarray import concat
 
-from . import TestCase, raises_regex, has_dask
+from . import TestCase, raises_regex, has_dask, requires_dask
 
 
 class TestOps(TestCase):
@@ -302,3 +303,10 @@ def test_argmin_max_error():
     da = construct_dataarray(2, np.bool_, contains_nan=True, dask=False)
     with pytest.raises(ValueError):
         da.argmin(dim='y')
+
+
+@requires_dask
+def test_isnull_with_dask():
+    da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
+    assert isinstance(da.isnull().data, dask_array_type)
+    assert_equal(da.isnull().load(), da.load().isnull())
