@@ -12,7 +12,6 @@ from __future__ import print_function
 import operator
 
 import numpy as np
-import pandas as pd
 
 from . import dtypes
 from . import duck_array_ops
