@@ -27,8 +27,8 @@ What's New
 
 .. _whats-new.0.10.1:
 
-v0.10.1 (unreleased)
---------------------
+v0.10.1 (25 February 2018)
+--------------------------
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
