@@ -891,7 +891,7 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         key = indexer.tuple
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects  don't like tuples)
+            # objects don't like tuples)
             key, = key
 
         if getattr(key, 'ndim', 0) > 1:  # Return np-array if multidimensional
