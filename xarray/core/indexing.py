@@ -891,7 +891,7 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         key = indexer.tuple
         if isinstance(key, tuple) and len(key) == 1:
             # unpack key so it can index a pandas.Index object (pandas.Index
-            # objects don't like tuples)
+            # objects  don't like tuples)
             key, = key
 
         if getattr(key, 'ndim', 0) > 1:  # Return np-array if multidimensional
@@ -911,6 +911,10 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
                 result = np.datetime64('NaT', 'ns')
             elif isinstance(result, timedelta):
                 result = np.timedelta64(getattr(result, 'value', result), 'ns')
+            elif isinstance(result, pd.Timestamp):
+                # GH:1932 If a single item is indexed from DatetimeIndex,
+                # we need to convert it to np.datetime64
+                result = np.asarray(result.to_datetime64())
             elif self.dtype != object:
                 result = np.asarray(result, dtype=self.dtype)
 
