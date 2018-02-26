@@ -10,12 +10,11 @@ from xarray.core.duck_array_ops import (
     first, last, count, mean, array_notnull_equiv, where, stack, concatenate,
     rolling_window
 )
-from xarray.core.pycompat import dask_array_type
 from xarray import DataArray
-from xarray.testing import assert_allclose, assert_equal
+from xarray.testing import assert_allclose
 from xarray import concat
 
-from . import TestCase, raises_regex, has_dask, requires_dask
+from . import TestCase, raises_regex, has_dask
 
 try:
     import dask.array as da
