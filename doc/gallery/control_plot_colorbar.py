@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-============================================
-Proportional colorbar for discrete colormaps
-============================================
+==========================
+Control a plot's colorbar
+==========================
 
 Use ``cbar_kwargs`` keyword to specify the number of ticks.
-``spacing`` can be used to draw the ticks proportional too.
+``spacing`` can be used to draw proportional ticks..
 """
-from __future__ import absolute_import
 import xarray as xr
 import matplotlib.pyplot as plt
 
 # Load the data
 air_temp = xr.tutorial.load_dataset('air_temperature')
-air = air_temp.air
-air2d = air.isel(time=500)
+air2d = air_temp.air.isel(time=500)
 
 # Prepare the figure
 f, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
