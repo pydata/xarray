@@ -745,6 +745,26 @@ def contourf(x, y, z, ax, **kwargs):
     return primitive
 
 
+def _is_monotonic(coord, axis=0):
+    """
+    >>> _is_monotonic(np.array([0, 1, 2]))
+    True
+    >>> _is_monotonic(np.array([2, 1, 0]))
+    True
+    >>> _is_monotonic(np.array([0, 2, 1]))
+    False
+    """
+    if coord.shape[axis] < 3:
+        return True
+    else:
+        n = coord.shape[axis]
+        delta_pos = (coord.take(np.arange(1, n), axis=axis) >=
+                     coord.take(np.arange(0, n - 1), axis=axis))
+        delta_neg = (coord.take(np.arange(1, n), axis=axis) <=
+                     coord.take(np.arange(0, n - 1), axis=axis))
+        return np.all(delta_pos) or np.all(delta_neg)
+
+
 def _infer_interval_breaks(coord, axis=0):
     """
     >>> _infer_interval_breaks(np.arange(5))
@@ -754,6 +774,15 @@ def _infer_interval_breaks(coord, axis=0):
            [ 2.5,  3.5,  4.5]])
     """
     coord = np.asarray(coord)
+
+    if not _is_monotonic(coord, axis=axis):
+        raise ValueError("The input coordinate is not sorted in increasing "
+                         "order along axis %d. This can lead to unexpected "
+                         "results. Consider calling the `sortby` method on "
+                         "the input DataArray. To plot data with categorical "
+                         "axes, consider using the `heatmap` function from "
+                         "the `seaborn` statistical plotting library." % axis)
+
     deltas = 0.5 * np.diff(coord, axis=axis)
     if deltas.size == 0:
         deltas = np.array(0.0)

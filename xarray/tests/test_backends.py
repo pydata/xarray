@@ -630,7 +630,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # should still pass though.
             assert_identical(ds, actual)
 
-        if type(self) is NetCDF4DataTest:
+        if isinstance(self, NetCDF4DataTest):
             ds['z'].encoding['endian'] = 'big'
             with pytest.raises(NotImplementedError):
                 with self.roundtrip(ds) as actual:
@@ -2214,7 +2214,10 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
         else:
             data_shape = nz, ny, nx
             write_kwargs = {}
-        data = np.arange(nz*ny*nx, dtype=rasterio.float32).reshape(*data_shape)
+        data = np.arange(
+            nz * ny * nx,
+            dtype=rasterio.float32).reshape(
+            *data_shape)
         if transform is None:
             transform = from_origin(*transform_args)
         with rasterio.open(
@@ -2231,10 +2234,10 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
         data = data[np.newaxis, ...] if nz == 1 else data
         expected = DataArray(data, dims=('band', 'y', 'x'),
                              coords={
-                                 'band': np.arange(nz)+1,
-                                 'y': -np.arange(ny) * d + b + dy/2,
-                                 'x': np.arange(nx) * c + a + dx/2,
-                             })
+                                 'band': np.arange(nz) + 1,
+                                 'y': -np.arange(ny) * d + b + dy / 2,
+                                 'x': np.arange(nx) * c + a + dx / 2,
+        })
         yield tmp_file, expected
 
 
@@ -2316,7 +2319,7 @@ class TestRasterio(TestCase):
             with create_tmp_file(suffix='.tif') as tmp_file:
                 # data
                 nx, ny, nz = 4, 3, 3
-                data = np.arange(nx*ny*nz,
+                data = np.arange(nx * ny * nz,
                                  dtype=rasterio.float32).reshape(nz, ny, nx)
                 with rasterio.open(
                         tmp_file, 'w',

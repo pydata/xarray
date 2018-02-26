@@ -29,7 +29,7 @@ basic_assignment_values = {
 
 outer_indexes = {
     '1d': {'x': randint(0, nx, 400)},
-    '2d':  {'x': randint(0, nx, 500), 'y': randint(0, ny, 400)},
+    '2d': {'x': randint(0, nx, 500), 'y': randint(0, ny, 400)},
     '2d-1scalar': {'x': randint(0, nx, 100), 'y': 1, 't': randint(0, nt, 400)}
 }
 
