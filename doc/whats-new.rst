@@ -30,19 +30,56 @@ What's New
 v0.10.1 (unreleased)
 --------------------
 
+The minor release includes a number of bug-fixes and backwards compatible enhancements.
+
 Documentation
 ~~~~~~~~~~~~~
 
-- Added apply_ufunc example to toy weather data page (:issue:`1844`).
+- Added a new guide on :ref:`contributing` (:issue:`640`)
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Added apply_ufunc example to :ref:`toy weather data` (:issue:`1844`).
   By `Liam Brannigan <https://github.com/braaannigan>`_.
 - New entry `Why don’t aggregations return Python scalars?` in the
   :doc:`faq` (:issue:`1726`).
   By `0x0L <https://github.com/0x0L>`_.
-- Added a new contributors guide (:issue:`640`)
-  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
+
+**New functions and methods**:
+
+- Added :py:meth:`DataArray.to_iris` and
+  :py:meth:`DataArray.from_iris` for
+  converting data arrays to and from Iris_ Cubes with the same data and coordinates
+  (:issue:`621` and :issue:`37`).
+  By `Neil Parley <https://github.com/nparley>`_ and `Duncan Watson-Parris <https://github.com/duncanwp>`_.
+- Experimental support for using `Zarr`_ as storage layer for xarray
+  (:issue:`1223`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_ and
+  `Joe Hamman <https://github.com/jhamman>`_.
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
+- ``.dt`` accessor can now ceil, floor and round timestamps to specified frequency.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+**Plotting enhancements**:
+
+- :func:`xarray.plot.imshow` now handles RGB and RGBA images.
+  Saturation can be adjusted with ``vmin`` and ``vmax``, or with ``robust=True``.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
+- :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
+  1D coordinate (e.g. time) and a 2D coordinate (e.g. depth as a function of
+  time) (:issue:`1737`).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`~plot()` rotates x-axis ticks if x-axis is time.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :py:func:`~plot.line()` can draw multiple lines if provided with a
+  2D variable.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+**Other enhancements**:
+
 - Reduce methods such as :py:func:`DataArray.sum()` now handles object-type array.
 
   .. ipython:: python
@@ -57,39 +94,17 @@ Enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added nodatavals attribute to DataArray when using :py:func:`~xarray.open_rasterio`. (:issue:`1736`).
   By `Alan Snow <https://github.com/snowman2>`_.
-- :py:func:`~plot.contourf()` learned to contour 2D variables that have both a
-  1D co-ordinate (e.g. time) and a 2D co-ordinate (e.g. depth as a function of
-  time) (:issue:`1737`).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- Added :py:meth:`DataArray.to_iris <xray.DataArray.to_iris>` and :py:meth:`DataArray.from_iris <xray.DataArray.from_iris>` for
-  converting data arrays to and from Iris_ Cubes with the same data and coordinates (:issue:`621` and :issue:`37`).
-  By `Neil Parley <https://github.com/nparley>`_ and `Duncan Watson-Parris <https://github.com/duncanwp>`_.
 - Use ``pandas.Grouper`` class in xarray resample methods rather than the
   deprecated ``pandas.TimeGrouper`` class (:issue:`1766`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Support for using `Zarr`_ as storage layer for xarray. (:issue:`1223`).
-  By `Ryan Abernathey <https://github.com/rabernat>`_ and
-  `Joe Hamman <https://github.com/jhamman>`_.
-- Support for using `Zarr`_ as storage layer for xarray.
-  By `Ryan Abernathey <https://github.com/rabernat>`_.
-- :func:`xarray.plot.imshow` now handles RGB and RGBA images.
-  Saturation can be adjusted with ``vmin`` and ``vmax``, or with ``robust=True``.
-  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 - Experimental support for parsing ENVI metadata to coordinates and attributes
   in :py:func:`xarray.open_rasterio`.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
-- :py:func:`~plot()` learned to rotate x-axis ticks if x-axis is time.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- :py:func:`~plot.line()` learned to draw multiple lines if provided with a
-  2D variable.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Reduce memory usage when decoding a variable with a scale_factor, by
   converting 8-bit and 16-bit integers to float32 instead of float64
   (:pull:`1840`), and keeping float16 and float32 as float32 (:issue:`1842`).
   Correspondingly, encoded variables may also be saved with a smaller dtype.
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
-- `.dt` accessor can now ceil, floor and round timestamps to specified frequency.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Speed of reindexing/alignment with dask array is orders of magnitude faster
   when inserting missing values  (:issue:`1847`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
@@ -103,12 +118,6 @@ Enhancements
 .. _Zarr: http://zarr.readthedocs.io/
 
 .. _Iris: http://scitools.org.uk/iris
-
-**New functions/methods**
-
-- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
-  bottleneck (:issue:`1731`).
-  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -138,7 +147,7 @@ Bug fixes
   with size one in some dimension can now be plotted, which is good for
   exploring satellite imagery (:issue:`1780`).
   By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
-- Fixed ``UnboundLocalError`` when opening netCDF file `` (:issue:`1781`).
+- Fixed ``UnboundLocalError`` when opening netCDF file (:issue:`1781`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - The ``variables``, ``attrs``, and ``dimensions`` properties have been
   deprecated as part of a bug fix addressing an issue where backends were
@@ -167,7 +176,7 @@ Bug fixes
   match pandas (:issue:`1847`). A combination of strings/numbers or
   unicode/bytes now promote to object dtype, instead of strings or unicode.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-  - Fixed bug where :py:meth:`~xarray.DataArray.isnull` was loading data
+- Fixed bug where :py:meth:`~xarray.DataArray.isnull` was loading data
   stored as dask arrays (:issue:`1937`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
