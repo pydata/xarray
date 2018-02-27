@@ -46,6 +46,8 @@ Enhancements
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -141,8 +143,6 @@ Enhancements
   encoding/decoding of datetimes with non-standard calendars without the
   netCDF4 dependency (:issue:`1084`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
