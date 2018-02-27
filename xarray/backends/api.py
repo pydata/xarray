@@ -13,8 +13,7 @@ from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
 from .common import (
-    GLOBAL_LOCK, HDF5_LOCK, ArrayWriter, CombinedLock, get_scheduler,
-    get_scheduler_lock)
+    HDF5_LOCK, ArrayWriter, CombinedLock, get_scheduler, get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'

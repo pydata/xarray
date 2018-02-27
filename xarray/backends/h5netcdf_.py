@@ -8,11 +8,11 @@ from .. import Variable
 from ..core import indexing
 from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from .common import (HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore,
-                     find_root)
-from .netCDF4_ import (BaseNetCDF4Array, _encode_nc4_variable,
-                       _extract_nc4_variable_encoding, _get_datatype,
-                       _nc4_group)
+from .common import (
+    HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore, find_root)
+from .netCDF4_ import (
+    BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
+    _get_datatype, _nc4_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):

@@ -12,8 +12,9 @@ from ..conventions import pop_to
 from ..core import indexing
 from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
-from .common import (HDF5_LOCK, BackendArray, DataStorePickleMixin,
-                     WritableCFDataStore, find_root, robust_getitem)
+from .common import (
+    HDF5_LOCK, BackendArray, DataStorePickleMixin, WritableCFDataStore,
+    find_root, robust_getitem)
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
