@@ -4,5 +4,7 @@ linters:
     fixer: false
     ignore: I002
     exclude:
-      - doc/**/*.py
+      - doc/gallery
+      - doc/examples
+      - doc/examples/_code
   py3k:
