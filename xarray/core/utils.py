@@ -1,20 +1,19 @@
 """Internal utilties; not for external use
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import contextlib
 import functools
 import itertools
 import re
 import warnings
-from collections import Mapping, MutableMapping, MutableSet, Iterable
+from collections import Iterable, Mapping, MutableMapping, MutableSet
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import (iteritems, OrderedDict, basestring, bytes_type,
-                       dask_array_type)
+from .pycompat import (
+    OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
 
 def alias_message(old_name, new_name):

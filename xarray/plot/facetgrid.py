@@ -1,18 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import warnings
-import itertools
 import functools
+import itertools
+import warnings
 
 import numpy as np
 
-from ..core.pycompat import getargspec
 from ..core.formatting import format_item
-from .utils import (_determine_cmap_params, _infer_xy_labels,
-                    import_matplotlib_pyplot)
-
+from ..core.pycompat import getargspec
+from .utils import (
+    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams

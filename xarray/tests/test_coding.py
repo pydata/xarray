@@ -1,12 +1,11 @@
 import numpy as np
-
 import pytest
 
 import xarray as xr
-from xarray.core.pycompat import suppress
 from xarray.coding import variables
+from xarray.core.pycompat import suppress
 
-from . import requires_dask, assert_identical
+from . import assert_identical, requires_dask
 
 with suppress(ImportError):
     import dask.array as da

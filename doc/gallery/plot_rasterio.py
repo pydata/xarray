@@ -18,12 +18,13 @@ original map projection (see :ref:`recipes.rasterio_rgb`).
 
 import os
 import urllib.request
-import numpy as np
-import xarray as xr
+
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import numpy as np
 from rasterio.warp import transform
 
+import xarray as xr
 
 # Download the file from rasterio's repository
 url = 'https://github.com/mapbox/rasterio/raw/master/tests/data/RGB.byte.tif'

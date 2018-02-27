@@ -4,7 +4,7 @@ import re
 import sys
 import warnings
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 MAJOR = 0
 MINOR = 10

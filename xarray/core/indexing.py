@@ -1,18 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from datetime import timedelta
-from collections import defaultdict, Hashable
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
+from collections import Hashable, defaultdict
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 
-from . import nputils
-from . import utils
-from . import duck_array_ops
-from .pycompat import (iteritems, range, integer_types, dask_array_type,
-                       suppress)
+from . import duck_array_ops, nputils, utils
+from .pycompat import (
+    dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
 
 

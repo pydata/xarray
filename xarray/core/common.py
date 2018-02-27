@@ -1,15 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-import pandas as pd
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
-from .pycompat import basestring, suppress, dask_array_type, OrderedDict
-from . import dtypes
-from . import formatting
-from . import ops
-from .utils import SortedKeysDict, not_implemented, Frozen
+import numpy as np
+import pandas as pd
+
+from . import dtypes, formatting, ops
+from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .utils import Frozen, SortedKeysDict, not_implemented
 
 
 class ImplementsArrayReduce(object):
@@ -214,7 +212,7 @@ class AttrAccessMixin(object):
 def get_squeeze_dims(xarray_obj, dim, axis=None):
     """Get a list of dimensions to squeeze out.
     """
-    if not dim is None and not axis is None:
+    if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
 
     if dim is None and axis is None:

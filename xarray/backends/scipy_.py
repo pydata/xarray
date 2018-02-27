@@ -1,20 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
+import warnings
 from io import BytesIO
 
 import numpy as np
-import warnings
 
 from .. import Variable
-from ..core.pycompat import iteritems, OrderedDict, basestring
-from ..core.utils import (Frozen, FrozenOrderedDict)
 from ..core.indexing import NumpyIndexingAdapter
-
-from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
-from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
-                      encode_nc3_variable)
+from ..core.pycompat import OrderedDict, basestring, iteritems
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import BackendArray, DataStorePickleMixin, WritableCFDataStore
+from .netcdf3 import (
+    encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
 
 def _decode_string(s):

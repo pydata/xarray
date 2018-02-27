@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, is_dict_like
 from ..core import indexing
 from ..core.pycompat import integer_types
-
+from ..core.utils import Frozen, FrozenOrderedDict, is_dict_like
 from .common import AbstractDataStore, BackendArray, robust_getitem
 
 

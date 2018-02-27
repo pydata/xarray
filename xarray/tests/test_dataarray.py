@@ -1,25 +1,24 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import pickle
+from copy import deepcopy
+from distutils.version import LooseVersion
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
-import pickle
 import pytest
-from copy import deepcopy
-from textwrap import dedent
-from distutils.version import LooseVersion
 
 import xarray as xr
-
-from xarray import (align, broadcast, Dataset, DataArray,
-                    IndexVariable, Variable)
+from xarray import (
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder
-from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
+from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
-    TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_identical, assert_equal, assert_allclose, assert_array_equal,
-    raises_regex, requires_scipy, requires_bottleneck)
+    ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
+    assert_identical, raises_regex, requires_bottleneck, requires_dask,
+    requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):

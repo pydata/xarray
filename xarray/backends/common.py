@@ -1,18 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
+import contextlib
 import logging
 import time
 import traceback
-import contextlib
-from collections import Mapping, OrderedDict
 import warnings
+from collections import Mapping, OrderedDict
+
+import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
+from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
-from ..core.pycompat import iteritems, dask_array_type
 
 try:
     from dask.utils import SerializableLock as Lock

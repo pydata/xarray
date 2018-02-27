@@ -1,21 +1,20 @@
 import functools
 import operator
 from collections import OrderedDict
-
 from distutils.version import LooseVersion
-import numpy as np
-from numpy.testing import assert_array_equal
-import pandas as pd
 
+import numpy as np
+import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 
 import xarray as xr
 from xarray.core.computation import (
-    _UFuncSignature, result_name, broadcast_compat_data, collect_dict_values,
-    join_dict_keys, ordered_set_intersection, ordered_set_union,
-    unified_dim_sizes, apply_ufunc)
+    _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
+    join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
+    unified_dim_sizes)
 
-from . import requires_dask, raises_regex
+from . import raises_regex, requires_dask
 
 
 def assert_identical(a, b):

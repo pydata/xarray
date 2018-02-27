@@ -2,12 +2,14 @@ import os
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import is_scalar
 from ..core import indexing
+from ..core.utils import is_scalar
 from .common import BackendArray
+
 try:
     from dask.utils import SerializableLock as Lock
 except ImportError:

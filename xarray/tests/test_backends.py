@@ -1,41 +1,39 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from io import BytesIO
+from __future__ import absolute_import, division, print_function
+
 import contextlib
 import itertools
 import os.path
 import pickle
 import shutil
+import sys
 import tempfile
 import unittest
-import sys
 import warnings
+from io import BytesIO
 
 import numpy as np
 import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray import (Dataset, DataArray, open_dataset, open_dataarray,
-                    open_mfdataset, backends, save_mfdataset)
+from xarray import (
+    DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
+    save_mfdataset)
 from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
-from xarray.core.pycompat import (iteritems, PY2, ExitStack, basestring,
-                                  dask_array_type)
-
-from . import (TestCase, requires_scipy, requires_netCDF4, requires_pydap,
-               requires_scipy_or_netCDF4, requires_dask, requires_h5netcdf,
-               requires_pynio, requires_pathlib, requires_zarr,
-               requires_rasterio, has_netCDF4, has_scipy, assert_allclose,
-               flaky, network, assert_identical, raises_regex, assert_equal,
-               assert_array_equal)
-
-from .test_dataset import create_test_data
-
+from xarray.core.pycompat import (
+    PY2, ExitStack, basestring, dask_array_type, iteritems)
 from xarray.tests import mock
+
+from . import (
+    TestCase, assert_allclose, assert_array_equal, assert_equal,
+    assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
+    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
+    requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
+    requires_scipy_or_netCDF4, requires_zarr)
+from .test_dataset import create_test_data
 
 try:
     import netCDF4 as nc4

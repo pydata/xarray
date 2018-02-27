@@ -1,20 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import os.path
 from glob import glob
 from io import BytesIO
 from numbers import Number
 
-
 import numpy as np
 
-from .. import backends, conventions, Dataset
-from .common import ArrayWriter, GLOBAL_LOCK
+from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import auto_combine
-from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, path_type
+from ..core.utils import close_on_error, is_remote_uri
+from .common import GLOBAL_LOCK, ArrayWriter
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'

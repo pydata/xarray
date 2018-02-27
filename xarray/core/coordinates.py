@@ -1,15 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 from collections import Mapping
 from contextlib import contextmanager
+
 import pandas as pd
 
 from . import formatting, indexing
-from .utils import Frozen
 from .merge import (
-    merge_coords, expand_and_merge_variables, merge_coords_for_inplace_math)
+    expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
+from .utils import Frozen
 from .variable import Variable
 
 
