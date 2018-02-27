@@ -4,23 +4,23 @@ For the sake of sanity, we only do internal formatting with unicode, which can
 be returned by the __unicode__ special method. We use ReprMixin to provide the
 __repr__ method so that things can work on Python 2.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import contextlib
-from datetime import datetime, timedelta
 import functools
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+
+from .options import OPTIONS
+from .pycompat import PY2, bytes_type, dask_array_type, unicode_type
+
 try:
     from pandas.errors import OutOfBoundsDatetime
 except ImportError:
     # pandas < 0.20
     from pandas.tslib import OutOfBoundsDatetime
-
-from .options import OPTIONS
-from .pycompat import PY2, unicode_type, bytes_type, dask_array_type
 
 
 def pretty_print(x, numchars):

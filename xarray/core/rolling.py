@@ -1,16 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import warnings
 from distutils.version import LooseVersion
 
-from .pycompat import OrderedDict, zip, dask_array_type
-from .common import full_like
+import numpy as np
+
 from .combine import concat
-from .ops import (inject_bottleneck_rolling_methods,
-                  inject_datasetrolling_methods, has_bottleneck, bn)
+from .common import full_like
 from .dask_array_ops import dask_rolling_wrapper
+from .ops import (
+    bn, has_bottleneck, inject_bottleneck_rolling_methods,
+    inject_datasetrolling_methods)
+from .pycompat import OrderedDict, dask_array_type, zip
 
 
 class Rolling(object):

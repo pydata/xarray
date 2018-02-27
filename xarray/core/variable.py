@@ -1,28 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from datetime import timedelta
-from collections import defaultdict
+from __future__ import absolute_import, division, print_function
+
 import functools
 import itertools
+from collections import defaultdict
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
-from . import common
-from . import duck_array_ops
-from . import dtypes
-from . import indexing
-from . import nputils
-from . import ops
-from . import utils
-from .pycompat import (basestring, OrderedDict, zip, integer_types,
-                       dask_array_type)
-from .indexing import (PandasIndexAdapter, as_indexable, BasicIndexer,
-                       OuterIndexer, VectorizedIndexer)
-from .utils import OrderedSet
-
 import xarray as xr  # only for Dataset and DataArray
+
+from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from .indexing import (
+    BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
+    as_indexable)
+from .pycompat import (
+    OrderedDict, basestring, dask_array_type, integer_types, zip)
+from .utils import OrderedSet
 
 try:
     import dask.array as da

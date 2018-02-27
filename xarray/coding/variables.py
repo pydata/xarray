@@ -1,18 +1,13 @@
 """Coders for individual Variable objects."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-from functools import partial
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
 
-from ..core import dtypes
-from ..core import duck_array_ops
-from ..core import indexing
-from ..core import utils
+from ..core import dtypes, duck_array_ops, indexing, utils
 from ..core.pycompat import dask_array_type
 from ..core.variable import Variable
 

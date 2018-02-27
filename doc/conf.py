@@ -11,14 +11,14 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
-import sys
-import os
 import datetime
 import importlib
+import os
+import sys
+
+import xarray
 
 allowed_failures = set()
 
@@ -44,7 +44,6 @@ for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
                                      'gallery/plot_rasterio_rgb.py',
                                      'gallery/plot_rasterio.py'])
 
-import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
 
 # -- General configuration ------------------------------------------------

@@ -1,18 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from copy import deepcopy
+from __future__ import absolute_import, division, print_function
 
-import pytest
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from xarray import Dataset, DataArray, auto_combine, concat, Variable
-from xarray.core.pycompat import iteritems, OrderedDict
+from xarray import DataArray, Dataset, Variable, auto_combine, concat
+from xarray.core.pycompat import OrderedDict, iteritems
 
-from . import (TestCase, InaccessibleArray, requires_dask, raises_regex,
-               assert_equal, assert_identical, assert_array_equal)
+from . import (
+    InaccessibleArray, TestCase, assert_array_equal, assert_equal,
+    assert_identical, raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 

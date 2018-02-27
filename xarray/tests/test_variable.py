@@ -1,35 +1,32 @@
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 from collections import namedtuple
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
-from textwrap import dedent
-import pytest
-
 from distutils.version import LooseVersion
-import numpy as np
-import pytz
-import pandas as pd
+from textwrap import dedent
 
-from xarray import Variable, IndexVariable, Coordinate, Dataset
+import numpy as np
+import pandas as pd
+import pytest
+import pytz
+
+from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
-from xarray.core.variable import as_variable, as_compatible_data
-from xarray.core.indexing import (PandasIndexAdapter, LazilyIndexedArray,
-                                  BasicIndexer, OuterIndexer,
-                                  VectorizedIndexer, NumpyIndexingAdapter,
-                                  CopyOnWriteArray, MemoryCachedArray,
-                                  DaskIndexingAdapter)
+from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.indexing import (
+    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter, LazilyIndexedArray,
+    MemoryCachedArray, NumpyIndexingAdapter, OuterIndexer, PandasIndexAdapter,
+    VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
-from xarray.core.common import full_like, zeros_like, ones_like
 from xarray.core.utils import NDArrayMixin
+from xarray.core.variable import as_compatible_data, as_variable
+from xarray.tests import requires_bottleneck
 
 from . import (
-    TestCase, source_ndarray, requires_dask, raises_regex, assert_identical,
-    assert_array_equal, assert_equal, assert_allclose)
-
-from xarray.tests import requires_bottleneck
+    TestCase, assert_allclose, assert_array_equal, assert_equal,
+    assert_identical, raises_regex, requires_dask, source_ndarray)
 
 
 class VariableSubclassTestCases(object):
