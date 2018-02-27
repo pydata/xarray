@@ -100,6 +100,14 @@ Once you've manipulated a dask array, you can still write a dataset too big to
 fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
 
+.. note::
+
+    When using dask's distributed scheduler to write NETCDF4 files,
+    it may be necessary to set the environment variable `HDF5_USE_FILE_LOCKING=FALSE`
+    to avoid competing locks within the HDF5 SWMR file locking scheme. Note that
+    writing netCDF files with dask's distributed scheduler is only supported for
+    the `netcdf4` backend.
+
 A dataset can also be converted to a dask DataFrame using :py:meth:`~xarray.Dataset.to_dask_dataframe`.
 
 .. ipython:: python

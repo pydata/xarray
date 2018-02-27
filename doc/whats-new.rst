@@ -38,6 +38,13 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Support for writing netCDF files from xarray datastores (scipy and netcdf4 only)
+  when using the `dask.distributed <https://distributed.readthedocs.io>`_ scheduler
+  (:issue:`1464`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+
+- Fixed to_netcdf when using dask distributed
 Bug fixes
 ~~~~~~~~~
 
@@ -176,8 +183,6 @@ Bug fixes
 - Compatibility fixes to plotting module for Numpy 1.14 and Pandas 0.22
   (:issue:`1813`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Fixed to_netcdf when using dask distributed (:issue:`1464`).
-  By `Joe Hamman <https://github.com/jhamman>`_..
 - Bug fix in encoding coordinates with ``{'_FillValue': None}`` in netCDF
   metadata (:issue:`1865`).
   By `Chris Roth <https://github.com/czr137>`_.
