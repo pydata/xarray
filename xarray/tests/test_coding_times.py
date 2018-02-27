@@ -9,8 +9,7 @@ import pytest
 from xarray import Variable, coding
 from xarray.coding.times import _import_netcdftime
 
-from . import (
-    TestCase, assert_array_equal, requires_netCDF4, requires_netcdftime)
+from . import TestCase, assert_array_equal, requires_netcdftime
 
 
 @np.vectorize
