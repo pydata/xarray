@@ -11,6 +11,7 @@ dask = pytest.importorskip('dask')  # isort:skip
 distributed = pytest.importorskip('distributed')  # isort:skip
 
 from dask import array
+from dask.distributed import Client, Lock
 from distributed.utils_test import cluster, gen_cluster
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
@@ -21,7 +22,8 @@ from xarray.tests.test_dataset import create_test_data
 from xarray.backends.common import HDF5_LOCK, CombinedLock
 
 from . import (
-    assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr)
+    assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr,
+    raises_regex)
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect
