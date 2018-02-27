@@ -33,7 +33,6 @@ Documentation
 
 **Getting Started**
 
-* :doc:`whats-new`
 * :doc:`why-xarray`
 * :doc:`faq`
 * :doc:`examples`
@@ -44,7 +43,6 @@ Documentation
    :hidden:
    :caption: Getting Started
 
-   whats-new
    why-xarray
    faq
    examples
@@ -83,6 +81,7 @@ Documentation
 
 **Help & reference**
 
+* :doc:`whats-new`
 * :doc:`api`
 * :doc:`internals`
 * :doc:`contributing`
@@ -92,6 +91,7 @@ Documentation
    :hidden:
    :caption: Help & reference
 
+   whats-new
    api
    internals
    contributing
