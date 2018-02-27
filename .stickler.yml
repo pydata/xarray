@@ -3,5 +3,5 @@ linters:
     max-line-length: 79
     fixer: false
     ignore: I002
-    exclude: doc/gallery/*.py,doc/examples/*.py,doc/examples/_code/*.py
+    exclude: doc/
   py3k:
