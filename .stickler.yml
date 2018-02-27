@@ -4,5 +4,5 @@ linters:
     fixer: false
     ignore: I002
     exclude:
-      - doc/*
+      - doc/**/*.py
   py3k:
