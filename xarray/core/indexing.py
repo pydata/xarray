@@ -912,8 +912,8 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
             elif isinstance(result, timedelta):
                 result = np.timedelta64(getattr(result, 'value', result), 'ns')
             elif isinstance(result, pd.Timestamp):
-                # GH:1932 If a single item is indexed from DatetimeIndex,
-                # we need to convert it to np.datetime64
+                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
                 result = np.asarray(result.to_datetime64())
             elif self.dtype != object:
                 result = np.asarray(result, dtype=self.dtype)
