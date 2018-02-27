@@ -1,20 +1,20 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-import logging
-import time
-import traceback
+from __future__ import absolute_import, division, print_function
+
 import contextlib
-from collections import Mapping, OrderedDict
-import warnings
+import logging
 import multiprocessing
 import threading
+import time
+import traceback
+import warnings
+from collections import Mapping, OrderedDict
+
+import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
+from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
-from ..core.pycompat import iteritems, dask_array_type
 
 # Import default lock
 try:

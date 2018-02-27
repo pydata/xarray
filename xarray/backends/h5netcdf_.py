@@ -1,19 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
+from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
-
-from .common import (WritableCFDataStore, DataStorePickleMixin, find_root,
-                     HDF5_LOCK)
-from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
-                       _extract_nc4_variable_encoding, BaseNetCDF4Array)
+from .common import (HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore,
+                     find_root)
+from .netCDF4_ import (BaseNetCDF4Array, _encode_nc4_variable,
+                       _extract_nc4_variable_encoding, _get_datatype,
+                       _nc4_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):

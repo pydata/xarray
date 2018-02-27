@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
 import warnings
@@ -8,16 +7,14 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import conventions
-from .. import Variable
+from .. import Variable, conventions
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, close_on_error, is_remote_uri)
-from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
-
-from .common import (WritableCFDataStore, robust_getitem, BackendArray,
-                     DataStorePickleMixin, find_root, HDF5_LOCK)
-from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
+from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
+from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
+from .common import (HDF5_LOCK, BackendArray, DataStorePickleMixin,
+                     WritableCFDataStore, find_root, robust_getitem)
+from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.

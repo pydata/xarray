@@ -13,20 +13,16 @@ priority order:
 Once NumPy 1.10 comes out with support for overriding ufuncs, this module will
 hopefully no longer be necessary.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as _np
 
-from .core.variable import Variable as _Variable
-from .core.dataset import Dataset as _Dataset
 from .core.dataarray import DataArray as _DataArray
-from .core.groupby import GroupBy as _GroupBy
-
-from .core.pycompat import dask_array_type as _dask_array_type
+from .core.dataset import Dataset as _Dataset
 from .core.duck_array_ops import _dask_or_eager_func
-
+from .core.groupby import GroupBy as _GroupBy
+from .core.pycompat import dask_array_type as _dask_array_type
+from .core.variable import Variable as _Variable
 
 _xarray_types = (_Variable, _DataArray, _Dataset, _GroupBy)
 _dispatch_order = (_np.ndarray, _dask_array_type) + _xarray_types

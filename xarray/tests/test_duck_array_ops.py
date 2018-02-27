@@ -1,19 +1,19 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pytest
-import numpy as np
-from numpy import array, nan
-from distutils.version import LooseVersion
-from . import assert_array_equal
-from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv, where, stack, concatenate
-)
-from xarray import DataArray
-from xarray.testing import assert_allclose
-from xarray import concat
+from __future__ import absolute_import, division, print_function
 
-from . import TestCase, raises_regex, has_dask
+from distutils.version import LooseVersion
+
+import numpy as np
+import pytest
+from numpy import array, nan
+
+from xarray import DataArray, concat
+from xarray.core.duck_array_ops import (
+    array_notnull_equiv, concatenate, count, first, last, mean, stack, where)
+from xarray.core.pycompat import dask_array_type
+from xarray.testing import assert_allclose, assert_equal
+
+from . import (
+    TestCase, assert_array_equal, has_dask, raises_regex, requires_dask)
 
 
 class TestOps(TestCase):
@@ -194,22 +194,18 @@ def series_reduce(da, func, dim, **kwargs):
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     if aggdim == 'y' and dim_num < 2:
-        return
+        pytest.skip('dim not in this test')
 
     if dtype == np.bool_ and func == 'mean':
-        return  # numpy does not support this
+        pytest.skip('numpy does not support this')
 
     if dask and not has_dask:
-        return
+        pytest.skip('requires dask')
 
     rtol = 1e-04 if dtype == np.float32 else 1e-05
 
     da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
     axis = None if aggdim is None else da.get_axis_num(aggdim)
-
-    if dask and not skipna and func in ['var', 'std'] and dtype == np.bool_:
-        # TODO this might be dask's bug
-        return
 
     if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
             da.dtype.kind == 'O' and skipna):
@@ -269,19 +265,17 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     # just make sure da[da.argmin()] == da.min()
 
     if aggdim == 'y' and dim_num < 2:
-        return
+        pytest.skip('dim not in this test')
 
     if dask and not has_dask:
-        return
+        pytest.skip('requires dask')
 
     if contains_nan:
         if not skipna:
-            # numpy's argmin (not nanargmin) does not handle object-dtype
-            return
+            pytest.skip("numpy's argmin (not nanargmin) does not handle "
+                        "object-dtype")
         if skipna and np.dtype(dtype).kind in 'iufc':
-            # numpy's nanargmin raises ValueError for all nan axis
-            return
-
+            pytest.skip("numpy's nanargmin raises ValueError for all nan axis")
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)
 
@@ -302,3 +296,10 @@ def test_argmin_max_error():
     da = construct_dataarray(2, np.bool_, contains_nan=True, dask=False)
     with pytest.raises(ValueError):
         da.argmin(dim='y')
+
+
+@requires_dask
+def test_isnull_with_dask():
+    da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
+    assert isinstance(da.isnull().data, dask_array_type)
+    assert_equal(da.isnull().load(), da.load().isnull())
