@@ -349,6 +349,13 @@ submitting code to run the check yourself::
 
    flake8
 
+If you install `isort <https://github.com/timothycrosley/isort>`_ and
+`flake8-isort <https://github.com/gforcada/flake8-isort>`_, this will also show
+any errors from incorrectly sorted imports. These aren't currently enforced in
+CI. To automatically sort imports, you can run::
+
+   isort -y
+
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
