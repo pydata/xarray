@@ -1719,6 +1719,13 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
             x = Coordinate('x', [1, 2, 3])
         assert isinstance(x, IndexVariable)
 
+    def test_datetime64(self):
+        # GH:1932  Make sure indexing keeps precision
+        t = np.array([1518418799999986560, 1518418799999996560],
+                     dtype='datetime64[ns]')
+        v = IndexVariable('t', t)
+        assert v[0].data == t[0]
+
     # These tests make use of multi-dimensional variables, which are not valid
     # IndexVariable objects:
     @pytest.mark.xfail
