@@ -7,7 +7,7 @@ xarray: N-D labeled arrays and datasets
    :target: https://ci.appveyor.com/project/shoyer/xray
 .. image:: https://coveralls.io/repos/pydata/xarray/badge.svg
    :target: https://coveralls.io/r/pydata/xarray
-.. image:: https://readthedocs.org/projects/xray/badge/?version=latent
+.. image:: https://readthedocs.org/projects/xray/badge/?version=latest
    :target: http://xarray.pydata.org/
 .. image:: https://img.shields.io/pypi/v/xarray.svg
    :target: https://pypi.python.org/pypi/xarray/
