@@ -47,16 +47,15 @@ NC_FORMATS = {'netcdf4': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT_OFFSET',
 TEST_FORMATS = ['NETCDF3_CLASSIC', 'NETCDF4_CLASSIC', 'NETCDF4']
 
 
-# Does this belong elsewhere?
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-
-
 @pytest.mark.xfail(sys.platform == 'win32',
                    reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine', ['netcdf4'])
 @pytest.mark.parametrize('autoclose', [True, False])
 @pytest.mark.parametrize('nc_format', TEST_FORMATS)
-def test_dask_distributed_netcdf_roundtrip(loop, engine, autoclose, nc_format):
+def test_dask_distributed_netcdf_roundtrip(monkeypatch, loop,
+                                           engine, autoclose, nc_format):
+
+    monkeypatch.setenv('HDF5_USE_FILE_LOCKING', 'FALSE')
 
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 

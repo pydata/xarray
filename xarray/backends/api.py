@@ -134,24 +134,12 @@ def _get_lock(engine, scheduler, format, path_or_file):
     """ Get the lock(s) that apply to a particular scheduler/engine/format"""
 
     locks = []
-    SchedulerLock = get_scheduler_lock(scheduler)
     if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
         locks.append(HDF5_LOCK)
-
-    try:
-        # per file lock
-        # Dask locks take a name argument (e.g. filename)
-        locks.append(SchedulerLock(path_or_file))
-    except TypeError:
-        # threading/multiprocessing lock
-        locks.append(SchedulerLock())
+    locks.append(get_scheduler_lock(scheduler, path_or_file))
 
     # When we have more than one lock, use the CombinedLock wrapper class
     lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
-
-    # Question: Should we be dropping one of these two locks when they are they
-    # are basically the same. For instance, when using netcdf4 and dask is not
-    # installed, locks will be [threading.Lock(), threading.Lock()]
 
     return lock
 

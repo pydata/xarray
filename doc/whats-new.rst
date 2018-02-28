@@ -38,9 +38,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- Support for writing netCDF files from xarray datastores (scipy and netcdf4 only)
-  when using the `dask.distributed <https://distributed.readthedocs.io>`_ scheduler
-  (:issue:`1464`).
+- Support for writing xarray datasets to netCDF files (netcdf4 backend only)
+  when using the `dask.distributed <https://distributed.readthedocs.io>`_
+  scheduler (:issue:`1464`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 

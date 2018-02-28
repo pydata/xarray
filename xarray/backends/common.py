@@ -59,7 +59,7 @@ def get_scheduler(get=None, collection=None):
         return None
 
 
-def get_scheduler_lock(scheduler):
+def get_scheduler_lock(scheduler, path_or_file=None):
     """ Get the appropriate lock for a certain situation based onthe dask
        scheduler used.
 
@@ -70,14 +70,14 @@ def get_scheduler_lock(scheduler):
 
     if scheduler == 'distributed':
         from dask.distributed import Lock
-        return Lock
+        return Lock(path_or_file)
     elif scheduler == 'multiprocessing':
-        return multiprocessing.Lock
+        return multiprocessing.Lock()
     elif scheduler == 'threaded':
         from dask.utils import SerializableLock
-        return SerializableLock
+        return SerializableLock()
     else:
-        return threading.Lock
+        return threading.Lock()
 
 
 def _encode_variable_name(name):
@@ -134,7 +134,7 @@ class CombinedLock(object):
     """
 
     def __init__(self, locks):
-        self.locks = locks
+        self.locks = set(locks)
 
     def acquire(self, *args):
         return all(lock.acquire(*args) for lock in self.locks)
@@ -156,7 +156,7 @@ class CombinedLock(object):
         return any(lock.locked for lock in self.locks)
 
     def __repr__(self):
-        return "CombinedLock(%s)" % [repr(lock) for lock in self.locks]
+        return "CombinedLock(%r)" % list(self.locks)
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
