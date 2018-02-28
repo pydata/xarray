@@ -50,6 +50,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 .. _whats-new.0.10.1:
 
 v0.10.1 (25 February 2018)

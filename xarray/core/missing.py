@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from collections import Iterable
 from functools import partial
@@ -8,12 +6,11 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-
-from .pycompat import iteritems
-from .computation import apply_ufunc
-from .utils import is_scalar
-from .npcompat import flip
 from . import rolling
+from .computation import apply_ufunc
+from .npcompat import flip
+from .pycompat import iteritems
+from .utils import is_scalar
 
 
 class BaseInterpolator(object):

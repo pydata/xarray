@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from xarray.core.nputils import (_is_contiguous, NumpyVIndexAdapter,
+from xarray.core.nputils import (NumpyVIndexAdapter, _is_contiguous,
                                  rolling_window)
 
 

@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import re
 import traceback
@@ -9,21 +7,21 @@ from datetime import datetime
 from functools import partial
 
 import numpy as np
-
 import pandas as pd
+
+from ..core import indexing
+from ..core.formatting import first_n_items, format_timestamp, last_item
+from ..core.pycompat import PY3
+from ..core.variable import Variable
+from .variables import (
+    SerializationWarning, VariableCoder, lazy_elemwise_func, pop_to,
+    safe_setitem, unpack_for_decoding, unpack_for_encoding)
+
 try:
     from pandas.errors import OutOfBoundsDatetime
 except ImportError:
     # pandas < 0.20
     from pandas.tslib import OutOfBoundsDatetime
-
-from .variables import (SerializationWarning, VariableCoder,
-                        lazy_elemwise_func, pop_to, safe_setitem,
-                        unpack_for_decoding, unpack_for_encoding)
-from ..core import indexing
-from ..core.formatting import first_n_items, format_timestamp, last_item
-from ..core.pycompat import PY3
-from ..core.variable import Variable
 
 
 # standard calendars recognized by netcdftime

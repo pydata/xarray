@@ -1,12 +1,10 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from .dtypes import is_datetime_like
-from .pycompat import dask_array_type
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pandas as pd
+
+from .dtypes import is_datetime_like
+from .pycompat import dask_array_type
 
 
 def _season_from_months(months):

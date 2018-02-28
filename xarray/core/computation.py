@@ -9,13 +9,11 @@ import operator
 
 import numpy as np
 
-from . import duck_array_ops
-from . import utils
+from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, dask_array_type
 from .utils import is_dict_like
-
 
 _DEFAULT_FROZEN_SET = frozenset()
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')

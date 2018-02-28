@@ -1,25 +1,20 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pytest
-import numpy as np
-from numpy import array, nan
+from __future__ import absolute_import, division, print_function
+
 from distutils.version import LooseVersion
-from . import assert_array_equal
+
+import numpy as np
+import pytest
+from numpy import array, nan
+
+from xarray import DataArray, concat
 from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv, where, stack, concatenate,
-    rolling_window
-)
-from xarray import DataArray
-from xarray.testing import assert_allclose
-from xarray import concat
+    array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
+    stack, where)
+from xarray.core.pycompat import dask_array_type
+from xarray.testing import assert_allclose, assert_equal
 
-from . import TestCase, raises_regex, has_dask
-
-try:
-    import dask.array as da
-except ImportError:
-    pass
+from . import (
+    TestCase, assert_array_equal, has_dask, raises_regex, requires_dask)
 
 
 class TestOps(TestCase):
@@ -304,11 +299,20 @@ def test_argmin_max_error():
         da.argmin(dim='y')
 
 
+@requires_dask
+def test_isnull_with_dask():
+    da = construct_dataarray(2, np.float32, contains_nan=True, dask=True)
+    assert isinstance(da.isnull().data, dask_array_type)
+    assert_equal(da.isnull().load(), da.load().isnull())
+
+
 @pytest.mark.skipif(not has_dask, reason='This is for dask.')
 @pytest.mark.parametrize('axis', [0, -1])
 @pytest.mark.parametrize('window', [3, 8, 11])
 @pytest.mark.parametrize('center', [True, False])
 def test_dask_rolling(axis, window, center):
+    import dask.array as da
+
     x = np.array(np.random.randn(100, 40), dtype=float)
     dx = da.from_array(x, chunks=[(6, 30, 30, 20, 14), 8])
 

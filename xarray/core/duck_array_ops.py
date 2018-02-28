@@ -3,24 +3,19 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-from functools import partial
 import contextlib
 import inspect
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
 
-from . import npcompat
-from . import nputils
-from . import dtypes
-from . import dask_array_ops
-from .pycompat import dask_array_type
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
+from .pycompat import dask_array_type
 
 try:
     import bottleneck as bn
