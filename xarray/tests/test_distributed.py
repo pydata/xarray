@@ -1,20 +1,29 @@
+""" isort:skip_file """
+
 import sys
 
 import pytest
-import xarray as xr
 
-distributed = pytest.importorskip('distributed')
-da = pytest.importorskip('dask.array')
-import dask
+dask = pytest.importorskip('dask')  # isort:skip
+distributed = pytest.importorskip('distributed')  # isort:skip
+
+from dask import array
 from distributed.utils_test import cluster, gen_cluster
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
 
-from xarray.tests.test_backends import create_tmp_file, ON_WINDOWS
+import xarray as xr
+from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
 from xarray.tests.test_dataset import create_test_data
 
-from . import (assert_allclose, has_scipy, has_netCDF4, has_h5netcdf,
-               requires_zarr)
+from . import (
+    assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr)
+
+# this is to stop isort throwing errors. May have been easier to just use
+# `isort:skip` in retrospect
+
+
+da = pytest.importorskip('dask.array')
 
 
 ENGINES = []
@@ -35,7 +44,8 @@ def test_dask_distributed_netcdf_integration_test(loop, engine):
             original = create_test_data()
             with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
                 original.to_netcdf(filename, engine=engine)
-                with xr.open_dataset(filename, chunks=3, engine=engine) as restored:
+                with xr.open_dataset(
+                        filename, chunks=3, engine=engine) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)

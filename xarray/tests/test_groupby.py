@@ -1,12 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 import pandas as pd
+import pytest
+
 import xarray as xr
 from xarray.core.groupby import _consolidate_slices
-
-import pytest
 
 
 def test_consolidate_slices():

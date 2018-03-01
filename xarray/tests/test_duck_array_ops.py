@@ -1,20 +1,19 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pytest
-import numpy as np
-from numpy import array, nan
-from distutils.version import LooseVersion
-from . import assert_array_equal
-from xarray.core.duck_array_ops import (
-    first, last, count, mean, array_notnull_equiv, where, stack, concatenate
-)
-from xarray.core.pycompat import dask_array_type
-from xarray import DataArray
-from xarray.testing import assert_allclose, assert_equal
-from xarray import concat
+from __future__ import absolute_import, division, print_function
 
-from . import TestCase, raises_regex, has_dask, requires_dask
+from distutils.version import LooseVersion
+
+import numpy as np
+import pytest
+from numpy import array, nan
+
+from xarray import DataArray, concat
+from xarray.core.duck_array_ops import (
+    array_notnull_equiv, concatenate, count, first, last, mean, stack, where)
+from xarray.core.pycompat import dask_array_type
+from xarray.testing import assert_allclose, assert_equal
+
+from . import (
+    TestCase, assert_array_equal, has_dask, raises_regex, requires_dask)
 
 
 class TestOps(TestCase):
