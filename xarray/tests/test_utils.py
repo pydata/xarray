@@ -9,7 +9,7 @@ from xarray.core import duck_array_ops, utils
 from xarray.core.pycompat import OrderedDict
 from .test_coding_times import _all_netcdftime_date_types
 from . import (TestCase, requires_dask, assert_array_equal,
-               requires_netCDF4)
+               requires_netcdftime)
 
 
 class TestAlias(TestCase):
@@ -37,7 +37,7 @@ class TestSafeCastToIndex(TestCase):
             assert_array_equal(expected, actual)
             assert expected.dtype == actual.dtype
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_netcdftimeindex(self):
         date_types = _all_netcdftime_date_types()
         for date_type in date_types.values():
