@@ -455,6 +455,7 @@ class TestDatetime(TestCase):
                           ((1000, 2, 3, 4, 5, 6),
                            '1000-02-03 04:05:06.000000')])
 def test_format_netcdftime_datetime(date_args, expected):
+    pytest.importorskip('netcdftime')
     for date_type in _all_netcdftime_date_types().values():
         result = coding.times.format_netcdftime_datetime(date_type(*date_args))
         assert result == expected
