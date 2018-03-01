@@ -1,8 +1,8 @@
-import numpy as np
 import functools
 
-from . import utils
+import numpy as np
 
+from . import utils
 
 # Use as a sentinel value to indicate a dtype appropriate NA value.
 NA = utils.ReprObject('<NA>')

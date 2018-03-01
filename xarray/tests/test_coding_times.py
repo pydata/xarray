@@ -1,16 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from xarray import Variable, coding
-from . import (
-    TestCase, requires_netCDF4, assert_array_equal)
-import pytest
+from xarray.coding.times import _import_netcdftime
+
+from . import TestCase, assert_array_equal, requires_netcdftime
 
 
 @np.vectorize
@@ -47,9 +46,9 @@ def _all_netcdftime_date_types():
 
 
 class TestDatetime(TestCase):
-    @requires_netCDF4
+    @requires_netcdftime
     def test_cf_datetime(self):
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
         for num_dates, units in [
             (np.arange(10), 'days since 2000-01-01'),
             (np.arange(10).astype('float64'), 'days since 2000-01-01'),
@@ -78,7 +77,7 @@ class TestDatetime(TestCase):
         ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(
-                    nc4.num2date(num_dates, units, calendar))
+                    nctime.num2date(num_dates, units, calendar))
                 print(num_dates, units, calendar)
                 with warnings.catch_warnings():
                     warnings.filterwarnings('ignore',
@@ -113,7 +112,7 @@ class TestDatetime(TestCase):
                             pd.Index(actual), units, calendar)
                         assert_array_equal(num_dates, np.around(encoded, 1))
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_cf_datetime_overflow(self):
         # checks for
         # https://github.com/pydata/pandas/issues/14068
@@ -138,7 +137,7 @@ class TestDatetime(TestCase):
         actual = coding.times.decode_cf_datetime(np.arange(100), units)
         assert_array_equal(actual, expected)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_cf_datetime_non_iso_strings(self):
         # datetime strings that are _almost_ ISO compliant but not quite,
         # but which netCDF4.num2date can still parse correctly
@@ -150,16 +149,16 @@ class TestDatetime(TestCase):
             actual = coding.times.decode_cf_datetime(num_dates, units)
             assert_array_equal(actual, expected)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_non_standard_calendar(self):
         from datetime import datetime
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
 
         date_types = _non_standard_netcdftime_date_types()
         for calendar, date_type in date_types.items():
             units = 'days since 0001-01-01'
             times = [datetime(1, 4, 1, h) for h in range(1, 5)]
-            noleap_time = nc4.date2num(times, units, calendar=calendar)
+            noleap_time = nctime.date2num(times, units, calendar=calendar)
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', 'Unable to decode time axis')
                 actual = coding.times.decode_cf_datetime(noleap_time, units,
@@ -173,7 +172,7 @@ class TestDatetime(TestCase):
             # https://github.com/Unidata/netcdf4-python/issues/355
             self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_standard_calendar_single_element_ns_range(self):
         units = 'days since 0001-01-01'
         for calendar in coding.times._STANDARD_CALENDARS:
@@ -185,7 +184,7 @@ class TestDatetime(TestCase):
                                                              calendar=calendar)
                 assert actual.dtype == np.dtype('M8[ns]')
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_standard_calendar_single_element_non_ns_range(self):
         from datetime import datetime
         from netcdftime import DatetimeGregorian
@@ -209,7 +208,7 @@ class TestDatetime(TestCase):
                     else:
                         assert isinstance(actual.item(), datetime)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_non_standard_calendar_single_element(self):
         date_types = _non_standard_netcdftime_date_types()
         units = 'days since 0001-01-01'
@@ -223,18 +222,18 @@ class TestDatetime(TestCase):
                             num_time, units, calendar=calendar)
                     assert isinstance(actual.item(), date_type)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_standard_calendar_multidim_time(self):
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
 
         for calendar in coding.times._STANDARD_CALENDARS:
             units = 'days since 0001-01-01'
             times1 = pd.date_range('2001-04-01', end='2001-04-05', freq='D')
             times2 = pd.date_range('2001-05-01', end='2001-05-05', freq='D')
-            noleap_time1 = nc4.date2num(times1.to_pydatetime(),
-                                        units, calendar=calendar)
-            noleap_time2 = nc4.date2num(times2.to_pydatetime(),
-                                        units, calendar=calendar)
+            noleap_time1 = nctime.date2num(times1.to_pydatetime(),
+                                           units, calendar=calendar)
+            noleap_time2 = nctime.date2num(times2.to_pydatetime(),
+                                           units, calendar=calendar)
             mdim_time = np.empty((len(noleap_time1), 2), )
             mdim_time[:, 0] = noleap_time1
             mdim_time[:, 1] = noleap_time2
@@ -253,18 +252,18 @@ class TestDatetime(TestCase):
             self.assertTrue((abs_diff1 <= np.timedelta64(1, 's')).all())
             self.assertTrue((abs_diff2 <= np.timedelta64(1, 's')).all())
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_non_standard_calendar_multidim_time(self):
         from datetime import datetime
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
 
         date_types = _non_standard_netcdftime_date_types()
         for calendar, date_type in date_types.items():
             units = 'days since 0001-01-01'
             times1 = [datetime(1, 4, day) for day in range(1, 6)]
             times2 = [datetime(1, 5, day) for day in range(1, 6)]
-            noleap_time1 = nc4.date2num(times1, units, calendar=calendar)
-            noleap_time2 = nc4.date2num(times2, units, calendar=calendar)
+            noleap_time1 = nctime.date2num(times1, units, calendar=calendar)
+            noleap_time2 = nctime.date2num(times2, units, calendar=calendar)
             mdim_time = np.empty((len(noleap_time1), 2), )
             mdim_time[:, 0] = noleap_time1
             mdim_time[:, 1] = noleap_time2
@@ -287,32 +286,36 @@ class TestDatetime(TestCase):
             self.assertTrue((abs_diff1 <= np.timedelta64(1, 's')).all())
             self.assertTrue((abs_diff2 <= np.timedelta64(1, 's')).all())
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_non_standard_calendar_single_element_fallback(self):
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
 
         units = 'days since 0001-01-01'
-        dt = nc4.netcdftime.datetime(2001, 2, 29)
+        try:
+            dt = nctime.netcdftime.datetime(2001, 2, 29)
+        except AttributeError:
+            # Must be using standalone netcdftime library
+            dt = nctime.datetime(2001, 2, 29)
         for calendar in ['360_day', 'all_leap', '366_day']:
-            num_time = nc4.date2num(dt, units, calendar)
+            num_time = nctime.date2num(dt, units, calendar)
             with pytest.warns(DeprecationWarning,
                               match='Unable to decode time axis'):
                 actual = coding.times.decode_cf_datetime(num_time, units,
                                                          calendar=calendar)
-            expected = np.asarray(nc4.num2date(num_time, units, calendar))
+            expected = np.asarray(nctime.num2date(num_time, units, calendar))
             assert actual.dtype == np.dtype('O')
             assert expected == actual
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decode_non_standard_calendar_fallback(self):
-        import netCDF4 as nc4
+        nctime = _import_netcdftime()
         # ensure leap year doesn't matter
         for year in [2010, 2011, 2012, 2013, 2014]:
             for calendar in ['360_day', '366_day', 'all_leap']:
                 calendar = '360_day'
                 units = 'days since {0}-01-01'.format(year)
                 num_times = np.arange(100)
-                expected = nc4.num2date(num_times, units, calendar)
+                expected = nctime.num2date(num_times, units, calendar)
 
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter('always')
@@ -325,7 +328,7 @@ class TestDatetime(TestCase):
                 assert actual.dtype == np.dtype('O')
                 assert_array_equal(actual, expected)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_cf_datetime_nan(self):
         for num_dates, units, expected_list in [
             ([np.nan], 'days since 2000-01-01', ['NaT']),
@@ -340,7 +343,7 @@ class TestDatetime(TestCase):
             expected = np.array(expected_list, dtype='datetime64[ns]')
             assert_array_equal(expected, actual)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_decoded_cf_datetime_array_2d(self):
         # regression test for GH1229
         variable = Variable(('x', 'y'), np.array([[0, 1], [2, 3]]),
@@ -369,7 +372,7 @@ class TestDatetime(TestCase):
                                 ]:
             assert expected == coding.times.infer_datetime_units(dates)
 
-    @requires_netCDF4
+    @requires_netcdftime
     def test_infer_netcdftime_datetime_units(self):
         date_types = _all_netcdftime_date_types()
         for date_type in date_types.values():

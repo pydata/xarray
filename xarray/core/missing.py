@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from collections import Iterable
 from functools import partial
@@ -8,11 +6,11 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-
-from .pycompat import iteritems
+from . import rolling
 from .computation import apply_ufunc
-from .utils import is_scalar
 from .npcompat import flip
+from .pycompat import iteritems
+from .utils import is_scalar
 
 
 class BaseInterpolator(object):
@@ -329,4 +327,8 @@ def _get_valid_fill_mask(arr, dim, limit):
     '''helper function to determine values that can be filled when limit is not
     None'''
     kw = {dim: limit + 1}
-    return arr.isnull().rolling(min_periods=1, **kw).sum() <= limit
+    # we explicitly use construct method to avoid copy.
+    new_dim = rolling._get_new_dimname(arr.dims, '_window')
+    return (arr.isnull().rolling(min_periods=1, **kw)
+            .construct(new_dim, fill_value=False)
+            .sum(new_dim, skipna=False)) <= limit

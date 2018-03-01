@@ -1,10 +1,8 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pytest
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from xarray.coding.netcdftimeindex import NetCDFTimeIndex
 from xarray.core import duck_array_ops, utils

@@ -1,15 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-import pandas as pd
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
-from .pycompat import basestring, suppress, dask_array_type, OrderedDict
-from . import dtypes
-from . import formatting
-from . import ops
-from .utils import SortedKeysDict, not_implemented, Frozen
+import numpy as np
+import pandas as pd
+
+from . import dtypes, formatting, ops
+from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .utils import Frozen, SortedKeysDict, not_implemented
 
 
 class ImplementsArrayReduce(object):
@@ -214,7 +212,7 @@ class AttrAccessMixin(object):
 def get_squeeze_dims(xarray_obj, dim, axis=None):
     """Get a list of dimensions to squeeze out.
     """
-    if not dim is None and not axis is None:
+    if dim is not None and axis is not None:
         raise ValueError('cannot use both parameters `axis` and `dim`')
 
     if dim is None and axis is None:
@@ -426,6 +424,11 @@ class BaseDataObject(AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        core.groupby.DataArrayGroupBy
+        core.groupby.DatasetGroupBy
         """
         return self._groupby_cls(self, group, squeeze=squeeze)
 
@@ -485,9 +488,6 @@ class BaseDataObject(AttrAccessMixin):
         """
         Rolling window object.
 
-        Rolling window aggregations are much faster when bottleneck is
-        installed.
-
         Parameters
         ----------
         min_periods : int, default None
@@ -505,7 +505,8 @@ class BaseDataObject(AttrAccessMixin):
 
         Returns
         -------
-        rolling : type of input argument
+        Rolling object (core.rolling.DataArrayRolling for DataArray,
+        core.rolling.DatasetRolling for Dataset.)
 
         Examples
         --------
@@ -533,6 +534,11 @@ class BaseDataObject(AttrAccessMixin):
         array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
         Coordinates:
           * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
+
+        See Also
+        --------
+        core.rolling.DataArrayRolling
+        core.rolling.DatasetRolling
         """
 
         return self._rolling_cls(self, min_periods=min_periods,
