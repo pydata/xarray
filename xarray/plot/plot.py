@@ -206,7 +206,7 @@ def line(darray, *args, **kwargs):
     ax = get_axis(figsize, size, aspect, ax)
 
     error_msg = ('must be either None or one of ({0:s})'
-                 .format(', '.join(['\'' + dd + '\'' for dd in darray.dims])))
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
 
     if x is not None and x not in darray.dims:
         raise ValueError('x ' + error_msg)
@@ -215,7 +215,8 @@ def line(darray, *args, **kwargs):
         raise ValueError('y ' + error_msg)
 
     if x is not None and y is not None:
-        raise ValueError('You cannot specify both x and y kwargs.')
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
 
     if ndims == 1:
         dim, = darray.dims  # get the only dimension name
