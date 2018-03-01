@@ -1,6 +1,17 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from distutils.version import LooseVersion
+
+
+if LooseVersion(np.__version__) >= LooseVersion('1.12'):
+    as_strided = np.lib.stride_tricks.as_strided
+else:
+    def as_strided(x, shape=None, strides=None, subok=False, writeable=True):
+        array = np.lib.stride_tricks.as_strided(x, shape, strides, subok)
+        array.setflags(write=writeable)
+        return array
+
 
 try:
     from numpy import nancumsum, nancumprod, flip
