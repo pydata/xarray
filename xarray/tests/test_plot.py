@@ -102,11 +102,9 @@ class TestPlot(PlotTestCase):
               [None, 'z'],
               ['z', None]]
 
-        f, ax = plt.subplots(2, 4)
-
+        f, ax = plt.subplots(3, 1)
         for aa, (x, y) in enumerate(xy):
             da.plot(x=x, y=y, ax=ax.flat[aa])
-            ax.flat[aa].set_title('x=' + str(x) + ' | ' + 'y=' + str(y))
 
         with raises_regex(ValueError, 'cannot'):
             da.plot(x='z', y='z')

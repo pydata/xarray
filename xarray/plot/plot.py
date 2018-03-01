@@ -180,6 +180,8 @@ def line(darray, *args, **kwargs):
         (2D DataArrays only).
     x, y : string, optional
         Coordinates for x, y axis. Only one of these may be specified.
+        The other coordinate plots values from the DataArray on which this
+        plot method is called.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
