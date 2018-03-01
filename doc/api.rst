@@ -467,6 +467,32 @@ DataArray methods
    DataArray.load
    DataArray.chunk
 
+Rolling objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayRolling
+   core.rolling.DataArrayRolling.construct
+   core.rolling.DataArrayRolling.reduce
+   core.rolling.DatasetRolling
+   core.rolling.DatasetRolling.construct
+   core.rolling.DatasetRolling.reduce
+
+GroupByObjects
+==============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.groupby.DataArrayGroupBy
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DataArrayGroupBy.reduce
+   core.groupby.DatasetGroupBy
+   core.groupby.DatasetGroupBy.apply
+   core.groupby.DatasetGroupBy.reduce
+
 Plotting
 ========
 
