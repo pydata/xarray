@@ -6,6 +6,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
+from . import rolling
 from .computation import apply_ufunc
 from .npcompat import flip
 from .pycompat import iteritems
@@ -326,4 +327,8 @@ def _get_valid_fill_mask(arr, dim, limit):
     '''helper function to determine values that can be filled when limit is not
     None'''
     kw = {dim: limit + 1}
-    return arr.isnull().rolling(min_periods=1, **kw).sum() <= limit
+    # we explicitly use construct method to avoid copy.
+    new_dim = rolling._get_new_dimname(arr.dims, '_window')
+    return (arr.isnull().rolling(min_periods=1, **kw)
+            .construct(new_dim, fill_value=False)
+            .sum(new_dim, skipna=False)) <= limit

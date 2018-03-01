@@ -223,20 +223,8 @@ def _func_slash_method_wrapper(f, name=None):
 
 def rolling_count(rolling):
 
-    not_null = rolling.obj.notnull()
-    instance_attr_dict = {'center': rolling.center,
-                          'min_periods': rolling.min_periods,
-                          rolling.dim: rolling.window}
-    rolling_count = not_null.rolling(**instance_attr_dict).sum()
-
-    if rolling.min_periods is None:
-        return rolling_count
-
-    # otherwise we need to filter out points where there aren't enough periods
-    # but not_null is False, and so the NaNs don't flow through
-    # array with points where there are enough values given min_periods
-    enough_periods = rolling_count >= rolling.min_periods
-
+    rolling_count = rolling._counts()
+    enough_periods = rolling_count >= rolling._min_periods
     return rolling_count.where(enough_periods)
 
 
