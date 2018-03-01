@@ -376,19 +376,20 @@ class TestDatetime(TestCase):
     def test_infer_netcdftime_datetime_units(self):
         date_types = _all_netcdftime_date_types()
         for date_type in date_types.values():
-            for dates, expected in [([date_type(1900, 1, 1),
-                                      date_type(1900, 1, 2)],
-                                     'days since 1900-01-01 00:00:00'),
-                                    ([date_type(1900, 1, 1, 12),
-                                      date_type(1900, 1, 1, 13)],
-                                     'seconds since 1900-01-01 12:00:00'),
-                                    ([date_type(1900, 1, 1),
-                                      date_type(1900, 1, 2),
-                                      date_type(1900, 1, 2, 0, 0, 1)],
-                                     'seconds since 1900-01-01 00:00:00'),
-                                    ([date_type(1900, 1, 1),
-                                      date_type(1900, 1, 2, 0, 0, 0, 5)],
-                                     'days since 1900-01-01 00:00:00')]:
+            for dates, expected in [
+                    ([date_type(1900, 1, 1),
+                      date_type(1900, 1, 2)],
+                     'days since 1900-01-01 00:00:00.000000'),
+                    ([date_type(1900, 1, 1, 12),
+                      date_type(1900, 1, 1, 13)],
+                     'seconds since 1900-01-01 12:00:00.000000'),
+                    ([date_type(1900, 1, 1),
+                      date_type(1900, 1, 2),
+                      date_type(1900, 1, 2, 0, 0, 1)],
+                     'seconds since 1900-01-01 00:00:00.000000'),
+                    ([date_type(1900, 1, 1),
+                      date_type(1900, 1, 2, 0, 0, 0, 5)],
+                     'days since 1900-01-01 00:00:00.000000')]:
                 assert expected == coding.times.infer_datetime_units(dates)
 
     def test_cf_timedelta(self):
@@ -442,3 +443,18 @@ class TestDatetime(TestCase):
                 (pd.to_timedelta(['1m', '2m', np.nan]), 'minutes'),
                 (pd.to_timedelta(['1m3s', '1m4s']), 'seconds')]:
             assert expected == coding.times.infer_timedelta_units(deltas)
+
+
+@pytest.mark.parametrize(['date_args', 'expected'],
+                         [((1, 2, 3, 4, 5, 6),
+                          '0001-02-03 04:05:06.000000'),
+                          ((10, 2, 3, 4, 5, 6),
+                           '0010-02-03 04:05:06.000000'),
+                          ((100, 2, 3, 4, 5, 6),
+                           '0100-02-03 04:05:06.000000'),
+                          ((1000, 2, 3, 4, 5, 6),
+                           '1000-02-03 04:05:06.000000')])
+def test_format_netcdftime_datetime(date_args, expected):
+    for date_type in _all_netcdftime_date_types().values():
+        result = coding.times.format_netcdftime_datetime(date_type(*date_args))
+        assert result == expected

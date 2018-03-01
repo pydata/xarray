@@ -236,8 +236,18 @@ def infer_datetime_units(dates):
         dates = np.asarray(dates).ravel()
         unique_timedeltas = np.unique(pd.to_timedelta(np.diff(dates)))
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
+        reference_date = format_netcdftime_datetime(reference_date)
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, reference_date)
+
+
+def format_netcdftime_datetime(date):
+    """Converts a netcdftime.datetime object to a string with the format:
+    YYYY-MM-DD HH:MM:SS.UUUUUU
+    """
+    return '{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}'.format(
+        date.year, date.month, date.day, date.hour, date.minute, date.second,
+        date.microsecond)
 
 
 def infer_timedelta_units(deltas):

@@ -10,8 +10,8 @@ from xarray.coding.netcdftimeindex import (
 from xarray.tests import assert_array_equal, assert_identical
 
 # Putting this at the module level for now, though technically we
-# don't need netCDF4 to test the string parser.
-pytest.importorskip('netCDF4')
+# don't need netcdftime to test the string parser.
+pytest.importorskip('netcdftime')
 
 
 def date_dict(year=None, month=None, day=None,
