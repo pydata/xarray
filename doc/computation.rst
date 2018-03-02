@@ -71,8 +71,8 @@ methods for working with missing data from pandas:
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
-    x.ffill()
-    x.bfill()
+    x.ffill('x')
+    x.bfill('x')
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.

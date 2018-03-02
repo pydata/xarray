@@ -113,6 +113,22 @@ Indexing
    Dataset.reset_index
    Dataset.reorder_levels
 
+Missing value handling
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.isnull
+   Dataset.notnull
+   Dataset.count
+   Dataset.dropna
+   Dataset.fillna
+   Dataset.ffill
+   Dataset.bfill
+   Dataset.interpolate_na
+   Dataset.where
+
 Computation
 -----------
 
@@ -141,17 +157,6 @@ Computation
 :py:attr:`~Dataset.sum`
 :py:attr:`~Dataset.std`
 :py:attr:`~Dataset.var`
-
-**Missing values**:
-:py:attr:`~Dataset.isnull`
-:py:attr:`~Dataset.notnull`
-:py:attr:`~Dataset.count`
-:py:attr:`~Dataset.dropna`
-:py:attr:`~Dataset.fillna`
-:py:attr:`~Dataset.ffill`
-:py:attr:`~Dataset.bfill`
-:py:attr:`~Dataset.interpolate_na`
-:py:attr:`~Dataset.where`
 
 **ndarray methods**:
 :py:attr:`~Dataset.argsort`
@@ -256,6 +261,22 @@ Indexing
    DataArray.reset_index
    DataArray.reorder_levels
 
+Missing value handling
+----------------------
+
+.. autosummary::
+  :toctree: generated/
+
+  DataArray.isnull
+  DataArray.notnull
+  DataArray.count
+  DataArray.dropna
+  DataArray.fillna
+  DataArray.ffill
+  DataArray.bfill
+  DataArray.interpolate_na
+  DataArray.where
+
 Comparisons
 -----------
 
@@ -295,17 +316,6 @@ Computation
 :py:attr:`~DataArray.sum`
 :py:attr:`~DataArray.std`
 :py:attr:`~DataArray.var`
-
-**Missing values**:
-:py:attr:`~DataArray.isnull`
-:py:attr:`~DataArray.notnull`
-:py:attr:`~DataArray.count`
-:py:attr:`~DataArray.dropna`
-:py:attr:`~DataArray.fillna`
-:py:attr:`~DataArray.ffill`
-:py:attr:`~DataArray.bfill`
-:py:attr:`~DataArray.interpolate_na`
-:py:attr:`~DataArray.where`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
