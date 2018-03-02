@@ -78,7 +78,9 @@ def maybe_promote(dtype):
     fill_value : Valid missing value for the promoted dtype.
     """
     # N.B. these casting rules should match pandas
-    if np.issubdtype(dtype, np.floating):
+    if np.issubdtype(dtype, np.timedelta64):
+        fill_value = np.timedelta64('NaT')
+    elif np.issubdtype(dtype, np.floating):
         fill_value = np.nan
     elif np.issubdtype(dtype, np.integer):
         if dtype.itemsize <= 2:
@@ -90,8 +92,6 @@ def maybe_promote(dtype):
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
         fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
     else:
         dtype = object
         fill_value = np.nan
