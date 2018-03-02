@@ -49,7 +49,7 @@ argument to :py:func:`~xarray.open_dataset` or using the
 :py:func:`~xarray.open_mfdataset` function.
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
