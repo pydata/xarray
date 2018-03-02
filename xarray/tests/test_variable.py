@@ -16,9 +16,9 @@ from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
-    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter, LazilyOuterIndexedArray,
-    MemoryCachedArray, NumpyIndexingAdapter, OuterIndexer, PandasIndexAdapter,
-    VectorizedIndexer)
+    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
+    LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
+    OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
@@ -1798,7 +1798,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, indexing.LazilyOuterIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
             for data in [np.arange(3),
                          pd.date_range('2000-01-01', periods=3),
@@ -1966,12 +1966,14 @@ class TestBackendIndexing(TestCase):
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d)))
         self.check_orthogonal_indexing(v)
 
     def test_CopyOnWriteArray(self):
@@ -1979,8 +1981,9 @@ class TestBackendIndexing(TestCase):
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
 
