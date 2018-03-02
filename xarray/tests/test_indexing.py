@@ -153,7 +153,7 @@ class TestLazyArray(TestCase):
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
         v = Variable(['i', 'j', 'k'], original)
-        lazy = indexing.LazilyIndexedArray(x)
+        lazy = indexing.LazilyOuterIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
         # test orthogonally applied indexers
@@ -172,7 +172,7 @@ class TestLazyArray(TestCase):
                         assert expected.shape == actual.shape
                         assert_array_equal(expected, actual)
                         assert isinstance(actual._data,
-                                          indexing.LazilyIndexedArray)
+                                          indexing.LazilyOuterIndexedArray)
 
                         # make sure actual.key is appropriate type
                         if all(isinstance(k, native_int_types + (slice, ))
@@ -191,7 +191,7 @@ class TestLazyArray(TestCase):
             actual = v_lazy[i][j]
             assert expected.shape == actual.shape
             assert_array_equal(expected, actual)
-            assert isinstance(actual._data, indexing.LazilyIndexedArray)
+            assert isinstance(actual._data, indexing.LazilyOuterIndexedArray)
             assert isinstance(actual._data.array,
                               indexing.NumpyIndexingAdapter)
 
@@ -199,7 +199,7 @@ class TestLazyArray(TestCase):
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
         v_eager = Variable(['i', 'j', 'k'], x)
-        lazy = indexing.LazilyIndexedArray(x)
+        lazy = indexing.LazilyOuterIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
 
@@ -210,7 +210,7 @@ class TestLazyArray(TestCase):
                 assert expected.shape == actual.shape
                 assert isinstance(actual._data,
                                   (indexing.LazilyVectorizedIndexedArray,
-                                   indexing.LazilyIndexedArray))
+                                   indexing.LazilyOuterIndexedArray))
                 assert_array_equal(expected, actual)
                 v_eager = expected
                 v_lazy = actual
@@ -263,19 +263,19 @@ class TestCopyOnWriteArray(TestCase):
 
 class TestMemoryCachedArray(TestCase):
     def test_wrapper(self):
-        original = indexing.LazilyIndexedArray(np.arange(10))
+        original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         assert_array_equal(wrapped, np.arange(10))
         assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
-        original = indexing.LazilyIndexedArray(np.arange(10))
+        original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
-        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
+        assert isinstance(wrapped.array, indexing.LazilyOuterIndexedArray)
 
     def test_setitem(self):
         original = np.arange(10)
@@ -388,6 +388,29 @@ class Test_vectorized_indexer(TestCase):
                 vindex, self.data.shape)
             np.testing.assert_array_equal(
                 self.data[vindex], self.data[vindex_array],)
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((slice(None),)), shape=(5,))
+        np.testing.assert_array_equal(actual.tuple, [np.arange(5)])
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((np.arange(5),) * 3), shape=(8, 10, 12))
+        expected = np.stack([np.arange(5)] * 3)
+        np.testing.assert_array_equal(np.stack(actual.tuple), expected)
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((np.arange(5), slice(None))),
+            shape=(8, 10))
+        a, b = actual.tuple
+        np.testing.assert_array_equal(a, np.arange(5)[:, np.newaxis])
+        np.testing.assert_array_equal(b, np.arange(10)[np.newaxis, :])
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((slice(None), np.arange(5))),
+            shape=(8, 10))
+        a, b = actual.tuple
+        np.testing.assert_array_equal(a, np.arange(8)[np.newaxis, :])
+        np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
 
 
 def get_indexers(shape, mode):

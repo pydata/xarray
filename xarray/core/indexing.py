@@ -440,7 +440,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
         return self.array[self.indexer_cls(key)]
 
 
-class LazilyIndexedArray(ExplicitlyIndexedNDArrayMixin):
+class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
     """Wrap an array to make basic and orthogonal indexing lazy.
     """
 
@@ -541,10 +541,10 @@ class LazilyVectorizedIndexedArray(ExplicitlyIndexedNDArrayMixin):
         return _combine_indexers(self.key, self.shape, new_key)
 
     def __getitem__(self, indexer):
-        # If the indexed array becomes a scalar, return LazilyIndexedArray.
+        # If the indexed array becomes a scalar, return LazilyOuterIndexedArray.
         if all(isinstance(ind, integer_types) for ind in indexer.tuple):
             key = BasicIndexer(tuple(k[indexer.tuple] for k in self.key.tuple))
-            return LazilyIndexedArray(self.array, key)
+            return LazilyOuterIndexedArray(self.array, key)
         return type(self)(self.array, self._updated_key(indexer))
 
     def transpose(self, order):
@@ -645,7 +645,7 @@ def _outer_to_vectorized_indexer(key, shape):
 
     Returns
     -------
-    VectorizedInexer
+    VectorizedIndexer
         Tuple suitable for use to index a NumPy array with vectorized indexing.
         Each element is an array: broadcasting them together gives the shape
         of the result.
@@ -923,7 +923,9 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
         return (OuterIndexer(tuple(backend_indexer)),
                 OuterIndexer(tuple(np_indexer)))
 
-    # basic
+    # basic indexer
+    assert indexing_support == IndexingSupport.BASIC
+
     for k, s in zip(indexer, shape):
         if isinstance(k, np.ndarray):
             # np.ndarray key is converted to slice that covers the entire

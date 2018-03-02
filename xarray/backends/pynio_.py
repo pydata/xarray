@@ -56,7 +56,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         self._mode = mode
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):

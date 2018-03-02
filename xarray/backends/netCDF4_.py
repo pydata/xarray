@@ -279,7 +279,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
-            data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+            data = indexing.LazilyOuterIndexedArray(NetCDF4ArrayWrapper(name, self))
             attributes = OrderedDict((k, var.getncattr(k))
                                      for k in var.ncattrs())
             _ensure_fill_value_valid(data, attributes)

@@ -490,7 +490,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         del attributes['dtype']
         data = BoolTypeArray(data)
 
-    return Variable(dimensions, indexing.LazilyIndexedArray(data),
+    return Variable(dimensions, indexing.LazilyOuterIndexedArray(data),
                     attributes, encoding=encoding)
 
 

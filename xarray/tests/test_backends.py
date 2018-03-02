@@ -1402,27 +1402,6 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
             yield tmp
 
 
-def test_replace_slices_with_arrays():
-    (actual,) = xr.backends.zarr._replace_slices_with_arrays(
-        key=(slice(None),), shape=(5,))
-    np.testing.assert_array_equal(actual, np.arange(5))
-
-    actual = xr.backends.zarr._replace_slices_with_arrays(
-        key=(np.arange(5),) * 3, shape=(8, 10, 12))
-    expected = np.stack([np.arange(5)] * 3)
-    np.testing.assert_array_equal(np.stack(actual), expected)
-
-    a, b = xr.backends.zarr._replace_slices_with_arrays(
-        key=(np.arange(5), slice(None)), shape=(8, 10))
-    np.testing.assert_array_equal(a, np.arange(5)[:, np.newaxis])
-    np.testing.assert_array_equal(b, np.arange(10)[np.newaxis, :])
-
-    a, b = xr.backends.zarr._replace_slices_with_arrays(
-        key=(slice(None), np.arange(5)), shape=(8, 10))
-    np.testing.assert_array_equal(a, np.arange(8)[np.newaxis, :])
-    np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
-
-
 @requires_scipy
 class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
     engine = 'scipy'

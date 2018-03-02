@@ -90,7 +90,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
-            data = indexing.LazilyIndexedArray(
+            data = indexing.LazilyOuterIndexedArray(
                 H5NetCDFArrayWrapper(name, self))
             attrs = _read_attributes(var)
 

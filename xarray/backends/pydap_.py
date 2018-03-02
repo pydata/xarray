@@ -78,7 +78,7 @@ class PydapDataStore(AbstractDataStore):
         return cls(ds)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+        data = indexing.LazilyOuterIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data,
                         _fix_attributes(var.attributes))
 
