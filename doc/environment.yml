@@ -6,6 +6,8 @@ dependencies:
   - python=3.5
   - numpy=1.11.2
   - pandas=0.21.0
+  - scipy=1.0
+  - bottleneck
   - numpydoc=0.7.0
   - matplotlib=2.0.0
   - seaborn=0.8
