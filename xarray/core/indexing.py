@@ -441,7 +441,7 @@ class ImplicitToExplicitIndexingAdapter(utils.NDArrayMixin):
 
 
 class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
-    """Wrap an array to make basic and orthogonal indexing lazy.
+    """Wrap an array to make basic and outer indexing lazy.
     """
 
     def __init__(self, array, key=None):
@@ -492,6 +492,10 @@ class LazilyOuterIndexedArray(ExplicitlyIndexedNDArrayMixin):
     def __array__(self, dtype=None):
         array = as_indexable(self.array)
         return np.asarray(array[self.key], dtype=None)
+
+    def transpose(self, order):
+        return LazilyVectorizedIndexedArray(
+            self.array, self.key).transpose(order)
 
     def __getitem__(self, indexer):
         if isinstance(indexer, VectorizedIndexer):
@@ -1117,6 +1121,9 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
         return array, key
 
+    def transpose(self, order):
+        return self.array.transpose(order)
+
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
         return self._ensure_ndarray(array[key])
@@ -1159,6 +1166,9 @@ class DaskIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                         'assign to this variable, you must first load it '
                         'into memory explicitly using the .load() '
                         'method or accessing its .values attribute.')
+
+    def transpose(self, order):
+        return self.array.transpose(order)
 
 
 class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
@@ -1233,6 +1243,9 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
             result = utils.to_0d_array(result)
 
         return result
+
+    def transpose(self, order):
+        return self.array  # self.array should be always one-dimensional
 
     def __repr__(self):
         return ('%s(array=%r, dtype=%r)'

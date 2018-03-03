@@ -187,10 +187,21 @@ class TestLazyArray(TestCase):
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
         for i, j in indexers:
-            expected = np.asarray(v[i][j])
+            expected = v[i][j]
             actual = v_lazy[i][j]
             assert expected.shape == actual.shape
             assert_array_equal(expected, actual)
+
+            # test transpose
+            if actual.ndim > 1:
+                order = np.random.choice(actual.ndim, actual.ndim)
+                order = np.array(actual.dims)
+                transposed = actual.transpose(*order)
+                assert_array_equal(expected.transpose(*order), transposed)
+                assert isinstance(
+                    actual._data, (indexing.LazilyVectorizedIndexedArray,
+                                   indexing.LazilyOuterIndexedArray))
+
             assert isinstance(actual._data, indexing.LazilyOuterIndexedArray)
             assert isinstance(actual._data.array,
                               indexing.NumpyIndexingAdapter)
