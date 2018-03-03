@@ -46,6 +46,10 @@ Enhancements
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``Dataset``s align ``DataArray``s to coords that are explicitly
+  passed into the constructor, where previously an error would be raised.
+  (:issue:`674`)
+  By `Maximilian Roos <https://github.com/maxim-lian`_
 
 Bug fixes
 ~~~~~~~~~
