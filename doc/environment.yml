@@ -3,8 +3,8 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.5
-  - numpy=1.11.2
+  - python=3.6
+  - numpy=1.13
   - pandas=0.21.0
   - scipy=1.0
   - bottleneck
