@@ -4,7 +4,7 @@ channels:
   - defaults
 dependencies:
   - python=3.5
-  - numpy=1.11.2
+  - numpy=1.13
   - pandas=0.21.0
   - scipy=1.0
   - bottleneck
