@@ -4042,6 +4042,10 @@ def data_set(seed=None):
     {'x': (['x'], np.asarray([1, 2, 0]))},
     {'x': pd.Index([2, 1, 0])},
     {'x': Variable(dims='x', data=[0, 2, 1])},
+    {'y': 42},
+    {'y': ('x', [2, 1, 0])},
+    {'y': ('x', np.asarray([2, 1, 0]))},
+    {'y': (['x'], np.asarray([2, 1, 0]))},
 ))
 def test_constructor_aligns_to_explicit_coords(unaligned_coords):
 
@@ -4054,6 +4058,18 @@ def test_constructor_aligns_to_explicit_coords(unaligned_coords):
     result = xr.Dataset({'a': a}, coords=coords)
 
     assert_equal(expected, result)
+
+
+@pytest.mark.parametrize('unaligned_coords', (
+    {'y': ('b', np.asarray([2, 1, 0]))},
+))
+def test_constructor_raises_with_invalid_coords(unaligned_coords):
+
+    coords = {'x': [0, 1, 2]}
+    a = xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
+
+    with pytest.raises(ValueError, 'not a subset of the DataArray dimensions'):
+        xr.Dataset({'a': a}, coords=coords)
 
 
 def test_dir_expected_attrs(data_set):
