@@ -16,7 +16,6 @@ from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
 
-
 # zarr attributes have to be serializable as json
 # many xarray datasets / variables have numpy arrays and values
 # these functions handle encoding / decoding of such items
@@ -273,13 +272,12 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
                    writer=None):
         import zarr
-        min_zarr       = '2.2'
-        min_zarr_loose = LooseVersion(min_zarr)
+        min_zarr = '2.2'
 
         if LooseVersion(zarr.__version__) < min_zarr:
-            raise NotImplementedError("Zarr version " + min_zarr + " or greater is required by xarray.  "
-                                      "See zarr installation instructions at " 
-                                      "http://zarr.readthedocs.io/en/stable/#installation")
+            raise NotImplementedError("Zarr version %s or greater is " % min_zarr +
+                  "required by xarray. See zarr installation instructions at "+
+                  "http://zarr.readthedocs.io/en/stable/#installation")
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
         return cls(zarr_group, writer=writer)
