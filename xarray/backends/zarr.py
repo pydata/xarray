@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from base64 import b64encode
 from itertools import product
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
+
 
 
 # zarr attributes have to be serializable as json
@@ -271,6 +273,13 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
                    writer=None):
         import zarr
+        min_zarr       = '2.2'
+        min_zarr_loose = LooseVersion(min_zarr)
+
+        if LooseVersion(zarr.__version__) < min_zarr:
+            raise NotImplementedError("Zarr version " + min_zarr + " or greater is required by xarray.  "
+                                      "See zarr installation instructions at " 
+                                      "http://zarr.readthedocs.io/en/stable/#installation")
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
         return cls(zarr_group, writer=writer)
