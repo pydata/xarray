@@ -4065,7 +4065,8 @@ def test_constructor_aligns_to_explicit_coords(unaligned_coords):
 ))
 def test_constructor_raises_with_invalid_coords(unaligned_coords):
 
-    with pytest.raises(ValueError, 'not a subset of the DataArray dimensions'):
+    with pytest.raises(ValueError,
+                       message='not a subset of the DataArray dimensions'):
         xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
 
 
