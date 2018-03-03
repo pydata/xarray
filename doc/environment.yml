@@ -9,7 +9,7 @@ dependencies:
   - scipy=1.0
   - bottleneck
   - numpydoc=0.7.0
-  - matplotlib=2.0.0
+  - matplotlib=2.1.2
   - seaborn=0.8
   - dask=0.16.0
   - ipython=6.2.1
