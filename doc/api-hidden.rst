@@ -22,13 +22,6 @@
    Dataset.std
    Dataset.var
 
-   Dataset.isnull
-   Dataset.notnull
-   Dataset.count
-   Dataset.dropna
-   Dataset.fillna
-   Dataset.where
-
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
    core.groupby.DatasetGroupBy.first
@@ -67,13 +60,6 @@
    DataArray.sum
    DataArray.std
    DataArray.var
-
-   DataArray.isnull
-   DataArray.notnull
-   DataArray.count
-   DataArray.dropna
-   DataArray.fillna
-   DataArray.where
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first

@@ -2,12 +2,14 @@ import os
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import is_scalar
 from ..core import indexing
+from ..core.utils import is_scalar
 from .common import BackendArray
+
 try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
@@ -190,8 +192,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         if parse:
             nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered
-            x, _ = (np.arange(nx)+0.5, np.zeros(nx)+0.5) * transform
-            _, y = (np.zeros(ny)+0.5, np.arange(ny)+0.5) * transform
+            x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * transform
+            _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * transform
             coords['y'] = y
             coords['x'] = x
     else:

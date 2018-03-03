@@ -11,16 +11,16 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
-import sys
-import os
 import datetime
 import importlib
+import os
+import sys
 
-allowed_failures = []
+import xarray
+
+allowed_failures = set()
 
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
@@ -34,13 +34,16 @@ for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
         print("%s: %s, %s" % (name, module.__version__, fname))
     except ImportError:
         print("no %s" % name)
+        # neither rasterio nor cartopy should be hard requirements for
+        # the doc build.
         if name == 'rasterio':
-            # not having rasterio should not break the build process
-            allowed_failures = ['gallery/plot_rasterio_rgb.py',
-                                'gallery/plot_rasterio.py'
-                                ]
+            allowed_failures.update(['gallery/plot_rasterio_rgb.py',
+                                     'gallery/plot_rasterio.py'])
+        elif name == 'cartopy':
+            allowed_failures.update(['gallery/plot_cartopy_facetgrid.py',
+                                     'gallery/plot_rasterio_rgb.py',
+                                     'gallery/plot_rasterio.py'])
 
-import xarray
 print("xarray: %s, %s" % (xarray.__version__, xarray.__file__))
 
 # -- General configuration ------------------------------------------------
@@ -70,7 +73,7 @@ extlinks = {'issue': ('https://github.com/pydata/xarray/issues/%s', 'GH'),
 sphinx_gallery_conf = {'examples_dirs': 'gallery',
                        'gallery_dirs': 'auto_gallery',
                        'backreferences_dir': False,
-                       'expected_failing_examples': allowed_failures
+                       'expected_failing_examples': list(allowed_failures)
                        }
 
 autosummary_generate = True

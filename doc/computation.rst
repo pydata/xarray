@@ -71,8 +71,8 @@ methods for working with missing data from pandas:
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
-    x.ffill()
-    x.bfill()
+    x.ffill('x')
+    x.bfill('x')
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
@@ -158,19 +158,41 @@ Aggregation and summary methods can be applied directly to the ``Rolling`` objec
     r.mean()
     r.reduce(np.std)
 
-Note that rolling window aggregations are much faster (both asymptotically and
-because they avoid a loop in Python) when bottleneck_ is installed. Otherwise,
-we fall back to a slower, pure Python implementation.
+Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck/
 
-Finally, we can manually iterate through ``Rolling`` objects:
+We can also manually iterate through ``Rolling`` objects:
 
 .. ipython:: python
 
    @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
+
+Finally, the rolling object has ``construct`` method, which gives a
+view of the original ``DataArray`` with the windowed dimension attached to
+the last position.
+You can use this for more advanced rolling operations, such as strided rolling,
+windowed rolling, convolution, short-time FFT, etc.
+
+.. ipython:: python
+
+    # rolling with 2-point stride
+    rolling_da = r.construct('window_dim', stride=2)
+    rolling_da
+    rolling_da.mean('window_dim', skipna=False)
+
+Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
+of the original array, it is memory efficient.
+
+.. note::
+  numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
+  In xarray, we internally use these functions in our aggregation methods
+  (such as ``.sum()``) if ``skipna`` argument is not specified or set to True.
+  This means ``rolling_da.mean('window_dim')`` is memory inefficient.
+  To avoid this, use ``skipna=False`` as the above example.
+
 
 .. _compute.broadcasting:
 

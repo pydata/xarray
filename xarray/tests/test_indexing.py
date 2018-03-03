@@ -1,20 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import itertools
+from __future__ import absolute_import, division, print_function
 
-import pytest
+import itertools
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from xarray import Dataset, DataArray, Variable
-from xarray.core import indexing
-from xarray.core import nputils
+from xarray import DataArray, Dataset, Variable
+from xarray.core import indexing, nputils
 from xarray.core.pycompat import native_int_types
-from . import (
-    TestCase, ReturnItem, raises_regex, IndexerMaker, assert_array_equal)
 
+from . import (
+    IndexerMaker, ReturnItem, TestCase, assert_array_equal, raises_regex)
 
 B = IndexerMaker(indexing.BasicIndexer)
 
@@ -114,25 +111,25 @@ class TestIndexers(TestCase):
         test_indexer(data, Variable([], 1), 0)
         test_indexer(mdata, ('a', 1, -1), 0)
         test_indexer(mdata, ('a', 1),
-                     [True,  True, False, False, False, False, False, False],
+                     [True, True, False, False, False, False, False, False],
                      [-1, -2])
         test_indexer(mdata, 'a', slice(0, 4, None),
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
         test_indexer(mdata, ('a',),
-                     [True,  True,  True,  True, False, False, False, False],
+                     [True, True, True, True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
         test_indexer(mdata, [('a', 1, -1), ('b', 2, -2)], [0, 7])
         test_indexer(mdata, slice('a', 'b'), slice(0, 8, None))
         test_indexer(mdata, slice(('a', 1), ('b', 1)), slice(0, 6, None))
         test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0)
         test_indexer(mdata, {'one': 'a', 'two': 1},
-                     [True,  True, False, False, False, False, False, False],
+                     [True, True, False, False, False, False, False, False],
                      [-1, -2])
         test_indexer(mdata, {'one': 'a', 'three': -1},
-                     [True,  False, True, False, False, False, False, False],
+                     [True, False, True, False, False, False, False, False],
                      [1, 2])
         test_indexer(mdata, {'one': 'a'},
-                     [True,  True,  True,  True, False, False, False, False],
+                     [True, True, True, True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 

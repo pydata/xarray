@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pandas as pd
+
 import xarray as xr
 
-from . import randn, randint, requires_dask
-
+from . import randint, randn, requires_dask
 
 nx = 3000
 ny = 2000
@@ -29,7 +27,7 @@ basic_assignment_values = {
 
 outer_indexes = {
     '1d': {'x': randint(0, nx, 400)},
-    '2d':  {'x': randint(0, nx, 500), 'y': randint(0, ny, 400)},
+    '2d': {'x': randint(0, nx, 500), 'y': randint(0, ny, 400)},
     '2d-1scalar': {'x': randint(0, nx, 100), 'y': 1, 't': randint(0, nt, 400)}
 }
 

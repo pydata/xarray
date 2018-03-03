@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import pandas as pd
 
 from .alignment import deep_align
 from .pycompat import OrderedDict, basestring
 from .utils import Frozen
 from .variable import as_variable, assert_unique_multiindex_level_names
-
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 

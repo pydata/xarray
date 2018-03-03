@@ -1,18 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from datetime import timedelta
-from collections import defaultdict, Hashable
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
+from collections import Hashable, defaultdict
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 
-from . import nputils
-from . import utils
-from . import duck_array_ops
-from .pycompat import (iteritems, range, integer_types, dask_array_type,
-                       suppress)
+from . import duck_array_ops, nputils, utils
+from .pycompat import (
+    dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
 
 
@@ -292,7 +290,7 @@ class ExplicitIndexer(object):
     """
 
     def __init__(self, key):
-        if type(self) is ExplicitIndexer:
+        if type(self) is ExplicitIndexer:  # noqa
             raise TypeError('cannot instantiate base ExplicitIndexer objects')
         self._key = tuple(key)
 
@@ -911,6 +909,10 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
                 result = np.datetime64('NaT', 'ns')
             elif isinstance(result, timedelta):
                 result = np.timedelta64(getattr(result, 'value', result), 'ns')
+            elif isinstance(result, pd.Timestamp):
+                # Work around for GH: pydata/xarray#1932 and numpy/numpy#10668
+                # numpy fails to convert pd.Timestamp to np.datetime64[ns]
+                result = np.asarray(result.to_datetime64())
             elif self.dtype != object:
                 result = np.asarray(result, dtype=self.dtype)
 

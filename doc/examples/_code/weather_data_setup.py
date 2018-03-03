@@ -1,7 +1,8 @@
-import xarray as xr
 import numpy as np
 import pandas as pd
-import seaborn as sns # pandas aware plotting library
+import seaborn as sns  # pandas aware plotting library
+
+import xarray as xr
 
 np.random.seed(123)
 

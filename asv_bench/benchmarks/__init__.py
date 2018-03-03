@@ -2,16 +2,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import itertools
-import random
 
 import numpy as np
 
 _counter = itertools.count()
 
 
+def parameterized(names, params):
+    def decorator(func):
+        func.param_names = names
+        func.params = params
+        return func
+    return decorator
+
+
 def requires_dask():
     try:
-        import dask
+        import dask  # noqa
     except ImportError:
         raise NotImplementedError
 

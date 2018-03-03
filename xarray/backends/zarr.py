@@ -1,18 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from itertools import product
+from __future__ import absolute_import, division, print_function
+
 from base64 import b64encode
+from itertools import product
 
 import numpy as np
 
-from .. import coding
-from .. import Variable
+from .. import Variable, coding, conventions
 from ..core import indexing
+from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from ..core.pycompat import iteritems, OrderedDict, integer_types
-from .common import AbstractWritableDataStore, BackendArray, ArrayWriter
-from .. import conventions
+from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -29,7 +26,7 @@ def _encode_zarr_attr_value(value):
         encoded = value.item()
         # np.string_('X').item() returns a type `bytes`
         # zarr still doesn't like that
-        if type(encoded) is bytes:
+        if type(encoded) is bytes:  # noqa
             encoded = b64encode(encoded)
     else:
         encoded = value
@@ -37,7 +34,7 @@ def _encode_zarr_attr_value(value):
 
 
 def _ensure_valid_fill_value(value, dtype):
-    if dtype.type == np.string_ and type(value) == bytes:
+    if dtype.type == np.string_ and type(value) == bytes:  # noqa
         valid = b64encode(value)
     else:
         valid = value
