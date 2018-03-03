@@ -35,6 +35,7 @@ nosetests.xml
 .ropeproject/
 .tags*
 .testmondata
+.tmontmp/
 .pytest_cache
 
 # asv environments
