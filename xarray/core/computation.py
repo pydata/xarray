@@ -1,8 +1,7 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
-
-NOT PUBLIC API.
 """
+from __future__ import absolute_import, division, print_function
 from distutils.version import LooseVersion
 import functools
 import itertools
