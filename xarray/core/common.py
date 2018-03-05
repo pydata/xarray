@@ -290,6 +290,12 @@ class SupportsArithmetic(object):
                            kwargs=kwargs,
                            dask='allowed')
 
+    # this has no runtime function - these are listed so IDEs know these
+    # methods are defined and don't warn on these operations
+    __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
+        __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
+        __or__ = __div__ = __eq__ = __ne__ = not_implemented  # noqa
+
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
@@ -804,12 +810,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-
-    # this has no runtime function - these are listed so IDEs know these
-    # methods are defined and don't warn on these operations
-    __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
-        __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
-        __or__ = __div__ = __eq__ = __ne__ = not_implemented  # noqa
 
 
 def full_like(other, fill_value, dtype=None):
