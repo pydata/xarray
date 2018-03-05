@@ -197,6 +197,16 @@ It is required to explicitly specify either
 Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
 If required, the automatic legend can be turned off using ``add_legend=False``.
 
+Dimension along y-axis
+~~~~~~~~~~~~~~~~~~~~~~
+
+It is also possible to make line plots such that the data are on the x-axis and a dimension is on the y-axis. This can be done by specifying the appropriate ``y`` keyword argument.
+
+.. ipython:: python
+
+    @savefig plotting_example_xy_kwarg.png
+    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon')
+
 Two Dimensions
 --------------
 
