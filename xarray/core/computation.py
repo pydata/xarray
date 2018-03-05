@@ -896,7 +896,7 @@ def apply_ufunc(func, *args, **kwargs):
                                 excluded=set(kwargs))
         else:
             func = np.vectorize(func,
-                                otype=output_dtypes,
+                                otypes=output_dtypes,
                                 excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
