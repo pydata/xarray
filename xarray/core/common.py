@@ -273,6 +273,8 @@ class SupportsArithmetic(object):
                 .format(method, ufunc))
 
         if any(isinstance(o, SupportsArithmetic) for o in out):
+            # TODO: implement this with logic like _inplace_binary_op. This
+            # will be necessary to use NDArrayOperatorsMixin.
             raise NotImplementedError(
                 'xarray objects are not yet supported in the `out` argument '
                 'for ufuncs.')
