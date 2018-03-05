@@ -91,14 +91,42 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, 'dimension'):
+        with raises_regex(ValueError, 'None'):
             self.darray[:, 0, 0].plot(x='dim_1')
+
+    def test_1d_x_y_kw(self):
+        z = np.arange(10)
+        da = DataArray(np.cos(z), dims=['z'], coords=[z], name='f')
+
+        xy = [[None, None],
+              [None, 'z'],
+              ['z', None]]
+
+        f, ax = plt.subplots(3, 1)
+        for aa, (x, y) in enumerate(xy):
+            da.plot(x=x, y=y, ax=ax.flat[aa])
+
+        with raises_regex(ValueError, 'cannot'):
+            da.plot(x='z', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='f', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='z', y='f')
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
             self.darray[:, :, 0].plot.line()
 
         self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_0', hue='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1')
+
+        with raises_regex(ValueError, 'cannot'):
+            self.darray[:, :, 0].plot.line(x='dim_1', y='dim_0', hue='dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
@@ -279,6 +307,10 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot()
         assert 'period' == plt.gca().get_xlabel()
 
+    def test_no_label_name_on_x_axis(self):
+        self.darray.plot(y='period')
+        self.assertEqual('', plt.gca().get_xlabel())
+
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()
         assert '' == plt.gca().get_ylabel()
@@ -287,6 +319,11 @@ class TestPlot1D(PlotTestCase):
         self.darray.name = 'temperature'
         self.darray.plot()
         assert self.darray.name == plt.gca().get_ylabel()
+
+    def test_xlabel_is_data_name(self):
+        self.darray.name = 'temperature'
+        self.darray.plot(y='period')
+        self.assertEqual(self.darray.name, plt.gca().get_xlabel())
 
     def test_format_string(self):
         self.darray.plot.line('ro')
