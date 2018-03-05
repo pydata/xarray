@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
-import numpy as np
 from distutils.version import LooseVersion
 
+import numpy as np
 
 if LooseVersion(np.__version__) >= LooseVersion('1.12'):
     as_strided = np.lib.stride_tricks.as_strided

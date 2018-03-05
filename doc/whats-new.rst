@@ -38,6 +38,18 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Implemented NumPy's ``__array_ufunc__`` protocol for all xarray objects
+  (:issue:`1617`). This enables using NumPy ufuncs directly on
+  ``xarray.Dataset`` objects with recent versions of NumPy (v1.13 and newer):
+
+  .. ipython:: python
+
+    ds = xr.Dataset({'a': 1})
+    np.sin(ds)
+
+  This obliviates the need for the ``xarray.ufuncs`` module, which will be
+  deprecated in the future when xarray drops support for older versions of
+  NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view

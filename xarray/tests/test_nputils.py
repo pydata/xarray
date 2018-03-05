@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from xarray.core.nputils import (NumpyVIndexAdapter, _is_contiguous,
-                                 rolling_window)
+from xarray.core.nputils import (
+    NumpyVIndexAdapter, _is_contiguous, rolling_window)
 
 
 def test_is_contiguous():

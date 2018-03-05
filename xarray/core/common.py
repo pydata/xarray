@@ -1,12 +1,16 @@
 from __future__ import absolute_import, division, print_function
 
+import numbers
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from . import dtypes, formatting, ops
-from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .options import OPTIONS
+from .pycompat import (
+    OrderedDict, basestring, bytes_type, dask_array_type, suppress,
+    unicode_type)
 from .utils import Frozen, SortedKeysDict, not_implemented
 
 
@@ -235,7 +239,57 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     return dim
 
 
-class BaseDataObject(AttrAccessMixin):
+class SupportsArithmetic(object):
+    """Base class for Dataset, DataArray, Variable and GroupBy."""
+
+    # TODO: implement special methods for arithmetic here rather than injecting
+    # them in xarray/core/ops.py. Ideally, do so by inheriting from
+    # numpy.lib.mixins.NDArrayOperatorsMixin.
+
+    # TODO: allow extending this with some sort of registration system
+    _HANDLED_TYPES = (np.ndarray, np.generic, numbers.Number, bytes_type,
+                      unicode_type) + dask_array_type
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        from .computation import apply_ufunc
+
+        # See the docstring example for numpy.lib.mixins.NDArrayOperatorsMixin.
+        out = kwargs.get('out', ())
+        for x in inputs + out:
+            if not isinstance(x, self._HANDLED_TYPES + (SupportsArithmetic,)):
+                return NotImplemented
+
+        if ufunc.signature is not None:
+            raise NotImplementedError(
+                '{} not supported: xarray objects do not directly implement '
+                'generalized ufuncs. Instead, use xarray.apply_ufunc.'
+                .format(ufunc))
+
+        if method != '__call__':
+            # TODO: support other methods, e.g., reduce and accumulate.
+            raise NotImplementedError(
+                '{} method for ufunc {} is not implemented on xarray objects, '
+                'which currently only support the __call__ method.'
+                .format(method, ufunc))
+
+        if any(isinstance(o, SupportsArithmetic) for o in out):
+            raise NotImplementedError(
+                'xarray objects are not yet supported in the `out` argument '
+                'for ufuncs.')
+
+        join = dataset_join = OPTIONS['arithmetic_join']
+
+        return apply_ufunc(ufunc, *inputs,
+                           input_core_dims=((),) * ufunc.nin,
+                           output_core_dims=((),) * ufunc.nout,
+                           join=join,
+                           dataset_join=dataset_join,
+                           dataset_fill_value=np.nan,
+                           kwargs=kwargs,
+                           dask='allowed')
+
+
+class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     def squeeze(self, dim=None, drop=False, axis=None):
