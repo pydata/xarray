@@ -274,7 +274,7 @@ class ZarrStore(AbstractWritableDataStore):
         import zarr
         min_zarr = '2.2'
 
-        if LooseVersion(zarr.__version__) < min_zarr:
+        if LooseVersion(zarr.__version__) < min_zarr:  # pragma: no cover
             raise NotImplementedError("Zarr version %s or greater is "
                                       "required by xarray. See zarr "
                                       "installation "
