@@ -239,7 +239,7 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     return dim
 
 
-class SupportsArithmetic(object):
+class SupportsArithmetic(object):  # noqa: W1641
     """Base class for Dataset, DataArray, Variable and GroupBy."""
 
     # TODO: implement special methods for arithmetic here rather than injecting
@@ -294,7 +294,7 @@ class SupportsArithmetic(object):
     # methods are defined and don't warn on these operations
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
-        __or__ = __div__ = __eq__ = __ne__ = not_implemented  # noqa
+        __or__ = __div__ = __eq__ = __ne__ = not_implemented
 
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
