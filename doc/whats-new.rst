@@ -50,6 +50,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Raise an informative error message when using ``apply_ufunc`` with numpy
+  v1.11 (:issue:`1956`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 

@@ -3,6 +3,7 @@ Functions for applying functions that act on arrays to xarray's labeled data.
 
 NOT PUBLIC API.
 """
+from distutils.version import LooseVersion
 import functools
 import itertools
 import operator
@@ -882,10 +883,21 @@ def apply_ufunc(func, *args, **kwargs):
         func = functools.partial(func, **kwargs_)
 
     if vectorize:
-        func = np.vectorize(func,
-                            otypes=output_dtypes,
-                            signature=signature.to_gufunc_string(),
-                            excluded=set(kwargs))
+        if signature.all_output_core_dims:
+            # we need the signature argument
+            if LooseVersion(np.__version__) < '1.12':  # pragma: no cover
+                raise NotImplementedError(
+                    'numpy 1.12 or newer required when using vectorize=True '
+                    'in xarray.apply_ufunc with non-scalar output core '
+                    'dimensions.')
+            func = np.vectorize(func,
+                                otypes=output_dtypes,
+                                signature=signature.to_gufunc_string(),
+                                excluded=set(kwargs))
+        else:
+            func = np.vectorize(func,
+                                otype=output_dtypes,
+                                excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
