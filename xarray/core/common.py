@@ -809,7 +809,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     # methods are defined and don't warn on these operations
     __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
         __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
-        __or__ = __div__ = __eq__ = __ne__ = not_implemented
+        __or__ = __div__ = __eq__ = __ne__ = not_implemented  # noqa
 
 
 def full_like(other, fill_value, dtype=None):
