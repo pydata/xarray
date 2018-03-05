@@ -52,6 +52,8 @@ Bug fixes
 
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Silenced irrelevant warnings issued by ``open_rasterio`` (:issue:`1964`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.1:
 
