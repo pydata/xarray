@@ -16,9 +16,9 @@ from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
-    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter, LazilyIndexedArray,
-    MemoryCachedArray, NumpyIndexingAdapter, OuterIndexer, PandasIndexAdapter,
-    VectorizedIndexer)
+    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
+    LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
+    OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
@@ -988,9 +988,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
-        v = Variable('x', LazilyIndexedArray(np.arange(2e5)))
+        v = Variable('x', LazilyOuterIndexedArray(np.arange(2e5)))
         assert '200000 values with dtype' in repr(v)
-        assert isinstance(v._data, LazilyIndexedArray)
+        assert isinstance(v._data, LazilyOuterIndexedArray)
 
     def test_detect_indexer_type(self):
         """ Tests indexer type was correctly detected. """
@@ -1798,7 +1798,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, indexing.LazilyIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
             for data in [np.arange(3),
                          pd.date_range('2000-01-01', periods=3),
@@ -1961,18 +1961,19 @@ class TestBackendIndexing(TestCase):
             v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(
                 NumpyIndexingAdapter(self.d)))
 
-    def test_LazilyIndexedArray(self):
-        v = Variable(dims=('x', 'y'), data=LazilyIndexedArray(self.d))
+    def test_LazilyOuterIndexedArray(self):
+        v = Variable(dims=('x', 'y'), data=LazilyOuterIndexedArray(self.d))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyIndexedArray(LazilyIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyIndexedArray(NumpyIndexingAdapter(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d)))
         self.check_orthogonal_indexing(v)
 
     def test_CopyOnWriteArray(self):
@@ -1980,11 +1981,11 @@ class TestBackendIndexing(TestCase):
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
 
     def test_MemoryCachedArray(self):
         v = Variable(dims=('x', 'y'), data=MemoryCachedArray(self.d))

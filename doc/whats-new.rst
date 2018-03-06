@@ -38,6 +38,11 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
