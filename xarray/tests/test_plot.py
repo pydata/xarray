@@ -938,6 +938,10 @@ class Common2dMixin:
         # check that all colormaps are the same
         assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
 
+    def test_cmap_and_color_both(self):
+        with pytest.raises(ValueError):
+            self.plotmethod(colors='k', cmap='RdBu')
+
 
 @pytest.mark.slow
 class TestContourf(Common2dMixin, PlotTestCase):

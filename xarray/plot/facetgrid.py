@@ -218,6 +218,14 @@ class FacetGrid(object):
         self : FacetGrid object
 
         """
+
+        cmapkw = kwargs.get('cmap')
+        colorskw = kwargs.get('colors')
+
+        # colors is mutually exclusive with cmap
+        if cmapkw and colorskw:
+            raise ValueError("Can't specify both cmap and colors.")
+
         # These should be consistent with xarray.plot._plot2d
         cmap_kwargs = {'plot_data': self.data.values,
                        # MPL default
@@ -229,6 +237,9 @@ class FacetGrid(object):
         cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+        if colorskw is not None:
+            cmap_params['cmap'] = None
 
         # Order is important
         func_kwargs = kwargs.copy()
