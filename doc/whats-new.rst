@@ -38,9 +38,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- Addition of :py:func:`~xarray.dot`, which is equivalent to ``np.einsum``.
+- Addition of :py:func:`~xarray.dot`, equivalent to ``np.einsum``.
   Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
-  which specifies along which dimensions to be summed over.
+  which specifies the dimensions to be summed over.
   (:issue:`1951`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
