@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from base64 import b64encode
 from itertools import product
+from distutils.version import LooseVersion
 
 import numpy as np
 
@@ -271,6 +272,14 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
                    writer=None):
         import zarr
+        min_zarr = '2.2'
+
+        if LooseVersion(zarr.__version__) < min_zarr:  # pragma: no cover
+            raise NotImplementedError("Zarr version %s or greater is "
+                                      "required by xarray. See zarr "
+                                      "installation "
+                                      "http://zarr.readthedocs.io/en/stable/"
+                                      "#installation" % min_zarr)
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
         return cls(zarr_group, writer=writer)
