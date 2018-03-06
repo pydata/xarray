@@ -45,11 +45,24 @@ Enhancements
 
 
 - Fixed to_netcdf when using dask distributed
+- Improve :py:func:`~xarray.DataArray.rolling` logic.
+  :py:func:`~xarray.DataArrayRolling` object now supports
+  :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
+  of the DataArray / Dataset object with the rolling-window dimension added
+  to the last axis. This enables more flexible operation, such as strided
+  rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
+  (:issue:`1831`, :issue:`1142`, :issue:`819`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 Bug fixes
 ~~~~~~~~~
 
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.1:
 
@@ -71,7 +84,6 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-
 **New functions and methods**:
 
 - Added :py:meth:`DataArray.to_iris` and
@@ -147,6 +159,10 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Rolling aggregation with ``center=True`` option now gives the same result
+  with pandas including the last element (:issue:`1046`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Support indexing with a 0d-np.ndarray (:issue:`1921`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Added warning in api.py of a netCDF4 bug that occurs when

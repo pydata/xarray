@@ -737,6 +737,52 @@ class VariableSubclassTestCases(object):
         with raises_regex(IndexError, 'Dimensions of indexers mis'):
             v[:, ind]
 
+    def test_pad(self):
+        data = np.arange(4 * 3 * 2).reshape(4, 3, 2)
+        v = self.cls(['x', 'y', 'z'], data)
+
+        xr_args = [{'x': (2, 1)}, {'y': (0, 3)}, {'x': (3, 1), 'z': (2, 0)}]
+        np_args = [((2, 1), (0, 0), (0, 0)), ((0, 0), (0, 3), (0, 0)),
+                   ((3, 1), (0, 0), (2, 0))]
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(**xr_arg)
+            expected = np.pad(np.array(v.data.astype(float)), np_arg,
+                              mode='constant', constant_values=np.nan)
+            assert_array_equal(actual, expected)
+            assert isinstance(actual._data, type(v._data))
+
+        # for the boolean array, we pad False
+        data = np.full_like(data, False, dtype=bool).reshape(4, 3, 2)
+        v = self.cls(['x', 'y', 'z'], data)
+        for xr_arg, np_arg in zip(xr_args, np_args):
+            actual = v.pad_with_fill_value(fill_value=False, **xr_arg)
+            expected = np.pad(np.array(v.data), np_arg,
+                              mode='constant', constant_values=False)
+            assert_array_equal(actual, expected)
+
+    def test_rolling_window(self):
+        # Just a working test. See test_nputils for the algorithm validation
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        for (d, w) in [('x', 3), ('y', 5)]:
+            v_rolling = v.rolling_window(d, w, d + '_window')
+            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
+            assert v_rolling.shape == v.shape + (w, )
+
+            v_rolling = v.rolling_window(d, w, d + '_window', center=True)
+            assert v_rolling.dims == ('x', 'y', 'z', d + '_window')
+            assert v_rolling.shape == v.shape + (w, )
+
+            # dask and numpy result should be the same
+            v_loaded = v.load().rolling_window(d, w, d + '_window',
+                                               center=True)
+            assert_array_equal(v_rolling, v_loaded)
+
+            # numpy backend should not be over-written
+            if isinstance(v._data, np.ndarray):
+                with pytest.raises(ValueError):
+                    v_loaded[0] = 1.0
+
 
 class TestVariable(TestCase, VariableSubclassTestCases):
     cls = staticmethod(Variable)
@@ -1462,7 +1508,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
         with pytest.raises(NotImplementedError):
-            v.max(skipna=True)
+            v.argmax(skipna=True)
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
@@ -1740,6 +1786,14 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
     @pytest.mark.xfail
     def test_getitem_uint(self):
         super(TestIndexVariable, self).test_getitem_fancy()
+
+    @pytest.mark.xfail
+    def test_pad(self):
+        super(TestIndexVariable, self).test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_rolling_window(self):
+        super(TestIndexVariable, self).test_rolling_window()
 
 
 class TestAsCompatibleData(TestCase):
