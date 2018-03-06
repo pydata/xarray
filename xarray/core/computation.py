@@ -882,7 +882,7 @@ def apply_ufunc(func, *args, **kwargs):
         func = functools.partial(func, **kwargs_)
 
     if vectorize:
-        if signature.all_output_core_dims:
+        if signature.all_core_dims:
             # we need the signature argument
             if LooseVersion(np.__version__) < '1.12':  # pragma: no cover
                 raise NotImplementedError(
