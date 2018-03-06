@@ -744,6 +744,49 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
+@pytest.mark.parametrize('dask', [False, True])
+def test_dot(dask):
+    a = np.arange(3 * 4).reshape(3, 4)
+    b = np.arange(3 * 4 * 5).reshape(3, 4, 5)
+    c = np.arange(5 * 6).reshape(5, 6)
+    da_a = xr.DataArray(a, dims=['a', 'b'])
+    da_b = xr.DataArray(b, dims=['a', 'b', 'c'])
+    da_c = xr.DataArray(c, dims=['c', 'e'])
+
+    if dask:
+        da_a = da_a.chunk({'b': 2})
+        da_b = da_b.chunk({'b': 2})
+        da_c = da_c.chunk({'e': 3})
+
+    actual = xr.dot(da_a, da_b, ['a', 'b'])
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+
+    actual = xr.dot(da_a, da_b)
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, ['b'])
+    assert actual.dims == ('a', 'c')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, 'b')
+    assert actual.dims == ('a', 'c')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, 'a')
+    assert actual.dims == ('b', 'c')
+    assert (actual.data == np.einsum('ij,ijk->jk', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, 'c')
+    assert actual.dims == ('a', 'b')
+    assert (actual.data == np.einsum('ij,ijk->ij', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, da_c, dims=['a', 'b'])
+    assert actual.dims == ('c', 'e')
+    assert (actual.data == np.einsum('ij,ijk,kl->kl ', a, b, c)).all()
+
+
 def test_where():
     cond = xr.DataArray([True, False], dims='x')
     actual = xr.where(cond, 1, 0)

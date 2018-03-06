@@ -12,7 +12,7 @@ import numpy as np
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, dask_array_type
+from .pycompat import OrderedDict, dask_array_type, basestring
 from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()
@@ -924,6 +924,86 @@ def apply_ufunc(func, *args, **kwargs):
         return variables_ufunc(*args)
     else:
         return apply_array_ufunc(func, *args, dask=dask)
+
+
+def dot(*args, **kwargs):
+    """ dot(*arrays, dims=None)
+
+    einsum for xarray object.
+
+    Parameters
+    ----------
+    arrays: arrays to compute
+    dims: tuple of strings, optional
+        Along which dimensions to be summed over.
+        If None is provided, then all the common dimensions are summed over.
+
+    Returns
+    -------
+    dot: same type to input.
+
+    Examples
+    --------
+
+    >>> da_a = xr.DataArray(np.arange(3 * 4).reshape(3, 4), dims=['a', 'b'])
+    >>> da_b = xr.DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5),
+                            dims=['a', 'b', 'c'])
+    >>> da_c = xr.DataArray(np.arange(5 * 6).reshape(5, 6), dims=['c', 'd'])
+
+    >>> dot(da_a, da_b, dims=['a', 'b']).dims
+    ('c', )
+    >>> dot(da_a, da_b, dims=['a']).dims
+    ('b', 'c')
+    >>> dot(da_a, da_b, da_c, dims=['b', 'c']).dims
+    ('a', 'd')
+    """
+    dims = kwargs.pop('dims', None)
+    arrays = args
+    if dims is None and isinstance(args[-1], (list, tuple, basestring)):
+        dims = args[-1]
+        arrays = args[:-1]
+
+    if len(arrays) < 2:
+        raise TypeError('More than two arrays must be provided')
+
+    if any(not hasattr(arr, 'dims') for arr in arrays):
+        raise TypeError('Only xr.DataArray and xr.Variable are supported.')
+
+    if isinstance(dims, basestring):
+        dims = [dims]
+
+    common_dims = set(arrays[0].dims)
+    for arr in arrays[1:]:
+        common_dims = common_dims.intersection(set(arr.dims))
+
+    if dims is None:
+        dims = list(common_dims)
+
+    broadcast_dims = [d for d in common_dims if d not in dims]
+    input_core_dims = []
+    output_core_dims = [[]]
+    all_dims = []
+
+    for arr in arrays:
+        input_core_dims.append([d for d in arr.dims if d not in
+                                broadcast_dims])
+        output_core_dims[0] += [d for d in arr.dims if d not in
+                                output_core_dims[0] + dims + broadcast_dims]
+        all_dims += [d for d in arr.dims if d not in all_dims]
+
+    einsum_axes = 'abcdefghijklmnopqrstuvwxyz'
+    dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
+
+    subscripts = ''
+    for ds in input_core_dims:
+        subscripts += '...' + ''.join([dim_map[d] for d in ds]) + ','
+    subscripts = subscripts[:-1]  # remove last comma
+    subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
+
+    result = apply_ufunc(np.einsum, subscripts, *arrays,
+                         input_core_dims=[[]] + input_core_dims,
+                         output_core_dims=output_core_dims, dask='allowed')
+    return result.transpose(*[d for d in all_dims if d in result.dims])
 
 
 def where(cond, x, y):

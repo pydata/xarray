@@ -38,6 +38,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Addition of :py:func:`~xarray.dot`, which is equivalent to ``np.einsum``.
+  Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
+  which specifies along which dimensions to be summed over.
+  (:issue:`1951`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
