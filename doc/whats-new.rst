@@ -56,6 +56,9 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix :py:func:`~xarray.plot.imshow` error when passed an RGB array with
+  size one in a spatial dimension.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 .. _whats-new.0.10.1:
 
