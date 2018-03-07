@@ -42,6 +42,9 @@ Enhancements
   Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
   which specifies the dimensions to be summed over.
   (:issue:`1951`)
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
@@ -52,12 +55,16 @@ Enhancements
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
 
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.1:
 
