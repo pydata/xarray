@@ -44,16 +44,11 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
     def __init__(self, filename, mode='r', autoclose=False):
         from PseudoNetCDF import pncopen
         try:
-            opener = functools.partial(pncopen, filename,
-                                       mode=mode, format='netcdf')
+            opener = functools.partial(pncopen, filename, mode=mode)
             self.ds = opener()
         except Exception:
-            try:
-                opener = functools.partial(pncopen, filename, mode=mode)
-                self.ds = opener()
-            except Exception:
-                opener = functools.partial(pncopen, filename)
-                self.ds = opener()
+            opener = functools.partial(pncopen, filename)
+            self.ds = opener()
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
