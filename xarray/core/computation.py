@@ -965,7 +965,7 @@ def dot(*arrays, **kwargs):
     dims = kwargs.pop('dims', None)
     if len(kwargs) > 0:
         raise TypeError('Invalid keyward arguments {} are given'.format(
-            kwargs.keys()))
+            list(kwargs.keys())))
 
     if len(arrays) < 2 and dims is None:
         raise TypeError('dim must be provided for one array computation.')
