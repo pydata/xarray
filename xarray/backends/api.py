@@ -438,7 +438,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different', **kwargs):
+                   lock=None, data_vars='all', coords='different',
+                   autoclose=False, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -547,12 +548,25 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if lock is None:
         lock = _default_lock(paths[0], engine)
-    datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
-                             **kwargs) for p in paths]
-    file_objs = [ds._file_obj for ds in datasets]
 
-    if preprocess is not None:
-        datasets = [preprocess(ds) for ds in datasets]
+    has_dask = True
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
+                       autoclose=autoclose, **kwargs)
+
+    if autoclose and has_dask:
+        import dask.bag as db
+        paths_bag = db.from_sequence(paths)
+        datasets = paths_bag.map(open_dataset, **open_kwargs).compute()
+        # important: get the file_objs before calling preprocess
+        file_objs = [ds._file_obj for ds in datasets]
+        if preprocess is not None:
+            datasets_bag = db.from_sequence(datasets)
+            datasets = datasets_bag.map(preprocess).compute()
+    else:
+        datasets = [open_dataset(p, **open_kwargs) for p in paths]
+        file_objs = [ds._file_obj for ds in datasets]
+        if preprocess is not None:
+            datasets = [preprocess(ds) for ds in datasets]
 
     # close datasets in case of a ValueError
     try:
