@@ -77,7 +77,8 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         def lazy_inaccessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            data = indexing.LazilyOuterIndexedArray(
+                InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
         return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
