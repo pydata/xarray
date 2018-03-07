@@ -927,45 +927,48 @@ def apply_ufunc(func, *args, **kwargs):
 
 
 def dot(*arrays, **kwargs):
-    """ dot(*arrays, *, dims=None)
+    """ dot(*arrays, dims=None)
 
-    einsum for xarray object, but providing simpler interface based on
-    the array dimensions.
+    Generalized dot product for xarray objects. Like np.einsum, but
+    provides a simpler interface based on array dimensions.
 
     Parameters
     ----------
-    arrays: multiple DataArrays
-        arrays to compute.
-    dims: tuple of strings, optional
-        Along which dimensions to be summed over.
+    arrays: DataArray objects
+        Arrays to compute.
+    dims: str or tuple of strings, optional
+        Which dimensions to sum over.
         If not speciified, then all the common dimensions are summed over.
 
     Returns
     -------
-    dot: same type to input.
+    dot: DataArray
 
     Examples
     --------
 
     >>> da_a = xr.DataArray(np.arange(3 * 4).reshape(3, 4), dims=['a', 'b'])
     >>> da_b = xr.DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5),
-                            dims=['a', 'b', 'c'])
+    >>>                     dims=['a', 'b', 'c'])
     >>> da_c = xr.DataArray(np.arange(5 * 6).reshape(5, 6), dims=['c', 'd'])
-
-    >>> dot(da_a, da_b, dims=['a', 'b']).dims
+    >>>
+    >>> xr.dot(da_a, da_b, dims=['a', 'b']).dims
     ('c', )
-    >>> dot(da_a, da_b, dims=['a']).dims
+    >>> xr.dot(da_a, da_b, dims=['a']).dims
     ('b', 'c')
-    >>> dot(da_a, da_b, da_c, dims=['b', 'c']).dims
+    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c']).dims
     ('a', 'd')
     """
     from .dataarray import DataArray
     from .variable import Variable
 
     dims = kwargs.pop('dims', None)
+    if len(kwargs) > 0:
+        raise TypeError('Invalid keyward arguments {} are given'.format(
+            kwargs.keys()))
 
-    if len(arrays) < 2:
-        raise TypeError('More than one arrays must be provided')
+    if len(arrays) < 2 and dims is None:
+        raise TypeError('dim must be provided for one array computation.')
 
     if any(not isinstance(arr, (DataArray, Variable)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.')
@@ -974,27 +977,30 @@ def dot(*arrays, **kwargs):
         dims = [dims]
 
     common_dims = set(arrays[0].dims)
+    all_dims = []
     for arr in arrays[1:]:
         common_dims = common_dims.intersection(set(arr.dims))
+    for arr in arrays:
+        all_dims += [d for d in arr.dims if d not in all_dims]
+
+    einsum_axes = 'abcdefghijklmnopqrstuvwxyz'
+    dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
     if dims is None:
-        dims = list(common_dims)
+        # find dimensions that exist in more than two arrays
+        whole_dims = []
+        for arr in arrays:
+            whole_dims += [d for d in arr.dims]
+        dims = [d for d in all_dims if whole_dims.count(d) > 1]
 
     broadcast_dims = [d for d in common_dims if d not in dims]
-
     input_core_dims = []
     output_core_dims = [[]]
-    all_dims = []
-
     for arr in arrays:
         input_core_dims.append([d for d in arr.dims if d not in
                                 broadcast_dims])
         output_core_dims[0] += [d for d in arr.dims if d not in
                                 output_core_dims[0] + dims + broadcast_dims]
-        all_dims += [d for d in arr.dims if d not in all_dims]
-
-    einsum_axes = 'abcdefghijklmnopqrstuvwxyz'
-    dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
     subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
                        in input_core_dims]
@@ -1004,7 +1010,7 @@ def dot(*arrays, **kwargs):
     # dtype estimation is necessary for dask='parallelized'
     out_dtype = dtypes.result_type(*arrays)
 
-    # we use tensordot if available, because it is more efficient for dask
+    # we use tensordot if possible, because it is more efficient for dask
     if len(broadcast_dims) == 0 and len(arrays) == 2:
         axes = [[arr.get_axis_num(d) for d in arr.dims if d in dims]
                 for arr in arrays]
@@ -1013,8 +1019,8 @@ def dot(*arrays, **kwargs):
                            output_core_dims=output_core_dims,
                            kwargs={'axes': axes})
 
-    # subscripts should be passed as arg, instead of kwargs. We need
-    # to pass a partial function especially for parallelized computation.
+    # subscripts should be passed as arg, not as a kwargs. We need
+    # to construct a partial function for parallelized computation.
     func = functools.partial(np.einsum, subscripts)
     result = apply_ufunc(func, *arrays,
                          input_core_dims=input_core_dims,

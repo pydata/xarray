@@ -13,7 +13,6 @@ from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
-from xarray.core.pycompat import dask_array_type
 
 from . import raises_regex, requires_dask, has_dask
 
@@ -747,7 +746,8 @@ def test_vectorize_dask():
 
 @pytest.mark.parametrize('dask', [True, False])
 def test_dot(dask):
-    pytest.mark.skipif(not has_dask, reason='test for dask.')
+    if not has_dask:
+        pytest.skip('test for dask.')
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -801,6 +801,21 @@ def test_dot(dask):
     actual = xr.dot(da_a, da_b, da_c, dims=['a', 'b'])
     assert actual.dims == ('c', 'e')
     assert (actual.data == np.einsum('ij,ijk,kl->kl ', a, b, c)).all()
+
+    # default dims
+    actual = xr.dot(da_a, da_b, da_c)
+    assert actual.dims == ('e', )
+    assert (actual.data == np.einsum('ij,ijk,kl->l ', a, b, c)).all()
+
+    # 1 array summation
+    actual = xr.dot(da_a, dims='a')
+    assert actual.dims == ('b', )
+    assert (actual.data == np.einsum('ij->j ', a)).all()
+
+    with pytest.raises(TypeError):
+        actual = xr.dot(da_a)
+    with pytest.raises(TypeError):
+        actual = xr.dot(da_a, dims='a', invalid=None)
 
 
 def test_where():
