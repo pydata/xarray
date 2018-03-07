@@ -13,8 +13,9 @@ from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
+from xarray.core.pycompat import dask_array_type
 
-from . import raises_regex, requires_dask
+from . import raises_regex, requires_dask, has_dask
 
 
 def assert_identical(a, b):
@@ -744,41 +745,56 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('dask', [True, False])
 def test_dot(dask):
-    a = np.arange(3 * 4).reshape(3, 4)
-    b = np.arange(3 * 4 * 5).reshape(3, 4, 5)
-    c = np.arange(5 * 6).reshape(5, 6)
+    pytest.mark.skipif(not has_dask, reason='test for dask.')
+
+    a = np.arange(30 * 4).reshape(30, 4)
+    b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
+    c = np.arange(5 * 60).reshape(5, 60)
     da_a = xr.DataArray(a, dims=['a', 'b'])
     da_b = xr.DataArray(b, dims=['a', 'b', 'c'])
     da_c = xr.DataArray(c, dims=['c', 'e'])
-
     if dask:
-        da_a = da_a.chunk({'b': 2})
-        da_b = da_b.chunk({'b': 2})
-        da_c = da_c.chunk({'e': 3})
+        da_a = da_a.chunk({'a': 3})
+        da_b = da_b.chunk({'a': 3})
+        da_c = da_c.chunk({'c': 3})
 
-    actual = xr.dot(da_a, da_b, ['a', 'b'])
+    actual = xr.dot(da_a, da_b, dims=['a', 'b'])
     assert actual.dims == ('c', )
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.variable.data, type(da_a.variable.data))
 
     actual = xr.dot(da_a, da_b)
     assert actual.dims == ('c', )
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-    actual = xr.dot(da_a, da_b, ['b'])
+    if dask:
+        da_a = da_a.chunk({'a': 3})
+        da_b = da_b.chunk({'a': 3})
+        actual = xr.dot(da_a, da_b, dims=['b'])
+        assert actual.dims == ('a', 'c')
+        assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+        assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+        pytest.skip('dot for dask array requires rechunking for core '
+                    'dimensions.')
+
+    # following requires rechunking
+    actual = xr.dot(da_a, da_b, dims=['b'])
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
 
-    actual = xr.dot(da_a, da_b, 'b')
+    actual = xr.dot(da_a, da_b, dims='b')
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
 
-    actual = xr.dot(da_a, da_b, 'a')
+    actual = xr.dot(da_a, da_b, dims='a')
     assert actual.dims == ('b', 'c')
     assert (actual.data == np.einsum('ij,ijk->jk', a, b)).all()
 
-    actual = xr.dot(da_a, da_b, 'c')
+    actual = xr.dot(da_a, da_b, dims='c')
     assert actual.dims == ('a', 'b')
     assert (actual.data == np.einsum('ij,ijk->ij', a, b)).all()
 

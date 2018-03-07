@@ -9,7 +9,7 @@ import operator
 
 import numpy as np
 
-from . import duck_array_ops, utils
+from . import duck_array_ops, utils, dtypes
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, dask_array_type, basestring
@@ -926,17 +926,19 @@ def apply_ufunc(func, *args, **kwargs):
         return apply_array_ufunc(func, *args, dask=dask)
 
 
-def dot(*args, **kwargs):
-    """ dot(*arrays, dims=None)
+def dot(*arrays, **kwargs):
+    """ dot(*arrays, *, dims=None)
 
-    einsum for xarray object.
+    einsum for xarray object, but providing simpler interface based on
+    the array dimensions.
 
     Parameters
     ----------
-    arrays: arrays to compute
+    arrays: multiple DataArrays
+        arrays to compute.
     dims: tuple of strings, optional
         Along which dimensions to be summed over.
-        If None is provided, then all the common dimensions are summed over.
+        If not speciified, then all the common dimensions are summed over.
 
     Returns
     -------
@@ -957,16 +959,15 @@ def dot(*args, **kwargs):
     >>> dot(da_a, da_b, da_c, dims=['b', 'c']).dims
     ('a', 'd')
     """
+    from .dataarray import DataArray
+    from .variable import Variable
+
     dims = kwargs.pop('dims', None)
-    arrays = args
-    if dims is None and isinstance(args[-1], (list, tuple, basestring)):
-        dims = args[-1]
-        arrays = args[:-1]
 
     if len(arrays) < 2:
-        raise TypeError('More than two arrays must be provided')
+        raise TypeError('More than one arrays must be provided')
 
-    if any(not hasattr(arr, 'dims') for arr in arrays):
+    if any(not isinstance(arr, (DataArray, Variable)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.')
 
     if isinstance(dims, basestring):
@@ -980,6 +981,7 @@ def dot(*args, **kwargs):
         dims = list(common_dims)
 
     broadcast_dims = [d for d in common_dims if d not in dims]
+
     input_core_dims = []
     output_core_dims = [[]]
     all_dims = []
@@ -994,15 +996,30 @@ def dot(*args, **kwargs):
     einsum_axes = 'abcdefghijklmnopqrstuvwxyz'
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
-    subscripts = ''
-    for ds in input_core_dims:
-        subscripts += '...' + ''.join([dim_map[d] for d in ds]) + ','
-    subscripts = subscripts[:-1]  # remove last comma
+    subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
+                       in input_core_dims]
+    subscripts = ','.join(subscripts_list)
     subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
 
-    result = apply_ufunc(np.einsum, subscripts, *arrays,
-                         input_core_dims=[[]] + input_core_dims,
-                         output_core_dims=output_core_dims, dask='allowed')
+    # dtype estimation is necessary for dask='parallelized'
+    out_dtype = dtypes.result_type(*arrays)
+
+    # we use tensordot if available, because it is more efficient for dask
+    if len(broadcast_dims) == 0 and len(arrays) == 2:
+        axes = [[arr.get_axis_num(d) for d in arr.dims if d in dims]
+                for arr in arrays]
+        return apply_ufunc(duck_array_ops.tensordot, *arrays, dask='allowed',
+                           input_core_dims=input_core_dims,
+                           output_core_dims=output_core_dims,
+                           kwargs={'axes': axes})
+
+    # subscripts should be passed as arg, instead of kwargs. We need
+    # to pass a partial function especially for parallelized computation.
+    func = functools.partial(np.einsum, subscripts)
+    result = apply_ufunc(func, *arrays,
+                         input_core_dims=input_core_dims,
+                         output_core_dims=output_core_dims,
+                         dask='parallelized', output_dtypes=[out_dtype])
     return result.transpose(*[d for d in all_dims if d in result.dims])
 
 

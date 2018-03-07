@@ -1972,11 +1972,6 @@ class DataArray(AbstractArray, BaseDataObject):
         if not isinstance(other, DataArray):
             raise TypeError('dot only operates on DataArrays.')
 
-        # backward compat: if there is no shared dimension, we rais an Errror
-        shared_dims = set(self.dims) & set(other.dims)
-        if len(shared_dims) == 0:
-            raise ValueError('no shared dimensions. Given {} and {}.'.format(
-                self.dims, other.dims))
         return computation.dot(self, other, dims=dims)
 
     def sortby(self, variables, ascending=True):
