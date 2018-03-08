@@ -935,7 +935,7 @@ def dot(*arrays, **kwargs):
 
     Parameters
     ----------
-    arrays: DataArray objects
+    arrays: DataArray (or Variable) objects
         Arrays to compute.
     dims: str or tuple of strings, optional
         Which dimensions to sum over.
@@ -961,13 +961,14 @@ def dot(*arrays, **kwargs):
     ('a', 'd')
     """
     from .dataarray import DataArray
+    from .variable import Variable
 
     dims = kwargs.pop('dims', None)
     if len(kwargs) > 0:
         raise TypeError('Invalid keyward arguments {} are given'.format(
             list(kwargs.keys())))
 
-    if any(not isinstance(arr, DataArray) for arr in arrays):
+    if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.'
                         'Given {}.'.format([type(arr) for arr in arrays]))
 
@@ -976,8 +977,6 @@ def dot(*arrays, **kwargs):
 
     if isinstance(dims, basestring):
         dims = (dims, )
-    elif isinstance(dims, list):
-        dims = tuple(dims)
 
     common_dims = set.intersection(*[set(arr.dims) for arr in arrays])
     all_dims = []
@@ -993,6 +992,8 @@ def dot(*arrays, **kwargs):
         for arr in arrays:
             dim_counts.update(arr.dims)
         dims = tuple(d for d, c in dim_counts.items() if c > 1)
+
+    dims = tuple(dims)  # make dims a tuple
 
     # dimensions to be parallelized
     broadcast_dims = tuple(common_dims.difference(set(dims)))

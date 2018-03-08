@@ -777,6 +777,12 @@ def test_dot(dask):
     actual = xr.dot(da_a)
     assert da_a.identical(actual)
 
+    # test for variable
+    actual = xr.dot(da_a.variable, da_b.variable)
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.data, type(da_a.variable.data))
+
     if dask:
         da_a = da_a.chunk({'a': 3})
         da_b = da_b.chunk({'a': 3})
