@@ -1001,7 +1001,7 @@ def dot(*arrays, **kwargs):
     input_core_dims = [[d for d in arr.dims if d not in broadcast_dims]
                        for arr in arrays]
     output_core_dims = [tuple(d for d in all_dims if d not in
-                              set(dims + broadcast_dims))]
+                              dims + broadcast_dims)]
 
     # we use tensordot if possible, because it is more efficient for dask
     if len(broadcast_dims) == 0 and len(arrays) == 2:
