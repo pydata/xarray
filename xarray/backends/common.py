@@ -134,7 +134,7 @@ class CombinedLock(object):
     """
 
     def __init__(self, locks):
-        self.locks = set(locks)
+        self.locks = tuple(set(locks))  # remove duplicates
 
     def acquire(self, *args):
         return all(lock.acquire(*args) for lock in self.locks)
