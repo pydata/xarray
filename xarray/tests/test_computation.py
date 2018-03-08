@@ -809,6 +809,11 @@ def test_dot(dask):
     assert actual.dims == ('c', 'e')
     assert (actual.data == np.einsum('ij,ijk,kl->kl ', a, b, c)).all()
 
+    # should work with tuple
+    actual = xr.dot(da_a, da_b, dims=('c', ))
+    assert actual.dims == ('a', 'b')
+    assert (actual.data == np.einsum('ij,ijk->ij', a, b)).all()
+
     # default dims
     actual = xr.dot(da_a, da_b, da_c)
     assert actual.dims == ('e', )
@@ -823,6 +828,8 @@ def test_dot(dask):
         actual = xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
         actual = xr.dot(da_a.to_dataset(name='da'), dims='a')
+    with pytest.raises(TypeError):
+        actual = xr.dot(dims='a')
 
 
 def test_where():

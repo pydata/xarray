@@ -968,15 +968,19 @@ def dot(*arrays, **kwargs):
             list(kwargs.keys())))
 
     if any(not isinstance(arr, DataArray) for arr in arrays):
-        raise TypeError('Only xr.DataArray and xr.Variable are supported.')
+        raise TypeError('Only xr.DataArray and xr.Variable are supported.'
+                        'Given {}.'.format([type(arr) for arr in arrays]))
+
+    if len(arrays) == 0:
+        raise TypeError('At least one array should be given.')
 
     if isinstance(dims, basestring):
-        dims = [dims]
+        dims = (dims, )
+    elif isinstance(dims, list):
+        dims = tuple(dims)
 
-    common_dims = set(arrays[0].dims)
+    common_dims = set.intersection(*[set(arr.dims) for arr in arrays])
     all_dims = []
-    for arr in arrays[1:]:
-        common_dims = common_dims.intersection(set(arr.dims))
     for arr in arrays:
         all_dims += [d for d in arr.dims if d not in all_dims]
 
@@ -988,24 +992,13 @@ def dot(*arrays, **kwargs):
         dim_counts = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)
-        dims = [d for d, c in dim_counts.items() if c > 1]
+        dims = tuple(d for d, c in dim_counts.items() if c > 1)
 
-    broadcast_dims = [d for d in common_dims if d not in dims]
-    input_core_dims = []
-    output_core_dims = [[]]
-    for arr in arrays:
-        input_core_dims.append([d for d in arr.dims if d not in
-                                broadcast_dims])
-        output_core_dims[0] += [d for d in arr.dims if d not in
-                                output_core_dims[0] + dims + broadcast_dims]
-
-    subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
-                       in input_core_dims]
-    subscripts = ','.join(subscripts_list)
-    subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
-
-    # dtype estimation is necessary for dask='parallelized'
-    out_dtype = dtypes.result_type(*arrays)
+    # dimensions to be parallelized
+    broadcast_dims = tuple(common_dims.difference(set(dims)))
+    input_core_dims = [[d for d in arr.dims if d not in broadcast_dims]
+                       for arr in arrays]
+    output_core_dims = [set(all_dims).difference(set(dims + broadcast_dims))]
 
     # we use tensordot if possible, because it is more efficient for dask
     if len(broadcast_dims) == 0 and len(arrays) == 2:
@@ -1016,7 +1009,17 @@ def dot(*arrays, **kwargs):
                            output_core_dims=output_core_dims,
                            kwargs={'axes': axes})
 
-    # subscripts should be passed as arg, not as a kwargs. We need
+    # construct einsum subscripts, such as '...abc,...ab->...c'
+    # Note: input_core_dims are always moved to the last position
+    subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
+                       in input_core_dims]
+    subscripts = ','.join(subscripts_list)
+    subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
+
+    # dtype estimation is necessary for dask='parallelized'
+    out_dtype = dtypes.result_type(*arrays)
+
+    # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for parallelized computation.
     func = functools.partial(np.einsum, subscripts)
     result = apply_ufunc(func, *arrays,
