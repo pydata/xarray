@@ -961,17 +961,13 @@ def dot(*arrays, **kwargs):
     ('a', 'd')
     """
     from .dataarray import DataArray
-    from .variable import Variable
 
     dims = kwargs.pop('dims', None)
     if len(kwargs) > 0:
         raise TypeError('Invalid keyward arguments {} are given'.format(
             list(kwargs.keys())))
 
-    if len(arrays) < 2 and dims is None:
-        raise TypeError('dim must be provided for one array computation.')
-
-    if any(not isinstance(arr, (DataArray, Variable)) for arr in arrays):
+    if any(not isinstance(arr, DataArray) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.')
 
     if isinstance(dims, basestring):
@@ -988,7 +984,7 @@ def dot(*arrays, **kwargs):
     dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
 
     if dims is None:
-        # find dimensions that exist in more than two arrays
+        # find dimensions that occur more than one times
         dim_counts = Counter()
         for arr in arrays:
             dim_counts.update(arr.dims)

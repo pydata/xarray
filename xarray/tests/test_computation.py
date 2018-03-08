@@ -752,8 +752,10 @@ def test_dot(dask):
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
     c = np.arange(5 * 60).reshape(5, 60)
-    da_a = xr.DataArray(a, dims=['a', 'b'])
-    da_b = xr.DataArray(b, dims=['a', 'b', 'c'])
+    da_a = xr.DataArray(a, dims=['a', 'b'],
+                        coords={'a': np.linspace(0, 1, 30)})
+    da_b = xr.DataArray(b, dims=['a', 'b', 'c'],
+                        coords={'a': np.linspace(0, 1, 30)})
     da_c = xr.DataArray(c, dims=['c', 'e'])
     if dask:
         da_a = da_a.chunk({'a': 3})
@@ -769,6 +771,11 @@ def test_dot(dask):
     assert actual.dims == ('c', )
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+    # for only a single array is passed without dims argument, just return
+    # as is
+    actual = xr.dot(da_a)
+    assert da_a.identical(actual)
 
     if dask:
         da_a = da_a.chunk({'a': 3})
@@ -813,9 +820,9 @@ def test_dot(dask):
     assert (actual.data == np.einsum('ij->j ', a)).all()
 
     with pytest.raises(TypeError):
-        actual = xr.dot(da_a)
-    with pytest.raises(TypeError):
         actual = xr.dot(da_a, dims='a', invalid=None)
+    with pytest.raises(TypeError):
+        actual = xr.dot(da_a.to_dataset(name='da'), dims='a')
 
 
 def test_where():
