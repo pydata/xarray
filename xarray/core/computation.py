@@ -6,6 +6,7 @@ NOT PUBLIC API.
 import functools
 import itertools
 import operator
+from collections import Counter
 
 import numpy as np
 
@@ -988,10 +989,10 @@ def dot(*arrays, **kwargs):
 
     if dims is None:
         # find dimensions that exist in more than two arrays
-        whole_dims = []
+        dim_counts = Counter()
         for arr in arrays:
-            whole_dims += [d for d in arr.dims]
-        dims = [d for d in all_dims if whole_dims.count(d) > 1]
+            dim_counts.update(arr.dims)
+        dims = [d for d, c in dim_counts.items() if c > 1]
 
     broadcast_dims = [d for d in common_dims if d not in dims]
     input_core_dims = []
