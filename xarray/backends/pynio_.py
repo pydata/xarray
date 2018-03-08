@@ -24,14 +24,19 @@ class NioArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.BASIC)
 
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
-            if key == () and self.ndim == 0:
+            if key.tuple == () and self.ndim == 0:
                 return array.get_value()
-            return array[key]
+
+            array = array[key.tuple]
+            if len(np_inds.tuple) > 0:
+                array = indexing.NumpyIndexingAdapter(array)[np_inds]
+
+            return array
 
 
 class NioDataStore(AbstractDataStore, DataStorePickleMixin):
@@ -51,7 +56,7 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):

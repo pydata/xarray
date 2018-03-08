@@ -45,6 +45,11 @@ Enhancements
 
 
 - Fixed to_netcdf when using dask distributed
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
@@ -59,6 +64,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Raise an informative error message when using ``apply_ufunc`` with numpy
+  v1.11 (:issue:`1956`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
