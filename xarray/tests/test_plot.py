@@ -1197,6 +1197,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
+    def test_regression_rgb_imshow_dim_size_one(self):
+        # Regression: https://github.com/pydata/xarray/issues/1966
+        da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
+        da.plot.imshow()
+
 
 class TestFacetGrid(PlotTestCase):
     def setUp(self):

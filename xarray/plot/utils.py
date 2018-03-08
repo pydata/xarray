@@ -296,7 +296,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     assert rgb is not None
 
     # Finally, we pick out the red slice and delegate to the 2D version:
-    return _infer_xy_labels(darray.isel(**{rgb: 0}).squeeze(), x, y)
+    return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
 
 
 def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
