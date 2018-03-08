@@ -996,10 +996,12 @@ def dot(*arrays, **kwargs):
     dims = tuple(dims)  # make dims a tuple
 
     # dimensions to be parallelized
-    broadcast_dims = tuple(common_dims.difference(set(dims)))
+    broadcast_dims = tuple(d for d in all_dims
+                           if d in common_dims and d not in dims)
     input_core_dims = [[d for d in arr.dims if d not in broadcast_dims]
                        for arr in arrays]
-    output_core_dims = [set(all_dims).difference(set(dims + broadcast_dims))]
+    output_core_dims = [tuple(d for d in all_dims if d not in
+                              set(dims + broadcast_dims))]
 
     # we use tensordot if possible, because it is more efficient for dask
     if len(broadcast_dims) == 0 and len(arrays) == 2:
