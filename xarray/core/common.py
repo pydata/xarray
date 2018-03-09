@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import numbers
 import warnings
 
 import numpy as np
@@ -8,11 +7,8 @@ import pandas as pd
 
 from . import dtypes, formatting, ops
 from .arithmetic import SupportsArithmetic
-from .options import OPTIONS
-from .pycompat import (
-    OrderedDict, basestring, bytes_type, dask_array_type, suppress,
-    unicode_type)
-from .utils import Frozen, SortedKeysDict, not_implemented
+from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .utils import Frozen, SortedKeysDict
 
 
 class ImplementsArrayReduce(object):
