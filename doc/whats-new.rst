@@ -38,6 +38,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Implemented NumPy's ``__array_ufunc__`` protocol for all xarray objects
   (:issue:`1617`). This enables using NumPy ufuncs directly on
   ``xarray.Dataset`` objects with recent versions of NumPy (v1.13 and newer):
@@ -58,12 +62,24 @@ Enhancements
   rolling, windowed rolling, ND-rolling, short-time FFT and convolution.
   (:issue:`1831`, :issue:`1142`, :issue:`819`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Raise an informative error message when using ``apply_ufunc`` with numpy
+  v1.11 (:issue:`1956`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Silenced irrelevant warnings issued by ``open_rasterio`` (:issue:`1964`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix :py:func:`~xarray.plot.imshow` error when passed an RGB array with
+  size one in a spatial dimension.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 .. _whats-new.0.10.1:
 
