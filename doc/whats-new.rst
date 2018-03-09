@@ -32,6 +32,18 @@ v0.10.2 (unreleased)
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The addition of ``__array_ufunc__`` for xarray objects (see below) means that
+  NumPy `ufunc methods`_ (e.g., ``np.add.reduce``) that previously worked on
+  ``xarray.DataArray`` objects by converting them into NumPy arrays will now
+  raise ``NotImplementedError`` instead. In all cases, the work-around is
+  simple: convert your objects explicitly into NumPy arrays before calling the
+  ufunc (e.g., with ``.values``).
+
+.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+
 Documentation
 ~~~~~~~~~~~~~
 
