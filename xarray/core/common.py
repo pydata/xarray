@@ -832,18 +832,16 @@ def is_np_datetime_like(dtype):
             np.issubdtype(dtype, np.timedelta64))
 
 
-def _contains_netcdftime_datetimes(var):
+def contains_netcdftime_datetimes(var):
     """Check if a variable contains netcdftime datetime objects"""
-    from netcdftime._netcdftime import datetime
-    return isinstance(var.data.ravel()[0], datetime)
+    try:
+        from netcdftime._netcdftime import datetime
+        return isinstance(var.data.flatten()[0], datetime)
+    except ImportError:
+        return False
 
 
 def _contains_datetime_like_objects(var):
     """Check if a variable contains datetime like objects (either
     np.datetime64, np.timedelta64, or netcdftime._netcdftime.datetime)"""
-    if is_np_datetime_like(var.dtype):
-        return True
-    try:
-        return _contains_netcdftime_datetimes(var)
-    except ImportError:
-        return False
+    return is_np_datetime_like(var.dtype) or contains_netcdftime_datetimes(var)

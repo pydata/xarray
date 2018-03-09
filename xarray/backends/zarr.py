@@ -8,6 +8,7 @@ import numpy as np
 
 from .. import Variable, coding, conventions
 from ..core import indexing
+from ..core.common import contains_netcdftime_datetimes
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
@@ -221,7 +222,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
         A variable which has been encoded as described above.
     """
 
-    if var.dtype.kind == 'O':
+    if var.dtype.kind == 'O' and not contains_netcdftime_datetimes(var):
         raise NotImplementedError("Variable `%s` is an object. Zarr "
                                   "store can't yet encode objects." % name)
 

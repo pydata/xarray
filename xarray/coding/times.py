@@ -9,6 +9,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
+from ..core.common import contains_netcdftime_datetimes
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.pycompat import PY3
@@ -357,23 +358,12 @@ def encode_cf_timedelta(timedeltas, units=None):
     return (num, units)
 
 
-def _contains_netcdftimes(data):
-    """Check if the first element of an array contains a
-    netcdftime.datetime object.
-    """
-    try:
-        from netcdftime._netcdftime import datetime as ncdatetime
-        return isinstance(data.flatten()[0], ncdatetime)
-    except ImportError:
-        return False
-
-
 class CFDatetimeCoder(VariableCoder):
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if (np.issubdtype(data.dtype, np.datetime64) or
-           _contains_netcdftimes(data)):
+           contains_netcdftime_datetimes(variable)):
             (data, units, calendar) = encode_cf_datetime(
                 data,
                 encoding.pop('units', None),
