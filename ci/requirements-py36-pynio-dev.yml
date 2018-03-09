@@ -10,6 +10,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
+  - netcdftime
   - pynio=dev
   - pytest
   - numpy
