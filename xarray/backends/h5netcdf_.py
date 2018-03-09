@@ -1,31 +1,35 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
+from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
-
-from .common import WritableCFDataStore, DataStorePickleMixin, find_root
-from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
-                       _extract_nc4_variable_encoding, BaseNetCDF4Array)
+from .common import DataStorePickleMixin, WritableCFDataStore, find_root
+from .netCDF4_ import (
+    BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
+    _get_datatype, _nc4_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
+
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
-        # OuterIndexer only holds 1D integer ndarrays, so it's safe to convert
-        # them to lists.
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in
+                    key.tuple)
         with self.datastore.ensure_open(autoclose=True):
-            return self.get_array()[key]
+            array = self.get_array()[key]
+
+        if len(np_inds.tuple) > 0:
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
+
+        return array
 
 
 def maybe_decode_bytes(txt):
@@ -86,7 +90,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
-            data = indexing.LazilyIndexedArray(
+            data = indexing.LazilyOuterIndexedArray(
                 H5NetCDFArrayWrapper(name, self))
             attrs = _read_attributes(var)
 

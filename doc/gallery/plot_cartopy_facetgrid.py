@@ -16,9 +16,10 @@ For more details see `this discussion`_ on github.
 
 from __future__ import division
 
-import xarray as xr
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+
+import xarray as xr
 
 # Load the data
 ds = xr.tutorial.load_dataset('air_temperature')

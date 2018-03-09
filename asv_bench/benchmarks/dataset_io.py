@@ -1,19 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pandas as pd
+
+import xarray as xr
+
+from . import randn, randint, requires_dask
 
 try:
     import dask
     import dask.multiprocessing
 except ImportError:
     pass
-
-import xarray as xr
-
-from . import randn, requires_dask
 
 
 class IOSingleNetCDF(object):
@@ -73,6 +71,15 @@ class IOSingleNetCDF(object):
 
         self.ds.attrs = {'history': 'created for xarray benchmarking'}
 
+        self.oinds = {'time': randint(0, self.nt, 120),
+                      'lon': randint(0, self.nx, 20),
+                      'lat': randint(0, self.ny, 10)}
+        self.vinds = {'time': xr.DataArray(randint(0, self.nt, 120),
+                                           dims='x'),
+                      'lon': xr.DataArray(randint(0, self.nx, 120),
+                                          dims='x'),
+                      'lat': slice(3, 20)}
+
 
 class IOWriteSingleNetCDF3(IOSingleNetCDF):
     def setup(self):
@@ -100,6 +107,14 @@ class IOReadSingleNetCDF4(IOSingleNetCDF):
     def time_load_dataset_netcdf4(self):
         xr.open_dataset(self.filepath, engine='netcdf4').load()
 
+    def time_orthogonal_indexing(self):
+        ds = xr.open_dataset(self.filepath, engine='netcdf4')
+        ds = ds.isel(**self.oinds).load()
+
+    def time_vectorized_indexing(self):
+        ds = xr.open_dataset(self.filepath, engine='netcdf4')
+        ds = ds.isel(**self.vinds).load()
+
 
 class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
     def setup(self):
@@ -112,6 +127,14 @@ class IOReadSingleNetCDF3(IOReadSingleNetCDF4):
 
     def time_load_dataset_scipy(self):
         xr.open_dataset(self.filepath, engine='scipy').load()
+
+    def time_orthogonal_indexing(self):
+        ds = xr.open_dataset(self.filepath, engine='scipy')
+        ds = ds.isel(**self.oinds).load()
+
+    def time_vectorized_indexing(self):
+        ds = xr.open_dataset(self.filepath, engine='scipy')
+        ds = ds.isel(**self.vinds).load()
 
 
 class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
@@ -128,6 +151,16 @@ class IOReadSingleNetCDF4Dask(IOSingleNetCDF):
     def time_load_dataset_netcdf4_with_block_chunks(self):
         xr.open_dataset(self.filepath, engine='netcdf4',
                         chunks=self.block_chunks).load()
+
+    def time_load_dataset_netcdf4_with_block_chunks_oindexing(self):
+        ds = xr.open_dataset(self.filepath, engine='netcdf4',
+                             chunks=self.block_chunks)
+        ds = ds.isel(**self.oinds).load()
+
+    def time_load_dataset_netcdf4_with_block_chunks_vindexing(self):
+        ds = xr.open_dataset(self.filepath, engine='netcdf4',
+                             chunks=self.block_chunks)
+        ds = ds.isel(**self.vinds).load()
 
     def time_load_dataset_netcdf4_with_block_chunks_multiprocessing(self):
         with dask.set_options(get=dask.multiprocessing.get):
@@ -159,6 +192,16 @@ class IOReadSingleNetCDF3Dask(IOReadSingleNetCDF4Dask):
         with dask.set_options(get=dask.multiprocessing.get):
             xr.open_dataset(self.filepath, engine='scipy',
                             chunks=self.block_chunks).load()
+
+    def time_load_dataset_scipy_with_block_chunks_oindexing(self):
+        ds = xr.open_dataset(self.filepath, engine='scipy',
+                             chunks=self.block_chunks)
+        ds = ds.isel(**self.oinds).load()
+
+    def time_load_dataset_scipy_with_block_chunks_vindexing(self):
+        ds = xr.open_dataset(self.filepath, engine='scipy',
+                             chunks=self.block_chunks)
+        ds = ds.isel(**self.vinds).load()
 
     def time_load_dataset_scipy_with_time_chunks(self):
         with dask.set_options(get=dask.multiprocessing.get):

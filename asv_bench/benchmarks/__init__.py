@@ -8,6 +8,14 @@ import numpy as np
 _counter = itertools.count()
 
 
+def parameterized(names, params):
+    def decorator(func):
+        func.param_names = names
+        func.params = params
+        return func
+    return decorator
+
+
 def requires_dask():
     try:
         import dask  # noqa

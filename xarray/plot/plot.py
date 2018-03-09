@@ -5,20 +5,21 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import warnings
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
-from .utils import (ROBUST_PERCENTILE, _determine_cmap_params,
-                    _infer_xy_labels, get_axis, import_matplotlib_pyplot)
-from .facetgrid import FacetGrid
 from xarray.core.pycompat import basestring
+
+from .facetgrid import FacetGrid
+from .utils import (
+    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
+    import_matplotlib_pyplot)
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -175,9 +176,12 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
-        Coordinate for which you want multiple lines plotted (2D inputs only).
-    x : string, optional
-        Coordinate for x axis.
+        Coordinate for which you want multiple lines plotted
+        (2D DataArrays only).
+    x, y : string, optional
+        Coordinates for x, y axis. Only one of these may be specified.
+        The other coordinate plots values from the DataArray on which this
+        plot method is called.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -198,35 +202,66 @@ def line(darray, *args, **kwargs):
     ax = kwargs.pop('ax', None)
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
+    y = kwargs.pop('y', None)
     add_legend = kwargs.pop('add_legend', True)
 
     ax = get_axis(figsize, size, aspect, ax)
 
-    if ndims == 1:
-        xlabel, = darray.dims
-        if x is not None and xlabel != x:
-            raise ValueError('Input does not have specified dimension'
-                             ' {!r}'.format(x))
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
 
-        x = darray.coords[xlabel]
+    if x is not None and x not in darray.dims:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
+
+    if ndims == 1:
+        dim, = darray.dims  # get the only dimension name
+
+        if (x is None and y is None) or x == dim:
+            xplt = darray.coords[dim]
+            yplt = darray
+            xlabel = dim
+            ylabel = darray.name
+
+        else:
+            yplt = darray.coords[dim]
+            xplt = darray
+            xlabel = darray.name
+            ylabel = dim
 
     else:
-        if x is None and hue is None:
+        if x is None and y is None and hue is None:
             raise ValueError('For 2D inputs, please specify either hue or x.')
 
-        xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
-        x = darray.coords[xlabel]
-        darray = darray.transpose(xlabel, huelabel)
+        if y is None:
+            xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
+            ylabel = darray.name
+            xplt = darray.coords[xlabel]
+            yplt = darray.transpose(xlabel, huelabel)
 
-    _ensure_plottable(x)
+        else:
+            ylabel, huelabel = _infer_xy_labels(darray=darray, x=y, y=hue)
+            xlabel = darray.name
+            xplt = darray.transpose(ylabel, huelabel)
+            yplt = darray.coords[ylabel]
 
-    primitive = ax.plot(x, darray, *args, **kwargs)
+    _ensure_plottable(xplt)
 
-    ax.set_xlabel(xlabel)
+    primitive = ax.plot(xplt, yplt, *args, **kwargs)
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+
+    if ylabel is not None:
+        ax.set_ylabel(ylabel)
+
     ax.set_title(darray._title_for_slice())
-
-    if darray.name is not None:
-        ax.set_ylabel(darray.name)
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
@@ -234,7 +269,7 @@ def line(darray, *args, **kwargs):
                   title=huelabel)
 
     # Rotate dates on xlabels
-    if np.issubdtype(x.dtype, np.datetime64):
+    if np.issubdtype(xplt.dtype, np.datetime64):
         ax.get_figure().autofmt_xdate()
 
     return primitive

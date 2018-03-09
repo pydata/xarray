@@ -1,9 +1,29 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 from copy import copy, deepcopy
+from distutils.version import LooseVersion
+from io import StringIO
 from textwrap import dedent
+
+import numpy as np
+import pandas as pd
+import pytest
+
+import xarray as xr
+from xarray import (
+    DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
+    broadcast, open_dataset, set_options)
+from xarray.core import indexing, utils
+from xarray.core.common import full_like
+from xarray.core.pycompat import (
+    OrderedDict, integer_types, iteritems, unicode_type)
+
+from . import (
+    InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
+    assert_array_equal, assert_equal, assert_identical, raises_regex,
+    requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -12,25 +32,6 @@ try:
     import dask.array as da
 except ImportError:
     pass
-from io import StringIO
-from distutils.version import LooseVersion
-
-import numpy as np
-import pandas as pd
-import xarray as xr
-import pytest
-
-from xarray import (align, broadcast, backends, Dataset, DataArray, Variable,
-                    IndexVariable, open_dataset, set_options, MergeError)
-from xarray.core import indexing, utils
-from xarray.core.pycompat import (iteritems, OrderedDict, unicode_type,
-                                  integer_types)
-from xarray.core.common import full_like
-
-from . import (TestCase, raises_regex, InaccessibleArray, UnexpectedDataAccess,
-               requires_dask, source_ndarray, assert_array_equal, assert_equal,
-               assert_allclose, assert_identical, requires_bottleneck,
-               requires_scipy)
 
 
 def create_test_data(seed=None):
@@ -76,7 +77,8 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         def lazy_inaccessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            data = indexing.LazilyOuterIndexedArray(
+                InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
         return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
@@ -4133,12 +4135,36 @@ def test_rolling_pandas_compat(center, window, min_periods):
                             min_periods=min_periods).mean()
     ds_rolling = ds.rolling(index=window, center=center,
                             min_periods=min_periods).mean()
-    # pandas does some fancy stuff in the last position,
-    # we're not going to do that yet!
-    np.testing.assert_allclose(df_rolling['x'].values[:-1],
-                               ds_rolling['x'].values[:-1])
-    np.testing.assert_allclose(df_rolling.index,
-                               ds_rolling['index'])
+
+    np.testing.assert_allclose(df_rolling['x'].values, ds_rolling['x'].values)
+    np.testing.assert_allclose(df_rolling.index, ds_rolling['index'])
+
+
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+def test_rolling_construct(center, window):
+    df = pd.DataFrame({'x': np.random.randn(20), 'y': np.random.randn(20),
+                       'time': np.linspace(0, 1, 20)})
+
+    ds = Dataset.from_dataframe(df)
+    df_rolling = df.rolling(window, center=center, min_periods=1).mean()
+    ds_rolling = ds.rolling(index=window, center=center)
+
+    ds_rolling_mean = ds_rolling.construct('window').mean('window')
+    np.testing.assert_allclose(df_rolling['x'].values,
+                               ds_rolling_mean['x'].values)
+    np.testing.assert_allclose(df_rolling.index, ds_rolling_mean['index'])
+
+    # with stride
+    ds_rolling_mean = ds_rolling.construct('window', stride=2).mean('window')
+    np.testing.assert_allclose(df_rolling['x'][::2].values,
+                               ds_rolling_mean['x'].values)
+    np.testing.assert_allclose(df_rolling.index[::2], ds_rolling_mean['index'])
+    # with fill_value
+    ds_rolling_mean = ds_rolling.construct(
+        'window', stride=2, fill_value=0.0).mean('window')
+    assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim='vars').all()
+    assert (ds_rolling_mean['x'] == 0.0).sum() >= 0
 
 
 @pytest.mark.slow

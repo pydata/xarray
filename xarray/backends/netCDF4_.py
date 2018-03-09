@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
 import warnings
@@ -8,16 +7,15 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import conventions
-from .. import Variable
+from .. import Variable, conventions
 from ..conventions import pop_to
 from ..core import indexing
-from ..core.utils import (FrozenOrderedDict, close_on_error, is_remote_uri)
-from ..core.pycompat import iteritems, basestring, OrderedDict, PY3, suppress
-
-from .common import (WritableCFDataStore, robust_getitem, BackendArray,
-                     DataStorePickleMixin, find_root)
-from .netcdf3 import (encode_nc3_attr_value, encode_nc3_variable)
+from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
+from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
+from .common import (
+    BackendArray, DataStorePickleMixin, WritableCFDataStore, find_root,
+    robust_getitem)
+from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
 # string used by netCDF4.
@@ -50,9 +48,8 @@ class BaseNetCDF4Array(BackendArray):
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
-
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER)
         if self.datastore.is_remote:  # pragma: no cover
             getitem = functools.partial(robust_getitem, catch=RuntimeError)
         else:
@@ -60,7 +57,7 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
 
         with self.datastore.ensure_open(autoclose=True):
             try:
-                data = getitem(self.get_array(), key)
+                array = getitem(self.get_array(), key.tuple)
             except IndexError:
                 # Catch IndexError in netCDF4 and return a more informative
                 # error message.  This is most often called when an unsorted
@@ -73,7 +70,10 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
                     msg += '\n\nOriginal traceback:\n' + traceback.format_exc()
                 raise IndexError(msg)
 
-        return data
+        if len(np_inds.tuple) > 0:
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
+
+        return array
 
 
 def _encode_nc4_variable(var):
@@ -279,7 +279,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
-            data = indexing.LazilyIndexedArray(NetCDF4ArrayWrapper(name, self))
+            data = indexing.LazilyOuterIndexedArray(
+                NetCDF4ArrayWrapper(name, self))
             attributes = OrderedDict((k, var.getncattr(k))
                                      for k in var.ncattrs())
             _ensure_fill_value_valid(data, attributes)

@@ -1,6 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import inspect
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+import pytest
+
+import xarray.plot as xplt
+from xarray import DataArray
+from xarray.plot.plot import _infer_interval_breaks
+from xarray.plot.utils import (
+    _build_discrete_cmap, _color_palette, _determine_cmap_params,
+    import_seaborn)
+
+from . import (
+    TestCase, assert_array_equal, assert_equal, raises_regex,
+    requires_matplotlib, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -8,23 +24,6 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-import inspect
-
-import numpy as np
-import pandas as pd
-from datetime import datetime
-import pytest
-
-from xarray import DataArray
-
-import xarray.plot as xplt
-from xarray.plot.plot import _infer_interval_breaks
-from xarray.plot.utils import (_determine_cmap_params, _build_discrete_cmap,
-                               _color_palette, import_seaborn)
-
-from . import (TestCase, requires_matplotlib, requires_seaborn, raises_regex,
-               assert_equal, assert_array_equal)
 
 
 @pytest.mark.flaky
@@ -92,14 +91,42 @@ class TestPlot(PlotTestCase):
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, 'dimension'):
+        with raises_regex(ValueError, 'None'):
             self.darray[:, 0, 0].plot(x='dim_1')
+
+    def test_1d_x_y_kw(self):
+        z = np.arange(10)
+        da = DataArray(np.cos(z), dims=['z'], coords=[z], name='f')
+
+        xy = [[None, None],
+              [None, 'z'],
+              ['z', None]]
+
+        f, ax = plt.subplots(3, 1)
+        for aa, (x, y) in enumerate(xy):
+            da.plot(x=x, y=y, ax=ax.flat[aa])
+
+        with raises_regex(ValueError, 'cannot'):
+            da.plot(x='z', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='f', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='z', y='f')
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
             self.darray[:, :, 0].plot.line()
 
         self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_0', hue='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1')
+
+        with raises_regex(ValueError, 'cannot'):
+            self.darray[:, :, 0].plot.line(x='dim_1', y='dim_0', hue='dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
@@ -280,6 +307,10 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot()
         assert 'period' == plt.gca().get_xlabel()
 
+    def test_no_label_name_on_x_axis(self):
+        self.darray.plot(y='period')
+        self.assertEqual('', plt.gca().get_xlabel())
+
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()
         assert '' == plt.gca().get_ylabel()
@@ -288,6 +319,11 @@ class TestPlot1D(PlotTestCase):
         self.darray.name = 'temperature'
         self.darray.plot()
         assert self.darray.name == plt.gca().get_ylabel()
+
+    def test_xlabel_is_data_name(self):
+        self.darray.name = 'temperature'
+        self.darray.plot(y='period')
+        self.assertEqual(self.darray.name, plt.gca().get_xlabel())
 
     def test_format_string(self):
         self.darray.plot.line('ro')
@@ -902,6 +938,10 @@ class Common2dMixin:
         # check that all colormaps are the same
         assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
 
+    def test_cmap_and_color_both(self):
+        with pytest.raises(ValueError):
+            self.plotmethod(colors='k', cmap='RdBu')
+
 
 @pytest.mark.slow
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -1156,6 +1196,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
         out = da.plot.imshow(ax=ax).get_array()
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
+
+    def test_regression_rgb_imshow_dim_size_one(self):
+        # Regression: https://github.com/pydata/xarray/issues/1966
+        da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
+        da.plot.imshow()
 
 
 class TestFacetGrid(PlotTestCase):

@@ -1,13 +1,15 @@
 import os
-import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+import warnings
+
 import numpy as np
 
 from .. import DataArray
-from ..core.utils import is_scalar
 from ..core import indexing
+from ..core.utils import is_scalar
 from .common import BackendArray
+
 try:
     from dask.utils import SerializableLock as Lock
 except ImportError:
@@ -40,48 +42,73 @@ class RasterioArrayWrapper(BackendArray):
     def shape(self):
         return self._shape
 
-    def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+    def _get_indexer(self, key):
+        """ Get indexer for rasterio array.
+
+        Parameter
+        ---------
+        key: ExplicitIndexer
+
+        Returns
+        -------
+        band_key: an indexer for the 1st dimension
+        window: two tuples. Each consists of (start, stop).
+        squeeze_axis: axes to be squeezed
+        np_ind: indexer for loaded numpy array
+
+        See also
+        --------
+        indexing.decompose_indexer
+        """
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER)
 
         # bands cannot be windowed but they can be listed
-        band_key = key[0]
-        n_bands = self.shape[0]
+        band_key = key.tuple[0]
+        new_shape = []
+        np_inds2 = []
+        # bands (axis=0) cannot be windowed but they can be listed
         if isinstance(band_key, slice):
-            start, stop, step = band_key.indices(n_bands)
-            if step is not None and step != 1:
-                raise IndexError(_ERROR_MSG)
-            band_key = np.arange(start, stop)
+            start, stop, step = band_key.indices(self.shape[0])
+            band_key = np.arange(start, stop, step)
         # be sure we give out a list
         band_key = (np.asarray(band_key) + 1).tolist()
+        if isinstance(band_key, list):  # if band_key is not a scalar
+            new_shape.append(len(band_key))
+            np_inds2.append(slice(None))
 
         # but other dims can only be windowed
         window = []
         squeeze_axis = []
-        for i, (k, n) in enumerate(zip(key[1:], self.shape[1:])):
+        for i, (k, n) in enumerate(zip(key.tuple[1:], self.shape[1:])):
             if isinstance(k, slice):
+                # step is always positive. see indexing.decompose_indexer
                 start, stop, step = k.indices(n)
-                if step is not None and step != 1:
-                    raise IndexError(_ERROR_MSG)
+                np_inds2.append(slice(None, None, step))
+                new_shape.append(stop - start)
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
-                squeeze_axis.append(i + 1)
+                squeeze_axis.append(- (2 - i))
                 start = k
                 stop = k + 1
             else:
-                k = np.asarray(k)
-                start = k[0]
-                stop = k[-1] + 1
-                ids = np.arange(start, stop)
-                if not ((k.shape == ids.shape) and np.all(k == ids)):
-                    raise IndexError(_ERROR_MSG)
+                start, stop = np.min(k), np.max(k) + 1
+                np_inds2.append(k - start)
+                new_shape.append(stop - start)
             window.append((start, stop))
+
+        np_inds = indexing._combine_indexers(
+            indexing.OuterIndexer(tuple(np_inds2)), new_shape, np_inds)
+        return band_key, window, tuple(squeeze_axis), np_inds
+
+    def __getitem__(self, key):
+        band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
 
         out = self.rasterio_ds.read(band_key, window=tuple(window))
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
-        return out
+        return indexing.NumpyIndexingAdapter(out)[np_inds]
 
 
 def _parse_envi(meta):
@@ -223,10 +250,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
         attrs['is_tiled'] = np.uint8(riods.is_tiled)
-    if hasattr(riods, 'transform'):
-        # Affine transformation matrix (tuple of floats)
-        # Describes coefficients mapping pixel coordinates to CRS
-        attrs['transform'] = tuple(riods.transform)
+    with warnings.catch_warnings():
+        # casting riods.transform to a tuple makes this future proof
+        warnings.simplefilter('ignore', FutureWarning)
+        if hasattr(riods, 'transform'):
+            # Affine transformation matrix (tuple of floats)
+            # Describes coefficients mapping pixel coordinates to CRS
+            attrs['transform'] = tuple(riods.transform)
     if hasattr(riods, 'nodatavals'):
         # The nodata values for the raster bands
         attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
@@ -247,7 +277,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
+    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(riods))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)

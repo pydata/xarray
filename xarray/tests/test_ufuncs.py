@@ -1,15 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import pickle
 
 import numpy as np
 
-import xarray.ufuncs as xu
 import xarray as xr
+import xarray.ufuncs as xu
 
-from . import (
-    TestCase, raises_regex, assert_identical, assert_array_equal)
+from . import TestCase, assert_array_equal, assert_identical, raises_regex
 
 
 class TestOps(TestCase):

@@ -1,18 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from itertools import product
+from __future__ import absolute_import, division, print_function
+
 from base64 import b64encode
+from itertools import product
+from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import coding
-from .. import Variable
+from .. import Variable, coding, conventions
 from ..core import indexing
+from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from ..core.pycompat import iteritems, OrderedDict, integer_types
-from .common import AbstractWritableDataStore, BackendArray, ArrayWriter
-from .. import conventions
+from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -44,30 +42,6 @@ def _ensure_valid_fill_value(value, dtype):
     return _encode_zarr_attr_value(valid)
 
 
-def _replace_slices_with_arrays(key, shape):
-    """Replace slice objects in vindex with equivalent ndarray objects."""
-    num_slices = sum(1 for k in key if isinstance(k, slice))
-    ndims = [k.ndim for k in key if isinstance(k, np.ndarray)]
-    array_subspace_size = max(ndims) if ndims else 0
-    assert len(key) == len(shape)
-    new_key = []
-    slice_count = 0
-    for k, size in zip(key, shape):
-        if isinstance(k, slice):
-            # the slice subspace always appears after the ndarray subspace
-            array = np.arange(*k.indices(size))
-            sl = [np.newaxis] * len(shape)
-            sl[array_subspace_size + slice_count] = slice(None)
-            k = array[tuple(sl)]
-            slice_count += 1
-        else:
-            assert isinstance(k, np.ndarray)
-            k = k[(slice(None),) * array_subspace_size +
-                  (np.newaxis,) * num_slices]
-        new_key.append(k)
-    return tuple(new_key)
-
-
 class ZarrArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
@@ -87,8 +61,8 @@ class ZarrArrayWrapper(BackendArray):
         if isinstance(key, indexing.BasicIndexer):
             return array[key.tuple]
         elif isinstance(key, indexing.VectorizedIndexer):
-            return array.vindex[_replace_slices_with_arrays(key.tuple,
-                                                            self.shape)]
+            return array.vindex[indexing._arrayize_vectorized_indexer(
+                key.tuple, self.shape).tuple]
         else:
             assert isinstance(key, indexing.OuterIndexer)
             return array.oindex[key.tuple]
@@ -274,6 +248,14 @@ class ZarrStore(AbstractWritableDataStore):
     def open_group(cls, store, mode='r', synchronizer=None, group=None,
                    writer=None):
         import zarr
+        min_zarr = '2.2'
+
+        if LooseVersion(zarr.__version__) < min_zarr:  # pragma: no cover
+            raise NotImplementedError("Zarr version %s or greater is "
+                                      "required by xarray. See zarr "
+                                      "installation "
+                                      "http://zarr.readthedocs.io/en/stable/"
+                                      "#installation" % min_zarr)
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
         return cls(zarr_group, writer=writer)
@@ -295,7 +277,7 @@ class ZarrStore(AbstractWritableDataStore):
         super(ZarrStore, self).__init__(zarr_writer)
 
     def open_store_variable(self, name, zarr_array):
-        data = indexing.LazilyIndexedArray(ZarrArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
                                                           _DIMENSION_KEY)
         attributes = OrderedDict(attributes)
