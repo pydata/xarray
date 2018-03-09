@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pytest
 from numpy import array, nan
+import warnings
 
 from xarray import DataArray, concat
 from xarray.core.duck_array_ops import (
@@ -208,50 +209,58 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
     axis = None if aggdim is None else da.get_axis_num(aggdim)
 
-    if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
-            da.dtype.kind == 'O' and skipna):
-        # Numpy < 1.13 does not handle object-type array.
-        try:
-            if skipna:
-                expected = getattr(np, 'nan{}'.format(func))(da.values,
-                                                             axis=axis)
-            else:
-                expected = getattr(np, func)(da.values, axis=axis)
+    # TODO: remove these after resolving
+    # https://github.com/dask/dask/issues/3245
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'All-NaN slice')
+        warnings.filterwarnings('ignore', 'invalid value encountered in')
 
-            actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-            assert np.allclose(actual.values, np.array(expected), rtol=1.0e-4,
-                               equal_nan=True)
-        except (TypeError, AttributeError, ZeroDivisionError):
-            # TODO currently, numpy does not support some methods such as
-            # nanmean for object dtype
-            pass
+        if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
+                da.dtype.kind == 'O' and skipna):
+            # Numpy < 1.13 does not handle object-type array.
+            try:
+                if skipna:
+                    expected = getattr(np, 'nan{}'.format(func))(da.values,
+                                                                 axis=axis)
+                else:
+                    expected = getattr(np, func)(da.values, axis=axis)
 
-    # make sure the compatiblility with pandas' results.
-    actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-    if func == 'var':
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
-        assert_allclose(actual, expected, rtol=rtol)
-        # also check ddof!=0 case
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=5)
-        assert_allclose(actual, expected, rtol=rtol)
-    else:
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
-        assert_allclose(actual, expected, rtol=rtol)
+                actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+                assert np.allclose(actual.values, np.array(expected),
+                                   rtol=1.0e-4, equal_nan=True)
+            except (TypeError, AttributeError, ZeroDivisionError):
+                # TODO currently, numpy does not support some methods such as
+                # nanmean for object dtype
+                pass
 
-    # make sure the dtype argument
-    if func not in ['max', 'min']:
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
-        assert actual.dtype == float
+        # make sure the compatiblility with pandas' results.
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+        if func == 'var':
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
+                                     ddof=0)
+            assert_allclose(actual, expected, rtol=rtol)
+            # also check ddof!=0 case
+            actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
+                                     ddof=5)
+            assert_allclose(actual, expected, rtol=rtol)
+        else:
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
+            assert_allclose(actual, expected, rtol=rtol)
 
-    # without nan
-    da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
-    actual = getattr(da, func)(skipna=skipna)
-    expected = getattr(np, 'nan{}'.format(func))(da.values)
-    if actual.dtype == object:
-        assert actual.values == np.array(expected)
-    else:
-        assert np.allclose(actual.values, np.array(expected), rtol=rtol)
+        # make sure the dtype argument
+        if func not in ['max', 'min']:
+            actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
+            assert actual.dtype == float
+
+        # without nan
+        da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
+        actual = getattr(da, func)(skipna=skipna)
+        expected = getattr(np, 'nan{}'.format(func))(da.values)
+        if actual.dtype == object:
+            assert actual.values == np.array(expected)
+        else:
+            assert np.allclose(actual.values, np.array(expected), rtol=rtol)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
@@ -280,17 +289,21 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)
 
-    if aggdim == 'y' and contains_nan and skipna:
-        with pytest.raises(ValueError):
-            actual = da.isel(**{
-                aggdim: getattr(da, 'arg' + func)(dim=aggdim,
-                                                  skipna=skipna).compute()})
-        return
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'All-NaN slice')
 
-    actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
-                        (dim=aggdim, skipna=skipna).compute()})
-    expected = getattr(da, func)(dim=aggdim, skipna=skipna)
-    assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
+        if aggdim == 'y' and contains_nan and skipna:
+            with pytest.raises(ValueError):
+                actual = da.isel(**{
+                    aggdim: getattr(da, 'arg' + func)(
+                        dim=aggdim, skipna=skipna).compute()})
+            return
+
+        actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
+                            (dim=aggdim, skipna=skipna).compute()})
+        expected = getattr(da, func)(dim=aggdim, skipna=skipna)
+        assert_allclose(actual.drop(actual.coords),
+                        expected.drop(expected.coords))
 
 
 def test_argmin_max_error():

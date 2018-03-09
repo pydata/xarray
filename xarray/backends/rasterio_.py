@@ -1,7 +1,7 @@
 import os
-import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+import warnings
 
 import numpy as np
 
@@ -250,10 +250,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
         attrs['is_tiled'] = np.uint8(riods.is_tiled)
-    if hasattr(riods, 'transform'):
-        # Affine transformation matrix (tuple of floats)
-        # Describes coefficients mapping pixel coordinates to CRS
-        attrs['transform'] = tuple(riods.transform)
+    with warnings.catch_warnings():
+        # casting riods.transform to a tuple makes this future proof
+        warnings.simplefilter('ignore', FutureWarning)
+        if hasattr(riods, 'transform'):
+            # Affine transformation matrix (tuple of floats)
+            # Describes coefficients mapping pixel coordinates to CRS
+            attrs['transform'] = tuple(riods.transform)
     if hasattr(riods, 'nodatavals'):
         # The nodata values for the raster bands
         attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval

@@ -62,6 +62,8 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Silenced irrelevant warnings issued by ``open_rasterio`` (:issue:`1964`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Fix :py:func:`~xarray.plot.imshow` error when passed an RGB array with
