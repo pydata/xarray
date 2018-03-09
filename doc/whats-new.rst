@@ -52,6 +52,8 @@ Bug fixes
 
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Avoid integer overflow when decoding large integer time values (:issue:`1965`).
+  By `Jonas Sølvsteen <https://github.com/j08lue>`_.
 
 .. _whats-new.0.10.1:
 
