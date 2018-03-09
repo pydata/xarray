@@ -186,9 +186,7 @@ class TestDatetime(TestCase):
 
     @requires_netcdftime
     def test_decode_standard_calendar_single_element_non_ns_range(self):
-        from datetime import datetime
-        from netcdftime import DatetimeGregorian
-
+        nctime = _import_netcdftime()
         units = 'days since 0001-01-01'
         for days in [1, 1470376]:
             for calendar in coding.times._STANDARD_CALENDARS:
@@ -198,15 +196,8 @@ class TestDatetime(TestCase):
                                                 'Unable to decode time axis')
                         actual = coding.times.decode_cf_datetime(
                             num_time, units, calendar=calendar)
-                    # Confusing, but this is how netCDF4.num2date behaves --
-                    # According to the documentation this is supposed to have
-                    # something to do with whether the date falls before or
-                    # after the breakpoint between the Julian
-                    # and Gregorian calendars (1582-10-15).
-                    if calendar == 'standard' and days == 1:
-                        assert isinstance(actual.item(), DatetimeGregorian)
-                    else:
-                        assert isinstance(actual.item(), datetime)
+                    expected = nctime.num2date(days, units, calendar)
+                    assert isinstance(actual.item(), type(expected))
 
     @requires_netcdftime
     def test_decode_non_standard_calendar_single_element(self):
