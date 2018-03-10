@@ -213,7 +213,7 @@ calendars or dates using a standard calendar, but outside the
 `Timestamp-valid range`_ (approximately between years 1678 and 2262).  This
 behavior has not yet been turned on by default; to take advantage of this
 functionality, you must have the ``enable_netcdftimeindex`` option set to
-``True`` within your context (see :meth:`xarray.set_options` for more
+``True`` within your context (see :py:func:`~xarray.set_options` for more
 information).
 
 For instance, you can create a DataArray indexed by a time
