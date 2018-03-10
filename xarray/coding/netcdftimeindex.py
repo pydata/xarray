@@ -141,12 +141,6 @@ def assert_all_valid_date_type(data):
 
 
 class NetCDFTimeIndex(pd.Index):
-    def __new__(cls, data):
-        result = object.__new__(cls)
-        assert_all_valid_date_type(data)
-        result._data = np.array(data)
-        return result
-
     year = _field_accessor('year', 'The year of the datetime')
     month = _field_accessor('month', 'The month of the datetime')
     day = _field_accessor('day', 'The days of the datetime')
@@ -156,6 +150,12 @@ class NetCDFTimeIndex(pd.Index):
     microsecond = _field_accessor('microsecond',
                                   'The microseconds of the datetime')
     date_type = property(get_date_type)
+
+    def __new__(cls, data):
+        result = object.__new__(cls)
+        assert_all_valid_date_type(data)
+        result._data = np.array(data)
+        return result
 
     def _partial_date_slice(self, resolution, parsed):
         """Adapted from
