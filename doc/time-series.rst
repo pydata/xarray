@@ -60,7 +60,7 @@ One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
 native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
 returned as arrays of ``netcdftime.datetime`` objects and a ``NetCDFTimeIndex``
-will be used for indexing.  The ``NetCDFTimeIndex`` enables only a subset of
+can be used for indexing.  The ``NetCDFTimeIndex`` enables only a subset of
 the indexing functionality of a ``pandas.DatetimeIndex``.  See
 :ref:`NetCDFTimeIndex` for more information.
 
@@ -206,32 +206,20 @@ For more examples of using grouped operations on a time dimension, see
 Non-standard calendars and dates outside the Timestamp-valid range
 ------------------------------------------------------------------
 
-.. note::
-
-   In a change from prior behavior, as of version 0.??.0, if a dataset is
-   encoded using a non-standard calendar type it will always be read in using
-   the corresponding date type from ``netcdftime``.  This is different from the
-   prior behavior where if the dates were within the Timestamp-valid range and
-   representable by standard datetimes (e.g. for a ``'noleap'`` calendar) they
-   would be decoded into standard datetimes indexed with a
-   ``pandas.DatetimeIndex``.
-
-   As of version 0.??.0, a ``NetCDFTimeIndex`` will be used for time indexing
-   if any of the following are true:
-
-   - The dates are from a non-standard calendar
-   - Any dates are outside the Timestamp-valid range
-
-   Otherwise a ``pandas.DatetimeIndex`` will be used.
-
 Through the optional ``netcdftime`` library and a custom subclass of
 ``pandas.Index``, xarray supports a subset of the indexing functionality enabled
 through the standard ``pandas.DatetimeIndex`` for dates from non-standard
 calendars or dates using a standard calendar, but outside the
-`Timestamp-valid range`_ (approximately between years 1678 and 2262).
+`Timestamp-valid range`_ (approximately between years 1678 and 2262).  This
+behavior has not yet been turned on by default; to take advantage of this
+functionality, you must have the ``enable_netcdftimeindex`` option set to
+``True`` within your context (see :meth:`xarray.set_options` for more
+information).
+
 For instance, you can create a DataArray indexed by a time
-coordinate with a no-leap calendar and it will automatically be indexed using a
-``NetCDFTimeIndex``.
+coordinate with a no-leap calendar within a context manager setting the
+``enable_netcdftimeindex`` option, and the time index will be cast to a
+``NetCDFTimeIndex``:
 
 .. ipython:: python
 
@@ -240,11 +228,26 @@ coordinate with a no-leap calendar and it will automatically be indexed using a
    
    dates = [DatetimeNoLeap(year, month, 1) for year, month in
             product(range(1, 3), range(1, 13))]
-   da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
-                     name='foo')
+   with xr.set_options(enable_netcdftimeindex=True):
+       da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
+                         name='foo')
+                         
+.. note::
 
+   With the ``enable_netcdftimeindex`` option activated, a ``NetCDFTimeIndex``
+   will be used for time indexing if any of the following are true:
+
+   - The dates are from a non-standard calendar
+   - Any dates are outside the Timestamp-valid range
+
+   Otherwise a ``pandas.DatetimeIndex`` will be used.  In addition, if any
+   variable (not just an index variable) is encoded using a non-standard
+   calendar, its times will be decoded into ``netcdftime.datetime`` objects,
+   regardless of whether or not they can be represented using
+   ``np.datetime64[ns]`` objects.
+                         
 For data indexed by a ``NetCDFTimeIndex`` xarray currently supports `partial
-datetime string indexing`_ using strictly `ISO8601-format`_ partial datetime
+datetime string indexing`_ using strictly `ISO 8601-format`_ partial datetime
 strings:
 
 .. ipython:: python
@@ -281,5 +284,5 @@ and serialization:
    ``NetCDFTimeIndex`` is not supported.
   
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
-.. _ISO8601-format: https://en.wikipedia.org/wiki/ISO_8601
+.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
 .. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing
