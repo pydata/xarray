@@ -6,10 +6,11 @@ import pytest
 
 from xarray.coding.netcdftimeindex import NetCDFTimeIndex
 from xarray.core import duck_array_ops, utils
+from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
 from .test_coding_times import _all_netcdftime_date_types
 from . import (TestCase, requires_dask, assert_array_equal,
-               requires_netcdftime)
+               has_netcdftime)
 
 
 class TestAlias(TestCase):
@@ -22,31 +23,41 @@ class TestAlias(TestCase):
             old_method()
 
 
-class TestSafeCastToIndex(TestCase):
-    def test(self):
-        dates = pd.date_range('2000-01-01', periods=10)
-        x = np.arange(5)
-        td = x * np.timedelta64(1, 'D')
-        for expected, array in [
-                (dates, dates.values),
-                (pd.Index(x, dtype=object), x.astype(object)),
-                (pd.Index(td), td),
-                (pd.Index(td, dtype=object), td.astype(object)),
-        ]:
-            actual = utils.safe_cast_to_index(array)
-            assert_array_equal(expected, actual)
-            assert expected.dtype == actual.dtype
+def test_safe_cast_to_index():
+    dates = pd.date_range('2000-01-01', periods=10)
+    x = np.arange(5)
+    td = x * np.timedelta64(1, 'D')
+    for expected, array in [
+            (dates, dates.values),
+            (pd.Index(x, dtype=object), x.astype(object)),
+            (pd.Index(td), td),
+            (pd.Index(td, dtype=object), td.astype(object)),
+    ]:
+        actual = utils.safe_cast_to_index(array)
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
 
-    @requires_netcdftime
-    def test_netcdftimeindex(self):
-        date_types = _all_netcdftime_date_types()
-        for date_type in date_types.values():
-            dates = [date_type(1, 1, day) for day in range(1, 20)]
+
+@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
+def test_safe_cast_to_index_netcdftimeindex(enable_netcdftimeindex):
+    date_types = _all_netcdftime_date_types()
+    for date_type in date_types.values():
+        dates = [date_type(1, 1, day) for day in range(1, 20)]
+        if enable_netcdftimeindex:
             expected = NetCDFTimeIndex(dates)
+        else:
+            expected = pd.Index(dates)
+
+        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
             actual = utils.safe_cast_to_index(np.array(dates))
-            assert_array_equal(expected, actual)
-            assert expected.dtype == actual.dtype
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+
+        if enable_netcdftimeindex:
             assert isinstance(actual, NetCDFTimeIndex)
+        else:
+            assert isinstance(actual, pd.Index)
 
 
 def test_multiindex_from_product_levels():

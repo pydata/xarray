@@ -235,10 +235,11 @@ coordinate with a no-leap calendar and it will automatically be indexed using a
 
 .. ipython:: python
 
+   from itertools import product
    from netcdftime import DatetimeNoLeap
    
-   dates = [DatetimeNoLeap((month - 1) // 12 + 1,
-            (month - 1) % 12 + 1, 1) for month in range(1, 25)]
+   dates = [DatetimeNoLeap(year, month, 1) for year, month in
+            product(range(1, 3), range(1, 13))]
    da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
                      name='foo')
 

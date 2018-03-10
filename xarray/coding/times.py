@@ -12,10 +12,11 @@ import pandas as pd
 from ..core.common import contains_netcdftime_datetimes
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
+from ..core.options import OPTIONS
 from ..core.pycompat import PY3
 from ..core.variable import Variable
 from .variables import (
-    VariableCoder, lazy_elemwise_func, pop_to,
+    SerializationWarning, VariableCoder, lazy_elemwise_func, pop_to,
     safe_setitem, unpack_for_decoding, unpack_for_encoding)
 
 try:
@@ -81,24 +82,36 @@ def _unpack_netcdf_time_units(units):
 def _decode_datetime_with_netcdftime(num_dates, units, calendar):
     nctime = _import_netcdftime()
     dates = np.asarray(nctime.num2date(num_dates, units, calendar))
-    if calendar in _STANDARD_CALENDARS:
-        if (dates[np.nanargmin(num_dates)].year < 1678 or
-           dates[np.nanargmax(num_dates)].year >= 2262):
-            warnings.warn(
-                'Unable to decode time axis into full '
-                'numpy.datetime64 objects, continuing using dummy '
-                'netCDF4.datetime objects instead, reason: dates out '
-                'of range', RuntimeWarning, stacklevel=3)
-        else:
-            dates = nctime_to_nptime(dates)
+
+    if (dates[np.nanargmin(num_dates)].year < 1678 or
+            dates[np.nanargmax(num_dates)].year >= 2262):
+        warnings.warn(
+            'Unable to decode time axis into full '
+            'numpy.datetime64 objects, continuing using dummy '
+            'netCDF4.datetime objects instead, reason: dates out '
+            'of range', SerializationWarning, stacklevel=3)
     else:
-        warnings.warn('Unable to decode time axis into full numpy.datetime64 '
-                      'objects, because dates are encoded using a '
-                      'non-standard calendar ({}).  Using netCDF4.datetime '
-                      'objects instead.  Time indexing will be done using a '
-                      'NetCDFTimeIndex rather than '
-                      'a DatetimeIndex'.format(calendar),
-                      DeprecationWarning, stacklevel=3)
+        if OPTIONS['enable_netcdftimeindex']:
+            if calendar in _STANDARD_CALENDARS:
+                dates = nctime_to_nptime(dates)
+            else:
+                warnings.warn(
+                    'Unable to decode time axis into full numpy.datetime64 '
+                    'objects, because dates are encoded using a '
+                    'non-standard calendar ({}).  Using netCDF4.datetime '
+                    'objects instead.  Time indexing will be done using a '
+                    'NetCDFTimeIndex rather than '
+                    'a DatetimeIndex'.format(calendar),
+                    SerializationWarning, stacklevel=3)
+        else:
+            try:
+                dates = nctime_to_nptime(dates)
+            except ValueError as e:
+                warnings.warn(
+                    'Unable to decode time axis into full '
+                    'numpy.datetime64 objects, continuing using '
+                    'dummy netcdftime.datetime objects instead, reason:'
+                    '{0}'.format(e), SerializationWarning, stacklevel=3)
     return dates
 
 

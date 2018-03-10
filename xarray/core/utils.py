@@ -12,6 +12,7 @@ from collections import Iterable, Mapping, MutableMapping, MutableSet
 import numpy as np
 import pandas as pd
 
+from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
@@ -37,16 +38,19 @@ def alias(obj, old_name):
 
 
 def _maybe_cast_to_netcdftimeindex(index):
-    try:
-        from netcdftime._netcdftime import datetime as ncdatetime
-        from ..coding.netcdftimeindex import NetCDFTimeIndex
-    except ImportError:
+    if not OPTIONS['enable_netcdftimeindex']:
         return index
     else:
-        if len(index):
-            if isinstance(index[0], ncdatetime):
-                index = NetCDFTimeIndex(index)
-        return index
+        try:
+            from netcdftime._netcdftime import datetime as ncdatetime
+            from ..coding.netcdftimeindex import NetCDFTimeIndex
+        except ImportError:
+            return index
+        else:
+            if len(index):
+                if isinstance(index[0], ncdatetime):
+                    index = NetCDFTimeIndex(index)
+            return index
 
 
 def safe_cast_to_index(array):
