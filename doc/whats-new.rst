@@ -38,6 +38,13 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Support for writing xarray datasets to netCDF files (netcdf4 backend only)
+  when using the `dask.distributed <https://distributed.readthedocs.io>`_
+  scheduler (:issue:`1464`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+
+- Fixed to_netcdf when using dask distributed
 - Support lazy vectorized-indexing. After this change, flexible indexing such
   as orthogonal/vectorized indexing, becomes possible for all the backend
   arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
