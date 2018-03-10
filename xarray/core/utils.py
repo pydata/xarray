@@ -40,11 +40,12 @@ def _maybe_cast_to_netcdftimeindex(index):
     try:
         from netcdftime._netcdftime import datetime as ncdatetime
         from ..coding.netcdftimeindex import NetCDFTimeIndex
+    except ImportError:
+        return index
+    else:
         if len(index):
             if isinstance(index[0], ncdatetime):
                 index = NetCDFTimeIndex(index)
-        return index
-    except ImportError:
         return index
 
 
