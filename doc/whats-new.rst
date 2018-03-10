@@ -38,6 +38,13 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Support for writing xarray datasets to netCDF files (netcdf4 backend only)
+  when using the `dask.distributed <https://distributed.readthedocs.io>`_
+  scheduler (:issue:`1464`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+
+- Fixed to_netcdf when using dask distributed
 - Support lazy vectorized-indexing. After this change, flexible indexing such
   as orthogonal/vectorized indexing, becomes possible for all the backend
   arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
@@ -154,14 +161,24 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix ``axis`` keyword ignored when applying ``np.squeeze`` to ``DataArray`` (:issue:`1487`).
   By `Florian Pinault <https://github.com/floriankrb>`_.
-- Add ``netcdftime`` as an optional dependency of xarray. This allows for
+- ``netcdf4-python`` has moved the its time handling in the ``netcdftime`` module to
+  a standalone package (`netcdftime`_). As such, xarray now considers `netcdftime`_
+  an optional dependency. One benefit of this change is that it allows for
   encoding/decoding of datetimes with non-standard calendars without the
-  netCDF4 dependency (:issue:`1084`).
+  ``netcdf4-python`` dependency (:issue:`1084`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
 .. _Iris: http://scitools.org.uk/iris
+
+.. _netcdftime: https://unidata.github.io/netcdftime
+
+**New functions/methods**
+
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~

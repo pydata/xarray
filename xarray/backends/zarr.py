@@ -342,6 +342,8 @@ class ZarrStore(AbstractWritableDataStore):
 
         fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
                                               dtype)
+        if variable.encoding == {'_FillValue': None} and fill_value is None:
+            variable.encoding = {}
 
         encoding = _extract_zarr_variable_encoding(
             variable, raise_on_invalid=check_encoding)
@@ -361,6 +363,9 @@ class ZarrStore(AbstractWritableDataStore):
     def store(self, variables, attributes, *args, **kwargs):
         AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
+
+    def sync(self):
+        self.writer.sync()
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
