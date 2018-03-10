@@ -8,7 +8,8 @@ from .. import Variable
 from ..core import indexing
 from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from .common import DataStorePickleMixin, WritableCFDataStore, find_root
+from .common import (
+    HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore, find_root)
 from .netCDF4_ import (
     BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
     _get_datatype, _nc4_group)
@@ -68,12 +69,12 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None, autoclose=False):
+                 writer=None, autoclose=False, lock=HDF5_LOCK):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
                                    group=group)
-        self.ds = opener()
+        self._ds = opener()
         if autoclose:
             raise NotImplementedError('autoclose=True is not implemented '
                                       'for the h5netcdf backend pending '
@@ -85,7 +86,7 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = mode
-        super(H5NetCDFStore, self).__init__(writer)
+        super(H5NetCDFStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
@@ -177,7 +178,10 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)
-        return nc4_var, variable.data
+
+        target = H5NetCDFArrayWrapper(name, self)
+
+        return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):

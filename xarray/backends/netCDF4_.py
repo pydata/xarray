@@ -13,8 +13,8 @@ from ..core import indexing
 from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
-    BackendArray, DataStorePickleMixin, WritableCFDataStore, find_root,
-    robust_getitem)
+    HDF5_LOCK, BackendArray, DataStorePickleMixin, WritableCFDataStore,
+    find_root, robust_getitem)
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
@@ -40,6 +40,11 @@ class BaseNetCDF4Array(BackendArray):
             # string concatenation via conventions.decode_cf_variable
             dtype = np.dtype('O')
         self.dtype = dtype
+
+    def __setitem__(self, key, value):
+        with self.datastore.ensure_open(autoclose=True):
+            data = self.get_array()
+            data[key] = value
 
     def get_array(self):
         self.datastore.assert_open()
@@ -231,14 +236,14 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, netcdf4_dataset, mode='r', writer=None, opener=None,
-                 autoclose=False):
+                 autoclose=False, lock=HDF5_LOCK):
 
         if autoclose and opener is None:
             raise ValueError('autoclose requires an opener')
 
         _disable_auto_decode_group(netcdf4_dataset)
 
-        self.ds = netcdf4_dataset
+        self._ds = netcdf4_dataset
         self._autoclose = autoclose
         self._isopen = True
         self.format = self.ds.data_model
@@ -249,12 +254,12 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             self._opener = functools.partial(opener, mode=self._mode)
         else:
             self._opener = opener
-        super(NetCDF4DataStore, self).__init__(writer)
+        super(NetCDF4DataStore, self).__init__(writer, lock=lock)
 
     @classmethod
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
              writer=None, clobber=True, diskless=False, persist=False,
-             autoclose=False):
+             autoclose=False, lock=HDF5_LOCK):
         import netCDF4 as nc4
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):
@@ -274,7 +279,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                                    format=format)
         ds = opener()
         return cls(ds, mode=mode, writer=writer, opener=opener,
-                   autoclose=autoclose)
+                   autoclose=autoclose, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
@@ -399,7 +404,9 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             # OrderedDict as the input to setncatts
             nc4_var.setncattr(k, v)
 
-        return nc4_var, variable.data
+        target = NetCDF4ArrayWrapper(name, self)
+
+        return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):

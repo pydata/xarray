@@ -672,9 +672,9 @@ files into a single Dataset by making use of :py:func:`~xarray.concat`.
 
 .. note::
 
-    Version 0.5 includes support for manipulating datasets that
-    don't fit into memory with dask_. If you have dask installed, you can open
-    multiple files simultaneously using :py:func:`~xarray.open_mfdataset`::
+    Xarray includes support for manipulating datasets that don't fit into memory
+    with dask_. If you have dask installed, you can open multiple files
+    simultaneously using :py:func:`~xarray.open_mfdataset`::
 
         xr.open_mfdataset('my/files/*.nc')
 
