@@ -748,15 +748,16 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'save_mfdataset')
 
     writer = ArrayWriter()
-    stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
+    stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
+                        compute=compute)
               for ds, path, group in zip(datasets, paths, groups)]
 
     try:
         delayed = writer.sync(compute=compute)
+        for store in stores:
+            store.sync(compute=compute)
         if not compute:
             return delayed
-        for store in stores:
-            store.sync()
     finally:
         for store in stores:
             store.close()
@@ -785,4 +786,6 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
     dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+    if not compute:
+        return store.delayed
     return store

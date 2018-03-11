@@ -42,7 +42,10 @@ Enhancements
   when using the `dask.distributed <https://distributed.readthedocs.io>`_
   scheduler (:issue:`1464`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
+- Support for returning dask delayed objects from xarray's
+  :py:meth:`Dataset.to_netcdf` and :py:meth:`Dataset.to_zarr` methods.
+  This only applies when writing datasets that include dask arrays (:issue:`1800`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 - Fixed to_netcdf when using dask distributed
 - Support lazy vectorized-indexing. After this change, flexible indexing such

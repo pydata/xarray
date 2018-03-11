@@ -158,8 +158,8 @@ class DatasetIOTestCases(object):
 
     # The save/open methods may be overwritten below
     def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine=self.engine, format=self.file_format,
-                          **kwargs)
+        return dataset.to_netcdf(path, engine=self.engine,
+                                 format=self.file_format, **kwargs)
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
@@ -1168,23 +1168,35 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
-    def test_to_netcdf_compute_false(self):
+    def test_to_netcdf_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
         original = create_test_data().chunk()
 
         with create_tmp_file() as tmp_file:
-            delayed_obj = original.to_netcdf(tmp_file, engine=self.engine,
-                                             compute=False)
+            # dataset, path, **kwargs):
+            delayed_obj = self.save(original, tmp_file, compute=False)
             assert isinstance(delayed_obj, Delayed)
             delayed_obj.compute()
 
-            with open_dataset(tmp_file, autoclose=self.autoclose) as actual:
-                assert_identical(original.load(), actual.load())
+            with self.open(tmp_file) as actual:
+                assert_identical(original, actual)
 
-    def test_save_mfdataset_compute_false(self):
-        # TODO
-        pass
+    def test_save_mfdataset_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
+                                             engine=self.engine, compute=False)
+                assert isinstance(delayed_obj, Delayed)
+                delayed_obj.compute()
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    assert_identical(actual, original)
 
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
@@ -1195,7 +1207,6 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 @requires_dask
 class H5NetCDFViaDaskDataTest(NetCDF4ViaDaskDataTest):
     engine = 'h5netcdf'
-
 
 
 @requires_zarr
@@ -1209,7 +1220,7 @@ class BaseZarrTest(CFEncodedDataTest):
             yield backends.ZarrStore.open_group(store_target, mode='w')
 
     def save(self, dataset, store_target, **kwargs):
-        dataset.to_zarr(store=store_target, **kwargs)
+        return dataset.to_zarr(store=store_target, **kwargs)
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
@@ -1412,10 +1423,18 @@ class BaseZarrTest(CFEncodedDataTest):
     def test_append_with_invalid_dim_raises(self):
         super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
 
+    def test_to_zarr_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
 
-    def test_to_zarr_compute_false(self):
-        #TODO:
-        pass
+        original = create_test_data().chunk()
+
+        with self.create_zarr_target() as store:
+            delayed_obj = self.save(original, store, compute=False)
+            assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(original, actual)
 
 
 @requires_zarr
@@ -2209,7 +2228,7 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
             yield ds
 
     def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine='scipy', **kwargs)
+        return dataset.to_netcdf(path, engine='scipy', **kwargs)
 
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})

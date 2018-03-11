@@ -100,6 +100,20 @@ Once you've manipulated a dask array, you can still write a dataset too big to
 fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
 
+.. ipython:: python
+
+    ds.to_netcdf('manipulated-example-data.nc')
+
+By setting the ``compute`` argument to ``False``, :py:meth:`~xarray.Dataset.to_netcdf`
+will return a dask delayed object that can be computed later.
+
+.. ipython:: python
+
+    from dask.diagnostics import ProgressBar
+    delayed_obj = ds.to_netcdf('manipulated-example-data.nc', compute=False)
+    with ProgressBar():
+        results = delayed_obj.compute()
+
 .. note::
 
     When using dask's distributed scheduler to write NETCDF4 files,
