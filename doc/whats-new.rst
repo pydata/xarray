@@ -60,6 +60,14 @@ Enhancements
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Add an option for using a ``NetCDFTimeIndex`` for indexing times with
+  non-standard calendars and/or outside the Timestamp-valid range; this index
+  enables a subset of the functionality of a standard
+  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Allow for serialization of ``netcdftime.datetime`` objects (:issue:`789`,
+  :issue:`1084`, :issue:`1252`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~

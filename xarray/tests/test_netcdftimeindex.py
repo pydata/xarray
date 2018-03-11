@@ -291,6 +291,11 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
+def test_resample_error(da):
+    with pytest.raises(TypeError):
+        da.resample(time='Y')
+
+
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
     'string-slice': slice('0001-01-01', '0001-12-30'),
