@@ -1,7 +1,5 @@
 """Testing functions exposed to the user API"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
@@ -50,7 +48,7 @@ def assert_equal(a, b):
     """
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
+    assert type(a) == type(b)  # noqa
     if isinstance(a, (xr.Variable, xr.DataArray, xr.Dataset)):
         assert a.equals(b), '{}\n{}'.format(a, b)
     else:
@@ -77,7 +75,7 @@ def assert_identical(a, b):
     """
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
+    assert type(a) == type(b)  # noqa
     if isinstance(a, xr.DataArray):
         assert a.name == b.name
         assert_identical(a._to_temp_dataset(), b._to_temp_dataset())
@@ -115,7 +113,7 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     """
     import xarray as xr
     __tracebackhide__ = True  # noqa: F841
-    assert type(a) == type(b)
+    assert type(a) == type(b)  # noqa
     kwargs = dict(rtol=rtol, atol=atol, decode_bytes=decode_bytes)
     if isinstance(a, xr.Variable):
         assert a.dims == b.dims

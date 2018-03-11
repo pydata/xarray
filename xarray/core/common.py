@@ -1,15 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-import pandas as pd
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
-from .pycompat import basestring, suppress, dask_array_type, OrderedDict
-from . import dtypes
-from . import formatting
-from . import ops
-from .utils import SortedKeysDict, not_implemented, Frozen
+import numpy as np
+import pandas as pd
+
+from . import dtypes, formatting, ops
+from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .utils import Frozen, SortedKeysDict, not_implemented
 
 
 class ImplementsArrayReduce(object):
@@ -211,14 +209,26 @@ class AttrAccessMixin(object):
         return list(set(item_lists))
 
 
-def get_squeeze_dims(xarray_obj, dim):
+def get_squeeze_dims(xarray_obj, dim, axis=None):
     """Get a list of dimensions to squeeze out.
     """
-    if dim is None:
+    if dim is not None and axis is not None:
+        raise ValueError('cannot use both parameters `axis` and `dim`')
+
+    if dim is None and axis is None:
         dim = [d for d, s in xarray_obj.sizes.items() if s == 1]
     else:
         if isinstance(dim, basestring):
             dim = [dim]
+        if isinstance(axis, int):
+            axis = (axis, )
+        if isinstance(axis, tuple):
+            for a in axis:
+                if not isinstance(a, int):
+                    raise ValueError(
+                        'parameter `axis` must be int or tuple of int.')
+            alldims = list(xarray_obj.sizes.keys())
+            dim = [alldims[a] for a in axis]
         if any(xarray_obj.sizes[k] > 1 for k in dim):
             raise ValueError('cannot select a dimension to squeeze out '
                              'which has length greater than one')
@@ -228,7 +238,7 @@ def get_squeeze_dims(xarray_obj, dim):
 class BaseDataObject(AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
-    def squeeze(self, dim=None, drop=False):
+    def squeeze(self, dim=None, drop=False, axis=None):
         """Return a new object with squeezed data.
 
         Parameters
@@ -240,6 +250,8 @@ class BaseDataObject(AttrAccessMixin):
         drop : bool, optional
             If ``drop=True``, drop squeezed coordinates instead of making them
             scalar.
+        axis : int, optional
+            Select the dimension to squeeze. Added for compatibility reasons.
 
         Returns
         -------
@@ -251,7 +263,7 @@ class BaseDataObject(AttrAccessMixin):
         --------
         numpy.squeeze
         """
-        dims = get_squeeze_dims(self, dim)
+        dims = get_squeeze_dims(self, dim, axis)
         return self.isel(drop=drop, **{d: 0 for d in dims})
 
     def get_index(self, key):
@@ -412,6 +424,11 @@ class BaseDataObject(AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
+
+        See Also
+        --------
+        core.groupby.DataArrayGroupBy
+        core.groupby.DatasetGroupBy
         """
         return self._groupby_cls(self, group, squeeze=squeeze)
 
@@ -471,9 +488,6 @@ class BaseDataObject(AttrAccessMixin):
         """
         Rolling window object.
 
-        Rolling window aggregations are much faster when bottleneck is
-        installed.
-
         Parameters
         ----------
         min_periods : int, default None
@@ -491,7 +505,8 @@ class BaseDataObject(AttrAccessMixin):
 
         Returns
         -------
-        rolling : type of input argument
+        Rolling object (core.rolling.DataArrayRolling for DataArray,
+        core.rolling.DatasetRolling for Dataset.)
 
         Examples
         --------
@@ -519,6 +534,11 @@ class BaseDataObject(AttrAccessMixin):
         array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
         Coordinates:
           * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
+
+        See Also
+        --------
+        core.rolling.DataArrayRolling
+        core.rolling.DatasetRolling
         """
 
         return self._rolling_cls(self, min_periods=min_periods,

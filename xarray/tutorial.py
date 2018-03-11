@@ -5,17 +5,13 @@ Useful for:
 * building tutorials in the documentation.
 
 '''
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import hashlib
-
 import os as _os
 
 from .backends.api import open_dataset as _open_dataset
 from .core.pycompat import urlretrieve as _urlretrieve
-
 
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 

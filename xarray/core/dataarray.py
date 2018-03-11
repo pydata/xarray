@@ -1,35 +1,27 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import warnings
 
 import numpy as np
 import pandas as pd
 
+from . import duck_array_ops, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
-
-from . import duck_array_ops
-from . import indexing
-from . import groupby
-from . import resample
-from . import rolling
-from . import ops
-from . import utils
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, BaseDataObject
-from .coordinates import (DataArrayCoordinates, LevelCoordinatesSource,
-                          Indexes, assert_coordinate_consistent,
-                          remap_label_indexers)
+from .coordinates import (
+    DataArrayCoordinates, Indexes, LevelCoordinatesSource,
+    assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
-from .pycompat import iteritems, basestring, OrderedDict, zip, range
-from .variable import (as_variable, Variable, as_compatible_data,
-                       IndexVariable,
-                       assert_unique_multiindex_level_names)
 from .formatting import format_item
-from .utils import decode_numpy_dict_values, ensure_us_time_resolution
 from .options import OPTIONS
+from .pycompat import OrderedDict, basestring, iteritems, range, zip
+from .utils import decode_numpy_dict_values, ensure_us_time_resolution
+from .variable import (
+    IndexVariable, Variable, as_compatible_data, as_variable,
+    assert_unique_multiindex_level_names)
 
 
 def _infer_coords_and_dims(shape, coords, dims):

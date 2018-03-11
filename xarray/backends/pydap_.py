@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 
 from .. import Variable
-from ..core.utils import FrozenOrderedDict, Frozen, is_dict_like
 from ..core import indexing
 from ..core.pycompat import integer_types
-
+from ..core.utils import Frozen, FrozenOrderedDict, is_dict_like
 from .common import AbstractDataStore, BackendArray, robust_getitem
 
 
@@ -24,18 +22,22 @@ class PydapArrayWrapper(BackendArray):
         return self.array.dtype
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.BASIC)
 
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
         array = getattr(self.array, 'array', self.array)
-        result = robust_getitem(array, key, catch=ValueError)
+        result = robust_getitem(array, key.tuple, catch=ValueError)
         # pydap doesn't squeeze axes automatically like numpy
-        axis = tuple(n for n, k in enumerate(key)
+        axis = tuple(n for n, k in enumerate(key.tuple)
                      if isinstance(k, integer_types))
         if len(axis) > 0:
             result = np.squeeze(result, axis)
+
+        if len(np_inds.tuple) > 0:
+            result = indexing.NumpyIndexingAdapter(np.asarray(result))[np_inds]
+
         return result
 
 
@@ -76,7 +78,7 @@ class PydapDataStore(AbstractDataStore):
         return cls(ds)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+        data = indexing.LazilyOuterIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data,
                         _fix_attributes(var.attributes))
 

@@ -1,16 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import functools
 
 import numpy as np
 
 from .. import Variable
-from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
-
-from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import AbstractDataStore, BackendArray, DataStorePickleMixin
 
 
 class NioArrayWrapper(BackendArray):
@@ -27,14 +24,19 @@ class NioArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.BASIC)
 
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
-            if key == () and self.ndim == 0:
+            if key.tuple == () and self.ndim == 0:
                 return array.get_value()
-            return array[key]
+
+            array = array[key.tuple]
+            if len(np_inds.tuple) > 0:
+                array = indexing.NumpyIndexingAdapter(array)[np_inds]
+
+            return array
 
 
 class NioDataStore(AbstractDataStore, DataStorePickleMixin):
@@ -44,17 +46,17 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
     def __init__(self, filename, mode='r', autoclose=False):
         import Nio
         opener = functools.partial(Nio.open_file, filename, mode=mode)
-        self.ds = opener()
-        # xarray provides its own support for FillValue,
-        # so turn off PyNIO's support for the same.
-        self.ds.set_option('MaskedArrayMode', 'MaskedNever')
+        self._ds = opener()
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
         self._mode = mode
+        # xarray provides its own support for FillValue,
+        # so turn off PyNIO's support for the same.
+        self.ds.set_option('MaskedArrayMode', 'MaskedNever')
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):

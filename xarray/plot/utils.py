@@ -1,15 +1,13 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pkg_resources
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
 import numpy as np
 import pandas as pd
+import pkg_resources
 
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
-
 
 ROBUST_PERCENTILE = 2.0
 
@@ -298,7 +296,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     assert rgb is not None
 
     # Finally, we pick out the red slice and delegate to the 2D version:
-    return _infer_xy_labels(darray.isel(**{rgb: 0}).squeeze(), x, y)
+    return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
 
 
 def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):

@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
 import pandas as pd
@@ -8,9 +7,9 @@ import pandas as pd
 from . import utils
 from .alignment import align
 from .merge import merge
-from .pycompat import iteritems, OrderedDict, basestring
-from .variable import Variable, as_variable, IndexVariable, \
-    concat as concat_vars
+from .pycompat import OrderedDict, basestring, iteritems
+from .variable import concat as concat_vars
+from .variable import IndexVariable, Variable, as_variable
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',

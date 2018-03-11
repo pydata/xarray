@@ -1,28 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from datetime import timedelta
-from collections import defaultdict
+from __future__ import absolute_import, division, print_function
+
 import functools
 import itertools
+from collections import defaultdict
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 
-from . import common
-from . import duck_array_ops
-from . import dtypes
-from . import indexing
-from . import nputils
-from . import ops
-from . import utils
-from .pycompat import (basestring, OrderedDict, zip, integer_types,
-                       dask_array_type)
-from .indexing import (PandasIndexAdapter, as_indexable, BasicIndexer,
-                       OuterIndexer, VectorizedIndexer)
-from .utils import OrderedSet
-
 import xarray as xr  # only for Dataset and DataArray
+
+from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from .indexing import (
+    BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
+    as_indexable)
+from .pycompat import (
+    OrderedDict, basestring, dask_array_type, integer_types, zip)
+from .utils import OrderedSet
 
 try:
     import dask.array as da
@@ -127,7 +121,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -940,6 +934,53 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             result = result._shift_one_dim(dim, count)
         return result
 
+    def pad_with_fill_value(self, fill_value=dtypes.NA, **pad_widths):
+        """
+        Return a new Variable with paddings.
+
+        Parameters
+        ----------
+        **pad_width: keyword arguments of the form {dim: (before, after)}
+            Number of values padded to the edges of each dimension.
+        """
+        if fill_value is dtypes.NA:  # np.nan is passed
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = self.dtype
+
+        if isinstance(self.data, dask_array_type):
+            array = self.data
+
+            # Dask does not yet support pad. We manually implement it.
+            # https://github.com/dask/dask/issues/1926
+            for d, pad in pad_widths.items():
+                axis = self.get_axis_num(d)
+                before_shape = list(array.shape)
+                before_shape[axis] = pad[0]
+                before_chunks = list(array.chunks)
+                before_chunks[axis] = (pad[0], )
+                after_shape = list(array.shape)
+                after_shape[axis] = pad[1]
+                after_chunks = list(array.chunks)
+                after_chunks[axis] = (pad[1], )
+
+                arrays = []
+                if pad[0] > 0:
+                    arrays.append(da.full(before_shape, fill_value,
+                                          dtype=dtype, chunks=before_chunks))
+                arrays.append(array)
+                if pad[1] > 0:
+                    arrays.append(da.full(after_shape, fill_value,
+                                          dtype=dtype, chunks=after_chunks))
+                if len(arrays) > 1:
+                    array = da.concatenate(arrays, axis=axis)
+        else:
+            pads = [(0, 0) if d not in pad_widths else pad_widths[d]
+                    for d in self.dims]
+            array = np.pad(self.data.astype(dtype, copy=False), pads,
+                           mode='constant', constant_values=fill_value)
+        return type(self)(self.dims, array)
+
     def _roll_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
 
@@ -1012,7 +1053,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
-        data = duck_array_ops.transpose(self.data, axes)
+
+        data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
@@ -1457,6 +1499,57 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             count = np.sum(~np.isnan(self.data), axis=axis, keepdims=True)
             ranked /= count
         return Variable(self.dims, ranked)
+
+    def rolling_window(self, dim, window, window_dim, center=False,
+                       fill_value=dtypes.NA):
+        """
+        Make a rolling_window along dim and add a new_dim to the last place.
+
+        Parameters
+        ----------
+        dim: str
+            Dimension over which to compute rolling_window
+        window: int
+            Window size of the rolling
+        window_dim: str
+            New name of the window dimension.
+        center: boolean. default False.
+            If True, pad fill_value for both ends. Otherwise, pad in the head
+            of the axis.
+        fill_value:
+            value to be filled.
+
+        Returns
+        -------
+        Variable that is a view of the original array with a added dimension of
+        size w.
+        The return dim: self.dims + (window_dim, )
+        The return shape: self.shape + (window, )
+
+        Examples
+        --------
+        >>> v=Variable(('a', 'b'), np.arange(8).reshape((2,4)))
+        >>> v.rolling_window(x, 'b', 3, 'window_dim')
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        array([[[nan, nan, 0], [nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[nan, nan, 4], [nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+
+        >>> v.rolling_window(x, 'b', 3, 'window_dim', center=True)
+        <xarray.Variable (a: 2, b: 4, window_dim: 3)>
+        array([[[nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, nan]],
+               [[nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, nan]]])
+        """
+        if fill_value is dtypes.NA:  # np.nan is passed
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+            array = self.astype(dtype, copy=False).data
+        else:
+            dtype = self.dtype
+            array = self.data
+
+        new_dims = self.dims + (window_dim, )
+        return Variable(new_dims, duck_array_ops.rolling_window(
+            array, axis=self.get_axis_num(dim), window=window,
+            center=center, fill_value=fill_value))
 
     @property
     def real(self):
