@@ -267,11 +267,11 @@ class ArrayWriter(object):
     def sync(self, compute=True):
         if self.sources:
             import dask.array as da
-            futures = da.store(self.sources, self.targets, lock=self.lock,
+            delayed = da.store(self.sources, self.targets, lock=self.lock,
                                compute=compute, flush=True)
             self.sources = []
             self.targets = []
-            return futures
+            return delayed
 
 
 class AbstractWritableDataStore(AbstractDataStore):
@@ -279,7 +279,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         if writer is None:
             writer = ArrayWriter(lock=lock)
         self.writer = writer
-        self.futures = None
+        self.delayed = None
 
     def encode(self, variables, attributes):
         """
@@ -321,12 +321,11 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def sync(self):
+    def sync(self, compute=True):
         if self._isopen and self._autoclose:
             # datastore will be reopened during write
             self.close()
-        futures = self.writer.sync()
-        return futures
+        self.delayed = self.writer.sync(compute=compute)
 
     def store_dataset(self, dataset):
         """

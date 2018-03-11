@@ -662,8 +662,11 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         if sync and isinstance(path_or_file, basestring):
             store.close()
 
-    if not sync or not compute:
+    if not sync:
         return store
+
+    if not compute:
+        return store.delayed
 
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
@@ -717,8 +720,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
     compute: boolean
-        If true compute immediately, otherwise return dask.delayed.Delayed
-        in `store.futures`.
+        If true compute immediately, otherwise return dask.delayed.Delayed.
     Examples
     --------
 
@@ -748,16 +750,16 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     writer = ArrayWriter()
     stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
               for ds, path, group in zip(datasets, paths, groups)]
+
     try:
-        writer.sync()
+        delayed = writer.sync(compute=compute)
+        if not compute:
+            return delayed
         for store in stores:
             store.sync()
     finally:
         for store in stores:
             store.close()
-
-    if sync or not compute:
-        return stores
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,

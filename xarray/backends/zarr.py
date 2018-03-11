@@ -363,8 +363,8 @@ class ZarrStore(AbstractWritableDataStore):
         AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
 
-    def sync(self):
-        self.writer.sync()
+    def sync(self, compute=True):
+        self.delayed = self.writer.sync(compute=compute)
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

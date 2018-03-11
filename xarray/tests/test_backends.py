@@ -1174,16 +1174,28 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         original = create_test_data().chunk()
 
         with create_tmp_file() as tmp_file:
-            store = original.to_netcdf(tmp_file, engine='h5netcdf',
-                                       compute=False)
-            assert isinstance(store.futures, Delayed)
-            store.futures.compute()
+            delayed_obj = original.to_netcdf(tmp_file, engine=self.engine,
+                                             compute=False)
+            assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
 
             with open_dataset(tmp_file, autoclose=self.autoclose) as actual:
                 assert_identical(original.load(), actual.load())
 
+    def test_save_mfdataset_compute_false(self):
+        # TODO
+        pass
+
+
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
+
+
+@requires_h5netcdf
+@requires_dask
+class H5NetCDFViaDaskDataTest(NetCDF4ViaDaskDataTest):
+    engine = 'h5netcdf'
+
 
 
 @requires_zarr
@@ -1399,6 +1411,11 @@ class BaseZarrTest(CFEncodedDataTest):
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
         super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
+
+
+    def test_to_zarr_compute_false(self):
+        #TODO:
+        pass
 
 
 @requires_zarr

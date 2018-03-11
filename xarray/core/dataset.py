@@ -1063,7 +1063,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            store.futures = store.sync(compute=compute)
+            store.sync(compute=compute)
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None, encoding=None, unlimited_dims=None,
@@ -1120,8 +1120,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
         compute: boolean
-            If true compute immediately, otherwise return dask.delayed.Delayed
-            in `store.futures`.
+            If true compute immediately, otherwise return dask.delayed.Delayed.
         """
         if encoding is None:
             encoding = {}
@@ -1156,7 +1155,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
         compute: boolean
             If true compute immediately, otherwise return dask.delayed.Delayed
-            in `store.futures`.
+            in `store.delayed`.
         """
         if encoding is None:
             encoding = {}
