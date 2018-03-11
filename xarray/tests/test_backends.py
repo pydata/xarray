@@ -679,7 +679,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # should still pass though.
             assert_identical(ds, actual)
 
-        if isinstance(self, NetCDF4DataTest):
+        if self.engine == 'netcdf4':
             ds['z'].encoding['endian'] = 'big'
             with pytest.raises(NotImplementedError):
                 with self.roundtrip(ds) as actual:
@@ -1207,6 +1207,10 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 @requires_dask
 class H5NetCDFViaDaskDataTest(NetCDF4ViaDaskDataTest):
     engine = 'h5netcdf'
+
+    @pytest.mark.xfail(reason="h5netcdf does not preserve variable order")
+    def test_variable_order(self):
+        super(NetCDF4ViaDaskDataTest, self).test_variable_order()
 
 
 @requires_zarr
