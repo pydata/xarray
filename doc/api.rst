@@ -24,6 +24,7 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   dot
 
 Dataset
 =======

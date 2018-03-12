@@ -38,6 +38,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Addition of :py:func:`~xarray.dot`, equivalent to ``np.einsum``.
+  Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
+  which specifies the dimensions to sum over.
+  (:issue:`1951`)
 - Support for writing xarray datasets to netCDF files (netcdf4 backend only)
   when using the `dask.distributed <https://distributed.readthedocs.io>`_
   scheduler (:issue:`1464`).
@@ -49,7 +53,6 @@ Enhancements
   as orthogonal/vectorized indexing, becomes possible for all the backend
   arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
