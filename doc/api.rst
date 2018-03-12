@@ -24,6 +24,7 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   dot
 
 Dataset
 =======
@@ -356,6 +357,13 @@ Reshaping and reorganizing
 
 Universal functions
 ===================
+
+.. warning::
+
+   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and dask objects. This obliviates the need
+   for the ``xarray.ufuncs`` module, which should not be used for new code
+   unless compatibility with versions of NumPy prior to v1.13 is required.
 
 This functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``

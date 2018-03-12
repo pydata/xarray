@@ -1340,8 +1340,10 @@ class BaseZarrTest(CFEncodedDataTest):
         import zarr
         blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
         save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
-        with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
-            assert repr(actual.var1.encoding['compressor']) == repr(blosc_comp)
+        with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
+            actual = ds['var1'].encoding['compressor']
+            # get_config returns a dictionary of compressor attributes
+            assert actual.get_config() == blosc_comp.get_config()
 
     def test_group(self):
         original = create_test_data()
