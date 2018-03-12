@@ -6,8 +6,9 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, formatting, ops
+from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import Frozen, SortedKeysDict, not_implemented
+from .utils import Frozen, SortedKeysDict
 
 
 class ImplementsArrayReduce(object):
@@ -235,7 +236,7 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
     return dim
 
 
-class BaseDataObject(AttrAccessMixin):
+class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
 
     def squeeze(self, dim=None, drop=False, axis=None):
@@ -748,12 +749,6 @@ class BaseDataObject(AttrAccessMixin):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-
-    # this has no runtime function - these are listed so IDEs know these
-    # methods are defined and don't warn on these operations
-    __lt__ = __le__ = __ge__ = __gt__ = __add__ = __sub__ = __mul__ = \
-        __truediv__ = __floordiv__ = __mod__ = __pow__ = __and__ = __xor__ = \
-        __or__ = __div__ = __eq__ = __ne__ = not_implemented
 
 
 def full_like(other, fill_value, dtype=None):

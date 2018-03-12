@@ -17,7 +17,7 @@ from . import (
     rolling, utils)
 from .. import conventions
 from .alignment import align
-from .common import BaseDataObject, ImplementsDatasetReduce
+from .common import DataWithCoords, ImplementsDatasetReduce
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -298,7 +298,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
+class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
               formatting.ReprMixin):
     """A multi-dimensional, in memory, array database.
 
@@ -2362,7 +2362,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += array.count(dims)
+                count += np.asarray(array.count(dims))
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:

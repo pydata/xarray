@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops
+from .arithmetic import SupportsArithmetic
 from .combine import concat
 from .common import ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import integer_types, range, zip
@@ -151,7 +152,7 @@ def _unique_and_monotonic(group):
         return index.is_unique and index.is_monotonic
 
 
-class GroupBy(object):
+class GroupBy(SupportsArithmetic):
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over
