@@ -2030,7 +2030,7 @@ class TestDataArray(TestCase):
             actual = array.coords['x'] + grouped
             assert_identical(expected, actual)
 
-            ds = array.coords['x'].to_dataset('X')
+            ds = array.coords['x'].to_dataset(name='X')
             expected = array + ds
             actual = grouped + ds
             assert_identical(expected, actual)
