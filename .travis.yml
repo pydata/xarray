@@ -45,8 +45,6 @@ matrix:
     env: CONDA_ENV=py36-rasterio1.0alpha
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdftime-dev
   - python: 3.5
     env: CONDA_ENV=docs
   allow_failures:
@@ -75,8 +73,6 @@ matrix:
     env: CONDA_ENV=py36-rasterio1.0alpha
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdftime-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
