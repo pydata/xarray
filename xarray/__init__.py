@@ -6,7 +6,7 @@ from __future__ import print_function
 from .core.alignment import align, broadcast, broadcast_arrays
 from .core.common import full_like, zeros_like, ones_like
 from .core.combine import concat, auto_combine
-from .core.computation import apply_ufunc, where
+from .core.computation import apply_ufunc, where, dot
 from .core.extensions import (register_dataarray_accessor,
                               register_dataset_accessor)
 from .core.variable import as_variable, Variable, IndexVariable, Coordinate
