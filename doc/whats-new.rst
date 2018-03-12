@@ -32,27 +32,53 @@ v0.10.2 (unreleased)
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The addition of ``__array_ufunc__`` for xarray objects (see below) means that
+  NumPy `ufunc methods`_ (e.g., ``np.add.reduce``) that previously worked on
+  ``xarray.DataArray`` objects by converting them into NumPy arrays will now
+  raise ``NotImplementedError`` instead. In all cases, the work-around is
+  simple: convert your objects explicitly into NumPy arrays before calling the
+  ufunc (e.g., with ``.values``).
+
+.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+
 Documentation
 ~~~~~~~~~~~~~
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Addition of :py:func:`~xarray.dot`, equivalent to ``np.einsum``.
+- Added :py:func:`~xarray.dot`, equivalent to :py:func:`np.einsum`.
   Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
   which specifies the dimensions to sum over.
   (:issue:`1951`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Support for writing xarray datasets to netCDF files (netcdf4 backend only)
   when using the `dask.distributed <https://distributed.readthedocs.io>`_
   scheduler (:issue:`1464`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-
-- Fixed to_netcdf when using dask distributed
 - Support lazy vectorized-indexing. After this change, flexible indexing such
   as orthogonal/vectorized indexing, becomes possible for all the backend
   arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Implemented NumPy's ``__array_ufunc__`` protocol for all xarray objects
+  (:issue:`1617`). This enables using NumPy ufuncs directly on
+  ``xarray.Dataset`` objects with recent versions of NumPy (v1.13 and newer):
+
+  .. ipython:: python
+
+    ds = xr.Dataset({'a': 1})
+    np.sin(ds)
+
+  This obliviates the need for the ``xarray.ufuncs`` module, which will be
+  deprecated in the future when xarray drops support for older versions of
+  NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
   :py:func:`~xarray.DataArrayRolling.construct` method that returns a view
