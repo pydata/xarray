@@ -454,7 +454,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   autoclose=False, **kwargs):
+                   autoclose=False, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -535,7 +535,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition the 'minimal' coordinates.
-
+    parallel : bool, optional
+        If True, the open and preprocess steps of this function will be performed
+        in parallel using ``dask.bag``.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -564,14 +566,14 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if lock is None:
         lock = _default_lock(paths[0], engine)
 
-    has_dask = True
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
 
-    if autoclose and has_dask:
+    if parallel:
         import dask.bag as db
         paths_bag = db.from_sequence(paths)
-        datasets = paths_bag.map(open_dataset, **open_kwargs).compute()
+        datasets = paths_bag.map(open_dataset,
+                                            **open_kwargs).compute()
         # important: get the file_objs before calling preprocess
         file_objs = [ds._file_obj for ds in datasets]
         if preprocess is not None:
