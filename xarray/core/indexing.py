@@ -775,8 +775,8 @@ def _decompose_vectorized_indexer(indexer, shape, indexing_support):
     backend_indexer: OuterIndexer or BasicIndexer
     np_indexers: an ExplicitIndexer (VectorizedIndexer / BasicIndexer)
 
-    Note
-    ----
+    Notes
+    -----
     This function is used to realize the vectorized indexing for the backend
     arrays that only support basic or outer indexing.
 
@@ -846,8 +846,8 @@ def _decompose_outer_indexer(indexer, shape, indexing_support):
     backend_indexer: OuterIndexer or BasicIndexer
     np_indexers: an ExplicitIndexer (OuterIndexer / BasicIndexer)
 
-    Note
-    ----
+    Notes
+    -----
     This function is used to realize the vectorized indexing for the backend
     arrays that only support basic or outer indexing.
 

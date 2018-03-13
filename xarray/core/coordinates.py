@@ -277,8 +277,8 @@ class Indexes(Mapping, formatting.ReprMixin):
     def __init__(self, variables, sizes):
         """Not for public consumption.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         variables : OrderedDict[Any, Variable]
             Reference to OrderedDict holding variable objects. Should be the
             same dictionary used by the source object.
