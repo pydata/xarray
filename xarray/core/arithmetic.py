@@ -36,14 +36,18 @@ class SupportsArithmetic(object):
         if ufunc.signature is not None:
             raise NotImplementedError(
                 '{} not supported: xarray objects do not directly implement '
-                'generalized ufuncs. Instead, use xarray.apply_ufunc.'
+                'generalized ufuncs. Instead, use xarray.apply_ufunc or '
+                'explicitly convert to xarray objects to NumPy arrays '
+                '(e.g., with `.values`).'
                 .format(ufunc))
 
         if method != '__call__':
             # TODO: support other methods, e.g., reduce and accumulate.
             raise NotImplementedError(
                 '{} method for ufunc {} is not implemented on xarray objects, '
-                'which currently only support the __call__ method.'
+                'which currently only support the __call__ method. As an '
+                'alternative, consider explicitly converting xarray objects '
+                'to NumPy arrays (e.g., with `.values`).'
                 .format(method, ufunc))
 
         if any(isinstance(o, SupportsArithmetic) for o in out):
@@ -51,7 +55,9 @@ class SupportsArithmetic(object):
             # will be necessary to use NDArrayOperatorsMixin.
             raise NotImplementedError(
                 'xarray objects are not yet supported in the `out` argument '
-                'for ufuncs.')
+                'for ufuncs. As an alternative, consider explicitly '
+                'converting xarray objects to NumPy arrays (e.g., with '
+                '`.values`).')
 
         join = dataset_join = OPTIONS['arithmetic_join']
 
