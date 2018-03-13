@@ -537,7 +537,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be performed
-        in parallel using ``dask.bag``.
+        in parallel using ``dask.delayed``.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -570,15 +570,17 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                        autoclose=autoclose, **kwargs)
 
     if parallel:
-        import dask.bag as db
-        paths_bag = db.from_sequence(paths)
-        datasets = paths_bag.map(open_dataset,
-                                            **open_kwargs).compute()
+        print('get_scheduler(): ', get_scheduler())
+        import dask
+        datasets = [delayed(open_dataset)(p, **open_kwargs) for p in paths]
         # important: get the file_objs before calling preprocess
         file_objs = [ds._file_obj for ds in datasets]
         if preprocess is not None:
-            datasets_bag = db.from_sequence(datasets)
-            datasets = datasets_bag.map(preprocess).compute()
+            datasets = [delayed(preprocess)(ds) for p in datasets]
+
+        # calling compute here will return compute the datasets/file_objs lists
+        # the underlying datasets will still be still be dask arrays
+        dask.compute([datasets, file_objs])
     else:
         datasets = [open_dataset(p, **open_kwargs) for p in paths]
         file_objs = [ds._file_obj for ds in datasets]

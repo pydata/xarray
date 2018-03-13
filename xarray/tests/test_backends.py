@@ -1678,6 +1678,11 @@ def parallel(request):
     return request.param
 
 
+@pytest.fixture(params=[None, 5])
+def chunks(request):
+    return request.param
+
+
 def skip_if_not_engine(engine):
     if engine == 'netcdf4':
         pytest.importorskip('netCDF4')
@@ -1687,7 +1692,8 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
-def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel):
+def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
+                                  chunks):
 
     # skip certain combinations
     skip_if_not_engine(readengine)
@@ -1697,6 +1703,9 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel):
 
     if readengine == 'h5netcdf' and autoclose:
         pytest.skip('h5netcdf does not support autoclose yet')
+
+    if not autoclose and nfiles > 10 and ON_WINDOWS:
+        pytest.skip('too many files for windows')
 
     randdata = np.random.randn(nfiles)
     original = Dataset({'foo': ('x', randdata)})
@@ -1711,7 +1720,11 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel):
 
         # check that calculation on opened datasets works properly
         actual = open_mfdataset(tmpfiles, engine=readengine,
-                                autoclose=autoclose)
+                                autoclose=autoclose,
+                                chunks=chunks)
+
+        # check that using open_mfdataset returns dask arrays for variables
+        assert isinstance(actual['foo'].data, dask_array_type)
 
         assert_identical(original, actual)
 
