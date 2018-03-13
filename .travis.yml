@@ -103,7 +103,7 @@ script:
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
-      sphinx-build -n -W -j auto -b html -d _build/doctrees doc _build/html;
+      sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
     else
       py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
     fi
