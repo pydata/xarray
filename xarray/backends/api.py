@@ -454,7 +454,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   autoclose=False, parallel=False, **kwargs):
+                   autoclose=False, parallel=None, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -537,7 +537,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be performed
-        in parallel using ``dask.delayed``.
+        in parallel using ``dask.delayed``. Default is False unless the dask's
+        distributed scheduler is being used in which case the default is True.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -569,8 +570,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
 
-    if parallel:
-        print('get_scheduler(): ', get_scheduler())
+    if parallel or (parallel is None and get_scheduler() == 'distributed'):
         import dask
         datasets = [delayed(open_dataset)(p, **open_kwargs) for p in paths]
         # important: get the file_objs before calling preprocess
@@ -579,7 +579,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             datasets = [delayed(preprocess)(ds) for p in datasets]
 
         # calling compute here will return compute the datasets/file_objs lists
-        # the underlying datasets will still be still be dask arrays
+        # the underlying datasets will still be stored as dask arrays
         dask.compute([datasets, file_objs])
     else:
         datasets = [open_dataset(p, **open_kwargs) for p in paths]
