@@ -27,7 +27,7 @@ What's New
 
 .. _whats-new.0.10.2:
 
-v0.10.2 (12 March 2018)
+v0.10.2 (13 March 2018)
 -----------------------
 
 The minor release includes a number of bug-fixes and enhancements, along with
