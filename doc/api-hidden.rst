@@ -9,6 +9,9 @@
 
    auto_combine
 
+   Dataset.nbytes
+   Dataset.chunks
+
    Dataset.all
    Dataset.any
    Dataset.argmax
@@ -42,9 +45,13 @@
    Dataset.rank
 
    DataArray.ndim
+   DataArray.nbytes
    DataArray.shape
    DataArray.size
    DataArray.dtype
+   DataArray.nbytes
+   DataArray.chunks
+
    DataArray.astype
    DataArray.item
 

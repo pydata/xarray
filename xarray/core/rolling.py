@@ -195,11 +195,8 @@ class DataArrayRolling(Rolling):
 
         Returns
         -------
-        DataArray that is a view of the original array.
-
-        Note
-        ----
-        The return array is not writeable.
+        DataArray that is a view of the original array. The returned array is
+        not writeable.
 
         Examples
         --------

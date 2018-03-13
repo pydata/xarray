@@ -27,10 +27,11 @@ What's New
 
 .. _whats-new.0.10.2:
 
-v0.10.2 (unreleased)
---------------------
+v0.10.2 (12 March 2018)
+-----------------------
 
-The minor release includes a number of bug-fixes and backwards compatible enhancements.
+The minor release includes a number of bug-fixes and enhancements, along with
+one possibly **backwards incompatible change**.
 
 Backwards incompatible changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -43,9 +44,6 @@ Backwards incompatible changes
   ufunc (e.g., with ``.values``).
 
 .. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
-
-Documentation
-~~~~~~~~~~~~~
 
 Enhancements
 ~~~~~~~~~~~~

@@ -399,8 +399,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @property
     def variables(self):
-        """Frozen dictionary of xarray.Variable objects constituting this
-        dataset's data
+        """Low level interface to Dataset contents as dict of Variable objects.
+
+        This ordered dictionary is frozen to prevent mutation that could
+        violate Dataset invariants. It contains all variable objects
+        constituting the Dataset, including both data variables and
+        coordinates.
         """
         return Frozen(self._variables)
 
@@ -2775,8 +2779,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         The dimensions, coordinates and data variables in this dataset form
         the columns of the DataFrame.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         dim_order : list, optional
             Hierarchical dimension order for the resulting dataframe. All
             arrays are transposed to this order and then written out as flat
