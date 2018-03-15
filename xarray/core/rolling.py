@@ -153,8 +153,9 @@ class DataArrayRolling(Rolling):
                                                center=center, **windows)
 
         self.window_labels = self.obj[self.dim]
-        self._stops = np.arange(len(self.window_labels)) + 1
-        self._starts = np.maximum(self._stops - int(self.window), 0)
+        self._stops = np.arange(1, len(self.window_labels) + 1)
+        self._starts = self._stops - int(self.window)
+        self._starts[:int(self.window)] = 0
 
     def __iter__(self):
         for (label, start, stop) in zip(self.window_labels, self._starts,
