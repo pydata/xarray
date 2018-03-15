@@ -580,7 +580,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
         # calling compute here will return compute the datasets/file_objs lists
         # the underlying datasets will still be stored as dask arrays
-        dask.compute([datasets, file_objs])
+        datasets, file_objs = dask.compute([datasets, file_objs])
     else:
         datasets = [open_dataset(p, **open_kwargs) for p in paths]
         file_objs = [ds._file_obj for ds in datasets]

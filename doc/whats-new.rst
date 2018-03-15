@@ -37,6 +37,13 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
+  ``dask.delayed`` to parallelize the open and preprocessing steps withing
+  ``open_mfdataset``. This is expected to provide performance improvements when
+  opening many files, particularly when used in conjunction with
+  ``dask.distributed`` (:issue:`1981`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
