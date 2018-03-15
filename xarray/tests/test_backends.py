@@ -1663,7 +1663,7 @@ def readengine(request):
     return request.param
 
 
-@pytest.fixture(params=[1, 10, 1000])
+@pytest.fixture(params=[1, 10, 500])
 def nfiles(request):
     return request.param
 
