@@ -151,33 +151,20 @@ class DataArrayRolling(Rolling):
         """
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
-        self.window_indices = None
-        self.window_labels = None
 
-        self._setup_windows()
+        self.window_labels = self.obj[self.dim]
+        self._stops = np.arange(len(self.window_labels)) + 1
+        self._starts = np.maximum(self._stops - int(self.window), 0)
 
     def __iter__(self):
-        for (label, indices) in zip(self.window_labels, self.window_indices):
-            window = self.obj.isel(**{self.dim: indices})
+        for (label, start, stop) in zip(self.window_labels, self._starts,
+                                        self._stops):
+            window = self.obj.isel(**{self.dim: slice(start, stop)})
 
             counts = window.count(dim=self.dim)
             window = window.where(counts >= self._min_periods)
 
             yield (label, window)
-
-    def _setup_windows(self):
-        """
-        Find the indices and labels for each window
-        """
-        self.window_labels = self.obj[self.dim]
-        window = int(self.window)
-        dim_size = self.obj[self.dim].size
-
-        stops = np.arange(dim_size) + 1
-        starts = np.maximum(stops - window, 0)
-
-        self.window_indices = [slice(start, stop)
-                               for start, stop in zip(starts, stops)]
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
         """

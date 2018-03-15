@@ -37,6 +37,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+ - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+ object (:issue:`1993`)
+ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Bug fixes
 ~~~~~~~~~
 
