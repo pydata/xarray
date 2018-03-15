@@ -52,6 +52,8 @@ Attributes
    Dataset.encoding
    Dataset.indexes
    Dataset.get_index
+   Dataset.chunks
+   Dataset.nbytes
 
 Dictionary interface
 --------------------
@@ -122,6 +124,7 @@ Missing value handling
 
    Dataset.isnull
    Dataset.notnull
+   Dataset.combine_first
    Dataset.count
    Dataset.dropna
    Dataset.fillna
@@ -160,6 +163,7 @@ Computation
 :py:attr:`~Dataset.var`
 
 **ndarray methods**:
+:py:attr:`~Dataset.astype`
 :py:attr:`~Dataset.argsort`
 :py:attr:`~Dataset.clip`
 :py:attr:`~Dataset.conj`
@@ -222,6 +226,8 @@ Attributes
 :py:attr:`~DataArray.shape`
 :py:attr:`~DataArray.size`
 :py:attr:`~DataArray.dtype`
+:py:attr:`~DataArray.nbytes`
+:py:attr:`~DataArray.chunks`
 
 DataArray contents
 ------------------
@@ -270,6 +276,7 @@ Missing value handling
 
   DataArray.isnull
   DataArray.notnull
+  DataArray.combine_first
   DataArray.count
   DataArray.dropna
   DataArray.fillna
@@ -298,6 +305,7 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
@@ -480,6 +488,7 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.close
    DataArray.compute
    DataArray.persist
    DataArray.load
@@ -517,6 +526,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   DataArray.plot
    plot.plot
    plot.contourf
    plot.contour
@@ -551,6 +561,8 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Dataset.variables
+   DataArray.variable
    Variable
    IndexVariable
    as_variable

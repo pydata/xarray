@@ -363,6 +363,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def variable(self):
+        """Low level interface to the Variable object for this DataArray."""
         return self._variable
 
     @property
