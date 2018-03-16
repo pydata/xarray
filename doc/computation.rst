@@ -341,20 +341,14 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-Unfortunately, we currently do not support NumPy ufuncs for datasets [1]_.
-:py:meth:`~xarray.Dataset.apply` works around this
-limitation, by applying the given function to each variable in the dataset:
+Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
+alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+to each variable in a dataset:
 
 .. ipython:: python
 
+    np.sin(ds)
     ds.apply(np.sin)
-
-You can also use the wrapped functions in the ``xarray.ufuncs`` module:
-
-.. ipython:: python
-
-    import xarray.ufuncs as xu
-    xu.sin(ds)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
@@ -372,10 +366,6 @@ Arithmetic between two datasets matches data variables of the same name:
 
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
-
-.. [1] This was previously due to a limitation of NumPy, but with NumPy 1.13
-       we should be able to support this by leveraging ``__array_ufunc__``
-       (:issue:`1617`).
 
 .. _comput.wrapping-custom:
 

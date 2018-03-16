@@ -6,11 +6,11 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, groupby, indexing, ops, resample, rolling, utils
+from . import computation, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
-from .common import AbstractArray, BaseDataObject
+from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -117,7 +117,7 @@ class _LocIndexer(object):
 _THIS_ARRAY = utils.ReprObject('<this-array>')
 
 
-class DataArray(AbstractArray, BaseDataObject):
+class DataArray(AbstractArray, DataWithCoords):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses labeled
@@ -363,6 +363,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def variable(self):
+        """Low level interface to the Variable object for this DataArray."""
         return self._variable
 
     @property
@@ -1926,7 +1927,7 @@ class DataArray(AbstractArray, BaseDataObject):
     def imag(self):
         return self._replace(self.variable.imag)
 
-    def dot(self, other):
+    def dot(self, other, dims=None):
         """Perform dot product of two DataArrays along their shared dims.
 
         Equivalent to taking taking tensordot over all shared dims.
@@ -1935,6 +1936,9 @@ class DataArray(AbstractArray, BaseDataObject):
         ----------
         other : DataArray
             The other array with which the dot product is performed.
+        dims: list of strings, optional
+            Along which dimensions to be summed over. Default all the common
+            dimensions are summed over.
 
         Returns
         -------
@@ -1943,6 +1947,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
         See also
         --------
+        dot
         numpy.tensordot
 
         Examples
@@ -1968,23 +1973,7 @@ class DataArray(AbstractArray, BaseDataObject):
         if not isinstance(other, DataArray):
             raise TypeError('dot only operates on DataArrays.')
 
-        # sum over the common dims
-        dims = set(self.dims) & set(other.dims)
-        if len(dims) == 0:
-            raise ValueError('DataArrays have no shared dimensions over which '
-                             'to perform dot.')
-
-        self, other = align(self, other, join='inner', copy=False)
-
-        axes = (self.get_axis_num(dims), other.get_axis_num(dims))
-        new_data = duck_array_ops.tensordot(self.data, other.data, axes=axes)
-
-        new_coords = self.coords.merge(other.coords)
-        new_coords = new_coords.drop([d for d in dims if d in new_coords])
-        new_dims = ([d for d in self.dims if d not in dims] +
-                    [d for d in other.dims if d not in dims])
-
-        return type(self)(new_data, new_coords.variables, new_dims)
+        return computation.dot(self, other, dims=dims)
 
     def sortby(self, variables, ascending=True):
         """
