@@ -153,13 +153,12 @@ class DataArrayRolling(Rolling):
                                                center=center, **windows)
 
         self.window_labels = self.obj[self.dim]
-        self._stops = np.arange(1, len(self.window_labels) + 1)
-        self._starts = self._stops - int(self.window)
-        self._starts[:int(self.window)] = 0
 
     def __iter__(self):
-        for (label, start, stop) in zip(self.window_labels, self._starts,
-                                        self._stops):
+        _stops = np.arange(1, len(self.window_labels) + 1)
+        _starts = _stops - int(self.window)
+        _starts[:int(self.window)] = 0
+        for (label, start, stop) in zip(self.window_labels, _starts, _stops):
             window = self.obj.isel(**{self.dim: slice(start, stop)})
 
             counts = window.count(dim=self.dim)
