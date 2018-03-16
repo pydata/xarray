@@ -8,7 +8,7 @@ import xarray as xr
 from . import parameterized, randn, requires_dask
 
 nx = 3000
-long_nx = 30000200
+long_nx = 30000000
 ny = 2000
 nt = 1000
 window = 20
@@ -37,10 +37,14 @@ class Rolling(object):
     def time_rolling(self, func, center):
         getattr(self.ds.rolling(x=window, center=center), func)()
 
-    @parameterized(['func', 'center'],
+    @parameterized(['func', 'pandas'],
                    (['mean', 'count'], [True, False]))
-    def time_rolling_long(self, func, center):
-        getattr(self.da_long.rolling(x=window, center=center), func)()
+    def time_rolling_long(self, func, pandas):
+        if pandas:
+            se = self.da_long.to_series()
+            getattr(se.rolling(window=window), func)()
+        else:
+            getattr(self.da_long.rolling(x=window), func)()
 
     @parameterized(['window_', 'min_periods'],
                    ([20, 40], [5, None]))
@@ -60,4 +64,4 @@ class RollingDask(Rolling):
         requires_dask()
         super(RollingDask, self).setup(**kwargs)
         self.ds = self.ds.chunk({'x': 100, 'y': 50, 't': 50})
-        self.da_long = self.da_long.chunk({'x': 100, 'y': 50, 't': 50})
+        self.da_long = self.da_long.chunk({'x': 10000})
