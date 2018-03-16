@@ -10,7 +10,7 @@ from . import computation, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
-from .common import AbstractArray, BaseDataObject
+from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -117,7 +117,7 @@ class _LocIndexer(object):
 _THIS_ARRAY = utils.ReprObject('<this-array>')
 
 
-class DataArray(AbstractArray, BaseDataObject):
+class DataArray(AbstractArray, DataWithCoords):
     """N-dimensional array with labeled coordinates and dimensions.
 
     DataArray provides a wrapper around numpy ndarrays that uses labeled
@@ -363,6 +363,7 @@ class DataArray(AbstractArray, BaseDataObject):
 
     @property
     def variable(self):
+        """Low level interface to the Variable object for this DataArray."""
         return self._variable
 
     @property

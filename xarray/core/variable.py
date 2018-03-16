@@ -10,7 +10,8 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import (
+    arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils,)
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
@@ -216,8 +217,8 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
-
+class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
+               utils.NdimSizeLenMixin):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
