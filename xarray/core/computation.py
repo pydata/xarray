@@ -1,21 +1,20 @@
 """
 Functions for applying functions that act on arrays to xarray's labeled data.
-
-NOT PUBLIC API.
 """
+from __future__ import absolute_import, division, print_function
+from distutils.version import LooseVersion
 import functools
 import itertools
 import operator
+from collections import Counter
 
 import numpy as np
 
-from . import duck_array_ops
-from . import utils
+from . import duck_array_ops, utils, dtypes
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, dask_array_type
+from .pycompat import OrderedDict, dask_array_type, basestring
 from .utils import is_dict_like
-
 
 _DEFAULT_FROZEN_SET = frozenset()
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')
@@ -884,10 +883,21 @@ def apply_ufunc(func, *args, **kwargs):
         func = functools.partial(func, **kwargs_)
 
     if vectorize:
-        func = np.vectorize(func,
-                            otypes=output_dtypes,
-                            signature=signature.to_gufunc_string(),
-                            excluded=set(kwargs))
+        if signature.all_core_dims:
+            # we need the signature argument
+            if LooseVersion(np.__version__) < '1.12':  # pragma: no cover
+                raise NotImplementedError(
+                    'numpy 1.12 or newer required when using vectorize=True '
+                    'in xarray.apply_ufunc with non-scalar output core '
+                    'dimensions.')
+            func = np.vectorize(func,
+                                otypes=output_dtypes,
+                                signature=signature.to_gufunc_string(),
+                                excluded=set(kwargs))
+        else:
+            func = np.vectorize(func,
+                                otypes=output_dtypes,
+                                excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
@@ -926,6 +936,111 @@ def apply_ufunc(func, *args, **kwargs):
         return variables_ufunc(*args)
     else:
         return apply_array_ufunc(func, *args, dask=dask)
+
+
+def dot(*arrays, **kwargs):
+    """ dot(*arrays, dims=None)
+
+    Generalized dot product for xarray objects. Like np.einsum, but
+    provides a simpler interface based on array dimensions.
+
+    Parameters
+    ----------
+    arrays: DataArray (or Variable) objects
+        Arrays to compute.
+    dims: str or tuple of strings, optional
+        Which dimensions to sum over.
+        If not speciified, then all the common dimensions are summed over.
+
+    Returns
+    -------
+    dot: DataArray
+
+    Examples
+    --------
+
+    >>> da_a = xr.DataArray(np.arange(3 * 4).reshape(3, 4), dims=['a', 'b'])
+    >>> da_b = xr.DataArray(np.arange(3 * 4 * 5).reshape(3, 4, 5),
+    >>>                     dims=['a', 'b', 'c'])
+    >>> da_c = xr.DataArray(np.arange(5 * 6).reshape(5, 6), dims=['c', 'd'])
+    >>>
+    >>> xr.dot(da_a, da_b, dims=['a', 'b']).dims
+    ('c', )
+    >>> xr.dot(da_a, da_b, dims=['a']).dims
+    ('b', 'c')
+    >>> xr.dot(da_a, da_b, da_c, dims=['b', 'c']).dims
+    ('a', 'd')
+    """
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    dims = kwargs.pop('dims', None)
+    if len(kwargs) > 0:
+        raise TypeError('Invalid keyward arguments {} are given'.format(
+            list(kwargs.keys())))
+
+    if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
+        raise TypeError('Only xr.DataArray and xr.Variable are supported.'
+                        'Given {}.'.format([type(arr) for arr in arrays]))
+
+    if len(arrays) == 0:
+        raise TypeError('At least one array should be given.')
+
+    if isinstance(dims, basestring):
+        dims = (dims, )
+
+    common_dims = set.intersection(*[set(arr.dims) for arr in arrays])
+    all_dims = []
+    for arr in arrays:
+        all_dims += [d for d in arr.dims if d not in all_dims]
+
+    einsum_axes = 'abcdefghijklmnopqrstuvwxyz'
+    dim_map = {d: einsum_axes[i] for i, d in enumerate(all_dims)}
+
+    if dims is None:
+        # find dimensions that occur more than one times
+        dim_counts = Counter()
+        for arr in arrays:
+            dim_counts.update(arr.dims)
+        dims = tuple(d for d, c in dim_counts.items() if c > 1)
+
+    dims = tuple(dims)  # make dims a tuple
+
+    # dimensions to be parallelized
+    broadcast_dims = tuple(d for d in all_dims
+                           if d in common_dims and d not in dims)
+    input_core_dims = [[d for d in arr.dims if d not in broadcast_dims]
+                       for arr in arrays]
+    output_core_dims = [tuple(d for d in all_dims if d not in
+                              dims + broadcast_dims)]
+
+    # we use tensordot if possible, because it is more efficient for dask
+    if len(broadcast_dims) == 0 and len(arrays) == 2:
+        axes = [[arr.get_axis_num(d) for d in arr.dims if d in dims]
+                for arr in arrays]
+        return apply_ufunc(duck_array_ops.tensordot, *arrays, dask='allowed',
+                           input_core_dims=input_core_dims,
+                           output_core_dims=output_core_dims,
+                           kwargs={'axes': axes})
+
+    # construct einsum subscripts, such as '...abc,...ab->...c'
+    # Note: input_core_dims are always moved to the last position
+    subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
+                       in input_core_dims]
+    subscripts = ','.join(subscripts_list)
+    subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
+
+    # dtype estimation is necessary for dask='parallelized'
+    out_dtype = dtypes.result_type(*arrays)
+
+    # subscripts should be passed to np.einsum as arg, not as kwargs. We need
+    # to construct a partial function for parallelized computation.
+    func = functools.partial(np.einsum, subscripts)
+    result = apply_ufunc(func, *arrays,
+                         input_core_dims=input_core_dims,
+                         output_core_dims=output_core_dims,
+                         dask='parallelized', output_dtypes=[out_dtype])
+    return result.transpose(*[d for d in all_dims if d in result.dims])
 
 
 def where(cond, x, y):

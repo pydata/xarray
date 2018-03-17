@@ -4,12 +4,11 @@ import re
 import sys
 import warnings
 
-from setuptools import setup, find_packages
-from setuptools import Command
+from setuptools import find_packages, setup
 
 MAJOR = 0
 MINOR = 10
-MICRO = 0
+MICRO = 2
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
@@ -64,7 +63,7 @@ Important links
 - Issue tracker: http://github.com/pydata/xarray/issues
 - Source code: http://github.com/pydata/xarray
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
-"""
+"""  # noqa
 
 # Code to extract and write the version copied from pandas.
 # Used under the terms of pandas's license, see licenses/PANDAS_LICENSE.
@@ -84,18 +83,23 @@ if not ISRELEASED:
             (so, serr) = pipe.communicate()
             if pipe.returncode == 0:
                 break
-        except:
+        except BaseException:
             pass
 
     if pipe is None or pipe.returncode != 0:
         # no git, or not in git dir
         if os.path.exists('xarray/version.py'):
-            warnings.warn("WARNING: Couldn't get git revision, using existing xarray/version.py")
+            warnings.warn(
+                "WARNING: Couldn't get git revision,"
+                " using existing xarray/version.py")
             write_version = False
         else:
-            warnings.warn("WARNING: Couldn't get git revision, using generic version string")
+            warnings.warn(
+                "WARNING: Couldn't get git revision,"
+                " using generic version string")
     else:
-        # have git, in git dir, but may have used a shallow clone (travis does this)
+        # have git, in git dir, but may have used a shallow clone (travis does
+        # this)
         rev = so.strip()
         # makes distutils blow up on Python 2.7
         if sys.version_info[0] >= 3:
@@ -131,6 +135,7 @@ short_version = '%s'
         a.write(cnt % (FULLVERSION, VERSION))
     finally:
         a.close()
+
 
 if write_version:
     write_version_py()

@@ -5,19 +5,15 @@ NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import operator
 
 import numpy as np
-import pandas as pd
 
-from . import dtypes
-from . import duck_array_ops
-from .pycompat import PY3
+from . import dtypes, duck_array_ops
 from .nputils import array_eq, array_ne
+from .pycompat import PY3
 
 try:
     import bottleneck as bn
@@ -227,20 +223,8 @@ def _func_slash_method_wrapper(f, name=None):
 
 def rolling_count(rolling):
 
-    not_null = rolling.obj.notnull()
-    instance_attr_dict = {'center': rolling.center,
-                          'min_periods': rolling.min_periods,
-                          rolling.dim: rolling.window}
-    rolling_count = not_null.rolling(**instance_attr_dict).sum()
-
-    if rolling.min_periods is None:
-        return rolling_count
-
-    # otherwise we need to filter out points where there aren't enough periods
-    # but not_null is False, and so the NaNs don't flow through
-    # array with points where there are enough values given min_periods
-    enough_periods = rolling_count >= rolling.min_periods
-
+    rolling_count = rolling._counts()
+    enough_periods = rolling_count >= rolling._min_periods
     return rolling_count.where(enough_periods)
 
 
@@ -320,7 +304,8 @@ def inject_all_ops_and_reduce_methods(cls, priority=50, array_only=True):
         setattr(cls, name, cls._unary_op(_method_wrapper(name)))
 
     for name in PANDAS_UNARY_FUNCTIONS:
-        f = _func_slash_method_wrapper(getattr(pd, name), name=name)
+        f = _func_slash_method_wrapper(
+            getattr(duck_array_ops, name), name=name)
         setattr(cls, name, cls._unary_op(f))
 
     f = _func_slash_method_wrapper(duck_array_ops.around, name='round')

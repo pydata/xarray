@@ -71,8 +71,8 @@ methods for working with missing data from pandas:
     x.count()
     x.dropna(dim='x')
     x.fillna(-1)
-    x.ffill()
-    x.bfill()
+    x.ffill('x')
+    x.bfill('x')
 
 Like pandas, xarray uses the float value ``np.nan`` (not-a-number) to represent
 missing values.
@@ -158,19 +158,41 @@ Aggregation and summary methods can be applied directly to the ``Rolling`` objec
     r.mean()
     r.reduce(np.std)
 
-Note that rolling window aggregations are much faster (both asymptotically and
-because they avoid a loop in Python) when bottleneck_ is installed. Otherwise,
-we fall back to a slower, pure Python implementation.
+Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 .. _bottleneck: https://github.com/kwgoodman/bottleneck/
 
-Finally, we can manually iterate through ``Rolling`` objects:
+We can also manually iterate through ``Rolling`` objects:
 
 .. ipython:: python
 
    @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
+
+Finally, the rolling object has ``construct`` method, which gives a
+view of the original ``DataArray`` with the windowed dimension attached to
+the last position.
+You can use this for more advanced rolling operations, such as strided rolling,
+windowed rolling, convolution, short-time FFT, etc.
+
+.. ipython:: python
+
+    # rolling with 2-point stride
+    rolling_da = r.construct('window_dim', stride=2)
+    rolling_da
+    rolling_da.mean('window_dim', skipna=False)
+
+Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
+of the original array, it is memory efficient.
+
+.. note::
+  numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
+  In xarray, we internally use these functions in our aggregation methods
+  (such as ``.sum()``) if ``skipna`` argument is not specified or set to True.
+  This means ``rolling_da.mean('window_dim')`` is memory inefficient.
+  To avoid this, use ``skipna=False`` as the above example.
+
 
 .. _compute.broadcasting:
 
@@ -319,20 +341,14 @@ Datasets support most of the same methods found on data arrays:
     ds.mean(dim='x')
     abs(ds)
 
-Unfortunately, we currently do not support NumPy ufuncs for datasets [1]_.
-:py:meth:`~xarray.Dataset.apply` works around this
-limitation, by applying the given function to each variable in the dataset:
+Datasets also support NumPy ufuncs (requires NumPy v1.13 or newer), or
+alternatively you can use :py:meth:`~xarray.Dataset.apply` to apply a function
+to each variable in a dataset:
 
 .. ipython:: python
 
+    np.sin(ds)
     ds.apply(np.sin)
-
-You can also use the wrapped functions in the ``xarray.ufuncs`` module:
-
-.. ipython:: python
-
-    import xarray.ufuncs as xu
-    xu.sin(ds)
 
 Datasets also use looping over variables for *broadcasting* in binary
 arithmetic. You can do arithmetic between any ``DataArray`` and a dataset:
@@ -350,10 +366,6 @@ Arithmetic between two datasets matches data variables of the same name:
 
 Similarly to index based alignment, the result has the intersection of all
 matching data variables.
-
-.. [1] This was previously due to a limitation of NumPy, but with NumPy 1.13
-       we should be able to support this by leveraging ``__array_ufunc__``
-       (:issue:`1617`).
 
 .. _comput.wrapping-custom:
 

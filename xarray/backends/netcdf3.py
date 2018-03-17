@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import unicodedata
 
 import numpy as np
 
-from .. import conventions, Variable
-from ..core.pycompat import basestring, unicode_type, OrderedDict
-
+from .. import Variable, conventions
+from ..core.pycompat import OrderedDict, basestring, unicode_type
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string

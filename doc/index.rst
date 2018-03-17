@@ -1,4 +1,3 @@
-
 .. image:: _static/dataset-diagram-logo.png
    :width: 300 px
    :align: center
@@ -32,13 +31,42 @@ describing scientific data in widespread use in the Earth sciences:
 Documentation
 -------------
 
+**Getting Started**
+
+* :doc:`why-xarray`
+* :doc:`faq`
+* :doc:`examples`
+* :doc:`installing`
+
 .. toctree::
    :maxdepth: 1
+   :hidden:
+   :caption: Getting Started
 
    why-xarray
    faq
    examples
    installing
+
+**User Guide**
+
+* :doc:`data-structures`
+* :doc:`indexing`
+* :doc:`computation`
+* :doc:`groupby`
+* :doc:`reshaping`
+* :doc:`combining`
+* :doc:`time-series`
+* :doc:`pandas`
+* :doc:`io`
+* :doc:`dask`
+* :doc:`plotting`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: User Guide
+
    data-structures
    indexing
    computation
@@ -50,10 +78,23 @@ Documentation
    io
    dask
    plotting
+
+**Help & reference**
+
+* :doc:`whats-new`
+* :doc:`api`
+* :doc:`internals`
+* :doc:`contributing`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Help & reference
+
+   whats-new
    api
    internals
    contributing
-   whats-new
 
 See also
 --------

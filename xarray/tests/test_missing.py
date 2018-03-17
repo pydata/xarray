@@ -1,20 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import itertools
+
 import numpy as np
 import pandas as pd
 import pytest
-import itertools
 
 import xarray as xr
-
-from xarray.core.missing import (NumpyInterpolator, ScipyInterpolator,
-                                 SplineInterpolator)
+from xarray.core.missing import (
+    NumpyInterpolator, ScipyInterpolator, SplineInterpolator)
 from xarray.core.pycompat import dask_array_type
-
-from xarray.tests import (assert_equal, assert_array_equal, raises_regex,
-                          requires_scipy, requires_bottleneck, requires_dask,
-                          requires_np112)
+from xarray.tests import (
+    assert_array_equal, assert_equal, raises_regex, requires_bottleneck,
+    requires_dask, requires_np112, requires_scipy)
 
 
 @pytest.fixture

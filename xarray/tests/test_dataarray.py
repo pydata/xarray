@@ -1,25 +1,24 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import pickle
+from copy import deepcopy
+from distutils.version import LooseVersion
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
-import pickle
 import pytest
-from copy import deepcopy
-from textwrap import dedent
-from distutils.version import LooseVersion
 
 import xarray as xr
-
-from xarray import (align, broadcast, Dataset, DataArray,
-                    IndexVariable, Variable)
+from xarray import (
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder
-from xarray.core.pycompat import iteritems, OrderedDict
 from xarray.core.common import full_like
+from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
-    TestCase, ReturnItem, source_ndarray, unittest, requires_dask,
-    assert_identical, assert_equal, assert_allclose, assert_array_equal,
-    raises_regex, requires_scipy, requires_bottleneck)
+    ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
+    assert_identical, raises_regex, requires_bottleneck, requires_dask,
+    requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -1668,6 +1667,21 @@ class TestDataArray(TestCase):
         actual = array.squeeze(drop=False)
         assert_identical(expected, actual)
 
+        array = DataArray([[[0., 1.]]], dims=['dim_0', 'dim_1', 'dim_2'])
+        expected = DataArray([[0., 1.]], dims=['dim_1', 'dim_2'])
+        actual = array.squeeze(axis=0)
+        assert_identical(expected, actual)
+
+        array = DataArray([[[[0., 1.]]]], dims=[
+                          'dim_0', 'dim_1', 'dim_2', 'dim_3'])
+        expected = DataArray([[0., 1.]], dims=['dim_1', 'dim_3'])
+        actual = array.squeeze(axis=(0, 2))
+        assert_identical(expected, actual)
+
+        array = DataArray([[[0., 1.]]], dims=['dim_0', 'dim_1', 'dim_2'])
+        with pytest.raises(ValueError):
+            array.squeeze(axis=0, dim='dim_1')
+
     def test_drop_coordinates(self):
         expected = DataArray(np.random.randn(2, 3), dims=['x', 'y'])
         arr = expected.copy()
@@ -2016,7 +2030,7 @@ class TestDataArray(TestCase):
             actual = array.coords['x'] + grouped
             assert_identical(expected, actual)
 
-            ds = array.coords['x'].to_dataset('X')
+            ds = array.coords['x'].to_dataset(name='X')
             expected = array + ds
             actual = grouped + ds
             assert_identical(expected, actual)
@@ -2715,7 +2729,7 @@ class TestDataArray(TestCase):
         if not hasattr(pd, 'CategoricalIndex'):
             raise unittest.SkipTest('requires pandas with CategoricalIndex')
 
-        s = pd.Series(range(5), index=pd.CategoricalIndex(list('aabbc')))
+        s = pd.Series(np.arange(5), index=pd.CategoricalIndex(list('aabbc')))
         arr = DataArray(s)
         assert "'a'" in repr(arr)  # should not error
 
@@ -3186,8 +3200,6 @@ class TestDataArray(TestCase):
             da.dot(dm.to_dataset(name='dm'))
         with pytest.raises(TypeError):
             da.dot(dm.values)
-        with raises_regex(ValueError, 'no shared dimensions'):
-            da.dot(DataArray(1))
 
     def test_binary_op_join_setting(self):
         dim = 'x'
@@ -3311,15 +3323,27 @@ def da_dask(seed=123):
     return da
 
 
+@pytest.mark.parametrize('da', (1, 2), indirect=True)
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
+    rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da['time'])
     assert_identical(rolling_obj.window_labels, da['time'])
 
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
+
+        actual = rolling_obj_mean.isel(time=i)
+        expected = window_da.mean('time')
+
+        # TODO add assert_allclose_with_nan, which compares nan position
+        # as well as the closeness of the values.
+        assert_array_equal(actual.isnull(), expected.isnull())
+        if (~actual.isnull()).sum() > 0:
+            np.allclose(actual.values[actual.values.nonzero()],
+                        expected.values[expected.values.nonzero()])
 
 
 def test_rolling_doc(da):
@@ -3389,8 +3413,8 @@ def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
-def test_rolling_pandas_compat(da, center, window, min_periods):
-    s = pd.Series(range(10))
+def test_rolling_pandas_compat(center, window, min_periods):
+    s = pd.Series(np.arange(10))
     da = DataArray.from_series(s)
 
     if min_periods is not None and window < min_periods:
@@ -3400,12 +3424,39 @@ def test_rolling_pandas_compat(da, center, window, min_periods):
                           min_periods=min_periods).mean()
     da_rolling = da.rolling(index=window, center=center,
                             min_periods=min_periods).mean()
-    # pandas does some fancy stuff in the last position,
-    # we're not going to do that yet!
-    np.testing.assert_allclose(s_rolling.values[:-1],
-                               da_rolling.values[:-1])
-    np.testing.assert_allclose(s_rolling.index,
-                               da_rolling['index'])
+    da_rolling_np = da.rolling(index=window, center=center,
+                               min_periods=min_periods).reduce(np.nanmean)
+
+    np.testing.assert_allclose(s_rolling.values, da_rolling.values)
+    np.testing.assert_allclose(s_rolling.index, da_rolling['index'])
+    np.testing.assert_allclose(s_rolling.values, da_rolling_np.values)
+    np.testing.assert_allclose(s_rolling.index, da_rolling_np['index'])
+
+
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+def test_rolling_construct(center, window):
+    s = pd.Series(np.arange(10))
+    da = DataArray.from_series(s)
+
+    s_rolling = s.rolling(window, center=center, min_periods=1).mean()
+    da_rolling = da.rolling(index=window, center=center, min_periods=1)
+
+    da_rolling_mean = da_rolling.construct('window').mean('window')
+    np.testing.assert_allclose(s_rolling.values, da_rolling_mean.values)
+    np.testing.assert_allclose(s_rolling.index, da_rolling_mean['index'])
+
+    # with stride
+    da_rolling_mean = da_rolling.construct('window',
+                                           stride=2).mean('window')
+    np.testing.assert_allclose(s_rolling.values[::2], da_rolling_mean.values)
+    np.testing.assert_allclose(s_rolling.index[::2], da_rolling_mean['index'])
+
+    # with fill_value
+    da_rolling_mean = da_rolling.construct(
+        'window', stride=2, fill_value=0.0).mean('window')
+    assert da_rolling_mean.isnull().sum() == 0
+    assert (da_rolling_mean == 0.0).sum() >= 0
 
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
@@ -3418,10 +3469,38 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     if min_periods is not None and window < min_periods:
         min_periods = window
 
+    if da.isnull().sum() > 1 and window == 1:
+        # this causes all nan slices
+        window = 2
+
     rolling_obj = da.rolling(time=window, center=center,
                              min_periods=min_periods)
 
     # add nan prefix to numpy methods to get similar # behavior as bottleneck
+    actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
+    expected = getattr(rolling_obj, name)()
+    assert_allclose(actual, expected)
+    assert actual.dims == expected.dims
+
+
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13'),
+                    reason='Old numpy does not support nansum / nanmax for '
+                    'object typed arrays.')
+@pytest.mark.parametrize('center', (True, False))
+@pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
+@pytest.mark.parametrize('window', (1, 2, 3, 4))
+@pytest.mark.parametrize('name', ('sum', 'max'))
+def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
+    da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
+                   dims='time').isnull()
+
+    if min_periods is not None and window < min_periods:
+        min_periods = window
+
+    rolling_obj = da.rolling(time=window, center=center,
+                             min_periods=min_periods)
+
+    # add nan prefix to numpy methods to get similar behavior as bottleneck
     actual = rolling_obj.reduce(getattr(np, 'nan%s' % name))
     expected = getattr(rolling_obj, name)()
     assert_allclose(actual, expected)
@@ -3433,21 +3512,23 @@ def test_rolling_count_correct():
     da = DataArray(
         [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7], dims='time')
 
-    result = da.rolling(time=11, min_periods=1).count()
-    expected = DataArray(
-        [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time')
-    assert_equal(result, expected)
-
-    result = da.rolling(time=11, min_periods=None).count()
-    expected = DataArray(
+    kwargs = [{'time': 11, 'min_periods': 1},
+              {'time': 11, 'min_periods': None},
+              {'time': 7, 'min_periods': 2}]
+    expecteds = [DataArray(
+        [1, 1, 2, 3, 3, 4, 5, 6, 6, 7, 8], dims='time'),
+        DataArray(
         [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan,
-         np.nan, np.nan, np.nan, np.nan, 8], dims='time')
-    assert_equal(result, expected)
+         np.nan, np.nan, np.nan, np.nan, np.nan], dims='time'),
+        DataArray(
+        [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')]
 
-    result = da.rolling(time=7, min_periods=2).count()
-    expected = DataArray(
-        [np.nan, np.nan, 2, 3, 3, 4, 5, 5, 5, 5, 5], dims='time')
-    assert_equal(result, expected)
+    for kwarg, expected in zip(kwargs, expecteds):
+        result = da.rolling(**kwarg).count()
+        assert_equal(result, expected)
+
+        result = da.to_dataset(name='var1').rolling(**kwarg).count()['var1']
+        assert_equal(result, expected)
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

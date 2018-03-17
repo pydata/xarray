@@ -1,6 +1,8 @@
-"""Define core operations for xarray objects.
-"""
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
+
+from . import nputils
 
 try:
     import dask.array as da
@@ -24,3 +26,70 @@ def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     # trim array
     result = da.ghost.trim_internal(out, depth)
     return result
+
+
+def rolling_window(a, axis, window, center, fill_value):
+    """ Dask's equivalence to np.utils.rolling_window """
+    orig_shape = a.shape
+    # inputs for ghost
+    if axis < 0:
+        axis = a.ndim + axis
+    depth = {d: 0 for d in range(a.ndim)}
+    depth[axis] = int(window / 2)
+    # For evenly sized window, we need to crop the first point of each block.
+    offset = 1 if window % 2 == 0 else 0
+
+    if depth[axis] > min(a.chunks[axis]):
+        raise ValueError(
+            "For window size %d, every chunk should be larger than %d, "
+            "but the smallest chunk size is %d. Rechunk your array\n"
+            "with a larger chunk size or a chunk size that\n"
+            "more evenly divides the shape of your array." %
+            (window, depth[axis], min(a.chunks[axis])))
+
+    # Although dask.ghost pads values to boundaries of the array,
+    # the size of the generated array is smaller than what we want
+    # if center == False.
+    if center:
+        start = int(window / 2)  # 10 -> 5,  9 -> 4
+        end = window - 1 - start
+    else:
+        start, end = window - 1, 0
+    pad_size = max(start, end) + offset - depth[axis]
+    drop_size = 0
+    # pad_size becomes more than 0 when the ghosted array is smaller than
+    # needed. In this case, we need to enlarge the original array by padding
+    # before ghosting.
+    if pad_size > 0:
+        if pad_size < depth[axis]:
+            # Ghosting requires each chunk larger than depth. If pad_size is
+            # smaller than the depth, we enlarge this and truncate it later.
+            drop_size = depth[axis] - pad_size
+            pad_size = depth[axis]
+        shape = list(a.shape)
+        shape[axis] = pad_size
+        chunks = list(a.chunks)
+        chunks[axis] = (pad_size, )
+        fill_array = da.full(shape, fill_value, dtype=a.dtype, chunks=chunks)
+        a = da.concatenate([fill_array, a], axis=axis)
+
+    boundary = {d: fill_value for d in range(a.ndim)}
+
+    # create ghosted arrays
+    ag = da.ghost.ghost(a, depth=depth, boundary=boundary)
+
+    # apply rolling func
+    def func(x, window, axis=-1):
+        x = np.asarray(x)
+        rolling = nputils._rolling_window(x, window, axis)
+        return rolling[(slice(None), ) * axis + (slice(offset, None), )]
+
+    chunks = list(a.chunks)
+    chunks.append(window)
+    out = ag.map_blocks(func, dtype=a.dtype, new_axis=a.ndim, chunks=chunks,
+                        window=window, axis=axis)
+
+    # crop boundary.
+    index = (slice(None),) * axis + (slice(drop_size,
+                                           drop_size + orig_shape[axis]), )
+    return out[index]

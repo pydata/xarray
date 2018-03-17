@@ -1,16 +1,12 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import warnings
 from collections import defaultdict
 
 import numpy as np
-
 import pandas as pd
 
-from .coding import times
-from .coding import variables
+from .coding import times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
 from .core.pycompat import OrderedDict, basestring, iteritems
@@ -494,7 +490,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         del attributes['dtype']
         data = BoolTypeArray(data)
 
-    return Variable(dimensions, indexing.LazilyIndexedArray(data),
+    return Variable(dimensions, indexing.LazilyOuterIndexedArray(data),
                     attributes, encoding=encoding)
 
 

@@ -1,24 +1,27 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
+import contextlib
 import logging
+import multiprocessing
+import threading
 import time
 import traceback
-import contextlib
-from collections import Mapping, OrderedDict
 import warnings
+from collections import Mapping, OrderedDict
+
+import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
+from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
-from ..core.pycompat import iteritems, dask_array_type
 
+# Import default lock
 try:
-    from dask.utils import SerializableLock as Lock
+    from dask.utils import SerializableLock
+    HDF5_LOCK = SerializableLock()
 except ImportError:
-    from threading import Lock
-
+    HDF5_LOCK = threading.Lock()
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -27,8 +30,54 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = '__values__'
 
 
-# dask.utils.SerializableLock if available, otherwise just a threading.Lock
-GLOBAL_LOCK = Lock()
+def get_scheduler(get=None, collection=None):
+    """ Determine the dask scheduler that is being used.
+
+    None is returned if not dask scheduler is active.
+
+    See also
+    --------
+    dask.utils.effective_get
+    """
+    try:
+        from dask.utils import effective_get
+        actual_get = effective_get(get, collection)
+        try:
+            from dask.distributed import Client
+            if isinstance(actual_get.__self__, Client):
+                return 'distributed'
+        except (ImportError, AttributeError):
+            try:
+                import dask.multiprocessing
+                if actual_get == dask.multiprocessing.get:
+                    return 'multiprocessing'
+                else:
+                    return 'threaded'
+            except ImportError:
+                return 'threaded'
+    except ImportError:
+        return None
+
+
+def get_scheduler_lock(scheduler, path_or_file=None):
+    """ Get the appropriate lock for a certain situation based onthe dask
+       scheduler used.
+
+    See Also
+    --------
+    dask.utils.get_scheduler_lock
+    """
+
+    if scheduler == 'distributed':
+        from dask.distributed import Lock
+        return Lock(path_or_file)
+    elif scheduler == 'multiprocessing':
+        return multiprocessing.Lock()
+    elif scheduler == 'threaded':
+        from dask.utils import SerializableLock
+        return SerializableLock()
+    else:
+        return threading.Lock()
 
 
 def _encode_variable_name(name):
@@ -77,6 +126,39 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
             time.sleep(1e-3 * next_delay)
 
 
+class CombinedLock(object):
+    """A combination of multiple locks.
+
+    Like a locked door, a CombinedLock is locked if any of its constituent
+    locks are locked.
+    """
+
+    def __init__(self, locks):
+        self.locks = tuple(set(locks))  # remove duplicates
+
+    def acquire(self, *args):
+        return all(lock.acquire(*args) for lock in self.locks)
+
+    def release(self, *args):
+        for lock in self.locks:
+            lock.release(*args)
+
+    def __enter__(self):
+        for lock in self.locks:
+            lock.__enter__()
+
+    def __exit__(self, *args):
+        for lock in self.locks:
+            lock.__exit__(*args)
+
+    @property
+    def locked(self):
+        return any(lock.locked for lock in self.locks)
+
+    def __repr__(self):
+        return "CombinedLock(%r)" % list(self.locks)
+
+
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def __array__(self, dtype=None):
@@ -85,7 +167,9 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 
 class AbstractDataStore(Mapping):
-    _autoclose = False
+    _autoclose = None
+    _ds = None
+    _isopen = False
 
     def __iter__(self):
         return iter(self.variables)
@@ -168,7 +252,7 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self, lock=GLOBAL_LOCK):
+    def __init__(self, lock=HDF5_LOCK):
         self.sources = []
         self.targets = []
         self.lock = lock
@@ -178,11 +262,7 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            try:
-                target[...] = source
-            except TypeError:
-                # workaround for GH: scipy/scipy#6880
-                target[:] = source
+            target[...] = source
 
     def sync(self):
         if self.sources:
@@ -193,9 +273,9 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None):
+    def __init__(self, writer=None, lock=HDF5_LOCK):
         if writer is None:
-            writer = ArrayWriter()
+            writer = ArrayWriter(lock=lock)
         self.writer = writer
 
     def encode(self, variables, attributes):
@@ -239,6 +319,9 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError
 
     def sync(self):
+        if self._isopen and self._autoclose:
+            # datastore will be reopened during write
+            self.close()
         self.writer.sync()
 
     def store_dataset(self, dataset):
@@ -373,7 +456,8 @@ class DataStorePickleMixin(object):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['ds']
+        del state['_ds']
+        del state['_isopen']
         if self._mode == 'w':
             # file has already been created, don't override when restoring
             state['_mode'] = 'a'
@@ -381,19 +465,32 @@ class DataStorePickleMixin(object):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.ds = self._opener(mode=self._mode)
+        self._ds = None
+        self._isopen = False
+
+    @property
+    def ds(self):
+        if self._ds is not None and self._isopen:
+            return self._ds
+        ds = self._opener(mode=self._mode)
+        self._isopen = True
+        return ds
 
     @contextlib.contextmanager
-    def ensure_open(self, autoclose):
+    def ensure_open(self, autoclose=None):
         """
         Helper function to make sure datasets are closed and opened
         at appropriate times to avoid too many open file errors.
 
         Use requires `autoclose=True` argument to `open_mfdataset`.
         """
-        if self._autoclose and not self._isopen:
+
+        if autoclose is None:
+            autoclose = self._autoclose
+
+        if not self._isopen:
             try:
-                self.ds = self._opener()
+                self._ds = self._opener()
                 self._isopen = True
                 yield
             finally:

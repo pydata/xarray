@@ -1,43 +1,37 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
+import sys
+import warnings
 from collections import Mapping, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
-import warnings
-
-import sys
 
 import numpy as np
 import pandas as pd
 
-from . import ops
-from . import utils
-from . import groupby
-from . import resample
-from . import rolling
-from . import indexing
-from . import alignment
-from . import formatting
-from . import duck_array_ops
+import xarray as xr
+
+from . import (
+    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
+    rolling, utils)
 from .. import conventions
 from .alignment import align
-from .coordinates import (DatasetCoordinates, LevelCoordinatesSource, Indexes,
-                          assert_coordinate_consistent, remap_label_indexers)
-from .common import ImplementsDatasetReduce, BaseDataObject
+from .common import DataWithCoords, ImplementsDatasetReduce
+from .coordinates import (
+    DatasetCoordinates, Indexes, LevelCoordinatesSource,
+    assert_coordinate_consistent, remap_label_indexers)
 from .dtypes import is_datetime_like
-from .merge import (dataset_update_method, dataset_merge_method,
-                    merge_data_and_coords, merge_variables)
-from .utils import (Frozen, SortedKeysDict, maybe_wrap_array, hashable,
-                    decode_numpy_dict_values, ensure_us_time_resolution)
-from .variable import (Variable, as_variable, IndexVariable,
-                       broadcast_variables)
-from .pycompat import (iteritems, basestring, OrderedDict,
-                       integer_types, dask_array_type, range)
+from .merge import (
+    dataset_merge_method, dataset_update_method, merge_data_and_coords,
+    merge_variables)
 from .options import OPTIONS
-
-import xarray as xr
+from .pycompat import (
+    OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
+from .utils import (
+    Frozen, SortedKeysDict, decode_numpy_dict_values,
+    ensure_us_time_resolution, hashable, maybe_wrap_array)
+from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -304,7 +298,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
+class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
               formatting.ReprMixin):
     """A multi-dimensional, in memory, array database.
 
@@ -405,8 +399,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def variables(self):
-        """Frozen dictionary of xarray.Variable objects constituting this
-        dataset's data
+        """Low level interface to Dataset contents as dict of Variable objects.
+
+        This ordered dictionary is frozen to prevent mutation that could
+        violate Dataset invariants. It contains all variable objects
+        constituting the Dataset, including both data variables and
+        coordinates.
         """
         return Frozen(self._variables)
 
@@ -1516,7 +1514,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             # Note: remove helper function when once when numpy
             # supports vindex https://github.com/numpy/numpy/pull/6075
             if hasattr(variable.data, 'vindex'):
-                # Special case for dask backed arrays to use vectorised list indexing
+                # Special case for dask backed arrays to use vectorised list
+                # indexing
                 sel = variable.data.vindex[slices]
             else:
                 # Otherwise assume backend is numpy array with 'fancy' indexing
@@ -1579,7 +1578,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         variables = OrderedDict()
 
         for name, var in reordered.variables.items():
-            if name in indexers_dict or any(d in indexer_dims for d in var.dims):
+            if name in indexers_dict or any(
+                    d in indexer_dims for d in var.dims):
                 # slice if var is an indexer or depends on an indexed dim
                 slc = [indexers_dict[k]
                        if k in indexers_dict
@@ -2366,7 +2366,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += array.count(dims)
+                count += np.asarray(array.count(dims))
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
@@ -2779,8 +2779,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         The dimensions, coordinates and data variables in this dataset form
         the columns of the DataFrame.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         dim_order : list, optional
             Hierarchical dimension order for the resulting dataframe. All
             arrays are transposed to this order and then written out as flat

@@ -1,20 +1,19 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
+import warnings
+from distutils.version import LooseVersion
 from io import BytesIO
 
 import numpy as np
-import warnings
 
 from .. import Variable
-from ..core.pycompat import iteritems, OrderedDict, basestring
-from ..core.utils import (Frozen, FrozenOrderedDict)
 from ..core.indexing import NumpyIndexingAdapter
-
-from .common import WritableCFDataStore, DataStorePickleMixin, BackendArray
-from .netcdf3 import (is_valid_nc3_name, encode_nc3_attr_value,
-                      encode_nc3_variable)
+from ..core.pycompat import OrderedDict, basestring, iteritems
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import BackendArray, DataStorePickleMixin, WritableCFDataStore
+from .netcdf3 import (
+    encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
 
 def _decode_string(s):
@@ -54,6 +53,18 @@ class ScipyArrayWrapper(BackendArray):
             # after closing associated files.
             copy = self.datastore.ds.use_mmap
             return np.array(data, dtype=self.dtype, copy=copy)
+
+    def __setitem__(self, key, value):
+        with self.datastore.ensure_open(autoclose=True):
+            data = self.datastore.ds.variables[self.variable_name]
+            try:
+                data[key] = value
+            except TypeError:
+                if key is Ellipsis:
+                    # workaround for GH: scipy/scipy#6880
+                    data[:] = value
+                else:
+                    raise
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
@@ -105,11 +116,12 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, autoclose=False):
+                 writer=None, mmap=None, autoclose=False, lock=None):
         import scipy
         import scipy.io
 
-        if mode != 'r' and scipy.__version__ < '0.13':  # pragma: no cover
+        if (mode != 'r' and
+                scipy.__version__ < LooseVersion('0.13')):  # pragma: no cover
             warnings.warn('scipy %s detected; '
                           'the minimal recommended version is 0.13. '
                           'Older version of this library do not reliably '
@@ -131,13 +143,13 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         opener = functools.partial(_open_scipy_netcdf,
                                    filename=filename_or_obj,
                                    mode=mode, mmap=mmap, version=version)
-        self.ds = opener()
+        self._ds = opener()
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
         self._mode = mode
 
-        super(ScipyDataStore, self).__init__(writer)
+        super(ScipyDataStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
@@ -202,7 +214,10 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(variable.attrs):
             self._validate_attr_key(k)
             setattr(scipy_var, k, v)
-        return scipy_var, data
+
+        target = ScipyArrayWrapper(name, self)
+
+        return target, data
 
     def sync(self):
         with self.ensure_open(autoclose=True):
@@ -223,4 +238,5 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
             # seek to the start of the file so scipy can read it
             filename.seek(0)
         super(ScipyDataStore, self).__setstate__(state)
-        self._isopen = True
+        self._ds = None
+        self._isopen = False

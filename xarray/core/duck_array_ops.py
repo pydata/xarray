@@ -3,22 +3,19 @@
 Currently, this means Dask or NumPy arrays. None of these functions should
 accept or return xarray objects.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-from functools import partial
 import contextlib
 import inspect
 import warnings
+from functools import partial
 
 import numpy as np
 import pandas as pd
 
-from . import npcompat
-from . import dtypes
-from .pycompat import dask_array_type
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
+from .pycompat import dask_array_type
 
 try:
     import bottleneck as bn
@@ -281,6 +278,10 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
+        # dask requires dtype argument for object dtype
+        if (values.dtype == 'object' and name in ['sum', ]):
+            kwargs['dtype'] = values.dtype if dtype is None else dtype
+
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
@@ -372,3 +373,16 @@ def last(values, axis, skipna=None):
         _fail_on_dask_array_input_skipna(values)
         return nanlast(values, axis)
     return take(values, -1, axis=axis)
+
+
+def rolling_window(array, axis, window, center, fill_value):
+    """
+    Make an ndarray with a rolling window of axis-th dimension.
+    The rolling dimension will be placed at the last dimension.
+    """
+    if isinstance(array, dask_array_type):
+        return dask_array_ops.rolling_window(
+            array, axis, window, center, fill_value)
+    else:  # np.ndarray
+        return nputils.rolling_window(
+            array, axis, window, center, fill_value)

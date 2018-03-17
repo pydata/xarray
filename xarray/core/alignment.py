@@ -1,17 +1,16 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
-from collections import defaultdict
 import warnings
+from collections import defaultdict
 
 import numpy as np
 
 from . import utils
 from .indexing import get_indexer_nd
-from .pycompat import iteritems, OrderedDict, suppress
-from .utils import is_full_slice, is_dict_like
+from .pycompat import OrderedDict, iteritems, suppress
+from .utils import is_dict_like, is_full_slice
 from .variable import IndexVariable
 
 
