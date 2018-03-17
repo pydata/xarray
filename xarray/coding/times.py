@@ -60,6 +60,27 @@ def _import_netcdftime():
     return nctime
 
 
+def _import_netcdftime_datetime():
+    """Helper function to handle importing netcdftime.datetime across the
+    transition between the version of netcdftime packaged with netCDF4 and the
+    standalone version"""
+    try:
+        # Will raise an ImportError if not using standalone netcdftime
+        from netcdftime import num2date  # noqa: F401
+
+        # Generic netcdftime datetime is exposed in the public API in the
+        # standalone version of netcdftime
+        from netcdftime import datetime
+    except ImportError:
+        # Need to use private API to import generic netcdftime datetime in
+        # older versions. See https://github.com/Unidata/netcdftime/issues/8
+        try:
+            from netcdftime._netcdftime import datetime
+        except ImportError:
+            raise ImportError("Failed to import netcdftime")
+    return datetime
+
+
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith('s'):

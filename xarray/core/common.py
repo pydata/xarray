@@ -829,12 +829,14 @@ def is_np_datetime_like(dtype):
 
 def contains_netcdftime_datetimes(var):
     """Check if a variable contains netcdftime datetime objects"""
+    from ..coding.times import _import_netcdftime_datetime
+    
     try:
-        from netcdftime._netcdftime import datetime
+        netcdftime_datetime = _import_netcdftime_datetime()
     except ImportError:
         return False
     else:
-        return isinstance(var.data.flatten()[0], datetime)
+        return isinstance(var.data.flatten()[0], netcdftime_datetime)
 
 
 def _contains_datetime_like_objects(var):
