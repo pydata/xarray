@@ -134,7 +134,8 @@ def _protect_dataset_variables_inplace(dataset, cache):
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, cache=None, drop_variables=None):
+                 chunks=None, lock=None, cache=None, drop_variables=None,
+                 backend_kwargs=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -296,8 +297,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store = backends.NioDataStore(filename_or_obj,
                                           autoclose=autoclose)
         elif engine == 'pseudonetcdf':
-            store = backends.PncDataStore(filename_or_obj,
-                                          autoclose=autoclose)
+            store = backends.PncDataStore.open(filename_or_obj,
+                                               autoclose=autoclose,
+                                               **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)

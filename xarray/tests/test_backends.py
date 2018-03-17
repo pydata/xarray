@@ -2203,7 +2203,8 @@ class TestPnc(NetCDF3Only, TestCase):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, engine='pseudonetcdf', autoclose=self.autoclose,
+        with open_dataset(path, engine='pseudonetcdf',
+                          autoclose=self.autoclose,
                           **kwargs) as ds:
             yield ds
 

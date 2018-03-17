@@ -40,19 +40,27 @@ class PncArrayWrapper(BackendArray):
 class PncDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PseudoNetCDF
     """
-
-    def __init__(self, filename, mode='r', autoclose=False):
+    @classmethod
+    def open(cls, filename, format=None, writer=None,
+             autoclose=False, **format_kwds):
         from PseudoNetCDF import pncopen
-        try:
-            opener = functools.partial(pncopen, filename, mode=mode)
-            self.ds = opener()
-        except Exception:
-            opener = functools.partial(pncopen, filename)
-            self.ds = opener()
+        opener = functools.partial(pncopen, filename, **format_kwds)
+        ds = opener()
+        mode = format_kwds.get('mode', 'r')
+        return cls(ds, mode=mode, writer=writer, opener=opener,
+                   autoclose=autoclose)
+
+    def __init__(self, pnc_dataset, mode='r', writer=None, opener=None,
+                 autoclose=False):
+
+        if autoclose and opener is None:
+            raise ValueError('autoclose requires an opener')
+
+        self.ds = pnc_dataset
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
-        self._mode = mode
+        super(PncDataStore, self).__init__()
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
