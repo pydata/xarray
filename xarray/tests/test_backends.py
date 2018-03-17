@@ -32,7 +32,7 @@ from . import (
     assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy_or_netCDF4, requires_zarr, requires_pnc)
 from .test_dataset import create_test_data
 
 try:

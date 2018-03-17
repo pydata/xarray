@@ -27,14 +27,14 @@ class PncArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
 
-        with self.datastore.ensure_open(autoclose=True):
-            array = self.get_array()
-            if key == () and self.ndim == 0:
-                return array[...]
-            return array[key]
+        array = self.get_array()[key.tuple]  # index backend array
+        if len(np_inds.tuple) > 0:
+            # index the loaded np.ndarray
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
+        return array
 
 
 class PncDataStore(AbstractDataStore, DataStorePickleMixin):
@@ -56,14 +56,14 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
         if autoclose and opener is None:
             raise ValueError('autoclose requires an opener')
 
-        self.ds = pnc_dataset
+        self._ds = pnc_dataset
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
         super(PncDataStore, self).__init__()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyIndexedArray(PncArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))
         return Variable(var.dimensions, data, dict([(k, getattr(var, k))
                                                     for k in var.ncattrs()]))
 
