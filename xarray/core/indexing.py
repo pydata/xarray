@@ -48,11 +48,25 @@ def _expand_slice(slice_, size):
     return np.arange(*slice_.indices(size))
 
 
-def _try_get_item(x):
-    try:
-        return x.item()
-    except AttributeError:
-        return x
+def _sanitize_slice_element(x):
+    from .variable import Variable
+    from .dataarray import DataArray
+
+    if isinstance(x, (Variable, DataArray)):
+        x = x.values
+
+    if isinstance(x, np.ndarray):
+        if x.ndim != 0:
+            raise ValueError('cannot use non-scalar arrays in a slice for '
+                             'xarray indexing: {}'.format(x))
+        x = x[()]
+
+    if isinstance(x, np.timedelta64):
+        # pandas does not support indexing with np.timedelta64 yet:
+        # https://github.com/pandas-dev/pandas/issues/20393
+        x = pd.Timedelta(x)
+
+    return x
 
 
 def _asarray_tuplesafe(values):
@@ -119,9 +133,9 @@ def convert_label_indexer(index, label, index_name='', method=None,
             raise NotImplementedError(
                 'cannot use ``method`` argument if any indexers are '
                 'slice objects')
-        indexer = index.slice_indexer(_try_get_item(label.start),
-                                      _try_get_item(label.stop),
-                                      _try_get_item(label.step))
+        indexer = index.slice_indexer(_sanitize_slice_element(label.start),
+                                      _sanitize_slice_element(label.stop),
+                                      _sanitize_slice_element(label.step))
         if not isinstance(indexer, slice):
             # unlike pandas, in xarray we never want to silently convert a
             # slice indexer into an array indexer
