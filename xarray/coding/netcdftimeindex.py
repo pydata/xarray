@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -126,17 +126,18 @@ def assert_all_valid_date_type(data):
 
     valid_types = (DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
                    DatetimeGregorian, DatetimeProlepticGregorian,
-                   Datetime360Day)
+                   Datetime360Day, datetime)
 
     sample = data[0]
     date_type = type(sample)
     if not isinstance(sample, valid_types):
         raise TypeError(
             'NetCDFTimeIndex requires netcdftime._netcdftime.datetime '
-            'objects.  Got object of {}.'.format(date_type))
+            'or datetime.datetime objects. '
+            'Got object of {}.'.format(date_type))
     if not all(isinstance(value, date_type) for value in data):
         raise TypeError(
-            'NetCDFTimeIndex requires using netcdftime._netcdftime.datetime '
+            'NetCDFTimeIndex requires using datetime '
             'objects of all the same type.  Got\n{}.'.format(data))
 
 

@@ -8,6 +8,7 @@ import itertools
 import re
 import warnings
 from collections import Iterable, Mapping, MutableMapping, MutableSet
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -48,7 +49,8 @@ def _maybe_cast_to_netcdftimeindex(index):
             return index
         else:
             if len(index):
-                if isinstance(index[0], ncdatetime):
+                if (isinstance(index[0], ncdatetime) or
+                   isinstance(index[0], datetime)):
                     index = NetCDFTimeIndex(index)
             return index
 

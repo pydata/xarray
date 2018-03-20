@@ -9,7 +9,8 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import contains_netcdftime_datetimes
+from ..core.common import (contains_netcdftime_datetimes,
+                           contains_datetime_datetimes)
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.options import OPTIONS
@@ -244,15 +245,27 @@ def _infer_time_units_from_diff(unique_timedeltas):
     return 'seconds'
 
 
+def _infer_calendar_from_min_date(date):
+    """Given a single datetime, infer the calendar type"""
+    from netcdftime import DatetimeGregorian
+
+    gregorian_breakpoint = type(date)(1582, 10, 15)
+    if date >= gregorian_breakpoint and isinstance(date, datetime):
+        return 'standard'
+    elif date < gregorian_breakpoint and isinstance(date, datetime):
+        return 'gregorian'
+    elif date < gregorian_breakpoint and isinstance(date, DatetimeGregorian):
+        return 'standard'
+    else:
+        return date.calendar
+
+
 def infer_calendar_name(dates):
     """Given an array of datetimes, infer the CF calendar name"""
     if np.asarray(dates).dtype == 'datetime64[ns]':
         return 'proleptic_gregorian'
     else:
-        try:
-            return np.asarray(dates)[0].calendar
-        except IndexError:
-            return np.asarray(dates).item().calendar
+        return _infer_calendar_from_min_date(np.min(np.asarray(dates)))
 
 
 def infer_datetime_units(dates):
@@ -397,7 +410,8 @@ class CFDatetimeCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if (np.issubdtype(data.dtype, np.datetime64) or
-           contains_netcdftime_datetimes(variable)):
+           contains_netcdftime_datetimes(variable) or
+           contains_datetime_datetimes(variable)):
             (data, units, calendar) = encode_cf_datetime(
                 data,
                 encoding.pop('units', None),

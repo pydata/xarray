@@ -341,7 +341,7 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             self.assertEqual(actual['x'].encoding['_Encoding'], 'ascii')
 
-    def test_roundtrip_datetime_data(self):
+    def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
@@ -349,8 +349,8 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
-    def test_roundtrip_netcdftime_datetime_data(self):
-        from datetime import datetime
+    def test_roundtrip_netcdftime_datetime_data_pre_gregorian(self):
+        from netcdftime import DatetimeGregorian
         from .test_coding_times import _all_netcdftime_date_types
 
         date_types = _all_netcdftime_date_types()
@@ -358,22 +358,19 @@ class DatasetIOTestCases(object):
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
             kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
-            if times[0].calendar == 'gregorian':
-                # netcdftime.num2date decodes dates from the Gregorian calendar
-                # to datetime.datetime objects
-                expected_decoded_t = np.array(
-                    [datetime(1, 1, 1), datetime(1, 1, 2)])
-                expected_decoded_t0 = np.array([datetime(1, 1, 1)])
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
+            if date_type is DatetimeGregorian:
+                expected_calendar = 'standard'
             else:
-                expected_decoded_t = np.array(times)
-                expected_decoded_t0 = np.array([date_type(1, 1, 1)])
+                expected_calendar = times[0].calendar
             with self.roundtrip(expected, save_kwargs=kwds) as actual:
                 abs_diff = abs(actual.t.values - expected_decoded_t)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
                 self.assertEquals(actual.t.encoding['units'],
                                   'days since 0001-01-01 00:00:00.000000')
                 self.assertEquals(actual.t.encoding['calendar'],
-                                  times[0].calendar)
+                                  expected_calendar)
 
                 abs_diff = abs(actual.t0.values - expected_decoded_t0)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
@@ -381,7 +378,82 @@ class DatasetIOTestCases(object):
                 self.assertEquals(actual.t0.encoding['units'],
                                   'days since 0001-01-01')
                 self.assertEquals(actual.t.encoding['calendar'],
-                                  times[0].calendar)
+                                  expected_calendar)
+
+    def test_roundtrip_netcdftime_datetime_data_post_gregorian(self):
+        from .test_coding_times import _all_netcdftime_date_types
+
+        date_types = _all_netcdftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1582, 10, 15), date_type(1582, 10, 16)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            kwds = {'encoding': {'t0': {'units': 'days since 1582-10-15'}}}
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1582, 10, 15)])
+            expected_calendar = times[0].calendar
+            with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                abs_diff = abs(actual.t.values - expected_decoded_t)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+                self.assertEquals(actual.t.encoding['units'],
+                                  'days since 1582-10-15 00:00:00.000000')
+                self.assertEquals(actual.t.encoding['calendar'],
+                                  expected_calendar)
+
+                abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+                self.assertEquals(actual.t0.encoding['units'],
+                                  'days since 1582-10-15')
+                self.assertEquals(actual.t.encoding['calendar'],
+                                  expected_calendar)
+
+    def test_roundtrip_datetime_datetime_data_pre_gregorian(self):
+        from datetime import datetime
+
+        times = [datetime(1, 1, 1), datetime(1, 1, 2)]
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
+        expected_decoded_t = np.array(times)
+        expected_decoded_t0 = np.array([datetime(1, 1, 1)])
+        with self.roundtrip(expected, save_kwargs=kwds) as actual:
+            abs_diff = abs(actual.t.values - expected_decoded_t)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+            self.assertEquals(actual.t.encoding['units'],
+                              'days since 0001-01-01 00:00:00.000000')
+            self.assertEquals(actual.t.encoding['calendar'],
+                              'gregorian')
+
+            abs_diff = abs(actual.t0.values - expected_decoded_t0)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+            self.assertEquals(actual.t0.encoding['units'],
+                              'days since 0001-01-01')
+            self.assertEquals(actual.t.encoding['calendar'],
+                              'gregorian')
+
+    def test_roundtrip_datetime_datetime_data_post_gregorian(self):
+        from datetime import datetime
+
+        times = [datetime(1582, 10, 15), datetime(1582, 10, 16)]
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        kwds = {'encoding': {'t0': {'units': 'days since 1582-10-15'}}}
+        expected_decoded_t = np.array(times)
+        expected_decoded_t0 = np.array([datetime(1582, 10, 15)])
+        with self.roundtrip(expected, save_kwargs=kwds) as actual:
+            abs_diff = abs(actual.t.values - expected_decoded_t)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+            self.assertEquals(actual.t.encoding['units'],
+                              'days since 1582-10-15 00:00:00.000000')
+            self.assertEquals(actual.t.encoding['calendar'],
+                              'standard')
+
+            abs_diff = abs(actual.t0.values - expected_decoded_t0)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+            self.assertEquals(actual.t0.encoding['units'],
+                              'days since 1582-10-15')
+            self.assertEquals(actual.t.encoding['calendar'],
+                              'standard')
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -1902,7 +1974,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
     def test_roundtrip_coordinates_with_space(self):
         pass
 
-    def test_roundtrip_datetime_data(self):
+    def test_roundtrip_numpy_datetime_data(self):
         # Override method in DatasetIOTestCases - remove not applicable
         # save_kwds
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
@@ -1910,7 +1982,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    def test_roundtrip_netcdftime_datetime_data(self):
+    def test_roundtrip_netcdftime_datetime_data_pre_gregorian(self):
         # Override method in DatasetIOTestCases - remove not applicable
         # save_kwds
         from .test_coding_times import _all_netcdftime_date_types
@@ -1919,15 +1991,65 @@ class DaskTest(TestCase, DatasetIOTestCases):
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
 
             with self.roundtrip(expected) as actual:
-                expected_t = np.array(times)
-                abs_diff = abs(actual.t.values - expected_t)
+                abs_diff = abs(actual.t.values - expected_decoded_t)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
-                expected_t0 = np.array([date_type(1, 1, 1)])
-                abs_diff = abs(actual.t0.values - expected_t0)
+                abs_diff = abs(actual.t0.values - expected_decoded_t0)
                 self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+    def test_roundtrip_netcdftime_datetime_data_post_gregorian(self):
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
+        from .test_coding_times import _all_netcdftime_date_types
+
+        date_types = _all_netcdftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1582, 10, 15), date_type(1582, 10, 16)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1582, 10, 15)])
+            with self.roundtrip(expected) as actual:
+                abs_diff = abs(actual.t.values - expected_decoded_t)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+                abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+    def test_roundtrip_datetime_datetime_data_pre_gregorian(self):
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
+        from datetime import datetime
+
+        times = [datetime(1, 1, 1), datetime(1, 1, 2)]
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        expected_decoded_t = np.array(times)
+        expected_decoded_t0 = np.array([datetime(1, 1, 1)])
+        with self.roundtrip(expected) as actual:
+            abs_diff = abs(actual.t.values - expected_decoded_t)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+            abs_diff = abs(actual.t0.values - expected_decoded_t0)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+    def test_roundtrip_datetime_datetime_data_post_gregorian(self):
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
+        from datetime import datetime
+
+        times = [datetime(1582, 10, 15), datetime(1582, 10, 16)]
+        expected = Dataset({'t': ('t', times), 't0': times[0]})
+        expected_decoded_t = np.array(times)
+        expected_decoded_t0 = np.array([datetime(1582, 10, 15)])
+        with self.roundtrip(expected) as actual:
+            abs_diff = abs(actual.t.values - expected_decoded_t)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+            abs_diff = abs(actual.t0.values - expected_decoded_t0)
+            self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
     def test_write_store(self):
         # Override method in DatasetIOTestCases - not applicable to dask
