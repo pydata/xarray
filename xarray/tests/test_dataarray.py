@@ -779,6 +779,22 @@ class TestDataArray(TestCase):
         assert 'new_dim' in actual.coords
         assert_equal(actual['new_dim'].drop('x'), ind['new_dim'])
 
+    def test_sel_invalid_slice(self):
+        array = DataArray(np.arange(10), [('x', np.arange(10))])
+        with raises_regex(ValueError, 'cannot use non-scalar arrays'):
+            array.sel(x=slice(array.x))
+
+    def test_sel_dataarray_datetime(self):
+        # regression test for GH1240
+        times = pd.date_range('2000-01-01', freq='D', periods=365)
+        array = DataArray(np.arange(365), [('time', times)])
+        result = array.sel(time=slice(array.time[0], array.time[-1]))
+        assert_equal(result, array)
+
+        array = DataArray(np.arange(365), [('delta', times - times[0])])
+        result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
+        assert_equal(result, array)
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
         assert_identical(array[0], array.sel(x=0))

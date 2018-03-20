@@ -46,9 +46,16 @@ Enhancements
 - Allow for serialization of ``netcdftime.datetime`` objects (:issue:`789`,
   :issue:`1084`, :issue:`1252`). By `Spencer Clark
          <https://github.com/spencerkclark>`_.
+ - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+ object (:issue:`1993`)
+ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fixed labeled indexing with slice bounds given by xarray objects with
+  datetime64 or timedelta64 dtypes (:issue:`1240`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.2:
 
