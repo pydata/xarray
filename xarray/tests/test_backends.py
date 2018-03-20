@@ -342,6 +342,7 @@ class DatasetIOTestCases(object):
             self.assertEqual(actual['x'].encoding['_Encoding'], 'ascii')
 
     def test_roundtrip_datetime_data(self):
+        import pdb; pdb.set_trace()
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
@@ -2199,7 +2200,7 @@ class TestPyNioAutocloseTrue(TestPyNio):
 
 @requires_scipy
 @requires_pnc
-class TestPnc(NetCDF3Only, TestCase):
+class TestPnc(CFEncodedDataTest, TestCase):
     def test_write_store(self):
         # pnc is read-only for now
         pass
