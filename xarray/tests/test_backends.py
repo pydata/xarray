@@ -2199,7 +2199,7 @@ class TestPyNioAutocloseTrue(TestPyNio):
 
 @requires_scipy
 @requires_pnc
-class TestPnc(CFEncodedDataTest, TestCase):
+class TestPnc(NetCDF3Only, TestCase):
     def test_write_store(self):
         # pnc is read-only for now
         pass
