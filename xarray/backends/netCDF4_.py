@@ -265,7 +265,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                 LooseVersion(nc4.__version__) < "1.3.1"):
             warnings.warn(
                 '\nA segmentation fault may occur when the\n'
-                'file path has exactly 88 characters as it does.\n'
+                'file path has exactly 88 characters as it does\n'
                 'in this case. The issue is known to occur with\n'
                 'version 1.2.4 of netCDF4 and can be addressed by\n'
                 'upgrading netCDF4 to at least version 1.3.1.\n'
