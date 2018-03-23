@@ -170,11 +170,11 @@ We can also manually iterate through ``Rolling`` objects:
    for label, arr_window in r:
       # arr_window is a view of x
 
-Finally, the rolling object has ``construct`` method, which gives a
-view of the original ``DataArray`` with the windowed dimension attached to
+Finally, the rolling object has a ``construct`` method which returns a
+view of the original ``DataArray`` with the windowed dimension in
 the last position.
-You can use this for more advanced rolling operations, such as strided rolling,
-windowed rolling, convolution, short-time FFT, etc.
+You can use this for more advanced rolling operations such as strided rolling,
+windowed rolling, convolution, short-time FFT etc.
 
 .. ipython:: python
 
@@ -185,6 +185,12 @@ windowed rolling, convolution, short-time FFT, etc.
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
+You can also use ``construct`` to compute a weighted rolling mean:
+
+.. ipython:: python
+
+   weight = xr.DataArray([0.25, 0.5, 0.25], dims=['window'])
+   arr.rolling(y=3).construct('window').dot(weight)
 
 .. note::
   numpy's Nan-aggregation functions such as ``nansum`` copy the original array.
