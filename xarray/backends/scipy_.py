@@ -223,7 +223,6 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             super(ScipyDataStore, self).sync(compute=compute)
             self.ds.flush()
-        return
 
     def close(self):
         self.ds.close()

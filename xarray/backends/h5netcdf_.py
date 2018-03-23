@@ -187,7 +187,6 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=True):
             super(H5NetCDFStore, self).sync(compute=compute)
             self.ds.sync()
-        return
 
     def close(self):
         if self._isopen:
