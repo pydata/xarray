@@ -146,7 +146,12 @@ def rolling_window(a, axis, window, center, fill_value):
         pads[axis] = (start, end)
     else:
         pads[axis] = (window - 1, 0)
-    a = np.pad(a, pads, mode='constant', constant_values=fill_value)
+
+    if fill_value == 'periodic':
+        a = np.pad(a, pads, mode='wrap')
+    else:
+        a = np.pad(a, pads, mode='constant', constant_values=fill_value)
+
     return _rolling_window(a, window, axis)
 
 
