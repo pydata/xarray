@@ -1704,8 +1704,8 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
     if readengine == 'h5netcdf' and autoclose:
         pytest.skip('h5netcdf does not support autoclose yet')
 
-    if not autoclose and nfiles > 10 and ON_WINDOWS:
-        pytest.skip('too many files for windows')
+    if ON_WINDOWS:
+        pytest.skip('Skipping on Windows')
 
     randdata = np.random.randn(nfiles)
     original = Dataset({'foo': ('x', randdata)})
