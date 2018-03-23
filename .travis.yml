@@ -47,6 +47,8 @@ matrix:
     env: CONDA_ENV=py36-zarr-dev
   - python: 3.5
     env: CONDA_ENV=docs
+  - python: 3.6
+    env: CONDA_ENV=py36-hypothesis
   allow_failures:
   - python: 3.6
     env:
@@ -104,6 +106,8 @@ script:
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
       sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
+    elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
+      pytest properties ;
     else
       py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
     fi
