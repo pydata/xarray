@@ -185,7 +185,7 @@ windowed rolling, convolution, short-time FFT etc.
 
 Because the ``DataArray`` given by ``r.construct('window_dim')`` is a view
 of the original array, it is memory efficient.
-One can also use ``construct`` to compute a weighted mean:
+You can also use ``construct`` to compute a weighted mean:
 
 .. ipython:: python
 
