@@ -144,6 +144,21 @@ def _get_lock(engine, scheduler, format, path_or_file):
     return lock
 
 
+def _finalize_store(store, write):
+    """ helper function to facilitate delayed writing/syncing/closing of stores
+    """
+    del write  # unused
+    store.sync()
+    store.close()
+
+
+def _finalize_stores(stores, write):
+    del write
+    for store in stores:
+        store.sync()
+        store.close()
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
@@ -666,8 +681,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         return store
 
     if not compute:
-        return store.delayed
-
+        import dask
+        return dask.delayed(_finalize_store)(store, store.delayed)
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None, compute=True):
@@ -754,10 +769,13 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
     try:
         delayed = writer.sync(compute=compute)
-        for store in stores:
-            store.sync(compute=compute)
         if not compute:
-            return delayed
+            import dask
+            # or should this return an iterable of delayed objects
+            # (one for each store)
+            return dask.delayed(_finalize_stores)(stores, delayed)
+        for store in stores:
+            store.sync(compute)
     finally:
         for store in stores:
             store.close()
@@ -786,6 +804,8 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
     dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+
     if not compute:
-        return store.delayed
+        import dask
+        return dask.delayed(_finalize_store)(store, store.delayed)
     return store
