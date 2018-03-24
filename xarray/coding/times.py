@@ -166,8 +166,9 @@ def decode_cf_datetime(num_dates, units, calendar=None):
 
         # Cast input dates to integers of nanoseconds because `pd.to_datetime`
         # works much faster when dealing with integers
-        flat_num_dates_ns_int = (flat_num_dates.astype(np.float) *
-                                 _NS_PER_TIME_DELTA[delta]).astype(np.int64)
+        # make _NS_PER_TIME_DELTA an array to ensure type upcasting
+        flat_num_dates_ns_int = (flat_num_dates *
+                                 [_NS_PER_TIME_DELTA[delta]]).astype(np.int64)
 
         dates = (pd.to_timedelta(flat_num_dates_ns_int, 'ns') +
                  ref_date).values
