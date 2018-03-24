@@ -2267,10 +2267,6 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
         pass
 
 
-class TestPseudoNetCDFAutocloseTrue(TestPseudoNetCDF):
-    autoclose = True
-
-
 @requires_rasterio
 @contextlib.contextmanager
 def create_tmp_geotiff(nx=4, ny=3, nz=3,
