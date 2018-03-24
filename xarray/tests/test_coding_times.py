@@ -112,6 +112,13 @@ class TestDatetime(TestCase):
         actual = coding.times.decode_cf_datetime(np.arange(100), units)
         assert_array_equal(actual, expected)
 
+    def test_decode_cf_datetime_int32(self):
+        # regression test for gh#2002
+        units = 'seconds since 1981-01-01'
+        expected = '2006-01-01T12:00:00.000000000'
+        actual = coding.times.decode_cf_datetime(np.int32(788961600), units)
+        assert_array_equal(str(actual), expected)
+
     @requires_netcdftime
     def test_decode_cf_datetime_non_iso_strings(self):
         # datetime strings that are _almost_ ISO compliant but not quite,
