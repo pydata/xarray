@@ -49,6 +49,7 @@ class TestDatetime(TestCase):
             ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
             (0, 'milliseconds since 2000-01-01T00:00:00'),
             (0, 'microseconds since 2000-01-01T00:00:00'),
+            (np.int32(788961600), 'seconds since 1981-01-01'),  # GH2002
         ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(
@@ -111,13 +112,6 @@ class TestDatetime(TestCase):
         units = 'hours since 1-1-1970'
         actual = coding.times.decode_cf_datetime(np.arange(100), units)
         assert_array_equal(actual, expected)
-
-    def test_decode_cf_datetime_int32(self):
-        # regression test for gh#2002
-        units = 'seconds since 1981-01-01'
-        expected = np.datetime64('2006-01-01T12')
-        actual = coding.times.decode_cf_datetime(np.int32(788961600), units)
-        assert actual == expected
 
     @requires_netcdftime
     def test_decode_cf_datetime_non_iso_strings(self):
