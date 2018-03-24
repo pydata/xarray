@@ -2206,7 +2206,8 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, engine='pseudonetcdf', autoclose=self.autoclose,
+        with open_dataset(path, engine='pseudonetcdf',
+                          autoclose=self.autoclose,
                           **kwargs) as ds:
             yield ds
 
@@ -2225,10 +2226,6 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             assert_identical(actual, expected)
 
     def test_pickle(self):
-        # pnc does not support pickling
-        pass
-
-    def test_pickle_dataarray(self):
         # pnc does not support pickling
         pass
 
@@ -2260,7 +2257,6 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             # working on the right approach
             # self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
-
 
     def test_unsigned_roundtrip_mask_and_scale(self):
         # pnc does not support object types
