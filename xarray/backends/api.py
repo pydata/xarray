@@ -148,7 +148,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs=None):
+                 backend_kwargs={}):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
