@@ -2197,7 +2197,7 @@ class TestPyNioAutocloseTrue(TestPyNio):
     autoclose = True
 
 
-@requires_scipy
+@requires_netCDF4
 @requires_pnc
 class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
     def test_write_store(self):
@@ -2225,26 +2225,30 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             del on_disk  # trigger garbage collection
             assert_identical(actual, expected)
 
+    @pytest.mark.skip(reason='cannot pickle file objects') 
     def test_pickle(self):
-        # pnc does not support pickling
         pass
 
+    @pytest.mark.skip(reason='cannot pickle file objects') 
     def test_pickle_dataarray(self):
-        # pnc does not support pickling
         pass
 
+    @pytest.mark.skip(reason='does not support boolean dtype') 
     def test_roundtrip_boolean_dtype(self):
         # pnc does not support boolean dtype
         pass
 
+    @pytest.mark.skip(reason='does not support auto masking and scaling') 
     def test_roundtrip_mask_and_scale(self):
         # pnc does not support auto masking and scaling
         pass
 
+    @pytest.mark.skip(reason='does not support object types') 
     def test_roundtrip_object_dtype(self):
         # pnc does not support object types
         pass
 
+    @pytest.mark.skip(reason='encoding types are not consistent with xarray')
     def test_roundtrip_string_encoded_characters(self):
         # pnc string treatment does not meet xarray expectations
         # working on the right approach
@@ -2258,6 +2262,7 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             # self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
+    @pytest.mark.skip(reason='does not support auto masking and scaling') 
     def test_unsigned_roundtrip_mask_and_scale(self):
         # pnc does not support object types
         pass
