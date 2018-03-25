@@ -30,6 +30,7 @@ class TestDatetime(TestCase):
             (np.arange(10).astype('float32'), 'days since 2000-01-01'),
             (np.arange(10).reshape(2, 5), 'days since 2000-01-01'),
             (12300 + np.arange(5), 'hours since 1680-01-01 00:00:00'),
+            ([978307200, 978393600], 'seconds since 1970-01-01'),
             # here we add a couple minor formatting errors to test
             # the robustness of the parsing algorithm.
             (12300 + np.arange(5), 'hour since 1680-01-01  00:00:00'),
