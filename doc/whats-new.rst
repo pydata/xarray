@@ -40,6 +40,10 @@ Enhancements
  - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
  object (:issue:`1993`)
  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+ - Handle variables with different values for ``missing_value`` and
+ ``_FillValue`` by masking values for both attributes; previously this
+ resulted in a ``ValueError``. (:issue:`2016`)
+ By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
