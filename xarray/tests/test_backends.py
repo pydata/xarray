@@ -2225,25 +2225,25 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             del on_disk  # trigger garbage collection
             assert_identical(actual, expected)
 
-    @pytest.mark.skip(reason='cannot pickle file objects') 
+    @pytest.mark.skip(reason='cannot pickle file objects')
     def test_pickle(self):
         pass
 
-    @pytest.mark.skip(reason='cannot pickle file objects') 
+    @pytest.mark.skip(reason='cannot pickle file objects')
     def test_pickle_dataarray(self):
         pass
 
-    @pytest.mark.skip(reason='does not support boolean dtype') 
+    @pytest.mark.skip(reason='does not support boolean dtype')
     def test_roundtrip_boolean_dtype(self):
         # pnc does not support boolean dtype
         pass
 
-    @pytest.mark.skip(reason='does not support auto masking and scaling') 
+    @pytest.mark.skip(reason='does not support auto masking and scaling')
     def test_roundtrip_mask_and_scale(self):
         # pnc does not support auto masking and scaling
         pass
 
-    @pytest.mark.skip(reason='does not support object types') 
+    @pytest.mark.skip(reason='does not support object types')
     def test_roundtrip_object_dtype(self):
         # pnc does not support object types
         pass
@@ -2262,7 +2262,7 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
             # self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
 
-    @pytest.mark.skip(reason='does not support auto masking and scaling') 
+    @pytest.mark.skip(reason='does not support auto masking and scaling')
     def test_unsigned_roundtrip_mask_and_scale(self):
         # pnc does not support object types
         pass
