@@ -25,18 +25,80 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.2:
 
-v0.10.2 (unreleased)
+.. _whats-new.0.10.3:
+
+v0.10.3 (unreleased)
 --------------------
-
-The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
 Documentation
 ~~~~~~~~~~~~~
 
 Enhancements
 ~~~~~~~~~~~~
+
+ - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+ object (:issue:`1993`)
+ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed labeled indexing with slice bounds given by xarray objects with
+  datetime64 or timedelta64 dtypes (:issue:`1240`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+.. _whats-new.0.10.2:
+
+v0.10.2 (13 March 2018)
+-----------------------
+
+The minor release includes a number of bug-fixes and enhancements, along with
+one possibly **backwards incompatible change**.
+
+Backwards incompatible changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- The addition of ``__array_ufunc__`` for xarray objects (see below) means that
+  NumPy `ufunc methods`_ (e.g., ``np.add.reduce``) that previously worked on
+  ``xarray.DataArray`` objects by converting them into NumPy arrays will now
+  raise ``NotImplementedError`` instead. In all cases, the work-around is
+  simple: convert your objects explicitly into NumPy arrays before calling the
+  ufunc (e.g., with ``.values``).
+
+.. _ufunc methods: https://docs.scipy.org/doc/numpy/reference/ufuncs.html#methods
+
+Enhancements
+~~~~~~~~~~~~
+
+- Added :py:func:`~xarray.dot`, equivalent to :py:func:`np.einsum`.
+  Also, :py:func:`~xarray.DataArray.dot` now supports ``dims`` option,
+  which specifies the dimensions to sum over.
+  (:issue:`1951`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Support for writing xarray datasets to netCDF files (netcdf4 backend only)
+  when using the `dask.distributed <https://distributed.readthedocs.io>`_
+  scheduler (:issue:`1464`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Support lazy vectorized-indexing. After this change, flexible indexing such
+  as orthogonal/vectorized indexing, becomes possible for all the backend
+  arrays. Also, lazy ``transpose`` is now also supported. (:issue:`1897`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Implemented NumPy's ``__array_ufunc__`` protocol for all xarray objects
+  (:issue:`1617`). This enables using NumPy ufuncs directly on
+  ``xarray.Dataset`` objects with recent versions of NumPy (v1.13 and newer):
+
+  .. ipython:: python
+
+    ds = xr.Dataset({'a': 1})
+    np.sin(ds)
+
+  This obliviates the need for the ``xarray.ufuncs`` module, which will be
+  deprecated in the future when xarray drops support for older versions of
+  NumPy. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Improve :py:func:`~xarray.DataArray.rolling` logic.
   :py:func:`~xarray.DataArrayRolling` object now supports
@@ -50,12 +112,24 @@ Enhancements
   passed into the constructor, where previously an error would be raised.
   (:issue:`674`)
   By `Maximilian Roos <https://github.com/maxim-lian`_
+- :py:func:`~plot.line()` learned to make plots with data on x-axis if so specified. (:issue:`575`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Raise an informative error message when using ``apply_ufunc`` with numpy
+  v1.11 (:issue:`1956`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix the precision drop after indexing datetime64 arrays (:issue:`1932`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Silenced irrelevant warnings issued by ``open_rasterio`` (:issue:`1964`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fix kwarg `colors` clashing with auto-inferred `cmap` (:issue:`1461`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fix :py:func:`~xarray.plot.imshow` error when passed an RGB array with
+  size one in a spatial dimension.
+  By `Zac Hatfield-Dodds <https://github.com/Zac-HD>`_.
 
 .. _whats-new.0.10.1:
 
@@ -141,14 +215,24 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fix ``axis`` keyword ignored when applying ``np.squeeze`` to ``DataArray`` (:issue:`1487`).
   By `Florian Pinault <https://github.com/floriankrb>`_.
-- Add ``netcdftime`` as an optional dependency of xarray. This allows for
+- ``netcdf4-python`` has moved the its time handling in the ``netcdftime`` module to
+  a standalone package (`netcdftime`_). As such, xarray now considers `netcdftime`_
+  an optional dependency. One benefit of this change is that it allows for
   encoding/decoding of datetimes with non-standard calendars without the
-  netCDF4 dependency (:issue:`1084`).
+  ``netcdf4-python`` dependency (:issue:`1084`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _Zarr: http://zarr.readthedocs.io/
 
 .. _Iris: http://scitools.org.uk/iris
+
+.. _netcdftime: https://unidata.github.io/netcdftime
+
+**New functions/methods**
+
+- New :py:meth:`~xarray.DataArray.rank` on arrays and datasets. Requires
+  bottleneck (:issue:`1731`).
+  By `0x0L <https://github.com/0x0L>`_.
 
 Bug fixes
 ~~~~~~~~~

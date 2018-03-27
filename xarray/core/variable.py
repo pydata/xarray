@@ -10,7 +10,8 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import (
+    arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils,)
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
@@ -121,7 +122,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -216,8 +217,8 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
-
+class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
+               utils.NdimSizeLenMixin):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -1053,7 +1054,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
-        data = duck_array_ops.transpose(self.data, axes)
+
+        data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 

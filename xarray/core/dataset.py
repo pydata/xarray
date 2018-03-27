@@ -17,7 +17,7 @@ from . import (
     rolling, utils)
 from .. import conventions
 from .alignment import align
-from .common import BaseDataObject, ImplementsDatasetReduce
+from .common import DataWithCoords, ImplementsDatasetReduce
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -298,7 +298,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
+class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
               formatting.ReprMixin):
     """A multi-dimensional, in memory, array database.
 
@@ -399,8 +399,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
 
     @property
     def variables(self):
-        """Frozen dictionary of xarray.Variable objects constituting this
-        dataset's data
+        """Low level interface to Dataset contents as dict of Variable objects.
+
+        This ordered dictionary is frozen to prevent mutation that could
+        violate Dataset invariants. It contains all variable objects
+        constituting the Dataset, including both data variables and
+        coordinates.
         """
         return Frozen(self._variables)
 
@@ -2362,7 +2366,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
             array = self._variables[k]
             if dim in array.dims:
                 dims = [d for d in array.dims if d != dim]
-                count += array.count(dims)
+                count += np.asarray(array.count(dims))
                 size += np.prod([self.dims[d] for d in dims])
 
         if thresh is not None:
@@ -2775,8 +2779,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, BaseDataObject,
         The dimensions, coordinates and data variables in this dataset form
         the columns of the DataFrame.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         dim_order : list, optional
             Hierarchical dimension order for the resulting dataframe. All
             arrays are transposed to this order and then written out as flat
