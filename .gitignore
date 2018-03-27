@@ -37,7 +37,7 @@ nosetests.xml
 .cache
 .ropeproject/
 .tags*
-.testmondata
+.testmon*
 .tmontmp/
 .pytest_cache
 
