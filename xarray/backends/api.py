@@ -572,15 +572,28 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if parallel or (parallel is None and get_scheduler() == 'distributed'):
         import dask
-        datasets = [delayed(open_dataset)(p, **open_kwargs) for p in paths]
-        # important: get the file_objs before calling preprocess
-        file_objs = [ds._file_obj for ds in datasets]
+
+        # delayed functions
+        delayed_open = dask.delayed(open_dataset)
+        delayed_getattr = dask.delayed(getattr)
         if preprocess is not None:
-            datasets = [delayed(preprocess)(ds) for p in datasets]
+            delayed_preprocess = dask.delayed(preprocess)
+
+        datasets = []
+        file_objs = []
+        for p in paths:
+            ds = delayed_open(p, **open_kwargs)
+
+            # important: get the file_objs before calling preprocess
+            file_objs.append(delayed_getattr(ds, '_file_obj'))
+
+            if preprocess is not None:
+                ds = delayed_preprocess(ds)
+            datasets.append(ds)
 
         # calling compute here will return compute the datasets/file_objs lists
         # the underlying datasets will still be stored as dask arrays
-        datasets, file_objs = dask.compute([datasets, file_objs])
+        datasets, file_objs = dask.compute(datasets, file_objs)
     else:
         datasets = [open_dataset(p, **open_kwargs) for p in paths]
         file_objs = [ds._file_obj for ds in datasets]
