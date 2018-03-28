@@ -1404,8 +1404,23 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
             yield tmp
 
 
+class ScipyTest(CFEncodedDataTest, NetCDF3Only):
+
+    def test_append_write(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyTest, self).test_append_write()
+
+    def test_append_overwrite_values(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyTest, self).test_append_overwrite_values()
+
+
 @requires_scipy
-class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyInMemoryDataTest(ScipyTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1431,7 +1446,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFileObjectTest(ScipyTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1459,7 +1474,7 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFilePathTest(ScipyTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
