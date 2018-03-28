@@ -49,6 +49,9 @@ def safe_cast_to_index(array):
         index = array
     elif hasattr(array, 'to_index'):
         index = array.to_index()
+    elif isinstance(array, tuple):
+        name, array = array
+        index = pd.Index(array, name=name)
     else:
         kwargs = {}
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
