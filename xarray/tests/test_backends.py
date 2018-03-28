@@ -1404,23 +1404,23 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
             yield tmp
 
 
-class ScipyTest(CFEncodedDataTest, NetCDF3Only):
+class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
 
     def test_append_write(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyTest, self).test_append_write()
+        super(ScipyWriteTest, self).test_append_write()
 
     def test_append_overwrite_values(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyTest, self).test_append_overwrite_values()
+        super(ScipyWriteTest, self).test_append_overwrite_values()
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(ScipyTest, TestCase):
+class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1446,7 +1446,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(ScipyTest, TestCase):
+class ScipyFileObjectTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1474,7 +1474,7 @@ class ScipyFileObjectTest(ScipyTest, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(ScipyTest, TestCase):
+class ScipyFilePathTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -2183,7 +2183,7 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
+class PyNioTest(ScipyWriteTest, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
         pass
@@ -2209,7 +2209,7 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
             assert_identical(actual, expected)
 
 
-class TestPyNioAutocloseTrue(TestPyNio):
+class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
 
 
