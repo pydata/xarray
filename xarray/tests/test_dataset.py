@@ -4043,14 +4043,19 @@ def data_set(seed=None):
     {'x': (['x'], np.asarray([1, 2, 0]))},
     {'x': pd.Index([2, 1, 0])},
     {'x': Variable(dims='x', data=[0, 2, 1])},
+    {'x': IndexVariable(dims='x', data=[0, 1, 2])},
     {'y': 42},
     {'y': ('x', [2, 1, 0])},
     {'y': ('x', np.asarray([2, 1, 0]))},
     {'y': (['x'], np.asarray([2, 1, 0]))},
 ))
-def test_constructor_aligns_to_explicit_coords(unaligned_coords):
+@pytest.mark.parametrize('coords', (
+    {'x': ('x', [0, 1, 2])},
+    {'x': [0, 1, 2]},
+))
+def test_dataset_constructor_aligns_to_explicit_coords(
+        unaligned_coords, coords):
 
-    coords = {'x': [0, 1, 2]}
     a = xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
 
     expected = xr.Dataset(coords=coords)
