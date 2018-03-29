@@ -37,8 +37,16 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+ - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+ object (:issue:`1993`)
+ By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- Fixed labeled indexing with slice bounds given by xarray objects with
+  datetime64 or timedelta64 dtypes (:issue:`1240`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.2:
 
