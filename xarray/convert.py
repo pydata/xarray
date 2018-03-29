@@ -1,16 +1,14 @@
 """Functions for converting to and from xarray objects
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
 from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
-from .core.dataarray import DataArray
-from .core.pycompat import OrderedDict, range
-from .core.dtypes import get_fill_value
 from .conventions import decode_cf
+from .core.dataarray import DataArray
+from .core.dtypes import get_fill_value
+from .core.pycompat import OrderedDict, range
 
 cdms2_ignored_attrs = {'name', 'tileIndex'}
 iris_forbidden_keys = {'standard_name', 'long_name', 'units', 'bounds', 'axis',

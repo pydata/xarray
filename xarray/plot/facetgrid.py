@@ -1,18 +1,15 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import warnings
-import itertools
 import functools
+import itertools
+import warnings
 
 import numpy as np
 
-from ..core.pycompat import getargspec
 from ..core.formatting import format_item
-from .utils import (_determine_cmap_params, _infer_xy_labels,
-                    import_matplotlib_pyplot)
-
+from ..core.pycompat import getargspec
+from .utils import (
+    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -221,6 +218,14 @@ class FacetGrid(object):
         self : FacetGrid object
 
         """
+
+        cmapkw = kwargs.get('cmap')
+        colorskw = kwargs.get('colors')
+
+        # colors is mutually exclusive with cmap
+        if cmapkw and colorskw:
+            raise ValueError("Can't specify both cmap and colors.")
+
         # These should be consistent with xarray.plot._plot2d
         cmap_kwargs = {'plot_data': self.data.values,
                        # MPL default
@@ -232,6 +237,9 @@ class FacetGrid(object):
         cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+        if colorskw is not None:
+            cmap_params['cmap'] = None
 
         # Order is important
         func_kwargs = kwargs.copy()

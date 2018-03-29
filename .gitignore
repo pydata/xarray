@@ -1,6 +1,9 @@
 *.py[cod]
 __pycache__
 
+# example caches from Hypothesis
+.hypothesis/
+
 # temp files from docs build
 doc/auto_gallery
 doc/example.nc
@@ -33,6 +36,9 @@ pip-log.txt
 nosetests.xml
 .cache
 .ropeproject/
+.tags*
+.testmondata
+.pytest_cache
 dask-worker-space/
 
 # asv environments

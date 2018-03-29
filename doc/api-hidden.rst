@@ -9,6 +9,9 @@
 
    auto_combine
 
+   Dataset.nbytes
+   Dataset.chunks
+
    Dataset.all
    Dataset.any
    Dataset.argmax
@@ -21,13 +24,6 @@
    Dataset.sum
    Dataset.std
    Dataset.var
-
-   Dataset.isnull
-   Dataset.notnull
-   Dataset.count
-   Dataset.dropna
-   Dataset.fillna
-   Dataset.where
 
    core.groupby.DatasetGroupBy.assign
    core.groupby.DatasetGroupBy.assign_coords
@@ -49,9 +45,13 @@
    Dataset.rank
 
    DataArray.ndim
+   DataArray.nbytes
    DataArray.shape
    DataArray.size
    DataArray.dtype
+   DataArray.nbytes
+   DataArray.chunks
+
    DataArray.astype
    DataArray.item
 
@@ -67,13 +67,6 @@
    DataArray.sum
    DataArray.std
    DataArray.var
-
-   DataArray.isnull
-   DataArray.notnull
-   DataArray.count
-   DataArray.dropna
-   DataArray.fillna
-   DataArray.where
 
    core.groupby.DataArrayGroupBy.assign_coords
    core.groupby.DataArrayGroupBy.first

@@ -1,21 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
+
 import numpy as np
 import pandas as pd
 
-from . import dtypes
-from . import duck_array_ops
-from . import nputils
-from . import ops
+from . import dtypes, duck_array_ops, nputils, ops
+from .arithmetic import SupportsArithmetic
 from .combine import concat
-from .common import (
-    ImplementsArrayReduce, ImplementsDatasetReduce,
-)
-from .pycompat import range, zip, integer_types
-from .utils import hashable, peek_at, maybe_wrap_array, safe_cast_to_index
-from .variable import as_variable, Variable, IndexVariable
+from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .pycompat import integer_types, range, zip
+from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
+from .variable import IndexVariable, Variable, as_variable
 
 
 def unique_value_groups(ar, sort=True):
@@ -156,7 +152,7 @@ def _unique_and_monotonic(group):
         return index.is_unique and index.is_monotonic
 
 
-class GroupBy(object):
+class GroupBy(SupportsArithmetic):
     """A object that implements the split-apply-combine pattern.
 
     Modeled after `pandas.GroupBy`. The `GroupBy` object can be iterated over

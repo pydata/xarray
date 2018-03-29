@@ -1,4 +1,3 @@
-
 .. image:: _static/dataset-diagram-logo.png
    :width: 300 px
    :align: center
@@ -18,12 +17,6 @@ pandas excels. Our approach adopts the `Common Data Model`_ for self-
 describing scientific data in widespread use in the Earth sciences:
 ``xarray.Dataset`` is an in-memory representation of a netCDF file.
 
-.. note::
-
-   xray is now xarray! See :ref:`the v0.7.0 release notes<whats-new.0.7.0>`
-   for more details. The preferred URL for these docs is now
-   http://xarray.pydata.org.
-
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
@@ -32,13 +25,42 @@ describing scientific data in widespread use in the Earth sciences:
 Documentation
 -------------
 
+**Getting Started**
+
+* :doc:`why-xarray`
+* :doc:`faq`
+* :doc:`examples`
+* :doc:`installing`
+
 .. toctree::
    :maxdepth: 1
+   :hidden:
+   :caption: Getting Started
 
    why-xarray
    faq
    examples
    installing
+
+**User Guide**
+
+* :doc:`data-structures`
+* :doc:`indexing`
+* :doc:`computation`
+* :doc:`groupby`
+* :doc:`reshaping`
+* :doc:`combining`
+* :doc:`time-series`
+* :doc:`pandas`
+* :doc:`io`
+* :doc:`dask`
+* :doc:`plotting`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: User Guide
+
    data-structures
    indexing
    computation
@@ -50,10 +72,23 @@ Documentation
    io
    dask
    plotting
+
+**Help & reference**
+
+* :doc:`whats-new`
+* :doc:`api`
+* :doc:`internals`
+* :doc:`contributing`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Help & reference
+
+   whats-new
    api
    internals
    contributing
-   whats-new
 
 See also
 --------

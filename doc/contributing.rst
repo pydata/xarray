@@ -290,8 +290,12 @@ First, you need to have a development environment to be able to build xarray
 Building the documentation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-So how do you build the docs? Navigate to your local
-``xarray/doc/`` directory in the console and run::
+In your development environment, install ``sphinx``, ``sphinx_rtd_theme``,
+``sphinx-gallery`` and ``numpydoc``::
+
+    conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc
+
+Navigate to your local ``xarray/doc/`` directory in the console and run::
 
     make html
 
@@ -341,18 +345,17 @@ the more common ``PEP8`` issues:
 :ref:`Continuous Integration <contributing.ci>` will run
 the `flake8 <http://pypi.python.org/pypi/flake8>`_ tool
 and report any stylistic errors in your code. Therefore, it is helpful before
-submitting code to run the check yourself on the diff::
+submitting code to run the check yourself::
 
-   git diff master -u -- "*.py" | flake8 --diff
+   flake8
 
-This command will catch any stylistic errors in your changes specifically, but
-be beware it may not catch all of them. For example, if you delete the only
-usage of an imported function, it is stylistically incorrect to import an
-unused function. However, style-checking the diff will not catch this because
-the actual import is not part of the diff. Thus, for completeness, you should
-run this command, though it will take longer::
+If you install `isort <https://github.com/timothycrosley/isort>`_ and
+`flake8-isort <https://github.com/gforcada/flake8-isort>`_, this will also show
+any errors from incorrectly sorted imports. These aren't currently enforced in
+CI. To automatically sort imports, you can run::
 
-   flake8 xarray
+   isort -y
+
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -659,7 +662,7 @@ Information on how to write a benchmark and how to use asv can be found in the
 `asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
 
 The ``xarray`` benchmarking suite is run remotely and the results are
-available `here <http://pandas.pydata.org/speed/xarray/`_.
+available `here <http://pandas.pydata.org/speed/xarray/>`_.
 
 Documenting your code
 ---------------------

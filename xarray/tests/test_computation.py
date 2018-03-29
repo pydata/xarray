@@ -1,21 +1,20 @@
 import functools
 import operator
 from collections import OrderedDict
-
 from distutils.version import LooseVersion
-import numpy as np
-from numpy.testing import assert_array_equal
-import pandas as pd
 
+import numpy as np
+import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 
 import xarray as xr
 from xarray.core.computation import (
-    _UFuncSignature, result_name, broadcast_compat_data, collect_dict_values,
-    join_dict_keys, ordered_set_intersection, ordered_set_union,
-    unified_dim_sizes, apply_ufunc)
+    _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
+    join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
+    unified_dim_sizes)
 
-from . import requires_dask, raises_regex
+from . import raises_regex, requires_dask, has_dask
 
 
 def assert_identical(a, b):
@@ -743,6 +742,100 @@ def test_vectorize_dask():
                          dask='parallelized',
                          output_dtypes=[float])
     assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_dot(dask):
+    if not has_dask:
+        pytest.skip('test for dask.')
+
+    a = np.arange(30 * 4).reshape(30, 4)
+    b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
+    c = np.arange(5 * 60).reshape(5, 60)
+    da_a = xr.DataArray(a, dims=['a', 'b'],
+                        coords={'a': np.linspace(0, 1, 30)})
+    da_b = xr.DataArray(b, dims=['a', 'b', 'c'],
+                        coords={'a': np.linspace(0, 1, 30)})
+    da_c = xr.DataArray(c, dims=['c', 'e'])
+    if dask:
+        da_a = da_a.chunk({'a': 3})
+        da_b = da_b.chunk({'a': 3})
+        da_c = da_c.chunk({'c': 3})
+
+    actual = xr.dot(da_a, da_b, dims=['a', 'b'])
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+    actual = xr.dot(da_a, da_b)
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+    # for only a single array is passed without dims argument, just return
+    # as is
+    actual = xr.dot(da_a)
+    assert da_a.identical(actual)
+
+    # test for variable
+    actual = xr.dot(da_a.variable, da_b.variable)
+    assert actual.dims == ('c', )
+    assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
+    assert isinstance(actual.data, type(da_a.variable.data))
+
+    if dask:
+        da_a = da_a.chunk({'a': 3})
+        da_b = da_b.chunk({'a': 3})
+        actual = xr.dot(da_a, da_b, dims=['b'])
+        assert actual.dims == ('a', 'c')
+        assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+        assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+        pytest.skip('dot for dask array requires rechunking for core '
+                    'dimensions.')
+
+    # following requires rechunking
+    actual = xr.dot(da_a, da_b, dims=['b'])
+    assert actual.dims == ('a', 'c')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, dims='b')
+    assert actual.dims == ('a', 'c')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, dims='a')
+    assert actual.dims == ('b', 'c')
+    assert (actual.data == np.einsum('ij,ijk->jk', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, dims='c')
+    assert actual.dims == ('a', 'b')
+    assert (actual.data == np.einsum('ij,ijk->ij', a, b)).all()
+
+    actual = xr.dot(da_a, da_b, da_c, dims=['a', 'b'])
+    assert actual.dims == ('c', 'e')
+    assert (actual.data == np.einsum('ij,ijk,kl->kl ', a, b, c)).all()
+
+    # should work with tuple
+    actual = xr.dot(da_a, da_b, dims=('c', ))
+    assert actual.dims == ('a', 'b')
+    assert (actual.data == np.einsum('ij,ijk->ij', a, b)).all()
+
+    # default dims
+    actual = xr.dot(da_a, da_b, da_c)
+    assert actual.dims == ('e', )
+    assert (actual.data == np.einsum('ij,ijk,kl->l ', a, b, c)).all()
+
+    # 1 array summation
+    actual = xr.dot(da_a, dims='a')
+    assert actual.dims == ('b', )
+    assert (actual.data == np.einsum('ij->j ', a)).all()
+
+    with pytest.raises(TypeError):
+        actual = xr.dot(da_a, dims='a', invalid=None)
+    with pytest.raises(TypeError):
+        actual = xr.dot(da_a.to_dataset(name='da'), dims='a')
+    with pytest.raises(TypeError):
+        actual = xr.dot(dims='a')
 
 
 def test_where():

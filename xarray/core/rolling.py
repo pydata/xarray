@@ -1,16 +1,34 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import warnings
 from distutils.version import LooseVersion
 
-from .pycompat import OrderedDict, zip, dask_array_type
-from .common import full_like
-from .combine import concat
-from .ops import (inject_bottleneck_rolling_methods,
-                  inject_datasetrolling_methods, has_bottleneck, bn)
+import numpy as np
+
+from . import dtypes
 from .dask_array_ops import dask_rolling_wrapper
+from .ops import (
+    bn, has_bottleneck, inject_bottleneck_rolling_methods,
+    inject_datasetrolling_methods)
+from .pycompat import OrderedDict, dask_array_type, zip
+
+
+def _get_new_dimname(dims, new_dim):
+    """ Get an new dimension name based on new_dim, that is not used in dims.
+    If the same name exists, we add an underscore(s) in the head.
+
+    Example1:
+        dims: ['a', 'b', 'c']
+        new_dim: ['_rolling']
+        -> ['_rolling']
+    Example2:
+        dims: ['a', 'b', 'c', '_rolling']
+        new_dim: ['_rolling']
+        -> ['__rolling']
+    """
+    while new_dim in dims:
+        new_dim = '_' + new_dim
+    return new_dim
 
 
 class Rolling(object):
@@ -97,92 +115,103 @@ class Rolling(object):
 
 
 class DataArrayRolling(Rolling):
-    """
-    This class adds the following class methods;
-    + _reduce_method(cls, func)
-    + _bottleneck_reduce(cls, func)
-
-    These class methods will be used to inject numpy or bottleneck function
-    by doing
-
-    >>> func = cls._reduce_method(f)
-    >>> func.__name__ = name
-    >>> setattr(cls, name, func)
-
-    in ops.inject_bottleneck_rolling_methods.
-
-    After the injection, the Rolling object will have `name` (such as `mean` or
-    `median`) methods,
-    e.g. it enables the following call,
-    >>> data.rolling().mean()
-
-    If bottleneck is installed, some bottleneck methods will be used instdad of
-    the numpy method.
-
-    see also
-    + rolling.DataArrayRolling
-    + ops.inject_bottleneck_rolling_methods
-    """
-
     def __init__(self, obj, min_periods=None, center=False, **windows):
+        """
+        Moving window object for DataArray.
+        You should use DataArray.rolling() method to construct this object
+        instead of the class constructor.
+
+        Parameters
+        ----------
+        obj : DataArray
+            Object to window.
+        min_periods : int, default None
+            Minimum number of observations in window required to have a value
+            (otherwise result is NA). The default, None, is equivalent to
+            setting min_periods equal to the size of the window.
+        center : boolean, default False
+            Set the labels at the center of the window.
+        **windows : dim=window
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+
+        Returns
+        -------
+        rolling : type of input argument
+
+        See Also
+        --------
+        DataArray.rolling
+        DataArray.groupby
+        Dataset.rolling
+        Dataset.groupby
+        """
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
-        self._windows = None
-        self._valid_windows = None
-        self.window_indices = None
-        self.window_labels = None
-
-        self._setup_windows()
-
-    @property
-    def windows(self):
-        if self._windows is None:
-            self._windows = OrderedDict(zip(self.window_labels,
-                                            self.window_indices))
-        return self._windows
-
-    def __iter__(self):
-        for (label, indices, valid) in zip(self.window_labels,
-                                           self.window_indices,
-                                           self._valid_windows):
-
-            window = self.obj.isel(**{self.dim: indices})
-
-            if not valid:
-                window = full_like(window, fill_value=True, dtype=bool)
-
-            yield (label, window)
-
-    def _setup_windows(self):
-        """
-        Find the indices and labels for each window
-        """
-        from .dataarray import DataArray
 
         self.window_labels = self.obj[self.dim]
 
-        window = int(self.window)
+    def __iter__(self):
+        stops = np.arange(1, len(self.window_labels) + 1)
+        starts = stops - int(self.window)
+        starts[:int(self.window)] = 0
+        for (label, start, stop) in zip(self.window_labels, starts, stops):
+            window = self.obj.isel(**{self.dim: slice(start, stop)})
 
-        dim_size = self.obj[self.dim].size
+            counts = window.count(dim=self.dim)
+            window = window.where(counts >= self._min_periods)
 
-        stops = np.arange(dim_size) + 1
-        starts = np.maximum(stops - window, 0)
+            yield (label, window)
 
-        if self._min_periods > 1:
-            valid_windows = (stops - starts) >= self._min_periods
-        else:
-            # No invalid windows
-            valid_windows = np.ones(dim_size, dtype=bool)
-        self._valid_windows = DataArray(valid_windows, dims=(self.dim, ),
-                                        coords=self.obj[self.dim].coords)
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+        """
+        Convert this rolling object to xr.DataArray,
+        where the window dimension is stacked as a new dimension
 
-        self.window_indices = [slice(start, stop)
-                               for start, stop in zip(starts, stops)]
+        Parameters
+        ----------
+        window_dim: str
+            New name of the window dimension.
+        stride: integer, optional
+            Size of stride for the rolling window.
+        fill_value: optional. Default dtypes.NA
+            Filling value to match the dimension size.
 
-    def _center_result(self, result):
-        """center result"""
-        shift = (-self.window // 2) + 1
-        return result.shift(**{self.dim: shift})
+        Returns
+        -------
+        DataArray that is a view of the original array. The returned array is
+        not writeable.
+
+        Examples
+        --------
+        >>> da = DataArray(np.arange(8).reshape(2, 4), dims=('a', 'b'))
+        >>>
+        >>> rolling = da.rolling(a=3)
+        >>> rolling.to_datarray('window_dim')
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, np.nan, 0], [np.nan, 0, 1], [0, 1, 2], [1, 2, 3]],
+               [[np.nan, np.nan, 4], [np.nan, 4, 5], [4, 5, 6], [5, 6, 7]]])
+        Dimensions without coordinates: a, b, window_dim
+        >>>
+        >>> rolling = da.rolling(a=3, center=True)
+        >>> rolling.to_datarray('window_dim')
+        <xarray.DataArray (a: 2, b: 4, window_dim: 3)>
+        array([[[np.nan, 0, 1], [0, 1, 2], [1, 2, 3], [2, 3, np.nan]],
+               [[np.nan, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, np.nan]]])
+        Dimensions without coordinates: a, b, window_dim
+        """
+
+        from .dataarray import DataArray
+
+        window = self.obj.variable.rolling_window(self.dim, self.window,
+                                                  window_dim, self.center,
+                                                  fill_value=fill_value)
+        result = DataArray(window, dims=self.obj.dims + (window_dim,),
+                           coords=self.obj.coords)
+        return result.isel(**{self.dim: slice(None, None, stride)})
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
@@ -202,27 +231,27 @@ class DataArrayRolling(Rolling):
         reduced : DataArray
             Array with summarized data.
         """
+        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        windows = self.construct(rolling_dim)
+        result = windows.reduce(func, dim=rolling_dim, **kwargs)
 
-        windows = [window.reduce(func, dim=self.dim, **kwargs)
-                   for _, window in self]
+        # Find valid windows based on count.
+        counts = self._counts()
+        return result.where(counts >= self._min_periods)
 
-        # Find valid windows based on count
-        if self.dim in self.obj.coords:
-            concat_dim = self.window_labels
-        else:
-            concat_dim = self.dim
-        counts = concat([window.count(dim=self.dim) for _, window in self],
-                        dim=concat_dim)
-        result = concat(windows, dim=concat_dim)
-        # restore dim order
-        result = result.transpose(*self.obj.dims)
+    def _counts(self):
+        """ Number of non-nan entries in each rolling window. """
 
-        result = result.where(counts >= self._min_periods)
-
-        if self.center:
-            result = self._center_result(result)
-
-        return result
+        rolling_dim = _get_new_dimname(self.obj.dims, '_rolling_dim')
+        # We use False as the fill_value instead of np.nan, since boolean
+        # array is faster to be reduced than object array.
+        # The use of skipna==False is also faster since it does not need to
+        # copy the strided array.
+        counts = (self.obj.notnull()
+                  .rolling(center=self.center, **{self.dim: self.window})
+                  .construct(rolling_dim, fill_value=False)
+                  .sum(dim=rolling_dim, skipna=False))
+        return counts
 
     @classmethod
     def _reduce_method(cls, func):
@@ -254,45 +283,41 @@ class DataArrayRolling(Rolling):
 
             axis = self.obj.get_axis_num(self.dim)
 
-            if isinstance(self.obj.data, dask_array_type):
+            padded = self.obj.variable
+            if self.center:
+                shift = (-self.window // 2) + 1
+
+                if (LooseVersion(np.__version__) < LooseVersion('1.13') and
+                        self.obj.dtype.kind == 'b'):
+                    # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
+                    # mixed array correctly. We cast boolean array to float.
+                    padded = padded.astype(float)
+                padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
+                valid = (slice(None), ) * axis + (slice(-shift, None), )
+
+            if isinstance(padded.data, dask_array_type):
                 values = dask_rolling_wrapper(func, self.obj.data,
                                               window=self.window,
                                               min_count=min_count,
                                               axis=axis)
             else:
-                values = func(self.obj.data, window=self.window,
+                values = func(padded.data, window=self.window,
                               min_count=min_count, axis=axis)
 
-            result = DataArray(values, self.obj.coords)
-
             if self.center:
-                result = self._center_result(result)
+                values = values[valid]
+            result = DataArray(values, self.obj.coords)
 
             return result
         return wrapped_func
 
 
 class DatasetRolling(Rolling):
-    """An object that implements the moving window pattern for Dataset.
-
-    This class has an OrderedDict named self.rollings, that is a collection of
-    DataArrayRollings for all the DataArrays in the Dataset, except for those
-    not depending on rolling dimension.
-
-    reduce() method returns a new Dataset generated from a set of
-    self.rollings[key].reduce().
-
-    See Also
-    --------
-    Dataset.groupby
-    DataArray.groupby
-    Dataset.rolling
-    DataArray.rolling
-    """
-
     def __init__(self, obj, min_periods=None, center=False, **windows):
         """
         Moving window object for Dataset.
+        You should use Dataset.rolling() method to construct this object
+        instead of the class constructor.
 
         Parameters
         ----------
@@ -314,6 +339,13 @@ class DatasetRolling(Rolling):
         Returns
         -------
         rolling : type of input argument
+
+        See Also
+        --------
+        Dataset.rolling
+        DataArray.rolling
+        Dataset.groupby
+        DataArray.groupby
         """
         super(DatasetRolling, self).__init__(obj,
                                              min_periods, center, **windows)
@@ -354,6 +386,16 @@ class DatasetRolling(Rolling):
                 reduced[key] = self.obj[key]
         return Dataset(reduced, coords=self.obj.coords)
 
+    def _counts(self):
+        from .dataset import Dataset
+        reduced = OrderedDict()
+        for key, da in self.obj.data_vars.items():
+            if self.dim in da.dims:
+                reduced[key] = self.rollings[key]._counts()
+            else:
+                reduced[key] = self.obj[key]
+        return Dataset(reduced, coords=self.obj.coords)
+
     @classmethod
     def _reduce_method(cls, func):
         """
@@ -372,6 +414,37 @@ class DatasetRolling(Rolling):
                     reduced[key] = self.obj[key]
             return Dataset(reduced, coords=self.obj.coords)
         return wrapped_func
+
+    def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
+        """
+        Convert this rolling object to xr.Dataset,
+        where the window dimension is stacked as a new dimension
+
+        Parameters
+        ----------
+        window_dim: str
+            New name of the window dimension.
+        stride: integer, optional
+            size of stride for the rolling window.
+        fill_value: optional. Default dtypes.NA
+            Filling value to match the dimension size.
+
+        Returns
+        -------
+        Dataset with variables converted from rolling object.
+        """
+
+        from .dataset import Dataset
+
+        dataset = OrderedDict()
+        for key, da in self.obj.data_vars.items():
+            if self.dim in da.dims:
+                dataset[key] = self.rollings[key].construct(
+                    window_dim, fill_value=fill_value)
+            else:
+                dataset[key] = da
+        return Dataset(dataset, coords=self.obj.coords).isel(
+            **{self.dim: slice(None, None, stride)})
 
 
 inject_bottleneck_rolling_methods(DataArrayRolling)

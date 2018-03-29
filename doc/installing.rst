@@ -25,6 +25,9 @@ For netCDF and IO
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
+- `netcdftime <https://unidata.github.io/netcdftime>`__: recommended if you
+  want to encode/decode datetimes for non-standard calendars or dates before
+  year 1678 or after year 2262.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -78,6 +81,7 @@ Testing
 -------
 
 To run the test suite after installing xarray, first install (via pypi or conda)
+
 - `py.test <https://pytest.org>`__: Simple unit testing library
 - `mock <https://pypi.python.org/pypi/mock>`__: additional testing library required for python version 2
 

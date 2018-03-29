@@ -1,21 +1,20 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import os.path
 import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
 
-
 import numpy as np
 
-from .. import backends, conventions, Dataset
-from .common import ArrayWriter, GLOBAL_LOCK
+from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import auto_combine
-from ..core.utils import close_on_error, is_remote_uri
 from ..core.pycompat import basestring, path_type
+from ..core.utils import close_on_error, is_remote_uri
+from .common import (
+    HDF5_LOCK, ArrayWriter, CombinedLock, get_scheduler, get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -67,9 +66,9 @@ def _default_lock(filename, engine):
             else:
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
-                lock = GLOBAL_LOCK
+                lock = HDF5_LOCK
         elif engine in {'h5netcdf', 'pynio'}:
-            lock = GLOBAL_LOCK
+            lock = HDF5_LOCK
         else:
             lock = False
     return lock
@@ -130,6 +129,20 @@ def _protect_dataset_variables_inplace(dataset, cache):
             if cache:
                 data = indexing.MemoryCachedArray(data)
             variable.data = data
+
+
+def _get_lock(engine, scheduler, format, path_or_file):
+    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
+
+    locks = []
+    if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
+        locks.append(HDF5_LOCK)
+    locks.append(get_scheduler_lock(scheduler, path_or_file))
+
+    # When we have more than one lock, use the CombinedLock wrapper class
+    lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
+
+    return lock
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -464,7 +477,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different', **kwargs):
     """Open multiple files as a single dataset.
 
-    Requires dask to be installed. See documentation for details on dask [1].  
+    Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
@@ -645,8 +658,20 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     # if a writer is provided, store asynchronously
     sync = writer is None
 
+    # handle scheduler specific logic
+    scheduler = get_scheduler()
+    if (dataset.chunks and scheduler in ['distributed', 'multiprocessing'] and
+            engine != 'netcdf4'):
+        raise NotImplementedError("Writing netCDF files with the %s backend "
+                                  "is not currently supported with dask's %s "
+                                  "scheduler" % (engine, scheduler))
+    lock = _get_lock(engine, scheduler, format, path_or_file)
+    autoclose = (dataset.chunks and
+                 scheduler in ['distributed', 'multiprocessing'])
+
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_open(target, mode, format, group, writer)
+    store = store_open(target, mode, format, group, writer,
+                       autoclose=autoclose, lock=lock)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)

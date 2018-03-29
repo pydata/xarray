@@ -45,6 +45,10 @@ matrix:
     env: CONDA_ENV=py36-rasterio1.0alpha
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
+  - python: 3.5
+    env: CONDA_ENV=docs
+  - python: 3.6
+    env: CONDA_ENV=py36-hypothesis
   allow_failures:
   - python: 3.6
     env:
@@ -86,16 +90,27 @@ before_install:
   - conda info -a
 
 install:
-  - conda env create --file ci/requirements-$CONDA_ENV.yml
+  - if [[ "$CONDA_ENV" == "docs" ]]; then
+      conda env create -n test_env --file doc/environment.yml;
+    else
+      conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml;
+    fi
   - source activate test_env
   - conda list
-  - python setup.py install
+  - pip install --no-deps -e .
   - python xarray/util/print_versions.py
 
 script:
   - flake8 -j auto xarray
   - python -OO -c "import xarray"
-  - py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS
+  - if [[ "$CONDA_ENV" == "docs" ]]; then
+      conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
+      sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
+    elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
+      pytest properties ;
+    else
+      py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
+    fi
 
 after_success:
   - coveralls
