@@ -264,6 +264,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):
             warnings.warn(
+<<<<<<< Updated upstream
                 '\nA segmentation fault may occur when the\n'
                 'file path has exactly 88 characters as it does\n'
                 'in this case. The issue is known to occur with\n'
@@ -271,6 +272,15 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
                 'upgrading netCDF4 to at least version 1.3.1.\n'
                 'More details can be found here:\n'
                 'https://github.com/pydata/xarray/issues/1745  \n')
+=======
+                'A segmentation fault may occur when the '
+                'file path has exactly 88 characters as it does '
+                'in this case. The issue is known to occur with '
+                'version 1.2.4 of netCDF4 and can be addressed by '
+                'upgrading netCDF4 to at least version 1.3.1. '
+                'More details can be found here: '
+                'https://github.com/pydata/xarray/issues/1745')
+>>>>>>> Stashed changes
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
