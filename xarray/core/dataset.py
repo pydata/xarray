@@ -1108,10 +1108,29 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
+        engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-ng'}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
             preference for 'netcdf4' if writing to a file on disk.
+
+            The 'h5netcdf' engine uses the h5netcdf module legacy API, whereas
+            'h5netcdf-ng' uses the new API of the same module. This alters what
+            is accepted by the encoding parameter, as the legacy API is
+            designed to be a drop-in replacement for the netcdf4 module,
+            whereas the new API is modeled after the h5py module.
+            At the moment of writing, the h5netcdf new API is the only way to
+            use compression algorithms other than gzip.
+
+            e.g::
+
+                to_netcdf(engine='h5netcdf',
+                          encoding={'varname': {'zlib': True, 'complevel': 9}})
+
+            is equivalent to::
+
+                to_netcdf(engine='h5netcdf-ng',
+                          encoding={'varname': {'compression': 'gzip', 'compression_opts': 9}})
+
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
@@ -1129,55 +1148,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
                          unlimited_dims=unlimited_dims)
-
-    def to_hdf5(self, path, mode='w', group=None,
-                encoding=None, unlimited_dims=None):
-        """Write dataset contents to a HDF5 file.
-
-        The output file will be actually mostly compatible with NetCDF, and in fact it
-        uses the h5netcdf library, but in addition supports a few features that are not
-        available with to_netcdf - namely, at the moment of writing, this is the only
-        way to use a compression algorithm other than gzip.
-
-        In order to read the read back the dataset from disk,
-        one can simply use `open_dataset`` or `open_mfdataset`, but only as long
-        as the file extension is ".h5". Otherwise, one needs to explicitly
-        pass the parameter ``engine="h5netcdf"``.
-
-        Parameters
-        ----------
-        path : str or Path
-            Path to which to save this dataset.
-        mode : {'w', 'a'}, optional
-            Write ('w') or append ('a') mode. If mode='w', any existing file at
-            this location will be overwritten. If mode='a', existing variables
-            will be overwritten.
-        group : str, optional
-            Path to the HDF5 group in the given file to open.
-            The group(s) will be created if necessary.
-        encoding : dict, optional
-            Nested dictionary with variable names as keys and dictionaries of
-            variable specific encodings as values, to be passed to
-            `h5netcdf.Group.create_variable`. Note that the syntax slightly
-            differs from the one of to_netcdf, which instead matches that
-            of NetCDF4-python. Namely, to_netcdf accepts
-            ``'zlib': True, 'complevel': 9``, whereas the same in to_hdf5 will be
-            ``'compression': 'gzip', 'compression_opts': 9``
-
-            e.g.: ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
-                     'compression': 'gzip'}, ...}``
-
-        unlimited_dims : sequence of str, optional
-            Dimension(s) that should be serialized as unlimited dimensions.
-            By default, no dimensions are treated as unlimited dimensions.
-            Note that unlimited_dims may also be set via
-            ``dataset.encoding['unlimited_dims']``.
-        """
-        if encoding is None:
-            encoding = {}
-        from ..backends.api import to_hdf5
-        to_hdf5(self, path, mode, group=group, encoding=encoding,
-                unlimited_dims=unlimited_dims)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
                 encoding=None):

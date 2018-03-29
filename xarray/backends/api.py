@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import os.path
-import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
@@ -155,18 +154,13 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     ----------
     filename_or_obj : str, Path, file or xarray.backends.*DataStore
         Strings and Path objects are interpreted as a path to a netCDF file
-        or an OpenDAP URL and opened with python-netCDF4, except in the following
-        special cases:
-
-        - If the filename ends with .gz, the file is gunzipped and opened with
-          scipy.io.netcdf (only netCDF3 supported).
-        - If the filename ends with .h5, the file is treated as a HDF5 file
-          (engine defaults to h5netcdf)
-        - File-like objects are opened with scipy.io.netcdf (only netCDF3 supported).
-
+        or an OpenDAP URL and opened with python-netCDF4, unless the filename
+        ends with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
-        Path to the netCDF4 or HDF5 group in the given file to open (only works for
-        netCDF4 and HDF5 files).
+        Path to the netCDF4 group in the given file to open (only works for
+        netCDF4 files).
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
         to CF conventions.
@@ -196,8 +190,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4', unless the file extension is .h5, in which cause 'h5netcdf'
-        will be preferred.
+        'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
@@ -297,13 +290,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 engine = 'scipy'
 
-        if filename_or_obj.endswith('.h5'):
-            if engine is not None and engine != 'h5netcdf':
-                warnings.warn('Opening a HDF5 file with a NetCDF library; some '
-                              'features may not be supported')
-            else:
-                engine = 'h5netcdf'
-
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
@@ -316,7 +302,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                                             autoclose=autoclose)
         elif engine == 'pydap':
             store = backends.PydapDataStore.open(filename_or_obj)
-
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                            autoclose=autoclose)
@@ -345,24 +330,19 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=True, decode_times=True, autoclose=False,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None):
-    """Open an DataArray from a netCDF or HDF5 file containing a single data variable.
+    """Open an DataArray from a netCDF file containing a single data variable.
 
-    This is designed to read netCDF or HDF5 files with only one data variable. If
+    This is designed to read netCDF files with only one data variable. If
     multiple variables are present then a ValueError is raised.
 
     Parameters
     ----------
     filename_or_obj : str, Path, file or xarray.backends.*DataStore
-        Strings and Path objects are interpreted as a path to a netCDF file
-        or an OpenDAP URL and opened with python-netCDF4, except in the following
-        special cases:
-
-        - If the filename ends with .gz, the file is gunzipped and opened with
-          scipy.io.netcdf (only netCDF3 supported).
-        - If the filename ends with .h5, the file is treated as a HDF5 file
-          (engine defaults to h5netcdf)
-        - File-like objects are opened with scipy.io.netcdf (only netCDF3 supported).
-
+        Strings and Paths are interpreted as a path to a netCDF file or an
+        OpenDAP URL and opened with python-netCDF4, unless the filename ends
+        with .gz, in which case the file is gunzipped and opened with
+        scipy.io.netcdf (only netCDF3 supported). File-like objects are opened
+        with scipy.io.netcdf (only netCDF3 supported).
     group : str, optional
         Path to the netCDF4 group in the given file to open (only works for
         netCDF4 files).
@@ -395,8 +375,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4', unless the file extension is .h5, in which cause 'h5netcdf'
-        will be preferred.
+        'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays.
@@ -483,9 +462,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     Parameters
     ----------
     paths : str or sequence
-        Either a string glob in the form "path/to/my/files/*.nc" or
-        "path/to/my/files/*.h5" or an explicit list of files to open. Paths
-        can be given as strings or as pathlib Paths.
+        Either a string glob in the form "path/to/my/files/*.nc" or an explicit
+        list of files to open.  Paths can be given as strings or as pathlib
+        Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -520,8 +499,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
-        'netcdf4', unless the file extension is .h5, in which cause 'h5netcdf'
-        will be preferred.
+        'netcdf4'.
     autoclose : bool, optional
         If True, automatically close files to avoid OS Error of too many files
         being open.  However, this option doesn't work with streams, e.g.,
@@ -613,7 +591,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
                     'scipy': backends.ScipyDataStore,
                     'h5netcdf': backends.H5NetCDFStore,
-                    'hdf5': backends.HDF5Store}
+                    'h5netcdf-ng': backends.H5NetCDFNGStore,
+                    }
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
@@ -623,7 +602,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     See `Dataset.to_netcdf` for full API docs.
 
-    The ``writer`` argument is only for the private use of `save_mfdataset`.
+    The ``writer`` argument is only for the private use of save_mfdataset.
     """
     if isinstance(path_or_file, path_type):
         path_or_file = str(path_or_file)
@@ -687,27 +666,17 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     if not sync:
         return store
 
-def to_hdf5(dataset, path_or_file=None, mode='w', group=None,
-            encoding=None, unlimited_dims=None):
-    """This function creates an appropriate datastore for writing a dataset to
-    disk as a HDF5 file
-
-    See `Dataset.to_hdf5` for full API docs.
-    """
-    to_netcdf(dataset, path_or_file, mode=mode, format='NETCDF4',
-              group=group, engine='hdf5', encoding=encoding,
-              unlimited_dims=unlimited_dims)
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None):
-    """Write multiple datasets to disk as netCDF or HDF5 files simultaneously.
+    """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
     objects, in which case it can write the multiple datasets to disk
     simultaneously using a shared thread pool.
 
-    When not using dask, it is no different than calling ``to_netcdf`` or
-    ``to_hdf5`` repeatedly.
+    When not using dask, it is no different than calling ``to_netcdf``
+    repeatedly.
 
     Parameters
     ----------
@@ -744,10 +713,11 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Paths to the netCDF4 group in each corresponding file to which to save
         datasets (only works for format='NETCDF4'). The groups will be created
         if necessary.
-    engine : {'netcdf4', 'scipy', 'h5netcdf', 'hdf5'}, optional
+    engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-ng'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
+        See `Dataset.to_netcdf` for additional information.
 
     Examples
     --------
@@ -785,6 +755,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     finally:
         for store in stores:
             store.close()
+
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
             encoding=None):

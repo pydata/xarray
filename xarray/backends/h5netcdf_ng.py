@@ -1,31 +1,36 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
+from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from ..core.pycompat import iteritems, bytes_type, unicode_type, OrderedDict
+from .common import (
+    HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore, find_root)
+from .netCDF4_ import (
+    BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
+    _get_datatype, _nc4_group)
 
-from .common import WritableCFDataStore, DataStorePickleMixin, find_root
-from .netCDF4_ import (_nc4_group, _encode_nc4_variable, _get_datatype,
-                       _extract_nc4_variable_encoding, BaseNetCDF4Array)
 
-
-class HDF5ArrayWrapper(BaseNetCDF4Array):
+class H5NetCDFNGArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+        key, np_inds = indexing.decompose_indexer(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
+
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
-        # OuterIndexer only holds 1D integer ndarrays, so it's safe to convert
-        # them to lists.
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in
+                    key.tuple)
         with self.datastore.ensure_open(autoclose=True):
-            return self.get_array()[key]
+            array = self.get_array()[key]
+
+        if len(np_inds.tuple) > 0:
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
+
+        return array
 
 
 def maybe_decode_bytes(txt):
@@ -35,13 +40,13 @@ def maybe_decode_bytes(txt):
         return txt
 
 
-def _read_attributes(hdf5_var):
+def _read_attributes(h5netcdf_var):
     # GH451
     # to ensure conventions decoding works properly on Python 3, decode all
     # bytes attributes to strings
     attrs = OrderedDict()
-    for k in hdf5_var.ncattrs():
-        v = hdf5_var.getncattr(k)
+    for k in h5netcdf_var.ncattrs():
+        v = h5netcdf_var.getncattr(k)
         if k not in ['_FillValue', 'missing_value']:
             v = maybe_decode_bytes(v)
         attrs[k] = v
@@ -49,46 +54,45 @@ def _read_attributes(hdf5_var):
 
 
 _extract_h5nc_encoding = functools.partial(_extract_nc4_variable_encoding,
-                                           lsd_okay=False, backend='hdf5')
+                                           lsd_okay=False, backend='h5netcdf')
 
 
-def _open_hdf5_group(filename, mode, group):
-    # TODO: switch to new API
+def _open_h5netcdf_group(filename, mode, group):
     import h5netcdf.legacyapi
-    ds = hdf5.legacyapi.Dataset(filename, mode=mode)
+    ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
     with close_on_error(ds):
         return _nc4_group(ds, group, mode)
 
 
-class HDF5Store(WritableCFDataStore, DataStorePickleMixin):
-    """Store for reading and writing data via hdf5
+class H5NetCDFNGStore(WritableCFDataStore, DataStorePickleMixin):
+    """Store for reading and writing data via h5netcdf
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None, autoclose=False):
+                 writer=None, autoclose=False, lock=HDF5_LOCK):
         if format not in [None, 'NETCDF4']:
-            raise ValueError('invalid format for hdf5 backend')
-        opener = functools.partial(_open_hdf5_group, filename, mode=mode,
+            raise ValueError('invalid format for h5netcdf backend')
+        opener = functools.partial(_open_h5netcdf_group, filename, mode=mode,
                                    group=group)
-        self.ds = opener()
+        self._ds = opener()
         if autoclose:
             raise NotImplementedError('autoclose=True is not implemented '
-                                      'for the hdf5 backend pending '
+                                      'for the h5netcdf backend pending '
                                       'further exploration, e.g., bug fixes '
-                                      '(in hdf5?)')
+                                      '(in h5netcdf?)')
         self._autoclose = False
         self._isopen = True
         self.format = format
         self._opener = opener
         self._filename = filename
         self._mode = mode
-        super(HDF5Store, self).__init__(writer)
+        super(H5NetCDFNGStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
-            data = indexing.LazilyIndexedArray(
-                HDF5ArrayWrapper(name, self))
+            data = indexing.LazilyOuterIndexedArray(
+                H5NetCDFNGArrayWrapper(name, self))
             attrs = _read_attributes(var)
 
             # netCDF4 specific encoding
@@ -148,9 +152,9 @@ class HDF5Store(WritableCFDataStore, DataStorePickleMixin):
         fill_value = attrs.pop('_FillValue', None)
         if dtype is str and fill_value is not None:
             raise NotImplementedError(
-                'hdf5 does not yet support setting a fill value for '
+                'h5netcdf does not yet support setting a fill value for '
                 'variable-length strings '
-                '(https://github.com/shoyer/hdf5/issues/37). '
+                '(https://github.com/shoyer/h5netcdf/issues/37). '
                 "Either remove '_FillValue' from encoding on variable %r "
                 "or set {'dtype': 'S1'} in encoding to use the fixed width "
                 'NC_CHAR type.' % name)
@@ -174,11 +178,14 @@ class HDF5Store(WritableCFDataStore, DataStorePickleMixin):
 
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)
-        return nc4_var, variable.data
+
+        target = H5NetCDFNGArrayWrapper(name, self)
+
+        return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):
-            super(HDF5Store, self).sync()
+            super(H5NetCDFNGStore, self).sync()
             self.ds.sync()
 
     def close(self):
