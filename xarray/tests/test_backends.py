@@ -1137,8 +1137,10 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         # should be fixed in netcdf4 v1.3.1
         with mock.patch('netCDF4.__version__', '1.2.4'):
             with warnings.catch_warnings():
-                warnings.simplefilter("error")
-                with raises_regex(Warning, 'segmentation fault'):
+                message = ('A segmentation fault may occur when the '
+                           'file path has exactly 88 characters')
+                warnings.filterwarnings('error', message)
+                with pytest.raises(Warning):
                     # Need to construct 88 character filepath
                     xr.Dataset().to_netcdf('a' * (88 - len(os.getcwd()) - 1))
 
