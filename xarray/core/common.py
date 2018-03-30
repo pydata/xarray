@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -743,6 +744,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if self._file_obj is not None:
             self._file_obj.close()
         self._file_obj = None
+
+    def isin(self, test_elements):
+        if LooseVersion(np.__version__) < LooseVersion('1.13.0'):
+            raise ImportError('isin requires numpy version 1.13.0 or later')
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            np.isin,
+            self,
+            kwargs=dict(test_elements=test_elements),
+            dask='parallelized',
+            output_dtypes=[np.bool_],
+        )
 
     def __enter__(self):
         return self
