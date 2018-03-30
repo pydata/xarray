@@ -4033,28 +4033,28 @@ class TestDataset(TestCase):
 
 
 @pytest.fixture()
-def data_set(seed=None):
+def ds(seed=None):
     return create_test_data(seed)
 
 
-def test_dir_expected_attrs(data_set):
+def test_dir_expected_attrs(ds):
 
     some_expected_attrs = {'pipe', 'mean', 'isnull', 'var1',
                            'dim2', 'numbers'}
-    result = dir(data_set)
+    result = dir(ds)
     assert set(result) >= some_expected_attrs
 
 
-def test_dir_non_string(data_set):
+def test_dir_non_string(ds):
     # add a numbered key to ensure this doesn't break dir
-    data_set[5] = 'foo'
-    result = dir(data_set)
+    ds[5] = 'foo'
+    result = dir(ds)
     assert not (5 in result)
 
 
-def test_dir_unicode(data_set):
-    data_set[u'unicode'] = 'uni'
-    result = dir(data_set)
+def test_dir_unicode(ds):
+    ds[u'unicode'] = 'uni'
+    result = dir(ds)
     assert u'unicode' in result
 
 
