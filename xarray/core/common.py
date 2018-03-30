@@ -746,6 +746,22 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self._file_obj = None
 
     def isin(self, test_elements):
+        """Tests each value in the array for whether it is in the supplied list
+        Requires NumPy >= 1.13 
+
+        Parameters
+        ----------
+        element : array_like
+            Input array.
+        test_elements : array_like
+            The values against which to test each value of `element`.
+            This argument is flattened if it is an array or array_like.
+            See notes for behavior with non-array-like parameters.
+
+        -------
+        isin : same as object, bool
+            Has the same shape as object
+        """
         if LooseVersion(np.__version__) < LooseVersion('1.13.0'):
             raise ImportError('isin requires numpy version 1.13.0 or later')
         from .computation import apply_ufunc
