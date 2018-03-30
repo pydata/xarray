@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -2114,6 +2115,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def isin(self, test_elements):
+        if LooseVersion(np.__version__) < LooseVersion('1.13.0'):
+            raise ImportError('isin requires numpy version 1.13.0 or later')
         from .computation import apply_ufunc
 
         return apply_ufunc(
