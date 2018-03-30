@@ -2113,6 +2113,15 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
+    def isin(self, test_elements):
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            np.isin,
+            self,
+            kwargs=dict(test_elements=test_elements),
+        )
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)
