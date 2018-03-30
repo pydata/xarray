@@ -4049,14 +4049,15 @@ def test_isin(data_set):
         }
     ).astype('bool')
 
-    result = (data_set
-              .round(0)
-              .isin([0])
-              .sel(dim2=0, dim3='a')
-              .isel(dim1=[0, 1])
-              .drop(['time', 'dim3', 'dim2', 'numbers'])
-              .squeeze()
-              )
+    result = (
+        data_set
+        .round(0)
+        .isin([0])
+        .sel(dim2=0, dim3='a')
+        .isel(dim1=[0, 1])
+        .drop(['time', 'dim3', 'dim2', 'numbers'])
+        .squeeze()
+    )
     assert_equal(result, expected)
 
 
