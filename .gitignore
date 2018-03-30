@@ -51,10 +51,11 @@ nosetests.xml
 .project
 .pydevproject
 
-# PyCharm and Vim
+# IDEs
 .idea
 *.swp
 .DS_Store
+.vscode/
 
 # xarray specific
 doc/_build
