@@ -2120,6 +2120,8 @@ class DataArray(AbstractArray, DataWithCoords):
             np.isin,
             self,
             kwargs=dict(test_elements=test_elements),
+            dask='parallelized',
+            output_types=[np.bool_],
         )
 
 
