@@ -4032,9 +4032,32 @@ class TestDataset(TestCase):
 # Py.test tests
 
 
-@pytest.fixture()
-def data_set(seed=None):
-    return create_test_data(seed)
+@pytest.fixture(params=[None])
+def data_set(request):
+    return create_test_data(request.param)
+
+
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0'),
+                    reason='requires numpy version 1.13.0 or later')
+@pytest.mark.parametrize('data_set', [1], indirect=True)
+def test_isin(data_set):
+    expected = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 1]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).astype('bool')
+
+    result = (data_set
+              .round(0)
+              .isin([0])
+              .sel(dim2=0, dim3='a')
+              .isel(dim1=[0, 1])
+              .drop(['time', 'dim3', 'dim2', 'numbers'])
+              .squeeze()
+              )
+    assert_equal(result, expected)
 
 
 def test_dir_expected_attrs(data_set):
