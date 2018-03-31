@@ -443,6 +443,11 @@ class TestDataset(TestCase):
         assert Dataset({'x': np.int64(1),
                         'y': np.float32([1, 2])}).nbytes == 16
 
+    def test_asarray(self):
+        ds = Dataset({'x': 0})
+        with raises_regex(TypeError, 'cannot directly convert'):
+            np.asarray(ds)
+
     def test_get_index(self):
         ds = Dataset({'foo': (('x', 'y'), np.zeros((2, 3)))},
                      coords={'x': ['a', 'b']})
