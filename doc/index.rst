@@ -1,11 +1,5 @@
-.. image:: _static/dataset-diagram-logo.png
-   :width: 300 px
-   :align: center
-
-|
-
-N-D labeled arrays and datasets in Python
-=========================================
+xarray: N-D labeled arrays and datasets in Python
+=================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
 that aims to bring the labeled data power of pandas_ to the physical sciences,
