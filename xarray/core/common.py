@@ -755,8 +755,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             Input array.
         test_elements : array_like
             The values against which to test each value of `element`.
-            This argument is flattened if it is an array or array_like.
-            See notes for behavior with non-array-like parameters.
+            This argument is flattened if an array or array_like.
+            See numpy notes for behavior with non-array-like parameters.
 
         -------
         isin : same as object, bool

@@ -37,7 +37,7 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- `~xarray.DataArray.isin` and `~xarray.Dataset.isin` methods, which tests each value 
+- `~xarray.DataArray.isin` and `~xarray.Dataset.isin` methods, which test each value 
   in the array for whether it is contained in the supplied list, returning a bool array.
    Similar to the ``np.isin`` function. Requires NumPy >= 1.13 
 By `Maximilian Roos <https://github.com/maxim-lian>`
