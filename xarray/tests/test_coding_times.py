@@ -49,6 +49,7 @@ class TestDatetime(TestCase):
             ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
             (0, 'milliseconds since 2000-01-01T00:00:00'),
             (0, 'microseconds since 2000-01-01T00:00:00'),
+            (np.int32(788961600), 'seconds since 1981-01-01'),  # GH2002
         ]:
             for calendar in ['standard', 'gregorian', 'proleptic_gregorian']:
                 expected = _ensure_naive_tz(
