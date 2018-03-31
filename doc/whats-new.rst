@@ -51,6 +51,9 @@ Bug fixes
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
+  correctly (:issue:`2002`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.10.2:
 
