@@ -45,6 +45,10 @@ By `Maximilian Roos <https://github.com/maxim-lian>`
 - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
  object (:issue:`1993`)
  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+ - Handle variables with different values for ``missing_value`` and
+ ``_FillValue`` by masking values for both attributes; previously this
+ resulted in a ``ValueError``. (:issue:`2016`)
+ By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -55,6 +59,9 @@ Bug fixes
 - Attempting to convert an xarray.Dataset into a numpy array now raises an
   informative error message.
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
+  correctly (:issue:`2002`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
 
 .. _whats-new.0.10.2:
 
