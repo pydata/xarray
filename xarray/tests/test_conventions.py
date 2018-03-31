@@ -156,12 +156,15 @@ class TestNativeEndiannessArray(TestCase):
 
 
 def test_decode_cf_with_conflicting_fill_missing_value():
-    var = Variable(['t'], np.arange(10),
+    expected = Variable(['t'], [np.nan, np.nan, 2], {'units': 'foobar'})
+    var = Variable(['t'], np.arange(3),
                    {'units': 'foobar',
                     'missing_value': 0,
                     '_FillValue': 1})
-    with raises_regex(ValueError, "_FillValue and missing_value"):
-        conventions.decode_cf_variable('t', var)
+    with warnings.catch_warnings(record=True) as w:
+        actual = conventions.decode_cf_variable('t', var)
+        assert_identical(actual, expected)
+        assert 'has multiple fill' in str(w[0].message)
 
     expected = Variable(['t'], np.arange(10), {'units': 'foobar'})
 
