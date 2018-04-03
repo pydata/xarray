@@ -21,7 +21,7 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, raises_regex,
+    assert_array_equal, assert_equal, assert_identical, has_dask, raises_regex,
     requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
 
 try:
@@ -4070,9 +4070,9 @@ def test_isin(test_elements):
     assert_equal(result, expected)
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0'),
-                    reason='requires numpy version 1.13.0 or later')
-@requires_dask
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0')
+                    or not has_dask,  # noqa
+                    reason='requires dask and numpy version 1.13.0 or later')
 @pytest.mark.parametrize('test_elements', (
     [1, 2],
     np.array([1, 2]),
