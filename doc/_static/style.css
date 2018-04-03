@@ -1,0 +1,18 @@
+@import url("theme.css");
+
+.wy-side-nav-search>a img.logo,
+.wy-side-nav-search .wy-dropdown>a img.logo {
+  width: 12rem
+}
+
+.wy-side-nav-search {
+  background-color: #eee;
+}
+
+.wy-side-nav-search>div.version {
+  display: none;
+}
+
+.wy-nav-top {
+  background-color: #555;
+}
