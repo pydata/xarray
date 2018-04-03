@@ -25,3 +25,4 @@ dependencies:
     - pytest-cov
     - pydap
     - lxml
+    - PseudoNetCDF
