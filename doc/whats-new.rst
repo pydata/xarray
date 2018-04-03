@@ -51,6 +51,9 @@ Bug fixes
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Attempting to convert an xarray.Dataset into a numpy array now raises an
+  informative error message.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 - Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
   correctly (:issue:`2002`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
