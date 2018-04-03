@@ -4070,8 +4070,8 @@ def test_isin(test_elements):
     assert_equal(result, expected)
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0')  # noqa
-                    or not has_dask,  # noqa
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0') or # noqa
+                    not has_dask,  # noqa
                     reason='requires dask and numpy version 1.13.0 or later')
 @pytest.mark.parametrize('test_elements', (
     [1, 2],
