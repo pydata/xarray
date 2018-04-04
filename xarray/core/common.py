@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -743,6 +744,35 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if self._file_obj is not None:
             self._file_obj.close()
         self._file_obj = None
+
+    def isin(self, test_elements):
+        """Tests each value in the array for whether it is in the supplied list
+        Requires NumPy >= 1.13 
+
+        Parameters
+        ----------
+        element : array_like
+            Input array.
+        test_elements : array_like
+            The values against which to test each value of `element`.
+            This argument is flattened if an array or array_like.
+            See numpy notes for behavior with non-array-like parameters.
+
+        -------
+        isin : same as object, bool
+            Has the same shape as object
+        """
+        if LooseVersion(np.__version__) < LooseVersion('1.13.0'):
+            raise ImportError('isin requires numpy version 1.13.0 or later')
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            np.isin,
+            self,
+            kwargs=dict(test_elements=test_elements),
+            dask='parallelized',
+            output_dtypes=[np.bool_],
+        )
 
     def __enter__(self):
         return self
