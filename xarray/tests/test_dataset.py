@@ -21,7 +21,7 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, raises_regex,
+    assert_array_equal, assert_equal, assert_identical, has_dask, raises_regex,
     requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
 
 try:
@@ -4037,9 +4037,66 @@ class TestDataset(TestCase):
 # Py.test tests
 
 
-@pytest.fixture()
-def data_set(seed=None):
-    return create_test_data(seed)
+@pytest.fixture(params=[None])
+def data_set(request):
+    return create_test_data(request.param)
+
+
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0'),
+                    reason='requires numpy version 1.13.0 or later')
+@pytest.mark.parametrize('test_elements', (
+    [1, 2],
+    np.array([1, 2]),
+    DataArray([1, 2]),
+    pytest.mark.xfail(Dataset({'x': [1, 2]})),
+))
+def test_isin(test_elements):
+    expected = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 1]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).astype('bool')
+
+    result = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 2]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).isin(test_elements)
+
+    assert_equal(result, expected)
+
+
+@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0') or  # noqa
+                    not has_dask,  # noqa
+                    reason='requires dask and numpy version 1.13.0 or later')
+@pytest.mark.parametrize('test_elements', (
+    [1, 2],
+    np.array([1, 2]),
+    DataArray([1, 2]),
+    pytest.mark.xfail(Dataset({'x': [1, 2]})),
+))
+def test_isin_dask(test_elements):
+    expected = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 1]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).astype('bool')
+
+    result = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 2]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).chunk(1).isin(test_elements).compute()
+
+    assert_equal(result, expected)
 
 
 def test_dir_expected_attrs(data_set):

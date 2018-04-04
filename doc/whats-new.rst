@@ -37,7 +37,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
- - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+- `~xarray.DataArray.isin` and `~xarray.Dataset.isin` methods, which test each value 
+  in the array for whether it is contained in the supplied list, returning a bool array.
+   Similar to the ``np.isin`` function. Requires NumPy >= 1.13 
+By `Maximilian Roos <https://github.com/maxim-lian>`
+
+- Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
  object (:issue:`1993`)
  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
  - Handle variables with different values for ``missing_value`` and

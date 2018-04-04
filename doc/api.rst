@@ -174,6 +174,7 @@ Computation
 :py:attr:`~Dataset.cumsum`
 :py:attr:`~Dataset.cumprod`
 :py:attr:`~Dataset.rank`
+:py:attr:`~Dataset.isin`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DatasetGroupBy.assign`
@@ -339,6 +340,7 @@ Computation
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
 :py:attr:`~DataArray.rank`
+:py:attr:`~DataArray.isin`
 
 **Grouped operations**:
 :py:attr:`~core.groupby.DataArrayGroupBy.assign_coords`
