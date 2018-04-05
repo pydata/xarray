@@ -37,18 +37,20 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- `~xarray.DataArray.isin` and `~xarray.Dataset.isin` methods, which test each value 
-  in the array for whether it is contained in the supplied list, returning a bool array.
-   Similar to the ``np.isin`` function. Requires NumPy >= 1.13 
-By `Maximilian Roos <https://github.com/maxim-lian>`
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
+  which test each value in the array for whether it is contained in the
+  supplied list, returning a bool array. See :ref:`selecting values with isin`
+  for full details. Similar to the ``np.isin`` function.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
- object (:issue:`1993`)
- By `Keisuke Fujii <https://github.com/fujiisoup>`_.
- - Handle variables with different values for ``missing_value`` and
- ``_FillValue`` by masking values for both attributes; previously this
- resulted in a ``ValueError``. (:issue:`2016`)
- By `Ryan May <https://github.com/dopplershift>`_.
+  object (:issue:`1993`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Handle variables with different values for ``missing_value`` and
+  ``_FillValue`` by masking values for both attributes; previously this
+  resulted in a ``ValueError``. (:issue:`2016`)
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~

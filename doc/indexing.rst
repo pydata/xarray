@@ -265,6 +265,31 @@ elements that are fully masked:
 
     arr2.where(arr2.y < 2, drop=True)
 
+.. _selecting values with isin:
+
+Selecting values with ``isin``
+------------------------------
+
+To check whether elements of an xarray object contain a single object, you can
+compare with the equality operator ``==`` (e.g., ``arr == 3``). To check
+multiple values, use :py:meth:`~xarray.DataArray.isin`:
+
+.. ipython:: python
+
+    arr = xr.DataArray([1, 2, 3, 4, 5], dims=['x'])
+    arr.isin([2, 4])
+
+:py:meth:`~xarray.DataArray.isin` works particularly well with
+:py:meth:`~xarray.DataArray.where` to support indexing by arrays that are not
+already labels of an array:
+
+.. ipython:: python
+
+    lookup = xr.DataArray([-1, -2, -3, -4, -5], dims=['x'])
+    arr.where(lookup.isin([-2, -4]), drop=True)
+
+However, some caution is in order: when done repeatedly, this type of indexing
+is significantly slower than using :py:meth:`~xarray.DataArray.sel`.
 
 .. _vectorized_indexing:
 
