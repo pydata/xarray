@@ -262,9 +262,10 @@ except ImportError:
 
     def isin(element, test_elements, assume_unique=False, invert=False):
         """
-        Calculates `element in test_elements`, broadcasting over `element` only.
-        Returns a boolean array of the same shape as `element` that is True
-        where an element of `element` is in `test_elements` and False otherwise.
+        Calculates `element in test_elements`, broadcasting over `element`
+        only. Returns a boolean array of the same shape as `element` that is
+        True where an element of `element` is in `test_elements` and False
+        otherwise.
 
         Parameters
         ----------
@@ -300,14 +301,16 @@ except ImportError:
 
         `isin` is an element-wise function version of the python keyword `in`.
         ``isin(a, b)`` is roughly equivalent to
-        ``np.array([item in b for item in a])`` if `a` and `b` are 1-D sequences.
+        ``np.array([item in b for item in a])`` if `a` and `b` are 1-D
+        sequences.
 
         `element` and `test_elements` are converted to arrays if they are not
         already. If `test_elements` is a set (or other non-sequence collection)
-        it will be converted to an object array with one element, rather than an
-        array of the values contained in `test_elements`. This is a consequence
-        of the `array` constructor's way of handling non-sequence collections.
-        Converting the set to a list usually gives the desired behavior.
+        it will be converted to an object array with one element, rather than
+        an array of the values contained in `test_elements`. This is a
+        consequence of the `array` constructor's way of handling non-sequence
+        collections. Converting the set to a list usually gives the desired
+        behavior.
 
         .. versionadded:: 1.13.0
 
