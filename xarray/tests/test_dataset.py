@@ -4042,13 +4042,10 @@ def data_set(request):
     return create_test_data(request.param)
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0'),
-                    reason='requires numpy version 1.13.0 or later')
 @pytest.mark.parametrize('test_elements', (
     [1, 2],
     np.array([1, 2]),
     DataArray([1, 2]),
-    pytest.mark.xfail(Dataset({'x': [1, 2]})),
 ))
 def test_isin(test_elements):
     expected = Dataset(
@@ -4070,14 +4067,11 @@ def test_isin(test_elements):
     assert_equal(result, expected)
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0') or  # noqa
-                    not has_dask,  # noqa
-                    reason='requires dask and numpy version 1.13.0 or later')
+@pytest.mark.skipif(not has_dask, reason='requires dask')
 @pytest.mark.parametrize('test_elements', (
     [1, 2],
     np.array([1, 2]),
     DataArray([1, 2]),
-    pytest.mark.xfail(Dataset({'x': [1, 2]})),
 ))
 def test_isin_dask(test_elements):
     expected = Dataset(
@@ -4097,6 +4091,12 @@ def test_isin_dask(test_elements):
     ).chunk(1).isin(test_elements).compute()
 
     assert_equal(result, expected)
+
+
+def test_isin_dataset():
+    ds = Dataset({'x': [1, 2]})
+    with pytest.raises(TypeError):
+        ds.isin(ds)
 
 
 def test_dir_expected_attrs(data_set):

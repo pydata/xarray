@@ -26,23 +26,24 @@ except ImportError:
     has_bottleneck = False
 
 try:
-    import dask.array as da
-    has_dask = True
+    import dask.array as dask_array
+    from . import dask_array_compat
 except ImportError:
-    has_dask = False
+    dask_array = None
+    dask_array_compat = None
 
 
-def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
-                        n_array_args=1):
+def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
+                        list_of_args=False, n_array_args=1):
     """Create a function that dispatches to dask for dask array inputs."""
-    if has_dask:
+    if dask_module is not None:
         def f(*args, **kwargs):
             if list_of_args:
                 dispatch_args = args[0]
             else:
                 dispatch_args = args[:n_array_args]
-            if any(isinstance(a, da.Array) for a in dispatch_args):
-                module = da
+            if any(isinstance(a, dask_array.Array) for a in dispatch_args):
+                module = dask_module
             else:
                 module = eager_module
             return getattr(module, name)(*args, **kwargs)
@@ -63,8 +64,8 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
-notnull = _dask_or_eager_func('notnull', pd)
-_isnull = _dask_or_eager_func('isnull', pd)
+notnull = _dask_or_eager_func('notnull', eager_module=pd)
+_isnull = _dask_or_eager_func('isnull', eager_module=pd)
 
 
 def isnull(data):
@@ -80,7 +81,8 @@ def isnull(data):
 
 transpose = _dask_or_eager_func('transpose')
 _where = _dask_or_eager_func('where', n_array_args=3)
-insert = _dask_or_eager_func('insert')
+isin = _dask_or_eager_func('isin', eager_module=npcompat,
+                           dask_module=dask_array_compat, n_array_args=2)
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
 
