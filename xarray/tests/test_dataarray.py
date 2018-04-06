@@ -3347,8 +3347,6 @@ def da_dask(seed=123):
     return da
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13.0'),
-                    reason='requires numpy version 1.13.0 or later')
 @pytest.mark.parametrize('da', ('repeating_ints', ), indirect=True)
 def test_isin(da):
 
