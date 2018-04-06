@@ -29,10 +29,11 @@ from xarray.tests import mock
 
 from . import (
     TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
-    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
-    requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    assert_identical, has_dask, has_h5netcdf, has_netCDF4, has_pynio,
+    has_scipy, network, raises_regex, requires_dask, requires_h5netcdf,
+    requires_netCDF4, requires_pathlib, requires_pydap, requires_pynio,
+    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
+    requires_zarr)
 from .test_dataset import create_test_data
 
 try:
@@ -1658,7 +1659,12 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
 
-@pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
+@pytest.fixture(params=[
+    pytest.mark.skipif(not has_scipy, 'scipy', reason='scipy not found'),
+    pytest.mark.skipif(not has_netCDF4, 'netcdf4', reason='netcdf4 not found'),
+    pytest.mark.skipif(not has_h5netcdf, 'h5netcdf',
+                       reason='h5netcdf not found'),
+    pytest.mark.skipif(not has_pynio, 'pynio', reason='pynio not found')])
 def readengine(request):
     return request.param
 
@@ -1683,20 +1689,8 @@ def chunks(request):
     return request.param
 
 
-def skip_if_not_engine(engine):
-    if engine == 'netcdf4':
-        pytest.importorskip('netCDF4')
-    elif engine == 'pynio':
-        pytest.importorskip('Nio')
-    else:
-        pytest.importorskip(engine)
-
-
 def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
                                   chunks):
-
-    # skip certain combinations
-    skip_if_not_engine(readengine)
 
     if not has_dask and parallel:
         pytest.skip('parallel requires dask')
@@ -1711,8 +1705,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
     original = Dataset({'foo': ('x', randdata)})
     # test standard open_mfdataset approach with too many files
     with create_tmp_files(nfiles) as tmpfiles:
-        writeengine = (readengine if readengine != 'pynio'
-                       else 'netcdf4')
+        writeengine = (readengine if readengine != 'pynio' else 'netcdf4')
         # split into multiple sets of temp files
         for ii in original.x.values:
             subds = original.isel(x=slice(ii, ii + 1))
@@ -1720,6 +1713,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
 
         # check that calculation on opened datasets works properly
         actual = open_mfdataset(tmpfiles, engine=readengine,
+                                parallel=parallel,
                                 autoclose=autoclose,
                                 chunks=chunks)
 

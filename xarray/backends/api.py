@@ -571,21 +571,26 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                        autoclose=autoclose, **kwargs)
 
     if parallel or (parallel is None and get_scheduler() == 'distributed'):
+        # wrap the open_dataset, getattr, and preprocess with delayed
         import dask
-        datasets = [delayed(open_dataset)(p, **open_kwargs) for p in paths]
-        # important: get the file_objs before calling preprocess
-        file_objs = [ds._file_obj for ds in datasets]
+        parallel = True
+        _open = dask.delayed(open_dataset)
+        _getattr = dask.delayed(getattr)
         if preprocess is not None:
-            datasets = [delayed(preprocess)(ds) for p in datasets]
-
-        # calling compute here will return compute the datasets/file_objs lists
-        # the underlying datasets will still be stored as dask arrays
-        datasets, file_objs = dask.compute([datasets, file_objs])
+            preprocess = dask.delayed(preprocess)
     else:
-        datasets = [open_dataset(p, **open_kwargs) for p in paths]
-        file_objs = [ds._file_obj for ds in datasets]
-        if preprocess is not None:
-            datasets = [preprocess(ds) for ds in datasets]
+        _open = open_dataset
+        _getattr = getattr
+
+    datasets = [_open(p, **open_kwargs) for p in paths]
+    file_objs = [_getattr(ds, '_file_obj') for ds in datasets]
+    if preprocess is not None:
+        datasets = [preprocess(ds) for ds in datasets]
+
+    if parallel:
+        # calling compute here will return the datasets/file_objs lists,
+        # the underlying datasets will still be stored as dask arrays
+        datasets, file_objs = dask.compute(datasets, file_objs)
 
     # close datasets in case of a ValueError
     try:
