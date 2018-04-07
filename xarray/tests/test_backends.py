@@ -1677,21 +1677,23 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
 
 
 @pytest.fixture(params=[
-    pytest.mark.skipif(not has_scipy, 'scipy', reason='scipy not found'),
-    pytest.mark.skipif(not has_netCDF4, 'netcdf4', reason='netcdf4 not found'),
+    pytest.mark.skipif(not has_scipy, 'scipy', reason='requires scipy'),
+    pytest.mark.skipif(not has_netCDF4, 'netcdf4', reason='requires netcdf4'),
     pytest.mark.skipif(not has_h5netcdf, 'h5netcdf',
-                       reason='h5netcdf not found'),
-    pytest.mark.skipif(not has_pynio, 'pynio', reason='pynio not found')])
+                       reason='requires h5netcdf'),
+    pytest.mark.skipif(not has_pynio, 'pynio', reason='requires pynio')])
 def readengine(request):
     return request.param
 
 
-@pytest.fixture(params=[1, 10, 500])
+@pytest.fixture(params=[1, 10, 100])
 def nfiles(request):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture(params=[
+    pytest.mark.skipif(not has_dask, True, reason='requires dask'),
+    None, False])
 def autoclose(request):
     return request.param
 
@@ -1708,9 +1710,6 @@ def chunks(request):
 
 def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
                                   chunks):
-
-    if not has_dask and parallel:
-        pytest.skip('parallel requires dask')
 
     if readengine == 'h5netcdf' and autoclose:
         pytest.skip('h5netcdf does not support autoclose yet')

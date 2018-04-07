@@ -537,8 +537,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be performed
-        in parallel using ``dask.delayed``. Default is False unless the dask's
-        distributed scheduler is being used in which case the default is True.
+        in parallel using ``dask.delayed``. Default is True unless the dask is
+        not installed, in which case the default value is False.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -570,20 +570,29 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
 
-    if parallel or (parallel is None and get_scheduler() == 'distributed'):
+    # import dask for parallel open
+    if parallel in [True, None]:
+        try:
+            import dask
+            parallel = True
+        except ImportError as e:
+            if parallel:
+                raise e
+            # parallel is None and dask is not available so don't use parallel
+            parallel = False
+
+    if parallel:
         # wrap the open_dataset, getattr, and preprocess with delayed
-        import dask
-        parallel = True
-        _open = dask.delayed(open_dataset)
-        _getattr = dask.delayed(getattr)
+        open_ = dask.delayed(open_dataset)
+        getattr_ = dask.delayed(getattr)
         if preprocess is not None:
             preprocess = dask.delayed(preprocess)
     else:
-        _open = open_dataset
-        _getattr = getattr
+        open_ = open_dataset
+        getattr_ = getattr
 
-    datasets = [_open(p, **open_kwargs) for p in paths]
-    file_objs = [_getattr(ds, '_file_obj') for ds in datasets]
+    datasets = [open_(p, **open_kwargs) for p in paths]
+    file_objs = [getattr_(ds, '_file_obj') for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
 
