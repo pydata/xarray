@@ -1144,6 +1144,23 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
                     # Need to construct 88 character filepath
                     xr.Dataset().to_netcdf('a' * (88 - len(os.getcwd()) - 1))
 
+    def test_setncattr_string(self):
+        list_of_strings = ['list', 'of', 'strings']
+        one_element_list_of_strings = ['one element']
+        one_string = 'one string'
+        attrs = {'foo': list_of_strings,
+                 'bar': one_element_list_of_strings,
+                 'baz': one_string}
+        ds = Dataset({'x': ('y', [1, 2, 3], attrs)},
+                     attrs=attrs)
+
+        with self.roundtrip(ds) as actual:
+            for totest in [actual, actual['x']]:
+                assert_array_equal(list_of_strings, totest.attrs['foo'])
+                assert_array_equal(one_element_list_of_strings,
+                                   totest.attrs['bar'])
+                assert one_string == totest.attrs['baz']
+
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
     autoclose = True
