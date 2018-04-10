@@ -9,7 +9,7 @@ import pandas as pd
 from .coding import times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
-from .core.pycompat import OrderedDict, basestring, iteritems
+from .core.pycompat import OrderedDict, basestring, iteritems, dask_array_type
 from .core.variable import IndexVariable, Variable, as_variable
 
 
@@ -490,8 +490,9 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         del attributes['dtype']
         data = BoolTypeArray(data)
 
-    return Variable(dimensions, indexing.LazilyOuterIndexedArray(data),
-                    attributes, encoding=encoding)
+    if not isinstance(data, dask_array_type):
+        data = indexing.LazilyOuterIndexedArray(data)
+    return Variable(dimensions, data, attributes, encoding=encoding)
 
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
