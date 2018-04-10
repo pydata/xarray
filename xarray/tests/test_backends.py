@@ -2017,6 +2017,20 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
                 assert_identical(original, actual)
 
+    def test_open_single_dataset(self):
+        # Test for issue GH #1988. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'), rnddata[np.newaxis, :])},
+                           {'baz': [100]})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_mfdataset([tmp], concat_dim=dim,
+                                autoclose=self.autoclose) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()
