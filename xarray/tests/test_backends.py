@@ -1686,7 +1686,7 @@ def readengine(request):
     return request.param
 
 
-@pytest.fixture(params=[1, 10, 100])
+@pytest.fixture(params=[1, 100])
 def nfiles(request):
     return request.param
 
@@ -1728,10 +1728,8 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
             subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
         # check that calculation on opened datasets works properly
-        actual = open_mfdataset(tmpfiles, engine=readengine,
-                                parallel=parallel,
-                                autoclose=autoclose,
-                                chunks=chunks)
+        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                                autoclose=autoclose, chunks=chunks)
 
         # check that using open_mfdataset returns dask arrays for variables
         assert isinstance(actual['foo'].data, dask_array_type)
