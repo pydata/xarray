@@ -1,7 +1,7 @@
 name: test_env
 channels:
   - conda-forge
-  - ncar
+  - conda-forge/label/dev
 dependencies:
   - python=3.6
   - dask
