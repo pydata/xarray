@@ -64,6 +64,10 @@ Bug fixes
 - Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
   correctly (:issue:`2002`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
+- When calling `xr.auto_combine()` or `xr.open_mfdataset()` with a `concat_dim`,
+  the resulting dataset will have that one-element dimension (it was
+  silently dropped, previously) (:issue:`1988`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.10.2:
 
