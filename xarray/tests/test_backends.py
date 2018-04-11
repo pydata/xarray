@@ -1578,6 +1578,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
