@@ -698,7 +698,7 @@ def apply_ufunc(func, *args, **kwargs):
         on each input argument that should not be broadcast. By default, we
         assume there are no core dimensions on any input arguments.
 
-        For example ,``input_core_dims=[[], ['time']]`` indicates that all
+        For example, ``input_core_dims=[[], ['time']]`` indicates that all
         dimensions on the first argument and all dimensions other than 'time'
         on the second argument should be broadcast.
 
