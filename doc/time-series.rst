@@ -225,7 +225,8 @@ calendars or dates using a standard calendar, but outside the
 behavior has not yet been turned on by default; to take advantage of this
 functionality, you must have the ``enable_netcdftimeindex`` option set to
 ``True`` within your context (see :py:func:`~xarray.set_options` for more
-information).
+information).  It is expected that this will become the default behavior in
+xarray version 0.11.
 
 For instance, you can create a DataArray indexed by a time
 coordinate with a no-leap calendar within a context manager setting the
@@ -257,17 +258,19 @@ coordinate with a no-leap calendar within a context manager setting the
    regardless of whether or not they can be represented using
    ``np.datetime64[ns]`` objects.
                          
-For data indexed by a ``NetCDFTimeIndex`` xarray currently supports `partial
-datetime string indexing`_ using strictly `ISO 8601-format`_ partial datetime
-strings:
+For data indexed by a ``NetCDFTimeIndex`` xarray currently supports:
 
+- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
+  datetime strings:
+  
 .. ipython:: python
 
    da.sel(time='0001')
    da.sel(time=slice('0001-05', '0002-02'))
 
-access of basic datetime components via the ``dt`` accessor (in this case just
-"year", "month", "day", "hour", "minute", "second", "microsecond", and "season"):
+- Access of basic datetime components via the ``dt`` accessor (in this case
+  just "year", "month", "day", "hour", "minute", "second", "microsecond", and
+  "season"): 
 
 .. ipython:: python
 
@@ -275,14 +278,14 @@ access of basic datetime components via the ``dt`` accessor (in this case just
    da.time.dt.month
    da.time.dt.season
 
-group-by operations based on datetime accessor attributes (e.g. by month of the
-year):
+- Group-by operations based on datetime accessor attributes (e.g. by month of
+  the year):
 
 .. ipython:: python
 
    da.groupby('time.month').sum()
    
-and serialization:
+- And serialization:
 
 .. ipython:: python
 
