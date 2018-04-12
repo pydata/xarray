@@ -55,6 +55,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed ``decode_cf`` function to operate lazily on dask arrays
+  (:issue:`1372`). By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
