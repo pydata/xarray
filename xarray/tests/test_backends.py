@@ -29,11 +29,10 @@ from xarray.tests import mock
 
 from . import (
     TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, has_dask, has_h5netcdf, has_netCDF4, has_pynio,
-    has_scipy, network, raises_regex, requires_dask, requires_h5netcdf,
-    requires_netCDF4, requires_pathlib, requires_pydap, requires_pynio,
-    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr)
+    assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
+    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
+    requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
+    requires_scipy_or_netCDF4, requires_zarr)
 from .test_dataset import create_test_data
 
 try:
@@ -1676,12 +1675,7 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
 
-@pytest.fixture(params=[
-    pytest.mark.skipif(not has_scipy, 'scipy', reason='requires scipy'),
-    pytest.mark.skipif(not has_netCDF4, 'netcdf4', reason='requires netcdf4'),
-    pytest.mark.skipif(not has_h5netcdf, 'h5netcdf',
-                       reason='requires h5netcdf'),
-    pytest.mark.skipif(not has_pynio, 'pynio', reason='requires pynio')])
+@pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
 def readengine(request):
     return request.param
 
@@ -1691,9 +1685,7 @@ def nfiles(request):
     return request.param
 
 
-@pytest.fixture(params=[
-    pytest.mark.skipif(not has_dask, True, reason='requires dask'),
-    None, False])
+@pytest.fixture(params=[True, None, False])
 def autoclose(request):
     return request.param
 
@@ -1708,8 +1700,24 @@ def chunks(request):
     return request.param
 
 
+# using pytest.mark.skipif does not work so this a work around
+def skip_if_not_engine(engine):
+    if engine == 'netcdf4':
+        pytest.importorskip('netCDF4')
+    elif engine == 'pynio':
+        pytest.importorskip('Nio')
+    else:
+        pytest.importorskip(engine)
+
+
 def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
                                   chunks):
+
+    # skip certain combinations
+    skip_if_not_engine(readengine)
+
+    if not has_dask and parallel:
+        pytest.skip('parallel requires dask')
 
     if readengine == 'h5netcdf' and autoclose:
         pytest.skip('h5netcdf does not support autoclose yet')
