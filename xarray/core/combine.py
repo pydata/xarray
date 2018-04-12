@@ -340,7 +340,8 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
 
 
 def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
-    if len(datasets) == 1:
+    if len(datasets) == 1 and dim is None:
+        # There is nothing more to combine, so kick out early.
         return datasets[0]
     else:
         if dim is None:

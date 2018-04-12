@@ -850,6 +850,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                       FutureWarning, stacklevel=2)
         return iter(self._variables)
 
+    def __array__(self, dtype=None):
+        raise TypeError('cannot directly convert an xarray.Dataset into a '
+                        'numpy array. Instead, create an xarray.DataArray '
+                        'first, either with indexing on the Dataset or by '
+                        'invoking the `to_array()` method.')
+
     @property
     def nbytes(self):
         return sum(v.nbytes for v in self.variables.values())

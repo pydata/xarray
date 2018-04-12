@@ -2,11 +2,12 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 from datetime import datetime
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
-from . import dtypes, formatting, ops
+from . import duck_array_ops, dtypes, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import Frozen, SortedKeysDict
@@ -744,6 +745,55 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if self._file_obj is not None:
             self._file_obj.close()
         self._file_obj = None
+
+    def isin(self, test_elements):
+        """Tests each value in the array for whether it is in the supplied list.
+
+        Parameters
+        ----------
+        test_elements : array_like
+            The values against which to test each value of `element`.
+            This argument is flattened if an array or array_like.
+            See numpy notes for behavior with non-array-like parameters.
+
+        Returns
+        -------
+        isin : same as object, bool
+            Has the same shape as this object.
+
+        Examples
+        --------
+
+        >>> array = xr.DataArray([1, 2, 3], dims='x')
+        >>> array.isin([1, 3])
+        <xarray.DataArray (x: 3)>
+        array([ True, False,  True])
+        Dimensions without coordinates: x
+
+        See also
+        --------
+        numpy.isin
+        """
+        from .computation import apply_ufunc
+        from .dataset import Dataset
+        from .dataarray import DataArray
+        from .variable import Variable
+
+        if isinstance(test_elements, Dataset):
+            raise TypeError(
+                'isin() argument must be convertible to an array: {}'
+                .format(test_elements))
+        elif isinstance(test_elements, (Variable, DataArray)):
+            # need to explicitly pull out data to support dask arrays as the
+            # second argument
+            test_elements = test_elements.data
+
+        return apply_ufunc(
+            duck_array_ops.isin,
+            self,
+            kwargs=dict(test_elements=test_elements),
+            dask='allowed',
+        )
 
     def __enter__(self):
         return self
