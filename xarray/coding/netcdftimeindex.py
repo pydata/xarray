@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -126,7 +126,7 @@ def assert_all_valid_date_type(data):
 
     valid_types = (DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
                    DatetimeGregorian, DatetimeProlepticGregorian,
-                   Datetime360Day, datetime)
+                   Datetime360Day)
 
     sample = data[0]
     date_type = type(sample)

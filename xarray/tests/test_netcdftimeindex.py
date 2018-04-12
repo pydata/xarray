@@ -5,7 +5,7 @@ import pytest
 import pandas as pd
 import xarray as xr
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from xarray.coding.netcdftimeindex import (
     parse_iso8601, NetCDFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
@@ -62,8 +62,7 @@ def netcdftime_date_types():
         DatetimeNoLeap, DatetimeJulian, DatetimeAllLeap,
         DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day)
     return [DatetimeNoLeap, DatetimeJulian, DatetimeAllLeap,
-            DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day,
-            datetime]
+            DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day]
 
 
 @pytest.fixture(params=netcdftime_date_types())

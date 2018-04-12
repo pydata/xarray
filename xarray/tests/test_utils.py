@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from datetime import datetime
 from xarray.coding.netcdftimeindex import NetCDFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
@@ -58,6 +59,19 @@ def test_safe_cast_to_index_netcdftimeindex(enable_netcdftimeindex):
             assert isinstance(actual, NetCDFTimeIndex)
         else:
             assert isinstance(actual, pd.Index)
+
+
+# Test that datetime.datetime objects are never used in a NetCDFTimeIndex
+@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
+def test_safe_cast_to_index_datetime_datetime(enable_netcdftimeindex):
+    dates = [datetime(1, 1, day) for day in range(1, 20)]
+
+    expected = pd.Index(dates)
+    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+        actual = utils.safe_cast_to_index(np.array(dates))
+    assert_array_equal(expected, actual)
+    assert isinstance(actual, pd.Index)
 
 
 def test_multiindex_from_product_levels():

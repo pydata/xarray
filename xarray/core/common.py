@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from datetime import datetime
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -890,13 +889,7 @@ def contains_netcdftime_datetimes(var):
         return isinstance(var.data.flatten()[0], netcdftime_datetime)
 
 
-def contains_datetime_datetimes(var):
-    """Check if a variable contains datetime.datetime objects"""
-    return isinstance(var.data.flatten()[0], datetime)
-    
-
 def _contains_datetime_like_objects(var):
     """Check if a variable contains datetime like objects (either
     np.datetime64, np.timedelta64, or netcdftime._netcdftime.datetime)"""
-    return (is_np_datetime_like(var.dtype) or
-            contains_netcdftime_datetimes(var) or contains_datetime_datetimes(var))
+    return is_np_datetime_like(var.dtype) or contains_netcdftime_datetimes(var)

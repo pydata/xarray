@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from datetime import datetime
 from itertools import product
 import warnings
 
@@ -533,27 +532,6 @@ def test_infer_netcdftime_datetime_units():
             assert expected == coding.times.infer_datetime_units(dates)
 
 
-# datetime.datetime objects have higher precision than netcdftime.datetime
-# objects.
-@pytest.mark.parametrize(
-    ['dates', 'expected'], [
-        ([datetime(1900, 1, 1),
-          datetime(1900, 1, 2)],
-         'days since 1900-01-01 00:00:00.000000'),
-        ([datetime(1900, 1, 1, 12),
-          datetime(1900, 1, 1, 13)],
-         'hours since 1900-01-01 12:00:00.000000'),
-        ([datetime(1900, 1, 1),
-          datetime(1900, 1, 2),
-          datetime(1900, 1, 2, 0, 0, 1)],
-         'seconds since 1900-01-01 00:00:00.000000'),
-        ([datetime(1900, 1, 1),
-          datetime(1900, 1, 2, 0, 0, 0, 5)],
-         'seconds since 1900-01-01 00:00:00.000000')])
-def test_infer_datetime_datetime_units(dates, expected):
-    assert expected == coding.times.infer_datetime_units(dates)
-
-
 @pytest.mark.parametrize(
     ['timedeltas', 'units', 'numbers'],
     [('1D', 'days', np.int64(1)),
@@ -621,7 +599,6 @@ def test_infer_timedelta_units(deltas, expected):
 def test_format_netcdftime_datetime(date_args, expected):
     pytest.importorskip('netcdftime')
     date_types = _all_netcdftime_date_types()
-    date_types['datetime.datetime'] = datetime  # Also test datetime.datetime
     for date_type in date_types.values():
         result = coding.times.format_netcdftime_datetime(date_type(*date_args))
         assert result == expected
