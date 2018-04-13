@@ -10,7 +10,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - cftime
   - pynio=dev
   - pytest
   - numpy
@@ -21,6 +20,7 @@ dependencies:
   - rasterio
   - bottleneck
   - pip:
+    - cftime
     - coveralls
     - pytest-cov
     - pydap

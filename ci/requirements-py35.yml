@@ -9,7 +9,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - cftime
   - pytest
   - flake8
   - numpy
@@ -20,5 +19,6 @@ dependencies:
   - rasterio
   - zarr
   - pip:
+    - cftime
     - coveralls
     - pytest-cov

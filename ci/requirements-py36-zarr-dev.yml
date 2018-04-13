@@ -14,8 +14,8 @@ dependencies:
   - seaborn
   - toolz
   - bottleneck
-  - cftime
   - pip:
+    - cftime
     - coveralls
     - pytest-cov
     - git+https://github.com/alimanfoo/zarr.git

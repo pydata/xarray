@@ -9,7 +9,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - cftime
   - pytest
   - numpy
   - pandas
@@ -18,3 +17,5 @@ dependencies:
   - toolz
   - rasterio
   - zarr
+  - pip:
+    - cftime

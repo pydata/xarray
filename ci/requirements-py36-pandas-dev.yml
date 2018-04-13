@@ -10,13 +10,13 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - cftime
   - pytest
   - flake8
   - numpy
   - scipy
   - toolz
   - pip:
+    - cftime
     - coveralls
     - pytest-cov
     - git+https://github.com/pydata/pandas.git

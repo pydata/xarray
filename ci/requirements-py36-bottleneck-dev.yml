@@ -9,7 +9,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - cftime
   - pytest
   - flake8
   - numpy
@@ -19,5 +18,6 @@ dependencies:
   - toolz
   - pip:
     - git+https://github.com/kwgoodman/bottleneck.git
+    - cftime
     - coveralls
     - pytest-cov
