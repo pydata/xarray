@@ -71,8 +71,7 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
-        index = _maybe_cast_to_netcdftimeindex(index)
-    return index
+    return _maybe_cast_to_netcdftimeindex(index)
 
 
 def multiindex_from_product_levels(levels, names=None):

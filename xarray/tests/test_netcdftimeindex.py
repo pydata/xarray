@@ -506,3 +506,21 @@ def test_indexing_in_dataframe_iloc(df, index):
     expected = pd.DataFrame([1, 2], index=index[:2])
     result = df.iloc[:2]
     assert result.equals(expected)
+
+
+@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
+def test_concat_netcdftimeindex(date_type, enable_netcdftimeindex):
+    with xr.set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+        da1 = xr.DataArray(
+            [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
+            dims=['time'])
+        da2 = xr.DataArray(
+            [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
+            dims=['time'])
+        da = xr.concat([da1, da2], dim='time')
+
+    if enable_netcdftimeindex:
+        assert isinstance(da.indexes['time'], NetCDFTimeIndex)
+    else:
+        assert isinstance(da.indexes['time'], pd.Index)
+        assert not isinstance(da.indexes['time'], NetCDFTimeIndex)
