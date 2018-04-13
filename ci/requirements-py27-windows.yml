@@ -9,7 +9,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - netcdftime
+  - cftime
   - pathlib2
   - pytest
   - flake8

@@ -14,7 +14,7 @@ dependencies:
   - seaborn
   - toolz
   - bottleneck
-  - netcdftime
+  - cftime
   - pip:
     - coveralls
     - pytest-cov

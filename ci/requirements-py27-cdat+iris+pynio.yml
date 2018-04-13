@@ -11,7 +11,7 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - netcdftime
+  - cftime
   - numpy
   - pandas
   - pathlib2
