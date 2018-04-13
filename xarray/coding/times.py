@@ -100,7 +100,8 @@ def _unpack_netcdf_time_units(units):
     return delta_units, ref_date
 
 
-def _decode_datetime_with_netcdftime(num_dates, units, calendar):
+def _decode_datetime_with_netcdftime(num_dates, units, calendar,
+                                     enable_netcdftimeindex):
     nctime = _import_netcdftime()
     dates = np.asarray(nctime.num2date(num_dates, units, calendar))
 
@@ -112,7 +113,7 @@ def _decode_datetime_with_netcdftime(num_dates, units, calendar):
             'netCDF4.datetime objects instead, reason: dates out '
             'of range', SerializationWarning, stacklevel=3)
     else:
-        if OPTIONS['enable_netcdftimeindex']:
+        if enable_netcdftimeindex:
             if calendar in _STANDARD_CALENDARS:
                 dates = nctime_to_nptime(dates)
             else:
@@ -136,7 +137,7 @@ def _decode_datetime_with_netcdftime(num_dates, units, calendar):
     return dates
 
 
-def _decode_cf_datetime_dtype(data, units, calendar):
+def _decode_cf_datetime_dtype(data, units, calendar, enable_netcdftimeindex):
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
@@ -146,7 +147,8 @@ def _decode_cf_datetime_dtype(data, units, calendar):
                                     last_item(values) or [0]])
 
     try:
-        result = decode_cf_datetime(example_value, units, calendar)
+        result = decode_cf_datetime(example_value, units, calendar,
+                                    enable_netcdftimeindex)
     except Exception:
         calendar_msg = ('the default calendar' if calendar is None
                         else 'calendar %r' % calendar)
@@ -162,7 +164,8 @@ def _decode_cf_datetime_dtype(data, units, calendar):
     return dtype
 
 
-def decode_cf_datetime(num_dates, units, calendar=None):
+def decode_cf_datetime(num_dates, units, calendar=None,
+                       enable_netcdftimeindex=False):
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
 
@@ -213,7 +216,8 @@ def decode_cf_datetime(num_dates, units, calendar=None):
 
     except (OutOfBoundsDatetime, OverflowError):
         dates = _decode_datetime_with_netcdftime(
-            flat_num_dates.astype(np.float), units, calendar)
+            flat_num_dates.astype(np.float), units, calendar,
+            enable_netcdftimeindex)
 
     return dates.reshape(num_dates.shape)
 
@@ -414,9 +418,11 @@ class CFDatetimeCoder(VariableCoder):
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')
-            dtype = _decode_cf_datetime_dtype(data, units, calendar)
+            dtype = _decode_cf_datetime_dtype(
+                data, units, calendar, OPTIONS['enable_netcdftimeindex'])
             transform = partial(
-                decode_cf_datetime, units=units, calendar=calendar)
+                decode_cf_datetime, units=units, calendar=calendar,
+                enable_netcdftimeindex=OPTIONS['enable_netcdftimeindex'])
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)

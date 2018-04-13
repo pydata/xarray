@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import Variable, coding, set_options
+from xarray import Variable, coding, set_options, DataArray, decode_cf
 from xarray.coding.times import _import_netcdftime
 from xarray.coding.variables import SerializationWarning
 
@@ -169,9 +169,9 @@ def test_decode_standard_calendar_inside_timestamp_range(
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-            actual = coding.times.decode_cf_datetime(noleap_time, units,
-                                                     calendar=calendar)
+        actual = coding.times.decode_cf_datetime(
+            noleap_time, units, calendar=calendar,
+            enable_netcdftimeindex=enable_netcdftimeindex)
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -201,9 +201,9 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-            actual = coding.times.decode_cf_datetime(noleap_time, units,
-                                                     calendar=calendar)
+        actual = coding.times.decode_cf_datetime(
+            noleap_time, units, calendar=calendar,
+            enable_netcdftimeindex=enable_netcdftimeindex)
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -229,9 +229,9 @@ def test_decode_dates_outside_timestamp_range(
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-            actual = coding.times.decode_cf_datetime(noleap_time, units,
-                                                     calendar=calendar)
+        actual = coding.times.decode_cf_datetime(
+            noleap_time, units, calendar=calendar,
+            enable_netcdftimeindex=enable_netcdftimeindex)
     assert all(isinstance(value, expected_date_type) for value in actual)
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -251,9 +251,9 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore',
                                     'Unable to decode time axis')
-            with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-                actual = coding.times.decode_cf_datetime(num_time, units,
-                                                         calendar=calendar)
+            actual = coding.times.decode_cf_datetime(
+                num_time, units, calendar=calendar,
+                enable_netcdftimeindex=enable_netcdftimeindex)
         assert actual.dtype == np.dtype('M8[ns]')
 
 
@@ -268,9 +268,9 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore',
                                     'Unable to decode time axis')
-            with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-                actual = coding.times.decode_cf_datetime(num_time, units,
-                                                         calendar=calendar)
+            actual = coding.times.decode_cf_datetime(
+                num_time, units, calendar=calendar,
+                enable_netcdftimeindex=enable_netcdftimeindex)
         if enable_netcdftimeindex:
             assert actual.dtype == np.dtype('O')
         else:
@@ -290,10 +290,9 @@ def test_decode_single_element_outside_timestamp_range(
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore',
                                         'Unable to decode time axis')
-                with set_options(
-                        enable_netcdftimeindex=enable_netcdftimeindex):
-                    actual = coding.times.decode_cf_datetime(
-                        num_time, units, calendar=calendar)
+                actual = coding.times.decode_cf_datetime(
+                    num_time, units, calendar=calendar,
+                    enable_netcdftimeindex=enable_netcdftimeindex)
             expected = nctime.num2date(days, units, calendar)
             assert isinstance(actual.item(), type(expected))
 
@@ -320,9 +319,9 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     expected1 = times1.values
     expected2 = times2.values
 
-    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-        actual = coding.times.decode_cf_datetime(mdim_time, units,
-                                                 calendar=calendar)
+    actual = coding.times.decode_cf_datetime(
+        mdim_time, units, calendar=calendar,
+        enable_netcdftimeindex=enable_netcdftimeindex)
     assert actual.dtype == np.dtype('M8[ns]')
 
     abs_diff1 = abs(actual[:, 0] - expected1)
@@ -362,9 +361,10 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
         expected2 = times2.values
         expected_dtype = np.dtype('M8[ns]')
 
-    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-        actual = coding.times.decode_cf_datetime(mdim_time, units,
-                                                 calendar=calendar)
+    actual = coding.times.decode_cf_datetime(
+        mdim_time, units, calendar=calendar,
+        enable_netcdftimeindex=enable_netcdftimeindex)
+
     assert actual.dtype == expected_dtype
     abs_diff1 = abs(actual[:, 0] - expected1)
     abs_diff2 = abs(actual[:, 1] - expected2)
@@ -398,9 +398,10 @@ def test_decode_multidim_time_outside_timestamp_range(
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-            actual = coding.times.decode_cf_datetime(mdim_time, units,
-                                                     calendar=calendar)
+        actual = coding.times.decode_cf_datetime(
+            mdim_time, units, calendar=calendar,
+            enable_netcdftimeindex=enable_netcdftimeindex)
+
     assert actual.dtype == np.dtype('O')
 
     abs_diff1 = abs(actual[:, 0] - expected1)
@@ -430,9 +431,9 @@ def test_decode_non_standard_calendar_single_element_fallback(
     num_time = nctime.date2num(dt, units, calendar)
     with pytest.warns(SerializationWarning,
                       match='Unable to decode time axis'):
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-            actual = coding.times.decode_cf_datetime(num_time, units,
-                                                     calendar=calendar)
+        actual = coding.times.decode_cf_datetime(
+            num_time, units, calendar=calendar,
+            enable_netcdftimeindex=enable_netcdftimeindex)
     expected = np.asarray(nctime.num2date(num_time, units, calendar))
     assert actual.dtype == np.dtype('O')
     assert expected == actual
@@ -453,9 +454,9 @@ def test_decode_non_standard_calendar_fallback(
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
-            with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
-                actual = coding.times.decode_cf_datetime(num_times, units,
-                                                         calendar=calendar)
+            actual = coding.times.decode_cf_datetime(
+                num_times, units, calendar=calendar,
+                enable_netcdftimeindex=enable_netcdftimeindex)
             assert len(w) == 1
             assert 'Unable to decode time axis' in str(w[0].message)
 
@@ -602,3 +603,26 @@ def test_format_netcdftime_datetime(date_args, expected):
     for date_type in date_types.values():
         result = coding.times.format_netcdftime_datetime(date_type(*date_args))
         assert result == expected
+
+
+@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.parametrize(
+    ['calendar', 'enable_netcdftimeindex'],
+    product(_ALL_CALENDARS, [False, True]))
+def test_decode_cf_enable_netcdftimeindex(calendar, enable_netcdftimeindex):
+    days = [1., 2., 3.]
+    da = DataArray(days, coords=[days], dims=['time'], name='test')
+    ds = da.to_dataset()
+
+    for v in ['test', 'time']:
+        ds[v].attrs['units'] = 'days since 2000-01-01'
+        ds[v].attrs['calendar'] = calendar
+
+    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+        ds = decode_cf(ds)
+
+    if (enable_netcdftimeindex and
+       calendar not in coding.times._STANDARD_CALENDARS):
+        assert ds.test.dtype == np.dtype('O')
+    else:
+        assert ds.test.dtype == np.dtype('M8[ns]')
