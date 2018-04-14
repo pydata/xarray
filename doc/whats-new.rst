@@ -26,13 +26,24 @@ What's New
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 
-.. _whats-new.0.10.3:
+.. _whats-new.0.10.4:
 
-v0.10.3 (unreleased)
+v0.10.4 (unreleased)
 --------------------
 
-Documentation
-~~~~~~~~~~~~~
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+
+.. _whats-new.0.10.3:
+
+v0.10.3 (April 13, 2018)
+------------------------
+
+The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -59,6 +70,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed ``decode_cf`` function to operate lazily on dask arrays
+  (:issue:`1372`). By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.

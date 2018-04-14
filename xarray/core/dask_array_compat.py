@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from functools import wraps
 import numpy as np
 import dask.array as da
 
@@ -15,7 +14,6 @@ except ImportError:  # pragma: no cover
                          assume_unique=assume_unique)
         return values.reshape(element.shape + (1,) * test_elements.ndim)
 
-    @wraps(getattr(np, 'isin', None))
     def isin(element, test_elements, assume_unique=False, invert=False):
         element = da.asarray(element)
         test_elements = da.asarray(test_elements)
