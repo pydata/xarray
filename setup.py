@@ -8,8 +8,8 @@ from setuptools import find_packages, setup
 
 MAJOR = 0
 MINOR = 10
-MICRO = 2
-ISRELEASED = False
+MICRO = 3
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
