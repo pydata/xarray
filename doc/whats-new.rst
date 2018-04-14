@@ -28,11 +28,10 @@ What's New
 
 .. _whats-new.0.10.3:
 
-v0.10.3 (unreleased)
---------------------
+v0.10.3 (April 13, 2018)
+------------------------
 
-Documentation
-~~~~~~~~~~~~~
+The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
