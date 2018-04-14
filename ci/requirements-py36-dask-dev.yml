@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - h5py
   - h5netcdf
   - matplotlib
@@ -15,7 +16,6 @@ dependencies:
   - scipy
   - toolz
   - pip:
-    - cftime
     - coveralls
     - pytest-cov
     - git+https://github.com/dask/dask.git

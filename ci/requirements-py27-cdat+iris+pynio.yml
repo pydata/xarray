@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=2.7
   - cdat-lite
+  - cftime
   - cyordereddict
   - dask
   - distributed
@@ -25,6 +26,5 @@ dependencies:
   - iris>=1.10
   - zarr
   - pip:
-    - cftime
     - coveralls
     - pytest-cov

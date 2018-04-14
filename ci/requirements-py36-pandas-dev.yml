@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - cython
   - dask
   - distributed
@@ -16,7 +17,6 @@ dependencies:
   - scipy
   - toolz
   - pip:
-    - cftime
     - coveralls
     - pytest-cov
     - git+https://github.com/pydata/pandas.git

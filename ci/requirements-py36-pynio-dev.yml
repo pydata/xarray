@@ -4,6 +4,7 @@ channels:
   - ncar
 dependencies:
   - python=3.6
+  - cftime
   - dask
   - distributed
   - h5py
@@ -20,7 +21,6 @@ dependencies:
   - rasterio
   - bottleneck
   - pip:
-    - cftime
     - coveralls
     - pytest-cov
     - pydap

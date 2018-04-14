@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - dask
   - distributed
   - matplotlib
@@ -15,7 +16,6 @@ dependencies:
   - toolz
   - bottleneck
   - pip:
-    - cftime
     - coveralls
     - pytest-cov
     - git+https://github.com/alimanfoo/zarr.git
