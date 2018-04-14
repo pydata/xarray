@@ -61,6 +61,11 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
         self._isopen = True
         self._opener = opener
         super(PncDataStore, self).__init__()
+        if not hasattr(self, '_mode'):
+            try:
+                self._mode = mode
+            except Exception:
+                pass
 
     def open_store_variable(self, name, var):
         data = indexing.LazilyOuterIndexedArray(PncArrayWrapper(name, self))

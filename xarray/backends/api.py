@@ -148,7 +148,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
-                 backend_kwargs={}):
+                 backend_kwargs=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -213,6 +213,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    backend_kwargs: dictionary, optional
+        A dictionary of keyword arguments to pass on to the backend. This
+        may be useful when backend options would improve performance or 
+        allow user control of dataset processing.
 
     Returns
     -------
@@ -231,6 +235,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
+
+    if backend_kwargs is None:
+        backend_kwargs = {}
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -334,7 +341,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
                    mask_and_scale=True, decode_times=True, autoclose=False,
                    concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, cache=None, drop_variables=None):
+                   chunks=None, lock=None, cache=None, drop_variables=None,
+                   backend_kwargs=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -401,6 +409,10 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    backend_kwargs: dictionary, optional
+        A dictionary of keyword arguments to pass on to the backend. This
+        may be useful when backend options would improve performance or 
+        allow user control of dataset processing.
 
     Notes
     -----
@@ -415,13 +427,15 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     --------
     open_dataset
     """
+
     dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
                            mask_and_scale=mask_and_scale,
                            decode_times=decode_times, autoclose=autoclose,
                            concat_characters=concat_characters,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
-                           drop_variables=drop_variables)
+                           drop_variables=drop_variables,
+                           backend_kwargs=backend_kwargs)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '

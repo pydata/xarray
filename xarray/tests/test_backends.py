@@ -2229,40 +2229,6 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
     def save(self, dataset, path, **kwargs):
         dataset.to_netcdf(path, engine='netcdf4', **kwargs)
 
-    def test_weakrefs(self):
-        example = Dataset({'foo': ('x', np.arange(5.0))})
-        expected = example.rename({'foo': 'bar', 'x': 'y'})
-
-        with create_tmp_file() as tmp_file:
-            example.to_netcdf(tmp_file, engine='netcdf4')
-            on_disk = open_dataset(tmp_file, engine='pseudonetcdf')
-            actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
-            del on_disk  # trigger garbage collection
-            assert_identical(actual, expected)
-
-    @pytest.mark.skip(reason='cannot pickle file objects')
-    def test_pickle(self):
-        pass
-
-    @pytest.mark.skip(reason='cannot pickle file objects')
-    def test_pickle_dataarray(self):
-        pass
-
-    @pytest.mark.skip(reason='does not support boolean dtype')
-    def test_roundtrip_boolean_dtype(self):
-        # pnc does not support boolean dtype
-        pass
-
-    @pytest.mark.skip(reason='does not support auto masking and scaling')
-    def test_roundtrip_mask_and_scale(self):
-        # pnc does not support auto masking and scaling
-        pass
-
-    @pytest.mark.skip(reason='does not support object types')
-    def test_roundtrip_object_dtype(self):
-        # pnc does not support object types
-        pass
-
     @pytest.mark.skip(reason='encoding types are not consistent with xarray')
     def test_roundtrip_string_encoded_characters(self):
         # pnc string treatment does not meet xarray expectations
