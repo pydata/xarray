@@ -9,7 +9,7 @@ from setuptools import find_packages, setup
 MAJOR = 0
 MINOR = 10
 MICRO = 3
-ISRELEASED = True
+ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
 QUALIFIER = ''
 
