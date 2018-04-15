@@ -45,27 +45,30 @@ def _read_attributes(h5netcdf_var):
     # to ensure conventions decoding works properly on Python 3, decode all
     # bytes attributes to strings
     attrs = OrderedDict()
-    for k in h5netcdf_var.ncattrs():
-        v = h5netcdf_var.getncattr(k)
+    for k, v in h5netcdf_var.attrs.items():
         if k not in ['_FillValue', 'missing_value']:
             v = maybe_decode_bytes(v)
         attrs[k] = v
     return attrs
 
 
-_extract_h5nc_encoding = functools.partial(_extract_nc4_variable_encoding,
-                                           lsd_okay=False, backend='h5netcdf')
+
+_extract_h5nc_encoding = functools.partial(
+    _extract_nc4_variable_encoding,
+    lsd_okay=False, backend='h5netcdf-new',
+    valid_encodings=frozenset(['compression', 'compression_opts', 'fletcher32',
+                               'chunks', 'shuffle', '_FillValue']))
 
 
 def _open_h5netcdf_group(filename, mode, group):
-    import h5netcdf.legacyapi
-    ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
+    import h5netcdf
+    ds = h5netcdf.File(filename, mode=mode)
     with close_on_error(ds):
         return _nc4_group(ds, group, mode)
 
 
 class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
-    """Store for reading and writing data via h5netcdf
+    """Store for reading and writing data via h5netcdf new API
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
@@ -96,10 +99,13 @@ class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
             attrs = _read_attributes(var)
 
             # netCDF4 specific encoding
-            encoding = dict(var.filters())
-            chunking = var.chunking()
-            encoding['chunksizes'] = chunking \
-                if chunking != 'contiguous' else None
+            encoding = {
+                'compression': var.compression,
+                'compression_opts': var.compression_opts,
+                'chunks': var.chunks,
+                'fletcher32': var.fletcher32,
+                'shuffle': var.shuffle,
+            }
 
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
@@ -130,14 +136,14 @@ class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
     def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
             if is_unlimited:
-                self.ds.createDimension(name, size=None)
+                self.ds.dimensions[name] = None
                 self.ds.resize_dimension(name, length)
             else:
-                self.ds.createDimension(name, size=length)
+                self.ds.dimensions[name] = length
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
-            self.ds.setncattr(key, value)
+            self.ds.attrs[key] = value
 
     def encode_variable(self, variable):
         return _encode_nc4_variable(variable)
@@ -149,8 +155,8 @@ class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
         attrs = variable.attrs.copy()
         dtype = _get_datatype(variable)
 
-        fill_value = attrs.pop('_FillValue', None)
-        if dtype is str and fill_value is not None:
+        fillvalue = attrs.pop('_FillValue', None)
+        if dtype is str and fillvalue is not None:
             raise NotImplementedError(
                 'h5netcdf does not yet support setting a fill value for '
                 'variable-length strings '
@@ -166,18 +172,18 @@ class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
                                           raise_on_invalid=check_encoding)
         kwargs = {}
 
-        for key in ['zlib', 'complevel', 'shuffle',
-                    'chunksizes', 'fletcher32']:
+        for key in ['compression', 'compression_opts', 'shuffle',
+                    'chunks', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-        if name not in self.ds.variables:
-            nc4_var = self.ds.createVariable(name, dtype, variable.dims,
-                                             fill_value=fill_value, **kwargs)
+        if name not in self.ds:
+            nc4_var = self.ds.create_variable(name, dtype=dtype, dimensions=variable.dims,
+                                              fillvalue=fillvalue, **kwargs)
         else:
-            nc4_var = self.ds.variables[name]
+            nc4_var = self.ds[name]
 
         for k, v in iteritems(attrs):
-            nc4_var.setncattr(k, v)
+            nc4_var.attrs[k] = v
 
         target = H5NetCDFNewArrayWrapper(name, self)
 

@@ -157,15 +157,16 @@ def _force_native_endianness(var):
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
                                    lsd_okay=True, backend='netCDF4',
-                                   unlimited_dims=None):
+                                   unlimited_dims=None, valid_encodings=None):
     if unlimited_dims is None:
         unlimited_dims = ()
 
     encoding = variable.encoding.copy()
 
     safe_to_drop = set(['source', 'original_shape'])
-    valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
-                           'chunksizes', 'shuffle', '_FillValue'])
+    if valid_encodings is None:
+        valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
+                               'chunksizes', 'shuffle', '_FillValue'])
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
 

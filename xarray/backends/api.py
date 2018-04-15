@@ -305,6 +305,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                            autoclose=autoclose)
+        elif engine == 'h5netcdf-new':
+            store = backends.H5NetCDFNewStore(filename_or_obj, group=group,
+                                              autoclose=autoclose)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj,
                                           autoclose=autoclose)

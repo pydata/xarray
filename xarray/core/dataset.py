@@ -1129,13 +1129,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
             e.g::
 
-                to_netcdf(engine='h5netcdf',
-                          encoding={varname: {'zlib': True, 'complevel': 9}})
+                to_netcdf(engine='h5netcdf', encoding={varname:
+                          {'zlib': True, 'complevel': 9, 'chunksizes': (100, 100)}})
 
             is equivalent to::
 
-                to_netcdf(engine='h5netcdf-new',
-                          encoding={varname: {'compression': 'gzip', 'compression_opts': 9}})
+                to_netcdf(engine='h5netcdf-new', encoding={varname:
+                          {'compression': 'gzip', 'compression_opts': 9, 'chunks': (100, 100)}})
 
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
