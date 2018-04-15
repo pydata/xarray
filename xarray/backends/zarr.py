@@ -236,7 +236,13 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     var = conventions.maybe_default_fill_value(var)
     var = conventions.maybe_encode_bools(var)
     var = conventions.ensure_dtype_not_object(var, name=name)
-    var = conventions.maybe_encode_string_dtype(var, name=name)
+
+    # zarr allows unicode, but not variable-length strings, so it's both
+    # simpler and more compact to always encode as UTF-8 explicitly.
+    # TODO: allow toggling this explicitly via dtype in encoding.
+    coder = coding.strings.EncodedStringCoder(allows_unicode=False)
+    var = coder.encode(var, name=name)
+
     return var
 
 
