@@ -18,7 +18,7 @@ from xarray.testing import assert_identical
 
 from . import (
     IndexerMaker, TestCase, assert_array_equal, raises_regex, requires_netCDF4,
-    requires_netcdftime, unittest)
+    requires_netcdftime, unittest, requires_dask)
 from .test_backends import CFEncodedDataTest
 
 B = IndexerMaker(indexing.BasicIndexer)
@@ -156,12 +156,15 @@ class TestNativeEndiannessArray(TestCase):
 
 
 def test_decode_cf_with_conflicting_fill_missing_value():
-    var = Variable(['t'], np.arange(10),
+    expected = Variable(['t'], [np.nan, np.nan, 2], {'units': 'foobar'})
+    var = Variable(['t'], np.arange(3),
                    {'units': 'foobar',
                     'missing_value': 0,
                     '_FillValue': 1})
-    with raises_regex(ValueError, "_FillValue and missing_value"):
-        conventions.decode_cf_variable('t', var)
+    with warnings.catch_warnings(record=True) as w:
+        actual = conventions.decode_cf_variable('t', var)
+        assert_identical(actual, expected)
+        assert 'has multiple fill' in str(w[0].message)
 
     expected = Variable(['t'], np.arange(10), {'units': 'foobar'})
 
@@ -328,6 +331,17 @@ class TestDecodeCF(TestCase):
                     datetime(2265, 10, 28, 0, 0)]
 
         assert_array_equal(ds_decoded.time.values, expected)
+
+    @requires_dask
+    def test_decode_cf_with_dask(self):
+        import dask
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999})
+        }).chunk({'t': 1})
+        decoded = conventions.decode_cf(original)
+        assert dask.is_dask_collection(decoded.y.data)
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):

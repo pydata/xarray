@@ -26,13 +26,24 @@ What's New
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 
-.. _whats-new.0.10.3:
+.. _whats-new.0.10.4:
 
-v0.10.3 (unreleased)
+v0.10.4 (unreleased)
 --------------------
 
-Documentation
-~~~~~~~~~~~~~
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+
+.. _whats-new.0.10.3:
+
+v0.10.3 (April 13, 2018)
+------------------------
+
+The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -45,13 +56,39 @@ Enhancements
    by the ``encoding`` parameter, and at the moment of writing is the only way
    to use compression algorithms other than zlib, e.g. LZF (:ussue:`1536`).
    By `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
+  which test each value in the array for whether it is contained in the
+  supplied list, returning a bool array. See :ref:`selecting values with isin`
+  for full details. Similar to the ``np.isin`` function.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
+  object (:issue:`1993`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Handle variables with different values for ``missing_value`` and
+  ``_FillValue`` by masking values for both attributes; previously this
+  resulted in a ``ValueError``. (:issue:`2016`)
+  By `Ryan May <https://github.com/dopplershift>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Fixed ``decode_cf`` function to operate lazily on dask arrays
+  (:issue:`1372`). By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Attempting to convert an xarray.Dataset into a numpy array now raises an
+  informative error message.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
+  correctly (:issue:`2002`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+- When calling `xr.auto_combine()` or `xr.open_mfdataset()` with a `concat_dim`,
+  the resulting dataset will have that one-element dimension (it was
+  silently dropped, previously) (:issue:`1988`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.10.2:
 

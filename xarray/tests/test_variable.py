@@ -1422,8 +1422,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with raises_regex(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
         v = Variable(['x', 'y'], self.d)
         for q in [0.25, [0.50], [0.25, 0.75]]:

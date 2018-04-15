@@ -3327,6 +3327,14 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+    if request.param == 'repeating_ints':
+        return DataArray(
+            np.tile(np.arange(12), 5).reshape(5, 4, 3),
+            coords={'x': list('abc'),
+                    'y': list('defg')},
+            dims=list('zyx')
+        )
+
 
 @pytest.fixture
 def da_dask(seed=123):
@@ -3337,6 +3345,29 @@ def da_dask(seed=123):
     da = DataArray(values, dims=('a', 'time', 'x')).chunk({'time': 7})
     da['time'] = times
     return da
+
+
+@pytest.mark.parametrize('da', ('repeating_ints', ), indirect=True)
+def test_isin(da):
+
+    expected = DataArray(
+        np.asarray([[0, 0, 0], [1, 0, 0]]),
+        dims=list('yx'),
+        coords={'x': list('abc'),
+                'y': list('de')},
+    ).astype('bool')
+
+    result = da.isin([3]).sel(y=list('de'), z=0)
+    assert_equal(result, expected)
+
+    expected = DataArray(
+        np.asarray([[0, 0, 1], [1, 0, 0]]),
+        dims=list('yx'),
+        coords={'x': list('abc'),
+                'y': list('de')},
+    ).astype('bool')
+    result = da.isin([2, 3]).sel(y=list('de'), z=0)
+    assert_equal(result, expected)
 
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)
