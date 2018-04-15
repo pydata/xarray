@@ -10,7 +10,7 @@ from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore
-from .h5netcdf_ng import H5NetCDFNGStore
+from .h5netcdf_new import H5NetCDFNewStore
 from .zarr import ZarrStore
 
 __all__ = [

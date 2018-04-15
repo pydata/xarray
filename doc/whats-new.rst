@@ -34,6 +34,12 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+ - New option ``engine='h5netcdf-new'`` for :py:meth:`~xarray.Dataset.to_netcdf`,
+   which uses the h5netcdf new API. This changes what settings are accepted
+   by the ``encoding`` parameter, and at the moment of writing is the only way
+   to use compression algorithms other than zlib, e.g. LZF (:ussue:`1536`).
+   By `Guido Imperiale <https://github.com/crusaderky>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -47,20 +53,6 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 
 Enhancements
 ~~~~~~~~~~~~
-
- - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
- object (:issue:`1993`)
- By `Keisuke Fujii <https://github.com/fujiisoup>`_.
- - New option ``engine='h5netcdf-ng'`` for :py:meth:`~xarray.Dataset.to_netcdf`,
-   which uses the h5netcdf new API. This changes what settings are accepted
-   by the ``encoding`` parameter, and at the moment of writing is the only way
-   to use compression algorithms other than zlib, e.g. LZF (:ussue:`1536`).
-   By `Guido Imperiale <https://github.com/crusaderky>`_.
-- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
-  which test each value in the array for whether it is contained in the
-  supplied list, returning a bool array. See :ref:`selecting values with isin`
-  for full details. Similar to the ``np.isin`` function.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
   object (:issue:`1993`)

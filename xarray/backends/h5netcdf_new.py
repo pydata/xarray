@@ -15,7 +15,7 @@ from .netCDF4_ import (
     _get_datatype, _nc4_group)
 
 
-class H5NetCDFNGArrayWrapper(BaseNetCDF4Array):
+class H5NetCDFNewArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
         key, np_inds = indexing.decompose_indexer(
             key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
@@ -64,7 +64,7 @@ def _open_h5netcdf_group(filename, mode, group):
         return _nc4_group(ds, group, mode)
 
 
-class H5NetCDFNGStore(WritableCFDataStore, DataStorePickleMixin):
+class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via h5netcdf
     """
 
@@ -86,13 +86,13 @@ class H5NetCDFNGStore(WritableCFDataStore, DataStorePickleMixin):
         self._opener = opener
         self._filename = filename
         self._mode = mode
-        super(H5NetCDFNGStore, self).__init__(writer, lock=lock)
+        super(H5NetCDFNewStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
             data = indexing.LazilyOuterIndexedArray(
-                H5NetCDFNGArrayWrapper(name, self))
+                H5NetCDFNewArrayWrapper(name, self))
             attrs = _read_attributes(var)
 
             # netCDF4 specific encoding
@@ -179,13 +179,13 @@ class H5NetCDFNGStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(attrs):
             nc4_var.setncattr(k, v)
 
-        target = H5NetCDFNGArrayWrapper(name, self)
+        target = H5NetCDFNewArrayWrapper(name, self)
 
         return target, variable.data
 
     def sync(self):
         with self.ensure_open(autoclose=True):
-            super(H5NetCDFNGStore, self).sync()
+            super(H5NetCDFNewStore, self).sync()
             self.ds.sync()
 
     def close(self):

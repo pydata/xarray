@@ -591,7 +591,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
                     'scipy': backends.ScipyDataStore,
                     'h5netcdf': backends.H5NetCDFStore,
-                    'h5netcdf-ng': backends.H5NetCDFNGStore,
+                    'h5netcdf-new': backends.H5NetCDFNewStore,
                     }
 
 
@@ -713,7 +713,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Paths to the netCDF4 group in each corresponding file to which to save
         datasets (only works for format='NETCDF4'). The groups will be created
         if necessary.
-    engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-ng'}, optional
+    engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-new'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.

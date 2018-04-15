@@ -1114,13 +1114,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-ng'}, optional
+        engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-new'}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
             preference for 'netcdf4' if writing to a file on disk.
 
             The 'h5netcdf' engine uses the h5netcdf module legacy API, whereas
-            'h5netcdf-ng' uses the new API of the same module. This alters what
+            'h5netcdf-new' uses the new API of the same module. This alters what
             is accepted by the encoding parameter, as the legacy API is
             designed to be a drop-in replacement for the netcdf4 module,
             whereas the new API is modeled after the h5py module.
@@ -1130,12 +1130,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             e.g::
 
                 to_netcdf(engine='h5netcdf',
-                          encoding={'varname': {'zlib': True, 'complevel': 9}})
+                          encoding={varname: {'zlib': True, 'complevel': 9}})
 
             is equivalent to::
 
-                to_netcdf(engine='h5netcdf-ng',
-                          encoding={'varname': {'compression': 'gzip', 'compression_opts': 9}})
+                to_netcdf(engine='h5netcdf-new',
+                          encoding={varname: {'compression': 'gzip', 'compression_opts': 9}})
 
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
