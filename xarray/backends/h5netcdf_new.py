@@ -52,7 +52,6 @@ def _read_attributes(h5netcdf_var):
     return attrs
 
 
-
 _extract_h5nc_encoding = functools.partial(
     _extract_nc4_variable_encoding,
     lsd_okay=False, backend='h5netcdf-new',
@@ -177,8 +176,9 @@ class H5NetCDFNewStore(WritableCFDataStore, DataStorePickleMixin):
             if key in encoding:
                 kwargs[key] = encoding[key]
         if name not in self.ds:
-            nc4_var = self.ds.create_variable(name, dtype=dtype, dimensions=variable.dims,
-                                              fillvalue=fillvalue, **kwargs)
+            nc4_var = self.ds.create_variable(
+                name, dtype=dtype, dimensions=variable.dims,
+                fillvalue=fillvalue, **kwargs)
         else:
             nc4_var = self.ds[name]
 

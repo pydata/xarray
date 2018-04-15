@@ -1692,7 +1692,8 @@ class H5NetCDFNewDataTest(H5NetCDFDataTest):
             with self.roundtrip(data) as actual:
                 for k, v in iteritems(data['var2'].encoding):
                     if k == 'chunks' and v is True:
-                        # Auto-chunking is converted to actual chunk sizes when reading back
+                        # Auto-chunking is converted to actual
+                        # chunk sizes when reading back
                         v = (8, 9)
                     self.assertEqual(v, actual['var2'].encoding[k])
 
@@ -1713,6 +1714,7 @@ class H5NetCDFNewDataTest(H5NetCDFDataTest):
 @unittest.skip
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
+
 
 @unittest.skip
 class H5NetCDFNewDataTestAutocloseTrue(H5NetCDFNewDataTest):
