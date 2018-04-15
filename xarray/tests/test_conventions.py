@@ -228,14 +228,20 @@ class TestDecodeCF(TestCase):
 
     @requires_dask
     def test_decode_cf_with_dask(self):
-        import dask
+        import dask.array as da
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
             'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'bar': ('string2', [b'a', b'b']),
+            'baz': (('x'), [b'abc'], {'_Encoding': 'utf-8'}),
             'y': ('t', [5, 10, -999], {'_FillValue': -999})
-        }).chunk({'t': 1})
+        }).chunk()
         decoded = conventions.decode_cf(original)
-        assert dask.is_dask_collection(decoded.y.data)
+        print(decoded)
+        assert all(isinstance(var.data, da.Array)
+                   for name, var in decoded.variables.items()
+                   if name not in decoded.indexes)
+        assert_identical(decoded, conventions.decode_cf(original).compute())
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
