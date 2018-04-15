@@ -2226,16 +2226,34 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
                           **kwargs) as ds:
             yield ds
 
+    def test_uamiv_format_read(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        camxfile = open_example_dataset('example.uamiv', engine='pseudonetcdf',
+                                        autoclose=False,
+                                        backend_kwargs=dict(format='uamiv'))
+        data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data = np.array(
+            ['2002-06-03T00:00:00.000000000'],
+            dtype='datetime64[ns]'
+        )
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+
     def save(self, dataset, path, **kwargs):
         dataset.to_netcdf(path, engine='netcdf4', **kwargs)
-
-    @pytest.mark.skip(reason='cannot pickle file objects')
-    def test_pickle(self):
-        pass
-
-    @pytest.mark.skip(reason='cannot pickle file objects')
-    def test_pickle_dataarray(self):
-        pass
 
     @pytest.mark.skip(reason='does not support boolean dtype')
     def test_roundtrip_boolean_dtype(self):
