@@ -21,6 +21,6 @@ __all__ = [
     'NioDataStore',
     'ScipyDataStore',
     'H5NetCDFStore',
-    'H5NetCDFNGStore',
+    'H5NetCDFNewStore',
     'ZarrStore',
 ]

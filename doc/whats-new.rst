@@ -54,6 +54,12 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
+  which test each value in the array for whether it is contained in the
+  supplied list, returning a bool array. See :ref:`selecting values with isin`
+  for full details. Similar to the ``np.isin`` function.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
 - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
   object (:issue:`1993`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
