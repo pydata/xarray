@@ -292,6 +292,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                       variables.CFMaskCoder(),
                       variables.CFScaleOffsetCoder()]:
             var = coder.decode(var, name=name)
+
     if decode_times:
         for coder in [times.CFTimedeltaCoder(),
                       times.CFDatetimeCoder()]:

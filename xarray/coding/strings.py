@@ -84,20 +84,25 @@ def encode_string_array(string_array, encoding='utf-8'):
     return np.array(encoded, dtype=bytes).reshape(string_array.shape)
 
 
+def ensure_fixed_length_bytes(var):
+    """Ensure that a variable with vlen bytes is converted to fixed width."""
+    dims, data, attrs, encoding = unpack_for_encoding(var)
+    if check_vlen_dtype(data.dtype) == bytes_type:
+        # TODO: figure out how to handle this with dask
+        data = np.asarray(data, dtype=np.string_)
+    return Variable(dims, data, attrs, encoding)
+
+
 class CharacterArrayCoder(VariableCoder):
     """Transforms between arrays containing bytes and character arrays."""
 
     def encode(self, variable, name=None):
+        variable = ensure_fixed_length_bytes(variable)
+
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-
-        if check_vlen_dtype(data.dtype) == bytes_type:
-            # TODO: figure out how to handle this with dask
-            data = np.asarray(data, dtype=np.string_)
-
-        if data.dtype.kind == 'S':  # and data.dtype.itemsize > 1:
+        if data.dtype.kind == 'S':
             data = bytes_to_char(data)
             dims = dims + ('string%s' % data.shape[-1],)
-
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
