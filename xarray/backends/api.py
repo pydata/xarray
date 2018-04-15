@@ -304,18 +304,23 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         if engine == 'netcdf4':
             store = backends.NetCDF4DataStore.open(filename_or_obj,
                                                    group=group,
-                                                   autoclose=autoclose)
+                                                   autoclose=autoclose,
+                                                   **backend_kwargs)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj,
-                                            autoclose=autoclose)
+                                            autoclose=autoclose,
+                                            **backend_kwargs)
         elif engine == 'pydap':
-            store = backends.PydapDataStore.open(filename_or_obj)
+            store = backends.PydapDataStore.open(filename_or_obj,
+                                                 **backend_kwargs)
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                           autoclose=autoclose)
+                                           autoclose=autoclose,
+                                           **backend_kwargs)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj,
-                                          autoclose=autoclose)
+                                          autoclose=autoclose,
+                                           **backend_kwargs)
         elif engine == 'pseudonetcdf':
             store = backends.PncDataStore.open(filename_or_obj,
                                                autoclose=autoclose,
