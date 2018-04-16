@@ -349,7 +349,7 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
-    def test_roundtrip_netcdftime_datetime_data(self):
+    def test_roundtrip_cftime_datetime_data(self):
         from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
@@ -1922,7 +1922,7 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    def test_roundtrip_netcdftime_datetime_data(self):
+    def test_roundtrip_cftime_datetime_data(self):
         # Override method in DatasetIOTestCases - remove not applicable
         # save_kwds
         from .test_coding_times import _all_cftime_date_types

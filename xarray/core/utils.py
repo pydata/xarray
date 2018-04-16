@@ -37,21 +37,21 @@ def alias(obj, old_name):
     return wrapper
 
 
-def _maybe_cast_to_netcdftimeindex(index):
+def _maybe_cast_to_cftimeindex(index):
     from ..coding.times import _import_cftime_datetime
 
-    if not OPTIONS['enable_netcdftimeindex']:
+    if not OPTIONS['enable_cftimeindex']:
         return index
     else:
         try:
             cftime_datetime = _import_cftime_datetime()
-            from ..coding.netcdftimeindex import NetCDFTimeIndex
+            from ..coding.cftimeindex import CFTimeIndex
         except ImportError:
             return index
         else:
             if len(index):
                 if isinstance(index[0], cftime_datetime):
-                    index = NetCDFTimeIndex(index)
+                    index = CFTimeIndex(index)
             return index
 
 
@@ -73,7 +73,7 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
-    return _maybe_cast_to_netcdftimeindex(index)
+    return _maybe_cast_to_cftimeindex(index)
 
 
 def multiindex_from_product_levels(levels, names=None):

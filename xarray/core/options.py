@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 OPTIONS = {
     'display_width': 80,
     'arithmetic_join': 'inner',
-    'enable_netcdftimeindex': False
+    'enable_cftimeindex': False
 }
 
 
@@ -16,7 +16,7 @@ class set_options(object):
       Default: ``80``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
-    - ``enable_netcdftimeindex``: flag to enable using a ``NetCDFTimeIndex``
+    - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
       for time indexes with non-standard calendars or dates outside the
       Timestamp-valid range. Default: ``False``.
 

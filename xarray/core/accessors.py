@@ -16,17 +16,17 @@ def _season_from_months(months):
     return seasons[(months // 3) % 4]
 
 
-def _access_through_netcdftimeindex(values, name):
-    """Coerce an array of datetime-like values to a NetCDFTimeIndex
+def _access_through_cftimeindex(values, name):
+    """Coerce an array of datetime-like values to a CFTimeIndex
     and access requested datetime component
     """
-    from ..coding.netcdftimeindex import NetCDFTimeIndex
-    values_as_netcdftimeindex = NetCDFTimeIndex(values)
+    from ..coding.cftimeindex import CFTimeIndex
+    values_as_cftimeindex = CFTimeIndex(values)
     if name == 'season':
-        months = values_as_netcdftimeindex.month
+        months = values_as_cftimeindex.month
         field_values = _season_from_months(months)
     else:
-        field_values = getattr(values_as_netcdftimeindex, name)
+        field_values = getattr(values_as_cftimeindex, name)
     return field_values.reshape(values.shape)
 
 
@@ -65,7 +65,7 @@ def _get_date_field(values, name, dtype):
     if is_np_datetime_like(values.dtype):
         access_method = _access_through_series
     else:
-        access_method = _access_through_netcdftimeindex
+        access_method = _access_through_cftimeindex
 
     if isinstance(values, dask_array_type):
         from dask.array import map_blocks
@@ -130,7 +130,7 @@ class DatetimeAccessor(object):
 
      All of the pandas fields are accessible here. Note that these fields are
      not calendar-aware; if your datetimes are encoded with a non-Gregorian
-     calendar (e.g. a 360-day calendar) using netcdftime, then some fields like
+     calendar (e.g. a 360-day calendar) using cftime, then some fields like
      `dayofyear` may not be accurate.
 
      """
@@ -139,7 +139,7 @@ class DatetimeAccessor(object):
         if not _contains_datetime_like_objects(xarray_obj):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 timedelta64 dtype or "
-                            "for arrays containing netcdftime datetime "
+                            "for arrays containing cftime datetime "
                             "objects.")
         self._obj = xarray_obj
 

@@ -135,7 +135,7 @@ def test_decode_cf_datetime_overflow():
 def test_decode_cf_datetime_non_standard_units():
     expected = pd.date_range(periods=100, start='1970-01-01', freq='h')
     # netCDFs from madis.noaa.gov use this format for their time units
-    # they cannot be parsed by netcdftime, but pd.Timestamp works
+    # they cannot be parsed by cftime, but pd.Timestamp works
     units = 'hours since 1-1-1970'
     actual = coding.times.decode_cf_datetime(np.arange(100), units)
     assert_array_equal(actual, expected)
@@ -156,10 +156,10 @@ def test_decode_cf_datetime_non_iso_strings():
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
@@ -173,7 +173,7 @@ def test_decode_standard_calendar_inside_timestamp_range(
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
         actual = coding.times.decode_cf_datetime(
             noleap_time, units, calendar=calendar,
-            enable_netcdftimeindex=enable_netcdftimeindex)
+            enable_cftimeindex=enable_cftimeindex)
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -184,17 +184,17 @@ def test_decode_standard_calendar_inside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_non_standard_calendar_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
                           freq='H')
     noleap_time = cftime.date2num(times.to_pydatetime(), units,
                                   calendar=calendar)
-    if enable_netcdftimeindex:
+    if enable_cftimeindex:
         expected = cftime.num2date(noleap_time, units, calendar=calendar)
         expected_dtype = np.dtype('O')
     else:
@@ -205,7 +205,7 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
         actual = coding.times.decode_cf_datetime(
             noleap_time, units, calendar=calendar,
-            enable_netcdftimeindex=enable_netcdftimeindex)
+            enable_cftimeindex=enable_cftimeindex)
     assert actual.dtype == expected_dtype
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -216,10 +216,10 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
 def test_decode_dates_outside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     from datetime import datetime
     cftime = _import_cftime()
 
@@ -233,7 +233,7 @@ def test_decode_dates_outside_timestamp_range(
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
         actual = coding.times.decode_cf_datetime(
             noleap_time, units, calendar=calendar,
-            enable_netcdftimeindex=enable_netcdftimeindex)
+            enable_cftimeindex=enable_cftimeindex)
     assert all(isinstance(value, expected_date_type) for value in actual)
     abs_diff = abs(actual - expected)
     # once we no longer support versions of netCDF4 older than 1.1.5,
@@ -244,10 +244,10 @@ def test_decode_dates_outside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_single_element_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     units = 'days since 0001-01-01'
     for num_time in [735368, [735368], [[735368]]]:
         with warnings.catch_warnings():
@@ -255,16 +255,16 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
                                     'Unable to decode time axis')
             actual = coding.times.decode_cf_datetime(
                 num_time, units, calendar=calendar,
-                enable_netcdftimeindex=enable_netcdftimeindex)
+                enable_cftimeindex=enable_cftimeindex)
         assert actual.dtype == np.dtype('M8[ns]')
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     units = 'days since 0001-01-01'
     for num_time in [735368, [735368], [[735368]]]:
         with warnings.catch_warnings():
@@ -272,8 +272,8 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
                                     'Unable to decode time axis')
             actual = coding.times.decode_cf_datetime(
                 num_time, units, calendar=calendar,
-                enable_netcdftimeindex=enable_netcdftimeindex)
-        if enable_netcdftimeindex:
+                enable_cftimeindex=enable_cftimeindex)
+        if enable_cftimeindex:
             assert actual.dtype == np.dtype('O')
         else:
             assert actual.dtype == np.dtype('M8[ns]')
@@ -281,10 +281,10 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_single_element_outside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     for days in [1, 1470376]:
@@ -294,17 +294,17 @@ def test_decode_single_element_outside_timestamp_range(
                                         'Unable to decode time axis')
                 actual = coding.times.decode_cf_datetime(
                     num_time, units, calendar=calendar,
-                    enable_netcdftimeindex=enable_netcdftimeindex)
+                    enable_cftimeindex=enable_cftimeindex)
             expected = cftime.num2date(days, units, calendar)
             assert isinstance(actual.item(), type(expected))
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -323,7 +323,7 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
 
     actual = coding.times.decode_cf_datetime(
         mdim_time, units, calendar=calendar,
-        enable_netcdftimeindex=enable_netcdftimeindex)
+        enable_cftimeindex=enable_cftimeindex)
     assert actual.dtype == np.dtype('M8[ns]')
 
     abs_diff1 = abs(actual[:, 0] - expected1)
@@ -337,10 +337,10 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -354,7 +354,7 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
     mdim_time[:, 0] = noleap_time1
     mdim_time[:, 1] = noleap_time2
 
-    if enable_netcdftimeindex:
+    if enable_cftimeindex:
         expected1 = cftime.num2date(noleap_time1, units, calendar)
         expected2 = cftime.num2date(noleap_time2, units, calendar)
         expected_dtype = np.dtype('O')
@@ -365,7 +365,7 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 
     actual = coding.times.decode_cf_datetime(
         mdim_time, units, calendar=calendar,
-        enable_netcdftimeindex=enable_netcdftimeindex)
+        enable_cftimeindex=enable_cftimeindex)
 
     assert actual.dtype == expected_dtype
     abs_diff1 = abs(actual[:, 0] - expected1)
@@ -379,10 +379,10 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
 def test_decode_multidim_time_outside_timestamp_range(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     from datetime import datetime
     cftime = _import_cftime()
 
@@ -402,7 +402,7 @@ def test_decode_multidim_time_outside_timestamp_range(
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
         actual = coding.times.decode_cf_datetime(
             mdim_time, units, calendar=calendar,
-            enable_netcdftimeindex=enable_netcdftimeindex)
+            enable_cftimeindex=enable_cftimeindex)
 
     assert actual.dtype == np.dtype('O')
 
@@ -417,10 +417,10 @@ def test_decode_multidim_time_outside_timestamp_range(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(['360_day', 'all_leap', '366_day'], [False, True]))
 def test_decode_non_standard_calendar_single_element_fallback(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -435,7 +435,7 @@ def test_decode_non_standard_calendar_single_element_fallback(
                       match='Unable to decode time axis'):
         actual = coding.times.decode_cf_datetime(
             num_time, units, calendar=calendar,
-            enable_netcdftimeindex=enable_netcdftimeindex)
+            enable_cftimeindex=enable_cftimeindex)
     expected = np.asarray(cftime.num2date(num_time, units, calendar))
     assert actual.dtype == np.dtype('O')
     assert expected == actual
@@ -443,10 +443,10 @@ def test_decode_non_standard_calendar_single_element_fallback(
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(['360_day'], [False, True]))
 def test_decode_non_standard_calendar_fallback(
-        calendar, enable_netcdftimeindex):
+        calendar, enable_cftimeindex):
     cftime = _import_cftime()
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
@@ -458,7 +458,7 @@ def test_decode_non_standard_calendar_fallback(
             warnings.simplefilter('always')
             actual = coding.times.decode_cf_datetime(
                 num_times, units, calendar=calendar,
-                enable_netcdftimeindex=enable_netcdftimeindex)
+                enable_cftimeindex=enable_cftimeindex)
             assert len(w) == 1
             assert 'Unable to decode time axis' in str(w[0].message)
 
@@ -515,7 +515,7 @@ def test_infer_datetime_units(dates, expected):
 
 
 @requires_cftime_or_netCDF4
-def test_infer_netcdftime_datetime_units():
+def test_infer_cftime_datetime_units():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         for dates, expected in [
@@ -599,18 +599,18 @@ def test_infer_timedelta_units(deltas, expected):
                            '0100-02-03 04:05:06.000000'),
                           ((1000, 2, 3, 4, 5, 6),
                            '1000-02-03 04:05:06.000000')])
-def test_format_netcdftime_datetime(date_args, expected):
+def test_format_cftime_datetime(date_args, expected):
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
-        result = coding.times.format_netcdftime_datetime(date_type(*date_args))
+        result = coding.times.format_cftime_datetime(date_type(*date_args))
         assert result == expected
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ['calendar', 'enable_netcdftimeindex'],
+    ['calendar', 'enable_cftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
-def test_decode_cf_enable_netcdftimeindex(calendar, enable_netcdftimeindex):
+def test_decode_cf_enable_cftimeindex(calendar, enable_cftimeindex):
     days = [1., 2., 3.]
     da = DataArray(days, coords=[days], dims=['time'], name='test')
     ds = da.to_dataset()
@@ -619,10 +619,10 @@ def test_decode_cf_enable_netcdftimeindex(calendar, enable_netcdftimeindex):
         ds[v].attrs['units'] = 'days since 2000-01-01'
         ds[v].attrs['calendar'] = calendar
 
-    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+    with set_options(enable_cftimeindex=enable_cftimeindex):
         ds = decode_cf(ds)
 
-    if (enable_netcdftimeindex and
+    if (enable_cftimeindex and
        calendar not in coding.times._STANDARD_CALENDARS):
         assert ds.test.dtype == np.dtype('O')
     else:

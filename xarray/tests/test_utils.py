@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from datetime import datetime
-from xarray.coding.netcdftimeindex import NetCDFTimeIndex
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
@@ -40,35 +40,35 @@ def test_safe_cast_to_index():
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
-def test_safe_cast_to_index_netcdftimeindex(enable_netcdftimeindex):
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
-        if enable_netcdftimeindex:
-            expected = NetCDFTimeIndex(dates)
+        if enable_cftimeindex:
+            expected = CFTimeIndex(dates)
         else:
             expected = pd.Index(dates)
 
-        with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+        with set_options(enable_cftimeindex=enable_cftimeindex):
             actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
 
-        if enable_netcdftimeindex:
-            assert isinstance(actual, NetCDFTimeIndex)
+        if enable_cftimeindex:
+            assert isinstance(actual, CFTimeIndex)
         else:
             assert isinstance(actual, pd.Index)
 
 
 # Test that datetime.datetime objects are never used in a NetCDFTimeIndex
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
-def test_safe_cast_to_index_datetime_datetime(enable_netcdftimeindex):
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
     expected = pd.Index(dates)
-    with set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+    with set_options(enable_cftimeindex=enable_cftimeindex):
         actual = utils.safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)

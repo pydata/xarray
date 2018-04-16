@@ -6,8 +6,8 @@ import pandas as pd
 import xarray as xr
 
 from datetime import timedelta
-from xarray.coding.netcdftimeindex import (
-    parse_iso8601, NetCDFTimeIndex, assert_all_valid_date_type,
+from xarray.coding.cftimeindex import (
+    parse_iso8601, CFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
@@ -80,14 +80,14 @@ def date_type(request):
 def index(date_type):
     dates = [date_type(1, 1, 1), date_type(1, 2, 1),
              date_type(2, 1, 1), date_type(2, 2, 1)]
-    return NetCDFTimeIndex(dates)
+    return CFTimeIndex(dates)
 
 
 @pytest.fixture
 def monotonic_decreasing_index(date_type):
     dates = [date_type(2, 2, 1), date_type(2, 1, 1),
              date_type(1, 2, 1), date_type(1, 1, 1)]
-    return NetCDFTimeIndex(dates)
+    return CFTimeIndex(dates)
 
 
 @pytest.fixture
@@ -150,7 +150,7 @@ def test_assert_all_valid_date_type(date_type, index):
     ('minute', [0, 0, 0, 0]),
     ('second', [0, 0, 0, 0]),
     ('microsecond', [0, 0, 0, 0])])
-def test_netcdftimeindex_field_accessors(index, field, expected):
+def test_cftimeindex_field_accessors(index, field, expected):
     result = getattr(index, field)
     assert_array_equal(result, expected)
 
@@ -514,9 +514,9 @@ def test_indexing_in_dataframe_iloc(df, index):
     assert result.equals(expected)
 
 
-@pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
-def test_concat_netcdftimeindex(date_type, enable_netcdftimeindex):
-    with xr.set_options(enable_netcdftimeindex=enable_netcdftimeindex):
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_concat_cftimeindex(date_type, enable_cftimeindex):
+    with xr.set_options(enable_cftimeindex=enable_cftimeindex):
         da1 = xr.DataArray(
             [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
             dims=['time'])
@@ -525,8 +525,8 @@ def test_concat_netcdftimeindex(date_type, enable_netcdftimeindex):
             dims=['time'])
         da = xr.concat([da1, da2], dim='time')
 
-    if enable_netcdftimeindex:
-        assert isinstance(da.indexes['time'], NetCDFTimeIndex)
+    if enable_cftimeindex:
+        assert isinstance(da.indexes['time'], CFTimeIndex)
     else:
         assert isinstance(da.indexes['time'], pd.Index)
-        assert not isinstance(da.indexes['time'], NetCDFTimeIndex)
+        assert not isinstance(da.indexes['time'], CFTimeIndex)

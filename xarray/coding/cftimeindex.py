@@ -69,7 +69,7 @@ def _parse_iso8601_with_reso(date_type, timestr):
 def _parsed_string_to_bounds(date_type, resolution, parsed):
     """Generalization of
     pandas.tseries.index.DatetimeIndex._parsed_string_to_bounds
-    for use with non-standard calendars and netcdftime._netcdftime.datetime
+    for use with non-standard calendars and cftime.datetime
     objects.
     """
     if resolution == 'year':
@@ -134,16 +134,16 @@ def assert_all_valid_date_type(data):
     date_type = type(sample)
     if not isinstance(sample, valid_types):
         raise TypeError(
-            'NetCDFTimeIndex requires cftime.datetime '
+            'CFTimeIndex requires cftime.datetime '
             'or datetime.datetime objects. '
             'Got object of {}.'.format(date_type))
     if not all(isinstance(value, date_type) for value in data):
         raise TypeError(
-            'NetCDFTimeIndex requires using datetime '
+            'CFTimeIndex requires using datetime '
             'objects of all the same type.  Got\n{}.'.format(data))
 
 
-class NetCDFTimeIndex(pd.Index):
+class CFTimeIndex(pd.Index):
     year = _field_accessor('year', 'The year of the datetime')
     month = _field_accessor('month', 'The month of the datetime')
     day = _field_accessor('day', 'The days of the datetime')
@@ -164,14 +164,14 @@ class NetCDFTimeIndex(pd.Index):
         """Adapted from
         pandas.tseries.index.DatetimeIndex._partial_date_slice
 
-        Note that when using a NetCDFTimeIndex, if a partial-date selection
+        Note that when using a CFTimeIndex, if a partial-date selection
         returns a single element, it will never be converted to a scalar
         coordinate; this is in slight contrast to the behavior when using
         a DatetimeIndex, which sometimes will return a DataArray with a scalar
         coordinate depending on the resolution of the datetimes used in
         defining the index.  For example:
 
-        >>> from netcdftime import DatetimeNoLeap
+        >>> from cftime import DatetimeNoLeap
         >>> import pandas as pd
         >>> import xarray as xr
         >>> da = xr.DataArray([1, 2],
