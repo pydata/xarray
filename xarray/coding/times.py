@@ -9,7 +9,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import contains_netcdftime_datetimes
+from ..core.common import contains_cftime_datetimes
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.options import OPTIONS
@@ -26,7 +26,7 @@ except ImportError:
     from pandas.tslib import OutOfBoundsDatetime
 
 
-# standard calendars recognized by netcdftime
+# standard calendars recognized by cftime
 _STANDARD_CALENDARS = set(['standard', 'gregorian', 'proleptic_gregorian'])
 
 _NS_PER_TIME_DELTA = {'us': int(1e3),
@@ -56,24 +56,19 @@ def _import_cftime():
     return cftime
 
 
-def _import_netcdftime_datetime():
-    """Helper function to handle importing netcdftime.datetime across the
-    transition between the version of netcdftime packaged with netCDF4 and the
+def _import_cftime_datetime():
+    """Helper function to handle importing cftime.datetime across the
+    transition between the version of cftime packaged with netCDF4 and the
     standalone version"""
     try:
-        # Will raise an ImportError if not using standalone netcdftime
-        from netcdftime import num2date  # noqa: F401
-
-        # Generic netcdftime datetime is exposed in the public API in the
-        # standalone version of netcdftime
-        from netcdftime import datetime
+        from cftime import datetime
     except ImportError:
         # Need to use private API to import generic netcdftime datetime in
         # older versions. See https://github.com/Unidata/netcdftime/issues/8
         try:
             from netcdftime._netcdftime import datetime
         except ImportError:
-            raise ImportError("Failed to import netcdftime")
+            raise ImportError("Failed to import cftime.datetime")
     return datetime
 
 
@@ -398,7 +393,7 @@ class CFDatetimeCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
         if (np.issubdtype(data.dtype, np.datetime64) or
-           contains_netcdftime_datetimes(variable)):
+           contains_cftime_datetimes(variable)):
             (data, units, calendar) = encode_cf_datetime(
                 data,
                 encoding.pop('units', None),

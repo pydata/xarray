@@ -120,19 +120,21 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    from netcdftime import (
-        DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
-        DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day)
+    try:
+        import cftime
+    except ImportError:
+        import netcdftime as cftime
 
-    valid_types = (DatetimeJulian, DatetimeNoLeap, DatetimeAllLeap,
-                   DatetimeGregorian, DatetimeProlepticGregorian,
-                   Datetime360Day)
+    valid_types = (cftime.DatetimeJulian, cftime.DatetimeNoLeap,
+                   cftime.DatetimeAllLeap, cftime.DatetimeGregorian,
+                   cftime.DatetimeProlepticGregorian,
+                   cftime.Datetime360Day)
 
     sample = data[0]
     date_type = type(sample)
     if not isinstance(sample, valid_types):
         raise TypeError(
-            'NetCDFTimeIndex requires netcdftime._netcdftime.datetime '
+            'NetCDFTimeIndex requires cftime.datetime '
             'or datetime.datetime objects. '
             'Got object of {}.'.format(date_type))
     if not all(isinstance(value, date_type) for value in data):

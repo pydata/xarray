@@ -11,9 +11,17 @@ from xarray.coding.netcdftimeindex import (
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
+from . import has_cftime_or_netCDF4
+
 # Putting this at the module level for now, though technically we
 # don't need netcdftime to test the string parser.
-pytest.importorskip('netcdftime')
+pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+
+
+try:
+    import cftime
+except ImportError:
+    import netcdftime as cftime
 
 
 def date_dict(year=None, month=None, day=None,
@@ -57,15 +65,13 @@ def test_parse_iso8601(string, expected):
         parse_iso8601(string + '.3')
 
 
-def netcdftime_date_types():
-    from netcdftime import (
-        DatetimeNoLeap, DatetimeJulian, DatetimeAllLeap,
-        DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day)
-    return [DatetimeNoLeap, DatetimeJulian, DatetimeAllLeap,
-            DatetimeGregorian, DatetimeProlepticGregorian, Datetime360Day]
+def cftime_date_types():
+    return [cftime.DatetimeNoLeap, cftime.DatetimeJulian,
+            cftime.DatetimeAllLeap, cftime.DatetimeGregorian,
+            cftime.DatetimeProlepticGregorian, cftime.Datetime360Day]
 
 
-@pytest.fixture(params=netcdftime_date_types())
+@pytest.fixture(params=cftime_date_types())
 def date_type(request):
     return request.param
 
@@ -102,7 +108,7 @@ def df(index):
 
 @pytest.fixture
 def feb_days(date_type):
-    from netcdftime import DatetimeAllLeap, Datetime360Day
+    from cftime import DatetimeAllLeap, Datetime360Day
     if date_type is DatetimeAllLeap:
         return 29
     elif date_type is Datetime360Day:
@@ -113,7 +119,7 @@ def feb_days(date_type):
 
 @pytest.fixture
 def dec_days(date_type):
-    from netcdftime import Datetime360Day
+    from cftime import Datetime360Day
     if date_type is Datetime360Day:
         return 30
     else:
@@ -121,7 +127,7 @@ def dec_days(date_type):
 
 
 def test_assert_all_valid_date_type(date_type, index):
-    from netcdftime import DatetimeNoLeap, DatetimeAllLeap
+    from cftime import DatetimeNoLeap, DatetimeAllLeap
 
     if date_type is DatetimeNoLeap:
         mixed_date_types = [date_type(1, 1, 1), DatetimeAllLeap(1, 2, 1)]

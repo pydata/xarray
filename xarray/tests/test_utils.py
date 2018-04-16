@@ -9,9 +9,9 @@ from xarray.coding.netcdftimeindex import NetCDFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
-from .test_coding_times import _all_netcdftime_date_types
+from .test_coding_times import _all_cftime_date_types
 from . import (TestCase, requires_dask, assert_array_equal,
-               has_netcdftime)
+               has_cftime_or_netCDF4)
 
 
 class TestAlias(TestCase):
@@ -39,10 +39,10 @@ def test_safe_cast_to_index():
         assert expected.dtype == actual.dtype
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
 def test_safe_cast_to_index_netcdftimeindex(enable_netcdftimeindex):
-    date_types = _all_netcdftime_date_types()
+    date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
         if enable_netcdftimeindex:
@@ -62,7 +62,7 @@ def test_safe_cast_to_index_netcdftimeindex(enable_netcdftimeindex):
 
 
 # Test that datetime.datetime objects are never used in a NetCDFTimeIndex
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize('enable_netcdftimeindex', [False, True])
 def test_safe_cast_to_index_datetime_datetime(enable_netcdftimeindex):
     dates = [datetime(1, 1, day) for day in range(1, 20)]

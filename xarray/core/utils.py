@@ -38,17 +38,19 @@ def alias(obj, old_name):
 
 
 def _maybe_cast_to_netcdftimeindex(index):
+    from ..coding.times import _import_cftime_datetime
+
     if not OPTIONS['enable_netcdftimeindex']:
         return index
     else:
         try:
-            from netcdftime._netcdftime import datetime as ncdatetime
+            cftime_datetime = _import_cftime_datetime()
             from ..coding.netcdftimeindex import NetCDFTimeIndex
         except ImportError:
             return index
         else:
             if len(index):
-                if isinstance(index[0], ncdatetime):
+                if isinstance(index[0], cftime_datetime):
                     index = NetCDFTimeIndex(index)
             return index
 

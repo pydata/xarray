@@ -350,9 +350,9 @@ class DatasetIOTestCases(object):
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
     def test_roundtrip_netcdftime_datetime_data(self):
-        from .test_coding_times import _all_netcdftime_date_types
+        from .test_coding_times import _all_cftime_date_types
 
-        date_types = _all_netcdftime_date_types()
+        date_types = _all_cftime_date_types()
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
@@ -1925,9 +1925,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
     def test_roundtrip_netcdftime_datetime_data(self):
         # Override method in DatasetIOTestCases - remove not applicable
         # save_kwds
-        from .test_coding_times import _all_netcdftime_date_types
+        from .test_coding_times import _all_cftime_date_types
 
-        date_types = _all_netcdftime_date_types()
+        date_types = _all_cftime_date_types()
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
             expected = Dataset({'t': ('t', times), 't0': times[0]})
