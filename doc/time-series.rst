@@ -50,12 +50,12 @@ attribute like ``'days since 2000-01-01'``).
 .. note::
 
    When decoding/encoding datetimes for non-standard calendars or for dates
-   before year 1678 or after year 2262, xarray uses the `netcdftime`_ library.
-   ``netcdftime`` was previously packaged with the ``netcdf4-python`` package but
-   is now distributed separately. ``netcdftime`` is an
+   before year 1678 or after year 2262, xarray uses the `cftime`_ library.
+   It was previously packaged with the ``netcdf4-python`` package under the
+   name ``netcdftime`` but is now distributed separately. ``cftime`` is an
    :ref:`optional dependency<installing>` of xarray.
 
-.. _netcdftime: https://unidata.github.io/netcdftime
+.. _cftime: https://unidata.github.io/cftime
 
 
 You can manual decode arrays in this form by passing a dataset to

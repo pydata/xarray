@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=2.7
   - cdat-lite
+  - cftime
   - cyordereddict
   - dask
   - distributed
@@ -11,7 +12,6 @@ dependencies:
   - h5netcdf
   - matplotlib
   - netcdf4
-  - netcdftime
   - numpy
   - pandas
   - pathlib2
