@@ -18,7 +18,7 @@ from xarray.testing import assert_identical
 
 from . import (
     IndexerMaker, TestCase, assert_array_equal, raises_regex, requires_netCDF4,
-    requires_netcdftime, unittest)
+    requires_cftime_or_netCDF4, unittest, requires_dask)
 from .test_backends import CFEncodedDataTest
 
 B = IndexerMaker(indexing.BasicIndexer)
@@ -183,7 +183,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
     assert_identical(actual, expected)
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 class TestEncodeCFVariable(TestCase):
     def test_incompatible_attributes(self):
         invalid_vars = [
@@ -239,7 +239,7 @@ class TestEncodeCFVariable(TestCase):
         assert 'coordinates' not in attrs
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 class TestDecodeCF(TestCase):
     def test_dataset(self):
         original = Dataset({
@@ -305,7 +305,7 @@ class TestDecodeCF(TestCase):
         with raises_regex(ValueError, 'unable to decode time'):
             decode_cf(ds)
 
-    @requires_netcdftime
+    @requires_cftime_or_netCDF4
     def test_dataset_repr_with_netcdf4_datetimes(self):
         # regression test for #347
         attrs = {'units': 'days since 0001-01-01', 'calendar': 'noleap'}
@@ -318,7 +318,7 @@ class TestDecodeCF(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         assert '(time) datetime64[ns]' in repr(ds)
 
-    @requires_netcdftime
+    @requires_cftime_or_netCDF4
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime
@@ -331,6 +331,17 @@ class TestDecodeCF(TestCase):
                     datetime(2265, 10, 28, 0, 0)]
 
         assert_array_equal(ds_decoded.time.values, expected)
+
+    @requires_dask
+    def test_decode_cf_with_dask(self):
+        import dask
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999})
+        }).chunk({'t': 1})
+        decoded = conventions.decode_cf(original)
+        assert dask.is_dask_collection(decoded.y.data)
 
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):

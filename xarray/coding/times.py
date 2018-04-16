@@ -40,24 +40,20 @@ TIME_UNITS = frozenset(['days', 'hours', 'minutes', 'seconds',
                         'milliseconds', 'microseconds'])
 
 
-def _import_netcdftime():
+def _import_cftime():
     '''
-    helper function handle the transition to netcdftime as a stand-alone
-    package
+    helper function handle the transition to netcdftime/cftime
+    as a stand-alone package
     '''
     try:
-        # Try importing netcdftime directly
-        import netcdftime as nctime
-        if not hasattr(nctime, 'num2date'):
-            # must have gotten an old version from netcdf4-python
-            raise ImportError
+        import cftime
     except ImportError:
         # in netCDF4 the num2date/date2num function are top-level api
         try:
-            import netCDF4 as nctime
+            import netCDF4 as cftime
         except ImportError:
-            raise ImportError("Failed to import netcdftime")
-    return nctime
+            raise ImportError("Failed to import cftime")
+    return cftime
 
 
 def _import_netcdftime_datetime():
@@ -100,39 +96,39 @@ def _unpack_netcdf_time_units(units):
     return delta_units, ref_date
 
 
-def _decode_datetime_with_netcdftime(num_dates, units, calendar,
-                                     enable_netcdftimeindex):
-    nctime = _import_netcdftime()
-    dates = np.asarray(nctime.num2date(num_dates, units, calendar))
+def _decode_datetime_with_cftime(num_dates, units, calendar,
+                                 enable_netcdftimeindex):
+    cftime = _import_cftime()
+    dates = np.asarray(cftime.num2date(num_dates, units, calendar))
 
     if (dates[np.nanargmin(num_dates)].year < 1678 or
             dates[np.nanargmax(num_dates)].year >= 2262):
         warnings.warn(
             'Unable to decode time axis into full '
             'numpy.datetime64 objects, continuing using dummy '
-            'netCDF4.datetime objects instead, reason: dates out '
+            'cftime.datetime objects instead, reason: dates out '
             'of range', SerializationWarning, stacklevel=3)
     else:
         if enable_netcdftimeindex:
             if calendar in _STANDARD_CALENDARS:
-                dates = nctime_to_nptime(dates)
+                dates = cftime_to_nptime(dates)
             else:
                 warnings.warn(
                     'Unable to decode time axis into full numpy.datetime64 '
                     'objects, because dates are encoded using a '
-                    'non-standard calendar ({}).  Using netCDF4.datetime '
+                    'non-standard calendar ({}).  Using cftime.datetime '
                     'objects instead.  Time indexing will be done using a '
                     'NetCDFTimeIndex rather than '
                     'a DatetimeIndex'.format(calendar),
                     SerializationWarning, stacklevel=3)
         else:
             try:
-                dates = nctime_to_nptime(dates)
+                dates = cftime_to_nptime(dates)
             except ValueError as e:
                 warnings.warn(
                     'Unable to decode time axis into full '
                     'numpy.datetime64 objects, continuing using '
-                    'dummy netcdftime.datetime objects instead, reason:'
+                    'dummy cftime.datetime objects instead, reason:'
                     '{0}'.format(e), SerializationWarning, stacklevel=3)
     return dates
 
@@ -215,7 +211,7 @@ def decode_cf_datetime(num_dates, units, calendar=None,
                  ref_date).values
 
     except (OutOfBoundsDatetime, OverflowError):
-        dates = _decode_datetime_with_netcdftime(
+        dates = _decode_datetime_with_cftime(
             flat_num_dates.astype(np.float), units, calendar,
             enable_netcdftimeindex)
 
@@ -301,8 +297,8 @@ def infer_timedelta_units(deltas):
     return units
 
 
-def nctime_to_nptime(times):
-    """Given an array of netcdftime.datetime objects, return an array of
+def cftime_to_nptime(times):
+    """Given an array of cftime.datetime objects, return an array of
     numpy.datetime64 objects of the same size"""
     times = np.asarray(times)
     new = np.empty(times.shape, dtype='M8[ns]')
@@ -328,14 +324,14 @@ def _encode_datetime_with_netcdftime(dates, units, calendar):
     This method is more flexible than xarray's parsing using datetime64[ns]
     arrays but also slower because it loops over each element.
     """
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     if np.issubdtype(dates.dtype, np.datetime64):
         # numpy's broken datetime conversion only works for us precision
         dates = dates.astype('M8[us]').astype(datetime)
 
     def encode_datetime(d):
-        return np.nan if d is None else nctime.date2num(d, units, calendar)
+        return np.nan if d is None else cftime.date2num(d, units, calendar)
 
     return np.vectorize(encode_datetime)(dates)
 

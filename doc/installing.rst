@@ -25,7 +25,7 @@ For netCDF and IO
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
-- `netcdftime <https://unidata.github.io/netcdftime>`__: recommended if you
+- `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
 

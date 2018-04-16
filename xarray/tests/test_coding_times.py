@@ -8,10 +8,11 @@ import pandas as pd
 import pytest
 
 from xarray import Variable, coding, set_options, DataArray, decode_cf
-from xarray.coding.times import _import_netcdftime
+from xarray.coding.times import _import_cftime
 from xarray.coding.variables import SerializationWarning
 
-from . import assert_array_equal, has_netcdftime, requires_netcdftime
+from . import (assert_array_equal, has_cftime_or_netCDF4,
+               requires_cftime_or_netCDF4)
 
 
 _NON_STANDARD_CALENDARS = {'noleap', '365_day', '360_day',
@@ -57,27 +58,28 @@ def _ensure_naive_tz(dt):
         return dt
 
 
-def _all_netcdftime_date_types():
-    from netcdftime import (
-        DatetimeNoLeap, DatetimeJulian, DatetimeAllLeap, Datetime360Day,
-        DatetimeGregorian, DatetimeProlepticGregorian)
-    return {'noleap': DatetimeNoLeap,
-            '365_day': DatetimeNoLeap,
-            '360_day': Datetime360Day,
-            'julian': DatetimeJulian,
-            'all_leap': DatetimeAllLeap,
-            '366_day': DatetimeAllLeap,
-            'gregorian': DatetimeGregorian,
-            'proleptic_gregorian': DatetimeProlepticGregorian}
+def _all_cftime_date_types():
+    try:
+        import cftime
+    except ImportError:
+        import netcdftime as cftime
+    return {'noleap': cftime.DatetimeNoLeap,
+            '365_day': cftime.DatetimeNoLeap,
+            '360_day': cftime.Datetime360Day,
+            'julian': cftime.DatetimeJulian,
+            'all_leap': cftime.DatetimeAllLeap,
+            '366_day': cftime.DatetimeAllLeap,
+            'gregorian': cftime.DatetimeGregorian,
+            'proleptic_gregorian': cftime.DatetimeProlepticGregorian}
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(['num_dates', 'units', 'calendar'],
                          _CF_DATETIME_TESTS)
 def test_cf_datetime(num_dates, units, calendar):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
     expected = _ensure_naive_tz(
-        nctime.num2date(num_dates, units, calendar))
+        cftime.num2date(num_dates, units, calendar))
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore',
                                 'Unable to decode time axis')
@@ -112,7 +114,7 @@ def test_cf_datetime(num_dates, units, calendar):
             assert_array_equal(num_dates, np.around(encoded, 1))
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 def test_decode_cf_datetime_overflow():
     # checks for
     # https://github.com/pydata/pandas/issues/14068
@@ -139,7 +141,7 @@ def test_decode_cf_datetime_non_standard_units():
     assert_array_equal(actual, expected)
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 def test_decode_cf_datetime_non_iso_strings():
     # datetime strings that are _almost_ ISO compliant but not quite,
     # but which netCDF4.num2date can still parse correctly
@@ -152,17 +154,17 @@ def test_decode_cf_datetime_non_iso_strings():
         assert_array_equal(actual, expected)
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_inside_timestamp_range(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
                           freq='H')
-    noleap_time = nctime.date2num(times.to_pydatetime(), units,
+    noleap_time = cftime.date2num(times.to_pydatetime(), units,
                                   calendar=calendar)
     expected = times.values
     expected_dtype = np.dtype('M8[ns]')
@@ -180,20 +182,20 @@ def test_decode_standard_calendar_inside_timestamp_range(
     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_non_standard_calendar_inside_timestamp_range(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
                           freq='H')
-    noleap_time = nctime.date2num(times.to_pydatetime(), units,
+    noleap_time = cftime.date2num(times.to_pydatetime(), units,
                                   calendar=calendar)
     if enable_netcdftimeindex:
-        expected = nctime.num2date(noleap_time, units, calendar=calendar)
+        expected = cftime.num2date(noleap_time, units, calendar=calendar)
         expected_dtype = np.dtype('O')
     else:
         expected = times.values
@@ -212,19 +214,19 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
 def test_decode_dates_outside_timestamp_range(
         calendar, enable_netcdftimeindex):
     from datetime import datetime
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
-    noleap_time = nctime.date2num(times, units, calendar=calendar)
-    expected = nctime.num2date(noleap_time, units, calendar=calendar)
+    noleap_time = cftime.date2num(times, units, calendar=calendar)
+    expected = cftime.num2date(noleap_time, units, calendar=calendar)
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -240,7 +242,7 @@ def test_decode_dates_outside_timestamp_range(
     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
@@ -257,7 +259,7 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
         assert actual.dtype == np.dtype('M8[ns]')
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
@@ -277,13 +279,13 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
             assert actual.dtype == np.dtype('M8[ns]')
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_single_element_outside_timestamp_range(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
     units = 'days since 0001-01-01'
     for days in [1, 1470376]:
         for num_time in [days, [days], [[days]]]:
@@ -293,24 +295,24 @@ def test_decode_single_element_outside_timestamp_range(
                 actual = coding.times.decode_cf_datetime(
                     num_time, units, calendar=calendar,
                     enable_netcdftimeindex=enable_netcdftimeindex)
-            expected = nctime.num2date(days, units, calendar)
+            expected = cftime.num2date(days, units, calendar)
             assert isinstance(actual.item(), type(expected))
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     times1 = pd.date_range('2001-04-01', end='2001-04-05', freq='D')
     times2 = pd.date_range('2001-05-01', end='2001-05-05', freq='D')
-    noleap_time1 = nctime.date2num(times1.to_pydatetime(),
+    noleap_time1 = cftime.date2num(times1.to_pydatetime(),
                                    units, calendar=calendar)
-    noleap_time2 = nctime.date2num(times2.to_pydatetime(),
+    noleap_time2 = cftime.date2num(times2.to_pydatetime(),
                                    units, calendar=calendar)
     mdim_time = np.empty((len(noleap_time1), 2), )
     mdim_time[:, 0] = noleap_time1
@@ -333,28 +335,28 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     assert (abs_diff2 <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     times1 = pd.date_range('2001-04-01', end='2001-04-05', freq='D')
     times2 = pd.date_range('2001-05-01', end='2001-05-05', freq='D')
-    noleap_time1 = nctime.date2num(times1.to_pydatetime(),
+    noleap_time1 = cftime.date2num(times1.to_pydatetime(),
                                    units, calendar=calendar)
-    noleap_time2 = nctime.date2num(times2.to_pydatetime(),
+    noleap_time2 = cftime.date2num(times2.to_pydatetime(),
                                    units, calendar=calendar)
     mdim_time = np.empty((len(noleap_time1), 2), )
     mdim_time[:, 0] = noleap_time1
     mdim_time[:, 1] = noleap_time2
 
     if enable_netcdftimeindex:
-        expected1 = nctime.num2date(noleap_time1, units, calendar)
-        expected2 = nctime.num2date(noleap_time2, units, calendar)
+        expected1 = cftime.num2date(noleap_time1, units, calendar)
+        expected2 = cftime.num2date(noleap_time2, units, calendar)
         expected_dtype = np.dtype('O')
     else:
         expected1 = times1.values
@@ -375,26 +377,26 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
     assert (abs_diff2 <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
 def test_decode_multidim_time_outside_timestamp_range(
         calendar, enable_netcdftimeindex):
     from datetime import datetime
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     times1 = [datetime(1, 4, day) for day in range(1, 6)]
     times2 = [datetime(1, 5, day) for day in range(1, 6)]
-    noleap_time1 = nctime.date2num(times1, units, calendar=calendar)
-    noleap_time2 = nctime.date2num(times2, units, calendar=calendar)
+    noleap_time1 = cftime.date2num(times1, units, calendar=calendar)
+    noleap_time2 = cftime.date2num(times2, units, calendar=calendar)
     mdim_time = np.empty((len(noleap_time1), 2), )
     mdim_time[:, 0] = noleap_time1
     mdim_time[:, 1] = noleap_time2
 
-    expected1 = nctime.num2date(noleap_time1, units, calendar)
-    expected2 = nctime.num2date(noleap_time2, units, calendar)
+    expected1 = cftime.num2date(noleap_time1, units, calendar)
+    expected2 = cftime.num2date(noleap_time2, units, calendar)
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
@@ -413,44 +415,44 @@ def test_decode_multidim_time_outside_timestamp_range(
     assert (abs_diff2 <= np.timedelta64(1, 's')).all()
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(['360_day', 'all_leap', '366_day'], [False, True]))
 def test_decode_non_standard_calendar_single_element_fallback(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     try:
-        dt = nctime.netcdftime.datetime(2001, 2, 29)
+        dt = cftime.netcdftime.datetime(2001, 2, 29)
     except AttributeError:
         # Must be using standalone netcdftime library
-        dt = nctime.datetime(2001, 2, 29)
+        dt = cftime.datetime(2001, 2, 29)
 
-    num_time = nctime.date2num(dt, units, calendar)
+    num_time = cftime.date2num(dt, units, calendar)
     with pytest.warns(SerializationWarning,
                       match='Unable to decode time axis'):
         actual = coding.times.decode_cf_datetime(
             num_time, units, calendar=calendar,
             enable_netcdftimeindex=enable_netcdftimeindex)
-    expected = np.asarray(nctime.num2date(num_time, units, calendar))
+    expected = np.asarray(cftime.num2date(num_time, units, calendar))
     assert actual.dtype == np.dtype('O')
     assert expected == actual
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(['360_day'], [False, True]))
 def test_decode_non_standard_calendar_fallback(
         calendar, enable_netcdftimeindex):
-    nctime = _import_netcdftime()
+    cftime = _import_cftime()
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
         units = 'days since {0}-01-01'.format(year)
         num_times = np.arange(100)
-        expected = nctime.num2date(num_times, units, calendar)
+        expected = cftime.num2date(num_times, units, calendar)
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
@@ -464,7 +466,7 @@ def test_decode_non_standard_calendar_fallback(
         assert_array_equal(actual, expected)
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['num_dates', 'units', 'expected_list'],
     [([np.nan], 'days since 2000-01-01', ['NaT']),
@@ -480,7 +482,7 @@ def test_cf_datetime_nan(num_dates, units, expected_list):
     assert_array_equal(expected, actual)
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 def test_decoded_cf_datetime_array_2d():
     # regression test for GH1229
     variable = Variable(('x', 'y'), np.array([[0, 1], [2, 3]]),
@@ -512,9 +514,9 @@ def test_infer_datetime_units(dates, expected):
     assert expected == coding.times.infer_datetime_units(dates)
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 def test_infer_netcdftime_datetime_units():
-    date_types = _all_netcdftime_date_types()
+    date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         for dates, expected in [
                 ([date_type(1900, 1, 1),
@@ -587,7 +589,7 @@ def test_infer_timedelta_units(deltas, expected):
     assert expected == coding.times.infer_timedelta_units(deltas)
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(['date_args', 'expected'],
                          [((1, 2, 3, 4, 5, 6),
                           '0001-02-03 04:05:06.000000'),
@@ -598,14 +600,13 @@ def test_infer_timedelta_units(deltas, expected):
                           ((1000, 2, 3, 4, 5, 6),
                            '1000-02-03 04:05:06.000000')])
 def test_format_netcdftime_datetime(date_args, expected):
-    pytest.importorskip('netcdftime')
-    date_types = _all_netcdftime_date_types()
+    date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         result = coding.times.format_netcdftime_datetime(date_type(*date_args))
         assert result == expected
 
 
-@pytest.mark.skipif(not has_netcdftime, reason='netcdftime not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
     ['calendar', 'enable_netcdftimeindex'],
     product(_ALL_CALENDARS, [False, True]))
