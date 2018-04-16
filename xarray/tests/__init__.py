@@ -69,7 +69,7 @@ has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
 has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
-has_netcdftime, requires_netcdftime = _importorskip('netcdftime')
+has_cftime, requires_cftime = _importorskip('cftime')
 has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
@@ -81,6 +81,9 @@ has_np112, requires_np112 = _importorskip('numpy', minversion='1.12.0')
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
 requires_scipy_or_netCDF4 = unittest.skipUnless(
     has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
+has_cftime_or_netCDF4 = has_cftime or has_netCDF4
+requires_cftime_or_netCDF4 = unittest.skipUnless(
+    has_cftime_or_netCDF4, reason='requires cftime or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 if has_dask:
