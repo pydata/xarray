@@ -41,7 +41,8 @@ Enhancements
   By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
   `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
-  :issue:`1084`, :issue:`2008`, :issue:`1252`). By `Spencer Clark
+  :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
+         library. By `Spencer Clark
          <https://github.com/spencerkclark>`_. 
 
 Bug fixes

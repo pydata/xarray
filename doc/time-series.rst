@@ -72,8 +72,9 @@ native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
 returned as arrays of ``cftime.datetime`` objects and a ``CFTimeIndex``
 can be used for indexing.  The ``CFTimeIndex`` enables only a subset of
-the indexing functionality of a ``pandas.DatetimeIndex``.  See
-:ref:`CFTimeIndex` for more information.
+the indexing functionality of a ``pandas.DatetimeIndex`` and is only enabled
+when using standalone version of ``cftime`` (not the version packaged with
+earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
 -----------------
@@ -217,7 +218,7 @@ For more examples of using grouped operations on a time dimension, see
 Non-standard calendars and dates outside the Timestamp-valid range
 ------------------------------------------------------------------
 
-Through the optional ``cftime`` library and a custom subclass of
+Through the standalone ``cftime`` library and a custom subclass of
 ``pandas.Index``, xarray supports a subset of the indexing functionality enabled
 through the standard ``pandas.DatetimeIndex`` for dates from non-standard
 calendars or dates using a standard calendar, but outside the

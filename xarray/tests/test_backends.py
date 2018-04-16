@@ -32,7 +32,7 @@ from . import (
     assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy_or_netCDF4, requires_zarr, has_cftime)
 from .test_dataset import create_test_data
 
 try:
@@ -361,21 +361,26 @@ class DatasetIOTestCases(object):
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
 
-            with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                abs_diff = abs(actual.t.values - expected_decoded_t)
-                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
-                self.assertEquals(actual.t.encoding['units'],
-                                  'days since 0001-01-01 00:00:00.000000')
-                self.assertEquals(actual.t.encoding['calendar'],
-                                  expected_calendar)
+            if has_cftime:
+                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+                    self.assertEquals(actual.t.encoding['units'],
+                                      'days since 0001-01-01 00:00:00.000000')
+                    self.assertEquals(actual.t.encoding['calendar'],
+                                      expected_calendar)
 
-                abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
-                self.assertEquals(actual.t0.encoding['units'],
-                                  'days since 0001-01-01')
-                self.assertEquals(actual.t.encoding['calendar'],
-                                  expected_calendar)
+                    self.assertEquals(actual.t0.encoding['units'],
+                                      'days since 0001-01-01')
+                    self.assertEquals(actual.t.encoding['calendar'],
+                                      expected_calendar)
+            else:
+                with pytest.raises(ImportError):
+                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                        pass
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])

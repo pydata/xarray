@@ -12,7 +12,7 @@ from xarray.coding.times import _import_cftime
 from xarray.coding.variables import SerializationWarning
 
 from . import (assert_array_equal, has_cftime_or_netCDF4,
-               requires_cftime_or_netCDF4)
+               requires_cftime_or_netCDF4, has_cftime)
 
 
 _NON_STANDARD_CALENDARS = {'noleap', '365_day', '360_day',
@@ -213,6 +213,7 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
+    
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
@@ -334,6 +335,7 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     assert (abs_diff1 <= np.timedelta64(1, 's')).all()
     assert (abs_diff2 <= np.timedelta64(1, 's')).all()
 
+    
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
@@ -532,7 +534,11 @@ def test_infer_cftime_datetime_units():
                 ([date_type(1900, 1, 1),
                   date_type(1900, 1, 2, 0, 0, 0, 5)],
                  'days since 1900-01-01 00:00:00.000000')]:
-            assert expected == coding.times.infer_datetime_units(dates)
+            if has_cftime:
+                assert expected == coding.times.infer_datetime_units(dates)
+            else:
+                with pytest.raises(ImportError):
+                    coding.times.infer_datetime_units(dates)
 
 
 @pytest.mark.parametrize(
@@ -619,11 +625,16 @@ def test_decode_cf_enable_cftimeindex(calendar, enable_cftimeindex):
         ds[v].attrs['units'] = 'days since 2000-01-01'
         ds[v].attrs['calendar'] = calendar
 
-    with set_options(enable_cftimeindex=enable_cftimeindex):
-        ds = decode_cf(ds)
-
-    if (enable_cftimeindex and
-       calendar not in coding.times._STANDARD_CALENDARS):
-        assert ds.test.dtype == np.dtype('O')
+    if not has_cftime and enable_cftimeindex:
+        with pytest.raises(ImportError):
+            with set_options(enable_cftimeindex=enable_cftimeindex):
+                ds = decode_cf(ds)
     else:
-        assert ds.test.dtype == np.dtype('M8[ns]')
+        with set_options(enable_cftimeindex=enable_cftimeindex):
+            ds = decode_cf(ds)
+
+        if (enable_cftimeindex and
+           calendar not in coding.times._STANDARD_CALENDARS):
+            assert ds.test.dtype == np.dtype('O')
+        else:
+            assert ds.test.dtype == np.dtype('M8[ns]')

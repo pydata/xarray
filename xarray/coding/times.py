@@ -72,6 +72,18 @@ def _import_cftime_datetime():
     return datetime
 
 
+def _require_standalone_cftime(message=None):
+    """Raises an ImportError if the standalone cftime is not found"""
+    try:
+        import cftime
+    except ImportError:
+        if message:
+            raise ImportError(message)
+        else:
+            raise ImportError('Using a CFTimeIndex requires the standalone '
+                              'version of the cftime library.')
+
+
 def _netcdf_to_numpy_timeunit(units):
     units = units.lower()
     if not units.endswith('s'):
@@ -264,6 +276,9 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
         reference_date = pd.Timestamp(reference_date)
     else:
+        _require_standalone_cftime(
+            'Serializing dates of type cftime.datetime '
+            'requires the standalone cftime library.')
         dates = np.asarray(dates).ravel()
         unique_timedeltas = np.unique(pd.to_timedelta(np.diff(dates)))
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
@@ -406,14 +421,18 @@ class CFDatetimeCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
+        enable_cftimeindex = OPTIONS['enable_cftimeindex']
+        if enable_cftimeindex:
+            _require_standalone_cftime()
+
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')
             dtype = _decode_cf_datetime_dtype(
-                data, units, calendar, OPTIONS['enable_cftimeindex'])
+                data, units, calendar, enable_cftimeindex)
             transform = partial(
                 decode_cf_datetime, units=units, calendar=calendar,
-                enable_cftimeindex=OPTIONS['enable_cftimeindex'])
+                enable_cftimeindex=enable_cftimeindex)
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)

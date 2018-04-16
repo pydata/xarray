@@ -11,7 +11,7 @@ from xarray.coding.cftimeindex import (
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime_or_netCDF4
+from . import has_cftime_or_netCDF4, has_cftime
 
 # Putting this at the module level for now, though technically we
 # don't need netcdftime to test the string parser.
@@ -108,10 +108,9 @@ def df(index):
 
 @pytest.fixture
 def feb_days(date_type):
-    from cftime import DatetimeAllLeap, Datetime360Day
-    if date_type is DatetimeAllLeap:
+    if date_type is cftime.DatetimeAllLeap:
         return 29
-    elif date_type is Datetime360Day:
+    elif date_type is cftime.Datetime360Day:
         return 30
     else:
         return 28
@@ -119,20 +118,19 @@ def feb_days(date_type):
 
 @pytest.fixture
 def dec_days(date_type):
-    from cftime import Datetime360Day
-    if date_type is Datetime360Day:
+    if date_type is cftime.Datetime360Day:
         return 30
     else:
         return 31
 
 
 def test_assert_all_valid_date_type(date_type, index):
-    from cftime import DatetimeNoLeap, DatetimeAllLeap
-
-    if date_type is DatetimeNoLeap:
-        mixed_date_types = [date_type(1, 1, 1), DatetimeAllLeap(1, 2, 1)]
+    if date_type is cftime.DatetimeNoLeap:
+        mixed_date_types = [date_type(1, 1, 1),
+                            cftime.DatetimeAllLeap(1, 2, 1)]
     else:
-        mixed_date_types = [date_type(1, 1, 1), DatetimeNoLeap(1, 2, 1)]
+        mixed_date_types = [date_type(1, 1, 1),
+                            cftime.DatetimeNoLeap(1, 2, 1)]
     with pytest.raises(TypeError):
         assert_all_valid_date_type(mixed_date_types)
 
@@ -516,17 +514,25 @@ def test_indexing_in_dataframe_iloc(df, index):
 
 @pytest.mark.parametrize('enable_cftimeindex', [False, True])
 def test_concat_cftimeindex(date_type, enable_cftimeindex):
-    with xr.set_options(enable_cftimeindex=enable_cftimeindex):
-        da1 = xr.DataArray(
-            [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
-            dims=['time'])
-        da2 = xr.DataArray(
-            [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
-            dims=['time'])
-        da = xr.concat([da1, da2], dim='time')
-
-    if enable_cftimeindex:
-        assert isinstance(da.indexes['time'], CFTimeIndex)
+    if not has_cftime and enable_cftimeindex:
+        with pytest.raises(ImportError):
+            with xr.set_options(enable_cftimeindex=enable_cftimeindex):
+                da1 = xr.DataArray(
+                    [1., 2.],
+                    coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
+                    dims=['time'])
     else:
-        assert isinstance(da.indexes['time'], pd.Index)
-        assert not isinstance(da.indexes['time'], CFTimeIndex)
+        with xr.set_options(enable_cftimeindex=enable_cftimeindex):
+            da1 = xr.DataArray(
+                [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
+                dims=['time'])
+            da2 = xr.DataArray(
+                [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
+                dims=['time'])
+            da = xr.concat([da1, da2], dim='time')
+
+        if enable_cftimeindex:
+            assert isinstance(da.indexes['time'], CFTimeIndex)
+        else:
+            assert isinstance(da.indexes['time'], pd.Index)
+            assert not isinstance(da.indexes['time'], CFTimeIndex)

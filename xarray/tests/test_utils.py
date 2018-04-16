@@ -11,7 +11,7 @@ from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
 from .test_coding_times import _all_cftime_date_types
 from . import (TestCase, requires_dask, assert_array_equal,
-               has_cftime_or_netCDF4)
+               has_cftime_or_netCDF4, has_cftime)
 
 
 class TestAlias(TestCase):
@@ -50,15 +50,20 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
         else:
             expected = pd.Index(dates)
 
-        with set_options(enable_cftimeindex=enable_cftimeindex):
-            actual = utils.safe_cast_to_index(np.array(dates))
-        assert_array_equal(expected, actual)
-        assert expected.dtype == actual.dtype
-
-        if enable_cftimeindex:
-            assert isinstance(actual, CFTimeIndex)
+        if not has_cftime and enable_cftimeindex:
+            with pytest.raises(ImportError):
+                with set_options(enable_cftimeindex=enable_cftimeindex):
+                    actual = utils.safe_cast_to_index(np.array(dates))
         else:
-            assert isinstance(actual, pd.Index)
+            with set_options(enable_cftimeindex=enable_cftimeindex):
+                actual = utils.safe_cast_to_index(np.array(dates))
+            assert_array_equal(expected, actual)
+            assert expected.dtype == actual.dtype
+
+            if enable_cftimeindex:
+                assert isinstance(actual, CFTimeIndex)
+            else:
+                assert isinstance(actual, pd.Index)
 
 
 # Test that datetime.datetime objects are never used in a NetCDFTimeIndex
@@ -68,10 +73,15 @@ def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
     expected = pd.Index(dates)
-    with set_options(enable_cftimeindex=enable_cftimeindex):
-        actual = utils.safe_cast_to_index(np.array(dates))
-    assert_array_equal(expected, actual)
-    assert isinstance(actual, pd.Index)
+    if not has_cftime and enable_cftimeindex:
+        with pytest.raises(ImportError):
+            with set_options(enable_cftimeindex=enable_cftimeindex):
+                actual = utils.safe_cast_to_index(np.array(dates))
+    else:
+        with set_options(enable_cftimeindex=enable_cftimeindex):
+            actual = utils.safe_cast_to_index(np.array(dates))
+        assert_array_equal(expected, actual)
+        assert isinstance(actual, pd.Index)
 
 
 def test_multiindex_from_product_levels():
