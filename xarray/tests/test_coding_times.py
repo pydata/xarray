@@ -213,7 +213,6 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
     # https://github.com/Unidata/netcdf4-python/issues/355
     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
-    
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(
@@ -335,7 +334,6 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     assert (abs_diff1 <= np.timedelta64(1, 's')).all()
     assert (abs_diff2 <= np.timedelta64(1, 's')).all()
 
-    
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize(

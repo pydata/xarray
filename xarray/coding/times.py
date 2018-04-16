@@ -75,7 +75,7 @@ def _import_cftime_datetime():
 def _require_standalone_cftime(message=None):
     """Raises an ImportError if the standalone cftime is not found"""
     try:
-        import cftime
+        import cftime  # noqa: F401
     except ImportError:
         if message:
             raise ImportError(message)
