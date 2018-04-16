@@ -34,6 +34,16 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Add an option for using a ``CFTimeIndex`` for indexing times with
+  non-standard calendars and/or outside the Timestamp-valid range; this index
+  enables a subset of the functionality of a standard
+  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
+  :issue:`1084`, :issue:`2008`, :issue:`1252`). By `Spencer Clark
+         <https://github.com/spencerkclark>`_. 
+
 Bug fixes
 ~~~~~~~~~
 
@@ -48,15 +58,6 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 Enhancements
 ~~~~~~~~~~~~
 
-- Add an option for using a ``NetCDFTimeIndex`` for indexing times with
-  non-standard calendars and/or outside the Timestamp-valid range; this index
-  enables a subset of the functionality of a standard
-  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
-  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
-  `Stephan Hoyer <https://github.com/shoyer>`_.
-- Allow for serialization of ``netcdftime.datetime`` objects (:issue:`789`,
-  :issue:`1084`, :issue:`1252`). By `Spencer Clark
-         <https://github.com/spencerkclark>`_.
  - Some speed improvement to construct :py:class:`~xarray.DataArrayRolling`
  object (:issue:`1993`)
  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
