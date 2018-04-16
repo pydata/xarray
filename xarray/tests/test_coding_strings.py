@@ -56,8 +56,7 @@ def test_EncodedStringCoder_decode_dask():
     actual = coder.decode(raw)
     assert isinstance(actual.data, da.Array)
 
-    expected = Variable(
-        ('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object)).chunk()
+    expected = Variable(('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object))
     assert_identical(actual, expected)
 
     actual_indexed = coder.decode(actual[0])
