@@ -7,6 +7,7 @@ import functools
 import numpy as np
 
 from .. import Variable
+from ..core.pycompat import OrderedDict
 from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
@@ -39,7 +40,7 @@ class PncArrayWrapper(BackendArray):
         return array
 
 
-class PncDataStore(AbstractDataStore, DataStorePickleMixin):
+class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
@@ -62,20 +63,16 @@ class PncDataStore(AbstractDataStore, DataStorePickleMixin):
         self._autoclose = autoclose
         self._isopen = True
         self._opener = opener
-        super(PncDataStore, self).__init__()
-        if not hasattr(self, '_mode'):
-            try:
-                self._mode = mode
-            except Exception:
-                pass
+        self._mode = mode
+        super(PseudoNetCDFDataStore, self).__init__()
 
     def open_store_variable(self, name, var):
         with self.ensure_open(autoclose=False):
             data = indexing.LazilyOuterIndexedArray(
                 PncArrayWrapper(name, self)
             )
-        return Variable(var.dimensions, data, dict([(k, getattr(var, k))
-                                                    for k in var.ncattrs()]))
+        attrs = OrderedDict((k, getattr(var, k)) for k in var.ncattrs())
+        return Variable(var.dimensions, data, attrs)
 
     def get_variables(self):
         with self.ensure_open(autoclose=False):

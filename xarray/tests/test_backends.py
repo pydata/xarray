@@ -32,7 +32,7 @@ from . import (
     assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr, requires_pnc)
+    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf)
 from .test_dataset import create_test_data
 
 try:
@@ -2213,8 +2213,8 @@ class PyNioTestAutocloseTrue(PyNioTest):
 
 
 @requires_netCDF4
-@requires_pnc
-class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
+@requires_pseudonetcdf
+class PseudoNetCDFTest(CFEncodedDataTest, TestCase):
     def test_write_store(self):
         # pseudonetcdf is read-only for now
         pass
@@ -2255,38 +2255,24 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
     def save(self, dataset, path, **kwargs):
         dataset.to_netcdf(path, engine='netcdf4', **kwargs)
 
-    @pytest.mark.skip(reason='does not support boolean dtype')
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
     def test_roundtrip_boolean_dtype(self):
-        # pnc does not support boolean dtype
         pass
 
-    @pytest.mark.skip(reason='does not support auto masking and scaling')
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
     def test_roundtrip_mask_and_scale(self):
-        # pnc does not support auto masking and scaling
         pass
 
-    @pytest.mark.skip(reason='does not support object types')
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
     def test_roundtrip_object_dtype(self):
-        # pnc does not support object types
         pass
 
-    @pytest.mark.skip(reason='encoding types are not consistent with xarray')
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
     def test_roundtrip_string_encoded_characters(self):
-        # pnc string treatment does not meet xarray expectations
-        # working on the right approach
         pass
 
-    def test_roundtrip_test_data(self):
-        expected = create_test_data()
-        with self.roundtrip(expected) as actual:
-            # dim3 sting type is <U instead of <U1
-            # working on the right approach
-            # self.check_dtypes_roundtripped(expected, actual)
-            assert_identical(expected, actual)
-
-    @pytest.mark.skip(reason='does not support auto masking and scaling')
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
     def test_unsigned_roundtrip_mask_and_scale(self):
-        # pnc does not support object types
         pass
 
 

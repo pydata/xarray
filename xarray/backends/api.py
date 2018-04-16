@@ -322,9 +322,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                                           autoclose=autoclose,
                                            **backend_kwargs)
         elif engine == 'pseudonetcdf':
-            store = backends.PncDataStore.open(filename_or_obj,
-                                               autoclose=autoclose,
-                                               **backend_kwargs)
+            store = backends.PseudoNetCDFDataStore.open(
+                filename_or_obj, autoclose=autoclose, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
