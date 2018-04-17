@@ -1703,7 +1703,7 @@ def nfiles(request):
     return request.param
 
 
-@pytest.fixture(params=[True, None, False])
+@pytest.fixture(params=[True, False])
 def autoclose(request):
     return request.param
 
