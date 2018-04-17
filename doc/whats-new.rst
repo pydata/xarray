@@ -34,6 +34,9 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Support writing lists of strings as netCDF attributes (:issue:`2044`).
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+
 Bug fixes
 ~~~~~~~~~
 
