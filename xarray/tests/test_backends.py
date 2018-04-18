@@ -2266,10 +2266,12 @@ class PseudoNetCDFTest(CFEncodedDataTest, TestCase):
         """
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=UserWarning,
-                                    message='IOAPI_ISPH is assumed to be 6370000.; consistent with WRF')
-            camxfile = open_example_dataset('example.uamiv', engine='pseudonetcdf',
-                                        autoclose=False,
-                                        backend_kwargs=dict(format='uamiv'))
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=False,
+                                            backend_kwargs={'format': 'uamiv'})
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
                                dict(units='ppm', long_name='O3'.ljust(16),
