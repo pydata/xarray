@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - dask
   - distributed
   - matplotlib
@@ -14,7 +15,6 @@ dependencies:
   - seaborn
   - toolz
   - bottleneck
-  - netcdftime
   - pip:
     - coveralls
     - pytest-cov

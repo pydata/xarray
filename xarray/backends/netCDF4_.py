@@ -229,6 +229,31 @@ def _disable_auto_decode_group(ds):
         _disable_auto_decode_variable(var)
 
 
+def _is_list_of_strings(value):
+    if (np.asarray(value).dtype.kind in ['U', 'S'] and
+            np.asarray(value).size > 1):
+        return True
+    else:
+        return False
+
+
+def _set_nc_attribute(obj, key, value):
+    if _is_list_of_strings(value):
+        # encode as NC_STRING if attr is list of strings
+        try:
+            obj.setncattr_string(key, value)
+        except AttributeError:
+            # Inform users with old netCDF that does not support
+            # NC_STRING that we can't serialize lists of strings
+            # as attrs
+            msg = ('Attributes which are lists of strings are not '
+                   'supported with this version of netCDF. Please '
+                   'upgrade to netCDF4-python 1.2.4 or greater.')
+            raise AttributeError(msg)
+    else:
+        obj.setncattr(key, value)
+
+
 class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -264,13 +289,13 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):
             warnings.warn(
-                '\nA segmentation fault may occur when the\n'
-                'file path has exactly 88 characters as it does\n'
-                'in this case. The issue is known to occur with\n'
-                'version 1.2.4 of netCDF4 and can be addressed by\n'
-                'upgrading netCDF4 to at least version 1.3.1.\n'
-                'More details can be found here:\n'
-                'https://github.com/pydata/xarray/issues/1745  \n')
+                'A segmentation fault may occur when the '
+                'file path has exactly 88 characters as it does '
+                'in this case. The issue is known to occur with '
+                'version 1.2.4 of netCDF4 and can be addressed by '
+                'upgrading netCDF4 to at least version 1.3.1. '
+                'More details can be found here: '
+                'https://github.com/pydata/xarray/issues/1745')
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
@@ -347,7 +372,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             if self.format != 'NETCDF4':
                 value = encode_nc3_attr_value(value)
-            self.ds.setncattr(key, value)
+            _set_nc_attribute(self.ds, key, value)
 
     def set_variables(self, *args, **kwargs):
         with self.ensure_open(autoclose=False):
@@ -402,7 +427,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
-            nc4_var.setncattr(k, v)
+            _set_nc_attribute(nc4_var, k, v)
 
         target = NetCDF4ArrayWrapper(name, self)
 

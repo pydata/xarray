@@ -132,6 +132,7 @@ Missing value handling
    Dataset.bfill
    Dataset.interpolate_na
    Dataset.where
+   Dataset.isin
 
 Computation
 -----------
@@ -284,6 +285,7 @@ Missing value handling
   DataArray.bfill
   DataArray.interpolate_na
   DataArray.where
+  DataArray.isin
 
 Comparisons
 -----------
