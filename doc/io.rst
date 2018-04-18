@@ -669,11 +669,6 @@ To use PseudoNetCDF to read such files, supply
 Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
 options are listed on the PseudoNetCDF page.
 
-PseudoNetCDF is available via pip and has a recipe awaiting approval 
-that will enable installing PseudoNetCDF via conda::
-
-    conda install -c conda-forge PseudoNetCDF
-
 .. _PseuodoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
