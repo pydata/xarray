@@ -147,8 +147,9 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-- added backend for many Atmospheric data formats ranging including GEOS-Chem,
-  CAMx, NOAA arlpacked bit and many others.
+- added a PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
+  By `Barron Henderson <https://github.com/barronh>`_.
 - reduce methods such as :py:func:`DataArray.sum()` now accepts ``dtype``
 **New functions and methods**:
 

@@ -2230,7 +2230,10 @@ class TestPseudoNetCDF(CFEncodedDataTest, NetCDF3Only, TestCase):
         """
         Open a CAMx file and test data variables
         """
-        camxfile = open_example_dataset('example.uamiv', engine='pseudonetcdf',
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message='IOAPI_ISPH is assumed to be 6370000.; consistent with WRF')
+            camxfile = open_example_dataset('example.uamiv', engine='pseudonetcdf',
                                         autoclose=False,
                                         backend_kwargs=dict(format='uamiv'))
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
