@@ -182,6 +182,12 @@ def line(darray, *args, **kwargs):
         Coordinates for x, y axis. Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
+    xincrease : None, True, or False, optional
+        Should the values on the x axes be increasing from left to right?
+        if None, use the default for the matplotlib function
+    yincrease : None, True, or False, optional
+        Should the values on the y axes be increasing from top to bottom?
+        if None, use the default for the matplotlib function
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -203,6 +209,8 @@ def line(darray, *args, **kwargs):
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     y = kwargs.pop('y', None)
+    xincrease = kwargs.pop('xincrease', True)
+    yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
 
     ax = get_axis(figsize, size, aspect, ax)
@@ -271,6 +279,7 @@ def line(darray, *args, **kwargs):
     # Rotate dates on xlabels
     if np.issubdtype(xplt.dtype, np.datetime64):
         ax.get_figure().autofmt_xdate()
+    _update_axes_limits(ax, xincrease, yincrease)
 
     return primitive
 
