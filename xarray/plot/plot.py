@@ -278,7 +278,10 @@ def line(darray, *args, **kwargs):
 
     # Rotate dates on xlabels
     if np.issubdtype(xplt.dtype, np.datetime64):
-        ax.get_figure().autofmt_xdate()
+        for xlabels in ax.get_xticklabels():
+            xlabels.set_rotation(30)
+            xlabels.set_ha('right')
+
     _update_axes_limits(ax, xincrease, yincrease)
 
     return primitive
