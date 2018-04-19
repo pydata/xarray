@@ -36,6 +36,11 @@ Enhancements
 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- New ``compute`` option in :py:meth:`~xarray.Dataset.to_netcdf`,
+  :py:meth:`~xarray.Dataset.to_zarr`, and :py:func:`~xarray.save_mfdataset` to
+  allow for the lazy computation of netCDF and zarr stores. This feature is
+  currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~

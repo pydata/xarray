@@ -184,6 +184,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         return target, variable.data
 
     def sync(self, compute=True):
+        if not compute:
+            raise NotImplementedError(
+                'compute=False is not supported for the h5netcdf backend yet')
         with self.ensure_open(autoclose=True):
             super(H5NetCDFStore, self).sync(compute=compute)
             self.ds.sync()

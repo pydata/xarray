@@ -1231,6 +1231,16 @@ class H5NetCDFViaDaskDataTest(NetCDF4ViaDaskDataTest):
     def test_variable_order(self):
         super(NetCDF4ViaDaskDataTest, self).test_variable_order()
 
+    @pytest.mark.xfail(reason="h5netcdf does not support compute=False yet")
+    def test_to_netcdf_compute_false_roundtrip(self):
+        super(NetCDF4ViaDaskDataTest,
+              self).test_to_netcdf_compute_false_roundtrip()
+
+    @pytest.mark.xfail(reason="h5netcdf does not support compute=False yet")
+    def test_save_mfdataset_compute_false_roundtrip(self):
+        super(NetCDF4ViaDaskDataTest,
+              self).test_save_mfdataset_compute_false_roundtrip()
+
 
 @requires_zarr
 class BaseZarrTest(CFEncodedDataTest):

@@ -144,15 +144,7 @@ def _get_lock(engine, scheduler, format, path_or_file):
     return lock
 
 
-def _finalize_store(store, write):
-    """ helper function to facilitate delayed writing/syncing/closing of stores
-    """
-    del write  # unused
-    store.sync()
-    store.close()
-
-
-def _finalize_stores(stores, write):
+def _finalize_stores(write, *stores):
     del write
     for store in stores:
         store.sync()
@@ -682,7 +674,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store, store.delayed)
+        return dask.delayed(_finalize_stores)(store.delayed, store)
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None, compute=True):
@@ -733,9 +725,9 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
-        preference for 'netcdf4' if writing to a file on disk.
     compute: boolean
-        If true compute immediately, otherwise return dask.delayed.Delayed.
+        If true compute immediately, otherwise return a
+        ``dask.delayed.Delayed`` object that can be computed later.
     Examples
     --------
 
@@ -773,9 +765,9 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
             import dask
             # or should this return an iterable of delayed objects
             # (one for each store)
-            return dask.delayed(_finalize_stores)(stores, delayed)
+            return dask.delayed(_finalize_stores)(delayed, *stores)
         for store in stores:
-            store.sync(compute)
+            store.sync()
     finally:
         for store in stores:
             store.close()
@@ -807,5 +799,5 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store, store.delayed)
+        return dask.delayed(_finalize_stores)(store.delayed, store)
     return store

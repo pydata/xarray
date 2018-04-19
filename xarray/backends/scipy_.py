@@ -220,6 +220,9 @@ class ScipyDataStore(WritableCFDataStore, DataStorePickleMixin):
         return target, data
 
     def sync(self, compute=True):
+        if not compute:
+            raise NotImplementedError(
+                'compute=False is not supported for the scipy backend yet')
         with self.ensure_open(autoclose=True):
             super(ScipyDataStore, self).sync(compute=compute)
             self.ds.flush()

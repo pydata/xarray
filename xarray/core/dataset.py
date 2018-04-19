@@ -1130,7 +1130,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
         compute: boolean
-            If true compute immediately, otherwise return dask.delayed.Delayed.
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
         """
         if encoding is None:
             encoding = {}
@@ -1164,8 +1165,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
         compute: boolean
-            If true compute immediately, otherwise return dask.delayed.Delayed
-            in `store.delayed`.
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
         """
         if encoding is None:
             encoding = {}
