@@ -779,6 +779,22 @@ class TestDataArray(TestCase):
         assert 'new_dim' in actual.coords
         assert_equal(actual['new_dim'].drop('x'), ind['new_dim'])
 
+    def test_sel_invalid_slice(self):
+        array = DataArray(np.arange(10), [('x', np.arange(10))])
+        with raises_regex(ValueError, 'cannot use non-scalar arrays'):
+            array.sel(x=slice(array.x))
+
+    def test_sel_dataarray_datetime(self):
+        # regression test for GH1240
+        times = pd.date_range('2000-01-01', freq='D', periods=365)
+        array = DataArray(np.arange(365), [('time', times)])
+        result = array.sel(time=slice(array.time[0], array.time[-1]))
+        assert_equal(result, array)
+
+        array = DataArray(np.arange(365), [('delta', times - times[0])])
+        result = array.sel(delta=slice(array.delta[0], array.delta[-1]))
+        assert_equal(result, array)
+
     def test_sel_no_index(self):
         array = DataArray(np.arange(10), dims='x')
         assert_identical(array[0], array.sel(x=0))
@@ -3311,6 +3327,14 @@ def da(request):
             [0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
             dims='time')
 
+    if request.param == 'repeating_ints':
+        return DataArray(
+            np.tile(np.arange(12), 5).reshape(5, 4, 3),
+            coords={'x': list('abc'),
+                    'y': list('defg')},
+            dims=list('zyx')
+        )
+
 
 @pytest.fixture
 def da_dask(seed=123):
@@ -3321,6 +3345,29 @@ def da_dask(seed=123):
     da = DataArray(values, dims=('a', 'time', 'x')).chunk({'time': 7})
     da['time'] = times
     return da
+
+
+@pytest.mark.parametrize('da', ('repeating_ints', ), indirect=True)
+def test_isin(da):
+
+    expected = DataArray(
+        np.asarray([[0, 0, 0], [1, 0, 0]]),
+        dims=list('yx'),
+        coords={'x': list('abc'),
+                'y': list('de')},
+    ).astype('bool')
+
+    result = da.isin([3]).sel(y=list('de'), z=0)
+    assert_equal(result, expected)
+
+    expected = DataArray(
+        np.asarray([[0, 0, 1], [1, 0, 0]]),
+        dims=list('yx'),
+        coords={'x': list('abc'),
+                'y': list('de')},
+    ).astype('bool')
+    result = da.isin([2, 3]).sel(y=list('de'), z=0)
+    assert_equal(result, expected)
 
 
 @pytest.mark.parametrize('da', (1, 2), indirect=True)

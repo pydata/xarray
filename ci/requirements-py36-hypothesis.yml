@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
-  - cftime
   - dask
   - distributed
   - h5py
@@ -25,3 +24,4 @@ dependencies:
     - pytest-cov
     - pydap
     - lxml
+    - hypothesis

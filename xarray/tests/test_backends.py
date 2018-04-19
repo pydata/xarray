@@ -1138,10 +1138,29 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         # should be fixed in netcdf4 v1.3.1
         with mock.patch('netCDF4.__version__', '1.2.4'):
             with warnings.catch_warnings():
-                warnings.simplefilter("error")
-                with raises_regex(Warning, 'segmentation fault'):
+                message = ('A segmentation fault may occur when the '
+                           'file path has exactly 88 characters')
+                warnings.filterwarnings('error', message)
+                with pytest.raises(Warning):
                     # Need to construct 88 character filepath
                     xr.Dataset().to_netcdf('a' * (88 - len(os.getcwd()) - 1))
+
+    def test_setncattr_string(self):
+        list_of_strings = ['list', 'of', 'strings']
+        one_element_list_of_strings = ['one element']
+        one_string = 'one string'
+        attrs = {'foo': list_of_strings,
+                 'bar': one_element_list_of_strings,
+                 'baz': one_string}
+        ds = Dataset({'x': ('y', [1, 2, 3], attrs)},
+                     attrs=attrs)
+
+        with self.roundtrip(ds) as actual:
+            for totest in [actual, actual['x']]:
+                assert_array_equal(list_of_strings, totest.attrs['foo'])
+                assert_array_equal(one_element_list_of_strings,
+                                   totest.attrs['bar'])
+                assert one_string == totest.attrs['baz']
 
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
@@ -1458,8 +1477,23 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
             yield tmp
 
 
+class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
+
+    def test_append_write(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyWriteTest, self).test_append_write()
+
+    def test_append_overwrite_values(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyWriteTest, self).test_append_overwrite_values()
+
+
 @requires_scipy
-class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1485,7 +1519,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFileObjectTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1513,7 +1547,7 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFilePathTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1615,6 +1649,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
@@ -2076,6 +2111,20 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
                 assert_identical(original, actual)
 
+    def test_open_single_dataset(self):
+        # Test for issue GH #1988. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'), rnddata[np.newaxis, :])},
+                           {'baz': [100]})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_mfdataset([tmp], concat_dim=dim,
+                                autoclose=self.autoclose) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -2222,7 +2271,7 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
+class PyNioTest(ScipyWriteTest, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
         pass
@@ -2248,7 +2297,7 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
             assert_identical(actual, expected)
 
 
-class TestPyNioAutocloseTrue(TestPyNio):
+class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
 
 
