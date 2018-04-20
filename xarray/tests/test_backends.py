@@ -29,7 +29,7 @@ from xarray.tests import mock
 
 from . import (
     TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
+    assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
     requires_scipy_or_netCDF4, requires_zarr)
@@ -1693,88 +1693,74 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
 
-class OpenMFDatasetManyFilesTest(TestCase):
-    def validate_open_mfdataset_autoclose(self, engine, nfiles=10):
-        randdata = np.random.randn(nfiles)
-        original = Dataset({'foo': ('x', randdata)})
-        # test standard open_mfdataset approach with too many files
-        with create_tmp_files(nfiles) as tmpfiles:
-            for readengine in engine:
-                writeengine = (readengine if readengine != 'pynio'
-                               else 'netcdf4')
-                # split into multiple sets of temp files
-                for ii in original.x.values:
-                    subds = original.isel(x=slice(ii, ii + 1))
-                    subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+@pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
+def readengine(request):
+    return request.param
 
-                # check that calculation on opened datasets works properly
-                ds = open_mfdataset(tmpfiles, engine=readengine,
-                                    autoclose=True)
-                self.assertAllClose(ds.x.sum().values,
-                                    (nfiles * (nfiles - 1)) / 2)
-                self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
-                self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
-                ds.close()
 
-    def validate_open_mfdataset_large_num_files(self, engine):
-        self.validate_open_mfdataset_autoclose(engine, nfiles=2000)
+@pytest.fixture(params=[1, 100])
+def nfiles(request):
+    return request.param
 
-    @requires_dask
-    @requires_netCDF4
-    def test_1_autoclose_netcdf4(self):
-        self.validate_open_mfdataset_autoclose(engine=['netcdf4'])
 
-    @requires_dask
-    @requires_scipy
-    def test_2_autoclose_scipy(self):
-        self.validate_open_mfdataset_autoclose(engine=['scipy'])
+@pytest.fixture(params=[True, False])
+def autoclose(request):
+    return request.param
 
-    @requires_dask
-    @requires_pynio
-    def test_3_autoclose_pynio(self):
-        self.validate_open_mfdataset_autoclose(engine=['pynio'])
 
-    # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error
-    @requires_dask
-    @requires_h5netcdf
-    @pytest.mark.xfail
-    def test_4_autoclose_h5netcdf(self):
-        self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
+@pytest.fixture(params=[True, False])
+def parallel(request):
+    return request.param
 
-    # These tests below are marked as flaky (and skipped by default) because
-    # they fail sometimes on Travis-CI, for no clear reason.
 
-    @requires_dask
-    @requires_netCDF4
-    @flaky
-    @pytest.mark.slow
-    def test_1_open_large_num_files_netcdf4(self):
-        self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
+@pytest.fixture(params=[None, 5])
+def chunks(request):
+    return request.param
 
-    @requires_dask
-    @requires_scipy
-    @flaky
-    @pytest.mark.slow
-    def test_2_open_large_num_files_scipy(self):
-        self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
-    @requires_dask
-    @requires_pynio
-    @flaky
-    @pytest.mark.slow
-    def test_3_open_large_num_files_pynio(self):
-        self.validate_open_mfdataset_large_num_files(engine=['pynio'])
+# using pytest.mark.skipif does not work so this a work around
+def skip_if_not_engine(engine):
+    if engine == 'netcdf4':
+        pytest.importorskip('netCDF4')
+    elif engine == 'pynio':
+        pytest.importorskip('Nio')
+    else:
+        pytest.importorskip(engine)
 
-    # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error
-    @requires_dask
-    @requires_h5netcdf
-    @flaky
-    @pytest.mark.xfail
-    @pytest.mark.slow
-    def test_4_open_large_num_files_h5netcdf(self):
-        self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
+
+def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
+                                  chunks):
+
+    # skip certain combinations
+    skip_if_not_engine(readengine)
+
+    if not has_dask and parallel:
+        pytest.skip('parallel requires dask')
+
+    if readengine == 'h5netcdf' and autoclose:
+        pytest.skip('h5netcdf does not support autoclose yet')
+
+    if ON_WINDOWS:
+        pytest.skip('Skipping on Windows')
+
+    randdata = np.random.randn(nfiles)
+    original = Dataset({'foo': ('x', randdata)})
+    # test standard open_mfdataset approach with too many files
+    with create_tmp_files(nfiles) as tmpfiles:
+        writeengine = (readengine if readengine != 'pynio' else 'netcdf4')
+        # split into multiple sets of temp files
+        for ii in original.x.values:
+            subds = original.isel(x=slice(ii, ii + 1))
+            subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+
+        # check that calculation on opened datasets works properly
+        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                                autoclose=autoclose, chunks=chunks)
+
+        # check that using open_mfdataset returns dask arrays for variables
+        assert isinstance(actual['foo'].data, dask_array_type)
+
+        assert_identical(original, actual)
 
 
 @requires_scipy_or_netCDF4
