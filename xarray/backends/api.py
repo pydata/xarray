@@ -453,7 +453,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different', **kwargs):
+                   lock=None, data_vars='all', coords='different',
+                   autoclose=False, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -534,7 +535,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition the 'minimal' coordinates.
-
+    parallel : bool, optional
+        If True, the open and preprocess steps of this function will be
+        performed in parallel using ``dask.delayed``. Default is False.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -562,12 +565,30 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if lock is None:
         lock = _default_lock(paths[0], engine)
-    datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
-                             **kwargs) for p in paths]
-    file_objs = [ds._file_obj for ds in datasets]
 
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
+                       autoclose=autoclose, **kwargs)
+
+    if parallel:
+        import dask
+        # wrap the open_dataset, getattr, and preprocess with delayed
+        open_ = dask.delayed(open_dataset)
+        getattr_ = dask.delayed(getattr)
+        if preprocess is not None:
+            preprocess = dask.delayed(preprocess)
+    else:
+        open_ = open_dataset
+        getattr_ = getattr
+
+    datasets = [open_(p, **open_kwargs) for p in paths]
+    file_objs = [getattr_(ds, '_file_obj') for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
+
+    if parallel:
+        # calling compute here will return the datasets/file_objs lists,
+        # the underlying datasets will still be stored as dask arrays
+        datasets, file_objs = dask.compute(datasets, file_objs)
 
     # close datasets in case of a ValueError
     try:
