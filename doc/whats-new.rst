@@ -36,6 +36,14 @@ Enhancements
 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+
+- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
+  ``dask.delayed`` to parallelize the open and preprocessing steps within
+  ``open_mfdataset``. This is expected to provide performance improvements when
+  opening many files, particularly when used in conjunction with dask's
+  multiprocessing or distributed schedulers (:issue:`1981`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - New ``compute`` option in :py:meth:`~xarray.Dataset.to_netcdf`,
   :py:meth:`~xarray.Dataset.to_zarr`, and :py:func:`~xarray.save_mfdataset` to
   allow for the lazy computation of netCDF and zarr stores. This feature is
@@ -56,12 +64,6 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 Enhancements
 ~~~~~~~~~~~~
 
-- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
-  ``dask.delayed`` to parallelize the open and preprocessing steps within
-  ``open_mfdataset``. This is expected to provide performance improvements when
-  opening many files, particularly when used in conjunction with dask's
-  multiprocessing or distributed schedulers (:issue:`1981`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 - :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
   which test each value in the array for whether it is contained in the
   supplied list, returning a bool array. See :ref:`selecting values with isin`
@@ -127,12 +129,6 @@ Enhancements
   when using the `dask.distributed <https://distributed.readthedocs.io>`_
   scheduler (:issue:`1464`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Support for returning dask delayed objects from xarray's
-  :py:meth:`Dataset.to_netcdf` and :py:meth:`Dataset.to_zarr` methods.
-  This only applies when writing datasets that include dask arrays (:issue:`1800`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
-
-- Fixed to_netcdf when using dask distributed
 
 - Support lazy vectorized-indexing. After this change, flexible indexing such
   as orthogonal/vectorized indexing, becomes possible for all the backend
