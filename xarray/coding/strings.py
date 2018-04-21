@@ -49,7 +49,7 @@ class EncodedStringCoder(VariableCoder):
             if '_FillValue' in attrs:
                 raise NotImplementedError(
                     'variable {!r} has a _FillValue specified, but '
-                    '_FillValue is yet supported on unicode strings: '
+                    '_FillValue is not yet supported on unicode strings: '
                     'https://github.com/pydata/xarray/issues/1647'
                     .format(name))
 
