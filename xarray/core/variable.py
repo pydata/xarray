@@ -679,7 +679,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
-                    'shape mismatch: value array of shape %s could not be'
+                    'shape mismatch: value array of shape %s could not be '
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
             if value.ndim == 0:
