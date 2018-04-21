@@ -773,10 +773,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         numpy.isin
         """
-        from .computation import apply_ufunc
         from .dataset import Dataset
         from .dataarray import DataArray
         from .variable import Variable
+        from .computation import apply_ufunc
 
         if isinstance(test_elements, Dataset):
             raise TypeError(
@@ -792,6 +792,46 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             self,
             kwargs=dict(test_elements=test_elements),
             dask='allowed',
+        )
+
+    def astype(self, dtype, casting = 'unsafe', copy = True):
+        """
+        Copy of the xarray object, with data cast to a specified type.
+        Leaves coordinate dtype unchanged.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+            Controls what kind of data casting may occur. Defaults to 'unsafe'
+            for backwards compatibility.
+
+            * 'no' means the data types should not be cast at all.
+            * 'equiv' means only byte-order changes are allowed.
+            * 'safe' means only casts which can preserve values are allowed.
+            * 'same_kind' means only safe casts or casts within a kind,
+                like float64 to float32, are allowed.
+            * 'unsafe' means any data conversions may be done.
+        copy : bool, optional
+            By default, astype always returns a newly allocated array. If this
+            is set to False and the `dtype` requirement is satisfied, the input
+            array is returned instead of a copy.
+
+        See also
+        --------
+        np.ndarray.astype
+        dask.array.Array.astype
+        """
+        from .computation import apply_ufunc
+
+        return apply_ufunc(
+            duck_array_ops.astype,
+            self,
+            dtype,
+            keep_attrs=True,
+            kwargs={'casting':casting,'copy':copy},
+            dask='allowed'
         )
 
     def __enter__(self):

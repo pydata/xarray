@@ -343,7 +343,6 @@ class VariableSubclassTestCases(object):
         x = np.arange(5)
         v = self.cls(['x'], x)
         assert_array_equal(np.asarray(v), x)
-        # test patched in methods
         assert_array_equal(v.astype(float), x.astype(float))
         # think this is a break, that argsort changes the type
         assert_identical(v.argsort(), v.to_base_variable())

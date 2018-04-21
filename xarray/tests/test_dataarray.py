@@ -1446,8 +1446,8 @@ class TestDataArray(TestCase):
 
     def test_array_interface(self):
         assert_array_equal(np.asarray(self.dv), self.x)
-        # test patched in methods
         assert_array_equal(self.dv.astype(float), self.v.astype(float))
+        # test patched in methods
         assert_array_equal(self.dv.argsort(), self.v.argsort())
         assert_array_equal(self.dv.clip(2, 3), self.v.clip(2, 3))
         # test ufuncs
@@ -1457,6 +1457,10 @@ class TestDataArray(TestCase):
         assert_array_equal(self.dv, np.maximum(self.v, self.dv))
         bar = Variable(['x', 'y'], np.zeros((10, 20)))
         assert_equal(self.dv, np.maximum(self.dv, bar))
+
+    def test_astype_attrs(self):
+        mda = self.mda.astype(bool)
+        assert list(mda.attrs.items()) == list(self.mda.attrs.items())
 
     def test_is_null(self):
         x = np.random.RandomState(42).randn(5, 6)

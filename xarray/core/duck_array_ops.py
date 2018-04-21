@@ -95,6 +95,9 @@ array_any = _dask_or_eager_func('any')
 tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
 
 
+def astype(data, dtype, **kwargs):
+    return data.astype(dtype, **kwargs)
+
 def asarray(data):
     return data if isinstance(data, dask_array_type) else np.asarray(data)
 
