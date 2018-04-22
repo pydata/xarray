@@ -140,8 +140,9 @@ preserve all use of multi-indexes:
     index = pd.MultiIndex.from_arrays([['a', 'a', 'b'], [0, 1, 2]],
                                       names=['one', 'two'])
     df = pd.DataFrame({'x': 1, 'y': 2}, index=index)
-    ds = xr.Dataset(df)
-    ds
+    df
+    xr.Dataset(df)
+    xr.Dataset.from_dataframe(df)
 
 However, you will need to set dimension names explicitly, either with the
 ``dims`` argument on in the ``DataArray`` constructor or by calling
