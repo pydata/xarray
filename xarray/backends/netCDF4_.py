@@ -156,22 +156,21 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
-                                   lsd_okay=True, backend='netCDF4',
-                                   unlimited_dims=None, extra_valid_encodings=None):
+                                   lsd_okay=True, h5py_okay=False, backend='netCDF4',
+                                   unlimited_dims=None):
     if unlimited_dims is None:
         unlimited_dims = ()
 
     encoding = variable.encoding.copy()
 
     safe_to_drop = set(['source', 'original_shape'])
-
     valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
                            'chunksizes', 'shuffle', '_FillValue'])
-    if extra_valid_encodings:
-        valid_encodings.update(extra_valid_encodings)
-
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
+    if h5py_okay:
+        valid_encodings.add('compression')
+        valid_encodings.add('compression_opts')
 
     if not raise_on_invalid and encoding.get('chunksizes') is not None:
         # It's possible to get encoded chunksizes larger than a dimension size

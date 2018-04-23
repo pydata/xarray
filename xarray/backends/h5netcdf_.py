@@ -54,8 +54,7 @@ def _read_attributes(h5netcdf_var):
 
 _extract_h5nc_encoding = functools.partial(
     _extract_nc4_variable_encoding,
-    lsd_okay=False, backend='h5netcdf',
-    extra_valid_encodings=set(['compression', 'compression_opts']))
+    lsd_okay=False, h5py_okay=True, backend='h5netcdf')
 
 
 def _open_h5netcdf_group(filename, mode, group):
