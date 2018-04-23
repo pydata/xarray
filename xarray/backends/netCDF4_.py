@@ -233,6 +233,31 @@ def _disable_auto_decode_group(ds):
         _disable_auto_decode_variable(var)
 
 
+def _is_list_of_strings(value):
+    if (np.asarray(value).dtype.kind in ['U', 'S'] and
+            np.asarray(value).size > 1):
+        return True
+    else:
+        return False
+
+
+def _set_nc_attribute(obj, key, value):
+    if _is_list_of_strings(value):
+        # encode as NC_STRING if attr is list of strings
+        try:
+            obj.setncattr_string(key, value)
+        except AttributeError:
+            # Inform users with old netCDF that does not support
+            # NC_STRING that we can't serialize lists of strings
+            # as attrs
+            msg = ('Attributes which are lists of strings are not '
+                   'supported with this version of netCDF. Please '
+                   'upgrade to netCDF4-python 1.2.4 or greater.')
+            raise AttributeError(msg)
+    else:
+        obj.setncattr(key, value)
+
+
 class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
     """Store for reading and writing data via the Python-NetCDF4 library.
 
@@ -351,7 +376,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             if self.format != 'NETCDF4':
                 value = encode_nc3_attr_value(value)
-            self.ds.setncattr(key, value)
+            _set_nc_attribute(self.ds, key, value)
 
     def set_variables(self, *args, **kwargs):
         with self.ensure_open(autoclose=False):
@@ -406,7 +431,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
-            nc4_var.setncattr(k, v)
+            _set_nc_attribute(nc4_var, k, v)
 
         target = NetCDF4ArrayWrapper(name, self)
 
