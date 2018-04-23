@@ -156,8 +156,8 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
-                                   lsd_okay=True, h5py_okay=False, backend='netCDF4',
-                                   unlimited_dims=None):
+                                   lsd_okay=True, h5py_okay=False,
+                                   backend='netCDF4', unlimited_dims=None):
     if unlimited_dims is None:
         unlimited_dims = ()
 

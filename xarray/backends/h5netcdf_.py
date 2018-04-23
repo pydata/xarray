@@ -175,13 +175,14 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                                           raise_on_invalid=check_encoding)
         kwargs = {}
 
-        if encoding.get('compression') == 'gzip':
-            encoding['zlib'] = True
-            del encoding['compression']
-            encoding['complevel'] = encoding.pop('compression_opts', None)
+        if encoding.get('zlib'):
+            encoding['compression'] = 'gzip'
+            del encoding['zlib']
+            encoding['compression_opts'] = encoding.pop('complevel', None)
+        encoding['chunks'] = encoding.pop('chunksizes', None)
 
-        for key in ['zlib', 'complevel', 'compression', 'compression_opts',
-                    'shuffle', 'chunksizes', 'fletcher32']:
+        for key in ['compression', 'compression_opts', 'shuffle',
+                    'chunks', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
         if name not in self.ds:

@@ -1687,40 +1687,38 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             assert_equal(ds, actual)
 
     def test_compression_encoding_h5py(self):
-        for compression in [
-            {'compression': 'gzip', 'compression_opts': 9},
-            {'compression': 'lzf', 'compression_opts': None, 'chunksizes': (5, 5)},
-        ]:
-            data = create_test_data()
-            data['var2'].encoding.update(compression)
-            data['var2'].encoding.update({'fletcher32': True,
-                                          'shuffle': True,
-                                          'original_shape': data.var2.shape})
-            with self.roundtrip(data) as actual:
-                for k, v in iteritems(data['var2'].encoding):
-                    # Compression settings are converted to NetCDF4-Python style,
-                    # but only for gzip/zlib
-                    if k == 'compression' and v == 'gzip':
-                        k, v = 'zlib', True
-                    if k == 'compression_opts' and data['var2'].encoding.get('gzip') is True:
-                        k = 'complevel'
-                    self.assertEqual(v, actual['var2'].encoding[k])
+        for compr_in, compr_out in (
+                ({'compression': 'gzip', 'compression_opts': 9},
+                 {'zlib': True, 'complevel': 9}),
+                ({'compression': 'lzf', 'compression_opts': None},
+                 {'compression': 'lzf', 'compression_opts': None})):
 
-            # regression test for #156
-            expected = data.isel(dim1=0)
-            with self.roundtrip(expected) as actual:
-                assert_equal(expected, actual)
+            data = create_test_data()
+            compr_common = {
+                'chunksizes': (5, 5),
+                'fletcher32': True,
+                'shuffle': True,
+                'original_shape': data.var2.shape
+            }
+            data['var2'].encoding.update(compr_in)
+            data['var2'].encoding.update(compr_common)
+            compr_out.update(compr_common)
+            with self.roundtrip(data) as actual:
+                for k, v in compr_out.items():
+                    self.assertEqual(v, actual['var2'].encoding[k])
 
     def test_dump_encodings_h5py(self):
         # regression test for #709
         ds = Dataset({'x': ('y', np.arange(10.0))})
 
-        kwargs = dict(encoding={'x': {'compression': 'gzip', 'compression_opts': 9}})
+        kwargs = {'encoding': {'x': {
+            'compression': 'gzip', 'compression_opts': 9}}}
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.x.encoding['zlib'], True)
             self.assertEqual(actual.x.encoding['complevel'], 9)
 
-        kwargs = dict(encoding={'x': {'compression': 'lzf', 'compression_opts': None}})
+        kwargs = {'encoding': {'x': {
+            'compression': 'lzf', 'compression_opts': None}}}
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.x.encoding['compression'], 'lzf')
             self.assertEqual(actual.x.encoding['compression_opts'], None)
