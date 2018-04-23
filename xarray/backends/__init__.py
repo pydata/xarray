@@ -10,7 +10,6 @@ from .pydap_ import PydapDataStore
 from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore
-from .h5netcdf_new import H5NetCDFNewStore
 from .zarr import ZarrStore
 
 __all__ = [
@@ -21,6 +20,5 @@ __all__ = [
     'NioDataStore',
     'ScipyDataStore',
     'H5NetCDFStore',
-    'H5NetCDFNewStore',
     'ZarrStore',
 ]

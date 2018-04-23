@@ -1642,7 +1642,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         # unicode instead of leaving them as bytes.
         data = create_test_data().drop('dim3')
         data.attrs['foo'] = 'bar'
-        valid_engines = ['netcdf4', self.engine]
+        valid_engines = ['netcdf4', 'h5netcdf']
         for write_engine in valid_engines:
             with create_tmp_file() as tmp_file:
                 data.to_netcdf(tmp_file, engine=write_engine)
@@ -1669,21 +1669,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
 
-
-@requires_h5netcdf
-@requires_netCDF4
-class H5NetCDFNewDataTest(H5NetCDFDataTest):
-    engine = 'h5netcdf-new'
-
-    @contextlib.contextmanager
-    def create_store(self):
-        with create_tmp_file() as tmp_file:
-            yield backends.H5NetCDFNewStore(tmp_file, 'w')
-
-    def test_compression_encoding(self):
-        for compression in (
-                {'compression': 'gzip', 'compression_opts': 9, 'chunks': True},
-                {'compression': 'lzf', 'chunks': (5, 5)}):
+    def test_compression_encoding_h5py(self):
+        for compression in [
+            {'compression': 'gzip', 'compression_opts': 9},
+            {'compression': 'lzf', 'compression_opts': None, 'chunksizes': (5, 5)},
+        ]:
             data = create_test_data()
             data['var2'].encoding.update(compression)
             data['var2'].encoding.update({'fletcher32': True,
@@ -1691,10 +1681,12 @@ class H5NetCDFNewDataTest(H5NetCDFDataTest):
                                           'original_shape': data.var2.shape})
             with self.roundtrip(data) as actual:
                 for k, v in iteritems(data['var2'].encoding):
-                    if k == 'chunks' and v is True:
-                        # Auto-chunking is converted to actual
-                        # chunk sizes when reading back
-                        v = (8, 9)
+                    # Compression settings are converted to NetCDF4-Python style,
+                    # but only for gzip/zlib
+                    if k == 'compression' and v == 'gzip':
+                        k, v = 'zlib', True
+                    if k == 'compression_opts' and data['var2'].encoding.get('gzip') is True:
+                        k = 'complevel'
                     self.assertEqual(v, actual['var2'].encoding[k])
 
             # regression test for #156
@@ -1702,22 +1694,24 @@ class H5NetCDFNewDataTest(H5NetCDFDataTest):
             with self.roundtrip(expected) as actual:
                 assert_equal(expected, actual)
 
-    def test_dump_encodings(self):
+    def test_dump_encodings_h5py(self):
         # regression test for #709
         ds = Dataset({'x': ('y', np.arange(10.0))})
-        kwargs = dict(encoding={'x': {'compression': 'gzip'}})
+
+        kwargs = dict(encoding={'x': {'compression': 'gzip', 'compression_opts': 9}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual.x.encoding['compression'], 'gzip')
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+
+        kwargs = dict(encoding={'x': {'compression': 'lzf', 'compression_opts': None}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['compression'], 'lzf')
+            self.assertEqual(actual.x.encoding['compression_opts'], None)
 
 
 # tests pending h5netcdf fix
 @unittest.skip
 class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
-    autoclose = True
-
-
-@unittest.skip
-class H5NetCDFNewDataTestAutocloseTrue(H5NetCDFNewDataTest):
     autoclose = True
 
 
@@ -1770,12 +1764,6 @@ class OpenMFDatasetManyFilesTest(TestCase):
     def test_4_autoclose_h5netcdf(self):
         self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
 
-    @requires_dask
-    @requires_h5netcdf
-    @pytest.mark.xfail
-    def test_4_autoclose_h5netcdf_new(self):
-        self.validate_open_mfdataset_autoclose(engine=['h5netcdf-new'])
-
     # These tests below are marked as flaky (and skipped by default) because
     # they fail sometimes on Travis-CI, for no clear reason.
 
@@ -1809,14 +1797,6 @@ class OpenMFDatasetManyFilesTest(TestCase):
     @pytest.mark.slow
     def test_4_open_large_num_files_h5netcdf(self):
         self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
-
-    @requires_dask
-    @requires_h5netcdf
-    @flaky
-    @pytest.mark.xfail
-    @pytest.mark.slow
-    def test_4_open_large_num_files_h5netcdf_new(self):
-        self.validate_open_mfdataset_large_num_files(engine=['h5netcdf-new'])
 
 
 @requires_scipy_or_netCDF4

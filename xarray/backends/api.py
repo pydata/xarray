@@ -305,9 +305,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
                                            autoclose=autoclose)
-        elif engine == 'h5netcdf-new':
-            store = backends.H5NetCDFNewStore(filename_or_obj, group=group,
-                                              autoclose=autoclose)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj,
                                           autoclose=autoclose)
@@ -593,9 +590,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
 WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
                     'scipy': backends.ScipyDataStore,
-                    'h5netcdf': backends.H5NetCDFStore,
-                    'h5netcdf-new': backends.H5NetCDFNewStore,
-                    }
+                    'h5netcdf': backends.H5NetCDFStore}
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
@@ -716,7 +711,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Paths to the netCDF4 group in each corresponding file to which to save
         datasets (only works for format='NETCDF4'). The groups will be created
         if necessary.
-    engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-new'}, optional
+    engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.

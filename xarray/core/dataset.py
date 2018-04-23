@@ -1114,34 +1114,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         group : str, optional
             Path to the netCDF4 group in the given file to open (only works for
             format='NETCDF4'). The group(s) will be created if necessary.
-        engine : {'netcdf4', 'scipy', 'h5netcdf', 'h5netcdf-new'}, optional
+        engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
             Engine to use when writing netCDF files. If not provided, the
             default engine is chosen based on available dependencies, with a
             preference for 'netcdf4' if writing to a file on disk.
-
-            The 'h5netcdf' engine uses the h5netcdf module legacy API, whereas
-            'h5netcdf-new' uses the new API of the same module. This alters what
-            is accepted by the encoding parameter, as the legacy API is
-            designed to be a drop-in replacement for the netcdf4 module,
-            whereas the new API is modeled after the h5py module.
-            At the moment of writing, the h5netcdf new API is the only way to
-            use compression algorithms other than gzip.
-
-            e.g::
-
-                to_netcdf(engine='h5netcdf', encoding={varname:
-                          {'zlib': True, 'complevel': 9, 'chunksizes': (100, 100)}})
-
-            is equivalent to::
-
-                to_netcdf(engine='h5netcdf-new', encoding={varname:
-                          {'compression': 'gzip', 'compression_opts': 9, 'chunks': (100, 100)}})
-
         encoding : dict, optional
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
                                'zlib': True}, ...}``
+
+            The `h5netcdf` engine supports both the NetCDF4-style compression
+            encoding parameters ``{'zlib': True, 'complevel': 9}`` and the h5py
+            ones ``{'compression': 'gzip', 'compression_opts': 9}``.
+            This allows using any compression plugin installed in the HDF5
+            library, e.g. LZF.
+
         unlimited_dims : sequence of str, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
