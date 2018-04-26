@@ -40,6 +40,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Better error handling in ``open_mfdataset`` (:issue:`2077`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 
