@@ -556,6 +556,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, basestring):
+        if is_remote_uri(paths):
+            raise ValueError(
+                'cannot do wild-card matching for paths that are remote URLs: '
+                '{!r}. Instead, supply paths as an explicit list of strings.'
+                .format(paths))
         paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, path_type) else p for p in paths]
