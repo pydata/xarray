@@ -72,16 +72,13 @@ def _import_cftime_datetime():
     return datetime
 
 
-def _require_standalone_cftime(message=None):
+def _require_standalone_cftime():
     """Raises an ImportError if the standalone cftime is not found"""
     try:
         import cftime  # noqa: F401
     except ImportError:
-        if message:
-            raise ImportError(message)
-        else:
-            raise ImportError('Using a CFTimeIndex requires the standalone '
-                              'version of the cftime library.')
+        raise ImportError('Using a CFTimeIndex requires the standalone '
+                          'version of the cftime library.')
 
 
 def _netcdf_to_numpy_timeunit(units):
@@ -106,7 +103,11 @@ def _unpack_netcdf_time_units(units):
 def _decode_datetime_with_cftime(num_dates, units, calendar,
                                  enable_cftimeindex):
     cftime = _import_cftime()
-    dates = np.asarray(cftime.num2date(num_dates, units, calendar))
+    if enable_cftimeindex:
+        dates = np.asarray(cftime.num2date(num_dates, units, calendar,
+                                           only_use_cftime_datetimes=True))
+    else:
+        dates = np.asarray(cftime.num2date(num_dates, units, calendar))
 
     if (dates[np.nanargmin(num_dates)].year < 1678 or
             dates[np.nanargmax(num_dates)].year >= 2262):
@@ -276,9 +277,11 @@ def infer_datetime_units(dates):
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
         reference_date = pd.Timestamp(reference_date)
     else:
-        _require_standalone_cftime(
-            'Serializing dates of type cftime.datetime '
-            'requires the standalone cftime library.')
+        if not OPTIONS['enable_cftimeindex']:
+            raise ValueError('Serializing dates of type cftime.datetime '
+                             'requires setting enable_cftimeindex to True and '
+                             'using the standalone cftime library to enable '
+                             'accurate roundtripping of date types.')
         dates = np.asarray(dates).ravel()
         unique_timedeltas = np.unique(pd.to_timedelta(np.diff(dates)))
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'

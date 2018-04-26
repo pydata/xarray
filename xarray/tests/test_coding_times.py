@@ -160,6 +160,9 @@ def test_decode_cf_datetime_non_iso_strings():
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
@@ -188,6 +191,9 @@ def test_decode_standard_calendar_inside_timestamp_range(
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_non_standard_calendar_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     times = pd.date_range('2001-04-01-00', end='2001-04-30-23',
@@ -221,12 +227,20 @@ def test_decode_non_standard_calendar_inside_timestamp_range(
 def test_decode_dates_outside_timestamp_range(
         calendar, enable_cftimeindex):
     from datetime import datetime
+
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
     times = [datetime(1, 4, 1, h) for h in range(1, 5)]
     noleap_time = cftime.date2num(times, units, calendar=calendar)
-    expected = cftime.num2date(noleap_time, units, calendar=calendar)
+    if enable_cftimeindex:
+        expected = cftime.num2date(noleap_time, units, calendar=calendar,
+                                   only_use_cftime_datetimes=True)
+    else:
+        expected = cftime.num2date(noleap_time, units, calendar=calendar)
     expected_date_type = type(expected[0])
 
     with warnings.catch_warnings():
@@ -248,6 +262,9 @@ def test_decode_dates_outside_timestamp_range(
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_single_element_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     units = 'days since 0001-01-01'
     for num_time in [735368, [735368], [[735368]]]:
         with warnings.catch_warnings():
@@ -265,6 +282,9 @@ def test_decode_standard_calendar_single_element_inside_timestamp_range(
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     units = 'days since 0001-01-01'
     for num_time in [735368, [735368], [[735368]]]:
         with warnings.catch_warnings():
@@ -285,6 +305,9 @@ def test_decode_non_standard_calendar_single_element_inside_timestamp_range(
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_single_element_outside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
     units = 'days since 0001-01-01'
     for days in [1, 1470376]:
@@ -305,6 +328,9 @@ def test_decode_single_element_outside_timestamp_range(
     product(coding.times._STANDARD_CALENDARS, [False, True]))
 def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -341,6 +367,9 @@ def test_decode_standard_calendar_multidim_time_inside_timestamp_range(
     product(_NON_STANDARD_CALENDARS, [False, True]))
 def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -384,6 +413,10 @@ def test_decode_nonstandard_calendar_multidim_time_inside_timestamp_range(
 def test_decode_multidim_time_outside_timestamp_range(
         calendar, enable_cftimeindex):
     from datetime import datetime
+
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -395,8 +428,14 @@ def test_decode_multidim_time_outside_timestamp_range(
     mdim_time[:, 0] = noleap_time1
     mdim_time[:, 1] = noleap_time2
 
-    expected1 = cftime.num2date(noleap_time1, units, calendar)
-    expected2 = cftime.num2date(noleap_time2, units, calendar)
+    if enable_cftimeindex:
+        expected1 = cftime.num2date(noleap_time1, units, calendar,
+                                    only_use_cftime_datetimes=True)
+        expected2 = cftime.num2date(noleap_time2, units, calendar,
+                                    only_use_cftime_datetimes=True)
+    else:
+        expected1 = cftime.num2date(noleap_time1, units, calendar)
+        expected2 = cftime.num2date(noleap_time2, units, calendar)
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'Unable to decode time axis')
@@ -421,6 +460,9 @@ def test_decode_multidim_time_outside_timestamp_range(
     product(['360_day', 'all_leap', '366_day'], [False, True]))
 def test_decode_non_standard_calendar_single_element_fallback(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
 
     units = 'days since 0001-01-01'
@@ -447,6 +489,9 @@ def test_decode_non_standard_calendar_single_element_fallback(
     product(['360_day'], [False, True]))
 def test_decode_non_standard_calendar_fallback(
         calendar, enable_cftimeindex):
+    if enable_cftimeindex:
+        pytest.importorskip('cftime')
+
     cftime = _import_cftime()
     # ensure leap year doesn't matter
     for year in [2010, 2011, 2012, 2013, 2014]:
@@ -514,8 +559,9 @@ def test_infer_datetime_units(dates, expected):
     assert expected == coding.times.infer_datetime_units(dates)
 
 
-@requires_cftime_or_netCDF4
-def test_infer_cftime_datetime_units():
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_infer_cftime_datetime_units(enable_cftimeindex):
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         for dates, expected in [
@@ -532,11 +578,13 @@ def test_infer_cftime_datetime_units():
                 ([date_type(1900, 1, 1),
                   date_type(1900, 1, 2, 0, 0, 0, 5)],
                  'days since 1900-01-01 00:00:00.000000')]:
-            if has_cftime:
-                assert expected == coding.times.infer_datetime_units(dates)
+            if enable_cftimeindex:
+                with set_options(enable_cftimeindex=enable_cftimeindex):
+                    assert expected == coding.times.infer_datetime_units(dates)
             else:
-                with pytest.raises(ImportError):
-                    coding.times.infer_datetime_units(dates)
+                with set_options(enable_cftimeindex=enable_cftimeindex):
+                    with pytest.raises(ValueError):
+                        coding.times.infer_datetime_units(dates)
 
 
 @pytest.mark.parametrize(
