@@ -1687,12 +1687,21 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             assert_equal(ds, actual)
 
     def test_compression_encoding_h5py(self):
-        for compr_in, compr_out in (
-                ({'compression': 'gzip', 'compression_opts': 9},
-                 {'zlib': True, 'complevel': 9}),
-                ({'compression': 'lzf', 'compression_opts': None},
-                 {'compression': 'lzf', 'compression_opts': None})):
+        ENCODINGS = (
+            # h5py style compression with gzip codec will be converted to
+            # NetCDF4-Python style on round-trip
+            ({'compression': 'gzip', 'compression_opts': 9},
+             {'zlib': True, 'complevel': 9}),
+            # What can't be expressed in NetCDF4-Python style is
+            # round-tripped unaltered
+            ({'compression': 'lzf', 'compression_opts': None},
+             {'compression': 'lzf', 'compression_opts': None}),
+            # If both styles are used together, h5py format takes precedence
+            ({'compression': 'lzf', 'compression_opts': None,
+              'zlib': True, 'complevel': 9},
+             {'compression': 'lzf', 'compression_opts': None}))
 
+        for compr_in, compr_out in ENCODINGS:
             data = create_test_data()
             compr_common = {
                 'chunksizes': (5, 5),
