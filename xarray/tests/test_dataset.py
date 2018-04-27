@@ -2327,6 +2327,42 @@ class TestDataset(TestCase):
         expected = Dataset({'x': ('y', [4, 5, 6])}, {'y': range(3)})
         assert_identical(ds, expected)
 
+    def test_setitem_with_coords(self):
+        # Regression test for GH:2068
+        ds = create_test_data()
+
+        other = DataArray(np.arange(10), dims='dim3',
+                          coords={'numbers': ('dim3', np.arange(10))})
+        expected = ds.copy()
+        expected['var3'] = other.drop('numbers')
+        actual = ds.copy()
+        actual['var3'] = other
+        assert_identical(expected, actual)
+
+        # with alignment
+        other = ds['var3'].isel(dim3=slice(1, -1))
+        other['numbers'] = ('dim3', np.arange(8))
+        actual = ds.copy()
+        actual['var3'] = other
+        expected = ds.copy()
+        expected['var3'] = ds['var3'].isel(dim3=slice(1, -1))
+        assert_identical(expected, actual)
+
+        # with non-duplicate coords
+        other = ds['var3'].isel(dim3=slice(1, -1))
+        other['numbers'] = ('dim3', np.arange(8))
+        other['position'] = ('dim3', np.arange(8))
+        actual = ds.copy()
+        actual['var3'] = other
+        assert 'position' in actual
+
+        # assigning a coordinate-only dataarray
+        actual = ds.copy()
+        other = actual['numbers']
+        other[0] = 10
+        actual['numbers'] = other
+        assert actual['numbers'][0] == 10
+
     def test_setitem_align_new_indexes(self):
         ds = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
         ds['bar'] = DataArray([2, 3, 4], [('x', [1, 2, 3])])
