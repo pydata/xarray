@@ -34,12 +34,12 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Support writing lists of strings as netCDF attributes (:issue:`2044`).
+  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - :py:meth:`~xarray.dot` on dask-backed data will now call :func:`dask.array.einsum`.
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
   (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
-- Support writing lists of strings as netCDF attributes (:issue:`2044`).
-  By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
 Bug fixes
 ~~~~~~~~~
