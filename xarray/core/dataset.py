@@ -1775,6 +1775,37 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
+    def interpolate_at(self, method='linear', bounds_error=True,
+                       fill_value=None, **coords):
+        """ Multidimensional interpolation of variables.
+
+        Parameters
+        ----------
+        **coords : {dim: new_coordinate, ...}
+            Keyword arguments with names matching dimensions and values.
+            coords can be a integer, array-like or DataArray.
+            If DataArrays are passed as coords, xarray-style indexing will be
+            carried out.
+        method: {'linear', 'RectBivariateSpline', 'NdPPoly'} for
+            multidimensional array,
+            {'linear', 'barycentric', 'krogh', 'pchip', 'akima',
+            'ppoly', 'bpoly'} for 1-dimensional array.
+
+        Returns
+        -------
+        interpolated: xr.Dataset
+            New dataset on the new coordinates.
+
+        Note
+        ----
+        scipy is required. If NaN is in the array, ValueError will be raised.
+        """
+        from . import interp
+
+        new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
+        return new
+
+
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
 
