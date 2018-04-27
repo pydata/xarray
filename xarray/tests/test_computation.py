@@ -791,10 +791,6 @@ def test_dot(dask):
         assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
         assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-        pytest.skip('dot for dask array requires rechunking for core '
-                    'dimensions.')
-
-    # following requires rechunking
     actual = xr.dot(da_a, da_b, dims=['b'])
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
@@ -829,6 +825,11 @@ def test_dot(dask):
     actual = xr.dot(da_a, dims='a')
     assert actual.dims == ('b', )
     assert (actual.data == np.einsum('ij->j ', a)).all()
+
+    # empty dim
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims='a')
+    assert actual.dims == ('b', )
+    assert (actual.data == np.zeros(actual.shape)).all()
 
     with pytest.raises(TypeError):
         actual = xr.dot(da_a, dims='a', invalid=None)
