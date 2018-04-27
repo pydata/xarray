@@ -554,12 +554,13 @@ def dataset_update_method(dataset, other):
     from .dataset import Dataset
     from .dataarray import DataArray
 
+    other = other.copy()
     for k, obj in other.items():
         if isinstance(obj, (Dataset, DataArray)):
             # drop duplicated coordinates
-            coord_names = [k for k in obj.coords
-                           if k not in obj.dims and k in dataset.coords]
-            if coord_names:
+            coord_names = [c for c in obj.coords
+                           if c not in obj.dims and c in dataset.coords]
+            if len(coord_names) > 0:
                 other[k] = obj.drop(*coord_names)
 
     return merge_core([dataset, other], priority_arg=1,
