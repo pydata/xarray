@@ -563,4 +563,4 @@ def dataset_update_method(dataset, other):
                 other[k] = obj.drop(*coord_names)
 
     return merge_core([dataset, other], priority_arg=1,
-                       indexes=dataset.indexes)
+                      indexes=dataset.indexes)
