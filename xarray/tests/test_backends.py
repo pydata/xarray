@@ -2237,12 +2237,25 @@ class PyNioTestAutocloseTrue(PyNioTest):
 class PseudoNetCDFFormatTest(TestCase):
     autoclose = False
 
-    @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, engine='pseudonetcdf',
-                          autoclose=self.autoclose,
-                          **kwargs) as ds:
-            yield ds
+        return open_dataset(path, engine='pseudonetcdf',
+                            autoclose=self.autoclose,
+                            **kwargs)
+    
+    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " + 
+                               "netcdf metaddata"))
+    def test_open_ncf(self):
+        ncffile = open_example_dataset('example_1.nc',
+                                       engine='pseudonetcdf',  
+                                       autoclose=False,
+                                       backend_kwargs={'format': 'ncf'})
+
+    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " + 
+                               "netcdf metaddata"))
+    def test_open_dyn_ncf(self):
+        ncffile = open_example_dataset('example_1.nc',
+                                       engine='pseudonetcdf',  
+                                       autoclose=False)
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -2353,12 +2366,13 @@ class PseudoNetCDFFormatTest(TestCase):
         assert_identical(ictfile, chkfile)
 
     def test_ict_format_write(self):
+        fmtkw = {'format': 'ffi1001'}
         expected = open_example_dataset('example.ict',
                                         engine='pseudonetcdf',
                                         autoclose=False,
-                                        backend_kwargs={'format': 'ffi1001'})
-        with self.roundtrip(expected, save_kwargs=dict(format='ffi1001'),
-                            open_kwargs=dict(decode_times=False)) as actual:
+                                        backend_kwargs=fmtkw)
+        with self.roundtrip(expected, save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
             assert_identical(expected, actual)
 
     def test_uamiv_format_read(self):
@@ -2393,6 +2407,7 @@ class PseudoNetCDFFormatTest(TestCase):
         assert_allclose(expected, actual)
 
     def test_uamiv_format_write(self):
+        fmtkw = {'format': 'uamiv'}
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=UserWarning,
                                     message=('IOAPI_ISPH is assumed to be ' +
@@ -2400,9 +2415,10 @@ class PseudoNetCDFFormatTest(TestCase):
             expected = open_example_dataset('example.uamiv',
                                             engine='pseudonetcdf',
                                             autoclose=False,
-                                            backend_kwargs={'format': 'uamiv'})
+                                            backend_kwargs=fmtkw)
         with self.roundtrip(expected,
-                            save_kwargs=dict(format='uamiv')) as actual:
+                            save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
             assert_identical(expected, actual)
 
     def save(self, dataset, path, **save_kwargs):
