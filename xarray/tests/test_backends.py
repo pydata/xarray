@@ -2286,6 +2286,11 @@ class PseudoNetCDFFormatTest(TestCase):
             'ulod_value': 'N/A'
         }
 
+        def myatts(**attrs):
+            outattr = stdattr.copy()
+            outattr.update(attrs)
+            return outattr
+
         input = {
             'coords': {},
             'attrs': {
@@ -2312,55 +2317,51 @@ class PseudoNetCDFFormatTest(TestCase):
                 'Start_UTC': {
                     'data': [43200.0, 46800.0, 50400.0, 50400.0],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        'units': 'Start_UTC',
-                        'standard_name': 'Start_UTC',
-                        **stdattr
-                    }
+                    'attrs': myatts(
+                        units='Start_UTC',
+                        standard_name='Start_UTC',
+                    )
                 },
                 'lat': {
                     'data': [41.0, 42.0, 42.0, 42.0],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        'units': 'degrees_north',
-                        'standard_name': 'lat',
-                        **stdattr
-                    }
+                    'attrs': myatts(
+                        units='degrees_north',
+                        standard_name='lat',
+                    )
                 },
                 'lon': {
                     'data': [-71.0, -72.0, -73.0, -74.],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        'units': 'degrees_east',
-                        'standard_name': 'lon',
-                        **stdattr
-                    }
+                    'attrs': myatts(
+                        units='degrees_east',
+                        standard_name='lon',
+                    )
                 },
                 'elev': {
                     'data': [5.0, 15.0, 20.0, 25.0],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        'units': 'meters',
-                        'standard_name': 'elev',
-                        **stdattr
-                    }
+                    'attrs': myatts(
+                        units='meters',
+                        standard_name='elev',
+                    )
                 },
                 'TEST_ppbv': {
                     'data': [1.2345, 2.3456, 3.4567, 4.5678],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        'units': 'ppbv', 'standard_name': 'TEST_ppbv',
-                        **stdattr
-                    }
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TEST_ppbv',
+                    )
                 },
                 'TESTM_ppbv': {
                     'data': [2.22, np.nan, -7777.0, -8888.0],
                     'dims': ('POINTS',),
-                    'attrs': {
-                        **stdattr,
-                        'units': 'ppbv', 'standard_name': 'TESTM_ppbv',
-                        'llod_value': 0.025
-                    }
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TESTM_ppbv',
+                        llod_value=0.025
+                    )
                 }
             }
         }
