@@ -380,7 +380,8 @@ class DatasetIOTestCases(object):
                         assert (actual.t.encoding['calendar'] ==
                                 expected_calendar)
             else:
-                with pytest.raises((ValueError, NotImplementedError)):
+                with pytest.raises((ValueError, NotImplementedError,
+                                    TypeError)):
                     with xr.set_options(enable_cftimeindex=True):
                         with self.roundtrip(expected,
                                             save_kwargs=kwds) as actual:
@@ -396,7 +397,8 @@ class DatasetIOTestCases(object):
             expected = Dataset({'t': ('t', times), 't0': times[0]})
             kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
 
-            with pytest.raises((ValueError, NotImplementedError)):
+            with pytest.raises((ValueError, NotImplementedError,
+                                TypeError)):
                 with xr.set_options(enable_cftimeindex=False):
                     with self.roundtrip(
                             expected,

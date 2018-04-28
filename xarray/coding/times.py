@@ -9,7 +9,8 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import contains_cftime_datetimes
+from ..core.common import (contains_cftime_datetimes,
+                           raise_if_contains_netcdftime_datetimes)
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.options import OPTIONS
@@ -394,6 +395,7 @@ class CFDatetimeCoder(VariableCoder):
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
+        raise_if_contains_netcdftime_datetimes(variable)
         if (np.issubdtype(data.dtype, np.datetime64) or
            contains_cftime_datetimes(variable)):
             (data, units, calendar) = encode_cf_datetime(

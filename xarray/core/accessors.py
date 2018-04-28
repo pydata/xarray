@@ -3,7 +3,8 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
 
-from .common import is_np_datetime_like, _contains_datetime_like_objects
+from .common import (is_np_datetime_like, _contains_datetime_like_objects,
+                     raise_if_contains_netcdftime_datetimes)
 from .pycompat import dask_array_type
 
 
@@ -136,6 +137,7 @@ class DatetimeAccessor(object):
      """
 
     def __init__(self, xarray_obj):
+        raise_if_contains_netcdftime_datetimes(xarray_obj)
         if not _contains_datetime_like_objects(xarray_obj):
             raise TypeError("'dt' accessor only available for "
                             "DataArray with datetime64 timedelta64 dtype or "
