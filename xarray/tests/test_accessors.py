@@ -8,7 +8,7 @@ import xarray as xr
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex, requires_dask,
-    has_cftime, has_dask, has_netCDF4)
+    has_cftime, has_dask, has_cftime_or_netCDF4)
 
 
 class TestDatetimeAccessor(TestCase):
@@ -219,7 +219,8 @@ def test_seasons(cftime_date_type):
     assert_array_equal(seasons.values, dates.dt.season.values)
 
 
-@pytest.mark.skipif(not has_netCDF4, reason='netCDF4 not installed')
+@pytest.mark.skipif(not has_cftime_or_netCDF4,
+                    reason='cftime or netCDF4 not installed')
 def test_dt_accessor_error_netCDF4(cftime_date_type):
     da = xr.DataArray(
         [cftime_date_type(1, 1, 1), cftime_date_type(2, 1, 1)],
