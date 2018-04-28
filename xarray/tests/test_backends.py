@@ -2233,12 +2233,9 @@ class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
 
 
-@requires_netCDF4
 @requires_pseudonetcdf
-class PseudoNetCDFTest(CFEncodedDataTest, TestCase):
-    def test_write_store(self):
-        # pseudonetcdf is read-only for now
-        pass
+class PseudoNetCDFFormatTest(TestCase):
+    autoclose = False
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
@@ -2246,6 +2243,123 @@ class PseudoNetCDFTest(CFEncodedDataTest, TestCase):
                           autoclose=self.autoclose,
                           **kwargs) as ds:
             yield ds
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            self.save(data, path, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    def test_ict_format(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        ictfile = open_example_dataset('example.ict',
+                                       engine='pseudonetcdf',
+                                       autoclose=False,
+                                       backend_kwargs={'format': 'ffi1001'})
+        stdattr = {
+            'fill_value': -9999.0,
+            'scale': 1,
+            'llod_flag': -8888,
+            'llod_value': 'N/A',
+            'ulod_flag': -7777,
+            'ulod_value': 'N/A'
+        }
+
+        input = {
+            'coords': {},
+            'attrs': {
+                'fmt': '1001', 'n_header_lines': 27,
+                'PI_NAME': 'Henderson, Barron',
+                'ORGANIZATION_NAME': 'U.S. EPA',
+                'SOURCE_DESCRIPTION': 'Example file with artificial data',
+                'MISSION_NAME': 'JUST_A_TEST',
+                'VOLUME_INFO': '1, 1',
+                'SDATE': '2018, 04, 27', 'WDATE': '2018, 04, 27',
+                'TIME_INTERVAL': '0',
+                'INDEPENDENT_VARIABLE': 'Start_UTC',
+                'ULOD_FLAG': '-7777', 'ULOD_VALUE': 'N/A',
+                'LLOD_FLAG': '-8888',
+                'LLOD_VALUE': ('N/A, N/A, N/A, N/A, 0.025'),
+                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/' +
+                                   'IcarttDataFormat.htm'),
+                'REVISION': 'R0',
+                'R0': 'No comments for this revision.',
+                'TFLAG': 'Start_UTC'
+            },
+            'dims': {'POINTS': 4},
+            'data_vars': {
+                'Start_UTC': {
+                    'data': [43200.0, 46800.0, 50400.0, 50400.0],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        'units': 'Start_UTC',
+                        'standard_name': 'Start_UTC',
+                        **stdattr
+                    }
+                },
+                'lat': {
+                    'data': [41.0, 42.0, 42.0, 42.0],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        'units': 'degrees_north',
+                        'standard_name': 'lat',
+                        **stdattr
+                    }
+                },
+                'lon': {
+                    'data': [-71.0, -72.0, -73.0, -74.],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        'units': 'degrees_east',
+                        'standard_name': 'lon',
+                        **stdattr
+                    }
+                },
+                'elev': {
+                    'data': [5.0, 15.0, 20.0, 25.0],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        'units': 'meters',
+                        'standard_name': 'elev',
+                        **stdattr
+                    }
+                },
+                'TEST_ppbv': {
+                    'data': [1.2345, 2.3456, 3.4567, 4.5678],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        'units': 'ppbv', 'standard_name': 'TEST_ppbv',
+                        **stdattr
+                    }
+                },
+                'TESTM_ppbv': {
+                    'data': [2.22, np.nan, -7777.0, -8888.0],
+                    'dims': ('POINTS',),
+                    'attrs': {
+                        **stdattr,
+                        'units': 'ppbv', 'standard_name': 'TESTM_ppbv',
+                        'llod_value': 0.025
+                    }
+                }
+            }
+        }
+        ictfile.to_dict()['data_vars']['TESTM_ppbv']; input['data_vars']['TESTM_ppbv']
+        chkfile = Dataset.from_dict(input)
+        assert_identical(ictfile, chkfile)
+
+    def test_ict_format_write(self):
+        expected = open_example_dataset('example.ict',
+                                        engine='pseudonetcdf',
+                                        autoclose=False,
+                                        backend_kwargs={'format': 'ffi1001'})
+        with self.roundtrip(expected, save_kwargs=dict(format='ffi1001'),
+                            open_kwargs=dict(decode_times=False)) as actual:
+            assert_identical(expected, actual)
 
     def test_uamiv_format_read(self):
         """
@@ -2278,28 +2392,33 @@ class PseudoNetCDFTest(CFEncodedDataTest, TestCase):
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
 
-    def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine='netcdf4', **kwargs)
+    def test_uamiv_format_write(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            expected = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=False,
+                                            backend_kwargs={'format': 'uamiv'})
+        with self.roundtrip(expected,
+                            save_kwargs=dict(format='uamiv')) as actual:
+            assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
-    def test_roundtrip_boolean_dtype(self):
-        pass
+    def save(self, dataset, path, **save_kwargs):
+        import PseudoNetCDF as pnc
+        pncf = pnc.PseudoNetCDFFile()
+        pncf.dimensions = {k: pnc.PseudoNetCDFDimension(pncf, k, v)
+                           for k, v in dataset.dims.items()}
+        pncf.variables = {k: pnc.PseudoNetCDFVariable(pncf, k, v.dtype.char,
+                                                      v.dims,
+                                                      values=v.data[...],
+                                                      **v.attrs)
+                          for k, v in dataset.variables.items()}
+        for pk, pv in dataset.attrs.items():
+            setattr(pncf, pk, pv)
 
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
-    def test_roundtrip_mask_and_scale(self):
-        pass
-
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
-    def test_roundtrip_object_dtype(self):
-        pass
-
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
-    def test_roundtrip_string_encoded_characters(self):
-        pass
-
-    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2061')
-    def test_unsigned_roundtrip_mask_and_scale(self):
-        pass
+        pnc.pncwrite(pncf, path, **save_kwargs)
 
 
 @requires_rasterio
