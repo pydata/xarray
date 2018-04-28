@@ -39,12 +39,13 @@ class PncArrayWrapper(BackendArray):
             array = indexing.NumpyIndexingAdapter(array)[np_inds]
         return array
 
+
 _genericncf = ('Dataset', 'netcdf', 'ncf', 'nc')
+
 
 class _notnetcdf:
     def __eq__(self, lhs):
-        return not lhs in _genericncf
-
+        return lhs not in _genericncf
 
 
 class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):

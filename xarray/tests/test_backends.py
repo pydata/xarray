@@ -2244,21 +2244,21 @@ class PseudoNetCDFFormatTest(TestCase):
         return open_dataset(path, engine='pseudonetcdf',
                             autoclose=self.autoclose,
                             **kwargs)
-    
-    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " + 
+
+    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " +
                                "netcdf metaddata"))
     def test_open_ncf(self):
-        ncffile = open_example_dataset('example_1.nc',
-                                       engine='pseudonetcdf',  
-                                       autoclose=False,
-                                       backend_kwargs={'format': 'ncf'})
+        open_example_dataset('example_1.nc',
+                             engine='pseudonetcdf',
+                             autoclose=False,
+                             backend_kwargs={'format': 'ncf'})
 
-    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " + 
+    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " +
                                "netcdf metaddata"))
     def test_open_dyn_ncf(self):
-        ncffile = open_example_dataset('example_1.nc',
-                                       engine='pseudonetcdf',  
-                                       autoclose=False)
+        open_example_dataset('example_1.nc',
+                             engine='pseudonetcdf',
+                             autoclose=False)
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -2364,7 +2364,6 @@ class PseudoNetCDFFormatTest(TestCase):
                 }
             }
         }
-        ictfile.to_dict()['data_vars']['TESTM_ppbv']; input['data_vars']['TESTM_ppbv']
         chkfile = Dataset.from_dict(input)
         assert_identical(ictfile, chkfile)
 
