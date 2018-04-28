@@ -912,7 +912,6 @@ def raise_if_contains_netcdftime_datetimes(var):
                 'with netCDF4; got dates of {}.'.format(type(sample)))
                     
 
-
 def _contains_datetime_like_objects(var):
     """Check if a variable contains datetime like objects (either
     np.datetime64, np.timedelta64, or cftime.datetime)"""
