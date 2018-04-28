@@ -2279,6 +2279,7 @@ class PseudoNetCDFFormatTest(TestCase):
                                        backend_kwargs={'format': 'ffi1001'})
         stdattr = {
             'fill_value': -9999.0,
+            'missing_value': -9999,
             'scale': 1,
             'llod_flag': -8888,
             'llod_value': 'N/A',
@@ -2355,7 +2356,7 @@ class PseudoNetCDFFormatTest(TestCase):
                     )
                 },
                 'TESTM_ppbv': {
-                    'data': [2.22, np.nan, -7777.0, -8888.0],
+                    'data': [2.22, -9999.0, -7777.0, -8888.0],
                     'dims': ('POINTS',),
                     'attrs': myatts(
                         units='ppbv',
