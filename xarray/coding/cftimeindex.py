@@ -8,6 +8,8 @@ import pandas as pd
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
+from .times import _require_standalone_cftime
+
 
 def named(name, pattern):
     return '(?P<' + name + '>' + pattern + ')'
@@ -120,10 +122,7 @@ def get_date_type(self):
 
 
 def assert_all_valid_date_type(data):
-    try:
-        import cftime
-    except ImportError:
-        import netcdftime as cftime
+    import cftime
 
     valid_types = (cftime.DatetimeJulian, cftime.DatetimeNoLeap,
                    cftime.DatetimeAllLeap, cftime.DatetimeGregorian,
@@ -135,8 +134,7 @@ def assert_all_valid_date_type(data):
     if not isinstance(sample, valid_types):
         raise TypeError(
             'CFTimeIndex requires cftime.datetime '
-            'or datetime.datetime objects. '
-            'Got object of {}.'.format(date_type))
+            'objects. Got object of {}.'.format(date_type))
     if not all(isinstance(value, date_type) for value in data):
         raise TypeError(
             'CFTimeIndex requires using datetime '
@@ -155,6 +153,7 @@ class CFTimeIndex(pd.Index):
     date_type = property(get_date_type)
 
     def __new__(cls, data):
+        _require_standalone_cftime()
         result = object.__new__(cls)
         assert_all_valid_date_type(data)
         result._data = np.array(data)

@@ -56,22 +56,6 @@ def _import_cftime():
     return cftime
 
 
-def _import_cftime_datetime():
-    """Helper function to handle importing cftime.datetime across the
-    transition between the version of cftime packaged with netCDF4 and the
-    standalone version"""
-    try:
-        from cftime import datetime
-    except ImportError:
-        # Need to use private API to import generic cftime datetime in
-        # older versions. See https://github.com/Unidata/cftime/issues/8
-        try:
-            from netcdftime._netcdftime import datetime
-        except ImportError:
-            raise ImportError("Failed to import cftime.datetime")
-    return datetime
-
-
 def _require_standalone_cftime():
     """Raises an ImportError if the standalone cftime is not found"""
     try:

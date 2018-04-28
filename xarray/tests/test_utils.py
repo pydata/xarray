@@ -45,16 +45,17 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
-        if enable_cftimeindex:
-            expected = CFTimeIndex(dates)
-        else:
-            expected = pd.Index(dates)
 
         if not has_cftime and enable_cftimeindex:
             with pytest.raises(ImportError):
                 with set_options(enable_cftimeindex=enable_cftimeindex):
                     actual = utils.safe_cast_to_index(np.array(dates))
         else:
+            if enable_cftimeindex:
+                expected = CFTimeIndex(dates)
+            else:
+                expected = pd.Index(dates)
+
             with set_options(enable_cftimeindex=enable_cftimeindex):
                 actual = utils.safe_cast_to_index(np.array(dates))
             assert_array_equal(expected, actual)

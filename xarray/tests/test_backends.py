@@ -353,7 +353,7 @@ class DatasetIOTestCases(object):
     @requires_cftime_or_netCDF4
     def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
         from .test_coding_times import _all_cftime_date_types
-        
+
         date_types = _all_cftime_date_types()
         for date_type in date_types.values():
             times = [date_type(1, 1, 1), date_type(1, 1, 2)]
@@ -380,7 +380,7 @@ class DatasetIOTestCases(object):
                         assert (actual.t.encoding['calendar'] ==
                                 expected_calendar)
             else:
-                with pytest.raises(ImportError):
+                with pytest.raises((ValueError, NotImplementedError)):
                     with xr.set_options(enable_cftimeindex=True):
                         with self.roundtrip(expected,
                                             save_kwargs=kwds) as actual:
@@ -396,7 +396,7 @@ class DatasetIOTestCases(object):
             expected = Dataset({'t': ('t', times), 't0': times[0]})
             kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
 
-            with pytest.raises(ValueError):
+            with pytest.raises((ValueError, NotImplementedError)):
                 with xr.set_options(enable_cftimeindex=False):
                     with self.roundtrip(
                             expected,

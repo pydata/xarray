@@ -879,14 +879,17 @@ def is_np_datetime_like(dtype):
 
 def contains_cftime_datetimes(var):
     """Check if a variable contains cftime datetime objects"""
-    from ..coding.times import _import_cftime_datetime
-    
     try:
-        cftime_datetime = _import_cftime_datetime()
+        from cftime import datetime as cftime_datetime
     except ImportError:
         return False
     else:
-        return isinstance(var.data.flatten()[0], cftime_datetime)
+        sample = var.data.ravel()[0]
+        if isinstance(sample, dask_array_type):
+            sample = sample.compute()
+            if isinstance(sample, np.ndarray):
+                sample = sample.item()
+        return isinstance(sample, cftime_datetime)
 
 
 def _contains_datetime_like_objects(var):

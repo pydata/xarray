@@ -21,7 +21,7 @@ def _access_through_cftimeindex(values, name):
     and access requested datetime component
     """
     from ..coding.cftimeindex import CFTimeIndex
-    values_as_cftimeindex = CFTimeIndex(values)
+    values_as_cftimeindex = CFTimeIndex(values.ravel())
     if name == 'season':
         months = values_as_cftimeindex.month
         field_values = _season_from_months(months)

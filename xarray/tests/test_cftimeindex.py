@@ -11,21 +11,10 @@ from xarray.coding.cftimeindex import (
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime_or_netCDF4, has_cftime
+from . import has_cftime
 
 
-if not has_cftime_or_netCDF4:
-    pytest.importorskip('cftime')
-
-
-def _import_cftime():
-    """Import cftime or netcdftime depending on what's available.
-    Note this is different than coding.times._import_cftime."""
-    try:
-        import cftime
-    except ImportError:
-        import netcdftime as cftime
-    return cftime
+cftime = pytest.importorskip('cftime')
 
 
 def date_dict(year=None, month=None, day=None,
@@ -70,7 +59,6 @@ def test_parse_iso8601(string, expected):
 
 
 def cftime_date_types():
-    cftime = _import_cftime()
     return [cftime.DatetimeNoLeap, cftime.DatetimeJulian,
             cftime.DatetimeAllLeap, cftime.DatetimeGregorian,
             cftime.DatetimeProlepticGregorian, cftime.Datetime360Day]
@@ -113,7 +101,6 @@ def df(index):
 
 @pytest.fixture
 def feb_days(date_type):
-    cftime = _import_cftime()
     if date_type is cftime.DatetimeAllLeap:
         return 29
     elif date_type is cftime.Datetime360Day:
@@ -124,7 +111,6 @@ def feb_days(date_type):
 
 @pytest.fixture
 def dec_days(date_type):
-    cftime = _import_cftime()
     if date_type is cftime.Datetime360Day:
         return 30
     else:
@@ -132,7 +118,6 @@ def dec_days(date_type):
 
 
 def test_assert_all_valid_date_type(date_type, index):
-    cftime = _import_cftime()
     if date_type is cftime.DatetimeNoLeap:
         mixed_date_types = [date_type(1, 1, 1),
                             cftime.DatetimeAllLeap(1, 2, 1)]

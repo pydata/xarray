@@ -38,22 +38,16 @@ def alias(obj, old_name):
 
 
 def _maybe_cast_to_cftimeindex(index):
-    from ..coding.times import (_import_cftime_datetime,
-                                _require_standalone_cftime)
+    from ..coding.cftimeindex import CFTimeIndex
+    from ..coding.times import _require_standalone_cftime
 
     if not OPTIONS['enable_cftimeindex']:
         return index
     else:
         _require_standalone_cftime()
         try:
-            cftime_datetime = _import_cftime_datetime()
-            from ..coding.cftimeindex import CFTimeIndex
-        except ImportError:
-            return index
-        else:
-            if len(index):
-                if isinstance(index[0], cftime_datetime):
-                    index = CFTimeIndex(index)
+            return CFTimeIndex(index)
+        except TypeError:
             return index
 
 
