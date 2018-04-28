@@ -1928,6 +1928,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+        with raises_regex(ValueError, 'wild-card'):
+            open_mfdataset('http://some/remote/uri', autoclose=self.autoclose)
+
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})

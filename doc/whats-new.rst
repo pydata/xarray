@@ -43,6 +43,12 @@ Enhancements
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
+Bug fixes
+~~~~~~~~~
+
+- Better error handling in ``open_mfdataset`` (:issue:`2077`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.10.3:
 
 v0.10.3 (unreleased)
