@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from base64 import b64encode
 from itertools import product
 from distutils.version import LooseVersion
 
@@ -26,21 +25,9 @@ def _encode_zarr_attr_value(value):
     # this checks if it's a scalar number
     elif isinstance(value, np.generic):
         encoded = value.item()
-        # np.string_('X').item() returns a type `bytes`
-        # zarr still doesn't like that
-        if type(encoded) is bytes:  # noqa
-            encoded = b64encode(encoded)
     else:
         encoded = value
     return encoded
-
-
-def _ensure_valid_fill_value(value, dtype):
-    if dtype.type == np.string_ and type(value) == bytes:  # noqa
-        valid = b64encode(value)
-    else:
-        valid = value
-    return _encode_zarr_attr_value(valid)
 
 
 class ZarrArrayWrapper(BackendArray):
@@ -221,23 +208,15 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     out : xarray.Variable
         A variable which has been encoded as described above.
     """
+    var = conventions.encode_cf_variable(var, name=name)
 
-    if var.dtype.kind == 'O' and not contains_cftime_datetimes(var):
-        raise NotImplementedError("Variable `%s` is an object. Zarr "
-                                  "store can't yet encode objects." % name)
+    # zarr allows unicode, but not variable-length strings, so it's both
+    # simpler and more compact to always encode as UTF-8 explicitly.
+    # TODO: allow toggling this explicitly via dtype in encoding.
+    coder = coding.strings.EncodedStringCoder(allows_unicode=False)
+    var = coder.encode(var, name=name)
+    var = coding.strings.ensure_fixed_length_bytes(var)
 
-    for coder in [coding.times.CFDatetimeCoder(),
-                  coding.times.CFTimedeltaCoder(),
-                  coding.variables.CFScaleOffsetCoder(),
-                  coding.variables.CFMaskCoder(),
-                  coding.variables.UnsignedIntegerCoder()]:
-        var = coder.encode(var, name=name)
-
-    var = conventions.maybe_encode_nonstring_dtype(var, name=name)
-    var = conventions.maybe_default_fill_value(var)
-    var = conventions.maybe_encode_bools(var)
-    var = conventions.ensure_dtype_not_object(var, name=name)
-    var = conventions.maybe_encode_string_dtype(var, name=name)
     return var
 
 
@@ -340,8 +319,7 @@ class ZarrStore(AbstractWritableDataStore):
         dtype = variable.dtype
         shape = variable.shape
 
-        fill_value = _ensure_valid_fill_value(attrs.pop('_FillValue', None),
-                                              dtype)
+        fill_value = attrs.pop('_FillValue', None)
         if variable.encoding == {'_FillValue': None} and fill_value is None:
             variable.encoding = {}
 
