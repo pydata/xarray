@@ -7,7 +7,6 @@ import numpy as np
 
 from .. import Variable, coding, conventions
 from ..core import indexing
-from ..core.common import contains_cftime_datetimes
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
