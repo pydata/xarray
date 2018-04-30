@@ -9,8 +9,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import (contains_cftime_datetimes,
-                           raise_if_contains_netcdftime_datetimes)
+from ..core.common import contains_cftime_datetimes
 from ..core import indexing
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.options import OPTIONS
@@ -89,6 +88,7 @@ def _decode_datetime_with_cftime(num_dates, units, calendar,
                                  enable_cftimeindex):
     cftime = _import_cftime()
     if enable_cftimeindex:
+        _require_standalone_cftime()
         dates = np.asarray(cftime.num2date(num_dates, units, calendar,
                                            only_use_cftime_datetimes=True))
     else:
@@ -96,24 +96,16 @@ def _decode_datetime_with_cftime(num_dates, units, calendar,
 
     if (dates[np.nanargmin(num_dates)].year < 1678 or
             dates[np.nanargmax(num_dates)].year >= 2262):
-        warnings.warn(
-            'Unable to decode time axis into full '
-            'numpy.datetime64 objects, continuing using dummy '
-            'cftime.datetime objects instead, reason: dates out '
-            'of range', SerializationWarning, stacklevel=3)
+        if calendar in _STANDARD_CALENDARS:
+            warnings.warn(
+                'Unable to decode time axis into full '
+                'numpy.datetime64 objects, continuing using dummy '
+                'cftime.datetime objects instead, reason: dates out '
+                'of range', SerializationWarning, stacklevel=3)
     else:
         if enable_cftimeindex:
             if calendar in _STANDARD_CALENDARS:
                 dates = cftime_to_nptime(dates)
-            else:
-                warnings.warn(
-                    'Unable to decode time axis into full numpy.datetime64 '
-                    'objects, because dates are encoded using a '
-                    'non-standard calendar ({}).  Using cftime.datetime '
-                    'objects instead.  Time indexing will be done using a '
-                    'CFTimeIndex rather than '
-                    'a DatetimeIndex'.format(calendar),
-                    SerializationWarning, stacklevel=3)
         else:
             try:
                 dates = cftime_to_nptime(dates)
@@ -243,10 +235,7 @@ def infer_calendar_name(dates):
     if np.asarray(dates).dtype == 'datetime64[ns]':
         return 'proleptic_gregorian'
     else:
-        try:
-            return np.asarray(dates)[0].calendar
-        except IndexError:
-            return np.asarray(dates).item().calendar
+        return np.asarray(dates).ravel()[0].calendar
 
 
 def infer_datetime_units(dates):
@@ -255,22 +244,16 @@ def infer_datetime_units(dates):
     'hours', 'minutes' or 'seconds' (the first one that can evenly divide all
     unique time deltas in `dates`)
     """
+    dates = np.asarray(dates).ravel()
     if np.asarray(dates).dtype == 'datetime64[ns]':
-        dates = pd.to_datetime(np.asarray(dates).ravel(), box=False)
+        dates = pd.to_datetime(dates, box=False)
         dates = dates[pd.notnull(dates)]
-        unique_timedeltas = np.unique(np.diff(dates))
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
         reference_date = pd.Timestamp(reference_date)
     else:
-        if not OPTIONS['enable_cftimeindex']:
-            raise ValueError('Serializing dates of type cftime.datetime '
-                             'requires setting enable_cftimeindex to True and '
-                             'using the standalone cftime library to enable '
-                             'accurate roundtripping of date types.')
-        dates = np.asarray(dates).ravel()
-        unique_timedeltas = np.unique(pd.to_timedelta(np.diff(dates)))
         reference_date = dates[0] if len(dates) > 0 else '1970-01-01'
         reference_date = format_cftime_datetime(reference_date)
+    unique_timedeltas = np.unique(np.diff(dates)).astype('timedelta64[ns]')
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, reference_date)
 
@@ -395,7 +378,6 @@ class CFDatetimeCoder(VariableCoder):
 
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-        raise_if_contains_netcdftime_datetimes(variable)
         if (np.issubdtype(data.dtype, np.datetime64) or
            contains_cftime_datetimes(variable)):
             (data, units, calendar) = encode_cf_datetime(
@@ -411,9 +393,6 @@ class CFDatetimeCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         enable_cftimeindex = OPTIONS['enable_cftimeindex']
-        if enable_cftimeindex:
-            _require_standalone_cftime()
-
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')

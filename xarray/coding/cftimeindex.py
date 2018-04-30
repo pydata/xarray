@@ -153,7 +153,6 @@ class CFTimeIndex(pd.Index):
     date_type = property(get_date_type)
 
     def __new__(cls, data):
-        _require_standalone_cftime()
         result = object.__new__(cls)
         assert_all_valid_date_type(data)
         result._data = np.array(data)

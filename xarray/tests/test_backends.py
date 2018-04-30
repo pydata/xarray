@@ -32,8 +32,8 @@ from . import (
     assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr, has_cftime,
-    requires_cftime_or_netCDF4)
+    requires_scipy_or_netCDF4, requires_zarr,
+    requires_cftime)
 from .test_dataset import create_test_data
 
 try:
@@ -350,7 +350,7 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
-    @requires_cftime_or_netCDF4
+    @requires_cftime
     def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
         from .test_coding_times import _all_cftime_date_types
 
@@ -363,47 +363,21 @@ class DatasetIOTestCases(object):
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
 
-            if has_cftime:
-                with xr.set_options(enable_cftimeindex=True):
-                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                        abs_diff = abs(actual.t.values - expected_decoded_t)
-                        assert (abs_diff <= np.timedelta64(1, 's')).all()
-                        assert (actual.t.encoding['units'] ==
-                                'days since 0001-01-01 00:00:00.000000')
-                        assert (actual.t.encoding['calendar'] ==
-                                expected_calendar)
+            with xr.set_options(enable_cftimeindex=True):
+                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t.encoding['units'] ==
+                            'days since 0001-01-01 00:00:00.000000')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
 
-                        abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                        assert (abs_diff <= np.timedelta64(1, 's')).all()
-                        assert (actual.t0.encoding['units'] ==
-                                'days since 0001-01-01')
-                        assert (actual.t.encoding['calendar'] ==
-                                expected_calendar)
-            else:
-                with pytest.raises((ValueError, NotImplementedError,
-                                    TypeError)):
-                    with xr.set_options(enable_cftimeindex=True):
-                        with self.roundtrip(expected,
-                                            save_kwargs=kwds) as actual:
-                            pass
-
-    @requires_cftime_or_netCDF4
-    def test_roundtrip_cftime_datetime_data_disable_cftimeindex(self):
-        from .test_coding_times import _all_cftime_date_types
-
-        date_types = _all_cftime_date_types()
-        for date_type in date_types.values():
-            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
-            expected = Dataset({'t': ('t', times), 't0': times[0]})
-            kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
-
-            with pytest.raises((ValueError, NotImplementedError,
-                                TypeError)):
-                with xr.set_options(enable_cftimeindex=False):
-                    with self.roundtrip(
-                            expected,
-                            save_kwargs=kwds) as actual:  # noqa: F841
-                        pass
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t0.encoding['units'] ==
+                            'days since 0001-01-01')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])

@@ -473,11 +473,17 @@ def test_decode_non_standard_calendar_single_element_fallback(
         dt = cftime.datetime(2001, 2, 29)
 
     num_time = cftime.date2num(dt, units, calendar)
-    with pytest.warns(SerializationWarning,
-                      match='Unable to decode time axis'):
+    if enable_cftimeindex:
         actual = coding.times.decode_cf_datetime(
             num_time, units, calendar=calendar,
             enable_cftimeindex=enable_cftimeindex)
+    else:
+        with pytest.warns(SerializationWarning,
+                          match='Unable to decode time axis'):
+            actual = coding.times.decode_cf_datetime(
+                num_time, units, calendar=calendar,
+                enable_cftimeindex=enable_cftimeindex)
+
     expected = np.asarray(cftime.num2date(num_time, units, calendar))
     assert actual.dtype == np.dtype('O')
     assert expected == actual
@@ -504,8 +510,11 @@ def test_decode_non_standard_calendar_fallback(
             actual = coding.times.decode_cf_datetime(
                 num_times, units, calendar=calendar,
                 enable_cftimeindex=enable_cftimeindex)
-            assert len(w) == 1
-            assert 'Unable to decode time axis' in str(w[0].message)
+            if enable_cftimeindex:
+                assert len(w) == 0
+            else:
+                assert len(w) == 1
+                assert 'Unable to decode time axis' in str(w[0].message)
 
         assert actual.dtype == np.dtype('O')
         assert_array_equal(actual, expected)
@@ -560,8 +569,7 @@ def test_infer_datetime_units(dates, expected):
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_infer_cftime_datetime_units(enable_cftimeindex):
+def test_infer_cftime_datetime_units():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         for dates, expected in [
@@ -578,13 +586,7 @@ def test_infer_cftime_datetime_units(enable_cftimeindex):
                 ([date_type(1900, 1, 1),
                   date_type(1900, 1, 2, 0, 0, 0, 5)],
                  'days since 1900-01-01 00:00:00.000000')]:
-            if enable_cftimeindex:
-                with set_options(enable_cftimeindex=enable_cftimeindex):
-                    assert expected == coding.times.infer_datetime_units(dates)
-            else:
-                with set_options(enable_cftimeindex=enable_cftimeindex):
-                    with pytest.raises(ValueError):
-                        coding.times.infer_datetime_units(dates)
+            assert expected == coding.times.infer_datetime_units(dates)
 
 
 @pytest.mark.parametrize(
@@ -668,11 +670,12 @@ def test_decode_cf_enable_cftimeindex(calendar, enable_cftimeindex):
     ds = da.to_dataset()
 
     for v in ['test', 'time']:
-        ds[v].attrs['units'] = 'days since 2000-01-01'
+        ds[v].attrs['units'] = 'days since 2001-01-01'
         ds[v].attrs['calendar'] = calendar
 
-    if not has_cftime and enable_cftimeindex:
-        with pytest.raises(ImportError):
+    if (not has_cftime and enable_cftimeindex and
+       calendar not in coding.times._STANDARD_CALENDARS):
+        with pytest.raises(ValueError):
             with set_options(enable_cftimeindex=enable_cftimeindex):
                 ds = decode_cf(ds)
     else:

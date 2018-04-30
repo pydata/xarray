@@ -890,26 +890,6 @@ def contains_cftime_datetimes(var):
             if isinstance(sample, np.ndarray):
                 sample = sample.item()
         return isinstance(sample, cftime_datetime)
-
-
-def raise_if_contains_netcdftime_datetimes(var):
-    """Raise a TypeError if netcdftime.datetime objects are found"""
-    try:
-        from netcdftime._netcdftime import datetime as netcdftime_datetime
-    except ImportError:
-        pass
-    else:
-        sample = var.data.ravel()[0]
-        if isinstance(sample, dask_array_type):
-            sample = sample.compute()
-            if isinstance(sample, np.ndarray):
-                sample = sample.item()
-        if isinstance(sample, netcdftime_datetime):
-            raise TypeError(
-                'Serialization or use of the dt accessor for dates not of type '
-                'np.datetime64 requires that the standalone '
-                'cftime library be installed rather than the version packaged '
-                'with netCDF4; got dates of {}.'.format(type(sample)))
                     
 
 def _contains_datetime_like_objects(var):

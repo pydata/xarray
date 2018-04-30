@@ -229,4 +229,4 @@ def test_dt_accessor_error_netCDF4(cftime_date_type):
         with pytest.raises(TypeError):
             da.dt.month
     else:
-        pass
+        da.dt.month
