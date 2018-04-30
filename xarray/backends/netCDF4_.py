@@ -7,10 +7,11 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import Variable, conventions
-from ..conventions import pop_to
+from .. import Variable, coding
+from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
+from ..core.pycompat import (
+    PY3, OrderedDict, basestring, iteritems, suppress)
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     HDF5_LOCK, BackendArray, DataStorePickleMixin, WritableCFDataStore,
@@ -82,8 +83,9 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
 
 
 def _encode_nc4_variable(var):
-    if var.dtype.kind == 'S':
-        var = conventions.maybe_encode_as_char_array(var)
+    for coder in [coding.strings.EncodedStringCoder(allows_unicode=True),
+                  coding.strings.CharacterArrayCoder()]:
+        var = coder.encode(var)
     return var
 
 
@@ -96,12 +98,13 @@ def _get_datatype(var, nc_format='NETCDF4'):
 
 
 def _nc4_dtype(var):
-    if var.dtype.kind == 'U':
+    if coding.strings.is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ['i', 'u', 'f', 'c', 'S']:
         dtype = var.dtype
     else:
-        raise ValueError('cannot infer dtype for netCDF4 variable')
+        raise ValueError('unsupported dtype for netCDF4 variable: {}'
+                         .format(var.dtype))
     return dtype
 
 
