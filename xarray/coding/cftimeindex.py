@@ -8,8 +8,6 @@ import pandas as pd
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
-from .times import _require_standalone_cftime
-
 
 def named(name, pattern):
     return '(?P<' + name + '>' + pattern + ')'
