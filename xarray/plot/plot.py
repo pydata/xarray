@@ -184,10 +184,10 @@ def line(darray, *args, **kwargs):
         plot method is called.
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -277,6 +277,9 @@ def line(darray, *args, **kwargs):
                   title=huelabel)
 
     # Rotate dates on xlabels
+    # Do this without calling autofmt_xdate so that x-axes ticks
+    # on other subplots (if any) are not deleted.
+    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
     if np.issubdtype(xplt.dtype, np.datetime64):
         for xlabels in ax.get_xticklabels():
             xlabels.set_rotation(30)
@@ -441,10 +444,10 @@ def _plot2d(plotfunc):
         Use together with ``col`` to wrap faceted plots
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     add_colorbar : Boolean, optional
         Adds colorbar to axis
     add_labels : Boolean, optional
