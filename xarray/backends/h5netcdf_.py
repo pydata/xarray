@@ -176,11 +176,22 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         kwargs = {}
 
         # Convert from NetCDF4-Python style compression settings to h5py style
+        # If both styles are used together, h5py takes precedence
+        # If set_encoding=True, raise ValueError in case of mismatch
         if encoding.pop('zlib', False):
-            # If both styles are used together, h5py takes precedence
+            if check_encoding and encoding.get('compression') \
+                    not in (None, 'gzip'):
+                raise ValueError("'zlib' and 'compression' encodings mismatch")
             encoding.setdefault('compression', 'gzip')
-            encoding.setdefault('compression_opts',
-                                encoding.pop('complevel', None))
+
+        if check_encoding and encoding.get('complevel') not in \
+                (None, encoding.get('compression_opts')):
+            raise ValueError("'complevel' and 'compression_opts' encodings "
+                             "mismatch")
+        complevel = encoding.pop('complevel', 0)
+        if complevel != 0:
+            encoding.setdefault('compression_opts', complevel)
+
         encoding['chunks'] = encoding.pop('chunksizes', None)
 
         for key in ['compression', 'compression_opts', 'shuffle',
