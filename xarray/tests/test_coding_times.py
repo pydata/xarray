@@ -43,7 +43,8 @@ _CF_DATETIME_NUM_DATES_UNITS = [
     (17093352.0, 'hours since 1-1-1 00:00:0.0'),
     ([0.5, 1.5], 'hours since 1900-01-01T00:00:00'),
     (0, 'milliseconds since 2000-01-01T00:00:00'),
-    (0, 'microseconds since 2000-01-01T00:00:00')
+    (0, 'microseconds since 2000-01-01T00:00:00'),
+    (np.int32(788961600), 'seconds since 1981-01-01')  # GH2002
 ]
 _CF_DATETIME_TESTS = [num_dates_units + (calendar,) for num_dates_units,
                       calendar in product(_CF_DATETIME_NUM_DATES_UNITS,
