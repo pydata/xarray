@@ -29,7 +29,7 @@ from xarray.tests import mock
 
 from . import (
     TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, flaky, has_netCDF4, has_scipy, network, raises_regex,
+    assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
     requires_scipy_or_netCDF4, requires_zarr)
@@ -403,34 +403,86 @@ class DatasetIOTestCases(object):
                         'dim3': np.arange(5)}
             expected = in_memory.isel(**indexers)
             actual = on_disk.isel(**indexers)
+            # make sure the array is not yet loaded into memory
+            assert not actual['var1'].variable._in_memory
             assert_identical(expected, actual)
             # do it twice, to make sure we're switched from orthogonal -> numpy
             # when we cached the values
             actual = on_disk.isel(**indexers)
             assert_identical(expected, actual)
 
-    def _test_vectorized_indexing(self, vindex_support=True):
-        # Make sure vectorized_indexing works or at least raises
-        # NotImplementedError
+    def test_vectorized_indexing(self):
         in_memory = create_test_data()
         with self.roundtrip(in_memory) as on_disk:
             indexers = {'dim1': DataArray([0, 2, 0], dims='a'),
                         'dim2': DataArray([0, 2, 3], dims='a')}
             expected = in_memory.isel(**indexers)
-            if vindex_support:
-                actual = on_disk.isel(**indexers)
-                assert_identical(expected, actual)
-                # do it twice, to make sure we're switched from
-                # orthogonal -> numpy when we cached the values
-                actual = on_disk.isel(**indexers)
-                assert_identical(expected, actual)
-            else:
-                with raises_regex(NotImplementedError, 'Vectorized indexing '):
-                    actual = on_disk.isel(**indexers)
+            actual = on_disk.isel(**indexers)
+            # make sure the array is not yet loaded into memory
+            assert not actual['var1'].variable._in_memory
+            assert_identical(expected, actual.load())
+            # do it twice, to make sure we're switched from
+            # vectorized -> numpy when we cached the values
+            actual = on_disk.isel(**indexers)
+            assert_identical(expected, actual)
 
-    def test_vectorized_indexing(self):
-        # This test should be overwritten if vindex is supported
-        self._test_vectorized_indexing(vindex_support=False)
+        def multiple_indexing(indexers):
+            # make sure a sequence of lazy indexings certainly works.
+            with self.roundtrip(in_memory) as on_disk:
+                actual = on_disk['var3']
+                expected = in_memory['var3']
+                for ind in indexers:
+                    actual = actual.isel(**ind)
+                    expected = expected.isel(**ind)
+                    # make sure the array is not yet loaded into memory
+                    assert not actual.variable._in_memory
+                assert_identical(expected, actual.load())
+
+        # two-staged vectorized-indexing
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': DataArray([[0, 4], [1, 3], [2, 2]], dims=['a', 'b'])},
+            {'a': DataArray([0, 1], dims=['c']),
+             'b': DataArray([0, 1], dims=['c'])}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-slice mixed
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(None, 10)}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-integer mixed
+        indexers = [
+            {'dim3': 0},
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b'])},
+            {'a': slice(None, None, 2)}
+        ]
+        multiple_indexing(indexers)
+
+        # vectorized-integer mixed
+        indexers = [
+            {'dim3': 0},
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b'])},
+            {'a': 1, 'b': 0}
+        ]
+        multiple_indexing(indexers)
+
+        # with negative step slice.
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(-1, 1, -1)},
+        ]
+        multiple_indexing(indexers)
+
+        # with negative step slice.
+        indexers = [
+            {'dim1': DataArray([[0, 7], [2, 6], [3, 5]], dims=['a', 'b']),
+             'dim3': slice(-1, 1, -2)},
+        ]
+        multiple_indexing(indexers)
 
     def test_isel_dataarray(self):
         # Make sure isel works lazily. GH:issue:1688
@@ -508,7 +560,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoding = {'_FillValue': b'X', 'dtype': 'S1'}
         original = Dataset({'x': ('t', values, {}, encoding)})
         expected = original.copy(deep=True)
-        print(original)
         with self.roundtrip(original) as actual:
             assert_identical(expected, actual)
 
@@ -755,9 +806,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with raises_regex(ValueError,
                               'Unable to update size for existing dimension'):
                 self.save(data, tmp_file, mode='a')
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=False)
 
     def test_multiindex_not_implemented(self):
         ds = (Dataset(coords={'y': ('x', [1, 2]), 'z': ('x', ['a', 'b'])})
@@ -1089,10 +1137,29 @@ class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
         # should be fixed in netcdf4 v1.3.1
         with mock.patch('netCDF4.__version__', '1.2.4'):
             with warnings.catch_warnings():
-                warnings.simplefilter("error")
-                with raises_regex(Warning, 'segmentation fault'):
+                message = ('A segmentation fault may occur when the '
+                           'file path has exactly 88 characters')
+                warnings.filterwarnings('error', message)
+                with pytest.raises(Warning):
                     # Need to construct 88 character filepath
                     xr.Dataset().to_netcdf('a' * (88 - len(os.getcwd()) - 1))
+
+    def test_setncattr_string(self):
+        list_of_strings = ['list', 'of', 'strings']
+        one_element_list_of_strings = ['one element']
+        one_string = 'one string'
+        attrs = {'foo': list_of_strings,
+                 'bar': one_element_list_of_strings,
+                 'baz': one_string}
+        ds = Dataset({'x': ('y', [1, 2, 3], attrs)},
+                     attrs=attrs)
+
+        with self.roundtrip(ds) as actual:
+            for totest in [actual, actual['x']]:
+                assert_array_equal(list_of_strings, totest.attrs['foo'])
+                assert_array_equal(one_element_list_of_strings,
+                                   totest.attrs['bar'])
+                assert one_string == totest.attrs['baz']
 
 
 class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
@@ -1118,9 +1185,6 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_dataset_caching(self):
         # caching behavior differs for dask
         pass
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
 
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
@@ -1238,9 +1302,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
 
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
-
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
         with self.create_store() as store:
@@ -1298,8 +1359,10 @@ class BaseZarrTest(CFEncodedDataTest):
         import zarr
         blosc_comp = zarr.Blosc(cname='zstd', clevel=3, shuffle=2)
         save_kwargs = dict(encoding={'var1': {'compressor': blosc_comp}})
-        with self.roundtrip(original, save_kwargs=save_kwargs) as actual:
-            assert repr(actual.var1.encoding['compressor']) == repr(blosc_comp)
+        with self.roundtrip(original, save_kwargs=save_kwargs) as ds:
+            actual = ds['var1'].encoding['compressor']
+            # get_config returns a dictionary of compressor attributes
+            assert actual.get_config() == blosc_comp.get_config()
 
     def test_group(self):
         original = create_test_data()
@@ -1307,24 +1370,6 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(original, save_kwargs={'group': group},
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
-
-    # TODO: implement zarr object encoding and make these tests pass
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_multiindex_not_implemented(self):
-        super(CFEncodedDataTest, self).test_multiindex_not_implemented()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_bytes_with_fill_value(self):
-        super(CFEncodedDataTest, self).test_roundtrip_bytes_with_fill_value()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_object_dtype(self):
-        super(CFEncodedDataTest, self).test_roundtrip_object_dtype()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_string_encoded_characters(self):
-        super(CFEncodedDataTest,
-              self).test_roundtrip_string_encoded_characters()
 
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
@@ -1360,29 +1405,23 @@ class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
             yield tmp
 
 
-def test_replace_slices_with_arrays():
-    (actual,) = xr.backends.zarr._replace_slices_with_arrays(
-        key=(slice(None),), shape=(5,))
-    np.testing.assert_array_equal(actual, np.arange(5))
+class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
 
-    actual = xr.backends.zarr._replace_slices_with_arrays(
-        key=(np.arange(5),) * 3, shape=(8, 10, 12))
-    expected = np.stack([np.arange(5)] * 3)
-    np.testing.assert_array_equal(np.stack(actual), expected)
+    def test_append_write(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyWriteTest, self).test_append_write()
 
-    a, b = xr.backends.zarr._replace_slices_with_arrays(
-        key=(np.arange(5), slice(None)), shape=(8, 10))
-    np.testing.assert_array_equal(a, np.arange(5)[:, np.newaxis])
-    np.testing.assert_array_equal(b, np.arange(10)[np.newaxis, :])
-
-    a, b = xr.backends.zarr._replace_slices_with_arrays(
-        key=(slice(None), np.arange(5)), shape=(8, 10))
-    np.testing.assert_array_equal(a, np.arange(8)[np.newaxis, :])
-    np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
+    def test_append_overwrite_values(self):
+        import scipy
+        if scipy.__version__ == '1.0.1':
+            pytest.xfail('https://github.com/scipy/scipy/issues/8625')
+        super(ScipyWriteTest, self).test_append_overwrite_values()
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1408,7 +1447,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFileObjectTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1436,7 +1475,7 @@ class ScipyFileObjectTest(CFEncodedDataTest, NetCDF3Only, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class ScipyFilePathTest(ScipyWriteTest, TestCase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1538,6 +1577,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         with raises_regex(ValueError, 'can only read'):
             open_dataset(BytesIO(netcdf_bytes), engine='foobar')
 
+    @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/2050')
     def test_cross_engine_read_write_netcdf3(self):
         data = create_test_data()
         valid_engines = set()
@@ -1589,19 +1629,6 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
-    def test_orthogonal_indexing(self):
-        # simplified version for h5netcdf
-        in_memory = create_test_data()
-        with self.roundtrip(in_memory) as on_disk:
-            indexers = {'dim3': np.arange(5)}
-            expected = in_memory.isel(**indexers)
-            actual = on_disk.isel(**indexers)
-            assert_identical(expected, actual.load())
-
-    def test_array_type_after_indexing(self):
-        # h5netcdf does not support multiple list-like indexers
-        pass
-
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -1648,88 +1675,74 @@ class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
     autoclose = True
 
 
-class OpenMFDatasetManyFilesTest(TestCase):
-    def validate_open_mfdataset_autoclose(self, engine, nfiles=10):
-        randdata = np.random.randn(nfiles)
-        original = Dataset({'foo': ('x', randdata)})
-        # test standard open_mfdataset approach with too many files
-        with create_tmp_files(nfiles) as tmpfiles:
-            for readengine in engine:
-                writeengine = (readengine if readengine != 'pynio'
-                               else 'netcdf4')
-                # split into multiple sets of temp files
-                for ii in original.x.values:
-                    subds = original.isel(x=slice(ii, ii + 1))
-                    subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+@pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
+def readengine(request):
+    return request.param
 
-                # check that calculation on opened datasets works properly
-                ds = open_mfdataset(tmpfiles, engine=readengine,
-                                    autoclose=True)
-                self.assertAllClose(ds.x.sum().values,
-                                    (nfiles * (nfiles - 1)) / 2)
-                self.assertAllClose(ds.foo.sum().values, np.sum(randdata))
-                self.assertAllClose(ds.sum().foo.values, np.sum(randdata))
-                ds.close()
 
-    def validate_open_mfdataset_large_num_files(self, engine):
-        self.validate_open_mfdataset_autoclose(engine, nfiles=2000)
+@pytest.fixture(params=[1, 100])
+def nfiles(request):
+    return request.param
 
-    @requires_dask
-    @requires_netCDF4
-    def test_1_autoclose_netcdf4(self):
-        self.validate_open_mfdataset_autoclose(engine=['netcdf4'])
 
-    @requires_dask
-    @requires_scipy
-    def test_2_autoclose_scipy(self):
-        self.validate_open_mfdataset_autoclose(engine=['scipy'])
+@pytest.fixture(params=[True, False])
+def autoclose(request):
+    return request.param
 
-    @requires_dask
-    @requires_pynio
-    def test_3_autoclose_pynio(self):
-        self.validate_open_mfdataset_autoclose(engine=['pynio'])
 
-    # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error
-    @requires_dask
-    @requires_h5netcdf
-    @pytest.mark.xfail
-    def test_4_autoclose_h5netcdf(self):
-        self.validate_open_mfdataset_autoclose(engine=['h5netcdf'])
+@pytest.fixture(params=[True, False])
+def parallel(request):
+    return request.param
 
-    # These tests below are marked as flaky (and skipped by default) because
-    # they fail sometimes on Travis-CI, for no clear reason.
 
-    @requires_dask
-    @requires_netCDF4
-    @flaky
-    @pytest.mark.slow
-    def test_1_open_large_num_files_netcdf4(self):
-        self.validate_open_mfdataset_large_num_files(engine=['netcdf4'])
+@pytest.fixture(params=[None, 5])
+def chunks(request):
+    return request.param
 
-    @requires_dask
-    @requires_scipy
-    @flaky
-    @pytest.mark.slow
-    def test_2_open_large_num_files_scipy(self):
-        self.validate_open_mfdataset_large_num_files(engine=['scipy'])
 
-    @requires_dask
-    @requires_pynio
-    @flaky
-    @pytest.mark.slow
-    def test_3_open_large_num_files_pynio(self):
-        self.validate_open_mfdataset_large_num_files(engine=['pynio'])
+# using pytest.mark.skipif does not work so this a work around
+def skip_if_not_engine(engine):
+    if engine == 'netcdf4':
+        pytest.importorskip('netCDF4')
+    elif engine == 'pynio':
+        pytest.importorskip('Nio')
+    else:
+        pytest.importorskip(engine)
 
-    # use of autoclose=True with h5netcdf broken because of
-    # probable h5netcdf error
-    @requires_dask
-    @requires_h5netcdf
-    @flaky
-    @pytest.mark.xfail
-    @pytest.mark.slow
-    def test_4_open_large_num_files_h5netcdf(self):
-        self.validate_open_mfdataset_large_num_files(engine=['h5netcdf'])
+
+def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
+                                  chunks):
+
+    # skip certain combinations
+    skip_if_not_engine(readengine)
+
+    if not has_dask and parallel:
+        pytest.skip('parallel requires dask')
+
+    if readengine == 'h5netcdf' and autoclose:
+        pytest.skip('h5netcdf does not support autoclose yet')
+
+    if ON_WINDOWS:
+        pytest.skip('Skipping on Windows')
+
+    randdata = np.random.randn(nfiles)
+    original = Dataset({'foo': ('x', randdata)})
+    # test standard open_mfdataset approach with too many files
+    with create_tmp_files(nfiles) as tmpfiles:
+        writeengine = (readengine if readengine != 'pynio' else 'netcdf4')
+        # split into multiple sets of temp files
+        for ii in original.x.values:
+            subds = original.isel(x=slice(ii, ii + 1))
+            subds.to_netcdf(tmpfiles[ii], engine=writeengine)
+
+        # check that calculation on opened datasets works properly
+        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                                autoclose=autoclose, chunks=chunks)
+
+        # check that using open_mfdataset returns dask arrays for variables
+        assert isinstance(actual['foo'].data, dask_array_type)
+
+        assert_identical(original, actual)
 
 
 @requires_scipy_or_netCDF4
@@ -1897,6 +1910,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
 
+        with raises_regex(ValueError, 'wild-card'):
+            open_mfdataset('http://some/remote/uri', autoclose=self.autoclose)
+
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
@@ -2012,6 +2028,20 @@ class DaskTest(TestCase, DatasetIOTestCases):
                 self.assertIsInstance(actual.foo.variable.data, np.ndarray)
                 assert_identical(original, actual)
 
+    def test_open_single_dataset(self):
+        # Test for issue GH #1988. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'), rnddata[np.newaxis, :])},
+                           {'baz': [100]})
+        with create_tmp_file() as tmp:
+            original.to_netcdf(tmp)
+            with open_mfdataset([tmp], concat_dim=dim,
+                                autoclose=self.autoclose) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -2048,9 +2078,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         assert_allclose(actual, computed, decode_bytes=False)
-
-    def test_vectorized_indexing(self):
-        self._test_vectorized_indexing(vindex_support=True)
 
 
 class DaskTestAutocloseTrue(DaskTest):
@@ -2111,6 +2138,17 @@ class PydapTest(TestCase):
             assert_equal(actual.isel(j=slice(1, 2)),
                          expected.isel(j=slice(1, 2)))
 
+        with self.create_datasets() as (actual, expected):
+            indexers = {'i': [1, 0, 0], 'j': [1, 2, 0, 1]}
+            assert_equal(actual.isel(**indexers),
+                         expected.isel(**indexers))
+
+        with self.create_datasets() as (actual, expected):
+            indexers = {'i': DataArray([0, 1, 0], dims='a'),
+                        'j': DataArray([0, 2, 1], dims='a')}
+            assert_equal(actual.isel(**indexers),
+                         expected.isel(**indexers))
+
     def test_compatible_to_netcdf(self):
         # make sure it can be saved as a netcdf
         with self.create_datasets() as (actual, expected):
@@ -2150,22 +2188,9 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
+class PyNioTest(ScipyWriteTest, TestCase):
     def test_write_store(self):
         # pynio is read-only for now
-        pass
-
-    def test_orthogonal_indexing(self):
-        # pynio also does not support list-like indexing
-        with raises_regex(NotImplementedError, 'Outer indexing'):
-            super(TestPyNio, self).test_orthogonal_indexing()
-
-    def test_isel_dataarray(self):
-        with raises_regex(NotImplementedError, 'Outer indexing'):
-            super(TestPyNio, self).test_isel_dataarray()
-
-    def test_array_type_after_indexing(self):
-        # pynio also does not support list-like indexing
         pass
 
     @contextlib.contextmanager
@@ -2189,7 +2214,7 @@ class TestPyNio(CFEncodedDataTest, NetCDF3Only, TestCase):
             assert_identical(actual, expected)
 
 
-class TestPyNioAutocloseTrue(TestPyNio):
+class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
 
 
@@ -2346,17 +2371,62 @@ class TestRasterio(TestCase):
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
+                assert not actual.variable._in_memory
 
-                # Slicing
-                ex = expected.isel(x=slice(2, 5), y=slice(5, 7))
-                ac = actual.isel(x=slice(2, 5), y=slice(5, 7))
-                assert_allclose(ac, ex)
+                # Basic indexer
+                ind = {'x': slice(2, 5), 'y': slice(5, 7)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
 
-                ex = expected.isel(band=slice(1, 2), x=slice(2, 5),
-                                   y=slice(5, 7))
-                ac = actual.isel(band=slice(1, 2), x=slice(2, 5),
-                                 y=slice(5, 7))
-                assert_allclose(ac, ex)
+                ind = {'band': slice(1, 2), 'x': slice(2, 5), 'y': slice(5, 7)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': slice(1, 2), 'x': slice(2, 5), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # orthogonal indexer
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': np.array([1, 0]), 'y': np.array([0, 2])}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': np.array([1, 0]), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # minus-stepped slice
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': slice(-1, None, -1), 'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': 1, 'y': slice(-1, 1, -2)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # None is selected
+                ind = {'band': np.array([2, 1, 0]),
+                       'x': 1, 'y': slice(2, 2, 1)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                # vectorized indexer
+                ind = {'band': DataArray([2, 1, 0], dims='a'),
+                       'x': DataArray([1, 0, 0], dims='a'),
+                       'y': np.array([0, 2])}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {
+                    'band': DataArray([[2, 1, 0], [1, 0, 2]], dims=['a', 'b']),
+                    'x': DataArray([[1, 0, 0], [0, 1, 0]], dims=['a', 'b']),
+                    'y': 0}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
 
                 # Selecting lists of bands is fine
                 ex = expected.isel(band=[1, 2])
@@ -2366,15 +2436,6 @@ class TestRasterio(TestCase):
                 ac = actual.isel(band=[0, 2])
                 assert_allclose(ac, ex)
 
-                # but on x and y only windowed operations are allowed, more
-                # exotic slicing should raise an error
-                err_msg = 'not valid on rasterio'
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[2, 4], y=[1, 3]).values
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[4, 2]).values
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=slice(5, 2, -1)).values
                 # Integer indexing
                 ex = expected.isel(band=1)
                 ac = actual.isel(band=1)
@@ -2411,11 +2472,6 @@ class TestRasterio(TestCase):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
-
-                # Without cache an error is raised
-                err_msg = 'not valid on rasterio'
-                with raises_regex(IndexError, err_msg):
-                    actual.isel(x=[2, 4]).values
 
                 # This should cache everything
                 assert_allclose(actual, expected)

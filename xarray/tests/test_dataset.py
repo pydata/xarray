@@ -21,7 +21,7 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, raises_regex,
+    assert_array_equal, assert_equal, assert_identical, has_dask, raises_regex,
     requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
 
 try:
@@ -77,7 +77,8 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
         def lazy_inaccessible(k, v):
             if k in self._indexvars:
                 return v
-            data = indexing.LazilyIndexedArray(InaccessibleArray(v.values))
+            data = indexing.LazilyOuterIndexedArray(
+                InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
         return dict((k, lazy_inaccessible(k, v)) for
                     k, v in iteritems(self._variables))
@@ -441,6 +442,11 @@ class TestDataset(TestCase):
 
         assert Dataset({'x': np.int64(1),
                         'y': np.float32([1, 2])}).nbytes == 16
+
+    def test_asarray(self):
+        ds = Dataset({'x': 0})
+        with raises_regex(TypeError, 'cannot directly convert'):
+            np.asarray(ds)
 
     def test_get_index(self):
         ds = Dataset({'foo': (('x', 'y'), np.zeros((2, 3)))},
@@ -4031,9 +4037,66 @@ class TestDataset(TestCase):
 # Py.test tests
 
 
-@pytest.fixture()
-def data_set(seed=None):
-    return create_test_data(seed)
+@pytest.fixture(params=[None])
+def data_set(request):
+    return create_test_data(request.param)
+
+
+@pytest.mark.parametrize('test_elements', (
+    [1, 2],
+    np.array([1, 2]),
+    DataArray([1, 2]),
+))
+def test_isin(test_elements):
+    expected = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 1]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).astype('bool')
+
+    result = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 2]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).isin(test_elements)
+
+    assert_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_dask, reason='requires dask')
+@pytest.mark.parametrize('test_elements', (
+    [1, 2],
+    np.array([1, 2]),
+    DataArray([1, 2]),
+))
+def test_isin_dask(test_elements):
+    expected = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 1]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).astype('bool')
+
+    result = Dataset(
+        data_vars={
+            'var1': (('dim1',), [0, 1]),
+            'var2': (('dim1',), [1, 2]),
+            'var3': (('dim1',), [0, 1]),
+        }
+    ).chunk(1).isin(test_elements).compute()
+
+    assert_equal(result, expected)
+
+
+def test_isin_dataset():
+    ds = Dataset({'x': [1, 2]})
+    with pytest.raises(TypeError):
+        ds.isin(ds)
 
 
 def test_dir_expected_attrs(data_set):
@@ -4162,7 +4225,7 @@ def test_rolling_construct(center, window):
     # with fill_value
     ds_rolling_mean = ds_rolling.construct(
         'window', stride=2, fill_value=0.0).mean('window')
-    assert ds_rolling_mean.isnull().sum() == 0
+    assert (ds_rolling_mean.isnull().sum() == 0).to_array(dim='vars').all()
     assert (ds_rolling_mean['x'] == 0.0).sum() >= 0
 
 

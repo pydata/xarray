@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core import dtypes, duck_array_ops, indexing, utils
+from ..core import dtypes, duck_array_ops, indexing
 from ..core.pycompat import dask_array_type
 from ..core.variable import Variable
 
@@ -129,10 +129,10 @@ def _apply_mask(data,  # type: np.ndarray
                 dtype,  # type: Any
                 ):  # type: np.ndarray
     """Mask all matching values in a NumPy arrays."""
+    data = np.asarray(data, dtype=dtype)
     condition = False
     for fv in encoded_fill_values:
         condition |= data == fv
-    data = np.asarray(data, dtype=dtype)
     return np.where(condition, decoded_fill_value, data)
 
 
@@ -152,26 +152,12 @@ class CFMaskCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        if 'missing_value' in attrs:
-            # missing_value is deprecated, but we still want to support it as
-            # an alias for _FillValue.
-            if ('_FillValue' in attrs and
-                not utils.equivalent(attrs['_FillValue'],
-                                     attrs['missing_value'])):
-                raise ValueError("Conflicting _FillValue and missing_value "
-                                 "attrs on a variable {!r}: {} vs. {}\n\n"
-                                 "Consider opening the offending dataset "
-                                 "using decode_cf=False, correcting the "
-                                 "attrs and decoding explicitly using "
-                                 "xarray.decode_cf()."
-                                 .format(name, attrs['_FillValue'],
-                                         attrs['missing_value']))
-            attrs['_FillValue'] = attrs.pop('missing_value')
-
-        if '_FillValue' in attrs:
-            raw_fill_value = pop_to(attrs, encoding, '_FillValue', name=name)
-            encoded_fill_values = [
-                fv for fv in np.ravel(raw_fill_value) if not pd.isnull(fv)]
+        raw_fill_values = [pop_to(attrs, encoding, attr, name=name)
+                           for attr in ('missing_value', '_FillValue')]
+        if raw_fill_values:
+            encoded_fill_values = {fv for option in raw_fill_values
+                                   for fv in np.ravel(option)
+                                   if not pd.isnull(fv)}
 
             if len(encoded_fill_values) > 1:
                 warnings.warn("variable {!r} has multiple fill values {}, "

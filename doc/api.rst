@@ -24,6 +24,7 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   dot
 
 Dataset
 =======
@@ -51,6 +52,8 @@ Attributes
    Dataset.encoding
    Dataset.indexes
    Dataset.get_index
+   Dataset.chunks
+   Dataset.nbytes
 
 Dictionary interface
 --------------------
@@ -121,6 +124,7 @@ Missing value handling
 
    Dataset.isnull
    Dataset.notnull
+   Dataset.combine_first
    Dataset.count
    Dataset.dropna
    Dataset.fillna
@@ -128,6 +132,7 @@ Missing value handling
    Dataset.bfill
    Dataset.interpolate_na
    Dataset.where
+   Dataset.isin
 
 Computation
 -----------
@@ -159,6 +164,7 @@ Computation
 :py:attr:`~Dataset.var`
 
 **ndarray methods**:
+:py:attr:`~Dataset.astype`
 :py:attr:`~Dataset.argsort`
 :py:attr:`~Dataset.clip`
 :py:attr:`~Dataset.conj`
@@ -221,6 +227,8 @@ Attributes
 :py:attr:`~DataArray.shape`
 :py:attr:`~DataArray.size`
 :py:attr:`~DataArray.dtype`
+:py:attr:`~DataArray.nbytes`
+:py:attr:`~DataArray.chunks`
 
 DataArray contents
 ------------------
@@ -269,6 +277,7 @@ Missing value handling
 
   DataArray.isnull
   DataArray.notnull
+  DataArray.combine_first
   DataArray.count
   DataArray.dropna
   DataArray.fillna
@@ -276,6 +285,7 @@ Missing value handling
   DataArray.bfill
   DataArray.interpolate_na
   DataArray.where
+  DataArray.isin
 
 Comparisons
 -----------
@@ -297,6 +307,7 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
@@ -356,6 +367,13 @@ Reshaping and reorganizing
 
 Universal functions
 ===================
+
+.. warning::
+
+   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and dask objects. This obliviates the need
+   for the ``xarray.ufuncs`` module, which should not be used for new code
+   unless compatibility with versions of NumPy prior to v1.13 is required.
 
 This functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
@@ -472,6 +490,7 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.close
    DataArray.compute
    DataArray.persist
    DataArray.load
@@ -509,6 +528,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   DataArray.plot
    plot.plot
    plot.contourf
    plot.contour
@@ -543,6 +563,8 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Dataset.variables
+   DataArray.variable
    Variable
    IndexVariable
    as_variable

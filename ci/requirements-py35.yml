@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.5
+  - cftime
   - dask
   - distributed
   - h5py
