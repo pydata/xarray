@@ -43,18 +43,13 @@ def _maybe_cast_to_cftimeindex(index):
     if not OPTIONS['enable_cftimeindex']:
         return index
     else:
-        try:
-            import cftime  # noqa: F401
-        except ImportError:
-            return index
-        else:
-            if index.dtype == 'O':
-                try:
-                    return CFTimeIndex(index)
-                except TypeError:
-                    return index
-            else:
+        if index.dtype == 'O':
+            try:
+                return CFTimeIndex(index)
+            except (ImportError, TypeError):
                 return index
+        else:
+            return index
 
 
 def safe_cast_to_index(array):

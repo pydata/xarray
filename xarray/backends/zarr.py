@@ -207,6 +207,7 @@ def encode_zarr_variable(var, needs_copy=True, name=None):
     out : xarray.Variable
         A variable which has been encoded as described above.
     """
+
     var = conventions.encode_cf_variable(var, name=name)
 
     # zarr allows unicode, but not variable-length strings, so it's both
