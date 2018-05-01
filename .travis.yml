@@ -101,7 +101,6 @@ install:
   - python xarray/util/print_versions.py
 
 script:
-  - flake8 -j auto xarray
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
