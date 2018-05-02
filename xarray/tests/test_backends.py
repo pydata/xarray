@@ -2260,14 +2260,12 @@ class PseudoNetCDFFormatTest(TestCase):
                              engine='pseudonetcdf',
                              autoclose=False)
 
-    @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
-            with self.open(path, **open_kwargs) as ds:
-                yield ds
+            return self.open(path, **open_kwargs)
 
     def test_ict_format(self):
         """
@@ -2420,10 +2418,10 @@ class PseudoNetCDFFormatTest(TestCase):
                                             engine='pseudonetcdf',
                                             autoclose=False,
                                             backend_kwargs=fmtkw)
-        with self.roundtrip(expected,
-                            save_kwargs=fmtkw,
-                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
-            assert_identical(expected, actual)
+        actual = self.roundtrip(expected,
+                                save_kwargs=fmtkw,
+                                open_kwargs={'backend_kwargs': fmtkw})
+        assert_identical(expected, actual)
 
     def save(self, dataset, path, **save_kwargs):
         import PseudoNetCDF as pnc
