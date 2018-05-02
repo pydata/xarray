@@ -40,6 +40,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
+  non-dimensional coordinates of the DataArray are now dropped.
+  (:issue:`2068`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 

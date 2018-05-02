@@ -547,6 +547,21 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
 
 
 def dataset_update_method(dataset, other):
-    """Guts of the Dataset.update method"""
+    """Guts of the Dataset.update method
+
+    This drops a duplicated coordinates from `other` (GH:2068)
+    """
+    from .dataset import Dataset
+    from .dataarray import DataArray
+
+    other = other.copy()
+    for k, obj in other.items():
+        if isinstance(obj, (Dataset, DataArray)):
+            # drop duplicated coordinates
+            coord_names = [c for c in obj.coords
+                           if c not in obj.dims and c in dataset.coords]
+            if coord_names:
+                other[k] = obj.drop(*coord_names)
+
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)
