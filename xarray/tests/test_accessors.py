@@ -43,6 +43,10 @@ class TestDatetimeAccessor(TestCase):
         assert_equal(days, self.data.time.dt.day)
         assert_equal(hours, self.data.time.dt.hour)
 
+    def test_strftime(self):
+        assert ('2000-01-01 01:00:00' ==
+                self.data.time.dt.strftime('%Y-%m-%d %H:%M:%S')[1])
+
     def test_not_datetime_type(self):
         nontime_data = self.data.copy()
         int_data = np.arange(len(self.data.time)).astype('int8')

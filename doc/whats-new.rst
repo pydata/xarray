@@ -82,6 +82,10 @@ Enhancements
   currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- ``strftime`` method added to ``.dt`` accessor, making it simpler to hand
+  datetime ``DataArray`` to other code expecting to format dates and times.
+  (:issue:`2090`). By `Ryan May <https://github.com/dopplershift>`_.
+
 Bug fixes
 ~~~~~~~~~
 

@@ -258,3 +258,24 @@ class DatetimeAccessor(object):
             Array-like of datetime fields accessed for each element in values
         '''
         return self._tslib_round_accessor("round", freq)
+
+    def strftime(self, date_format):
+        '''
+        Return an array of formatted strings specified by date_format, which
+        supports the same string format as the python standard library. Details
+        of the string format can be found in `python string format doc
+        <https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior>`__
+
+        Parameters
+        ----------
+        date_format : str
+            date format string (e.g. "%Y-%m-%d")
+
+        Returns
+        -------
+        ndarray of formatted strings
+        '''
+        values = self._obj.data
+        values_as_series = pd.Series(values.ravel())
+        strs = values_as_series.dt.strftime(date_format)
+        return strs.values.reshape(values.shape)
