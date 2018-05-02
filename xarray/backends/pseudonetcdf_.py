@@ -55,9 +55,9 @@ class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
     def open(cls, filename, format=None, writer=None,
              autoclose=False, **format_kwds):
         from PseudoNetCDF._getreader import getreader, getreaderdict
+        readerdict = getreaderdict()
         _genreaders = tuple([readerdict[rn] for rn in _genericncf
                              if rn in readerdict])
-        readerdict = getreaderdict()
         reader = getreader(filename, format=format, **format_kwds)
         if isinstance(reader, _genreaders):
             raise ValueError(('In xarray, PseudoNetCDF should not be used ' +
