@@ -2368,8 +2368,8 @@ class TestDataset(TestCase):
         
         # GH: 2099
         ds = Dataset({'var': ('x', [1, 2, 3])}, 
-                coords={'x': [0, 1, 2], 'z1': ('x', [1, 2, 3]), 
-                        'z2': ('x', [1, 2, 3])})
+                     coords={'x': [0, 1, 2], 'z1': ('x', [1, 2, 3]), 
+                             'z2': ('x', [1, 2, 3])})
         ds['var'] = ds['var'] * 2
         assert np.allclose(ds['var'], [2, 4, 6]) 
 
