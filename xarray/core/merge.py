@@ -561,7 +561,7 @@ def dataset_update_method(dataset, other):
             coord_names = [c for c in obj.coords
                            if c not in obj.dims and c in dataset.coords]
             if coord_names:
-                other[k] = obj.drop(*coord_names)
+                other[k] = obj.drop(coord_names)
 
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)
