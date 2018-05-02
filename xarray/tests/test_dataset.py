@@ -2365,13 +2365,13 @@ class TestDataset(TestCase):
         other[0] = 10
         actual['numbers'] = other
         assert actual['numbers'][0] == 10
-        
+
         # GH: 2099
-        ds = Dataset({'var': ('x', [1, 2, 3])}, 
-                     coords={'x': [0, 1, 2], 'z1': ('x', [1, 2, 3]), 
+        ds = Dataset({'var': ('x', [1, 2, 3])},
+                     coords={'x': [0, 1, 2], 'z1': ('x', [1, 2, 3]),
                              'z2': ('x', [1, 2, 3])})
         ds['var'] = ds['var'] * 2
-        assert np.allclose(ds['var'], [2, 4, 6]) 
+        assert np.allclose(ds['var'], [2, 4, 6])
 
     def test_setitem_align_new_indexes(self):
         ds = Dataset({'foo': ('x', [1, 2, 3])}, {'x': [0, 1, 2]})
