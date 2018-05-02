@@ -40,7 +40,8 @@ class PncArrayWrapper(BackendArray):
         return array
 
 
-_genericncf = ('Dataset', 'netcdf', 'ncf', 'nc', 'notreal')
+_genericncf = ('Dataset', 'netcdf', 'ncf', 'nc')
+_genreaders = tuple([readerdict[rn] for rn in _genericncf if rn in readerdict])
 
 
 class _notnetcdf:
@@ -57,7 +58,6 @@ class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
         from PseudoNetCDF._getreader import getreader, getreaderdict
         readerdict = getreaderdict()
         reader = getreader(filename, format=format, **format_kwds)
-        _genreaders = tuple([readerdict[rn] for rn in _genericncf if rn in readerdict])
         if isinstance(reader, _genreaders):
             raise ValueError(('In xarray, PseudoNetCDF should not be used ' +
                               'to read netcdf files with unknown metadata. ' +
