@@ -96,7 +96,7 @@ def _decode_datetime_with_cftime(num_dates, units, calendar,
 
     if (dates[np.nanargmin(num_dates)].year < 1678 or
             dates[np.nanargmax(num_dates)].year >= 2262):
-        if calendar in _STANDARD_CALENDARS:
+        if not enable_cftimeindex or calendar in _STANDARD_CALENDARS:
             warnings.warn(
                 'Unable to decode time axis into full '
                 'numpy.datetime64 objects, continuing using dummy '
