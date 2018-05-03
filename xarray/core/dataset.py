@@ -1311,7 +1311,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             elif isinstance(v, Dataset):
                 raise TypeError('cannot use a Dataset as an indexer')
             else:
-                v = np.asarray(v)
+                v = as_variable((k, np.asarray(v)))
             indexers_list.append((k, v))
         return indexers_list
 
@@ -1322,6 +1322,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Only coordinate with a name different from any of self.variables will
         be attached.
+
+        If remove_dimensional_coord is True, the dimensional coordinate of
+        indexers will be removed.
         """
         from .dataarray import DataArray
 
@@ -1775,7 +1778,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def interpolate_at(self, method='linear', fill_value=dtypes.NA, kwargs={},
+    def interpolate_at(self, method='linear', fill_value=np.nan, kwargs={},
                        **coords):
         """ Multidimensional interpolation of variables.
 
@@ -1800,50 +1803,30 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----
         scipy is required. If NaN is in the array, ValueError will be raised.
         """
-        from .dataarray import DataArray
         from . import interp
 
-        for c in coords:
-            if c not in self.dims:
-                raise ValueError(
-                    'interpolate_at only supports interpolation along a dimension '
-                    'coordinate. Given {}.'.format(c))
+        indexers_list = self._validate_indexers(coords)
 
         variables = OrderedDict()
-        coord_names = []
-        for k, v in self.variables.items():
-            if k in self._coord_names:
-                # drop non-dimensional coordinate
-                if all(d not in coords for d in v.dims):
-                    variables[k] = v
-                    coord_names.append(k)
-                elif k in coords:
-                    v = coords[k]
-                    if isinstance(v, DataArray):
-                        v = v.variable
-                    elif not isinstance(v, Variable):
-                        v = Variable(k, v)
-                    variables[k] = v
-                    coord_names.append(k)
-            else:
-                indexes_coords = OrderedDict()
-                for d in v.dims:
-                    if d in coords:
-                        # TODO dimension without coordinate?
-                        indexes_coords[d] = (self.variables[d], coords[d])
-                if len(indexes_coords) == 0:
-                    variables[k] = v
-                elif len(indexes_coords) == 1:
-                    variables[k] = interp.interpolate_1d(
-                        v, indexes_coords, method, fill_value, kwargs)
-                else:
-                    raise NotImplementedError(
-                        'Interpolation along multiple dimension is not '
-                        'implemented yet.')
+        for name, var in iteritems(self._variables):
+            var_indexers = {k: (self._variables[k], v) for k, v
+                            in indexers_list if k in var.dims}
+            if name not in [k for k, v in indexers_list]:
+                variables[name] = interp.interpolate(
+                    var, var_indexers, method, fill_value, kwargs)
 
-        # If interpolate along dimension without coordinate
-        coord_names = set(coord_names).union(coords)
-        return self._replace_vars_and_dims(variables, coord_names)
+        coord_names = set(variables).intersection(self._coord_names)
+        selected = self._replace_vars_and_dims(variables,
+                                               coord_names=coord_names)
+        # attach indexer as coordinate
+        variables.update({k: v for k, v in indexers_list})
+        # Extract coordinates from indexers
+        coord_vars = selected._get_indexers_coordinates(coords)
+        variables.update(coord_vars)
+        coord_names = (set(variables)
+                       .intersection(self._coord_names)
+                       .union(coord_vars))
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.

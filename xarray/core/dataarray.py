@@ -883,7 +883,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
 
-    def interpolate_at(self, method='linear', fill_value=dtypes.NA, kwargs={},
+    def interpolate_at(self, method='linear', fill_value=np.nan, kwargs={},
                        **coords):
         """ Multidimensional interpolation of variables.
 
