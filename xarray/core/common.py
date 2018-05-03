@@ -608,7 +608,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             
         Examples
         --------
-        Resample monthly time-series data to seasonal data:
+        Downsample monthly time-series data to seasonal data:
         
         >>> da = xr.DataArray(np.linspace(0, 11, num=12),
         ...                   coords=[pd.date_range('15/12/1999',
@@ -624,6 +624,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([ 1.,  4.,  7., 10.])
         Coordinates:
           * time     (time) datetime64[ns] 2000-02-29 2000-05-31 2000-08-31 2000-11-30
+          
+        Upsample monthly time-series data to daily data:
+        
+        >>> da.resample(time='1D').interpolate('linear')
+        <xarray.DataArray (time: 337)>
+        array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
           
         Resample time in an N-dimensional array:
         
