@@ -426,7 +426,27 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
-
+            
+        Examples
+        --------
+        Calculate daily anomalies for daily data:
+        
+        >>> da = xr.DataArray(np.linspace(0, 1826, num=1827),
+        ...                   coords=[pd.date_range('1/1/2000', '31/12/2004',
+        ...                           freq='D')],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 1827)>
+        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03, 1.826e+03])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+        >>> da.groupby('time.dayofyear') - da.groupby('time.dayofyear').mean('time')
+        <xarray.DataArray (time: 1827)>
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        Coordinates:
+          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+            dayofyear  (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 ...
+        
         See Also
         --------
         core.groupby.DataArrayGroupBy
@@ -514,7 +534,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
 
-        >>> da = xr.DataArray(np.linspace(0,11,num=12),
+        >>> da = xr.DataArray(np.linspace(0, 11, num=12),
         ...                   coords=[pd.date_range('15/12/1999',
         ...                           periods=12, freq=pd.DateOffset(months=1))],
         ...                   dims='time')
@@ -523,19 +543,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da.rolling(time=3).mean()
+        >>> da.rolling(time=3, center=True).mean()
         <xarray.DataArray (time: 12)>
-        array([ nan,  nan,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
 
         Remove the NaNs using ``dropna()``:
 
-        >>> da.rolling(time=3).mean().dropna('time')
+        >>> da.rolling(time=3, center=True).mean().dropna('time')
         <xarray.DataArray (time: 10)>
-        array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
 
         See Also
         --------
@@ -556,6 +576,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
+        freq : str, pandas Offset Alias
+            Frequency for which to resample to.
+        dim : str, 
+            Name of dimension to resample.
+        how : str, optional
+            Method of resampling e.g. mean.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -572,12 +598,32 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             object will be returned without attributes.
         **indexer : {dim: freq}
             Dictionary with a key indicating the dimension name to resample
-            over and a value corresponding to the resampling frequency.
+            over and a value corresponding to the resampling frequency. e.g.
+            time="M"
 
         Returns
         -------
         resampled : same type as caller
             This object resampled.
+            
+        Examples
+        --------
+        Resample monthly data to seasonal data:
+        
+        >>> da = xr.DataArray(np.linspace(0,11,num=12),
+        ...                   coords=[pd.date_range('15/12/1999',
+        ...                           periods=12, freq=pd.DateOffset(months=1))],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da.resample(time="Q-DEC").mean()
+        <xarray.DataArray (time: 4)>
+        array([ 1.,  4.,  7., 10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-02-29 2000-05-31 2000-08-31 2000-11-30
 
         References
         ----------
