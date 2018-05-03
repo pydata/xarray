@@ -1,41 +1,52 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from collections import OrderedDict
 from .computation import apply_ufunc
 
 
-def interpolate_dataarray(obj, method='linear', bounds_error=True,
-                          fill_value=None, **coords):
-    """ Make an interpolation of dataarray
+def interpolate_1d(obj, index_coord, method, fill_value, kwargs):
+    """ Make an interpolation of Variable
+    
     Parameters
     ----------
-    variable: xr.DataArray
-    **coords: mapping from dimension name to the new coordinate.
+    obj: Variable
+    index_coord:
+        mapping from dimension name to a pair of original and new coordinates.
+    method: string or callable similar to scipy.interpolate
+    fill_value:
+        fill value if extrapolate
+    kwargs:
+        keyword arguments that are passed to scipy.interpolate
 
     Returns
     -------
-    Interpolated DataArray
-
-    Note
-    ----
-    The method should
+    Interpolated Variable
     """
-    # a simple speedup for linear interpolator
-    if method in ['linear', 'nearest']:
-        indexers = {d: _get_used_range for d, c in coords.items()}
-        obj = obj.isel(**indexers)
+    #if method in ['linear', 'nearest']:
+    #    return interpolate_1d_local(obj, method, fill_value, kwargs, **coords)
+    try:
+        import scipy
+    except ImportError:
+        raise ImportError(
+            'Interpolation with method `%s` requires scipy' % method)
 
-    if len(coords) == 1:
-        return interpolate_1d(obj, method, bounds_error, fill_value, **coords)
+    dim, [x, new_x] = list(index_coord.items())[0]
 
-    if len(set(getattr(c, 'dim', d) for d, c in coord.items)) == len(coords):
-        # grid->grid interpolation
-        return interpolate_grid(obj, method, bounds_error, fill_value, **coords)
+    if method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic']:
+        def interpolator(arr):
+            return scipy.interpolate.interp1d(
+                x, arr, kind=method, bounds_error=False,
+                fill_value=fill_value)(new_x)
+    else:
+        raise NotImplementedError
 
-    # sampling-like interpolation
-    return interpolate_nd(obj, method, bounds_error, fill_value, **coords)
+    return apply_ufunc(interpolator, obj, input_core_dims=[[dim]],
+                       output_core_dims=[[dim]], output_dtypes=[obj.dtype],
+                       keep_attrs=True).transpose(*obj.dims)
 
 
+'''
 def interpolate_local(obj, method, bounds_error, fill_value, **coords):
     """ Interpolator for linear and nearestneighbor """
     # Only use necessary region for the efficiency
@@ -75,3 +86,4 @@ def interpolate_nd(obj, func, bounds_error, fill_value, **coords):
 def _assert_no_chunks_along(obj, dim):
     if len(obj.chunks[dim]) > 1:
         raise ValueError('Chunk along ** is not allowed')
+'''

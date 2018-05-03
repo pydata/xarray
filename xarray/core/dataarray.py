@@ -6,7 +6,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import computation, groupby, indexing, ops, resample, rolling, utils
+from . import (computation, dtypes, groupby, indexing, ops, resample, rolling,
+               utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -881,6 +882,36 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().reindex(
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
+
+    def interpolate_at(self, method='linear', fill_value=dtypes.NA, kwargs={},
+                       **coords):
+        """ Multidimensional interpolation of variables.
+
+        Parameters
+        ----------
+        **coords : {dim: new_coordinate, ...}
+            Keyword arguments with names matching dimensions and values.
+            coords can be a integer, array-like or DataArray.
+            If DataArrays are passed as coords, xarray-style indexing will be
+            carried out.
+        method: {'linear', 'RectBivariateSpline', 'NdPPoly'} for
+            multidimensional array,
+            {'linear', 'barycentric', 'krogh', 'pchip', 'akima',
+            'ppoly', 'bpoly'} for 1-dimensional array.
+
+        Returns
+        -------
+        interpolated: xr.Dataset
+            New dataset on the new coordinates.
+
+        Note
+        ----
+        scipy is required. If NaN is in the array, ValueError will be raised.
+        """
+        ds = self._to_temp_dataset().interpolate_at(
+            method=method, fill_value=fill_value, kwargs=kwargs, **coords)
+        return self._from_temp_dataset(ds)
+
 
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed coordinates or a new name.

@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
-    rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
+    resample, rolling, utils)
 from .. import conventions
 from .alignment import align
 from .common import DataWithCoords, ImplementsDatasetReduce
@@ -1775,8 +1775,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def interpolate_at(self, method='linear', bounds_error=True,
-                       fill_value=None, **coords):
+    def interpolate_at(self, method='linear', fill_value=dtypes.NA, kwargs={},
+                       **coords):
         """ Multidimensional interpolation of variables.
 
         Parameters
@@ -1800,11 +1800,50 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----
         scipy is required. If NaN is in the array, ValueError will be raised.
         """
+        from .dataarray import DataArray
         from . import interp
 
-        new = _apply_over_vars_with_dim(bfill, self, dim=dim, limit=limit)
-        return new
+        for c in coords:
+            if c not in self.dims:
+                raise ValueError(
+                    'interpolate_at only supports interpolation along a dimension '
+                    'coordinate. Given {}.'.format(c))
 
+        variables = OrderedDict()
+        coord_names = []
+        for k, v in self.variables.items():
+            if k in self._coord_names:
+                # drop non-dimensional coordinate
+                if all(d not in coords for d in v.dims):
+                    variables[k] = v
+                    coord_names.append(k)
+                elif k in coords:
+                    v = coords[k]
+                    if isinstance(v, DataArray):
+                        v = v.variable
+                    elif not isinstance(v, Variable):
+                        v = Variable(k, v)
+                    variables[k] = v
+                    coord_names.append(k)
+            else:
+                indexes_coords = OrderedDict()
+                for d in v.dims:
+                    if d in coords:
+                        # TODO dimension without coordinate?
+                        indexes_coords[d] = (self.variables[d], coords[d])
+                if len(indexes_coords) == 0:
+                    variables[k] = v
+                elif len(indexes_coords) == 1:
+                    variables[k] = interp.interpolate_1d(
+                        v, indexes_coords, method, fill_value, kwargs)
+                else:
+                    raise NotImplementedError(
+                        'Interpolation along multiple dimension is not '
+                        'implemented yet.')
+
+        # If interpolate along dimension without coordinate
+        coord_names = set(coord_names).union(coords)
+        return self._replace_vars_and_dims(variables, coord_names)
 
     def rename(self, name_dict, inplace=False):
         """Returns a new object with renamed variables and dimensions.
