@@ -570,9 +570,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. Upsampling with filling is
-        not supported; if any intervals contain no values from the original
-        object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. If any intervals contain no 
+        values from the original object, they will be given the value ``NaN``.
 
         Parameters
         ----------
