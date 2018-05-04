@@ -180,6 +180,9 @@ def decode_cf_timedelta(num_timedeltas, units):
     """Given an array of numeric timedeltas in netCDF format, convert it into a
     numpy timedelta64[ns] array.
     """
+    warnings.warn('Decoding timedeltas been deprecated and '
+                  'will be removed in xarray v??.',
+                  FutureWarning, stacklevel=2)
     num_timedeltas = np.asarray(num_timedeltas)
     units = _netcdf_to_numpy_timeunit(units)
 
@@ -362,10 +365,12 @@ class CFTimedeltaCoder(VariableCoder):
             data, units = encode_cf_timedelta(
                 data, encoding.pop('units', None))
             safe_setitem(attrs, 'units', units, name=name)
-
         return Variable(dims, data, attrs, encoding)
 
     def decode(self, variable, name=None):
+        warnings.warn('Decoding timedeltas been deprecated and '
+                      'will be removed in xarray v??.',
+                      FutureWarning, stacklevel=2)
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
         if 'units' in attrs and attrs['units'] in TIME_UNITS:
