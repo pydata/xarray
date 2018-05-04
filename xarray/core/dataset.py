@@ -1798,8 +1798,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If DataArrays are passed as coords, their dimensions are used
             for the broadcasting.
         method: {'linear', 'nearest'} for multidimensional array,
-            {'linear', 'barycentric', 'krogh', 'pchip', 'akima',
-            'ppoly', 'bpoly'} for 1-dimensional array.
+            {‘linear’, ‘nearest’, ‘zero’, ‘slinear’, ‘quadratic’, ‘cubic’ }
+            for 1-dimensional array.
 
         Returns
         -------
@@ -1810,9 +1810,68 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----
         scipy is required. If NaN is in the array, ValueError will be raised.
 
+        See Also
+        --------
+        scipy.interpolate.interp1d
+        scipy.interpolate.RegularGridInterpolator
+
         Examples
         --------
-
+        >>> da = xr.DataArray([0, 0.1, 0.2, 0.1], dims='x',
+        >>>                   coords={'x': [0, 1, 2, 3]})
+        >>>
+        >>> da.interpolate_at(x=[0.5, 1.5])  # simple linear interpolation
+        <xarray.DataArray (x: 2)>
+        array([0.05, 0.15])
+        Coordinates:
+          * x        (x) float64 0.5 1.5
+        >>>
+        >>> # with cubic spline interpolation
+        ... da.interpolate_at(x=[0.5, 1.5], method='cubic')
+        <xarray.DataArray (x: 2)>
+        array([0.0375, 0.1625])
+        Coordinates:
+          * x        (x) float64 0.5 1.5
+        >>>
+        >>> # interpolation at one single position
+        ... da.interpolate_at(x=0.5)
+        <xarray.DataArray ()>
+        array(0.05)
+        Coordinates:
+            x        float64 0.5
+        >>>
+        >>> # interpolation with broadcasting
+        ... da.interpolate_at(x=xr.DataArray([[0.5, 1.0], [1.5, 2.0]],
+        ...                   dims=['y', 'z']))
+        <xarray.DataArray (y: 2, z: 2)>
+        array([[0.05, 0.1 ],
+               [0.15, 0.2 ]])
+        Coordinates:
+            x        (y, z) float64 0.5 1.0 1.5 2.0
+        Dimensions without coordinates: y, z
+        >>>
+        >>> da = xr.DataArray([[0, 0.1, 0.2], [1.0, 1.1, 1.2]],
+        ...                   dims=['x', 'y'],
+        ...                   coords={'x': [0, 1], 'y': [0, 10, 20]})
+        >>>
+        >>> # multidimensional interpolation
+        ... da.interpolate_at(x=[0.5, 1.5], y=[5, 15])
+        <xarray.DataArray (x: 2, y: 2)>
+        array([[0.55, 0.65],
+               [ nan,  nan]])
+        Coordinates:
+          * x        (x) float64 0.5 1.5
+          * y        (y) int64 5 15
+        >>>
+        >>> # multidimensional interpolation with broadcasting
+        ... da.interpolate_at(x=xr.DataArray([0.5, 1.5], dims='z'),
+        ...                   y=xr.DataArray([5, 15], dims='z'))
+        <xarray.DataArray (z: 2)>
+        array([0.55,  nan])
+        Coordinates:
+            x        (z) float64 0.5 1.5
+            y        (z) int64 5 15
+        Dimensions without coordinates: z
         """
         from . import interp
 
