@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from xarray import (Dataset, Variable, SerializationWarning, coding,
-                    conventions, open_dataset)
+                    conventions, open_dataset, set_options)
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
@@ -174,6 +174,23 @@ class TestDecodeCF(TestCase):
             actual = conventions.decode_cf_variable('t', original)
             assert_identical(expected, actual)
             assert 'has multiple fill' in str(w[0].message)
+
+    def test_decode_cf_raises_timedelta_deprecation(self):
+        original = Variable(['t'], [0, 1, 2])
+        original.attrs.update({'units': 'seconds'})
+        with warnings.catch_warnings(record=True) as w:
+            actual = conventions.decode_cf_variable('t', original)
+            assert 'Decoding timedeltas been deprecated' in str(w[0].message)
+            assert np.issubdtype(actual.dtype, np.timedelta64)
+
+    def test_decode_cf_enable_future_time_unit_decoding(self):
+        with set_options(enable_future_time_unit_decoding=True):
+            original = Variable(['t'], [0, 1, 2])
+            original.attrs.update({'units': 'seconds'})
+            with warnings.catch_warnings(record=True) as w:
+                actual = conventions.decode_cf_variable('t', original)
+                assert not w
+                assert np.issubdtype(actual.dtype, original.dtype)
 
     def test_decode_cf_with_drop_variables(self):
         original = Dataset({
