@@ -1798,7 +1798,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If DataArrays are passed as coords, their dimensions are used
             for the broadcasting.
         method: {'linear', 'nearest'} for multidimensional array,
-            {‘linear’, ‘nearest’, ‘zero’, ‘slinear’, ‘quadratic’, ‘cubic’ }
+            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
 
         Returns
