@@ -842,25 +842,17 @@ def test_dot(use_dask):
     with pytest.raises(TypeError):
         xr.dot(dims='a')
 
-    # optimize parameter
-    xr.dot(da_a, da_b, dims=['b'], optimize='optimal')
+    # einsum parameters
+    xr.dot(da_a, da_b, dims=['b'], order='F')
     actual = xr.dot(da_a, da_b, dims=['b'])
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
 
-    # Dask-only tests
-    if use_dask:
-        # einsum has a constant string as of the first parameter, which makes
-        # it hard to pass to xarray.apply_ufunc.
-        # make sure dot() uses functools.partial(einsum, subscripts), which
-        # can be pickled, and not a lambda, which can't.
-        pickle.loads(pickle.dumps(xr.dot(da_a)))
-
-        # Pass split_every to da.einsum
-        xr.dot(da_a, da_b, dims=['b'], split_every=2)
-        actual = xr.dot(da_a, da_b, dims=['b'])
-        assert actual.dims == ('a', 'c')
-        assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    # einsum has a constant string as of the first parameter, which makes
+    # it hard to pass to xarray.apply_ufunc.
+    # make sure dot() uses functools.partial(einsum, subscripts), which
+    # can be pickled, and not a lambda, which can't.
+    pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
 def test_where():
