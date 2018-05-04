@@ -1716,6 +1716,38 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
                 for k, v in compr_out.items():
                     self.assertEqual(v, actual['var2'].encoding[k])
 
+    def test_compression_check_encoding_h5py(self):
+        """When mismatched h5py and NetCDF4-Python encodings are expressed
+        in to_netcdf(encoding=...), must raise ValueError
+        """
+        data = Dataset({'x': ('y', np.arange(10.0))})
+        # Compatible encodings are graciously supported
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(
+                tmp_file, engine='h5netcdf',
+                encoding={'x': {'compression': 'gzip', 'zlib': True,
+                                'compression_opts': 6, 'complevel': 6}})
+            with open_dataset(tmp_file, engine='h5netcdf') as actual:
+                assert actual.x.encoding['zlib'] == True
+                assert actual.x.encoding['complevel'] == 6
+
+        # Incompatible encodings cause a crash
+        with create_tmp_file() as tmp_file:
+            with raises_regex(ValueError,
+                              "'zlib' and 'compression' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'lzf', 'zlib': True}})
+
+        with create_tmp_file() as tmp_file:
+            with raises_regex(
+                    ValueError,
+                    "'complevel' and 'compression_opts' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'gzip',
+                                    'compression_opts': 5, 'complevel': 6}})
+
     def test_dump_encodings_h5py(self):
         # regression test for #709
         ds = Dataset({'x': ('y', np.arange(10.0))})
