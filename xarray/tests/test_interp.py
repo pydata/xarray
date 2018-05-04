@@ -9,8 +9,9 @@ import pytest
 import xarray as xr
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
-    assert_array_equal, assert_equal, raises_regex, requires_bottleneck,
-    requires_dask, requires_np112, requires_scipy)
+    assert_allclose, assert_array_equal, assert_equal, raises_regex,
+    requires_bottleneck, requires_dask, requires_np112, requires_scipy)
+from . import has_dask
 
 try:
     import scipy
@@ -31,6 +32,16 @@ def get_example_data(case):
         return data.chunk({'y': 3})
     elif case == 2:
         return data.chunk({'x': 25, 'y': 3})
+    elif case == 3:
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(0, 0.1, 30)
+        z = np.linspace(0.1, 0.2, 10)
+        return xr.DataArray(
+            np.sin(x[:, np.newaxis, np.newaxis])*np.cos(y[:, np.newaxis])*z,
+            dims=['x', 'y', 'z'],
+            coords={'x': x, 'y': y, 'x2': ('x', x**2), 'z': z})
+    elif case == 4:
+        return get_example_data(3).chunk({'z': 5})
 
 
 @requires_scipy
@@ -38,15 +49,17 @@ def get_example_data(case):
 @pytest.mark.parametrize('dim', ['x', 'y'])
 @pytest.mark.parametrize('case', [0, 1])
 def test_interpolate_1d(method, dim, case):
-    if dim == 'y' and case == 1:
-        pytest.skip('interpolation along chunked dimension is '
-                    'not yet supported')
-
     if not has_dask and case in [1]:
         pytest.skip('dask is not installed in the environment.')
 
     da = get_example_data(case)
     xdest = np.linspace(0.1, 0.9, 80)
+
+    if dim == 'y' and case == 1:
+        with pytest.raises(ValueError):
+            actual = da.interpolate_at(**{dim: xdest}, method=method)
+        pytest.skip('interpolation along chunked dimension is '
+                    'not yet supported')
 
     actual = da.interpolate_at(**{dim: xdest}, method=method)
 
@@ -65,7 +78,12 @@ def test_interpolate_1d(method, dim, case):
     assert_equal(actual, expected)
 
 
-def test_interpolate_vectorize():
+@requires_scipy
+@pytest.mark.parametrize('use_dask', [False, True])
+def test_interpolate_vectorize(use_dask):
+    if not has_dask and use_dask:
+        pytest.skip('dask is not installed in the environment.')
+
     # scipy interpolation for the reference
     def func(obj, dim, new_x):
         shape = [s for i, s in enumerate(obj.shape)
@@ -77,8 +95,9 @@ def test_interpolate_vectorize():
             da[dim], obj.data, axis=obj.get_axis_num(dim),
             bounds_error=False, fill_value=np.nan)(new_x).reshape(shape)
 
-
     da = get_example_data(0)
+    if use_dask:
+        da = da.chunk({'y': 5})
 
     # xdest is 1d but has different dimension
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30), dims='z',
@@ -109,4 +128,93 @@ def test_interpolate_vectorize():
         coords={'z': xdest['z'], 'w': xdest['w'], 'z2': xdest['z2'],
                 'y': da['y'], 'x': (('z', 'w'), xdest),
                 'x2': (('z', 'w'), func(da['x2'], 'x', xdest))})
-    assert_equal(actual, expected.transpose('y', 'z', 'w'))
+    assert_allclose(actual, expected.transpose('y', 'z', 'w'))
+
+
+@requires_scipy
+@pytest.mark.parametrize('case', [3, 4])
+def test_interpolate_nd(case):
+    if not has_dask and case == 4:
+        pytest.skip('dask is not installed in the environment.')
+
+    da = get_example_data(case)
+
+    # grid -> grid
+    xdest = np.linspace(0.1, 1.0, 11)
+    ydest = np.linspace(0.0, 0.2, 10)
+    actual = da.interpolate_at(x=xdest, y=ydest, method='linear')
+
+    # linear interpolation is separateable
+    expected = da.interpolate_at(x=xdest, method='linear')
+    expected = expected.interpolate_at(y=ydest, method='linear')
+    assert_allclose(actual, expected.transpose('x', 'y', 'z'))
+
+    # grid -> 1d-sample
+    xdest = xr.DataArray(np.linspace(0.1, 1.0, 11), dims='y')
+    ydest = xr.DataArray(np.linspace(0.0, 0.2, 11), dims='y')
+    actual = da.interpolate_at(x=xdest, y=ydest, method='linear')
+
+    # linear interpolation is separateable
+    expected_data = scipy.interpolate.RegularGridInterpolator(
+        (da['x'], da['y']), da.transpose('x', 'y', 'z').values,
+        method='linear', bounds_error=False,
+        fill_value=np.nan)(np.stack([xdest, ydest], axis=-1))
+    expected = xr.DataArray(
+        expected_data, dims=['y', 'z'],
+        coords={'z': da['z'], 'y': ydest, 'x': ('y', xdest.values),
+                'x2': da['x2'].interpolate_at(x=xdest)})
+    assert_allclose(actual, expected.transpose('z', 'y'))
+
+
+@requires_scipy
+@pytest.mark.parametrize('method', ['linear'])
+@pytest.mark.parametrize('case', [0, 1])
+def test_interpolate_scalar(method, case):
+    if not has_dask and case in [1]:
+        pytest.skip('dask is not installed in the environment.')
+
+    da = get_example_data(case)
+    xdest = 0.4
+
+    actual = da.interpolate_at(x=xdest, method=method)
+
+    # scipy interpolation for the reference
+    def func(obj, new_x):
+        return scipy.interpolate.interp1d(
+            da['x'], obj.data, axis=obj.get_axis_num('x'), bounds_error=False,
+            fill_value=np.nan)(new_x)
+
+    coords = {'x': xdest, 'y': da['y'], 'x2': func(da['x2'], xdest)}
+    expected = xr.DataArray(func(da, xdest), dims=['y'], coords=coords)
+    assert_equal(actual, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize('method', ['linear'])
+@pytest.mark.parametrize('case', [3, 4])
+def test_interpolate_nd_scalar(method, case):
+    if not has_dask and case in [4]:
+        pytest.skip('dask is not installed in the environment.')
+
+    da = get_example_data(case)
+    xdest = 0.4
+    ydest = 0.05
+
+    actual = da.interpolate_at(x=xdest, y=ydest, method=method)
+    # scipy interpolation for the reference
+    expected_data = scipy.interpolate.RegularGridInterpolator(
+        (da['x'], da['y']), da.transpose('x', 'y', 'z').values,
+        method='linear', bounds_error=False,
+        fill_value=np.nan)(np.stack([xdest, ydest], axis=-1))
+
+    coords = {'x': xdest, 'y': ydest, 'x2': da['x2'].interpolate_at(x=xdest),
+              'z': da['z']}
+    expected = xr.DataArray(expected_data[0], dims=['z'], coords=coords)
+    assert_equal(actual, expected)
+
+
+@requires_scipy
+def test_errors():
+    da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
+    with pytest.raises(ValueError):
+        da.interpolate_at(x=[0, 1])

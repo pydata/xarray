@@ -1311,7 +1311,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             elif isinstance(v, Dataset):
                 raise TypeError('cannot use a Dataset as an indexer')
             else:
-                v = as_variable((k, np.asarray(v)))
+                v = np.asarray(v)
+                if v.ndim == 0:
+                    v = as_variable(v)
+                elif v.ndim == 1:
+                    v = as_variable((k, v))
+                else:
+                    raise IndexError(
+                        "Unlabeled multi-dimensional array cannot be "
+                        "used for indexing: {}".format(k))
             indexers_list.append((k, v))
         return indexers_list
 
@@ -1780,17 +1788,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     def interpolate_at(self, method='linear', fill_value=np.nan, kwargs={},
                        **coords):
-        """ Multidimensional interpolation of variables.
+        """ Multidimensional interpolation of Dataset.
 
         Parameters
         ----------
         **coords : {dim: new_coordinate, ...}
             Keyword arguments with names matching dimensions and values.
-            coords can be a integer, array-like or DataArray.
-            If DataArrays are passed as coords, xarray-style indexing will be
-            carried out.
-        method: {'linear', 'RectBivariateSpline', 'NdPPoly'} for
-            multidimensional array,
+            coords can be an integer, array-like or DataArray.
+            If DataArrays are passed as coords, their dimensions are used
+            for the broadcasting.
+        method: {'linear', 'nearest'} for multidimensional array,
             {'linear', 'barycentric', 'krogh', 'pchip', 'akima',
             'ppoly', 'bpoly'} for 1-dimensional array.
 
@@ -1802,6 +1809,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Note
         ----
         scipy is required. If NaN is in the array, ValueError will be raised.
+
+        Examples
+        --------
+
         """
         from . import interp
 
@@ -1812,6 +1823,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             var_indexers = {k: (self._variables[k], v) for k, v
                             in indexers_list if k in var.dims}
             if name not in [k for k, v in indexers_list]:
+                if duck_array_ops.count(var.data) != var.size:
+                    raise ValueError(
+                        'intarpolate_at can not be used for an array with '
+                        'nan. {} has {} nans.'.format(
+                            name, var.count() - var.size))
                 variables[name] = interp.interpolate(
                     var, var_indexers, method, fill_value, kwargs)
 

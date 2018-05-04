@@ -4,6 +4,7 @@ from functools import partial
 import numpy as np
 from .computation import apply_ufunc
 from .pycompat import (OrderedDict, dask_array_type)
+from .variable import broadcast_variables
 
 
 def _localize(obj, index_coord):
@@ -24,13 +25,6 @@ def _localize(obj, index_coord):
 
 
 def interpolate(obj, indexes_coords, method, fill_value, kwargs):
-    if len(indexes_coords) == 0:
-        return obj
-    if len(indexes_coords) == 1:
-        return interpolate_1d(obj, indexes_coords, method, fill_value, kwargs)
-
-
-def interpolate_1d(obj, index_coord, method, fill_value, kwargs):
     """ Make an interpolation of Variable
 
     Parameters
@@ -38,11 +32,14 @@ def interpolate_1d(obj, index_coord, method, fill_value, kwargs):
     obj: Variable
     index_coord:
         mapping from dimension name to a pair of original and new coordinates.
-    method: string or callable similar to scipy.interpolate
+    method: string
+        One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
+        'cubic'}. For multidimensional interpolation, only
+        {'linear', 'nearest'} can be used.
     fill_value:
-        fill value if extrapolate
+        fill value for extrapolation
     kwargs:
-        keyword arguments that are passed to scipy.interpolate
+        keyword arguments to be passed to scipy.interpolate
 
     Returns
     -------
@@ -54,42 +51,98 @@ def interpolate_1d(obj, index_coord, method, fill_value, kwargs):
         raise ImportError(
             'Interpolation with method `%s` requires scipy' % method)
 
-    # simple speed up
+    if len(indexes_coords) == 0:
+        return obj
+
+    # simple speed up for the local interpolation
     if method in ['linear', 'nearest']:
-        obj, index_coord = _localize(obj, index_coord)
+        obj, indexes_coords = _localize(obj, indexes_coords)
 
-    dim, [x, new_x] = list(index_coord.items())[0]
+    # target dimensions
+    dims = list(indexes_coords)
+    x = [indexes_coords[d][0] for d in dims]
+    new_x = [indexes_coords[d][1] for d in dims]
+    destination = broadcast_variables(*new_x)
 
-    if method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
-                  'cubic']:
-        func = partial(scipy.interpolate.interp1d, kind=method, axis=-1,
-                       bounds_error=False, fill_value=fill_value)
+    if len(indexes_coords) == 1:
+        if method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                      'cubic']:
+            func = partial(scipy.interpolate.interp1d, kind=method, axis=-1,
+                           bounds_error=False, fill_value=fill_value)
+        else:
+            raise NotImplementedError
+
+        rslt = apply_ufunc(_interpolate_1d, obj,
+                           input_core_dims=[dims],
+                           output_core_dims=[destination[0].dims],
+                           output_dtypes=[obj.dtype], dask='allowed',
+                           kwargs={'x': x, 'new_x': destination, 'func': func},
+                           keep_attrs=True)
     else:
-        raise NotImplementedError
+        if method in ['linear', 'nearest']:
+            func = partial(scipy.interpolate.RegularGridInterpolator,
+                           method=method, bounds_error=False,
+                           fill_value=fill_value)
+        else:
+            raise NotImplementedError
 
-    rslt = apply_ufunc(_interpolate1d_func, obj, input_core_dims=[[dim]],
-                       output_core_dims=[new_x.dims],
-                       output_dtypes=[obj.dtype], dask='allowed',
-                       kwargs={'x':x, 'new_x': new_x, 'func': func},
-                       keep_attrs=True)
-    if x.dims == new_x.dims:
+        rslt = apply_ufunc(_interpolate_nd, obj,
+                           input_core_dims=[dims],
+                           output_core_dims=[destination[0].dims],
+                           output_dtypes=[obj.dtype], dask='allowed',
+                           kwargs={'x': x, 'new_x': destination, 'func': func},
+                           keep_attrs=True)
+    if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
         return rslt.transpose(*obj.dims)
     return rslt
 
 
-def _interpolate1d_func(obj, x, new_x, func):
+def _interpolate_1d(obj, x, new_x, func):
     if isinstance(obj, dask_array_type):
         import dask.array as da
 
         _assert_single_chunks(obj, [-1])
-        chunks = obj.chunks[:-1] + (len(new_x), )
-        return da.map_blocks(_interpolate1d_func, obj, x, new_x, func,
-                             dtype=obj.dtype, chunks=chunks)
+        chunks = obj.chunks[:-len(x)] + new_x[0].shape
+        drop_axis = range(obj.ndim-len(x), obj.ndim)
+        new_axis = range(obj.ndim-len(x), obj.ndim-len(x)+new_x[0].ndim)
+        # call this function recursively
+        return da.map_blocks(_interpolate_1d, obj, x, new_x, func,
+                             dtype=obj.dtype, chunks=chunks,
+                             new_axis=new_axis, drop_axis=drop_axis)
 
-    if len(new_x.dims) > 1:
-        rslt = func(x, obj)(np.ravel(new_x))
+    # x, new_x are tuples of size 1.
+    x, new_x = x[0], new_x[0]
+    rslt = func(x, obj)(np.ravel(new_x))
+    if new_x.ndim > 1:
         return rslt.reshape(obj.shape[:-1] + new_x.shape)
-    return func(x, obj)(new_x)
+    if new_x.ndim == 0:
+        return rslt[..., -1]
+    return rslt
+
+
+def _interpolate_nd(obj, x, new_x, func):
+    """ dask compatible interpolation function.
+    The last len(x) dimensions are used for the interpolation
+    """
+    if isinstance(obj, dask_array_type):
+        import dask.array as da
+
+        _assert_single_chunks(obj, range(-len(x), 0))
+        chunks = obj.chunks[:-len(x)] + new_x[0].shape
+        drop_axis = range(obj.ndim-len(x), obj.ndim)
+        new_axis = range(obj.ndim-len(x), obj.ndim-len(x)+new_x[0].ndim)
+        return da.map_blocks(_interpolate_nd, obj, x, new_x, func,
+                             dtype=obj.dtype, chunks=chunks,
+                             new_axis=new_axis, drop_axis=drop_axis)
+
+    # move the interpolation axes to the start position
+    obj = obj.transpose(range(-len(x), obj.ndim - len(x)))
+    # stack new_x to 1 vector, with reshape
+    xi = np.stack([x1.values.ravel() for x1 in new_x], axis=-1)
+    rslt = func(x, obj)(xi)
+    # move back the interpolation axes to the last position
+    rslt = rslt.transpose(range(-rslt.ndim+1, 1))
+    return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 
 def _assert_single_chunks(obj, axes):
