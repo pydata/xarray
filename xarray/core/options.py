@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 OPTIONS = {
     'display_width': 80,
     'arithmetic_join': 'inner',
+    'enable_future_time_unit_decoding': False,
 }
 
 
