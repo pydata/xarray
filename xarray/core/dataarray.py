@@ -6,8 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import (computation, dtypes, groupby, indexing, ops, resample, rolling,
-               utils)
+from . import computation, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -912,10 +911,8 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method, fill_value=fill_value, kwargs=kwargs, **coords)
         return self._from_temp_dataset(ds)
 
-
     def rename(self, new_name_or_name_dict):
         """Returns a new DataArray with renamed coordinates or a new name.
-
 
         Parameters
         ----------

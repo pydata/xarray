@@ -1,16 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
-import itertools
-
 import numpy as np
-import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.core.pycompat import dask_array_type
-from xarray.tests import (
-    assert_allclose, assert_array_equal, assert_equal, raises_regex,
-    requires_bottleneck, requires_dask, requires_np112, requires_scipy)
+from xarray.tests import assert_allclose, assert_equal, requires_scipy
 from . import has_dask
 
 try:
@@ -23,7 +17,7 @@ def get_example_data(case):
     x = np.linspace(0, 1, 100)
     y = np.linspace(0, 0.1, 30)
     data = xr.DataArray(
-        np.sin(x[:, np.newaxis])*np.cos(y), dims=['x', 'y'],
+        np.sin(x[:, np.newaxis]) * np.cos(y), dims=['x', 'y'],
         coords={'x': x, 'y': y, 'x2': ('x', x**2)})
 
     if case == 0:
@@ -37,7 +31,8 @@ def get_example_data(case):
         y = np.linspace(0, 0.1, 30)
         z = np.linspace(0.1, 0.2, 10)
         return xr.DataArray(
-            np.sin(x[:, np.newaxis, np.newaxis])*np.cos(y[:, np.newaxis])*z,
+            np.sin(x[:, np.newaxis, np.newaxis]) * np.cos(
+                y[:, np.newaxis]) * z,
             dims=['x', 'y', 'z'],
             coords={'x': x, 'y': y, 'x2': ('x', x**2), 'z': z})
     elif case == 4:
@@ -57,11 +52,11 @@ def test_interpolate_1d(method, dim, case):
 
     if dim == 'y' and case == 1:
         with pytest.raises(ValueError):
-            actual = da.interpolate_at(**{dim: xdest}, method=method)
+            actual = da.interpolate_at(method=method, **{dim: xdest})
         pytest.skip('interpolation along chunked dimension is '
                     'not yet supported')
 
-    actual = da.interpolate_at(**{dim: xdest}, method=method)
+    actual = da.interpolate_at(method=method, **{dim: xdest})
 
     # scipy interpolation for the reference
     def func(obj, new_x):

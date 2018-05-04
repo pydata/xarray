@@ -3,7 +3,7 @@ from functools import partial
 
 import numpy as np
 from .computation import apply_ufunc
-from .pycompat import (OrderedDict, dask_array_type)
+from .pycompat import dask_array_type
 from .variable import broadcast_variables
 
 
@@ -16,10 +16,10 @@ def _localize(obj, index_coord):
             imin = x.to_index().get_loc(np.min(new_x), method='ffill')
             imax = x.to_index().get_loc(np.max(new_x), method='bfill')
 
-            idx = slice(np.maximum(imin-1, 0), imax+1)
+            idx = slice(np.maximum(imin - 1, 0), imax + 1)
             index_coord[dim] = (x[idx], new_x)
             obj = obj.isel(**{dim: idx})
-        except:
+        except ValueError:  # if index is not sorted.
             pass
     return obj, index_coord
 
@@ -103,8 +103,8 @@ def _interpolate_1d(obj, x, new_x, func):
 
         _assert_single_chunks(obj, [-1])
         chunks = obj.chunks[:-len(x)] + new_x[0].shape
-        drop_axis = range(obj.ndim-len(x), obj.ndim)
-        new_axis = range(obj.ndim-len(x), obj.ndim-len(x)+new_x[0].ndim)
+        drop_axis = range(obj.ndim - len(x), obj.ndim)
+        new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
         # call this function recursively
         return da.map_blocks(_interpolate_1d, obj, x, new_x, func,
                              dtype=obj.dtype, chunks=chunks,
@@ -129,8 +129,8 @@ def _interpolate_nd(obj, x, new_x, func):
 
         _assert_single_chunks(obj, range(-len(x), 0))
         chunks = obj.chunks[:-len(x)] + new_x[0].shape
-        drop_axis = range(obj.ndim-len(x), obj.ndim)
-        new_axis = range(obj.ndim-len(x), obj.ndim-len(x)+new_x[0].ndim)
+        drop_axis = range(obj.ndim - len(x), obj.ndim)
+        new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
         return da.map_blocks(_interpolate_nd, obj, x, new_x, func,
                              dtype=obj.dtype, chunks=chunks,
                              new_axis=new_axis, drop_axis=drop_axis)
@@ -141,7 +141,7 @@ def _interpolate_nd(obj, x, new_x, func):
     xi = np.stack([x1.values.ravel() for x1 in new_x], axis=-1)
     rslt = func(x, obj)(xi)
     # move back the interpolation axes to the last position
-    rslt = rslt.transpose(range(-rslt.ndim+1, 1))
+    rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
 
 

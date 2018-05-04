@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
-    resample, rolling, utils)
+    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
+    rolling, utils)
 from .. import conventions
 from .alignment import align
 from .common import DataWithCoords, ImplementsDatasetReduce
