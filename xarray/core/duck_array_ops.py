@@ -34,19 +34,24 @@ except ImportError:
 
 
 def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
-                        list_of_args=False, n_array_args=1):
+                        list_of_args=False, array_args=slice(1),
+                        requires_dask=None):
     """Create a function that dispatches to dask for dask array inputs."""
     if dask_module is not None:
         def f(*args, **kwargs):
             if list_of_args:
                 dispatch_args = args[0]
             else:
-                dispatch_args = args[:n_array_args]
+                dispatch_args = args[array_args]
             if any(isinstance(a, dask_array.Array) for a in dispatch_args):
-                module = dask_module
+                try:
+                    wrapped = getattr(dask_module, name)
+                except AttributeError as e:
+                    raise AttributeError("%s: requires dask >=%s" %
+                                         (e, requires_dask))
             else:
-                module = eager_module
-            return getattr(module, name)(*args, **kwargs)
+                wrapped = getattr(eager_module, name)
+            return wrapped(*args, ** kwargs)
     else:
         def f(data, *args, **kwargs):
             return getattr(eager_module, name)(data, *args, **kwargs)
@@ -80,9 +85,9 @@ def isnull(data):
 
 
 transpose = _dask_or_eager_func('transpose')
-_where = _dask_or_eager_func('where', n_array_args=3)
+_where = _dask_or_eager_func('where', array_args=slice(3))
 isin = _dask_or_eager_func('isin', eager_module=npcompat,
-                           dask_module=dask_array_compat, n_array_args=2)
+                           dask_module=dask_array_compat, array_args=slice(2))
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
 
@@ -92,7 +97,9 @@ _stack = _dask_or_eager_func('stack', list_of_args=True)
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
 
-tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
+tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
+einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
+                             requires_dask='0.17.3')
 
 
 def asarray(data):

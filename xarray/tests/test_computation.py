@@ -744,10 +744,14 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize('dask', [True, False])
-def test_dot(dask):
-    if not has_dask:
-        pytest.skip('test for dask.')
+@pytest.mark.parametrize('use_dask', [True, False])
+def test_dot(use_dask):
+    if use_dask:
+        if not has_dask:
+            pytest.skip('test for dask.')
+        import dask
+        if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
+            pytest.skip("needs dask.array.einsum")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -757,7 +761,7 @@ def test_dot(dask):
     da_b = xr.DataArray(b, dims=['a', 'b', 'c'],
                         coords={'a': np.linspace(0, 1, 30)})
     da_c = xr.DataArray(c, dims=['c', 'e'])
-    if dask:
+    if use_dask:
         da_a = da_a.chunk({'a': 3})
         da_b = da_b.chunk({'a': 3})
         da_c = da_c.chunk({'c': 3})
@@ -783,7 +787,7 @@ def test_dot(dask):
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
     assert isinstance(actual.data, type(da_a.variable.data))
 
-    if dask:
+    if use_dask:
         da_a = da_a.chunk({'a': 3})
         da_b = da_b.chunk({'a': 3})
         actual = xr.dot(da_a, da_b, dims=['b'])
@@ -791,10 +795,6 @@ def test_dot(dask):
         assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
         assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-        pytest.skip('dot for dask array requires rechunking for core '
-                    'dimensions.')
-
-    # following requires rechunking
     actual = xr.dot(da_a, da_b, dims=['b'])
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
@@ -830,12 +830,17 @@ def test_dot(dask):
     assert actual.dims == ('b', )
     assert (actual.data == np.einsum('ij->j ', a)).all()
 
+    # empty dim
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims='a')
+    assert actual.dims == ('b', )
+    assert (actual.data == np.zeros(actual.shape)).all()
+
     with pytest.raises(TypeError):
-        actual = xr.dot(da_a, dims='a', invalid=None)
+        xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
-        actual = xr.dot(da_a.to_dataset(name='da'), dims='a')
+        xr.dot(da_a.to_dataset(name='da'), dims='a')
     with pytest.raises(TypeError):
-        actual = xr.dot(dims='a')
+        xr.dot(dims='a')
 
 
 def test_where():

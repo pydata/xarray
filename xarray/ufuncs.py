@@ -50,7 +50,7 @@ class _UFuncDispatcher(object):
             'directly.', PendingDeprecationWarning, stacklevel=2)
 
         new_args = args
-        f = _dask_or_eager_func(self._name, n_array_args=len(args))
+        f = _dask_or_eager_func(self._name, array_args=slice(len(args)))
         if len(args) > 2 or len(args) == 0:
             raise TypeError('cannot handle %s arguments for %r' %
                             (len(args), self._name))
