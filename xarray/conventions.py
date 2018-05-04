@@ -294,12 +294,16 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                       variables.CFScaleOffsetCoder()]:
             var = coder.decode(var, name=name)
 
-    enable_future_time_unit_decoding = OPTIONS['enable_future_time_unit_decoding']
+    enable_future_time_unit_decoding = OPTIONS[
+        'enable_future_time_unit_decoding']
     if decode_times:
         if enable_future_time_unit_decoding:
             coder = times.CFDatetimeCoder()
             var = coder.decode(var, name=name)
         else:
+            warnings.warn('Decoding timedeltas been deprecated and '
+                          'will be removed in xarray v0.11.',
+                          FutureWarning, stacklevel=2)
             for coder in [times.CFTimedeltaCoder(),
                           times.CFDatetimeCoder()]:
                 var = coder.decode(var, name=name)
