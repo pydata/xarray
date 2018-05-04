@@ -9,6 +9,7 @@ import pandas as pd
 from .coding import times, strings, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
+from .core.options import OPTIONS
 from .core.pycompat import (
     OrderedDict, basestring, bytes_type, iteritems, dask_array_type,
     unicode_type)
@@ -293,10 +294,15 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
                       variables.CFScaleOffsetCoder()]:
             var = coder.decode(var, name=name)
 
+    enable_future_time_unit_decoding = OPTIONS['enable_future_time_unit_decoding']
     if decode_times:
-        for coder in [times.CFTimedeltaCoder(),
-                      times.CFDatetimeCoder()]:
+        if enable_future_time_unit_decoding:
+            coder = times.CFDatetimeCoder()
             var = coder.decode(var, name=name)
+        else:
+            for coder in [times.CFTimedeltaCoder(),
+                          times.CFDatetimeCoder()]:
+                var = coder.decode(var, name=name)
 
     dimensions, data, attributes, encoding = (
         variables.unpack_for_decoding(var))
