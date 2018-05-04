@@ -1728,7 +1728,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
                 encoding={'x': {'compression': 'gzip', 'zlib': True,
                                 'compression_opts': 6, 'complevel': 6}})
             with open_dataset(tmp_file, engine='h5netcdf') as actual:
-                assert actual.x.encoding['zlib'] == True
+                assert actual.x.encoding['zlib'] is True
                 assert actual.x.encoding['complevel'] == 6
 
         # Incompatible encodings cause a crash
