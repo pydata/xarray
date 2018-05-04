@@ -1014,15 +1014,6 @@ def dot(*arrays, **kwargs):
     output_core_dims = [tuple(d for d in all_dims if d not in
                               dims + broadcast_dims)]
 
-    # we use tensordot if possible, because it is more efficient for dask
-    if len(broadcast_dims) == 0 and len(arrays) == 2:
-        axes = [[arr.get_axis_num(d) for d in arr.dims if d in dims]
-                for arr in arrays]
-        return apply_ufunc(duck_array_ops.tensordot, *arrays, dask='allowed',
-                           input_core_dims=input_core_dims,
-                           output_core_dims=output_core_dims,
-                           kwargs={'axes': axes})
-
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
     subscripts_list = ['...' + ''.join([dim_map[d] for d in ds]) for ds
@@ -1030,16 +1021,13 @@ def dot(*arrays, **kwargs):
     subscripts = ','.join(subscripts_list)
     subscripts += '->...' + ''.join([dim_map[d] for d in output_core_dims[0]])
 
-    # dtype estimation is necessary for dask='parallelized'
-    out_dtype = dtypes.result_type(*arrays)
-
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
-    # to construct a partial function for parallelized computation.
-    func = functools.partial(np.einsum, subscripts)
+    # to construct a partial function for apply_ufunc to work.
+    func = functools.partial(duck_array_ops.einsum, subscripts)
     result = apply_ufunc(func, *arrays,
                          input_core_dims=input_core_dims,
                          output_core_dims=output_core_dims,
-                         dask='parallelized', output_dtypes=[out_dtype])
+                         dask='allowed')
     return result.transpose(*[d for d in all_dims if d in result.dims])
 
 

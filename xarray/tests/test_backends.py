@@ -1371,24 +1371,6 @@ class BaseZarrTest(CFEncodedDataTest):
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
 
-    # TODO: implement zarr object encoding and make these tests pass
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_multiindex_not_implemented(self):
-        super(CFEncodedDataTest, self).test_multiindex_not_implemented()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_bytes_with_fill_value(self):
-        super(CFEncodedDataTest, self).test_roundtrip_bytes_with_fill_value()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_object_dtype(self):
-        super(CFEncodedDataTest, self).test_roundtrip_object_dtype()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_string_encoded_characters(self):
-        super(CFEncodedDataTest,
-              self).test_roundtrip_string_encoded_characters()
-
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
@@ -2005,6 +1987,9 @@ class DaskTest(TestCase, DatasetIOTestCases):
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
+
+        with raises_regex(ValueError, 'wild-card'):
+            open_mfdataset('http://some/remote/uri', autoclose=self.autoclose)
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):

@@ -41,10 +41,20 @@ Enhancements
   NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
   This allows using any compression plugin installed in hdf5, e.g. LZF
   (:issue:`1536`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~xarray.dot` on dask-backed data will now call :func:`dask.array.einsum`.
+  This greatly boosts speed and allows chunking on the core dims.
+  The function now requires dask >= 0.17.3 to work on dask-backed data
+  (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
+  non-dimensional coordinates of the DataArray are now dropped.
+  (:issue:`2068`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Better error handling in ``open_mfdataset`` (:issue:`2077`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 
