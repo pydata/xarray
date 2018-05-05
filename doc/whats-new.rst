@@ -40,6 +40,19 @@ Enhancements
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
   (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- Deprecate the automatic decoding of time data to timedelta64 (:issue:`1621`).
+
+  .. ipython:: python
+
+    In [1]: wave_periods = xr.Variable(['t'], [0, 1, 2])
+    In [2]: wave_periods.attrs.update({'units': 'seconds'})
+    In [3]: current_behavior = xr.conventions.decode_cf_variable('t', wave_periods)
+    In [4]: print(current_behavior.dtype)
+            timedelta64[ns]
+    In [5]: with xr.set_options(enable_future_time_unit_decoding=True):
+       ...:     new_behavior = xr.conventions.decode_cf_variable('t', wave_periods)
+    In [6]: print(new_behavior.dtype)
+            int64
 
 Bug fixes
 ~~~~~~~~~
