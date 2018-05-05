@@ -335,6 +335,10 @@ like ``'days'`` for ``timedelta64`` data. ``calendar`` should be one of the cale
 supported by netCDF4-python: 'standard', 'gregorian', 'proleptic_gregorian' 'noleap',
 '365_day', '360_day', 'julian', 'all_leap', '366_day'.
 
+The automatic decoding of untis like ``'days'`` to ``timedelta64`` is deprecated and
+will be removed in xarray version 0.11. The default behavior will keep the same numeric
+type of the original data instead of converting to ``timedelta64``.
+
 By default, xarray uses the 'proleptic_gregorian' calendar and units of the smallest time
 difference between values, with a reference time of the first time value.
 
