@@ -682,9 +682,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         warnings.warn("\n.resample() has been modified to defer "
                       "calculations. Instead of passing 'dim' and "
                       "how=\"{how}\", instead consider using "
-                      ".resample({dim}=\"{freq}\").{how}() ".format(
-                      dim=dim, freq=freq, how=how),
-                      "or .resample({dim}=\"{freq}\").{how}(dim={dim})".format(
+                      ".resample({dim}=\"{freq}\").{how}().mean('{dim}') ".format(
                       dim=dim, freq=freq, how=how),
                       DeprecationWarning, stacklevel=3)
 
