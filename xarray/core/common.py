@@ -597,8 +597,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             object will be returned without attributes.
         **indexer : {dim: freq}
             Dictionary with a key indicating the dimension name to resample
-            over and a value corresponding to the resampling frequency. e.g.
-            time="M"
+            over and a value corresponding to the resampling frequency.
 
         Returns
         -------
@@ -682,7 +681,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         warnings.warn("\n.resample() has been modified to defer "
                       "calculations. Instead of passing 'dim' and "
                       "how=\"{how}\", instead consider using "
-                      ".resample({dim}=\"{freq}\").{how}().mean('{dim}') ".format(
+                      ".resample({dim}=\"{freq}\").{how}('{dim}') ".format(
                       dim=dim, freq=freq, how=how),
                       DeprecationWarning, stacklevel=3)
 
