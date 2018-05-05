@@ -632,27 +632,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
           
-        Resample time in an N-dimensional array:
-        
-        >>> da = xr.DataArray(np.random.rand(2,2),
-        ...                   coords=[pd.date_range('1/1/2000', '1/2/2000', freq='D'),
-        ...                           np.linspace(0,1,num=2)],
-        ...                   dims=['time', 'latitude'])
-        >>> da
-        <xarray.DataArray (time: 2, latitude: 2)>
-        array([[0.229808, 0.780577],
-               [0.725998, 0.666351]])
-        Coordinates:
-          * time      (time) datetime64[ns] 2000-01-01 2000-01-02
-          * latitude  (latitude) float64 0.0 1.0
-        >>> da.resample(freq='M', dim='time', how='mean')
-        <xarray.DataArray (time: 1, latitude: 2)>
-        array([[0.477903, 0.723464]])
-        Coordinates:
-          * time      (time) datetime64[ns] 2000-01-31
-          * latitude  (latitude) float64 0.0 1.0
-                
-
         References
         ----------
 
@@ -702,10 +681,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         warnings.warn("\n.resample() has been modified to defer "
                       "calculations. Instead of passing 'dim' and "
-                      "'how=\"{how}\", instead consider using "
+                      "how=\"{how}\", instead consider using "
                       ".resample({dim}=\"{freq}\").{how}() ".format(
-                          dim=dim, freq=freq, how=how
-                      ), DeprecationWarning, stacklevel=3)
+                      dim=dim, freq=freq, how=how),
+                      "or .resample({dim}=\"{freq}\").{how}(dim={dim})".format(
+                      dim=dim, freq=freq, how=how),
+                      DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):
             dim = self[dim]
