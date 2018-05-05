@@ -41,8 +41,8 @@ converted automatically when used as arguments in xarray objects:
     import datetime
     xr.Dataset({'time': datetime.datetime(2000, 1, 1)})
 
-When reading or writing netCDF files, xarray automatically decodes datetime and
-timedelta arrays using `CF conventions`_ (that is, by using a ``units``
+When reading or writing netCDF files, xarray automatically decodes datetime
+arrays using `CF conventions`_ (that is, by using a ``units``
 attribute like ``'days since 2000-01-01'``).
 
 .. _CF conventions: http://cfconventions.org
