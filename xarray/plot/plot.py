@@ -105,8 +105,8 @@ def _line_facetgrid(darray, row=None, col=None, hue=None,
     return g.map_dataarray_line(hue=hue, **kwargs)
 
 
-def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None, rtol=0.01,
-         subplot_kws=None, **kwargs):
+def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
+         rtol=0.01, subplot_kws=None, **kwargs):
     """
     Default plot of DataArray using matplotlib.pyplot.
 
@@ -129,7 +129,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None, rtol=0.01
     col : string, optional
         If passed, make column faceted plots on this dimension name
     hue : string, optional
-        If passed, make faceted line plots with hue corresponding to this dimension name 
+        If passed, make faceted line plots with hue corresponding to this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes, optional

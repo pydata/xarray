@@ -271,7 +271,8 @@ class FacetGrid(object):
 
         Parameters
         ----------
-        TODO: write this
+        x, y, hue: string
+            dimension names for the axes and hues of each facet
 
         Returns
         ------- 
@@ -280,17 +281,20 @@ class FacetGrid(object):
         """
         from .plot import line, _infer_line_data
 
-        add_legend=kwargs.pop('add_legend',True)
-        kwargs['add_legend']=False
+        add_legend = kwargs.pop('add_legend', True)
+        kwargs['add_legend'] = False
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = line(subset, x=x, y=y, hue=hue, ax=ax, _labels=False, **kwargs)
+                mappable = line(subset, x=x, y=y, hue=hue,
+                                ax=ax, _labels=False,
+                                **kwargs)
                 self._mappables.append(mappable)
-        _, _, xlabel, ylabel, huelabel = _infer_line_data(darray=self.data.loc[self.name_dicts.flat[0]],
-                                                          x=x, y=y,hue=hue)
+        _, _, xlabel, ylabel, huelabel = _infer_line_data(
+                                darray=self.data.loc[self.name_dicts.flat[0]],
+                                x=x, y=y, hue=hue)
 
         self._finalize_grid(xlabel, ylabel)
 
