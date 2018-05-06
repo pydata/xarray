@@ -129,7 +129,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     col : string, optional
         If passed, make column faceted plots on this dimension name
     hue : string, optional
-        If passed, make faceted line plots with hue corresponding to this dimension name
+        If passed, make faceted line plots with hue on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes, optional

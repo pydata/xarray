@@ -275,7 +275,7 @@ class FacetGrid(object):
             dimension names for the axes and hues of each facet
 
         Returns
-        ------- 
+        -------
         self : FacetGrid object
 
         """
@@ -293,8 +293,8 @@ class FacetGrid(object):
                                 **kwargs)
                 self._mappables.append(mappable)
         _, _, xlabel, ylabel, huelabel = _infer_line_data(
-                                darray=self.data.loc[self.name_dicts.flat[0]],
-                                x=x, y=y, hue=hue)
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=x, y=y, hue=hue)
 
         self._finalize_grid(xlabel, ylabel)
 
