@@ -10,7 +10,7 @@ from . import has_dask, has_scipy
 try:
     import scipy
 except ImportError:
-    pytest.skipif('scipy is not installed.')
+    pytest.skip('scipy is not installed.')
 
 
 def get_example_data(case):
