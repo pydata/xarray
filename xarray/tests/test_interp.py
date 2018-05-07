@@ -5,12 +5,12 @@ import pytest
 
 import xarray as xr
 from xarray.tests import assert_allclose, assert_equal, requires_scipy
-from . import has_dask
+from . import has_dask, has_scipy
 
 try:
     import scipy
 except ImportError:
-    pass
+    pytest.skipif('scipy is not installed.')
 
 
 def get_example_data(case):
@@ -39,7 +39,6 @@ def get_example_data(case):
         return get_example_data(3).chunk({'z': 5})
 
 
-@requires_scipy
 @pytest.mark.parametrize('method', ['linear', 'cubic'])
 @pytest.mark.parametrize('dim', ['x', 'y'])
 @pytest.mark.parametrize('case', [0, 1])
@@ -73,7 +72,6 @@ def test_interpolate_1d(method, dim, case):
     assert_equal(actual, expected)
 
 
-@requires_scipy
 @pytest.mark.parametrize('method', ['cubic', 'zero'])
 def test_interpolate_1d_methods(method):
     da = get_example_data(0)
@@ -93,7 +91,6 @@ def test_interpolate_1d_methods(method):
     assert_equal(actual, expected)
 
 
-@requires_scipy
 @pytest.mark.parametrize('use_dask', [False, True])
 def test_interpolate_vectorize(use_dask):
     if not has_dask and use_dask:
@@ -181,7 +178,6 @@ def test_interpolate_nd(case):
     assert_allclose(actual, expected.transpose('z', 'y'))
 
 
-@requires_scipy
 @pytest.mark.parametrize('method', ['linear'])
 @pytest.mark.parametrize('case', [0, 1])
 def test_interpolate_scalar(method, case):
@@ -204,7 +200,6 @@ def test_interpolate_scalar(method, case):
     assert_equal(actual, expected)
 
 
-@requires_scipy
 @pytest.mark.parametrize('method', ['linear'])
 @pytest.mark.parametrize('case', [3, 4])
 def test_interpolate_nd_scalar(method, case):
@@ -228,7 +223,6 @@ def test_interpolate_nd_scalar(method, case):
     assert_equal(actual, expected)
 
 
-@requires_scipy
 def test_errors():
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
     actual = da.interp(x=[0.5, 1.5])
