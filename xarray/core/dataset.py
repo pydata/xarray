@@ -1807,7 +1807,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Note
         ----
-        scipy is required. If NaN is in the array, ValueError will be raised.
+        scipy is required.
 
         See Also
         --------

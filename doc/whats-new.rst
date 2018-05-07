@@ -37,6 +37,12 @@ Enhancements
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 
+- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
+  methods are newly added.
+  See :ref:`interpolating values with interp` for the detail.
+  (:issue:`2079`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Bug fixes
 ~~~~~~~~~
 

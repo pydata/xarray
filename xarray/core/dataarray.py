@@ -904,7 +904,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Note
         ----
-        scipy is required. If NaN is in the array, ValueError will be raised.
+        scipy is required.
         """
         ds = self._to_temp_dataset().interp(
             method=method, kwargs=kwargs, **coords)

@@ -400,8 +400,6 @@ def interp(obj, indexes_coords, method, **kwargs):
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
-    fill_value:
-        fill value for extrapolation
     kwargs:
         keyword arguments to be passed to scipy.interpolate
 
@@ -480,7 +478,7 @@ def interp_func(obj, x, new_x, method, kwargs):
     if isinstance(obj, dask_array_type):
         import dask.array as da
 
-        _assert_single_chunk(obj, range(obj.ndim-len(x), obj.ndim))
+        _assert_single_chunk(obj, range(obj.ndim - len(x), obj.ndim))
         chunks = obj.chunks[:-len(x)] + new_x[0].shape
         drop_axis = range(obj.ndim - len(x), obj.ndim)
         new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
