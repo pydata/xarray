@@ -157,10 +157,11 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
                  'See the package `Seaborn` for more options.')
 
     if ndims in [1, 2]:
-        kwargs['row'] = row
-        kwargs['col'] = col
-        kwargs['col_wrap'] = col_wrap
-        kwargs['subplot_kws'] = subplot_kws
+        if row or col:
+            kwargs['row'] = row
+            kwargs['col'] = col
+            kwargs['col_wrap'] = col_wrap
+            kwargs['subplot_kws'] = subplot_kws
         if ndims == 1:
             plotfunc = line
             kwargs['hue'] = hue
@@ -265,8 +266,8 @@ def line(darray, *args, **kwargs):
     """
 
     # Handle facetgrids first
-    row = kwargs.get('row', None)
-    col = kwargs.get('col', None)
+    row = kwargs.pop('row', None)
+    col = kwargs.pop('col', None)
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))

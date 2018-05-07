@@ -267,7 +267,7 @@ class FacetGrid(object):
 
     def map_dataarray_line(self, x=None, y=None, hue=None, **kwargs):
         """
-        Apply a line plot to a 2d facet's subset of the data.
+        Apply a line plot to a 2d facet subset of the data.
 
         Parameters
         ----------
@@ -298,7 +298,7 @@ class FacetGrid(object):
 
         self._finalize_grid(xlabel, ylabel)
 
-        if add_legend:
+        if add_legend and huelabel:
             self.fig.legend(handles=self._mappables[-1],
                             labels=list(self.data.coords[huelabel].values),
                             title=huelabel,
