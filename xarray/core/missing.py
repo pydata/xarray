@@ -294,19 +294,26 @@ def _get_interpolator(method, **kwargs):
     valid_methods = interp1d_methods + ['barycentric', 'krog', 'pchip',
                                         'spline', 'akima']
 
+    has_scipy = True
     try:
         from scipy import interpolate
     except ImportError:
-        # scipy.interpolate should prior
-        if (method == 'linear' and not
-                kwargs.get('fill_value', None) == 'extrapolate'):
-            kwargs.update(method=method)
-            return NumpyInterpolator, kwargs
+        has_scipy = False
 
-        raise ImportError(
-            'Interpolation with method `%s` requires scipy' % method)
+    # prioritize scipy.interpolate
+    if (method == 'linear' and not
+            kwargs.get('fill_value', None) == 'extrapolate'):
+        kwargs.update(method=method)
+        if has_scipy:
+            interp_class = ScipyInterpolator
+        else:
+            interp_class = NumpyInterpolator
 
-    if method in valid_methods:
+    elif method in valid_methods:
+        if not has_scipy:
+            raise ImportError(
+                'Interpolation with method `%s` requires scipy' % method)
+
         if method in interp1d_methods:
             kwargs.update(method=method)
             interp_class = ScipyInterpolator
