@@ -308,6 +308,25 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         assigned : same type as caller
             A new object with the new coordinates in addition to the existing
             data.
+            
+        Examples
+        --------
+        
+        Convert longitude coordinates from 0-359 to -180-179:
+        
+        >>> da = xr.DataArray(np.random.rand(4),
+        ...                   coords=[np.array([358, 359, 0, 1])],
+        ...                   dims='lon')
+        >>> da
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 358 359 0 1
+        >>> da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 -2 -1 0 1
 
         Notes
         -----
