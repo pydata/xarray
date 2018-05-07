@@ -152,7 +152,6 @@ def test_interpolate_vectorize(use_dask):
     assert_allclose(actual, expected.transpose('y', 'z', 'w'))
 
 
-@requires_scipy
 @pytest.mark.parametrize('case', [3, 4])
 def test_interpolate_nd(case):
     if not has_scipy:
