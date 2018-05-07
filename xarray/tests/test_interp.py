@@ -10,7 +10,7 @@ from . import has_dask, has_scipy
 try:
     import scipy
 except ImportError:
-    pytest.skip('scipy is not installed.')
+    pass
 
 
 def get_example_data(case):
@@ -43,6 +43,9 @@ def get_example_data(case):
 @pytest.mark.parametrize('dim', ['x', 'y'])
 @pytest.mark.parametrize('case', [0, 1])
 def test_interpolate_1d(method, dim, case):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     if not has_dask and case in [1]:
         pytest.skip('dask is not installed in the environment.')
 
@@ -74,6 +77,9 @@ def test_interpolate_1d(method, dim, case):
 
 @pytest.mark.parametrize('method', ['cubic', 'zero'])
 def test_interpolate_1d_methods(method):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     da = get_example_data(0)
     dim = 'x'
     xdest = np.linspace(0.0, 0.9, 80)
@@ -93,6 +99,9 @@ def test_interpolate_1d_methods(method):
 
 @pytest.mark.parametrize('use_dask', [False, True])
 def test_interpolate_vectorize(use_dask):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     if not has_dask and use_dask:
         pytest.skip('dask is not installed in the environment.')
 
@@ -146,6 +155,9 @@ def test_interpolate_vectorize(use_dask):
 @requires_scipy
 @pytest.mark.parametrize('case', [3, 4])
 def test_interpolate_nd(case):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     if not has_dask and case == 4:
         pytest.skip('dask is not installed in the environment.')
 
@@ -181,6 +193,9 @@ def test_interpolate_nd(case):
 @pytest.mark.parametrize('method', ['linear'])
 @pytest.mark.parametrize('case', [0, 1])
 def test_interpolate_scalar(method, case):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     if not has_dask and case in [1]:
         pytest.skip('dask is not installed in the environment.')
 
@@ -203,6 +218,9 @@ def test_interpolate_scalar(method, case):
 @pytest.mark.parametrize('method', ['linear'])
 @pytest.mark.parametrize('case', [3, 4])
 def test_interpolate_nd_scalar(method, case):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     if not has_dask and case in [4]:
         pytest.skip('dask is not installed in the environment.')
 
@@ -223,6 +241,7 @@ def test_interpolate_nd_scalar(method, case):
     assert_equal(actual, expected)
 
 
+@requires_scipy
 def test_errors():
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
     actual = da.interp(x=[0.5, 1.5])
