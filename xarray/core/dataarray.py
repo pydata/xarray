@@ -882,8 +882,7 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
 
-    def interpolate_at(self, method='linear', fill_value=np.nan, kwargs={},
-                       **coords):
+    def interp(self, method='linear', kwargs={}, **coords):
         """ Multidimensional interpolation of variables.
 
         Parameters
@@ -907,8 +906,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ----
         scipy is required. If NaN is in the array, ValueError will be raised.
         """
-        ds = self._to_temp_dataset().interpolate_at(
-            method=method, fill_value=fill_value, kwargs=kwargs, **coords)
+        ds = self._to_temp_dataset().interp(
+            method=method, kwargs=kwargs, **coords)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):

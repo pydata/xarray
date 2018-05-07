@@ -11,6 +11,8 @@ from .computation import apply_ufunc
 from .npcompat import flip
 from .pycompat import iteritems
 from .utils import is_scalar
+from .variable import broadcast_variables
+from .duck_array_ops import dask_array_type
 
 
 class BaseInterpolator(object):
@@ -203,7 +205,8 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     # method
     index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate,
                                    **kwargs)
-    interpolator = _get_interpolator(method, **kwargs)
+    interp_class, kwargs = _get_interpolator(method, **kwargs)
+    interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
     arr = apply_ufunc(interpolator, index, self,
                       input_core_dims=[[dim], [dim]],
@@ -219,7 +222,7 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     return arr
 
 
-def wrap_interpolator(interpolator, x, y, **kwargs):
+def func_interpolate_na(interpolator, x, y, **kwargs):
     '''helper function to apply interpolation along 1 dimension'''
     # it would be nice if this wasn't necessary, works around:
     # "ValueError: assignment destination is read-only" in assignment below
@@ -284,23 +287,26 @@ def bfill(arr, dim=None, limit=None):
 def _get_interpolator(method, **kwargs):
     '''helper function to select the appropriate interpolator class
 
-    returns a partial of wrap_interpolator
+    returns interpolator class and keyword arguments for the class
     '''
     interp1d_methods = ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
                         'cubic', 'polynomial']
     valid_methods = interp1d_methods + ['barycentric', 'krog', 'pchip',
                                         'spline', 'akima']
 
-    if (method == 'linear' and not
-            kwargs.get('fill_value', None) == 'extrapolate'):
-        kwargs.update(method=method)
-        interp_class = NumpyInterpolator
-    elif method in valid_methods:
-        try:
-            from scipy import interpolate
-        except ImportError:
-            raise ImportError(
-                'Interpolation with method `%s` requires scipy' % method)
+    try:
+        from scipy import interpolate
+    except ImportError:
+        # scipy.interpolate should prior
+        if (method == 'linear' and not
+                kwargs.get('fill_value', None) == 'extrapolate'):
+            kwargs.update(method=method)
+            return NumpyInterpolator, kwargs
+
+        raise ImportError(
+            'Interpolation with method `%s` requires scipy' % method)
+
+    if method in valid_methods:
         if method in interp1d_methods:
             kwargs.update(method=method)
             interp_class = ScipyInterpolator
@@ -312,6 +318,8 @@ def _get_interpolator(method, **kwargs):
             interp_class = interpolate.PchipInterpolator
         elif method == 'spline':
             kwargs.update(method=method)
+            if 'fill_value' in kwargs:
+                del kwargs['fill_value']
             interp_class = SplineInterpolator
         elif method == 'akima':
             interp_class = interpolate.Akima1DInterpolator
@@ -320,7 +328,29 @@ def _get_interpolator(method, **kwargs):
     else:
         raise ValueError('%s is not a valid interpolator' % method)
 
-    return partial(wrap_interpolator, interp_class, **kwargs)
+    return interp_class, kwargs
+
+
+def _get_interpolator_nd(method, **kwargs):
+    '''helper function to select the appropriate interpolator class
+
+    returns interpolator class and keyword arguments for the class
+    '''
+    valid_methods = ['linear', 'nearest']
+
+    try:
+        from scipy import interpolate
+    except ImportError:
+        raise ImportError(
+            'Interpolation with method `%s` requires scipy' % method)
+
+    if method in valid_methods:
+        kwargs.update(method=method)
+        interp_class = interpolate.interpn
+    else:
+        raise ValueError('%s is not a valid interpolator' % method)
+
+    return interp_class, kwargs
 
 
 def _get_valid_fill_mask(arr, dim, limit):
@@ -332,3 +362,157 @@ def _get_valid_fill_mask(arr, dim, limit):
     return (arr.isnull().rolling(min_periods=1, **kw)
             .construct(new_dim, fill_value=False)
             .sum(new_dim, skipna=False)) <= limit
+
+
+def _assert_single_chunk(obj, axes):
+    for axis in axes:
+        if len(obj.chunks[axis]) > 1 or obj.chunks[axis][0] < obj.shape[axis]:
+            raise ValueError('Chunk along the dimension to be interpolated '
+                             '({}) is not allowed.'.format(axis))
+
+
+def _localize(obj, indexes_coords):
+    """ Speed up for linear and nearest neighbor method.
+    Only consider a subspace that is needed for the interpolation
+    """
+    for dim, [x, new_x] in indexes_coords.items():
+        try:
+            imin = x.to_index().get_loc(np.min(new_x.values), method='nearest')
+            imax = x.to_index().get_loc(np.max(new_x.values), method='nearest')
+
+            idx = slice(np.maximum(imin - 2, 0), imax + 2)
+            indexes_coords[dim] = (x[idx], new_x)
+            obj = obj.isel(**{dim: idx})
+        except ValueError:  # if index is not sorted.
+            pass
+    return obj, indexes_coords
+
+
+def interp(obj, indexes_coords, method, **kwargs):
+    """ Make an interpolation of Variable
+
+    Parameters
+    ----------
+    obj: Variable
+    index_coord:
+        mapping from dimension name to a pair of original and new coordinates.
+    method: string
+        One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
+        'cubic'}. For multidimensional interpolation, only
+        {'linear', 'nearest'} can be used.
+    fill_value:
+        fill value for extrapolation
+    kwargs:
+        keyword arguments to be passed to scipy.interpolate
+
+    Returns
+    -------
+    Interpolated Variable
+    """
+    if len(indexes_coords) == 0:
+        return obj
+
+    # simple speed up for the local interpolation
+    if method in ['linear', 'nearest']:
+        obj, indexes_coords = _localize(obj, indexes_coords)
+
+    if method not in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                      'cubic', 'polynomial']:
+        raise ValueError('{} is not a valid method.'.format(method))
+
+    # default behavior
+    kwargs['bounds_error'] = kwargs.get('bounds_error', False)
+
+    # target dimensions
+    dims = list(indexes_coords)
+    x = [indexes_coords[d][0] for d in dims]
+    new_x = [indexes_coords[d][1] for d in dims]
+    destination = broadcast_variables(*new_x)
+
+    rslt = apply_ufunc(interp_func, obj,
+                       input_core_dims=[dims],
+                       output_core_dims=[destination[0].dims],
+                       output_dtypes=[obj.dtype], dask='allowed',
+                       kwargs={'x': x, 'new_x': destination, 'method': method,
+                               'kwargs': kwargs},
+                       keep_attrs=True)
+
+    if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
+        return rslt.transpose(*obj.dims)
+    return rslt
+
+
+def interp_func(obj, x, new_x, method, kwargs):
+    """
+    multi-dimensional interpolation for array-like.
+
+    Parameters
+    ----------
+    obj: np.ndarray or dask.array.Array
+        Array to be interpolated. The final dimension is interpolated.
+    x: a list of 1d array.
+        Original coordinates. Should not contain NaN.
+    new_x: 1d array
+        Original coordinates. Should not contain NaN.
+    method: string
+        {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
+        1-dimensional itnterpolation.
+        {'linear', 'nearest'} for multidimensional interpolation
+    kwargs:
+        Optional keyword arguments to be passed to scipy.interpolator
+
+    Returns
+    -------
+    interpolated: array
+        Interpolated array
+
+    Note
+    ----
+    This requiers scipy installed.
+
+    See Also
+    --------
+    scipy.interpolate.interp1d
+    """
+    if len(x) == 0:
+        return obj
+
+    if isinstance(obj, dask_array_type):
+        import dask.array as da
+
+        _assert_single_chunk(obj, range(obj.ndim-len(x), obj.ndim))
+        chunks = obj.chunks[:-len(x)] + new_x[0].shape
+        drop_axis = range(obj.ndim - len(x), obj.ndim)
+        new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
+        # call this function recursively
+        return da.map_blocks(interp_func, obj, x, new_x, method, kwargs,
+                             dtype=obj.dtype, chunks=chunks,
+                             new_axis=new_axis, drop_axis=drop_axis)
+    if len(x) == 1:
+        func, kwargs = _get_interpolator(method, **kwargs)
+        return _interp1d(obj, x, new_x, func, kwargs)
+
+    func, kwargs = _get_interpolator_nd(method, **kwargs)
+    return _interpnd(obj, x, new_x, func, kwargs)
+
+
+def _interp1d(obj, x, new_x, func, kwargs):
+    # x, new_x are tuples of size 1.
+    x, new_x = x[0], new_x[0]
+    rslt = func(x, obj, **kwargs)(np.ravel(new_x))
+    if new_x.ndim > 1:
+        return rslt.reshape(obj.shape[:-1] + new_x.shape)
+    if new_x.ndim == 0:
+        return rslt[..., -1]
+    return rslt
+
+
+def _interpnd(obj, x, new_x, func, kwargs):
+    # move the interpolation axes to the start position
+    obj = obj.transpose(range(-len(x), obj.ndim - len(x)))
+    # stack new_x to 1 vector, with reshape
+    xi = np.stack([x1.values.ravel() for x1 in new_x], axis=-1)
+    rslt = func(x, obj, xi, **kwargs)
+    # move back the interpolation axes to the last position
+    rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
+    return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)

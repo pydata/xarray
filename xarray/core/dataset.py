@@ -1786,8 +1786,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def interpolate_at(self, method='linear', fill_value=np.nan, kwargs={},
-                       **coords):
+    def interp(self, method='linear', kwargs={}, **coords):
         """ Multidimensional interpolation of Dataset.
 
         Parameters
@@ -1814,66 +1813,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.RegularGridInterpolator
-
-        Examples
-        --------
-        >>> da = xr.DataArray([0, 0.1, 0.2, 0.1], dims='x',
-        >>>                   coords={'x': [0, 1, 2, 3]})
-        >>>
-        >>> da.interpolate_at(x=[0.5, 1.5])  # simple linear interpolation
-        <xarray.DataArray (x: 2)>
-        array([0.05, 0.15])
-        Coordinates:
-          * x        (x) float64 0.5 1.5
-        >>>
-        >>> # with cubic spline interpolation
-        ... da.interpolate_at(x=[0.5, 1.5], method='cubic')
-        <xarray.DataArray (x: 2)>
-        array([0.0375, 0.1625])
-        Coordinates:
-          * x        (x) float64 0.5 1.5
-        >>>
-        >>> # interpolation at one single position
-        ... da.interpolate_at(x=0.5)
-        <xarray.DataArray ()>
-        array(0.05)
-        Coordinates:
-            x        float64 0.5
-        >>>
-        >>> # interpolation with broadcasting
-        ... da.interpolate_at(x=xr.DataArray([[0.5, 1.0], [1.5, 2.0]],
-        ...                   dims=['y', 'z']))
-        <xarray.DataArray (y: 2, z: 2)>
-        array([[0.05, 0.1 ],
-               [0.15, 0.2 ]])
-        Coordinates:
-            x        (y, z) float64 0.5 1.0 1.5 2.0
-        Dimensions without coordinates: y, z
-        >>>
-        >>> da = xr.DataArray([[0, 0.1, 0.2], [1.0, 1.1, 1.2]],
-        ...                   dims=['x', 'y'],
-        ...                   coords={'x': [0, 1], 'y': [0, 10, 20]})
-        >>>
-        >>> # multidimensional interpolation
-        ... da.interpolate_at(x=[0.5, 1.5], y=[5, 15])
-        <xarray.DataArray (x: 2, y: 2)>
-        array([[0.55, 0.65],
-               [ nan,  nan]])
-        Coordinates:
-          * x        (x) float64 0.5 1.5
-          * y        (y) int64 5 15
-        >>>
-        >>> # multidimensional interpolation with broadcasting
-        ... da.interpolate_at(x=xr.DataArray([0.5, 1.5], dims='z'),
-        ...                   y=xr.DataArray([5, 15], dims='z'))
-        <xarray.DataArray (z: 2)>
-        array([0.55,  nan])
-        Coordinates:
-            x        (z) float64 0.5 1.5
-            y        (z) int64 5 15
-        Dimensions without coordinates: z
         """
-        from . import interp
+        from . import missing
 
         indexers_list = self._validate_indexers(coords)
 
@@ -1882,13 +1823,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             var_indexers = {k: (self._variables[k], v) for k, v
                             in indexers_list if k in var.dims}
             if name not in [k for k, v in indexers_list]:
-                if duck_array_ops.count(var.data) != var.size:
-                    raise ValueError(
-                        'intarpolate_at can not be used for an array with '
-                        'nan. {} has {} nans.'.format(
-                            name, var.count() - var.size))
-                variables[name] = interp.interpolate(
-                    var, var_indexers, method, fill_value, kwargs)
+                variables[name] = missing.interp(
+                    var, var_indexers, method, **kwargs)
 
         coord_names = set(variables).intersection(self._coord_names)
         selected = self._replace_vars_and_dims(variables,
