@@ -179,13 +179,13 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         # If both styles are used together, h5py takes precedence
         # If set_encoding=True, raise ValueError in case of mismatch
         if encoding.pop('zlib', False):
-            if check_encoding and encoding.get('compression') \
-                    not in (None, 'gzip'):
+            if (check_encoding and encoding.get('compression')
+                    not in (None, 'gzip')):
                 raise ValueError("'zlib' and 'compression' encodings mismatch")
             encoding.setdefault('compression', 'gzip')
 
-        if check_encoding and encoding.get('complevel') not in \
-                (None, encoding.get('compression_opts')):
+        if (check_encoding and encoding.get('complevel') not in
+                (None, encoding.get('compression_opts'))):
             raise ValueError("'complevel' and 'compression_opts' encodings "
                              "mismatch")
         complevel = encoding.pop('complevel', 0)
