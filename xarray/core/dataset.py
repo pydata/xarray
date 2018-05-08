@@ -1330,9 +1330,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Only coordinate with a name different from any of self.variables will
         be attached.
-
-        If remove_dimensional_coord is True, the dimensional coordinate of
-        indexers will be removed.
         """
         from .dataarray import DataArray
 

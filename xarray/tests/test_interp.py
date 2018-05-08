@@ -261,7 +261,7 @@ def test_dataset():
     interpolated = ds.interp(dim2=new_dim2)
 
     assert_allclose(interpolated['var1'], ds['var1'].interp(dim2=new_dim2))
-    
+
     # make sure modifying interpolated does not affect the original dataset
     interpolated['var1'][:, 1] = 1.0
     interpolated['var3'][:, 1] = 1.0
