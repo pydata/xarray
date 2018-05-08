@@ -1,10 +1,10 @@
-from __future__ import absolute_import, division, print_function
+assert_allclosefrom __future__ import absolute_import, division, print_function
 
 import numpy as np
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_equal, requires_scipy
+from xarray.tests import assert_allclose, requires_scipy
 from . import has_dask, has_scipy
 
 try:
@@ -72,7 +72,7 @@ def test_interpolate_1d(method, dim, case):
         coords = {'x': da['x'], 'y': xdest, 'x2': da['x2']}
 
     expected = xr.DataArray(func(da, xdest), dims=['x', 'y'], coords=coords)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize('method', ['cubic', 'zero'])
@@ -94,7 +94,7 @@ def test_interpolate_1d_methods(method):
 
     coords = {'x': xdest, 'y': da['y'], 'x2': ('x', func(da['x2'], xdest))}
     expected = xr.DataArray(func(da, xdest), dims=['x', 'y'], coords=coords)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize('use_dask', [False, True])
@@ -132,7 +132,7 @@ def test_interpolate_vectorize(use_dask):
                                     'y': da['y'],
                                     'x': ('z', xdest.values),
                                     'x2': ('z', func(da['x2'], 'x', xdest))})
-    assert_equal(actual, expected.transpose('y', 'z'))
+    assert_allclose(actual, expected.transpose('y', 'z'))
 
     # xdest is 2d
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30).reshape(6, 5),
@@ -211,7 +211,7 @@ def test_interpolate_scalar(method, case):
 
     coords = {'x': xdest, 'y': da['y'], 'x2': func(da['x2'], xdest)}
     expected = xr.DataArray(func(da, xdest), dims=['y'], coords=coords)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize('method', ['linear'])
@@ -237,7 +237,7 @@ def test_interpolate_nd_scalar(method, case):
     coords = {'x': xdest, 'y': ydest, 'x2': da['x2'].interp(x=xdest),
               'z': da['z']}
     expected = xr.DataArray(expected_data[0], dims=['z'], coords=coords)
-    assert_equal(actual, expected)
+    assert_allclose(actual, expected)
 
 
 @requires_scipy
