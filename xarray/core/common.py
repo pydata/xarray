@@ -594,12 +594,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        freq : str, pandas Offset Alias
-            Frequency for which to resample to.
-        dim : str, 
-            Name of dimension to resample.
-        how : str, optional
-            Method of resampling e.g. mean.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
