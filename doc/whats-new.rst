@@ -36,6 +36,11 @@ Enhancements
 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
+  encoding settings ``compression`` and ``compression_opts``, along with the
+  NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
+  This allows using any compression plugin installed in hdf5, e.g. LZF
+  (:issue:`1536`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - :py:meth:`~xarray.dot` on dask-backed data will now call :func:`dask.array.einsum`.
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data

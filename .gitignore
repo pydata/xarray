@@ -39,6 +39,7 @@ nosetests.xml
 .tags*
 .testmon*
 .pytest_cache
+dask-worker-space/
 
 # asv environments
 .asv
