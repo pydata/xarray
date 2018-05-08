@@ -1668,6 +1668,84 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
 
+    def test_compression_encoding_h5py(self):
+        ENCODINGS = (
+            # h5py style compression with gzip codec will be converted to
+            # NetCDF4-Python style on round-trip
+            ({'compression': 'gzip', 'compression_opts': 9},
+             {'zlib': True, 'complevel': 9}),
+            # What can't be expressed in NetCDF4-Python style is
+            # round-tripped unaltered
+            ({'compression': 'lzf', 'compression_opts': None},
+             {'compression': 'lzf', 'compression_opts': None}),
+            # If both styles are used together, h5py format takes precedence
+            ({'compression': 'lzf', 'compression_opts': None,
+              'zlib': True, 'complevel': 9},
+             {'compression': 'lzf', 'compression_opts': None}))
+
+        for compr_in, compr_out in ENCODINGS:
+            data = create_test_data()
+            compr_common = {
+                'chunksizes': (5, 5),
+                'fletcher32': True,
+                'shuffle': True,
+                'original_shape': data.var2.shape
+            }
+            data['var2'].encoding.update(compr_in)
+            data['var2'].encoding.update(compr_common)
+            compr_out.update(compr_common)
+            with self.roundtrip(data) as actual:
+                for k, v in compr_out.items():
+                    self.assertEqual(v, actual['var2'].encoding[k])
+
+    def test_compression_check_encoding_h5py(self):
+        """When mismatched h5py and NetCDF4-Python encodings are expressed
+        in to_netcdf(encoding=...), must raise ValueError
+        """
+        data = Dataset({'x': ('y', np.arange(10.0))})
+        # Compatible encodings are graciously supported
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(
+                tmp_file, engine='h5netcdf',
+                encoding={'x': {'compression': 'gzip', 'zlib': True,
+                                'compression_opts': 6, 'complevel': 6}})
+            with open_dataset(tmp_file, engine='h5netcdf') as actual:
+                assert actual.x.encoding['zlib'] is True
+                assert actual.x.encoding['complevel'] == 6
+
+        # Incompatible encodings cause a crash
+        with create_tmp_file() as tmp_file:
+            with raises_regex(ValueError,
+                              "'zlib' and 'compression' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'lzf', 'zlib': True}})
+
+        with create_tmp_file() as tmp_file:
+            with raises_regex(
+                    ValueError,
+                    "'complevel' and 'compression_opts' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'gzip',
+                                    'compression_opts': 5, 'complevel': 6}})
+
+    def test_dump_encodings_h5py(self):
+        # regression test for #709
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+
+        kwargs = {'encoding': {'x': {
+            'compression': 'gzip', 'compression_opts': 9}}}
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+
+        kwargs = {'encoding': {'x': {
+            'compression': 'lzf', 'compression_opts': None}}}
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['compression'], 'lzf')
+            self.assertEqual(actual.x.encoding['compression_opts'], None)
+
 
 # tests pending h5netcdf fix
 @unittest.skip
