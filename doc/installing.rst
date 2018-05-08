@@ -32,6 +32,7 @@ For netCDF and IO
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+- `scipy <http://scipy.org/>`__: necessary to enable the interpolation features for xarray objects
 - `bottleneck <https://github.com/kwgoodman/bottleneck>`__: speeds up
   NaN-skipping and rolling window aggregations by a large factor
   (1.1 or later)
