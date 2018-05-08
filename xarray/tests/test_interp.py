@@ -6,6 +6,7 @@ import pytest
 import xarray as xr
 from xarray.tests import assert_allclose, requires_scipy
 from . import has_dask, has_scipy
+from .test_dataset import create_test_data
 
 try:
     import scipy
@@ -251,3 +252,19 @@ def test_errors():
     for method in ['akima', 'spline']:
         with pytest.raises(ValueError):
             actual = da.interp(x=[0.5, 1.5], method=method)
+
+
+@requires_scipy
+def test_dataset():
+    ds = create_test_data()
+    new_dim2 = xr.DataArray([0.11, 0.21, 0.31], dims='z')
+    interpolated = ds.interp(dim2=new_dim2)
+
+    assert_allclose(interpolated['var1'], ds['var1'].interp(dim2=new_dim2))
+    
+    # make sure modifying interpolated does not affect the original dataset
+    interpolated['var1'][:, 1] = 1.0
+    interpolated['var3'][:, 1] = 1.0
+
+    assert not interpolated['var1'].equals(ds['var1'])
+    assert not interpolated['var3'].equals(ds['var3'])

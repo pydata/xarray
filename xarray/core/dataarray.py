@@ -885,26 +885,30 @@ class DataArray(AbstractArray, DataWithCoords):
     def interp(self, method='linear', kwargs={}, **coords):
         """ Multidimensional interpolation of variables.
 
-        Parameters
-        ----------
         **coords : {dim: new_coordinate, ...}
             Keyword arguments with names matching dimensions and values.
-            coords can be a integer, array-like or DataArray.
-            If DataArrays are passed as coords, xarray-style indexing will be
-            carried out.
-        method: {'linear', 'RectBivariateSpline', 'NdPPoly'} for
-            multidimensional array,
-            {'linear', 'barycentric', 'krogh', 'pchip', 'akima',
-            'ppoly', 'bpoly'} for 1-dimensional array.
+            coords can be an integer, array-like or DataArray.
+            If DataArrays are passed as coords, their dimensions are used
+            for the broadcasting.
+        method: {'linear', 'nearest'} for multidimensional array,
+            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
+            for 1-dimensional array.
+        kwargs: dictionary
+            Additional keyword passed to scipy's interpolator.
 
         Returns
         -------
-        interpolated: xr.Dataset
-            New dataset on the new coordinates.
+        interpolated: xr.DataArray
+            New dataarray on the new coordinates.
 
         Note
         ----
         scipy is required.
+
+        See Also
+        --------
+        scipy.interpolate.interp1d
+        scipy.interpolate.interpn
         """
         ds = self._to_temp_dataset().interp(
             method=method, kwargs=kwargs, **coords)

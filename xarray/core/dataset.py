@@ -1799,6 +1799,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         method: {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
+        kwargs: dictionary
+            Additional keyword passed to scipy's interpolator.
 
         Returns
         -------
@@ -1812,7 +1814,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         See Also
         --------
         scipy.interpolate.interp1d
-        scipy.interpolate.RegularGridInterpolator
+        scipy.interpolate.interpn
         """
         from . import missing
 

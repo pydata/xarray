@@ -415,7 +415,7 @@ def interp(obj, indexes_coords, method, **kwargs):
     Interpolated Variable
     """
     if len(indexes_coords) == 0:
-        return obj
+        return obj.copy()
 
     # simple speed up for the local interpolation
     if method in ['linear', 'nearest']:
