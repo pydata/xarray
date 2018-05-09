@@ -11,7 +11,7 @@ Interpolating data
     import xarray as xr
     np.random.seed(123456)
 
-xarray offers flexible interpolating routines, which has a similar interface
+xarray offers flexible interpolation routines, which has a similar interface
 to our :ref:`indexing <indexing>`.
 
 .. note::
@@ -50,7 +50,7 @@ array-like, which gives the interpolated result as an array.
 
 .. note::
 
-  Currently, our interpolation only works for gridded array.
+  Currently, our interpolation only works for gridded (structured) arrays
   Therefore, as similar to :py:meth:`~xarray.DataArray.sel`,
   only dimensional coordinates can be used for the original coordinate to be
   interpolated.
@@ -88,7 +88,7 @@ Interpolation methods
 We use scipy.interpolate.interp1d for 1-dimensional interpolation and
 scipy.interpolate.interpn for multi-dimensional interpolation.
 
-The interpolation method can be specified by ``method`` optional argument.
+The interpolation method can be specified by the ``method`` optional argument.
 
 .. ipython:: python
 
@@ -128,7 +128,7 @@ a common dimension as new coordinate.
     :alt: advanced indexing and interpolation
     :align: center
 
-The example snippest is shown below,
+For example:
 
 .. ipython:: python
 
@@ -166,7 +166,9 @@ Interpolating arrays with NaN
 -----------------------------
 
 Our :py:meth:`~xarray.DataArray.interp` works with arrays with NaN
-as the same way that `scipy.interpolate.interp1d` and scipy.interpolate.interpn` do.
+the same way that
+`scipy.interpolate.interp1d <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html>`_ and
+`scipy.interpolate.interpn <https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interpn.html>`_ do.
 ``linear`` and ``nearest`` methods return arrays including NaN,
 while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
 
