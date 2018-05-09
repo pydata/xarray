@@ -6,6 +6,7 @@ import numpy as np
 
 from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
+from .core import duck_array_ops
 from .core.dataarray import DataArray
 from .core.dtypes import get_fill_value
 from .core.pycompat import OrderedDict, range
@@ -94,7 +95,6 @@ def to_iris(dataarray):
     # Iris not a hard dependency
     import iris
     from iris.fileformats.netcdf import parse_cell_methods
-    from xarray.core.pycompat import dask_array_type
 
     dim_coords = []
     aux_coords = []
@@ -121,13 +121,7 @@ def to_iris(dataarray):
         args['cell_methods'] = \
             parse_cell_methods(dataarray.attrs['cell_methods'])
 
-    # Create the right type of masked array (should be easier after #1769)
-    if isinstance(dataarray.data, dask_array_type):
-        from dask.array import ma as dask_ma
-        masked_data = dask_ma.masked_invalid(dataarray)
-    else:
-        masked_data = np.ma.masked_invalid(dataarray)
-
+    masked_data = duck_array_ops.masked_invalid(dataarray.data)
     cube = iris.cube.Cube(masked_data, **args)
 
     return cube
