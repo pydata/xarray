@@ -534,7 +534,7 @@ longitudes and latitudes.
     considered as being experimental. Please report any bug you may find
     on xarray's github repository.
 
-.. _rasterio: https://mapbox.github.io/rasterio/
+.. _rasterio: https://rasterio.readthedocs.io/en/latest/
 .. _test files: https://github.com/mapbox/rasterio/blob/master/tests/data/RGB.byte.tif
 .. _pyproj: https://github.com/jswhit/pyproj
 

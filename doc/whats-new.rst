@@ -785,7 +785,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - New function :py:func:`~xarray.open_rasterio` for opening raster files with
-  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  the `rasterio <https://rasterio.readthedocs.io/en/latest/>`_ library.
   See :ref:`the docs <io.rasterio>` for details.
   By `Joe Hamman <https://github.com/jhamman>`_,
   `Nic Wayand <https://github.com/NicWayand>`_ and
