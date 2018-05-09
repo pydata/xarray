@@ -39,12 +39,12 @@ class Interpolation(object):
                    (['linear', 'cubic'], [True, False]))
     def time_interpolation(self, method, is_short):
         new_x = new_x_short if is_short else new_x_long
-        self.ds.interp(x=new_x, method=method)
+        self.ds.interp(x=new_x, method=method).load()
 
     @parameterized(['method'],
                    (['linear', 'nearest']))
     def time_interpolation_2d(self, method):
-        self.ds.interp(x=new_x_long, y=new_y_long, method=method)
+        self.ds.interp(x=new_x_long, y=new_y_long, method=method).load()
 
 
 class InterpolationDask(Interpolation):
