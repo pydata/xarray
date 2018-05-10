@@ -198,7 +198,7 @@ class AbstractDataStore(Mapping):
         A centralized loading function makes it easier to create
         data stores that do automatic encoding/decoding.
 
-        For example:
+        For example::
 
             class SuffixAppendingDataStore(AbstractDataStore):
 
