@@ -289,6 +289,7 @@ def test_dimension_wo_coords():
     assert_equal(da.interp(x=[0.1, 0.2, 0.3], y=[0.5]),
                  da_w_coord.interp(x=[0.1, 0.2, 0.3], y=[0.5]))
 
+
 @requires_scipy
 def test_dataset():
     ds = create_test_data()
