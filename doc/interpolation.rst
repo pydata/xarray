@@ -182,4 +182,48 @@ while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
 Example
 -------
 
-Our interpolation can be used to remap the coordinate of the data,
+Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
+
+.. ipython:: python
+
+    # Raw data
+    ds = xr.tutorial.load_dataset('air_temperature')
+    fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
+    ds.air.isel(time=0).plot(ax=axes[0])
+    axes[0].set_title('Raw data')
+
+    # Interpolated data
+    new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims['lon'] * 4)
+    new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims['lat'] * 4)
+    dsi = ds.interp(lon=new_lon, lat=new_lat)
+    dsi.air.isel(time=0).plot(ax=axes[1])
+    @savefig interpolation_sample3.png width=8in
+    axes[1].set_title('Interpolated data')
+
+Our advanced interpolation can be used to remap the data to the new coordinate.
+Consider the new coordinates x and z on the two dimensional plane.
+The remapping can be done as follows
+
+.. ipython:: python
+
+    # new coordinate
+    x = np.linspace(240, 300, 100)
+    z = np.linspace(20, 70, 100)
+    # relation between new and original coordinates
+    lat = xr.DataArray(z, dims=['z'], coords={'z': z})
+    lon = xr.DataArray((x[:, np.newaxis]-270)/np.cos(z*np.pi/180)+270,
+                       dims=['x', 'z'], coords={'x': x, 'z': z})
+
+    fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
+    ds.air.isel(time=0).plot(ax=axes[0])
+    # draw the new coordinate on the original coordinates.
+    for idx in [0, 33, 66, 99]:
+        axes[0].plot(lon.isel(x=idx), lat, '--k')
+    for idx in [0, 33, 66, 99]:
+        axes[0].plot(*xr.broadcast(lon.isel(z=idx), lat.isel(z=idx)), '--k')
+    axes[0].set_title('Raw data')
+
+    dsi = ds.interp(lon=lon, lat=lat)
+    dsi.air.isel(time=0).T.plot(ax=axes[1])
+    @savefig interpolation_sample4.png width=8in
+    axes[1].set_title('Remapped data')

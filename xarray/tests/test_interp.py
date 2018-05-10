@@ -293,6 +293,8 @@ def test_dimension_wo_coords():
 @requires_scipy
 def test_dataset():
     ds = create_test_data()
+    ds.attrs['foo'] = 'var'
+    ds['var1'].attrs['buz'] = 'var2'
     new_dim2 = xr.DataArray([0.11, 0.21, 0.31], dims='z')
     interpolated = ds.interp(dim2=new_dim2)
 
@@ -304,3 +306,6 @@ def test_dataset():
 
     assert not interpolated['var1'].equals(ds['var1'])
     assert not interpolated['var3'].equals(ds['var3'])
+    # attrs should be kept
+    assert interpolated.attrs['foo'] == 'var'
+    assert interpolated['var1'].attrs['buz'] == 'var2'
