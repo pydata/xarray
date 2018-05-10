@@ -1824,11 +1824,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
+        def maybe_variable(obj, k):
+            try:
+                return obj._variables[k]
+            except KeyError:
+                return as_variable((k, range(obj.dims[k])))
+
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
-            var_indexers = {k: (obj._variables[k], v) for k, v
-                            in indexers_list if k in var.dims}
             if name not in [k for k, v in indexers_list]:
+                var_indexers = {k: (maybe_variable(obj, k), v) for k, v
+                                in indexers_list if k in var.dims}
                 variables[name] = missing.interp(
                     var, var_indexers, method, **kwargs)
 
