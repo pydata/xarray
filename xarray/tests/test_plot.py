@@ -352,6 +352,13 @@ class TestPlot1D(PlotTestCase):
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         assert rotation != 0
 
+    def test_xyincrease_false_changes_axes(self):
+        self.darray.plot.line(xincrease=False, yincrease=False)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
+        diffs = xlim[1] - xlim[0], ylim[1] - ylim[0]
+        assert all(x < 0 for x in diffs)
+
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
         self.darray.plot.line()
