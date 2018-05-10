@@ -882,7 +882,8 @@ class DataArray(AbstractArray, DataWithCoords):
             method=method, tolerance=tolerance, copy=copy, **indexers)
         return self._from_temp_dataset(ds)
 
-    def interp(self, method='linear', kwargs={}, **coords):
+    def interp(self, method='linear', kwargs={}, assume_sorted=False,
+               **coords):
         """ Multidimensional interpolation of variables.
 
         **coords : {dim: new_coordinate, ...}
@@ -893,6 +894,10 @@ class DataArray(AbstractArray, DataWithCoords):
         method: {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
+        assume_sorted: boolean, optional
+            If False, values of x can be in any order and they are sorted
+            first. If True, x has to be an array of monotonically increasing
+            values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
 

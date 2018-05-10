@@ -403,6 +403,7 @@ def interp(obj, indexes_coords, method, **kwargs):
     obj: Variable
     index_coord:
         mapping from dimension name to a pair of original and new coordinates.
+        Original coordinates should be sorted in strictly ascending order.
     method: string
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
@@ -427,6 +428,8 @@ def interp(obj, indexes_coords, method, **kwargs):
 
     # default behavior
     kwargs['bounds_error'] = kwargs.get('bounds_error', False)
+    # as coords should be always sorted, neglect this option
+    kwargs.pop('assume_sorted', None)
 
     # target dimensions
     dims = list(indexes_coords)
@@ -504,7 +507,7 @@ def interp_func(obj, x, new_x, method, kwargs):
 def _interp1d(obj, x, new_x, func, kwargs):
     # x, new_x are tuples of size 1.
     x, new_x = x[0], new_x[0]
-    rslt = func(x, obj, **kwargs)(np.ravel(new_x))
+    rslt = func(x, obj, assume_sorted=True, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
         return rslt.reshape(obj.shape[:-1] + new_x.shape)
     if new_x.ndim == 0:

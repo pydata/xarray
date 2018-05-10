@@ -255,6 +255,29 @@ def test_errors():
 
 
 @requires_scipy
+def test_sorted():
+    # unsorted non-uniform gridded data
+    x = np.random.randn(100)
+    y = np.random.randn(30)
+    z = np.linspace(0.1, 0.2, 10) * 3.0
+    da = xr.DataArray(
+        np.cos(x[:, np.newaxis, np.newaxis]) * np.cos(
+            y[:, np.newaxis]) * z,
+        dims=['x', 'y', 'z'],
+        coords={'x': x, 'y': y, 'x2': ('x', x**2), 'z': z})
+
+    x_new = np.linspace(0, 1, 30)
+    y_new = np.linspace(0, 1, 20)
+
+    da_sorted = da.sortby('x')
+    assert_allclose(da.interp(x=x_new),
+                    da_sorted.interp(x=x_new, assume_sorted=True))
+    da_sorted = da.sortby(['x', 'y'])
+    assert_allclose(da.interp(x=x_new, y=y_new),
+                    da_sorted.interp(x=x_new, y=y_new, assume_sorted=True))
+
+
+@requires_scipy
 def test_dataset():
     ds = create_test_data()
     new_dim2 = xr.DataArray([0.11, 0.21, 0.31], dims='z')
