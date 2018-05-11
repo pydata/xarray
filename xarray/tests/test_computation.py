@@ -843,10 +843,17 @@ def test_dot(use_dask):
         xr.dot(dims='a')
 
     # einsum parameters
-    xr.dot(da_a, da_b, dims=['b'], order='F')
-    actual = xr.dot(da_a, da_b, dims=['b'])
-    assert actual.dims == ('a', 'c')
+    actual = xr.dot(da_a, da_b, dims=['b'], order='C')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    assert actual.values.flags['C_CONTIGUOUS']
+    assert not actual.values.flags['F_CONTIGUOUS']
+    actual = xr.dot(da_a, da_b, dims=['b'], order='F')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    # dask converts Fortran arrays to C order when merging the final array
+    if not use_dask:
+        assert not actual.values.flags['C_CONTIGUOUS']
+        assert actual.values.flags['F_CONTIGUOUS']
+
 
     # einsum has a constant string as of the first parameter, which makes
     # it hard to pass to xarray.apply_ufunc.
