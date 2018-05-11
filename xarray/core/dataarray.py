@@ -1479,8 +1479,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
-        """
-        Write DataArray contents to a netCDF file.
+        """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------

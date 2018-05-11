@@ -21,6 +21,7 @@ def _load_default_cmap(fname='default_colormap.csv'):
     # Not sure what the first arg here should be
     f = pkg_resources.resource_stream(__name__, fname)
     cm_data = pd.read_csv(f, header=None).values
+    f.close()
 
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
