@@ -199,8 +199,22 @@ def _values_method_wrapper(name):
 def _method_wrapper(name):
     def func(self, *args, **kwargs):
         return _call_possibly_missing_method(self, name, args, kwargs)
+
+    def format_docstring(doc):
+        '''Unlike numpy we don't support the out kwarg.
+           Remove it from the docstring'''
+
+        if doc.find('out=None') != -1:
+            idx = doc.find('for full documentation.')
+            doc = ((doc[:idx] +
+                    'for full documentation.\n\n' +
+                    '    The out keyword argument is not supported.' +
+                    doc[idx + 23:]).replace(', out=None', ''))
+
+        return doc
+
     func.__name__ = name
-    func.__doc__ = getattr(np.ndarray, name).__doc__
+    func.__doc__ = format_docstring(getattr(np.ndarray, name).__doc__)
     return func
 
 
