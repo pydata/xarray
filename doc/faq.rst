@@ -157,6 +157,32 @@ and CDAT have some great domain specific functionality, and we would love to
 have support for converting their native objects to and from xarray (see
 :issue:`37` and :issue:`133`)
 
+
+What other projects leverage xarray?
+------------------------------------
+
+Here are several existing libraries that build functionality upon xarray.
+They may be useful points of reference for your work:
+
+- `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
+- `eofs <https://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
+- `MPAS-Analysis <http://mpas-analysis.readthedocs.io>`_: Analysis for simulations produced with Model for Prediction Across Scales (MPAS) components and the Accelerated Climate Model for Energy (ACME)
+- `psyplot <https://https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
+- `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
+  accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
+  subclass.
+- `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting,
+- `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
+- `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
+- `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
+  harmonic wind analysis in Python.
+- `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
+- `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
+- `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
+- `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
+- `xgcm <https://xgcm.readthedocs.io/>`_: General Circulation Model Postprocessing. Uses subclassing and custom xarray backends.
+- `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray
+
 How should I cite xarray?
 -------------------------
 
