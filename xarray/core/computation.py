@@ -195,7 +195,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    keep_attrs = kwargs.pop('keep_attrs', False)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -217,11 +216,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         coords, = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs and isinstance(args[0], DataArray):
-        if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(args[0]) for ds in out)
-        else:
-            out._copy_attrs_from(args[0])
     return out
 
 
@@ -526,6 +520,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
     dask = kwargs.pop('dask', 'forbidden')
     output_dtypes = kwargs.pop('output_dtypes', None)
     output_sizes = kwargs.pop('output_sizes', None)
+    keep_attrs = kwargs.pop('keep_attrs', False)
     if kwargs:
         raise TypeError('apply_variable_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -567,11 +562,17 @@ def apply_variable_ufunc(func, *args, **kwargs):
     if signature.num_outputs > 1:
         output = []
         for dims, data in zip(output_dims, result_data):
-            output.append(Variable(dims, data))
+            var = Variable(dims, data)
+            if keep_attrs and isinstance(args[0], Variable):
+                var.attrs.update(args[0].attrs)
+            output.append(var)
         return tuple(output)
     else:
         dims, = output_dims
-        return Variable(dims, result_data)
+        var = Variable(dims, result_data)
+        if keep_attrs and isinstance(args[0], Variable):
+            var.attrs.update(args[0].attrs)
+        return var
 
 
 def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
@@ -902,6 +903,7 @@ def apply_ufunc(func, *args, **kwargs):
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
                                         exclude_dims=exclude_dims,
+                                        keep_attrs=keep_attrs,
                                         dask=dask,
                                         output_dtypes=output_dtypes,
                                         output_sizes=output_sizes)
@@ -930,8 +932,7 @@ def apply_ufunc(func, *args, **kwargs):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
                                      join=join,
-                                     exclude_dims=exclude_dims,
-                                     keep_attrs=keep_attrs)
+                                     exclude_dims=exclude_dims)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:

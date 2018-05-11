@@ -49,6 +49,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug where `keep_attrs=True` flag was neglected if
+  :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
   non-dimensional coordinates of the DataArray are now dropped.
   (:issue:`2068`)
