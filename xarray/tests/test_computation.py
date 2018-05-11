@@ -861,7 +861,6 @@ def test_dot(use_dask):
         assert not actual.values.flags['C_CONTIGUOUS']
         assert actual.values.flags['F_CONTIGUOUS']
 
-
     # einsum has a constant string as of the first parameter, which makes
     # it hard to pass to xarray.apply_ufunc.
     # make sure dot() uses functools.partial(einsum, subscripts), which
