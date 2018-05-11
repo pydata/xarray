@@ -844,6 +844,9 @@ def test_dot(use_dask):
     assert (actual.data == np.zeros(actual.shape)).all()
 
     # Invalid cases
+    if not use_dask or LooseVersion(dask.__version__) > LooseVersion('0.17.4'):
+        with pytest.raises(TypeError):
+            xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
         xr.dot(da_a.to_dataset(name='da'), dims='a')
     with pytest.raises(TypeError):
