@@ -481,11 +481,18 @@ def test_keep_attrs():
 
     a = xr.DataArray([0, 1], [('x', [0, 1])])
     a.attrs['attr'] = 'da'
+    a['x'].attrs['attr'] = 'da_coord'
     b = xr.DataArray([1, 2], [('x', [0, 1])])
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
     actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual['x'].attrs, a['x'].attrs)
+
+    actual = add(a.variable, b.variable, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a.variable, b.variable, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
     a = xr.Dataset({'x': [0, 1]})

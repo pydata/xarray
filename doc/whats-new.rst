@@ -36,6 +36,11 @@ Enhancements
 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
+  encoding settings ``compression`` and ``compression_opts``, along with the
+  NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
+  This allows using any compression plugin installed in hdf5, e.g. LZF
+  (:issue:`1536`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 - :py:meth:`~xarray.dot` on dask-backed data will now call :func:`dask.array.einsum`.
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
@@ -44,12 +49,19 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug where `keep_attrs=True` flag was neglected if
+  :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
   non-dimensional coordinates of the DataArray are now dropped.
   (:issue:`2068`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.3:
 
@@ -780,7 +792,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - New function :py:func:`~xarray.open_rasterio` for opening raster files with
-  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  the `rasterio <https://rasterio.readthedocs.io/en/latest/>`_ library.
   See :ref:`the docs <io.rasterio>` for details.
   By `Joe Hamman <https://github.com/jhamman>`_,
   `Nic Wayand <https://github.com/NicWayand>`_ and

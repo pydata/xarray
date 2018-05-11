@@ -207,6 +207,16 @@ It is also possible to make line plots such that the data are on the x-axis and 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon')
 
+Changing Axes Direction
+-----------------------
+
+The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
+
+.. ipython:: python
+
+    @savefig plotting_example_xincrease_yincrease_kwarg.png
+    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon', xincrease=False, yincrease=False)
+
 Two Dimensions
 --------------
 
