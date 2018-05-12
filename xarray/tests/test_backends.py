@@ -2579,6 +2579,14 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
+    def test_pickle(self):
+        with create_tmp_geotiff() as (tmp_file, expected):
+            # Write it to a netcdf and read again (roundtrip)
+            with xr.open_rasterio(tmp_file) as rioda:
+                temp = pickle.dumps(rioda)
+                actual = pickle.loads(temp)
+                assert_equal(actual, rioda)
+
     def test_ENVI_tags(self):
         rasterio = pytest.importorskip('rasterio', minversion='1.0a')
         from rasterio.transform import from_origin
