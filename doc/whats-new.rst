@@ -55,6 +55,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
+  integer dask array. (:issue:`21133`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
   :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -67,6 +70,8 @@ Bug fixes
 - ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.3:
