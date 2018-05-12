@@ -185,6 +185,8 @@ They may be useful points of reference for your work:
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
 
+More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.
+
 How should I cite xarray?
 -------------------------
 
