@@ -3439,21 +3439,41 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da['time'])
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',
-                                  'median'))
+@pytest.mark.parametrize('name', ('mean', 'count'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
-def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
+@pytest.mark.parametrize('window', (7, 8))
+def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     pytest.importorskip('dask.array')
     # dask version
-    rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
+    rolling_obj = da_dask.rolling(time=window, min_periods=min_periods,
+                                  center=center)
     actual = getattr(rolling_obj, name)().load()
     # numpy version
-    rolling_obj = da_dask.load().rolling(time=7, min_periods=min_periods)
+    rolling_obj = da_dask.load().rolling(time=window, min_periods=min_periods,
+                                         center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
     # precision errors
+    assert_allclose(actual, expected)
+
+    # with zero chunked array GH:2113
+    rolling_obj = da_dask.chunk().rolling(time=window, min_periods=min_periods,
+                                          center=center)
+    actual = getattr(rolling_obj, name)().load()
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize('center', (True, None))
+def test_rolling_wrapped_dask_nochunk(center):
+    # GH:2113
+    pytest.importorskip('dask.array')
+
+    da_day_clim = xr.DataArray(np.arange(1, 367),
+                               coords=[np.arange(1, 367)], dims='dayofyear')
+    expected = da_day_clim.rolling(dayofyear=31, center=center).mean()
+    actual = da_day_clim.chunk().rolling(dayofyear=31, center=center).mean()
     assert_allclose(actual, expected)
 
 
