@@ -122,14 +122,9 @@ def get_date_type(self):
 def assert_all_valid_date_type(data):
     import cftime
 
-    valid_types = (cftime.DatetimeJulian, cftime.DatetimeNoLeap,
-                   cftime.DatetimeAllLeap, cftime.DatetimeGregorian,
-                   cftime.DatetimeProlepticGregorian,
-                   cftime.Datetime360Day)
-
     sample = data[0]
     date_type = type(sample)
-    if not isinstance(sample, valid_types):
+    if not isinstance(sample, cftime.datetime):
         raise TypeError(
             'CFTimeIndex requires cftime.datetime '
             'objects. Got object of {}.'.format(date_type))

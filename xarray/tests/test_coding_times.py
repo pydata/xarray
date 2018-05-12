@@ -10,9 +10,10 @@ import pytest
 from xarray import Variable, coding, set_options, DataArray, decode_cf
 from xarray.coding.times import _import_cftime
 from xarray.coding.variables import SerializationWarning
+from xarray.core.common import contains_cftime_datetimes
 
 from . import (assert_array_equal, has_cftime_or_netCDF4,
-               requires_cftime_or_netCDF4, has_cftime)
+               requires_cftime_or_netCDF4, has_cftime, has_dask)
 
 
 _NON_STANDARD_CALENDARS = {'noleap', '365_day', '360_day',
@@ -688,3 +689,69 @@ def test_decode_cf_enable_cftimeindex(calendar, enable_cftimeindex):
             assert ds.test.dtype == np.dtype('O')
         else:
             assert ds.test.dtype == np.dtype('M8[ns]')
+
+
+@pytest.fixture(params=_ALL_CALENDARS)
+def calendar(request):
+    return request.param
+
+
+@pytest.fixture()
+def times(calendar):
+    cftime = _import_cftime()
+
+    return cftime.num2date(
+        np.arange(4), units='hours since 2000-01-01', calendar=calendar,
+        only_use_cftime_datetimes=True)
+
+
+@pytest.fixture()
+def data(times):
+    data = np.random.rand(2, 2, 4)
+    lons = np.linspace(0, 11, 2)
+    lats = np.linspace(0, 20, 2)
+    return DataArray(data, coords=[lons, lats, times],
+                     dims=['lon', 'lat', 'time'], name='data')
+
+
+@pytest.fixture()
+def times_3d(times):
+    lons = np.linspace(0, 11, 2)
+    lats = np.linspace(0, 20, 2)
+    times_arr = np.random.choice(times, size=(2, 2, 4))
+    return DataArray(times_arr, coords=[lons, lats, times],
+                     dims=['lon', 'lat', 'time'],
+                     name='data')
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_contains_cftime_datetimes_1d(data):
+    assert contains_cftime_datetimes(data.time)
+
+
+@pytest.mark.skipif(not has_dask, reason='dask not installed')
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_contains_cftime_datetimes_dask_1d(data):
+    assert contains_cftime_datetimes(data.time.chunk())
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_contains_cftime_datetimes_3d(times_3d):
+    assert contains_cftime_datetimes(times_3d)
+
+
+@pytest.mark.skipif(not has_dask, reason='dask not installed')
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_contains_cftime_datetimes_dask_3d(times_3d):
+    assert contains_cftime_datetimes(times_3d.chunk())
+
+
+@pytest.mark.parametrize('non_cftime_data', [DataArray([]), DataArray([1, 2])])
+def test_contains_cftime_datetimes_non_cftimes(non_cftime_data):
+    assert not contains_cftime_datetimes(non_cftime_data)
+
+
+@pytest.mark.skipif(not has_dask, reason='dask not installed')
+@pytest.mark.parametrize('non_cftime_data', [DataArray([]), DataArray([1, 2])])
+def test_contains_cftime_datetimes_non_cftimes_dask(non_cftime_data):
+    assert not contains_cftime_datetimes(non_cftime_data.chunk())

@@ -9,6 +9,7 @@ import pytest
 
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -16,7 +17,7 @@ from xarray.plot.utils import (
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn)
+    requires_matplotlib, requires_seaborn, requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -1488,3 +1489,24 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
+
+
+@requires_cftime
+def test_plot_cftime_coordinate_error():
+    cftime = _import_cftime()
+    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(np.arange(5), coords=[time], dims=['time'])
+    with raises_regex(TypeError,
+                      'requires coordinates to be numeric or dates'):
+        data.plot()
+
+
+@requires_cftime
+def test_plot_cftime_data_error():
+    cftime = _import_cftime()
+    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
+    with raises_regex(NotImplementedError, 'cftime.datetime'):
+        data.plot()

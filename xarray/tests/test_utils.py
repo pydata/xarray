@@ -58,7 +58,7 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
         assert isinstance(actual, type(expected))
 
 
-# Test that datetime.datetime objects are never used in a NetCDFTimeIndex
+# Test that datetime.datetime objects are never used in a CFTimeIndex
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
 @pytest.mark.parametrize('enable_cftimeindex', [False, True])
 def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
