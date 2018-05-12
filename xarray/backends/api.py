@@ -563,6 +563,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, basestring):
+        if is_remote_uri(paths):
+            raise ValueError(
+                'cannot do wild-card matching for paths that are remote URLs: '
+                '{!r}. Instead, supply paths as an explicit list of strings.'
+                .format(paths))
         paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, path_type) else p for p in paths]
@@ -746,9 +751,12 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     engine : {'netcdf4', 'scipy', 'h5netcdf'}, optional
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
+        preference for 'netcdf4' if writing to a file on disk.
+        See `Dataset.to_netcdf` for additional information.
     compute: boolean
         If true compute immediately, otherwise return a
         ``dask.delayed.Delayed`` object that can be computed later.
+
     Examples
     --------
 

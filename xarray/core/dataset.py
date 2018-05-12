@@ -1124,6 +1124,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,
                                'zlib': True}, ...}``
+
+            The `h5netcdf` engine supports both the NetCDF4-style compression
+            encoding parameters ``{'zlib': True, 'complevel': 9}`` and the h5py
+            ones ``{'compression': 'gzip', 'compression_opts': 9}``.
+            This allows using any compression plugin installed in the HDF5
+            library, e.g. LZF.
+
         unlimited_dims : sequence of str, optional
             Dimension(s) that should be serialized as unlimited dimensions.
             By default, no dimensions are treated as unlimited dimensions.
