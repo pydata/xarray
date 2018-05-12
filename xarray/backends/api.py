@@ -144,11 +144,10 @@ def _get_lock(engine, scheduler, format, path_or_file):
     return lock
 
 
-def _finalize_stores(write, *stores):
+def _finalize_store(write, store):
     del write
-    for store in stores:
-        store.sync()
-        store.close()
+    store.sync()
+    store.close()
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
@@ -695,12 +694,12 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         if sync and isinstance(path_or_file, basestring):
             store.close()
 
-    if not sync:
-        return store
-
     if not compute:
         import dask
-        return dask.delayed(_finalize_stores)(store.delayed, store)
+        return dask.delayed(_finalize_store)(store.delayed, store)
+
+    if not sync:
+        return store
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None, compute=True):
@@ -783,18 +782,17 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
 
-    writer = ArrayWriter()
+    writer = ArrayWriter() if compute else None
     stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
                         compute=compute)
               for ds, path, group in zip(datasets, paths, groups)]
 
+    if not compute:
+        import dask
+        return dask.delayed(stores)
+
     try:
         delayed = writer.sync(compute=compute)
-        if not compute:
-            import dask
-            # or should this return an iterable of delayed objects
-            # (one for each store)
-            return dask.delayed(_finalize_stores)(delayed, *stores)
         for store in stores:
             store.sync()
     finally:
@@ -828,5 +826,5 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_stores)(store.delayed, store)
+        return dask.delayed(_finalize_store)(store.delayed, store)
     return store

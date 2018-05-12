@@ -1204,7 +1204,8 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
     def test_save_mfdataset_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
-        original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
+        original = Dataset({'foo': ('x', np.random.randn(10)),
+                            'x': ('x', np.arange(10))}).chunk({'x': 3})
         datasets = [original.isel(x=slice(5)),
                     original.isel(x=slice(5, 10))]
         with create_tmp_file() as tmp1:
