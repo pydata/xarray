@@ -65,6 +65,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Colorbar limits are now determined by excluding ±Infs too.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.3:
 

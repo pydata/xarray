@@ -160,7 +160,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     """
     import matplotlib as mpl
 
-    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
+    calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:

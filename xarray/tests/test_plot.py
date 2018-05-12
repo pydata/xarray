@@ -426,6 +426,15 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
 
+    def test_nan_inf_are_ignored(self):
+        cmap_params1 = _determine_cmap_params(self.data)
+        data = self.data
+        data[50:55] = np.nan
+        data[56:60] = np.inf
+        cmap_params2 = _determine_cmap_params(data)
+        assert cmap_params1['vmin'] == cmap_params2['vmin']
+        assert cmap_params1['vmax'] == cmap_params2['vmax']
+
     @pytest.mark.slow
     def test_integer_levels(self):
         data = self.data + 1
