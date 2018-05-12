@@ -49,6 +49,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
+  integer dask array. (:issue:`21133`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
   :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.

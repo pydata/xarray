@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 
 from . import nputils
+from . import dtypes
 
 try:
     import dask.array as da
@@ -12,12 +13,14 @@ except ImportError:
 
 def dask_rolling_wrapper(moving_func, a, window, min_count=None, axis=-1):
     '''wrapper to apply bottleneck moving window funcs on dask arrays'''
+    dtype, fill_value = dtypes.maybe_promote(a.dtype)
+    a = a.astype(dtype)
     # inputs for ghost
     if axis < 0:
         axis = a.ndim + axis
     depth = {d: 0 for d in range(a.ndim)}
     depth[axis] = window - 1
-    boundary = {d: np.nan for d in range(a.ndim)}
+    boundary = {d: fill_value for d in range(a.ndim)}
     # create ghosted arrays
     ag = da.ghost.ghost(a, depth=depth, boundary=boundary)
     # apply rolling func
