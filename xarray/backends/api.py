@@ -347,7 +347,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     return maybe_decode_store(store)
 
 
-def open_dataarray(filename_or_obj, group=None, decode_cf=True,
+def open_dataarray(filename_or_obj, group=None, decode_cf=None,
                    mask_and_scale=True, decode_times=True, autoclose=False,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
@@ -378,7 +378,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA.
+        be replaced by NA. mask_and_scale defaults to True except for the 
+        pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.

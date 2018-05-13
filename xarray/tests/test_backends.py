@@ -62,6 +62,13 @@ def open_example_dataset(name, *args, **kwargs):
                         *args, **kwargs)
 
 
+def open_example_mfdataset(names, *args, **kwargs):
+    return open_mfdataset(
+        [os.path.join(os.path.dirname(__file__), 'data', name)
+         for name in names],
+        *args, **kwargs)
+
+
 def create_masked_and_scaled_data():
     x = np.array([np.nan, np.nan, 10, 10.1, 10.2], dtype=np.float32)
     encoding = {'_FillValue': -1, 'add_offset': 10,
@@ -2396,10 +2403,41 @@ class PseudoNetCDFFormatTest(TestCase):
         actual = camxfile.variables['O3']
         assert_allclose(expected, actual)
 
-        data = np.array(
-            ['2002-06-03T00:00:00.000000000'],
-            dtype='datetime64[ns]'
-        )
+        data = np.array([1.02306240e+09])
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+
+    def test_uamiv_format_mfread(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_mfdataset(
+                ['example.uamiv',
+                 'example.uamiv'],
+                engine='pseudonetcdf',
+                autoclose=False,
+                concat_dim='TSTEP',
+                backend_kwargs={'format': 'uamiv'})
+
+        data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        data = np.concatenate([data1] * 2, axis=0)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data1 = np.array([1.02306240e+09])
+        data = np.concatenate([data1] * 2, axis=0)
         expected = xr.Variable(('TSTEP',), data,
                                dict(bounds='time_bounds',
                                     long_name=('synthesized time coordinate ' +
