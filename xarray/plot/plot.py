@@ -14,6 +14,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
@@ -53,7 +54,8 @@ def _ensure_plottable(*args):
         if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
                 _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates.')
+                            'or dates of type np.datetime64 or '
+                            'datetime.datetime.')
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -119,6 +121,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
 
     """
     darray = darray.squeeze()
+
+    if contains_cftime_datetimes(darray):
+        raise NotImplementedError('Plotting arrays of cftime.datetime objects '
+                                  'is currently not possible.')
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)

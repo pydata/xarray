@@ -34,6 +34,16 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Add an option for using a ``CFTimeIndex`` for indexing times with
+  non-standard calendars and/or outside the Timestamp-valid range; this index
+  enables a subset of the functionality of a standard
+  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
+  :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
+         library. By `Spencer Clark
+         <https://github.com/spencerkclark>`_. 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
