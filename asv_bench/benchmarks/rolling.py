@@ -35,7 +35,7 @@ class Rolling(object):
     @parameterized(['func', 'center'],
                    (['mean', 'count'], [True, False]))
     def time_rolling(self, func, center):
-        getattr(self.ds.rolling(x=window, center=center), func)()
+        getattr(self.ds.rolling(x=window, center=center), func)().load()
 
     @parameterized(['func', 'pandas'],
                    (['mean', 'count'], [True, False]))
@@ -44,19 +44,20 @@ class Rolling(object):
             se = self.da_long.to_series()
             getattr(se.rolling(window=window), func)()
         else:
-            getattr(self.da_long.rolling(x=window), func)()
+            getattr(self.da_long.rolling(x=window), func)().load()
 
     @parameterized(['window_', 'min_periods'],
                    ([20, 40], [5, None]))
     def time_rolling_np(self, window_, min_periods):
         self.ds.rolling(x=window_, center=False,
-                        min_periods=min_periods).reduce(getattr(np, 'nanmean'))
+                        min_periods=min_periods).reduce(
+                            getattr(np, 'nanmean')).load()
 
     @parameterized(['center', 'stride'],
                    ([True, False], [1, 200]))
     def time_rolling_construct(self, center, stride):
         self.ds.rolling(x=window, center=center).construct(
-            'window_dim', stride=stride).mean(dim='window_dim')
+            'window_dim', stride=stride).mean(dim='window_dim').load()
 
 
 class RollingDask(Rolling):

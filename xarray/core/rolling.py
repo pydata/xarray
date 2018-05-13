@@ -294,8 +294,8 @@ class DataArrayRolling(Rolling):
                 if isinstance(padded.data, dask_array_type):
                     # Workaround to make the padded chunk size is larger than
                     # self.window-1
-                    shift = - (self.window - 1)
-                    offset = -shift - self.window // 2
+                    shift = - (self.window + 1) // 2
+                    offset = (self.window - 1) // 2
                     valid = (slice(None), ) * axis + (
                         slice(offset, offset + self.obj.shape[axis]), )
                 else:
