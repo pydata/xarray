@@ -17,7 +17,8 @@ from . import (
     rolling, utils)
 from .. import conventions
 from .alignment import align
-from .common import DataWithCoords, ImplementsDatasetReduce
+from .common import (DataWithCoords, ImplementsDatasetReduce,
+                     _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -75,7 +76,7 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
         virtual_var = ref_var
         var_name = key
     else:
-        if is_datetime_like(ref_var.dtype):
+        if _contains_datetime_like_objects(ref_var):
             ref_var = xr.DataArray(ref_var)
             data = getattr(ref_var.dt, var_name).data
         else:
