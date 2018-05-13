@@ -1183,9 +1183,9 @@ class TestDataArray(TestCase):
         # GH: 2112
         da = xr.DataArray([0, 1, 2], dims='x')
         with pytest.raises(ValueError):
-            da['x'] = [0, 1, 2, 3]  # no error
+            da['x'] = [0, 1, 2, 3]  # size conflict
         with pytest.raises(ValueError):
-            da.coords['x'] = [0, 1, 2, 3]  # no error
+            da.coords['x'] = [0, 1, 2, 3]  # size conflict
 
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
