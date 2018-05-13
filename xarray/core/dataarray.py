@@ -474,10 +474,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
-            # convert to dataset first to use merge.dataset_update_method
-            ds = self._to_temp_dataset()
-            ds[key] = value
-            self._coords[key] = ds[key].variable
+            self.coords[key] = value
         else:
             # Coordinates in key, value and self[key] should be consistent.
             # TODO Coordinate consistency in key is checked here, but it
