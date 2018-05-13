@@ -40,14 +40,49 @@ Enhancements
 - added a PseudoNetCDF backend for many Atmospheric data formats including
   GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
   By `Barron Henderson <https://github.com/barronh>`_.
+- Add an option for using a ``CFTimeIndex`` for indexing times with
+  non-standard calendars and/or outside the Timestamp-valid range; this index
+  enables a subset of the functionality of a standard
+  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
+  :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
+         library. By `Spencer Clark
+         <https://github.com/spencerkclark>`_. 
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
+- :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
+  encoding settings ``compression`` and ``compression_opts``, along with the
+  NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
+  This allows using any compression plugin installed in hdf5, e.g. LZF
+  (:issue:`1536`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- :py:meth:`~xarray.dot` on dask-backed data will now call :func:`dask.array.einsum`.
+  This greatly boosts speed and allows chunking on the core dims.
+  The function now requires dask >= 0.17.3 to work on dask-backed data
+  (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
+  integer dask array. (:issue:`21133`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fixed a bug where `keep_attrs=True` flag was neglected if
+  :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
+  non-dimensional coordinates of the DataArray are now dropped.
+  (:issue:`2068`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- Colorbar limits are now determined by excluding ±Infs too.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.3:
 
@@ -767,7 +802,7 @@ Enhancements
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - New function :py:func:`~xarray.open_rasterio` for opening raster files with
-  the `rasterio <https://mapbox.github.io/rasterio/>`_ library.
+  the `rasterio <https://rasterio.readthedocs.io/en/latest/>`_ library.
   See :ref:`the docs <io.rasterio>` for details.
   By `Joe Hamman <https://github.com/jhamman>`_,
   `Nic Wayand <https://github.com/NicWayand>`_ and

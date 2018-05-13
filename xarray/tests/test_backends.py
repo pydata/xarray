@@ -32,7 +32,8 @@ from . import (
     assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf)
+    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf,
+    requires_cftime)
 from .test_dataset import create_test_data
 
 try:
@@ -348,13 +349,42 @@ class DatasetIOTestCases(object):
             assert_identical(expected, actual)
             self.assertEqual(actual['x'].encoding['_Encoding'], 'ascii')
 
-    def test_roundtrip_datetime_data(self):
+    def test_roundtrip_numpy_datetime_data(self):
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         kwds = {'encoding': {'t0': {'units': 'days since 1950-01-01'}}}
         with self.roundtrip(expected, save_kwargs=kwds) as actual:
             assert_identical(expected, actual)
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
+
+    @requires_cftime
+    def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
+        from .test_coding_times import _all_cftime_date_types
+
+        date_types = _all_cftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            kwds = {'encoding': {'t0': {'units': 'days since 0001-01-01'}}}
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
+            expected_calendar = times[0].calendar
+
+            with xr.set_options(enable_cftimeindex=True):
+                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t.encoding['units'] ==
+                            'days since 0001-01-01 00:00:00.000000')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
+
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t0.encoding['units'] ==
+                            'days since 0001-01-01')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -1378,24 +1408,6 @@ class BaseZarrTest(CFEncodedDataTest):
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
 
-    # TODO: implement zarr object encoding and make these tests pass
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_multiindex_not_implemented(self):
-        super(CFEncodedDataTest, self).test_multiindex_not_implemented()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_bytes_with_fill_value(self):
-        super(CFEncodedDataTest, self).test_roundtrip_bytes_with_fill_value()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_object_dtype(self):
-        super(CFEncodedDataTest, self).test_roundtrip_object_dtype()
-
-    @pytest.mark.xfail(reason="Zarr object encoding not implemented")
-    def test_roundtrip_string_encoded_characters(self):
-        super(CFEncodedDataTest,
-              self).test_roundtrip_string_encoded_characters()
-
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
@@ -1693,6 +1705,84 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
 
+    def test_compression_encoding_h5py(self):
+        ENCODINGS = (
+            # h5py style compression with gzip codec will be converted to
+            # NetCDF4-Python style on round-trip
+            ({'compression': 'gzip', 'compression_opts': 9},
+             {'zlib': True, 'complevel': 9}),
+            # What can't be expressed in NetCDF4-Python style is
+            # round-tripped unaltered
+            ({'compression': 'lzf', 'compression_opts': None},
+             {'compression': 'lzf', 'compression_opts': None}),
+            # If both styles are used together, h5py format takes precedence
+            ({'compression': 'lzf', 'compression_opts': None,
+              'zlib': True, 'complevel': 9},
+             {'compression': 'lzf', 'compression_opts': None}))
+
+        for compr_in, compr_out in ENCODINGS:
+            data = create_test_data()
+            compr_common = {
+                'chunksizes': (5, 5),
+                'fletcher32': True,
+                'shuffle': True,
+                'original_shape': data.var2.shape
+            }
+            data['var2'].encoding.update(compr_in)
+            data['var2'].encoding.update(compr_common)
+            compr_out.update(compr_common)
+            with self.roundtrip(data) as actual:
+                for k, v in compr_out.items():
+                    self.assertEqual(v, actual['var2'].encoding[k])
+
+    def test_compression_check_encoding_h5py(self):
+        """When mismatched h5py and NetCDF4-Python encodings are expressed
+        in to_netcdf(encoding=...), must raise ValueError
+        """
+        data = Dataset({'x': ('y', np.arange(10.0))})
+        # Compatible encodings are graciously supported
+        with create_tmp_file() as tmp_file:
+            data.to_netcdf(
+                tmp_file, engine='h5netcdf',
+                encoding={'x': {'compression': 'gzip', 'zlib': True,
+                                'compression_opts': 6, 'complevel': 6}})
+            with open_dataset(tmp_file, engine='h5netcdf') as actual:
+                assert actual.x.encoding['zlib'] is True
+                assert actual.x.encoding['complevel'] == 6
+
+        # Incompatible encodings cause a crash
+        with create_tmp_file() as tmp_file:
+            with raises_regex(ValueError,
+                              "'zlib' and 'compression' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'lzf', 'zlib': True}})
+
+        with create_tmp_file() as tmp_file:
+            with raises_regex(
+                    ValueError,
+                    "'complevel' and 'compression_opts' encodings mismatch"):
+                data.to_netcdf(
+                    tmp_file, engine='h5netcdf',
+                    encoding={'x': {'compression': 'gzip',
+                                    'compression_opts': 5, 'complevel': 6}})
+
+    def test_dump_encodings_h5py(self):
+        # regression test for #709
+        ds = Dataset({'x': ('y', np.arange(10.0))})
+
+        kwargs = {'encoding': {'x': {
+            'compression': 'gzip', 'compression_opts': 9}}}
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+
+        kwargs = {'encoding': {'x': {
+            'compression': 'lzf', 'compression_opts': None}}}
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual.x.encoding['compression'], 'lzf')
+            self.assertEqual(actual.x.encoding['compression_opts'], None)
+
 
 # tests pending h5netcdf fix
 @unittest.skip
@@ -1896,13 +1986,53 @@ class DaskTest(TestCase, DatasetIOTestCases):
     def test_roundtrip_coordinates_with_space(self):
         pass
 
-    def test_roundtrip_datetime_data(self):
+    def test_roundtrip_numpy_datetime_data(self):
         # Override method in DatasetIOTestCases - remove not applicable
         # save_kwds
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
+
+    def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
+        from .test_coding_times import _all_cftime_date_types
+
+        date_types = _all_cftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
+
+            with xr.set_options(enable_cftimeindex=True):
+                with self.roundtrip(expected) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+    def test_roundtrip_cftime_datetime_data_disable_cftimeindex(self):
+        # Override method in DatasetIOTestCases - remove not applicable
+        # save_kwds
+        from .test_coding_times import _all_cftime_date_types
+
+        date_types = _all_cftime_date_types()
+        for date_type in date_types.values():
+            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
+            expected = Dataset({'t': ('t', times), 't0': times[0]})
+            expected_decoded_t = np.array(times)
+            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
+
+            with xr.set_options(enable_cftimeindex=False):
+                with self.roundtrip(expected) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
+
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    self.assertTrue((abs_diff <= np.timedelta64(1, 's')).all())
 
     def test_write_store(self):
         # Override method in DatasetIOTestCases - not applicable to dask
@@ -2403,7 +2533,7 @@ class PseudoNetCDFFormatTest(TestCase):
         actual = camxfile.variables['O3']
         assert_allclose(expected, actual)
 
-        data = np.array([1.02306240e+09])
+        data = np.array(['2002-06-03'], 'datetime64[ns]')
         expected = xr.Variable(('TSTEP',), data,
                                dict(bounds='time_bounds',
                                     long_name=('synthesized time coordinate ' +
@@ -2436,7 +2566,7 @@ class PseudoNetCDFFormatTest(TestCase):
         actual = camxfile.variables['O3']
         assert_allclose(expected, actual)
 
-        data1 = np.array([1.02306240e+09])
+        data1 = np.array(['2002-06-03'], 'datetime64[ns]')
         data = np.concatenate([data1] * 2, axis=0)
         expected = xr.Variable(('TSTEP',), data,
                                dict(bounds='time_bounds',

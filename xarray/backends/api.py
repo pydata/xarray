@@ -770,6 +770,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
+        See `Dataset.to_netcdf` for additional information.
 
     Examples
     --------

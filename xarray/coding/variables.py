@@ -129,10 +129,10 @@ def _apply_mask(data,  # type: np.ndarray
                 dtype,  # type: Any
                 ):  # type: np.ndarray
     """Mask all matching values in a NumPy arrays."""
+    data = np.asarray(data, dtype=dtype)
     condition = False
     for fv in encoded_fill_values:
         condition |= data == fv
-    data = np.asarray(data, dtype=dtype)
     return np.where(condition, decoded_fill_value, data)
 
 
