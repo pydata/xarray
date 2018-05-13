@@ -43,7 +43,7 @@ Enhancements
 - Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
   :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
          library. By `Spencer Clark
-         <https://github.com/spencerkclark>`_. 
+         <https://github.com/spencerkclark>`_.
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
@@ -59,8 +59,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Now raises an Error if a coordinate with wrong size is assigned to a
+  :py:class:`~xarray.DataArray`. (:issue:`2112`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
-  integer dask array. (:issue:`21133`)
+  integer dask array. (:issue:`2113`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
   :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)

@@ -1180,6 +1180,11 @@ class TestDataArray(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda.assign_coords(level_1=range(4))
 
+        # GH: 2112
+        da = xr.DataArray([0, 1, 2], dims='x')
+        with pytest.raises(ValueError):
+            da['x'] = [0, 1, 2, 3]  # no error
+
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [('x', [1, 2, 3])])
