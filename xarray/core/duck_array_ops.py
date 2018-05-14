@@ -103,7 +103,7 @@ einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
 
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,
-    dask_module=getattr(dask_array, 'ma', None)
+    dask_module=getattr(dask_array, 'ma', None))
 
 
 def asarray(data):
