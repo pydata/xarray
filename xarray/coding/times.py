@@ -255,10 +255,9 @@ def infer_datetime_units(dates):
         reference_date = format_cftime_datetime(reference_date)
     unique_timedeltas = np.unique(np.diff(dates))
     if unique_timedeltas.dtype == np.dtype('O'):
-        # Convert to np.timedelta64 objects one at a time to work around a
-        # NumPy casting bug (GH 2127)
-        unique_timedeltas = np.array([np.timedelta64(delta, 'ns')
-                                      for delta in unique_timedeltas])
+        # Convert to np.timedelta64 objects using pandas to work around a
+        # NumPy casting bug: https://github.com/numpy/numpy/issues/11096
+        unique_timedeltas = pd.to_timedelta(unique_timedeltas).values
     units = _infer_time_units_from_diff(unique_timedeltas)
     return '%s since %s' % (units, reference_date)
 
