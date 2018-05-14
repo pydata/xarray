@@ -165,8 +165,7 @@ Here are several existing libraries that build functionality upon xarray.
 
 Geosciences
 ~~~~~~~~~~~
-Models and analysis of model output
-'''''''''''''''''''''''''''''''''''
+
 - `aospy <https://aospy.readthedocs.io>`_: Automated analysis and management of gridded climate data.
 - `infinite-diff <https://github.com/spencerahill/infinite-diff>`_: xarray-based finite-differencing, focused on gridded climate/meterology data
 - `marc_analysis <https://github.com/darothen/marc_analysis>`_: Analysis package for CESM/MARC experiments and output.
@@ -175,29 +174,23 @@ Models and analysis of model output
 - `Oocgcm <https://oocgcm.readthedocs.io/>`_: Analysis of large gridded geophysical datasets
 - `Open Data Cube <https://www.opendatacube.org/>`_: Analysis toolkit of continental scale Earth Observation data from satellites.
 - `Pangaea: <https://pangaea.readthedocs.io/en/latest/>`_: xarray extension for gridded land surface & weather model output).
+- `Pangeo <https://pangeo-data.github.io>`_: A community effort for big data geoscience in the cloud.
 - `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
   accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
   subclass.
+- `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
+- `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
+- `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
+- `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
+  harmonic wind analysis in Python.
 - `wrf-python <https://wrf-python.readthedocs.io/>`_: A collection of diagnostic and interpolation routines for use with output of the Weather Research and Forecasting (WRF-ARW) Model.
 - `xarray-simlab <https://xarray-simlab.readthedocs.io>`_: xarray extension for computer model simulations.
+- `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
 - `xbpch <https://github.com/darothen/xbpch>`_: xarray interface for bpch files.
 - `xESMF <https://xesmf.readthedocs.io>`_: Universal Regridder for Geospatial Data.
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
-
-Topography
-''''''''''
-- `Regionmask <https://regionmask.readthedocs.io/>`_: plotting and creation of masks of spatial regions
-- `salem <https://salem.readthedocs.io>`_: Adds geolocalised subsetting, masking, and plotting operations to xarray's data structures via accessors.
 - `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
-- `xarray-topo <https://gitext.gfz-potsdam.de/sec55-public/xarray-topo>`_: xarray extension for topographic analysis and modelling.
-
-Other
-'''''
-- `Pangeo <https://pangeo-data.github.io>`_: A community effort for big data geoscience in the cloud.
-- `Spyfit <https://spyfit.readthedocs.io/en/master/>`_: FTIR spectroscopy of the atmosphere
-- `windspharm <https://ajdawson.github.io/windspharm/index.html>`_: Spherical
-  harmonic wind analysis in Python.
 
 Machine Learning
 ~~~~~~~~~~~~~~~~
