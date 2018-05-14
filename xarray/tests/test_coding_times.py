@@ -587,6 +587,9 @@ def test_infer_cftime_datetime_units():
                  'seconds since 1900-01-01 00:00:00.000000'),
                 ([date_type(1900, 1, 1),
                   date_type(1900, 1, 2, 0, 0, 0, 5)],
+                 'days since 1900-01-01 00:00:00.000000'),
+                ([date_type(1900, 1, 1), date_type(1900, 1, 8),
+                  date_type(1900, 1, 16)],
                  'days since 1900-01-01 00:00:00.000000')]:
             assert expected == coding.times.infer_datetime_units(dates)
 
