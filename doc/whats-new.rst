@@ -89,6 +89,8 @@ Bug fixes
 - Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
   The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
+  By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 

@@ -101,6 +101,10 @@ tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
 einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
                              requires_dask='0.17.3')
 
+masked_invalid = _dask_or_eager_func(
+    'masked_invalid', eager_module=np.ma,
+    dask_module=getattr(dask_array, 'ma', None))
+
 
 def asarray(data):
     return data if isinstance(data, dask_array_type) else np.asarray(data)
