@@ -952,6 +952,9 @@ def dot(*arrays, **kwargs):
     dims: str or tuple of strings, optional
         Which dimensions to sum over.
         If not speciified, then all the common dimensions are summed over.
+    **kwargs: dict
+        Additional keyword arguments passed to numpy.einsum or
+        dask.array.einsum
 
     Returns
     -------
@@ -976,9 +979,6 @@ def dot(*arrays, **kwargs):
     from .variable import Variable
 
     dims = kwargs.pop('dims', None)
-    if len(kwargs) > 0:
-        raise TypeError('Invalid keyward arguments {} are given'.format(
-            list(kwargs.keys())))
 
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.'
@@ -1024,7 +1024,7 @@ def dot(*arrays, **kwargs):
 
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for apply_ufunc to work.
-    func = functools.partial(duck_array_ops.einsum, subscripts)
+    func = functools.partial(duck_array_ops.einsum, subscripts, **kwargs)
     result = apply_ufunc(func, *arrays,
                          input_core_dims=input_core_dims,
                          output_core_dims=output_core_dims,
