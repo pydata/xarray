@@ -130,20 +130,3 @@ To help users keep things straight, please `let us know
 <https://github.com/pydata/xarray/issues>`_ if you plan to write a new accessor
 for an open source library. In the future, we will maintain a list of accessors
 and the libraries that implement them on this page.
-
-Here are several existing libraries that build functionality upon xarray.
-They may be useful points of reference for your work:
-
-- `xgcm <https://xgcm.readthedocs.io/>`_: General Circulation Model
-  Postprocessing. Uses subclassing and custom xarray backends.
-- `PyGDX <https://pygdx.readthedocs.io/en/latest/>`_: Python 3 package for
-  accessing data stored in GAMS Data eXchange (GDX) files. Also uses a custom
-  subclass.
-- `windspharm <http://ajdawson.github.io/windspharm/index.html>`_: Spherical
-  harmonic wind analysis in Python.
-- `eofs <http://ajdawson.github.io/eofs/>`_: EOF analysis in Python.
-- `salem <http://salem.readthedocs.io>`_: Adds geolocalised subsetting,
-  masking, and plotting operations to xarray's data structures via accessors.
-
-.. TODO: consider adding references to these projects somewhere more prominent
-.. in the documentation? maybe the FAQ page?
