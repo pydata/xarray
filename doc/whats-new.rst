@@ -71,8 +71,6 @@ Bug fixes
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
   By `Deepak Cherian <https://github.com/dcherian>`_.
-- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
