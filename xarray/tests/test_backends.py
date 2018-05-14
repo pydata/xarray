@@ -1187,60 +1187,9 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
-    def test_to_netcdf_compute_false_roundtrip(self):
-        from dask.delayed import Delayed
-
-        original = create_test_data().chunk()
-
-        with create_tmp_file() as tmp_file:
-            # dataset, path, **kwargs):
-            delayed_obj = self.save(original, tmp_file, compute=False)
-            assert isinstance(delayed_obj, Delayed)
-            delayed_obj.compute()
-
-            with self.open(tmp_file) as actual:
-                assert_identical(original, actual)
-
-    def test_save_mfdataset_compute_false_roundtrip(self):
-        from dask.delayed import Delayed
-
-        original = Dataset({'foo': ('x', np.random.randn(10)),
-                            'x': ('x', np.arange(10))}).chunk({'x': 3})
-        datasets = [original.isel(x=slice(5)),
-                    original.isel(x=slice(5, 10))]
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
-                delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
-                                             engine=self.engine, compute=False)
-                assert isinstance(delayed_obj, Delayed)
-                delayed_obj.compute()
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
-                    assert_identical(actual, original)
-
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
-
-
-@requires_h5netcdf
-@requires_dask
-class H5NetCDFViaDaskDataTest(NetCDF4ViaDaskDataTest):
-    engine = 'h5netcdf'
-
-    @pytest.mark.xfail(reason="h5netcdf does not preserve variable order")
-    def test_variable_order(self):
-        super(NetCDF4ViaDaskDataTest, self).test_variable_order()
-
-    @pytest.mark.xfail(reason="h5netcdf does not support compute=False yet")
-    def test_to_netcdf_compute_false_roundtrip(self):
-        super(NetCDF4ViaDaskDataTest,
-              self).test_to_netcdf_compute_false_roundtrip()
-
-    @pytest.mark.xfail(reason="h5netcdf does not support compute=False yet")
-    def test_save_mfdataset_compute_false_roundtrip(self):
-        super(NetCDF4ViaDaskDataTest,
-              self).test_save_mfdataset_compute_false_roundtrip()
 
 
 @requires_zarr
@@ -2221,6 +2170,36 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertFalse(actual._in_memory)
         self.assertTrue(computed._in_memory)
         assert_allclose(actual, computed, decode_bytes=False)
+
+    def test_to_netcdf_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = create_test_data().chunk()
+
+        with create_tmp_file() as tmp_file:
+            # dataset, path, **kwargs):
+            delayed_obj = self.save(original, tmp_file, compute=False)
+            assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
+
+            with self.open(tmp_file) as actual:
+                assert_identical(original, actual)
+
+    def test_save_mfdataset_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
+                                             engine=self.engine, compute=False)
+                assert isinstance(delayed_obj, Delayed)
+                delayed_obj.compute()
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    assert_identical(actual, original)
 
 
 class DaskTestAutocloseTrue(DaskTest):
