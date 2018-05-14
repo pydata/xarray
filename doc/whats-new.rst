@@ -59,6 +59,8 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
+  By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 
