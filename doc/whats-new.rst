@@ -34,6 +34,9 @@ v0.10.4 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Slight modification in `rolling` with dask.array and bottleneck. Also, fixed a bug in rolling an
+  integer dask array.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Add an option for using a ``CFTimeIndex`` for indexing times with
   non-standard calendars and/or outside the Timestamp-valid range; this index
   enables a subset of the functionality of a standard
@@ -43,7 +46,7 @@ Enhancements
 - Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
   :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
          library. By `Spencer Clark
-         <https://github.com/spencerkclark>`_. 
+         <https://github.com/spencerkclark>`_.
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
