@@ -2650,8 +2650,8 @@ class TestRasterio(TestCase):
                 assert_allclose(ac, ex)
 
     def test_pickle_rio(self):
+        # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
-            # Write it to a netcdf and read again (roundtrip)
             with xr.open_rasterio(tmp_file) as rioda:
                 temp = pickle.dumps(rioda)
                 actual = pickle.loads(temp)

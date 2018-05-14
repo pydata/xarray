@@ -86,6 +86,9 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
+  The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.3:
 
