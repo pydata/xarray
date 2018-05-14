@@ -21,3 +21,4 @@ dependencies:
   - zarr
   - iris
   - flake8
+  - cftime
