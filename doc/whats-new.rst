@@ -31,6 +31,12 @@ What's New
 v0.10.4 (unreleased)
 --------------------
 
+Documentation
+~~~~~~~~~~~~~
+- `FAQ <http://xarray.pydata.org/en/stable/faq.html#what-other-projects-leverage-xarray>`_ now lists projects that leverage xarray.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -58,6 +64,8 @@ Enhancements
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
   (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -75,8 +83,6 @@ Bug fixes
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 - ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
