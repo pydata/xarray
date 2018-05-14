@@ -162,7 +162,6 @@ What other projects leverage xarray?
 ------------------------------------
 
 Here are several existing libraries that build functionality upon xarray.
-They may be useful points of reference for your work:
 
 Geosciences
 ~~~~~~~~~~~
