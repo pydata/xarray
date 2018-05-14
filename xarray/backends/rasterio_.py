@@ -8,7 +8,7 @@ import numpy as np
 from .. import DataArray
 from ..core import indexing
 from ..core.utils import is_scalar
-from .common import BackendArray
+from .common import BackendArray, PickleByReconstructionWrapper
 
 try:
     from dask.utils import SerializableLock as Lock
@@ -194,7 +194,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     """
 
     import rasterio
-    riods = rasterio.open(filename, mode='r')
+
+    riods = PickleByReconstructionWrapper(rasterio.open, filename, mode='r')
 
     if cache is None:
         cache = chunks is None

@@ -2649,7 +2649,7 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
-    def test_pickle(self):
+    def test_pickle_rio(self):
         with create_tmp_geotiff() as (tmp_file, expected):
             # Write it to a netcdf and read again (roundtrip)
             with xr.open_rasterio(tmp_file) as rioda:
