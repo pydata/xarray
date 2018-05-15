@@ -697,7 +697,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed, store)
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
 
     if not sync:
         return store
@@ -827,5 +827,5 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed, store)
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
     return store
