@@ -17,13 +17,14 @@ from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
 
 import xarray as xr
-from xarray.tests.test_backends import ON_WINDOWS, create_tmp_file
+from xarray.tests.test_backends import (ON_WINDOWS, create_tmp_file,
+                                        create_tmp_geotiff)
 from xarray.tests.test_dataset import create_test_data
 from xarray.backends.common import HDF5_LOCK, CombinedLock
 
 from . import (
-    assert_allclose, has_h5netcdf, has_netCDF4, has_scipy, requires_zarr,
-    raises_regex)
+    assert_allclose, has_h5netcdf, has_netCDF4, requires_rasterio, has_scipy,
+    requires_zarr, raises_regex)
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect
@@ -134,6 +135,17 @@ def test_dask_distributed_zarr_integration_test(loop):
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
+
+
+@requires_rasterio
+def test_dask_distributed_rasterio_integration_test(loop):
+    with create_tmp_geotiff() as (tmp_file, expected):
+        with cluster() as (s, [a, b]):
+            with Client(s['address'], loop=loop) as c:
+                da_tiff = xr.open_rasterio(tmp_file, chunks={'band': 1})
+                assert isinstance(da_tiff.data, da.Array)
+                actual = da_tiff.compute()
+                assert_allclose(actual, expected)
 
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',
