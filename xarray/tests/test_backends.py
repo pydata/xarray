@@ -2650,7 +2650,7 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
-    def test_pickle_rio(self):
+    def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:

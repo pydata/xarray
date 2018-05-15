@@ -8,6 +8,7 @@ import time
 import traceback
 import warnings
 from collections import Mapping, OrderedDict
+from functools import partial
 
 import numpy as np
 
@@ -507,36 +508,24 @@ class DataStorePickleMixin(object):
 
 class PickleByReconstructionWrapper(object):
 
-    def __init__(self, opener, *args, **kwargs):
+    def __init__(self, opener, file, mode='r', **kwargs):
 
-        self.opener = opener
-        self.open_args = args
-        self.open_kwargs = kwargs
-
-        self._ds = None
-        self._isopen = False
+        self.opener = partial(opener, file, mode=mode, **kwargs)
+        self.mode = mode
 
     @property
     def value(self):
-        if self._ds is not None and self._isopen:
-            return self._ds
-        self._ds = self.opener(*self.open_args, **self.open_kwargs)
-        self._isopen = True
-        return self._ds
+        return self.opener()
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['_ds']
-        del state['_isopen']
-        if self.open_kwargs.get('mode', None) == 'w':
+        if self.mode == 'w':
             # file has already been created, don't override when restoring
-            state['open_kwargs']['mode'] = 'a'
+            state['mode'] = 'a'
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self._ds = None
-        self._isopen = False
 
     def __getitem__(self, key):
         return self.value[key]
