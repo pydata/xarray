@@ -110,6 +110,7 @@ will return a dask delayed object that can be computed later.
 .. ipython:: python
 
     from dask.diagnostics import ProgressBar
+    # or distributed.progress when using the distributed scheduler
     delayed_obj = ds.to_netcdf('manipulated-example-data.nc', compute=False)
     with ProgressBar():
         results = delayed_obj.compute()

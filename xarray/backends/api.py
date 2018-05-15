@@ -145,7 +145,8 @@ def _get_lock(engine, scheduler, format, path_or_file):
 
 
 def _finalize_store(write, store):
-    del write
+    """ Finalize this store by explicitly syncing and closing"""
+    del write  # ensure writing is done first
     store.sync()
     store.close()
 
