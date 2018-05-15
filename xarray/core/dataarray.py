@@ -758,10 +758,22 @@ class DataArray(AbstractArray, DataWithCoords):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
+        .. warning::
+
+          Do not try to assign values when using any of the indexing methods
+          ``isel`` or ``sel``::
+
+            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            # DO NOT do this
+            da.isel(x=[0, 1, 2])[1] = -1
+
+          Assigning values with the chained indexing using ``.sel`` or ``.isel`` fails silently.
+
         See Also
         --------
         Dataset.sel
         DataArray.isel
+
         """
         ds = self._to_temp_dataset().sel(drop=drop, method=method,
                                          tolerance=tolerance, **indexers)
