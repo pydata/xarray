@@ -2949,6 +2949,26 @@ class TestDataset(TestCase):
                           "without the key 'dims'"):
             Dataset.from_dict(d)
 
+    def test_to_and_from_dict_with_zero_dim(self):
+        ds = Dataset(OrderedDict([('a', ('t', np.array([], dtype='float64'))),
+                                  ('b', ('t', np.array([], dtype='float64'))),
+                                  ('t', ('t', np.array([], dtype='U1')))]))
+        expected = {'coords': {'t': {'dims': ('t',),
+                                     'data': [],
+                                     'attrs': {}}},
+                    'attrs': {},
+                    'dims': {'t': 0},
+                    'data_vars': {'a': {'dims': ('t',),
+                                        'data': [],
+                                        'attrs': {}},
+                                  'b': {'dims': ('t',),
+                                        'data': [],
+                                        'attrs': {}}}}
+
+        actual = ds.to_dict()
+        self.assertEqual(expected, actual)
+        self.assertDatasetIdentical(ds, Dataset.from_dict(actual))
+
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)

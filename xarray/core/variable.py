@@ -418,7 +418,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         if isinstance(dims, basestring):
             dims = (dims,)
         dims = tuple(dims)
-        if len(dims) != self.ndim:
+        if self.shape != (0,) and len(dims) != self.ndim:
             raise ValueError('dimensions %s must have the same length as the '
                              'number of data dimensions, ndim=%s'
                              % (dims, self.ndim))
