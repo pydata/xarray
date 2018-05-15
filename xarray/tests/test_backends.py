@@ -2654,8 +2654,8 @@ class TestRasterio(TestCase):
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 temp = pickle.dumps(rioda)
-                actual = pickle.loads(temp)
-                assert_equal(actual, rioda)
+                with pickle.loads(temp) as actual:
+                    assert_equal(actual, rioda)
 
     def test_ENVI_tags(self):
         rasterio = pytest.importorskip('rasterio', minversion='1.0a')
