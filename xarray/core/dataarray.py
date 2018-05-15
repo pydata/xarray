@@ -767,7 +767,8 @@ class DataArray(AbstractArray, DataWithCoords):
             # DO NOT do this
             da.isel(x=[0, 1, 2])[1] = -1
 
-          Assigning values with the chained indexing using ``.sel`` or ``.isel`` fails silently.
+          Assigning values with the chained indexing using ``.sel`` or
+          ``.isel`` fails silently.
 
         See Also
         --------
