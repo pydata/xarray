@@ -9,8 +9,13 @@ from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
-from .utils import Frozen
+from .utils import Frozen, ReprObject
 from .variable import Variable
+
+
+# Used as the key corresponding to a DataArray's variable when converting
+# arbitrary DataArray objects to datasets
+_THIS_ARRAY = ReprObject('<this-array>')
 
 
 class AbstractCoordinates(Mapping, formatting.ReprMixin):
@@ -225,7 +230,9 @@ class DataArrayCoordinates(AbstractCoordinates):
     def _update_coords(self, coords):
         from .dataset import calculate_dimensions
 
-        dims = calculate_dimensions(coords)
+        coords_plus_data = coords.copy()
+        coords_plus_data[_THIS_ARRAY] = self._data.variable
+        dims = calculate_dimensions(coords_plus_data)
         if not set(dims) <= set(self.dims):
             raise ValueError('cannot add coordinates with new dimensions to '
                              'a DataArray')
