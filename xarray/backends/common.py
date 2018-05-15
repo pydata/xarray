@@ -509,15 +509,17 @@ class DataStorePickleMixin(object):
 class PickleByReconstructionWrapper(object):
 
     def __init__(self, opener, file, mode='r', **kwargs):
-
         self.opener = partial(opener, file, mode=mode, **kwargs)
         self.mode = mode
+        self._ds = None
 
     @property
     def value(self):
-        return self.opener()
+        self._ds = self.opener()
+        return self._ds
 
     def __getstate__(self):
+        del self._ds
         state = self.__dict__.copy()
         if self.mode == 'w':
             # file has already been created, don't override when restoring
@@ -527,8 +529,5 @@ class PickleByReconstructionWrapper(object):
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def __getitem__(self, key):
-        return self.value[key]
-
-    def __getattr__(self, name):
-        return getattr(self.value, name)
+    def close(self):
+        self._ds.close()
