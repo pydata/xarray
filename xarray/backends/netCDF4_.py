@@ -439,9 +439,9 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
         return target, variable.data
 
-    def sync(self):
+    def sync(self, compute=True):
         with self.ensure_open(autoclose=True):
-            super(NetCDF4DataStore, self).sync()
+            super(NetCDF4DataStore, self).sync(compute=compute)
             self.ds.sync()
 
     def close(self):
