@@ -31,30 +31,34 @@ What's New
 v0.10.4 (unreleased)
 --------------------
 
+The minor release includes a number of bug-fixes and backwards compatible
+enhancements. A highlight is ``CFTimeIndex``, which offers support for
+non-standard calendars used in climate modeling.
+
 Documentation
 ~~~~~~~~~~~~~
-- `FAQ <http://xarray.pydata.org/en/stable/faq.html#what-other-projects-leverage-xarray>`_ now lists projects that leverage xarray.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- `Assigning values with indexing <http://xarray.pydata.org/en/stable/indexing.html#assigning-values-with-indexing>`_ now includes examples on how to select and assign values to a :py:class:`~xarray.DataArray`.
-  By `Chiara Lepore <https://github.com/chiaral>`_.
 
+- New FAQ entry, :ref:`faq.other_projects`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :ref:`assigning_values` now includes examples on how to select and assign
+  values to a :py:class:`~xarray.DataArray` with ``.loc``.
+  By `Chiara Lepore <https://github.com/chiaral>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- Slight modification in `rolling` with dask.array and bottleneck. Also, fixed a bug in rolling an
-  integer dask array.
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Add an option for using a ``CFTimeIndex`` for indexing times with
   non-standard calendars and/or outside the Timestamp-valid range; this index
   enables a subset of the functionality of a standard
-  ``pandas.DatetimeIndex`` (:issue:`789`, :issue:`1084`, :issue:`1252`).
+  ``pandas.DatetimeIndex``.
+  See :ref:`CFTimeIndex` for full details.
+  (:issue:`789`, :issue:`1084`, :issue:`1252`)
   By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
   `Stephan Hoyer <https://github.com/shoyer>`_.
 - Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
   :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
-         library. By `Spencer Clark
-         <https://github.com/spencerkclark>`_.
+  library.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
 - :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
@@ -66,7 +70,8 @@ Enhancements
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
   (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
-- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change
+  the direction of the respective axes.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
 - Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
@@ -85,14 +90,14 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Now raises an Error if a coordinate with wrong size is assigned to a
-  :py:class:`~xarray.DataArray`. (:issue:`2112`)
+- ``ValueError`` is raised when coordinates with the wrong size are assigned to
+  a :py:class:`DataArray`. (:issue:`2112`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
-  integer dask array. (:issue:`2113`)
+- Fixed a bug in :py:meth:`~xarary.DatasArray.rolling` with bottleneck. Also,
+  fixed a bug in rolling an integer dask array. (:issue:`2113`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
-  :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
+  :py:func:`apply_ufunc` was used with :py:class:`Variable`. (:issue:`2114`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
   non-dimensional coordinates of the DataArray are now dropped.
@@ -100,7 +105,9 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
+- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes
+  the rotation and horizontal alignment of labels without removing the x-axes of
+  any other subplots in the figure (if any).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
