@@ -1848,7 +1848,9 @@ class TestDataset(TestCase):
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
-        with pytest.raises(ValueError):
+        # This exception raised by pandas changed from ValueError -> KeyError
+        # in pandas 0.23.
+        with pytest.raises((ValueError, KeyError)):
             # not contained in axis
             data.drop(['c'], dim='x')
 
