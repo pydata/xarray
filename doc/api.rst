@@ -522,6 +522,13 @@ GroupByObjects
    core.groupby.DatasetGroupBy.apply
    core.groupby.DatasetGroupBy.reduce
 
+Custom Indexes
+==============
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
+
 Plotting
 ========
 

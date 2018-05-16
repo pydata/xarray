@@ -22,6 +22,8 @@ from .backends.zarr import open_zarr
 
 from .conventions import decode_cf, SerializationWarning
 
+from .coding.cftimeindex import CFTimeIndex
+
 try:
     from .version import version as __version__
 except ImportError:  # pragma: no cover
