@@ -398,7 +398,37 @@ These methods may and also be applied to ``Dataset`` objects
 Assigning values with indexing
 ------------------------------
 
-Vectorized indexing can be used to assign values to xarray object.
+To select and assign values to a portion of a :py:meth:`~xarray.DataArray` you
+can use indexing with ``.loc`` :
+
+.. ipython:: python
+
+    ds = xr.tutorial.load_dataset('air_temperature')
+
+    #add an empty 2D dataarray
+    ds['empty']= xr.full_like(ds.air.mean('time'),fill_value=0)
+
+    #modify one grid point using loc()
+    ds['empty'].loc[dict(lon=260, lat=30)] = 100
+
+    #modify a 2D region using loc()
+    lc = ds.coords['lon']
+    la = ds.coords['lat']
+    ds['empty'].loc[dict(lon=lc[(lc>220)&(lc<260)], lat=la[(la>20)&(la<60)])] = 100
+
+or :py:meth:`~xarray.where`:
+
+.. ipython:: python
+
+    #modify one grid point using xr.where()
+    ds['empty'] = xr.where((ds.coords['lat']==20)&(ds.coords['lon']==260), 100, ds['empty'])
+
+    #or modify a 2D region using xr.where()
+    mask = (ds.coords['lat']>20)&(ds.coords['lat']<60)&(ds.coords['lon']>220)&(ds.coords['lon']<260)
+    ds['empty'] = xr.where(mask, 100, ds['empty'])
+
+
+Vectorized indexing can also be used to assign values to xarray object.
 
 .. ipython:: python
 
