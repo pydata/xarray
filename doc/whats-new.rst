@@ -69,6 +69,19 @@ Enhancements
 - ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
+  ``dask.delayed`` to parallelize the open and preprocessing steps within
+  ``open_mfdataset``. This is expected to provide performance improvements when
+  opening many files, particularly when used in conjunction with dask's
+  multiprocessing or distributed schedulers (:issue:`1981`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- New ``compute`` option in :py:meth:`~xarray.Dataset.to_netcdf`,
+  :py:meth:`~xarray.Dataset.to_zarr`, and :py:func:`~xarray.save_mfdataset` to
+  allow for the lazy computation of netCDF and zarr stores. This feature is
+  currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -104,12 +117,6 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 Enhancements
 ~~~~~~~~~~~~
 
-- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
-  ``dask.delayed`` to parallelize the open and preprocessing steps within
-  ``open_mfdataset``. This is expected to provide performance improvements when
-  opening many files, particularly when used in conjunction with dask's
-  multiprocessing or distributed schedulers (:issue:`1981`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 - :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
   which test each value in the array for whether it is contained in the
   supplied list, returning a bool array. See :ref:`selecting values with isin`
