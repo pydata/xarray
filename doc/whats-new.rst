@@ -35,6 +35,8 @@ Documentation
 ~~~~~~~~~~~~~
 - `FAQ <http://xarray.pydata.org/en/stable/faq.html#what-other-projects-leverage-xarray>`_ now lists projects that leverage xarray.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- `Assigning values with indexing <http://xarray.pydata.org/en/stable/indexing.html#assigning-values-with-indexing>`_ now includes examples on how to select and assign values to a :py:class:`~xarray.DataArray`.
+  By `Chiara Lepore <https://github.com/chiaral>`_.
 
 
 Enhancements
