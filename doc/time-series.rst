@@ -70,7 +70,11 @@ You can manual decode arrays in this form by passing a dataset to
 One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
 native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
-returned as arrays of ``netcdftime.datetime`` objects.
+returned as arrays of ``cftime.datetime`` objects and a ``CFTimeIndex``
+can be used for indexing.  The ``CFTimeIndex`` enables only a subset of
+the indexing functionality of a ``pandas.DatetimeIndex`` and is only enabled
+when using the standalone version of ``cftime`` (not the version packaged with
+earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing
 -----------------
@@ -207,3 +211,93 @@ Dataset and DataArray objects with an arbitrary number of dimensions.
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
+
+
+.. _CFTimeIndex:
+     
+Non-standard calendars and dates outside the Timestamp-valid range
+------------------------------------------------------------------
+
+Through the standalone ``cftime`` library and a custom subclass of
+``pandas.Index``, xarray supports a subset of the indexing functionality enabled
+through the standard ``pandas.DatetimeIndex`` for dates from non-standard
+calendars or dates using a standard calendar, but outside the
+`Timestamp-valid range`_ (approximately between years 1678 and 2262).  This
+behavior has not yet been turned on by default; to take advantage of this
+functionality, you must have the ``enable_cftimeindex`` option set to
+``True`` within your context (see :py:func:`~xarray.set_options` for more
+information).  It is expected that this will become the default behavior in
+xarray version 0.11.
+
+For instance, you can create a DataArray indexed by a time
+coordinate with a no-leap calendar within a context manager setting the
+``enable_cftimeindex`` option, and the time index will be cast to a
+``CFTimeIndex``:
+
+.. ipython:: python
+
+   from itertools import product
+   from cftime import DatetimeNoLeap
+   
+   dates = [DatetimeNoLeap(year, month, 1) for year, month in
+            product(range(1, 3), range(1, 13))]
+   with xr.set_options(enable_cftimeindex=True):
+       da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
+                         name='foo')
+                         
+.. note::
+
+   With the ``enable_cftimeindex`` option activated, a ``CFTimeIndex``
+   will be used for time indexing if any of the following are true:
+
+   - The dates are from a non-standard calendar
+   - Any dates are outside the Timestamp-valid range
+
+   Otherwise a ``pandas.DatetimeIndex`` will be used.  In addition, if any
+   variable (not just an index variable) is encoded using a non-standard
+   calendar, its times will be decoded into ``cftime.datetime`` objects,
+   regardless of whether or not they can be represented using
+   ``np.datetime64[ns]`` objects.
+                         
+For data indexed by a ``CFTimeIndex`` xarray currently supports:
+
+- `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
+  datetime strings:
+  
+.. ipython:: python
+
+   da.sel(time='0001')
+   da.sel(time=slice('0001-05', '0002-02'))
+
+- Access of basic datetime components via the ``dt`` accessor (in this case
+  just "year", "month", "day", "hour", "minute", "second", "microsecond", and
+  "season"): 
+
+.. ipython:: python
+
+   da.time.dt.year
+   da.time.dt.month
+   da.time.dt.season
+
+- Group-by operations based on datetime accessor attributes (e.g. by month of
+  the year):
+
+.. ipython:: python
+
+   da.groupby('time.month').sum()
+   
+- And serialization:
+
+.. ipython:: python
+
+   da.to_netcdf('example.nc')
+   xr.open_dataset('example.nc')
+
+.. note::
+   
+   Currently resampling along the time dimension for data indexed by a
+   ``CFTimeIndex`` is not supported.
+  
+.. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
+.. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
+.. _partial datetime string indexing: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#partial-string-indexing
