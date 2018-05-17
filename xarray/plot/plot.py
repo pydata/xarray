@@ -20,7 +20,7 @@ from xarray.core.pycompat import basestring
 from .facetgrid import FacetGrid
 from .utils import (
     ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
-    import_matplotlib_pyplot)
+    import_matplotlib_pyplot, label_from_attrs)
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -240,14 +240,10 @@ def line(darray, *args, **kwargs):
         if (x is None and y is None) or x == dim:
             xplt = darray.coords[dim]
             yplt = darray
-            xlabel = dim
-            ylabel = darray.name
 
         else:
             yplt = darray.coords[dim]
             xplt = darray
-            xlabel = darray.name
-            ylabel = dim
 
     else:
         if x is None and y is None and hue is None:
@@ -265,6 +261,12 @@ def line(darray, *args, **kwargs):
             xplt = darray.transpose(ylabel, huelabel)
             yplt = darray.coords[ylabel]
 
+        huecoords = darray[huelabel]
+        huelabel = label_from_attrs(huecoords)
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
     _ensure_plottable(xplt)
 
     primitive = ax.plot(xplt, yplt, *args, **kwargs)
@@ -279,7 +281,7 @@ def line(darray, *args, **kwargs):
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
-                  labels=list(darray.coords[huelabel].values),
+                  labels=list(huecoords.values),
                   title=huelabel)
 
     # Rotate dates on xlabels
@@ -333,8 +335,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     ax.set_ylabel('Count')
 
-    if darray.name is not None:
-        ax.set_title('Histogram of {0}'.format(darray.name))
+    ax.set_title('Histogram')
+    ax.set_xlabel(label_from_attrs(darray))
 
     return primitive
 
@@ -652,8 +654,8 @@ def _plot2d(plotfunc):
 
         # Label the plot with metadata
         if add_labels:
-            ax.set_xlabel(xlab)
-            ax.set_ylabel(ylab)
+            ax.set_xlabel(label_from_attrs(darray[xlab]))
+            ax.set_ylabel(label_from_attrs(darray[ylab]))
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
@@ -664,8 +666,8 @@ def _plot2d(plotfunc):
             else:
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
-            if darray.name and add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(darray.name, rotation=90)
+            if add_labels and 'label' not in cbar_kwargs:
+                cbar.set_label(label_from_attrs(darray), rotation=90)
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

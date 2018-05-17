@@ -66,6 +66,10 @@ For these examples we'll use the North American air temperature dataset.
     # Convert to celsius
     air = airtemps.air - 273.15
 
+    # copy attributes to get nice figure labels and change Kelvin to Celsius
+    air.attrs = airtemps.air.attrs
+    air.attrs['units'] = 'deg C'
+
 
 One Dimension
 -------------
@@ -73,7 +77,7 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-xarray uses the coordinate name to label the x axis.
+xarray uses the coordinate name along with any associated `CF-compliant metadata <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_ (the `attrs` 'long_name', 'standard_name' and 'units') to label the axes.
 
 .. ipython:: python
 
