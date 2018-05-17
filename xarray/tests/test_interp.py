@@ -171,7 +171,8 @@ def test_interpolate_nd(case):
     # linear interpolation is separateable
     expected = da.interp(x=xdest, method='linear')
     expected = expected.interp(y=ydest, method='linear')
-    assert_allclose(actual, expected.transpose('x', 'y', 'z'))
+    assert_allclose(actual.transpose('x', 'y', 'z'),
+                    expected.transpose('x', 'y', 'z'))
 
     # grid -> 1d-sample
     xdest = xr.DataArray(np.linspace(0.1, 1.0, 11), dims='y')
@@ -187,7 +188,7 @@ def test_interpolate_nd(case):
         expected_data, dims=['y', 'z'],
         coords={'z': da['z'], 'y': ydest, 'x': ('y', xdest.values),
                 'x2': da['x2'].interp(x=xdest)})
-    assert_allclose(actual, expected.transpose('y', 'z'))
+    assert_allclose(actual.transpose('y', 'z'), expected)
 
 
 @pytest.mark.parametrize('method', ['linear'])
