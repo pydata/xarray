@@ -445,9 +445,12 @@ def interp(obj, indexes_coords, method, **kwargs):
 
     # transpose the result so that the new dimensions are inserted to the
     # original position
-    start = min(obj.get_axis_num(d) for d in dims)
-    result_dims = (broadcast_dims[:start] + list(destination[0].dims) +
-                   broadcast_dims[start:])
+    if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
+        result_dims = obj.dims
+    else:
+        start = min(obj.get_axis_num(d) for d in dims)
+        result_dims = (broadcast_dims[:start] + list(destination[0].dims) +
+                       broadcast_dims[start:])
     return result.transpose(*result_dims)
 
 
