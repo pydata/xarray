@@ -61,7 +61,7 @@ Enhancements
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
-- :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
+- :py:meth:`~xarray.Dataset.to_netcdf` with ``engine='h5netcdf'`` now accepts h5py
   encoding settings ``compression`` and ``compression_opts``, along with the
   NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
   This allows using any compression plugin installed in hdf5, e.g. LZF
