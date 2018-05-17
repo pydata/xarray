@@ -2594,26 +2594,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             reduce_dims = [dim for dim in var.dims if dim in dims]
-            if reduce_dims or not var.dims:
-                if name not in self.coords:
-                    if (not numeric_only or
-                            np.issubdtype(var.dtype, np.number) or
-                            (var.dtype == np.bool_)):
-                        if len(reduce_dims) == 1:
-                            # unpack dimensions for the benefit of functions
-                            # like np.argmin which can't handle tuple arguments
-                            reduce_dims, = reduce_dims
-                        elif len(reduce_dims) == var.ndim:
-                            # prefer to aggregate over axis=None rather than
-                            # axis=(0, 1) if they will be equivalent, because
-                            # the former is often more efficient
-                            reduce_dims = None
-                        variables[name] = var.reduce(func, dim=reduce_dims,
-                                                     keep_attrs=keep_attrs,
-                                                     allow_lazy=allow_lazy,
-                                                     **kwargs)
+            if name in self.coords:
+                if not reduce_dims:
+                    variables[name] = var
+                # drop other coordinates
             else:
-                variables[name] = var
+                if (not numeric_only or
+                        np.issubdtype(var.dtype, np.number) or
+                        (var.dtype == np.bool_)):
+                    if len(reduce_dims) == 1:
+                        # unpack dimensions for the benefit of functions
+                        # like np.argmin which can't handle tuple arguments
+                        reduce_dims, = reduce_dims
+                    elif len(reduce_dims) == var.ndim:
+                        # prefer to aggregate over axis=None rather than
+                        # axis=(0, 1) if they will be equivalent, because
+                        # the former is often more efficient
+                        reduce_dims = None
+                    variables[name] = var.reduce(func, dim=reduce_dims,
+                                                 keep_attrs=keep_attrs,
+                                                 allow_lazy=allow_lazy,
+                                                 **kwargs)
+                # drop other data_vars
 
         coord_names = set(k for k in self.coords if k in variables)
         attrs = self.attrs if keep_attrs else None

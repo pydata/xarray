@@ -8,6 +8,7 @@ from numpy import array, nan
 import warnings
 
 from xarray import DataArray, concat
+from xarray.core import duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
     stack, where)
@@ -101,6 +102,53 @@ class TestOps(TestCase):
 
     def test_all_nan_arrays(self):
         assert np.isnan(mean([np.nan, np.nan]))
+
+
+def test_cumsum_1d():
+    inputs = np.array([0, 1, 2, 3])
+    expected = np.array([0, 1, 3, 6])
+    actual = duck_array_ops.cumsum(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=0)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=-1)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=(0,))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=())
+    assert_array_equal(inputs, actual)
+
+
+def test_cumsum_2d():
+    inputs = np.array([[1, 2], [3, 4]])
+
+    expected = np.array([[1, 3], [4, 10]])
+    actual = duck_array_ops.cumsum(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=(0, 1))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=())
+    assert_array_equal(inputs, actual)
+
+
+def test_cumprod_2d():
+    inputs = np.array([[1, 2], [3, 4]])
+
+    expected = np.array([[1, 2], [3, 2*3*4]])
+    actual = duck_array_ops.cumprod(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumprod(inputs, axis=(0, 1))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumprod(inputs, axis=())
+    assert_array_equal(inputs, actual)
 
 
 class TestArrayNotNullEquiv():
