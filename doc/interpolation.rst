@@ -11,7 +11,7 @@ Interpolating data
     import xarray as xr
     np.random.seed(123456)
 
-xarray offers flexible interpolation routines, which has a similar interface
+xarray offers flexible interpolation routines, which have a similar interface
 to our :ref:`indexing <indexing>`.
 
 .. note::
@@ -174,17 +174,40 @@ while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
 
 .. ipython:: python
 
-    da = xr.DataArray([0, 1, np.nan, 3], dims='x', coords={'x': range(4)})
+    da = xr.DataArray([0, 2, np.nan, 3, 3.25], dims='x',
+                      coords={'x': range(5)})
     da.interp(x=[0.5, 1.5, 2.5])
     da.interp(x=[0.5, 1.5, 2.5], method='cubic')
 
-In order to fill NaN, you can use :py:meth:`~xarray.DataArray.interpolate_na`
-method, which is similar to pandas interpolate <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.interpolate.html>`_ method.
+To avoid this, you can drop NaN by :py:meth:`~xarray.DataArray.dropna`, and
+then make the interpolation
+
+.. ipython:: python
+
+    dropped = da.dropna('x')
+    dropped
+    dropped.interp(x=[0.5, 1.5, 2.5], method='cubic')
+
+If NaNs are distributed rondomly in your multidimensional array,
+dropping all the columns containing more than one NaNs by
+:py:meth:`~xarray.DataArray.dropna` may lose significant amount of information.
+In such a case, you can fill NaN by :py:meth:`~xarray.DataArray.interpolate_na`,
+which is similar to pandas `interpolate <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.interpolate.html>`_ method.
 
 .. ipython:: python
 
     filled = da.interpolate_na(dim='x')
-    da.interp(x=[0.5, 1.5, 2.5], method='cubic')
+    filled
+
+This fills NaN by interpolating along the specified dimension.
+After filling NaNs, you can interpolate
+
+.. ipython:: python
+
+    filled.interp(x=[0.5, 1.5, 2.5], method='cubic')
+
+For the details of :py:meth:`~xarray.DataArray.interpolate_na`,
+see :ref:`Missing values <missing_values>`.
 
 
 Example
@@ -203,7 +226,7 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
     # Interpolated data
     new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims['lon'] * 4)
     new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims['lat'] * 4)
-    dsi = ds.interp(lon=new_lon, lat=new_lat)
+    dsi = ds.interp(lat=new_lat, lon=new_lon)
     dsi.air.isel(time=0).plot(ax=axes[1])
     @savefig interpolation_sample3.png width=8in
     axes[1].set_title('Interpolated data')
