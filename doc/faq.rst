@@ -266,5 +266,5 @@ would certainly appreciate it. We recommend two citations.
                  month  = aug,
                  year   = 2016,
                  doi    = {10.5281/zenodo.59499},
-                 url    = {http://dx.doi.org/10.5281/zenodo.59499}
+                 url    = {https://doi.org/10.5281/zenodo.59499}
                 }
