@@ -11,7 +11,7 @@ from .computation import apply_ufunc
 from .npcompat import flip
 from .pycompat import iteritems
 from .utils import is_scalar
-from .variable import broadcast_variables
+from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
 
 
@@ -374,7 +374,7 @@ def _get_valid_fill_mask(arr, dim, limit):
 def _assert_single_chunk(obj, axes):
     for axis in axes:
         if len(obj.chunks[axis]) > 1 or obj.chunks[axis][0] < obj.shape[axis]:
-            raise ValueError('Chunk along the dimension to be interpolated '
+            raise ValueError('Chunking along the dimension to be interpolated '
                              '({}) is not allowed.'.format(axis))
 
 
@@ -382,17 +382,15 @@ def _localize(obj, indexes_coords):
     """ Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
+    indexes = {}
     for dim, [x, new_x] in indexes_coords.items():
-        try:
-            imin = x.to_index().get_loc(np.min(new_x.values), method='nearest')
-            imax = x.to_index().get_loc(np.max(new_x.values), method='nearest')
+        index = x.to_index()
+        imin = index.get_loc(np.min(new_x.values), method='nearest')
+        imax = index.get_loc(np.max(new_x.values), method='nearest')
 
-            idx = slice(np.maximum(imin - 2, 0), imax + 2)
-            indexes_coords[dim] = (x[idx], new_x)
-            obj = obj.isel(**{dim: idx})
-        except ValueError:  # if index is not sorted.
-            pass
-    return obj, indexes_coords
+        indexes[dim] = slice(max(imin - 2, 0), imax + 2)
+        indexes_coords[dim] = (x[indexes[dim]], new_x)
+    return obj.isel(**indexes), indexes_coords
 
 
 def interp(obj, indexes_coords, method, **kwargs):
@@ -415,7 +413,7 @@ def interp(obj, indexes_coords, method, **kwargs):
     -------
     Interpolated Variable
     """
-    if len(indexes_coords) == 0:
+    if not indexes_coords:
         return obj.copy()
 
     # simple speed up for the local interpolation
@@ -433,21 +431,24 @@ def interp(obj, indexes_coords, method, **kwargs):
 
     # target dimensions
     dims = list(indexes_coords)
-    x = [indexes_coords[d][0] for d in dims]
-    new_x = [indexes_coords[d][1] for d in dims]
+    x, new_x = zip(*[indexes_coords[d] for d in dims])
     destination = broadcast_variables(*new_x)
 
-    rslt = apply_ufunc(interp_func, obj,
-                       input_core_dims=[dims],
-                       output_core_dims=[destination[0].dims],
-                       output_dtypes=[obj.dtype], dask='allowed',
-                       kwargs={'x': x, 'new_x': destination, 'method': method,
-                               'kwargs': kwargs},
-                       keep_attrs=True)
+    # transpose to make the interpolated axis to the last position
+    broadcast_dims = [d for d in obj.dims if d not in dims]
+    original_dims = broadcast_dims + dims
+    new_dims = broadcast_dims + list(destination[0].dims)
+    interped = interp_func(obj.transpose(*original_dims).data,
+                           x, destination, method, kwargs)
 
-    if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
-        return rslt.transpose(*obj.dims)
-    return rslt
+    result = Variable(new_dims, interped, attrs=obj.attrs)
+
+    # transpose the result so that the new dimensions are inserted to the
+    # original position
+    start = min(obj.get_axis_num(d) for d in dims)
+    result_dims = (broadcast_dims[:start] + list(destination[0].dims) +
+                   broadcast_dims[start:])
+    return result.transpose(*result_dims)
 
 
 def interp_func(obj, x, new_x, method, kwargs):
@@ -482,7 +483,7 @@ def interp_func(obj, x, new_x, method, kwargs):
     --------
     scipy.interpolate.interp1d
     """
-    if len(x) == 0:
+    if not x:
         return obj
 
     if isinstance(obj, dask_array_type):

@@ -1805,8 +1805,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
         assume_sorted: boolean, optional
-            If False, values of x can be in any order and they are sorted
-            first. If True, x has to be an array of monotonically increasing
+            If False, values of coordinates that are interpolated over can be
+            in any order and they are sorted first. If True, interpolated
+            coordinates are assumed to be an array of monotonically increasing
             values.
         kwargs: dictionary, optional
             Additional keyword passed to scipy's interpolator.

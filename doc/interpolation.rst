@@ -178,6 +178,14 @@ while other methods such as ``cubic`` or ``quadratic`` return all NaN arrays.
     da.interp(x=[0.5, 1.5, 2.5])
     da.interp(x=[0.5, 1.5, 2.5], method='cubic')
 
+In order to fill NaN, you can use :py:meth:`~xarray.DataArray.interpolate_na`
+method, which is similar to pandas interpolate <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.interpolate.html>`_ method.
+
+.. ipython:: python
+
+    filled = da.interpolate_na(dim='x')
+    da.interp(x=[0.5, 1.5, 2.5], method='cubic')
+
 
 Example
 -------

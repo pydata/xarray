@@ -133,7 +133,7 @@ def test_interpolate_vectorize(use_dask):
                                     'y': da['y'],
                                     'x': ('z', xdest.values),
                                     'x2': ('z', func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('y', 'z'))
+    assert_allclose(actual, expected.transpose('z', 'y'))
 
     # xdest is 2d
     xdest = xr.DataArray(np.linspace(0.1, 0.9, 30).reshape(6, 5),
@@ -150,7 +150,7 @@ def test_interpolate_vectorize(use_dask):
         coords={'z': xdest['z'], 'w': xdest['w'], 'z2': xdest['z2'],
                 'y': da['y'], 'x': (('z', 'w'), xdest),
                 'x2': (('z', 'w'), func(da['x2'], 'x', xdest))})
-    assert_allclose(actual, expected.transpose('y', 'z', 'w'))
+    assert_allclose(actual, expected.transpose('z', 'w', 'y'))
 
 
 @pytest.mark.parametrize('case', [3, 4])
@@ -187,7 +187,7 @@ def test_interpolate_nd(case):
         expected_data, dims=['y', 'z'],
         coords={'z': da['z'], 'y': ydest, 'x': ('y', xdest.values),
                 'x2': da['x2'].interp(x=xdest)})
-    assert_allclose(actual, expected.transpose('z', 'y'))
+    assert_allclose(actual, expected.transpose('y', 'z'))
 
 
 @pytest.mark.parametrize('method', ['linear'])
@@ -309,3 +309,30 @@ def test_dataset():
     # attrs should be kept
     assert interpolated.attrs['foo'] == 'var'
     assert interpolated['var1'].attrs['buz'] == 'var2'
+
+
+@pytest.mark.parametrize('case', [0, 3])
+def test_interpolate_scalar(case):
+    """ Make sure the resultant dimension order is consistent with .sel() """
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
+    da = get_example_data(case)
+
+    new_x = xr.DataArray([0, 1, 2], dims='x')
+    assert da.interp(x=new_x).dims == da.sel(x=new_x, method='nearest').dims
+
+    new_x = xr.DataArray([0, 1, 2], dims='a')
+    assert da.interp(x=new_x).dims == da.sel(x=new_x, method='nearest').dims
+    assert da.interp(y=new_x).dims == da.sel(y=new_x, method='nearest').dims
+
+    new_x = xr.DataArray([[0], [1], [2]], dims=['a', 'b'])
+    assert da.interp(x=new_x).dims == da.sel(x=new_x, method='nearest').dims
+    assert da.interp(y=new_x).dims == da.sel(y=new_x, method='nearest').dims
+
+    if case == 3:
+        new_x = xr.DataArray([[0], [1], [2]], dims=['a', 'b'])
+        new_z = xr.DataArray([[0], [1], [2]], dims=['a', 'b'])
+        actual = da.interp(x=new_x, z=new_z).dims
+        expected = da.sel(x=new_x, z=new_z, method='nearest').dims
+        assert actual == expected
