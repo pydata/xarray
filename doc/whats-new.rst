@@ -39,6 +39,10 @@ Enhancements
 
 Bug fixes
 ~~~~~~~~~
+- Restore the ability to pass ``{'dtype': 'S1'}`` encoding to
+  :meth:`~xarray.Dataset.to_netcdf`. This was a regression introduced in
+  v0.10.4 (:issue:`2149`).
+  By `Guido Imperiale <https://github.com/crusaderky>`_.
 
 
 .. _whats-new.0.10.4:
