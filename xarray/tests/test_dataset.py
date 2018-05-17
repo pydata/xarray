@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from distutils.version import LooseVersion
 from io import StringIO
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -338,14 +339,19 @@ class TestDataset(TestCase):
         das = [
             DataArray(np.random.rand(4), dims=['a']),  # series
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
-            DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']),  # panel
         ]
 
-        for a in das:
-            pandas_obj = a.to_pandas()
-            ds_based_on_pandas = Dataset(pandas_obj)
-            for dim in ds_based_on_pandas.data_vars:
-                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+        if hasattr(pd, 'Panel'):
+            das.append(
+                DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+            for a in das:
+                pandas_obj = a.to_pandas()
+                ds_based_on_pandas = Dataset(pandas_obj)
+                for dim in ds_based_on_pandas.data_vars:
+                    assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
@@ -2136,6 +2142,22 @@ class TestDataset(TestCase):
         actual.update(other)
         assert_identical(expected, actual)
 
+    def test_update_overwrite_coords(self):
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update(Dataset(coords={'b': 4}))
+        expected = Dataset({'a': ('x', [1, 2])}, {'b': 4})
+        assert_identical(data, expected)
+
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update(Dataset({'c': 5}, coords={'b': 4}))
+        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 4})
+        assert_identical(data, expected)
+
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update({'c': DataArray(5, coords={'b': 4})})
+        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 4})
+        assert_identical(data, expected)
+
     def test_update_auto_align(self):
         ds = Dataset({'x': ('t', [3, 4])}, {'t': [0, 1]})
 
@@ -2340,14 +2362,14 @@ class TestDataset(TestCase):
         actual = ds.copy()
         actual['var3'] = other
         assert_identical(expected, actual)
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
 
         # with alignment
         other = ds['var3'].isel(dim3=slice(1, -1))
         other['numbers'] = ('dim3', np.arange(8))
         actual = ds.copy()
         actual['var3'] = other
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
         expected = ds.copy()
         expected['var3'] = ds['var3'].isel(dim3=slice(1, -1))
         assert_identical(expected, actual)
@@ -2359,7 +2381,7 @@ class TestDataset(TestCase):
         actual = ds.copy()
         actual['var3'] = other
         assert 'position' in actual
-        assert 'position' in other
+        assert 'position' in other.coords
 
         # assigning a coordinate-only dataarray
         actual = ds.copy()

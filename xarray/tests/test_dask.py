@@ -459,8 +459,8 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        with dask.set_options(get=counting_get):
-            ds.load()
+        # with dask.set_options(get=counting_get):
+        ds.load(get=counting_get)
         assert count[0] == 1
 
     def test_stack(self):

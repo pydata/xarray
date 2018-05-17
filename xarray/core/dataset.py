@@ -895,8 +895,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
-
-        self.update({key: value})
+        self._update({key: value}, overwrite_coords=False)
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
@@ -2196,8 +2195,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        variables, coord_names, dims = dataset_update_method(self, other)
+        return self._update(other, inplace=inplace, overwrite_coords=True)
 
+    def _update(self, other, inplace=True, overwrite_coords=False):
+        """Shared logic between update() and __setitem__()."""
+        variables, coord_names, dims = dataset_update_method(
+            self, other, overwrite_coords=overwrite_coords)
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
