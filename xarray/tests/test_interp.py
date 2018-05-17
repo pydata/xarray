@@ -312,7 +312,7 @@ def test_dataset():
 
 
 @pytest.mark.parametrize('case', [0, 3])
-def test_interpolate_scalar(case):
+def test_interpolate_dimorder(case):
     """ Make sure the resultant dimension order is consistent with .sel() """
     if not has_scipy:
         pytest.skip('scipy is not installed.')
