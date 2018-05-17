@@ -40,6 +40,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- :py:func:`apply_ufunc` now validates that dimension sizes do not change
+  between inputs and outputs (:issue:`1931`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.4:
 
