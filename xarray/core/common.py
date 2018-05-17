@@ -308,6 +308,25 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         assigned : same type as caller
             A new object with the new coordinates in addition to the existing
             data.
+            
+        Examples
+        --------
+        
+        Convert longitude coordinates from 0-359 to -180-179:
+        
+        >>> da = xr.DataArray(np.random.rand(4),
+        ...                   coords=[np.array([358, 359, 0, 1])],
+        ...                   dims='lon')
+        >>> da
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 358 359 0 1
+        >>> da.assign_coords(lon=(((da.lon + 180) % 360) - 180))
+        <xarray.DataArray (lon: 4)>
+        array([0.28298 , 0.667347, 0.657938, 0.177683])
+        Coordinates:
+          * lon      (lon) int64 -2 -1 0 1
 
         Notes
         -----
@@ -426,7 +445,27 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
-
+            
+        Examples
+        --------
+        Calculate daily anomalies for daily data:
+        
+        >>> da = xr.DataArray(np.linspace(0, 1826, num=1827),
+        ...                   coords=[pd.date_range('1/1/2000', '31/12/2004',
+        ...                           freq='D')],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 1827)>
+        array([0.000e+00, 1.000e+00, 2.000e+00, ..., 1.824e+03, 1.825e+03, 1.826e+03])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+        >>> da.groupby('time.dayofyear') - da.groupby('time.dayofyear').mean('time')
+        <xarray.DataArray (time: 1827)>
+        array([-730.8, -730.8, -730.8, ...,  730.2,  730.2,  730.5])
+        Coordinates:
+          * time       (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+            dayofyear  (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 ...
+        
         See Also
         --------
         core.groupby.DataArrayGroupBy
@@ -514,7 +553,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Create rolling seasonal average of monthly data e.g. DJF, JFM, ..., SON:
 
-        >>> da = xr.DataArray(np.linspace(0,11,num=12),
+        >>> da = xr.DataArray(np.linspace(0, 11, num=12),
         ...                   coords=[pd.date_range('15/12/1999',
         ...                           periods=12, freq=pd.DateOffset(months=1))],
         ...                   dims='time')
@@ -523,19 +562,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da.rolling(time=3).mean()
+        >>> da.rolling(time=3, center=True).mean()
         <xarray.DataArray (time: 12)>
-        array([ nan,  nan,   1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
 
         Remove the NaNs using ``dropna()``:
 
-        >>> da.rolling(time=3).mean().dropna('time')
+        >>> da.rolling(time=3, center=True).mean().dropna('time')
         <xarray.DataArray (time: 10)>
-        array([  1.,   2.,   3.,   4.,   5.,   6.,   7.,   8.,   9.,  10.])
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-02-15 2000-03-15 2000-04-15 ...
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
 
         See Also
         --------
@@ -550,9 +589,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. Upsampling with filling is
-        not supported; if any intervals contain no values from the original
-        object, they will be given the value ``NaN``.
+        Handles both downsampling and upsampling. If any intervals contain no 
+        values from the original object, they will be given the value ``NaN``.
 
         Parameters
         ----------
@@ -578,7 +616,34 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         -------
         resampled : same type as caller
             This object resampled.
-
+            
+        Examples
+        --------
+        Downsample monthly time-series data to seasonal data:
+        
+        >>> da = xr.DataArray(np.linspace(0, 11, num=12),
+        ...                   coords=[pd.date_range('15/12/1999',
+        ...                           periods=12, freq=pd.DateOffset(months=1))],
+        ...                   dims='time')
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da.resample(time="Q-DEC").mean()
+        <xarray.DataArray (time: 4)>
+        array([ 1.,  4.,  7., 10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-02-29 2000-05-31 2000-08-31 2000-11-30
+          
+        Upsample monthly time-series data to daily data:
+        
+        >>> da.resample(time='1D').interpolate('linear')
+        <xarray.DataArray (time: 337)>
+        array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
+          
         References
         ----------
 
@@ -628,10 +693,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         warnings.warn("\n.resample() has been modified to defer "
                       "calculations. Instead of passing 'dim' and "
-                      "'how=\"{how}\", instead consider using "
-                      ".resample({dim}=\"{freq}\").{how}() ".format(
-                          dim=dim, freq=freq, how=how
-                      ), DeprecationWarning, stacklevel=3)
+                      "how=\"{how}\", instead consider using "
+                      ".resample({dim}=\"{freq}\").{how}('{dim}') ".format(
+                      dim=dim, freq=freq, how=how),
+                      DeprecationWarning, stacklevel=3)
 
         if isinstance(dim, basestring):
             dim = self[dim]
@@ -868,3 +933,34 @@ def ones_like(other, dtype=None):
     """Shorthand for full_like(other, 1, dtype)
     """
     return full_like(other, 1, dtype)
+
+
+def is_np_datetime_like(dtype):
+    """Check if a dtype is a subclass of the numpy datetime types
+    """
+    return (np.issubdtype(dtype, np.datetime64) or
+            np.issubdtype(dtype, np.timedelta64))
+
+
+def contains_cftime_datetimes(var):
+    """Check if a variable contains cftime datetime objects"""
+    try:
+        from cftime import datetime as cftime_datetime
+    except ImportError:
+        return False
+    else:
+        if var.dtype == np.dtype('O') and var.data.size > 0:
+            sample = var.data.ravel()[0]
+            if isinstance(sample, dask_array_type):
+                sample = sample.compute()
+                if isinstance(sample, np.ndarray):
+                    sample = sample.item()
+            return isinstance(sample, cftime_datetime)
+        else:
+            return False        
+                    
+
+def _contains_datetime_like_objects(var):
+    """Check if a variable contains datetime like objects (either
+    np.datetime64, np.timedelta64, or cftime.datetime)"""
+    return is_np_datetime_like(var.dtype) or contains_cftime_datetimes(var)

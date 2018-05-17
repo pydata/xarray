@@ -1,5 +1,6 @@
 import functools
 import operator
+import pickle
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
@@ -480,11 +481,18 @@ def test_keep_attrs():
 
     a = xr.DataArray([0, 1], [('x', [0, 1])])
     a.attrs['attr'] = 'da'
+    a['x'].attrs['attr'] = 'da_coord'
     b = xr.DataArray([1, 2], [('x', [0, 1])])
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
     actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual['x'].attrs, a['x'].attrs)
+
+    actual = add(a.variable, b.variable, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a.variable, b.variable, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
     a = xr.Dataset({'x': [0, 1]})
@@ -835,12 +843,32 @@ def test_dot(use_dask):
     assert actual.dims == ('b', )
     assert (actual.data == np.zeros(actual.shape)).all()
 
-    with pytest.raises(TypeError):
-        xr.dot(da_a, dims='a', invalid=None)
+    # Invalid cases
+    if not use_dask or LooseVersion(dask.__version__) > LooseVersion('0.17.4'):
+        with pytest.raises(TypeError):
+            xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
         xr.dot(da_a.to_dataset(name='da'), dims='a')
     with pytest.raises(TypeError):
         xr.dot(dims='a')
+
+    # einsum parameters
+    actual = xr.dot(da_a, da_b, dims=['b'], order='C')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    assert actual.values.flags['C_CONTIGUOUS']
+    assert not actual.values.flags['F_CONTIGUOUS']
+    actual = xr.dot(da_a, da_b, dims=['b'], order='F')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    # dask converts Fortran arrays to C order when merging the final array
+    if not use_dask:
+        assert not actual.values.flags['C_CONTIGUOUS']
+        assert actual.values.flags['F_CONTIGUOUS']
+
+    # einsum has a constant string as of the first parameter, which makes
+    # it hard to pass to xarray.apply_ufunc.
+    # make sure dot() uses functools.partial(einsum, subscripts), which
+    # can be pickled, and not a lambda, which can't.
+    pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
 def test_where():

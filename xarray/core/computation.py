@@ -195,7 +195,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     join = kwargs.pop('join', 'inner')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
-    keep_attrs = kwargs.pop('keep_attrs', False)
     if kwargs:
         raise TypeError('apply_dataarray_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -217,11 +216,6 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
         coords, = result_coords
         out = DataArray(result_var, coords, name=name, fastpath=True)
 
-    if keep_attrs and isinstance(args[0], DataArray):
-        if isinstance(out, tuple):
-            out = tuple(ds._copy_attrs_from(args[0]) for ds in out)
-        else:
-            out._copy_attrs_from(args[0])
     return out
 
 
@@ -526,6 +520,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
     dask = kwargs.pop('dask', 'forbidden')
     output_dtypes = kwargs.pop('output_dtypes', None)
     output_sizes = kwargs.pop('output_sizes', None)
+    keep_attrs = kwargs.pop('keep_attrs', False)
     if kwargs:
         raise TypeError('apply_variable_ufunc() got unexpected keyword '
                         'arguments: %s' % list(kwargs))
@@ -567,11 +562,17 @@ def apply_variable_ufunc(func, *args, **kwargs):
     if signature.num_outputs > 1:
         output = []
         for dims, data in zip(output_dims, result_data):
-            output.append(Variable(dims, data))
+            var = Variable(dims, data)
+            if keep_attrs and isinstance(args[0], Variable):
+                var.attrs.update(args[0].attrs)
+            output.append(var)
         return tuple(output)
     else:
         dims, = output_dims
-        return Variable(dims, result_data)
+        var = Variable(dims, result_data)
+        if keep_attrs and isinstance(args[0], Variable):
+            var.attrs.update(args[0].attrs)
+        return var
 
 
 def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
@@ -902,6 +903,7 @@ def apply_ufunc(func, *args, **kwargs):
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
                                         exclude_dims=exclude_dims,
+                                        keep_attrs=keep_attrs,
                                         dask=dask,
                                         output_dtypes=output_dtypes,
                                         output_sizes=output_sizes)
@@ -930,8 +932,7 @@ def apply_ufunc(func, *args, **kwargs):
         return apply_dataarray_ufunc(variables_ufunc, *args,
                                      signature=signature,
                                      join=join,
-                                     exclude_dims=exclude_dims,
-                                     keep_attrs=keep_attrs)
+                                     exclude_dims=exclude_dims)
     elif any(isinstance(a, Variable) for a in args):
         return variables_ufunc(*args)
     else:
@@ -951,6 +952,9 @@ def dot(*arrays, **kwargs):
     dims: str or tuple of strings, optional
         Which dimensions to sum over.
         If not speciified, then all the common dimensions are summed over.
+    **kwargs: dict
+        Additional keyword arguments passed to numpy.einsum or
+        dask.array.einsum
 
     Returns
     -------
@@ -975,9 +979,6 @@ def dot(*arrays, **kwargs):
     from .variable import Variable
 
     dims = kwargs.pop('dims', None)
-    if len(kwargs) > 0:
-        raise TypeError('Invalid keyward arguments {} are given'.format(
-            list(kwargs.keys())))
 
     if any(not isinstance(arr, (Variable, DataArray)) for arr in arrays):
         raise TypeError('Only xr.DataArray and xr.Variable are supported.'
@@ -1023,7 +1024,7 @@ def dot(*arrays, **kwargs):
 
     # subscripts should be passed to np.einsum as arg, not as kwargs. We need
     # to construct a partial function for apply_ufunc to work.
-    func = functools.partial(duck_array_ops.einsum, subscripts)
+    func = functools.partial(duck_array_ops.einsum, subscripts, **kwargs)
     result = apply_ufunc(func, *arrays,
                          input_core_dims=input_core_dims,
                          output_core_dims=output_core_dims,

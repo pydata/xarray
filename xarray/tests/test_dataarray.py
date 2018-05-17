@@ -11,14 +11,14 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
-from xarray.coding.times import CFDatetimeCoder
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
     assert_identical, raises_regex, requires_bottleneck, requires_dask,
-    requires_scipy, source_ndarray, unittest)
+    requires_scipy, source_ndarray, unittest, requires_cftime)
 
 
 class TestDataArray(TestCase):
@@ -1180,6 +1180,13 @@ class TestDataArray(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda.assign_coords(level_1=range(4))
 
+        # GH: 2112
+        da = xr.DataArray([0, 1, 2], dims='x')
+        with pytest.raises(ValueError):
+            da['x'] = [0, 1, 2, 3]  # size conflict
+        with pytest.raises(ValueError):
+            da.coords['x'] = [0, 1, 2, 3]  # size conflict
+
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [('x', [1, 2, 3])])
@@ -2208,6 +2215,19 @@ class TestDataArray(TestCase):
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
+    @requires_cftime
+    def test_resample_cftimeindex(self):
+        cftime = _import_cftime()
+        times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
+                                calendar='noleap')
+        with set_options(enable_cftimeindex=True):
+            array = DataArray(np.arange(12), [('time', times)])
+
+        with raises_regex(TypeError,
+                          'Only valid with DatetimeIndex, '
+                          'TimedeltaIndex or PeriodIndex'):
+            array.resample(time='6H').mean()
+
     def test_resample_first(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.arange(10), [('time', times)])
@@ -3025,12 +3045,11 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_iris(actual)
         assert_identical(original, roundtripped)
 
-        # If the Iris version supports it then we should get a dask array back
+        # If the Iris version supports it then we should have a dask array
+        # at each stage of the conversion
         if hasattr(actual, 'core_data'):
-            pass
-            # TODO This currently fails due to the decoding loading
-            # the data (#1372)
-            # self.assertEqual(type(original.data), type(roundtripped.data))
+            self.assertEqual(type(original.data), type(actual.core_data()))
+            self.assertEqual(type(original.data), type(roundtripped.data))
 
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)
@@ -3439,21 +3458,41 @@ def test_rolling_wrapped_bottleneck(da, name, center, min_periods):
     assert_equal(actual, da['time'])
 
 
-@pytest.mark.parametrize('name', ('sum', 'mean', 'std', 'min', 'max',
-                                  'median'))
+@pytest.mark.parametrize('name', ('mean', 'count'))
 @pytest.mark.parametrize('center', (True, False, None))
 @pytest.mark.parametrize('min_periods', (1, None))
-def test_rolling_wrapped_bottleneck_dask(da_dask, name, center, min_periods):
+@pytest.mark.parametrize('window', (7, 8))
+def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     pytest.importorskip('dask.array')
     # dask version
-    rolling_obj = da_dask.rolling(time=7, min_periods=min_periods)
+    rolling_obj = da_dask.rolling(time=window, min_periods=min_periods,
+                                  center=center)
     actual = getattr(rolling_obj, name)().load()
     # numpy version
-    rolling_obj = da_dask.load().rolling(time=7, min_periods=min_periods)
+    rolling_obj = da_dask.load().rolling(time=window, min_periods=min_periods,
+                                         center=center)
     expected = getattr(rolling_obj, name)()
 
     # using all-close because rolling over ghost cells introduces some
     # precision errors
+    assert_allclose(actual, expected)
+
+    # with zero chunked array GH:2113
+    rolling_obj = da_dask.chunk().rolling(time=window, min_periods=min_periods,
+                                          center=center)
+    actual = getattr(rolling_obj, name)().load()
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize('center', (True, None))
+def test_rolling_wrapped_dask_nochunk(center):
+    # GH:2113
+    pytest.importorskip('dask.array')
+
+    da_day_clim = xr.DataArray(np.arange(1, 367),
+                               coords=[np.arange(1, 367)], dims='dayofyear')
+    expected = da_day_clim.rolling(dayofyear=31, center=center).mean()
+    actual = da_day_clim.chunk().rolling(dayofyear=31, center=center).mean()
     assert_allclose(actual, expected)
 
 

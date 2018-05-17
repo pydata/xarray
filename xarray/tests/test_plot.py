@@ -9,6 +9,7 @@ import pytest
 
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
@@ -16,7 +17,7 @@ from xarray.plot.utils import (
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn)
+    requires_matplotlib, requires_seaborn, requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -352,6 +353,13 @@ class TestPlot1D(PlotTestCase):
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         assert rotation != 0
 
+    def test_xyincrease_false_changes_axes(self):
+        self.darray.plot.line(xincrease=False, yincrease=False)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
+        diffs = xlim[1] - xlim[0], ylim[1] - ylim[0]
+        assert all(x < 0 for x in diffs)
+
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
         self.darray.plot.line()
@@ -418,6 +426,15 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_nan_inf_are_ignored(self):
+        cmap_params1 = _determine_cmap_params(self.data)
+        data = self.data
+        data[50:55] = np.nan
+        data[56:60] = np.inf
+        cmap_params2 = _determine_cmap_params(data)
+        assert cmap_params1['vmin'] == cmap_params2['vmin']
+        assert cmap_params1['vmax'] == cmap_params2['vmax']
 
     @pytest.mark.slow
     def test_integer_levels(self):
@@ -1488,3 +1505,24 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
+
+
+@requires_cftime
+def test_plot_cftime_coordinate_error():
+    cftime = _import_cftime()
+    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(np.arange(5), coords=[time], dims=['time'])
+    with raises_regex(TypeError,
+                      'requires coordinates to be numeric or dates'):
+        data.plot()
+
+
+@requires_cftime
+def test_plot_cftime_data_error():
+    cftime = _import_cftime()
+    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
+    with raises_regex(NotImplementedError, 'cftime.datetime'):
+        data.plot()

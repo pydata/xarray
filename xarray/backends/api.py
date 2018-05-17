@@ -144,6 +144,13 @@ def _get_lock(engine, scheduler, format, path_or_file):
     return lock
 
 
+def _finalize_store(write, store):
+    """ Finalize this store by explicitly syncing and closing"""
+    del write  # ensure writing is done first
+    store.sync()
+    store.close()
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
@@ -620,7 +627,8 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None,
+              compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -680,19 +688,22 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
-                              unlimited_dims=unlimited_dims)
+                              unlimited_dims=unlimited_dims, compute=compute)
         if path_or_file is None:
             return target.getvalue()
     finally:
         if sync and isinstance(path_or_file, basestring):
             store.close()
 
+    if not compute:
+        import dask
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
+
     if not sync:
         return store
 
-
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=None):
+                   engine=None, compute=True):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
@@ -741,6 +752,10 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
+        See `Dataset.to_netcdf` for additional information.
+    compute: boolean
+        If true compute immediately, otherwise return a
+        ``dask.delayed.Delayed`` object that can be computed later.
 
     Examples
     --------
@@ -768,11 +783,17 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
 
-    writer = ArrayWriter()
-    stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
+    writer = ArrayWriter() if compute else None
+    stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
+                        compute=compute)
               for ds, path, group in zip(datasets, paths, groups)]
+
+    if not compute:
+        import dask
+        return dask.delayed(stores)
+
     try:
-        writer.sync()
+        delayed = writer.sync(compute=compute)
         for store in stores:
             store.sync()
     finally:
@@ -781,7 +802,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None):
+            encoding=None, compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -802,5 +823,9 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
-    dataset.dump_to_store(store, sync=True, encoding=encoding)
+    dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+
+    if not compute:
+        import dask
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
     return store

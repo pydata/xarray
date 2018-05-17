@@ -4,10 +4,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from datetime import datetime
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
+from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
-
-from . import TestCase, assert_array_equal, requires_dask
+from .test_coding_times import _all_cftime_date_types
+from . import (TestCase, requires_dask, assert_array_equal,
+               has_cftime_or_netCDF4, has_cftime)
 
 
 class TestAlias(TestCase):
@@ -20,20 +24,51 @@ class TestAlias(TestCase):
             old_method()
 
 
-class TestSafeCastToIndex(TestCase):
-    def test(self):
-        dates = pd.date_range('2000-01-01', periods=10)
-        x = np.arange(5)
-        td = x * np.timedelta64(1, 'D')
-        for expected, array in [
-                (dates, dates.values),
-                (pd.Index(x, dtype=object), x.astype(object)),
-                (pd.Index(td), td),
-                (pd.Index(td, dtype=object), td.astype(object)),
-        ]:
-            actual = utils.safe_cast_to_index(array)
-            assert_array_equal(expected, actual)
-            assert expected.dtype == actual.dtype
+def test_safe_cast_to_index():
+    dates = pd.date_range('2000-01-01', periods=10)
+    x = np.arange(5)
+    td = x * np.timedelta64(1, 'D')
+    for expected, array in [
+            (dates, dates.values),
+            (pd.Index(x, dtype=object), x.astype(object)),
+            (pd.Index(td), td),
+            (pd.Index(td, dtype=object), td.astype(object)),
+    ]:
+        actual = utils.safe_cast_to_index(array)
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+
+
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
+    date_types = _all_cftime_date_types()
+    for date_type in date_types.values():
+        dates = [date_type(1, 1, day) for day in range(1, 20)]
+
+        if enable_cftimeindex and has_cftime:
+            expected = CFTimeIndex(dates)
+        else:
+            expected = pd.Index(dates)
+
+        with set_options(enable_cftimeindex=enable_cftimeindex):
+            actual = utils.safe_cast_to_index(np.array(dates))
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+        assert isinstance(actual, type(expected))
+
+
+# Test that datetime.datetime objects are never used in a CFTimeIndex
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+@pytest.mark.parametrize('enable_cftimeindex', [False, True])
+def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
+    dates = [datetime(1, 1, day) for day in range(1, 20)]
+
+    expected = pd.Index(dates)
+    with set_options(enable_cftimeindex=enable_cftimeindex):
+        actual = utils.safe_cast_to_index(np.array(dates))
+    assert_array_equal(expected, actual)
+    assert isinstance(actual, pd.Index)
 
 
 def test_multiindex_from_product_levels():

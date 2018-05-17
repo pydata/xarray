@@ -285,18 +285,26 @@ class DataArrayRolling(Rolling):
 
             padded = self.obj.variable
             if self.center:
-                shift = (-self.window // 2) + 1
-
                 if (LooseVersion(np.__version__) < LooseVersion('1.13') and
                         self.obj.dtype.kind == 'b'):
                     # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
                     # mixed array correctly. We cast boolean array to float.
                     padded = padded.astype(float)
+
+                if isinstance(padded.data, dask_array_type):
+                    # Workaround to make the padded chunk size is larger than
+                    # self.window-1
+                    shift = - (self.window + 1) // 2
+                    offset = (self.window - 1) // 2
+                    valid = (slice(None), ) * axis + (
+                        slice(offset, offset + self.obj.shape[axis]), )
+                else:
+                    shift = (-self.window // 2) + 1
+                    valid = (slice(None), ) * axis + (slice(-shift, None), )
                 padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
-                valid = (slice(None), ) * axis + (slice(-shift, None), )
 
             if isinstance(padded.data, dask_array_type):
-                values = dask_rolling_wrapper(func, self.obj.data,
+                values = dask_rolling_wrapper(func, padded,
                                               window=self.window,
                                               min_count=min_count,
                                               axis=axis)
