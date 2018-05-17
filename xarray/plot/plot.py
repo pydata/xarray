@@ -48,14 +48,27 @@ def _ensure_plottable(*args):
     axis.
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
-    other_types = [datetime]
+    other_types = [datetime, pd._libs.interval.Interval]
 
     for x in args:
         if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
                 _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64 or '
-                            'datetime.datetime.')
+                            'datetime.datetime or pd._libs.interval.Interval.')
+
+
+def _interval_to_mid_points(array, label):
+    """
+    Helper function which checks whether array consists of
+    pd._libs.interval.Interval. If yes, it returns an array
+    with the Intervals' mid points.In addition, _center is
+    appended to the label
+    """
+    if _valid_other_type(array, [pd._libs.interval.Interval]):
+        array = np.asarray(list(map(lambda x: x.mid, array)))
+        label += '_center'
+    return array, label
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -266,6 +279,8 @@ def line(darray, *args, **kwargs):
             yplt = darray.coords[ylabel]
 
     _ensure_plottable(xplt)
+
+    xplt.values, xlabel = _interval_to_mid_points(xplt.values, xlabel)
 
     primitive = ax.plot(xplt, yplt, *args, **kwargs)
 
@@ -609,6 +624,9 @@ def _plot2d(plotfunc):
         zval = darray.to_masked_array(copy=False)
 
         _ensure_plottable(xval, yval)
+
+        xval, xlab = _interval_to_mid_points(xval, xlab)
+        yval, ylab = _interval_to_mid_points(yval, ylab)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default

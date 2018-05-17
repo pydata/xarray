@@ -37,6 +37,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- DataArrays created with groupby_bins supported by plotting routines. 
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+
 Bug fixes
 ~~~~~~~~~
 
