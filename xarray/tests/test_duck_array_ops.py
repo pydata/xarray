@@ -140,7 +140,7 @@ def test_cumsum_2d():
 def test_cumprod_2d():
     inputs = np.array([[1, 2], [3, 4]])
 
-    expected = np.array([[1, 2], [3, 2*3*4]])
+    expected = np.array([[1, 2], [3, 2 * 3 * 4]])
     actual = duck_array_ops.cumprod(inputs)
     assert_array_equal(expected, actual)
 
