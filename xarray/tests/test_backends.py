@@ -727,11 +727,48 @@ class CFEncodedDataTest(DatasetIOTestCases):
                     pass
 
     def test_encoding_kwarg(self):
-        ds = Dataset({'x': ('y', np.arange(10.0))})
-        kwargs = dict(encoding={'x': {'dtype': 'f4'}})
+        ds = Dataset({
+            'x': np.arange(10.0),
+            's1': ['foo', 'bar', 'baz'],
+            's2': ['foo', 'bar', 'baz'],
+        })
+        kwargs = dict(encoding={
+            'x': {'dtype': 'f4'},
+            's1': {'dtype': 'S1'},
+            's2': {'dtype': str},
+        })
+
+        can_compress = (self.engine not in ('scipy', 'zarr') and
+            self.file_format not in ('NETCDF3_CLASSIC', 'netcdf3_64bit'))
+        if can_compress:
+            kwargs['encoding']['x'].update(dict(
+                zlib=True, complevel=9, fletcher32=True, chunksizes=(5, ),
+                shuffle=True))
+
+        if self.engine == 'zarr':
+            actual_s2_dtype = '<U3'
+        elif self.engine == 'scipy':
+            actual_s2_dtype = 'S1'
+        elif self.file_format in ('NETCDF3_CLASSIC', 'NETCDF4_CLASSIC',
+                                  'netcdf3_64bit'):
+            actual_s2_dtype = 'S1'
+        else:
+            actual_s2_dtype = object
+
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.x.encoding['dtype'], 'f4')
+            if can_compress:
+                self.assertEqual(actual.x.encoding['zlib'], True)
+                self.assertEqual(actual.x.encoding['complevel'], 9)
+                self.assertEqual(actual.x.encoding['fletcher32'], True)
+                self.assertEqual(actual.x.encoding['chunksizes'], (5, ))
+                self.assertEqual(actual.x.encoding['shuffle'], True)
+            self.assertEqual(actual.s1.encoding['dtype'], 'S1')
+            self.assertEqual(actual.s2.encoding['dtype'], actual_s2_dtype)
+
         self.assertEqual(ds.x.encoding, {})
+        self.assertEqual(ds.s1.encoding, {})
+        self.assertEqual(ds.s2.encoding, {})
 
         kwargs = dict(encoding={'x': {'foo': 'bar'}})
         with raises_regex(ValueError, 'unexpected encoding'):
@@ -1225,6 +1262,7 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 @requires_zarr
 class BaseZarrTest(CFEncodedDataTest):
 
+    engine = 'zarr'
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
