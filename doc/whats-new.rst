@@ -28,8 +28,8 @@ What's New
 
 .. _whats-new.0.10.4:
 
-v0.10.4 (unreleased)
---------------------
+v0.10.4 (May 16, 2018)
+----------------------
 
 The minor release includes a number of bug-fixes and backwards compatible
 enhancements. A highlight is ``CFTimeIndex``, which offers support for
