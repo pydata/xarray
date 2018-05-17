@@ -738,7 +738,8 @@ class CFEncodedDataTest(DatasetIOTestCases):
             's2': {'dtype': str},
         })
 
-        can_compress = (self.engine not in ('scipy', 'zarr') and
+        can_compress = (
+            self.engine not in ('scipy', 'zarr') and
             self.file_format not in ('NETCDF3_CLASSIC', 'netcdf3_64bit'))
         if can_compress:
             kwargs['encoding']['x'].update(dict(
