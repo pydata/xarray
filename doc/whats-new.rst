@@ -37,9 +37,23 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
+  aggregation over multiple dimensions at the same time. This is the default
+  behavior when dimensions are not specified (previously this raised an error).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
+  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
+  etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a
+  bug where non-scalar data-variables that did not include the aggregation
+  dimension were improperly skipped.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 .. _whats-new.0.10.4:
 
