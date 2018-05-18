@@ -568,10 +568,10 @@ def apply_variable_ufunc(func, *args, **kwargs):
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(
-                    'size of dimension {!r} on inputs was unexpectedly changed '
-                    'by applied function from {} to {}. Only dimensions '
-                    'specified in ``exclude_dims`` with xarray.apply_ufunc '
-                    'are allowed to change size.'
+                    'size of dimension {!r} on inputs was unexpectedly '
+                    'changed by applied function from {} to {}. Only '
+                    'dimensions specified in ``exclude_dims`` with '
+                    'xarray.apply_ufunc are allowed to change size.'
                     .format(dim, dim_sizes[dim], new_size))
 
         if keep_attrs and isinstance(args[0], Variable):
