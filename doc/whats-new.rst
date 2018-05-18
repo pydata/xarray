@@ -42,6 +42,10 @@ Enhancements
   behavior when dimensions are not specified (previously this raised an error).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
+  to manage its version strings. (:issue:`1300`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
