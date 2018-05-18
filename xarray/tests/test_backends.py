@@ -804,11 +804,15 @@ class CFEncodedDataTest(DatasetIOTestCases):
 
     def test_encoding_kwarg_string(self):
         # regression test for GH2149
-        ds = Dataset({'x': ['foo', 'bar', 'baz']})
-        kwargs = dict(encoding={'x': {'dtype': 'S1'}})
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual['x'].encoding['dtype'], 'S1')
-            assert_identical(actual, ds)
+        for strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            ds = Dataset({'x': strings})
+            kwargs = dict(encoding={'x': {'dtype': 'S1'}})
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertEqual(actual['x'].encoding['dtype'], 'S1')
+                assert_identical(actual, ds)
 
     def test_default_fill_value(self):
         # Test default encoding for float:
