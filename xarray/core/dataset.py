@@ -2597,7 +2597,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             if name in self.coords:
                 if not reduce_dims:
                     variables[name] = var
-                # drop other coordinates
             else:
                 if (not numeric_only or
                         np.issubdtype(var.dtype, np.number) or
@@ -2615,7 +2614,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                                  keep_attrs=keep_attrs,
                                                  allow_lazy=allow_lazy,
                                                  **kwargs)
-                # drop other data_vars
 
         coord_names = set(k for k in self.coords if k in variables)
         attrs = self.attrs if keep_attrs else None
