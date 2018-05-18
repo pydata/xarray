@@ -24,8 +24,8 @@ from .coordinates import (
     assert_coordinate_consistent, remap_label_indexers)
 from .dtypes import is_datetime_like
 from .merge import (
-    dataset_merge_method, dataset_update_method, merge_data_and_coords,
-    merge_variables)
+    dataset_merge_method, dataset_setitem_method, dataset_update_method,
+    merge_data_and_coords, merge_variables)
 from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
@@ -895,7 +895,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
-        self._update({key: value}, overwrite_coords=False)
+        variables, coord_names, dims = dataset_setitem_method(self, key, value)
+        self._replace_vars_and_dims(variables, coord_names, dims, inplace=True)
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
@@ -2195,12 +2196,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        return self._update(other, inplace=inplace, overwrite_coords=True)
-
-    def _update(self, other, inplace=True, overwrite_coords=False):
-        """Shared logic between update() and __setitem__()."""
-        variables, coord_names, dims = dataset_update_method(
-            self, other, overwrite_coords=overwrite_coords)
+        variables, coord_names, dims = dataset_update_method(self, other)
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 

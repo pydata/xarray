@@ -546,29 +546,24 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     return merge_core(objs, compat, join, priority_arg=priority_arg)
 
 
-def dataset_update_method(dataset, other, overwrite_coords=False):
-    """Guts of the Dataset.update method
+def dataset_setitem_method(dataset, key, value):
+    """Guts of the Dataset.__setitem__ method.
 
     This drops a duplicated coordinates from `other` (GH:2068).
     """
-    from .dataset import Dataset
     from .dataarray import DataArray
 
-    if not overwrite_coords:
-        # drop duplicated coordinates
-        if isinstance(other, Dataset):
-            coord_names = [c for c in other.coords
-                           if c not in other.dims and c in dataset.coords]
-            if coord_names:
-                other = other.drop(coord_names)
-        else:
-            other = other.copy()
-            for k, obj in other.items():
-                if isinstance(obj, DataArray):
-                    coord_names = [c for c in obj.coords
-                                   if c not in obj.dims and c in dataset.coords]
-                    if coord_names:
-                        other[k] = obj.drop(coord_names)
+    if isinstance(value, DataArray):
+        coord_names = [c for c in value.coords
+                       if c not in value.dims and c in dataset.coords]
+        if coord_names:
+            value = value.drop(coord_names)
 
+    return merge_core([dataset, {key: value}], priority_arg=1,
+                      indexes=dataset.indexes)
+
+
+def dataset_update_method(dataset, other, overwrite_coords=False):
+    """Guts of the Dataset.update method."""
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)
