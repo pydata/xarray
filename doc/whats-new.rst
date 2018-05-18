@@ -45,6 +45,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
+  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
   etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a
   bug where non-scalar data-variables that did not include the aggregation
