@@ -43,9 +43,12 @@ class EncodedStringCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         contains_unicode = is_unicode_dtype(data.dtype)
-        encode_as_char = 'dtype' in encoding and encoding['dtype'] == 'S1'
+        encode_as_char = encoding.get('dtype') == 'S1'
 
         if contains_unicode and (encode_as_char or not self.allows_unicode):
+            if encode_as_char:
+                del encoding['dtype']  # no longer relevant
+
             if '_FillValue' in attrs:
                 raise NotImplementedError(
                     'variable {!r} has a _FillValue specified, but '

@@ -748,11 +748,20 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
+    def test_encoding_kwarg_dates(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
         units = 'days since 1900-01-01'
         kwargs = dict(encoding={'t': {'units': units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.t.encoding['units'], units)
+            assert_identical(actual, ds)
+
+    def test_encoding_kwarg_string(self):
+        # regression test for GH2149
+        ds = Dataset({'x': ['foo', 'bar', 'baz']})
+        kwargs = dict(encoding={'x': {'dtype': 'S1'}})
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            self.assertEqual(actual['x'].encoding['dtype'], 'S1')
             assert_identical(actual, ds)
 
     def test_default_fill_value(self):
@@ -1401,6 +1410,10 @@ class BaseZarrTest(CFEncodedDataTest):
         with self.roundtrip(original, save_kwargs={'group': group},
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
+
+    def test_encoding_kwarg_string(self):
+        # not relevant for zarr, since we don't use EncodedStringCoder
+        pass
 
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
