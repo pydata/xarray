@@ -184,8 +184,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                 raise ValueError("'zlib' and 'compression' encodings mismatch")
             encoding.setdefault('compression', 'gzip')
 
-        if (check_encoding and encoding.get('complevel') not in
-                (None, encoding.get('compression_opts'))):
+        if (check_encoding and 
+                'complevel' in encoding and 'compression_opts' in encoding and
+                 encoding['complevel'] != encoding['compression_opts']):
             raise ValueError("'complevel' and 'compression_opts' encodings "
                              "mismatch")
         complevel = encoding.pop('complevel', 0)
