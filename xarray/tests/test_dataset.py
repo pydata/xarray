@@ -3331,7 +3331,18 @@ class TestDataset(TestCase):
 
         assert_equal(data.mean(dim=[]), data)
 
-        # uint support
+    def test_reduce_coords(self):
+        # regression test for GH1470
+        data = xr.Dataset({'a': ('x', [1, 2, 3])}, coords={'b': 4})
+        expected = xr.Dataset({'a': 2}, coords={'b': 4})
+        actual = data.mean('x')
+        assert_identical(actual, expected)
+
+        # should be consistent
+        actual = data['a'].mean('x').to_dataset()
+        assert_identical(actual, expected)
+
+    def test_mean_uint_dtype(self):
         data = xr.Dataset({'a': (('x', 'y'),
                                  np.arange(6).reshape(3, 2).astype('uint')),
                            'b': (('x', ), np.array([0.1, 0.2, np.nan]))})
@@ -3345,15 +3356,20 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'Dataset does not contain'):
             data.mean(dim='bad_dim')
 
+    def test_reduce_cumsum(self):
+        data = xr.Dataset({'a': 1,
+                           'b': ('x', [1, 2]),
+                           'c': (('x', 'y'), [[np.nan, 3], [0, 4]])})
+        assert_identical(data.fillna(0), data.cumsum('y'))
+
+        expected = xr.Dataset({'a': 1,
+                               'b': ('x', [1, 3]),
+                               'c': (('x', 'y'), [[0, 3], [0, 7]])})
+        assert_identical(expected, data.cumsum())
+
     def test_reduce_cumsum_test_dims(self):
         data = create_test_data()
         for cumfunc in ['cumsum', 'cumprod']:
-            with raises_regex(ValueError,
-                              "must supply either single 'dim' or 'axis'"):
-                getattr(data, cumfunc)()
-            with raises_regex(ValueError,
-                              "must supply either single 'dim' or 'axis'"):
-                getattr(data, cumfunc)(dim=['dim1', 'dim2'])
             with raises_regex(ValueError, 'Dataset does not contain'):
                 getattr(data, cumfunc)(dim='bad_dim')
 
@@ -3458,6 +3474,10 @@ class TestDataset(TestCase):
         ds = Dataset({'x': ('a', [2, 2]), 'y': 2, 'z': ('b', [2])})
         expected = Dataset({'x': 0, 'y': 0, 'z': 0})
         actual = ds.var()
+        assert_identical(expected, actual)
+
+        expected = Dataset({'x': 0, 'y': 0, 'z': ('b', [0])})
+        actual = ds.var('a')
         assert_identical(expected, actual)
 
     def test_reduce_only_one_axis(self):
