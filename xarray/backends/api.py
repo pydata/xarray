@@ -686,6 +686,9 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
+    if isinstance(unlimited_dims, basestring):
+        unlimited_dims = [unlimited_dims]
+
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
                               unlimited_dims=unlimited_dims, compute=compute)

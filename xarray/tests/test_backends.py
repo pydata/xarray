@@ -1653,7 +1653,19 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
 
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims='y')) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            assert_equal(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        ds.encoding = {'unlimited_dims': 'y'}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
