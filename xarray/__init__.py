@@ -36,3 +36,7 @@ from .util.print_versions import show_versions
 from . import tutorial
 from . import ufuncs
 from . import testing
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
