@@ -87,7 +87,7 @@ if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 if has_dask:
     import dask
-    if LooseVersion(dask.__version__) < '0.16':
+    if LooseVersion(dask.__version__) < '0.18':
         dask.set_options(get=dask.get)
     else:
         dask.config.set(scheduler='sync')
