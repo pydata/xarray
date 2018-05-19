@@ -1309,7 +1309,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         # all indexers should be int, slice, np.ndarrays, or Variable
         indexers_list = []
         for k, v in iteritems(indexers):
-            if isinstance(v, integer_types + (slice, Variable)):
+            if isinstance(v, (slice, Variable)):
                 pass
             elif isinstance(v, DataArray):
                 v = v.variable

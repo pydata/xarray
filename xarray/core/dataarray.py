@@ -916,7 +916,8 @@ class DataArray(AbstractArray, DataWithCoords):
         scipy.interpolate.interpn
         """
         ds = self._to_temp_dataset().interp(
-            method=method, kwargs=kwargs, **coords)
+            method=method, kwargs=kwargs, assume_sorted=assume_sorted,
+            **coords)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):

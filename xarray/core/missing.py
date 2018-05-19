@@ -284,7 +284,7 @@ def bfill(arr, dim=None, limit=None):
                        kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
 
-def _get_interpolator(method, **kwargs):
+def _get_interpolator(method, vectorizeable_only=False, **kwargs):
     '''helper function to select the appropriate interpolator class
 
     returns interpolator class and keyword arguments for the class
@@ -302,7 +302,8 @@ def _get_interpolator(method, **kwargs):
 
     # prioritize scipy.interpolate
     if (method == 'linear' and not
-            kwargs.get('fill_value', None) == 'extrapolate'):
+            kwargs.get('fill_value', None) == 'extrapolate' and
+            not vectorizeable_only):
         kwargs.update(method=method)
         if has_scipy:
             interp_class = ScipyInterpolator
@@ -317,6 +318,10 @@ def _get_interpolator(method, **kwargs):
         if method in interp1d_methods:
             kwargs.update(method=method)
             interp_class = ScipyInterpolator
+        elif vectorizeable_only:
+            raise ValueError('{} is not a vectorizeable interpolator. '
+                             'Available methods are {}'.format(
+                                 method, interp1d_methods))
         elif method == 'barycentric':
             interp_class = interpolate.BarycentricInterpolator
         elif method == 'krog':
@@ -420,14 +425,8 @@ def interp(obj, indexes_coords, method, **kwargs):
     if method in ['linear', 'nearest']:
         obj, indexes_coords = _localize(obj, indexes_coords)
 
-    if method not in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
-                      'cubic', 'polynomial']:
-        raise ValueError('{} is not a valid method.'.format(method))
-
     # default behavior
     kwargs['bounds_error'] = kwargs.get('bounds_error', False)
-    # as coords should be always sorted, neglect this option
-    kwargs.pop('assume_sorted', None)
 
     # target dimensions
     dims = list(indexes_coords)
@@ -489,6 +488,12 @@ def interp_func(obj, x, new_x, method, kwargs):
     if not x:
         return obj
 
+    if len(x) == 1:
+        func, kwargs = _get_interpolator(method, vectorizeable_only=True,
+                                         **kwargs)
+    else:
+        func, kwargs = _get_interpolator_nd(method, **kwargs)
+
     if isinstance(obj, dask_array_type):
         import dask.array as da
 
@@ -496,15 +501,10 @@ def interp_func(obj, x, new_x, method, kwargs):
         chunks = obj.chunks[:-len(x)] + new_x[0].shape
         drop_axis = range(obj.ndim - len(x), obj.ndim)
         new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
-        # call this function recursively
-        return da.map_blocks(interp_func, obj, x, new_x, method, kwargs,
+        return da.map_blocks(_interpnd, obj, x, new_x, func, kwargs,
                              dtype=obj.dtype, chunks=chunks,
                              new_axis=new_axis, drop_axis=drop_axis)
-    if len(x) == 1:
-        func, kwargs = _get_interpolator(method, **kwargs)
-        return _interp1d(obj, x, new_x, func, kwargs)
 
-    func, kwargs = _get_interpolator_nd(method, **kwargs)
     return _interpnd(obj, x, new_x, func, kwargs)
 
 
@@ -520,6 +520,9 @@ def _interp1d(obj, x, new_x, func, kwargs):
 
 
 def _interpnd(obj, x, new_x, func, kwargs):
+    if len(x) == 1:
+        return _interp1d(obj, x, new_x, func, kwargs)
+
     # move the interpolation axes to the start position
     obj = obj.transpose(range(-len(x), obj.ndim - len(x)))
     # stack new_x to 1 vector, with reshape

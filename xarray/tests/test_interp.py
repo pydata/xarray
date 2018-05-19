@@ -246,17 +246,48 @@ def test_interpolate_nd_scalar(method, case):
     assert_allclose(actual, expected)
 
 
-@requires_scipy
-def test_errors():
+@pytest.mark.parametrize('dask', [True, False])
+def test_nans(dask):
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
+    if dask:
+        da = da.chunk()
+
     actual = da.interp(x=[0.5, 1.5])
     # not all values are nan
     assert actual.count() > 0
 
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_errors(dask):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
+    # akima and spline are unavailable
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
+    if dask and has_dask:
+        da = da.chunk()
     for method in ['akima', 'spline']:
         with pytest.raises(ValueError):
-            actual = da.interp(x=[0.5, 1.5], method=method)
+            da.interp(x=[0.5, 1.5], method=method)
+
+    # not sorted
+    if dask and has_dask:
+        da = get_example_data(3)
+    else:
+        da = get_example_data(1)
+
+    result = da.interp(x=[-1, 1, 3], kwargs={'fill_value': 0.0})
+    assert not np.isnan(result.values).any()
+    result = da.interp(x=[-1, 1, 3])
+    assert np.isnan(result.values).any()
+
+    # invalid method
+    with pytest.raises(ValueError):
+        da.interp(x=[2, 0], method='boo')
+    with pytest.raises(ValueError):
+        da.interp(x=[2, 0], y=2, method='cubic')
+    with pytest.raises(ValueError):
+        da.interp(y=[2, 0], method='boo')
 
 
 @requires_scipy
@@ -280,6 +311,9 @@ def test_sorted():
     da_sorted = da.sortby(['x', 'y'])
     assert_allclose(da.interp(x=x_new, y=y_new),
                     da_sorted.interp(x=x_new, y=y_new, assume_sorted=True))
+
+    with pytest.raises(ValueError):
+        da.interp(x=[0, 1, 2], assume_sorted=True)
 
 
 @requires_scipy
