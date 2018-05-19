@@ -155,7 +155,8 @@ If you want to add a coordinate to the new dimension ``z``, you can supply
 .. ipython:: python
 
     x = xr.DataArray([0.5, 1.5, 2.5], dims='z', coords={'z': ['a', 'b','c']})
-    y = xr.DataArray([0.15, 0.25, 0.35], dims='z')
+    y = xr.DataArray([0.15, 0.25, 0.35], dims='z',
+                     coords={'z': ['a', 'b','c']}))
     da.interp(x=x, y=y)
 
 For the details of the advanced indexing,
