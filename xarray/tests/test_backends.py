@@ -1256,7 +1256,6 @@ class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
 @requires_zarr
 class BaseZarrTest(CFEncodedDataTest):
 
-    engine = 'zarr'
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
