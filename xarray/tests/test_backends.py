@@ -748,52 +748,6 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
-    def test_encoding_kwarg_compression(self):
-        ds = Dataset({
-            'x': np.arange(10.0),
-            's1': ['foo', 'bar', 'baz'],
-            's2': ['foo', 'bar', 'baz'],
-        })
-        kwargs = dict(encoding={
-            'x': {'dtype': 'f4'},
-            's1': {'dtype': 'S1'},
-            's2': {'dtype': str},
-        })
-
-        can_compress = (
-            self.engine not in ('scipy', 'zarr') and
-            self.file_format not in ('NETCDF3_CLASSIC', 'netcdf3_64bit'))
-        if can_compress:
-            kwargs['encoding']['x'].update(dict(
-                zlib=True, complevel=9, fletcher32=True, chunksizes=(5, ),
-                shuffle=True))
-
-        if self.engine == 'zarr':
-            actual_s2_dtype = '<U3'
-        elif self.engine == 'scipy':
-            actual_s2_dtype = 'S1'
-        elif self.file_format in ('NETCDF3_CLASSIC', 'NETCDF4_CLASSIC',
-                                  'netcdf3_64bit'):
-            actual_s2_dtype = 'S1'
-        else:
-            actual_s2_dtype = object
-
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertEqual(actual.x.encoding['dtype'], 'f4')
-            if can_compress:
-                self.assertEqual(actual.x.encoding['zlib'], True)
-                self.assertEqual(actual.x.encoding['complevel'], 9)
-                self.assertEqual(actual.x.encoding['fletcher32'], True)
-                self.assertEqual(actual.x.encoding['chunksizes'], (5, ))
-                self.assertEqual(actual.x.encoding['shuffle'], True)
-            if self.engine != 'zarr':
-                self.assertEqual(actual.s1.encoding['dtype'], 'S1')
-                self.assertEqual(actual.s2.encoding['dtype'], actual_s2_dtype)
-
-        self.assertEqual(ds.x.encoding, {})
-        self.assertEqual(ds.s1.encoding, {})
-        self.assertEqual(ds.s2.encoding, {})
-
     def test_encoding_kwarg_dates(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
         units = 'days since 1900-01-01'
@@ -932,6 +886,7 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
 
 @requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+    """Tests for both netCDF4-python and h5netcdf."""
 
     engine = 'netcdf4'
 
@@ -1104,6 +1059,23 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         expected = data.isel(dim1=0)
         with self.roundtrip(expected) as actual:
             assert_equal(expected, actual)
+
+    def test_encoding_kwarg_compression(self):
+        ds = Dataset({'x': np.arange(10.0)})
+        encoding = dict(dtype='f4', zlib=True, complevel=9, fletcher32=True,
+                        chunksizes=(5,), shuffle=True)
+        kwargs = dict(encoding=dict(x=encoding))
+
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert_equal(actual, ds)
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+            self.assertEqual(actual.x.encoding['fletcher32'], True)
+            self.assertEqual(actual.x.encoding['chunksizes'], (5,))
+            self.assertEqual(actual.x.encoding['shuffle'], True)
+
+        self.assertEqual(ds.x.encoding, {})
 
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
