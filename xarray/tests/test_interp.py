@@ -246,10 +246,15 @@ def test_interpolate_nd_scalar(method, case):
     assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize('dask', [True, False])
-def test_nans(dask):
+@pytest.mark.parametrize('use_dask', [True, False])
+def test_nans(use_dask):
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
-    if dask:
+
+    if not has_dask and use_dask:
+        pytest.skip('dask is not installed in the environment.')
         da = da.chunk()
 
     actual = da.interp(x=[0.5, 1.5])
@@ -257,21 +262,23 @@ def test_nans(dask):
     assert actual.count() > 0
 
 
-@pytest.mark.parametrize('dask', [True, False])
-def test_errors(dask):
+@pytest.mark.parametrize('use_dask', [True, False])
+def test_errors(use_dask):
     if not has_scipy:
         pytest.skip('scipy is not installed.')
 
     # akima and spline are unavailable
     da = xr.DataArray([0, 1, np.nan, 2], dims='x', coords={'x': range(4)})
-    if dask and has_dask:
+    if not has_dask and use_dask:
+        pytest.skip('dask is not installed in the environment.')
         da = da.chunk()
+
     for method in ['akima', 'spline']:
         with pytest.raises(ValueError):
             da.interp(x=[0.5, 1.5], method=method)
 
     # not sorted
-    if dask and has_dask:
+    if use_dask:
         da = get_example_data(3)
     else:
         da = get_example_data(1)
