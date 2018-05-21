@@ -80,6 +80,12 @@ def monotonic_decreasing_index(date_type):
 
 
 @pytest.fixture
+def length_one_index(date_type):
+    dates = [date_type(1, 1, 1)]
+    return CFTimeIndex(dates)
+
+
+@pytest.fixture
 def da(index):
     return xr.DataArray([1, 2, 3, 4], coords=[index],
                         dims=['time'])
@@ -278,6 +284,35 @@ def test_get_slice_bound_decreasing_index(
         date_type(1, 3, 1), 'right', kind)
     expected = 2
     assert result == expected
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('kind', ['loc', 'getitem'])
+def test_get_slice_bound_length_one_index(
+        date_type, length_one_index, kind):
+    result = length_one_index.get_slice_bound('0001', 'left', kind)
+    expected = 0
+    assert result == expected
+
+    result = length_one_index.get_slice_bound('0001', 'right', kind)
+    expected = 1
+    assert result == expected
+
+    result = length_one_index.get_slice_bound(
+        date_type(1, 3, 1), 'left', kind)
+    expected = 1
+    assert result == expected
+
+    result = length_one_index.get_slice_bound(
+        date_type(1, 3, 1), 'right', kind)
+    expected = 1
+    assert result == expected
+
+
+def test_string_slice_length_one_index(length_one_index):
+    da = xr.DataArray([1], coords=[length_one_index], dims=['time'])
+    result = da.sel(time=slice('0001', '0001'))
+    assert_identical(result, da)
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
