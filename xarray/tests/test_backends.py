@@ -948,6 +948,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             with open_dataset(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
 
+    @pytest.mark.parametrize('input_strings', [
+        [b'foo', b'bar', b'baz'],
+        [u'foo', u'bar', u'baz'],
+    ])
+    def test_encoding_kwarg_vlen_string(self, input_strings):
+        original = Dataset({'x': input_strings})
+        expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+        kwargs = dict(encoding={'x': {'dtype': str}})
+        with self.roundtrip(original, save_kwargs=kwargs) as actual:
+            assert actual['x'].encoding['dtype'] is str
+            assert_identical(actual, expected)
+
     def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
@@ -1140,7 +1152,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     expected = Dataset({'x': ((), 42)})
                     assert_identical(expected, ds)
 
-    def test_variable_len_strings(self):
+    def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
 
@@ -1605,6 +1617,13 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
+
+    def test_encoding_kwarg_vlen_string(self):
+        original = Dataset({'x': [u'foo', u'bar', u'baz']})
+        kwargs = dict(encoding={'x': {'dtype': str}})
+        with raises_regex(ValueError, 'encoding dtype=str for vlen'):
+            with self.roundtrip(original, save_kwargs=kwargs) as actual:
+                pass
 
 
 class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):

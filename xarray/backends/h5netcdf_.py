@@ -89,6 +89,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         super(H5NetCDFStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
+        import h5py
+
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
             data = indexing.LazilyOuterIndexedArray(
@@ -113,6 +115,14 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
             encoding['original_shape'] = var.shape
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is not None:
+                if vlen_dtype is not unicode_type:  # pragma: no cover
+                    raise NotImplementedError('unexpected vlen dtype: {!r}'
+                                              .format(vlen_dtype))
+                encoding['dtype'] = str
+            else:
+                encoding['dtype'] = var.dtype
 
         return Variable(dimensions, data, attrs, encoding)
 
@@ -156,7 +166,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         import h5py
 
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable)
+        dtype = _get_datatype(
+            variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop('_FillValue', None)
         if dtype is str and fillvalue is not None:

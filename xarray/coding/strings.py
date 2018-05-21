@@ -103,7 +103,7 @@ class CharacterArrayCoder(VariableCoder):
         variable = ensure_fixed_length_bytes(variable)
 
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-        if data.dtype.kind == 'S':
+        if data.dtype.kind == 'S' and encoding.get('dtype') is not str:
             data = bytes_to_char(data)
             dims = dims + ('string%s' % data.shape[-1],)
         return Variable(dims, data, attrs, encoding)

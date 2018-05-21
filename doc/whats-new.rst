@@ -49,6 +49,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a regression in 0.10.4, where explicitly specifying ``dtype='S1'`` or
+  ``dtype=str`` in ``encoding`` with ``to_netcdf()`` raised an error
+  (:issue:`2149`).
+  `Stephan Hoyer <https://github.com/shoyer>`_
 - Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
   with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
   By `Joe Hamman <https://github.com/jhamman>`_.
