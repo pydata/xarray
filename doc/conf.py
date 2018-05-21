@@ -102,7 +102,7 @@ copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = xarray.version.short_version
+version = xarray.__version__.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = xarray.__version__
 

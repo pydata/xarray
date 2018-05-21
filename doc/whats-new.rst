@@ -37,13 +37,37 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
+  aggregation over multiple dimensions at the same time. This is the default
+  behavior when dimensions are not specified (previously this raised an error).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
+  to manage its version strings. (:issue:`1300`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
 - :py:func:`apply_ufunc` now validates that dimension sizes do not change
   between inputs and outputs (:issue:`1931`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
+  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
+  etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a
+  bug where non-scalar data-variables that did not include the aggregation
+  dimension were improperly skipped.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
+  now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no
+  longer falsely returns an empty array when the slice includes the value in
+  the index) (:issue:`2165`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+  
 .. _whats-new.0.10.4:
 
 v0.10.4 (May 16, 2018)
