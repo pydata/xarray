@@ -1622,7 +1622,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
         original = Dataset({'x': [u'foo', u'bar', u'baz']})
         kwargs = dict(encoding={'x': {'dtype': str}})
         with raises_regex(ValueError, 'encoding dtype=str for vlen'):
-            with self.roundtrip(original, save_kwargs=kwargs) as actual:
+            with self.roundtrip(original, save_kwargs=kwargs):
                 pass
 
 
