@@ -513,7 +513,7 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 def apply_variable_ufunc(func, *args, **kwargs):
     """apply_variable_ufunc(func, *args, signature, exclude_dims=frozenset())
     """
-    from .variable import Variable
+    from .variable import Variable, as_compatible_data
 
     signature = kwargs.pop('signature')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
@@ -560,11 +560,24 @@ def apply_variable_ufunc(func, *args, **kwargs):
     result_data = func(*input_data)
 
     if signature.num_outputs == 1:
-        result_data = [result_data]
+        result_data = (result_data,)
+    elif (not isinstance(result_data, tuple) or
+            len(result_data) != signature.num_outputs):
+        raise ValueError('applied function does not have the number of '
+                         'outputs specified in the ufunc signature. '
+                         'Result is not a tuple of {} elements: {!r}'
+                         .format(signature.num_outputs, result_data))
 
     output = []
     for dims, data in zip(output_dims, result_data):
-        var = Variable(dims, data)
+        data = as_compatible_data(data)
+        if data.ndim != len(dims):
+            raise ValueError(
+                'applied function returned data with unexpected '
+                'number of dimensions: {} vs {}, for dimensions {}'
+                .format(data.ndim, len(dims), dims))
+
+        var = Variable(dims, data, fastpath=True)
         for dim, new_size in var.sizes.items():
             if dim in dim_sizes and new_size != dim_sizes[dim]:
                 raise ValueError(

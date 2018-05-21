@@ -752,7 +752,42 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-def test_dim_size_changes():
+def test_output_wrong_number():
+    variable = xr.Variable('x', np.arange(10))
+
+    def identity(x):
+        return x
+
+    def tuple3x(x):
+        return (x, x, x)
+
+    with raises_regex(ValueError, 'number of outputs'):
+        apply_ufunc(identity, variable, output_core_dims=[(), ()])
+
+    with raises_regex(ValueError, 'number of outputs'):
+        apply_ufunc(tuple3x, variable, output_core_dims=[(), ()])
+
+
+def test_output_wrong_dims():
+    variable = xr.Variable('x', np.arange(10))
+
+    def add_dim(x):
+        return x[..., np.newaxis]
+
+    def remove_dim(x):
+        return x[..., 0]
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(add_dim, variable, output_core_dims=[('y', 'z')])
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(add_dim, variable)
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(remove_dim, variable)
+
+
+def test_output_wrong_dim_size():
     array = np.arange(10)
     variable = xr.Variable('x', array)
     data_array = xr.DataArray(variable, [('x', -array)])
