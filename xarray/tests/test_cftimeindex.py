@@ -309,6 +309,7 @@ def test_get_slice_bound_length_one_index(
     assert result == expected
 
 
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_string_slice_length_one_index(length_one_index):
     da = xr.DataArray([1], coords=[length_one_index], dims=['time'])
     result = da.sel(time=slice('0001', '0001'))
