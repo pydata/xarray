@@ -225,7 +225,7 @@ class CFTimeIndex(pd.Index):
                                                           label)
             start, end = _parsed_string_to_bounds(self.date_type, resolution,
                                                   parsed)
-            if self.is_monotonic_decreasing and len(self):
+            if self.is_monotonic_decreasing and len(self) > 1:
                 return end if side == 'left' else start
             return start if side == 'left' else end
         else:
