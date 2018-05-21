@@ -55,6 +55,12 @@ Bug fixes
   dimension were improperly skipped.
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
+  now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no
+  longer falsely returns an empty array when the slice includes the value in
+  the index) (:issue:`2165`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+  
 .. _whats-new.0.10.4:
 
 v0.10.4 (May 16, 2018)
