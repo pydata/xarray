@@ -1180,6 +1180,13 @@ class TestDataArray(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda.assign_coords(level_1=range(4))
 
+        # GH: 2112
+        da = xr.DataArray([0, 1, 2], dims='x')
+        with pytest.raises(ValueError):
+            da['x'] = [0, 1, 2, 3]  # size conflict
+        with pytest.raises(ValueError):
+            da.coords['x'] = [0, 1, 2, 3]  # size conflict
+
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [('x', [1, 2, 3])])
@@ -1759,6 +1766,11 @@ class TestDataArray(TestCase):
                   'c': -999}
         orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords,
                          dims=['x', 'y'])
+
+        actual = orig.cumsum()
+        expected = DataArray([[-1, -1, 0], [-4, -4, 0]], coords,
+                             dims=['x', 'y'])
+        assert_identical(expected, actual)
 
         actual = orig.cumsum('x')
         expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords,
@@ -3038,12 +3050,11 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_iris(actual)
         assert_identical(original, roundtripped)
 
-        # If the Iris version supports it then we should get a dask array back
+        # If the Iris version supports it then we should have a dask array
+        # at each stage of the conversion
         if hasattr(actual, 'core_data'):
-            pass
-            # TODO This currently fails due to the decoding loading
-            # the data (#1372)
-            # self.assertEqual(type(original.data), type(roundtripped.data))
+            self.assertEqual(type(original.data), type(actual.core_data()))
+            self.assertEqual(type(original.data), type(roundtripped.data))
 
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)

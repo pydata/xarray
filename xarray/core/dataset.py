@@ -1055,7 +1055,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return obj
 
     def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
-                      unlimited_dims=None):
+                      unlimited_dims=None, compute=True):
         """Store dataset contents to a backends.*DataStore object."""
         if encoding is None:
             encoding = {}
@@ -1074,10 +1074,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            store.sync()
+            store.sync(compute=compute)
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
-                  engine=None, encoding=None, unlimited_dims=None):
+                  engine=None, encoding=None, unlimited_dims=None,
+                  compute=True):
         """Write dataset contents to a netCDF file.
 
         Parameters
@@ -1136,16 +1137,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             By default, no dimensions are treated as unlimited dimensions.
             Note that unlimited_dims may also be set via
             ``dataset.encoding['unlimited_dims']``.
+        compute: boolean
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
         """
         if encoding is None:
             encoding = {}
         from ..backends.api import to_netcdf
         return to_netcdf(self, path, mode, format=format, group=group,
                          engine=engine, encoding=encoding,
-                         unlimited_dims=unlimited_dims)
+                         unlimited_dims=unlimited_dims,
+                         compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None):
+                encoding=None, compute=True):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1167,6 +1172,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
+        compute: boolean
+            If true compute immediately, otherwise return a
+            ``dask.delayed.Delayed`` object that can be computed later.
         """
         if encoding is None:
             encoding = {}
@@ -1176,7 +1184,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              "and 'w-'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
-                       group=group, encoding=encoding)
+                       group=group, encoding=encoding, compute=compute)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -2586,26 +2594,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             reduce_dims = [dim for dim in var.dims if dim in dims]
-            if reduce_dims or not var.dims:
-                if name not in self.coords:
-                    if (not numeric_only or
-                            np.issubdtype(var.dtype, np.number) or
-                            (var.dtype == np.bool_)):
-                        if len(reduce_dims) == 1:
-                            # unpack dimensions for the benefit of functions
-                            # like np.argmin which can't handle tuple arguments
-                            reduce_dims, = reduce_dims
-                        elif len(reduce_dims) == var.ndim:
-                            # prefer to aggregate over axis=None rather than
-                            # axis=(0, 1) if they will be equivalent, because
-                            # the former is often more efficient
-                            reduce_dims = None
-                        variables[name] = var.reduce(func, dim=reduce_dims,
-                                                     keep_attrs=keep_attrs,
-                                                     allow_lazy=allow_lazy,
-                                                     **kwargs)
+            if name in self.coords:
+                if not reduce_dims:
+                    variables[name] = var
             else:
-                variables[name] = var
+                if (not numeric_only or
+                        np.issubdtype(var.dtype, np.number) or
+                        (var.dtype == np.bool_)):
+                    if len(reduce_dims) == 1:
+                        # unpack dimensions for the benefit of functions
+                        # like np.argmin which can't handle tuple arguments
+                        reduce_dims, = reduce_dims
+                    elif len(reduce_dims) == var.ndim:
+                        # prefer to aggregate over axis=None rather than
+                        # axis=(0, 1) if they will be equivalent, because
+                        # the former is often more efficient
+                        reduce_dims = None
+                    variables[name] = var.reduce(func, dim=reduce_dims,
+                                                 keep_attrs=keep_attrs,
+                                                 allow_lazy=allow_lazy,
+                                                 **kwargs)
 
         coord_names = set(k for k in self.coords if k in variables)
         attrs = self.attrs if keep_attrs else None

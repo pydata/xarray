@@ -166,8 +166,8 @@ class DatasetIOTestCases(object):
 
     # The save/open methods may be overwritten below
     def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine=self.engine, format=self.file_format,
-                          **kwargs)
+        return dataset.to_netcdf(path, engine=self.engine,
+                                 format=self.file_format, **kwargs)
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
@@ -716,7 +716,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             # should still pass though.
             assert_identical(ds, actual)
 
-        if isinstance(self, NetCDF4DataTest):
+        if self.engine == 'netcdf4':
             ds['z'].encoding['endian'] = 'big'
             with pytest.raises(NotImplementedError):
                 with self.roundtrip(ds) as actual:
@@ -909,7 +909,8 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 open_dataset(tmp_file, group=(1, 2, 3))
 
     def test_open_subgroup(self):
-        # Create a netCDF file with a dataset within a group within a group
+        # Create a netCDF file with a dataset stored within a group within a
+        # group
         with create_tmp_file() as tmp_file:
             rootgrp = nc4.Dataset(tmp_file, 'w')
             foogrp = rootgrp.createGroup('foo')
@@ -1239,7 +1240,7 @@ class BaseZarrTest(CFEncodedDataTest):
             yield backends.ZarrStore.open_group(store_target, mode='w')
 
     def save(self, dataset, store_target, **kwargs):
-        dataset.to_zarr(store=store_target, **kwargs)
+        return dataset.to_zarr(store=store_target, **kwargs)
 
     @contextlib.contextmanager
     def open(self, store_target, **kwargs):
@@ -1425,6 +1426,19 @@ class BaseZarrTest(CFEncodedDataTest):
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
         super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
+
+    def test_to_zarr_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = create_test_data().chunk()
+
+        with self.create_zarr_target() as store:
+            delayed_obj = self.save(original, store, compute=False)
+            assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
+
+            with self.open(store) as actual:
+                assert_identical(original, actual)
 
 
 @requires_zarr
@@ -1646,7 +1660,19 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
 
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        with self.roundtrip(ds,
+                            save_kwargs=dict(unlimited_dims='y')) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            assert_equal(ds, actual)
+
         ds.encoding = {'unlimited_dims': ['y']}
+        with self.roundtrip(ds) as actual:
+            self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
+            assert_equal(ds, actual)
+
+        # Regression test for https://github.com/pydata/xarray/issues/2134
+        ds.encoding = {'unlimited_dims': 'y'}
         with self.roundtrip(ds) as actual:
             self.assertEqual(actual.encoding['unlimited_dims'], set('y'))
             assert_equal(ds, actual)
@@ -2234,6 +2260,36 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         assert_allclose(actual, computed, decode_bytes=False)
 
+    def test_to_netcdf_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = create_test_data().chunk()
+
+        with create_tmp_file() as tmp_file:
+            # dataset, path, **kwargs):
+            delayed_obj = self.save(original, tmp_file, compute=False)
+            assert isinstance(delayed_obj, Delayed)
+            delayed_obj.compute()
+
+            with self.open(tmp_file) as actual:
+                assert_identical(original, actual)
+
+    def test_save_mfdataset_compute_false_roundtrip(self):
+        from dask.delayed import Delayed
+
+        original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
+        datasets = [original.isel(x=slice(5)),
+                    original.isel(x=slice(5, 10))]
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
+                                             engine=self.engine, compute=False)
+                assert isinstance(delayed_obj, Delayed)
+                delayed_obj.compute()
+                with open_mfdataset([tmp1, tmp2],
+                                    autoclose=self.autoclose) as actual:
+                    assert_identical(actual, original)
+
 
 class DaskTestAutocloseTrue(DaskTest):
     autoclose = True
@@ -2355,7 +2411,7 @@ class PyNioTest(ScipyWriteTest, TestCase):
             yield ds
 
     def save(self, dataset, path, **kwargs):
-        dataset.to_netcdf(path, engine='scipy', **kwargs)
+        return dataset.to_netcdf(path, engine='scipy', **kwargs)
 
     def test_weakrefs(self):
         example = Dataset({'foo': ('x', np.arange(5.0))})

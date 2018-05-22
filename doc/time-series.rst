@@ -73,7 +73,7 @@ native representation of dates to those that fall between the years 1678 and
 returned as arrays of ``cftime.datetime`` objects and a ``CFTimeIndex``
 can be used for indexing.  The ``CFTimeIndex`` enables only a subset of
 the indexing functionality of a ``pandas.DatetimeIndex`` and is only enabled
-when using standalone version of ``cftime`` (not the version packaged with
+when using the standalone version of ``cftime`` (not the version packaged with
 earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more information.
 
 Datetime indexing

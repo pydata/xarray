@@ -3,7 +3,7 @@
 Working with Multidimensional Coordinates
 =========================================
 
-Author: `Ryan Abernathey <http://github.org/rabernat>`__
+Author: `Ryan Abernathey <https://github.com/rabernat>`__
 
 Many datasets have *physical coordinates* which differ from their
 *logical coordinates*. Xarray provides several ways to plot and analyze
