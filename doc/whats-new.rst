@@ -64,6 +64,11 @@ Bug fixes
   longer falsely returns an empty array when the slice includes the value in
   the index) (:issue:`2165`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+- Fix ``DataArray.groupby().reduce()`` mutating coordinates on the input array
+  when grouping over dimension coordinates with duplicated entries
+  (:issue:`2153`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
   
 .. _whats-new.0.10.4:
 

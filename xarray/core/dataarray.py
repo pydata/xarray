@@ -251,7 +251,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def _replace_maybe_drop_dims(self, variable, name=__default):
         if variable.dims == self.dims:
-            coords = None
+            coords = self._coords.copy()
         else:
             allowed_dims = set(variable.dims)
             coords = OrderedDict((k, v) for k, v in self._coords.items()
