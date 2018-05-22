@@ -26,17 +26,87 @@ What's New
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 
-.. _whats-new.0.10.4:
+.. _whats-new.0.10.5:
 
-v0.10.4 (unreleased)
+v0.10.5 (unreleased)
 --------------------
+
+Documentation
+~~~~~~~~~~~~~
 
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
+  methods are newly added.
+  See :ref:`interpolating values with interp` for the detail.
+  (:issue:`2079`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  
+- :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
+  aggregation over multiple dimensions at the same time. This is the default
+  behavior when dimensions are not specified (previously this raised an error).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
+  to manage its version strings. (:issue:`1300`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
+  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
+  etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a
+  bug where non-scalar data-variables that did not include the aggregation
+  dimension were improperly skipped.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
+  now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no
+  longer falsely returns an empty array when the slice includes the value in
+  the index) (:issue:`2165`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+.. _whats-new.0.10.4:
+
+v0.10.4 (May 16, 2018)
+----------------------
+
+The minor release includes a number of bug-fixes and backwards compatible
+enhancements. A highlight is ``CFTimeIndex``, which offers support for
+non-standard calendars used in climate modeling.
+
+Documentation
+~~~~~~~~~~~~~
+
+- New FAQ entry, :ref:`faq.other_projects`.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- :ref:`assigning_values` now includes examples on how to select and assign
+  values to a :py:class:`~xarray.DataArray` with ``.loc``.
+  By `Chiara Lepore <https://github.com/chiaral>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- Add an option for using a ``CFTimeIndex`` for indexing times with
+  non-standard calendars and/or outside the Timestamp-valid range; this index
+  enables a subset of the functionality of a standard
+  ``pandas.DatetimeIndex``.
+  See :ref:`CFTimeIndex` for full details.
+  (:issue:`789`, :issue:`1084`, :issue:`1252`)
+  By `Spencer Clark <https://github.com/spencerkclark>`_ with help from
+  `Stephan Hoyer <https://github.com/shoyer>`_.
+- Allow for serialization of ``cftime.datetime`` objects (:issue:`789`,
+  :issue:`1084`, :issue:`2008`, :issue:`1252`) using the standalone ``cftime``
+  library.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Support writing lists of strings as netCDF attributes (:issue:`2044`).
   By `Dan Nowacki <https://github.com/dnowacki-usgs>`_.
-- :py:meth:`~xarray.Dataset.to_netcdf(engine='h5netcdf')` now accepts h5py
+- :py:meth:`~xarray.Dataset.to_netcdf` with ``engine='h5netcdf'`` now accepts h5py
   encoding settings ``compression`` and ``compression_opts``, along with the
   NetCDF4-Python style settings ``gzip=True`` and ``complevel``.
   This allows using any compression plugin installed in hdf5, e.g. LZF
@@ -45,21 +115,35 @@ Enhancements
   This greatly boosts speed and allows chunking on the core dims.
   The function now requires dask >= 0.17.3 to work on dask-backed data
   (:issue:`2074`). By `Guido Imperiale <https://github.com/crusaderky>`_.
+- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change
+  the direction of the respective axes.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
-- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
-  methods are newly added.
-  See :ref:`interpolating values with interp` for the detail.
-  (:issue:`2079`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
+  ``dask.delayed`` to parallelize the open and preprocessing steps within
+  ``open_mfdataset``. This is expected to provide performance improvements when
+  opening many files, particularly when used in conjunction with dask's
+  multiprocessing or distributed schedulers (:issue:`1981`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- New ``compute`` option in :py:meth:`~xarray.Dataset.to_netcdf`,
+  :py:meth:`~xarray.Dataset.to_zarr`, and :py:func:`~xarray.save_mfdataset` to
+  allow for the lazy computation of netCDF and zarr stores. This feature is
+  currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~
 
-- Fixed a bug in `rolling` with bottleneck. Also, fixed a bug in rolling an
-  integer dask array. (:issue:`21133`)
+- ``ValueError`` is raised when coordinates with the wrong size are assigned to
+  a :py:class:`DataArray`. (:issue:`2112`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Fixed a bug in :py:meth:`~xarary.DatasArray.rolling` with bottleneck. Also,
+  fixed a bug in rolling an integer dask array. (:issue:`2113`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Fixed a bug where `keep_attrs=True` flag was neglected if
-  :py:func:`apply_func` was used with :py:class:`Variable`. (:issue:`2114`)
+  :py:func:`apply_ufunc` was used with :py:class:`Variable`. (:issue:`2114`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - When assigning a :py:class:`DataArray` to :py:class:`Dataset`, any conflicted
   non-dimensional coordinates of the DataArray are now dropped.
@@ -67,12 +151,14 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Better error handling in ``open_mfdataset`` (:issue:`2077`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
-- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes the rotation and horizontal alignment of labels without removing the x-axes of any other subplots in the figure (if any).
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-- ``plot.line()`` learned new kwargs: ``xincrease``, ``yincrease`` that change the direction of the respective axes.
+- ``plot.line()`` does not call ``autofmt_xdate()`` anymore. Instead it changes
+  the rotation and horizontal alignment of labels without removing the x-axes of
+  any other subplots in the figure (if any).
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
+  By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 
@@ -84,12 +170,6 @@ The minor release includes a number of bug-fixes and backwards compatible enhanc
 Enhancements
 ~~~~~~~~~~~~
 
-- Added the ``parallel`` option to :py:func:`open_mfdataset`. This option uses
-  ``dask.delayed`` to parallelize the open and preprocessing steps within
-  ``open_mfdataset``. This is expected to provide performance improvements when
-  opening many files, particularly when used in conjunction with dask's
-  multiprocessing or distributed schedulers (:issue:`1981`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
 - :py:meth:`~xarray.DataArray.isin` and :py:meth:`~xarray.Dataset.isin` methods,
   which test each value in the array for whether it is contained in the
   supplied list, returning a bool array. See :ref:`selecting values with isin`

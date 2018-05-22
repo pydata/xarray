@@ -12,6 +12,7 @@ from collections import Iterable, Mapping, MutableMapping, MutableSet
 import numpy as np
 import pandas as pd
 
+from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
@@ -36,6 +37,21 @@ def alias(obj, old_name):
     return wrapper
 
 
+def _maybe_cast_to_cftimeindex(index):
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if not OPTIONS['enable_cftimeindex']:
+        return index
+    else:
+        if index.dtype == 'O':
+            try:
+                return CFTimeIndex(index)
+            except (ImportError, TypeError):
+                return index
+        else:
+            return index
+
+
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
@@ -54,7 +70,7 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
-    return index
+    return _maybe_cast_to_cftimeindex(index)
 
 
 def multiindex_from_product_levels(levels, names=None):

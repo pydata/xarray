@@ -498,6 +498,19 @@ DataArray methods
    DataArray.load
    DataArray.chunk
 
+GroupBy objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.groupby.DataArrayGroupBy
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DataArrayGroupBy.reduce
+   core.groupby.DatasetGroupBy
+   core.groupby.DatasetGroupBy.apply
+   core.groupby.DatasetGroupBy.reduce
+
 Rolling objects
 ===============
 
@@ -511,18 +524,34 @@ Rolling objects
    core.rolling.DatasetRolling.construct
    core.rolling.DatasetRolling.reduce
 
-GroupByObjects
-==============
+Resample objects
+================
+
+Resample objects also implement the GroupBy interface
+(methods like ``apply()``, ``reduce()``, ``mean()``, ``sum()``, etc.).
 
 .. autosummary::
    :toctree: generated/
 
-   core.groupby.DataArrayGroupBy
-   core.groupby.DataArrayGroupBy.apply
-   core.groupby.DataArrayGroupBy.reduce
-   core.groupby.DatasetGroupBy
-   core.groupby.DatasetGroupBy.apply
-   core.groupby.DatasetGroupBy.reduce
+   core.resample.DataArrayResample
+   core.resample.DataArrayResample.asfreq
+   core.resample.DataArrayResample.backfill
+   core.resample.DataArrayResample.interpolate
+   core.resample.DataArrayResample.nearest
+   core.resample.DataArrayResample.pad
+   core.resample.DatasetResample
+   core.resample.DatasetResample.asfreq
+   core.resample.DatasetResample.backfill
+   core.resample.DatasetResample.interpolate
+   core.resample.DatasetResample.nearest
+   core.resample.DatasetResample.pad
+
+Custom Indexes
+==============
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
 
 Plotting
 ========

@@ -1256,11 +1256,6 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
-        if getattr(func, 'keep_dims', False):
-            if dim is None and axis is None:
-                raise ValueError("must supply either single 'dim' or 'axis' "
-                                 "argument to %s" % (func.__name__))
-
         if dim is not None:
             axis = self.get_axis_num(dim)
         data = func(self.data if allow_lazy else self.values,
