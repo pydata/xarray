@@ -7,6 +7,9 @@ OPTIONS = {
 }
 
 
+EXPLICIT_INDEXES = False
+
+
 class set_options(object):
     """Set options for xarray in a controlled context.
 

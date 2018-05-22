@@ -117,6 +117,88 @@ def as_variable(obj, name=None):
     return obj
 
 
+def as_index_or_compatible_data(data):
+    if isinstance(data, pd.Index):
+        return data
+    else:
+        return as_compatible_data(data)
+
+
+def as_variables_with_multiindex_expansion(obj, name):
+    """Expand an object into one or more Variable objects.
+
+    Parameters
+    ----------
+    obj : object
+        Object to convert into a variable or variables. Like the obj argument
+        to as_variable(), but if data is a MultiIndex, each level is extracted
+        as a separate IndexVariable.
+    name : any
+        Name of this object, when used as a key in a dictionary. This is used
+        to set a default dimension name.
+
+    Returns
+    -------
+    OrderedDict with a single Variable/IndexVariable value or multiple
+    IndexVariable values (keyed by level name) if input data is a MultiIndex.
+
+    Examples
+    --------
+    >>> as_variables_with_multiindex_expansion([1, 2, 3], name='x')
+    OrderedDict([('x', IndexVariable(('x',), array([1, 2, 3])))])
+
+    >>> as_variables_with_multiindex_expansion(('y', [1, 2, 3]), name='x')
+    OrderedDict([('x', Variable(('y',), array([1, 2, 3])))])
+
+    >>> idx = pd.MultiIndex.from_tuples([('a', 1), ('b', 2)], names=['y', 'z'])
+    >>> as_variables_with_multiindex_expansion(idx, name='x')
+    OrderedDict([('y', IndexVariable(('x',), array(['a', 'b']))),
+                 ('z', IndexVariable(('x',), array([1, 2])))])
+    """
+
+    if hasattr(obj, 'variable'):
+        # extract the primary Variable from DataArrays
+        obj = obj.variable
+
+    if isinstance(obj, Variable):
+        variable = obj.copy(deep=False)
+
+    elif utils.is_scalar(obj):
+        variable = Variable([], obj)
+
+    else:
+        if isinstance(obj, tuple):
+            if len(obj) < 2:
+                # use .format() instead of % because it handles tuples
+                # consistently
+                raise TypeError('tuples to convert into variables must be of '
+                                'the form (dims, data[, attrs, encoding]): '
+                                '{}'.format(obj))
+            dims, data = obj[:2]
+            data = as_index_or_compatible_data(data)
+            args = obj[2:]
+        else:
+            dims = (name,)
+            data = as_index_or_compatible_data(obj)
+            args = ()
+
+            if data.ndim != 1:
+                raise MissingDimensionsError(
+                    'cannot set variable %r with %r-dimensional data '
+                    'without explicit dimension names. Pass a tuple of '
+                    '(dims, data) instead.' % (name, data.ndim))
+
+        if isinstance(data, pd.MultiIndex):
+            raise NotImplementedError('TODO: expand MultiIndex objects.')
+
+        if (name,) == dims or isinstance(data, pd.Index):
+            variable = IndexVariable(dims, data, *args, fastpath=True)
+        else:
+            variable = Variable(dims, data, *args, fastpath=True)
+
+    return OrderedDict([(name, variable)])
+
+
 def _maybe_wrap_data(data):
     """
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
