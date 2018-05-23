@@ -423,7 +423,7 @@ class TestPlotHistogram(PlotTestCase):
                            'mean', 'prod', 'sum',
                            'std', 'var', 'median']:
                 gp = self.darray.groupby_bins(dim, [-1, 0, 1, 2])
-                getattr(gp, method)().plot.hist(range=(-1,2))
+                getattr(gp, method)().plot.hist(range=(-1, 2))
 
 
 @requires_matplotlib
