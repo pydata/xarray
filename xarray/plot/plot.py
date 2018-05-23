@@ -62,7 +62,7 @@ def _interval_to_mid_points(array, label):
     """
     Helper function which checks whether array consists of
     pd.Interval. If yes, it returns an array
-    with the Intervals' mid points.In addition, _center is
+    with the Intervals' mid points. In addition, _center is
     appended to the label
     """
     if _valid_other_type(array, [pd.Interval]):
@@ -280,9 +280,10 @@ def line(darray, *args, **kwargs):
 
     _ensure_plottable(xplt)
 
-    xplt.values, xlabel = _interval_to_mid_points(xplt.values, xlabel)
+    # Remove pd.Intervals if contained in xplt.values.
+    xplt_val, xlabel = _interval_to_mid_points(xplt.values, xlabel)
 
-    primitive = ax.plot(xplt, yplt, *args, **kwargs)
+    primitive = ax.plot(xplt_val, yplt, *args, **kwargs)
 
     if xlabel is not None:
         ax.set_xlabel(xlabel)
@@ -625,8 +626,9 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xval, yval)
 
-        xval, xlab = _interval_to_mid_points(xval, xlab)
-        yval, ylab = _interval_to_mid_points(yval, ylab)
+        # Replace pd.Intervals if contained in xval or yval.
+        xplt, xlab = _interval_to_mid_points(xval, xlab)
+        yplt, ylab = _interval_to_mid_points(yval, ylab)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
@@ -663,7 +665,7 @@ def _plot2d(plotfunc):
                              "in xarray")
 
         ax = get_axis(figsize, size, aspect, ax)
-        primitive = plotfunc(xval, yval, zval, ax=ax, cmap=cmap_params['cmap'],
+        primitive = plotfunc(xplt, yplt, zval, ax=ax, cmap=cmap_params['cmap'],
                              vmin=cmap_params['vmin'],
                              vmax=cmap_params['vmax'],
                              **kwargs)
@@ -692,7 +694,7 @@ def _plot2d(plotfunc):
         _update_axes_limits(ax, xincrease, yincrease)
 
         # Rotate dates on xlabels
-        if np.issubdtype(xval.dtype, np.datetime64):
+        if np.issubdtype(xplt.dtype, np.datetime64):
             ax.get_figure().autofmt_xdate()
 
         return primitive
