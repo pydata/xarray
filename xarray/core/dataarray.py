@@ -467,7 +467,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
     def __getitem__(self, key):
         try:
-            is_coord_key = key in set(self.dims).union(self.coords)
+            is_coord_key = any([
+                isinstance(key, basestring),
+                key in set(self.dims).union(self.coords)
+            ])
         except TypeError:
             # not hashable, but testing with collections.Hashable is not
             # complete, since# tuples with slices inside will suggest
