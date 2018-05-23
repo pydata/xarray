@@ -58,17 +58,13 @@ def _ensure_plottable(*args):
                             'datetime.datetime or pd.Interval.')
 
 
-def _interval_to_mid_points(array, label):
+def _interval_to_mid_points(array):
     """
-    Helper function which checks whether array consists of
-    pd.Interval. If yes, it returns an array
-    with the Intervals' mid points. In addition, _center is
-    appended to the label
+    Helper function which returns an array
+    with the Intervals' mid points.
     """
-    if _valid_other_type(array, [pd.Interval]):
-        array = np.asarray(list(map(lambda x: x.mid, array)))
-        label += '_center'
-    return array, label
+
+    return np.asarray(list(map(lambda x: x.mid, array)))
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -281,7 +277,11 @@ def line(darray, *args, **kwargs):
     _ensure_plottable(xplt)
 
     # Remove pd.Intervals if contained in xplt.values.
-    xplt_val, xlabel = _interval_to_mid_points(xplt.values, xlabel)
+    if _valid_other_type(xplt.values, [pd.Interval]):
+        xplt_val = _interval_to_mid_points(xplt.values)
+        xlabel += '_center'
+    else:
+        xplt_val = xplt.values
 
     primitive = ax.plot(xplt_val, yplt, *args, **kwargs)
 
@@ -627,8 +627,14 @@ def _plot2d(plotfunc):
         _ensure_plottable(xval, yval)
 
         # Replace pd.Intervals if contained in xval or yval.
-        xplt, xlab = _interval_to_mid_points(xval, xlab)
-        yplt, ylab = _interval_to_mid_points(yval, ylab)
+        if _valid_other_type(xval, [pd.Interval]):
+            xplt = _interval_to_mid_points(xval)
+        else:
+            xplt = xval
+        if _valid_other_type(yval, [pd.Interval]):
+            yplt = _interval_to_mid_points(yval)
+        else:
+            yplt = yval
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
