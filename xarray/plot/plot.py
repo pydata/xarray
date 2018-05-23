@@ -48,24 +48,24 @@ def _ensure_plottable(*args):
     axis.
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
-    other_types = [datetime, pd._libs.interval.Interval]
+    other_types = [datetime, pd.Interval]
 
     for x in args:
         if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
                 _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64 or '
-                            'datetime.datetime or pd._libs.interval.Interval.')
+                            'datetime.datetime or pd.Interval.')
 
 
 def _interval_to_mid_points(array, label):
     """
     Helper function which checks whether array consists of
-    pd._libs.interval.Interval. If yes, it returns an array
+    pd.Interval. If yes, it returns an array
     with the Intervals' mid points.In addition, _center is
     appended to the label
     """
-    if _valid_other_type(array, [pd._libs.interval.Interval]):
+    if _valid_other_type(array, [pd.Interval]):
         array = np.asarray(list(map(lambda x: x.mid, array)))
         label += '_center'
     return array, label
