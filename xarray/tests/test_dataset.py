@@ -4181,6 +4181,12 @@ def test_dir_non_string(data_set):
     result = dir(data_set)
     assert not (5 in result)
 
+    # GH2172
+    sample_data = np.random.uniform(size=[2, 2000, 10000])
+    x = xr.Dataset({"sample_data": (sample_data.shape, sample_data)})
+    x2 = x["sample_data"]
+    dir(x2)
+
 
 def test_dir_unicode(data_set):
     data_set[u'unicode'] = 'uni'

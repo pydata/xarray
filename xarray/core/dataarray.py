@@ -466,7 +466,14 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace_maybe_drop_dims(var, name=key)
 
     def __getitem__(self, key):
-        if isinstance(key, basestring):
+        try:
+            is_coord_key = key in set(self.dims).union(self.coords)
+        except TypeError:
+            # not hashable, but testing with collections.Hashable is not
+            # complete, since# tuples with slices inside will suggest
+            # they're hashable
+            is_coord_key = False
+        if is_coord_key:
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
