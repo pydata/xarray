@@ -824,7 +824,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
-    def isel(self, **indexers):
+    def isel(self, indexer_dict=None, **indexers):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -841,6 +841,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
+        if indexer_dict is not None:
+            if indexers:
+                raise ValueError("Both indexer_dict and indexers supplied. "
+                                 "Please only provide one")
+            indexers = indexer_dict
+
         invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)

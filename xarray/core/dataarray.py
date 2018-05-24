@@ -466,21 +466,11 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._replace_maybe_drop_dims(var, name=key)
 
     def __getitem__(self, key):
-        try:
-            is_coord_key = any([
-                isinstance(key, basestring),
-                key in set(self.dims).union(self.coords)
-            ])
-        except TypeError:
-            # not hashable, but testing with collections.Hashable is not
-            # complete, since# tuples with slices inside will suggest
-            # they're hashable
-            is_coord_key = False
-        if is_coord_key:
+        if isinstance(key, basestring):
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
-            return self.isel(**self._item_key_to_dict(key))
+            return self.isel(indexer_dict=self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -508,7 +498,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @property
     def _item_sources(self):
         """List of places to look-up items for key-completion"""
-        return [self.coords, {d: self[d] for d in self.dims},
+        return [self.coords, {d: self.coords[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
@@ -752,7 +742,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                            token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
-    def isel(self, drop=False, **indexers):
+    def isel(self, indexer_dict=None, drop=False, **indexers):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -761,7 +751,13 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._to_temp_dataset().isel(drop=drop, **indexers)
+        if indexer_dict is not None:
+            if indexers:
+                # could combine them (easier syntax when we drop Py2)
+                raise ValueError("Both indexer_dict and indexers supplied. "
+                                 "Please only provide one")
+            indexers = indexer_dict
+        ds = self._to_temp_dataset().isel(drop=drop, indexer_dict=indexers)
         return self._from_temp_dataset(ds)
 
     def sel(self, method=None, tolerance=None, drop=False, **indexers):

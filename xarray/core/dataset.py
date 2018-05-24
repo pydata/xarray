@@ -1368,7 +1368,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 attached_coords[k] = v
         return attached_coords
 
-    def isel(self, drop=False, **indexers):
+    def isel(self, indexer_dict=None, drop=False, **indexers):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -1404,12 +1404,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.sel
         DataArray.isel
         """
+        if indexer_dict is not None:
+            if indexers:
+                raise ValueError("Both indexer_dict and indexers supplied. "
+                                 "Please only provide one")
+            indexers = indexer_dict
+        assert isinstance(drop, bool)
+
         indexers_list = self._validate_indexers(indexers)
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
-            new_var = var.isel(**var_indexers)
+            new_var = var.isel(indexer_dict=var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
 
