@@ -275,5 +275,5 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
     def test_encoding_kwarg(self):
         pass
 
-    def test_encoding_kwarg_string(self):
+    def test_encoding_kwarg_fixed_width_string(self):
         pass

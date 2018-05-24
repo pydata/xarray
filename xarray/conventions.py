@@ -80,7 +80,8 @@ def _var_as_tuple(var):
 
 def maybe_encode_nonstring_dtype(var, name=None):
     if ('dtype' in var.encoding and
-            var.encoding['dtype'] not in {'S1', str}):
+            var.encoding['dtype'] != 'S1' and
+            var.encoding['dtype'] is not str):
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype:

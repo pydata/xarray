@@ -756,7 +756,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
             self.assertEqual(actual.t.encoding['units'], units)
             assert_identical(actual, ds)
 
-    def test_encoding_kwarg_string(self):
+    def test_encoding_kwarg_fixed_width_string(self):
         # regression test for GH2149
         for strings in [
             [b'foo', b'bar', b'baz'],
@@ -948,17 +948,17 @@ class BaseNetCDF4Test(CFEncodedDataTest):
             with open_dataset(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
 
-    @pytest.mark.parametrize('input_strings', [
-        [b'foo', b'bar', b'baz'],
-        [u'foo', u'bar', u'baz'],
-    ])
-    def test_encoding_kwarg_vlen_string(self, input_strings):
-        original = Dataset({'x': input_strings})
-        expected = Dataset({'x': [u'foo', u'bar', u'baz']})
-        kwargs = dict(encoding={'x': {'dtype': str}})
-        with self.roundtrip(original, save_kwargs=kwargs) as actual:
-            assert actual['x'].encoding['dtype'] is str
-            assert_identical(actual, expected)
+    def test_encoding_kwarg_vlen_string(self):
+        for input_strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            original = Dataset({'x': input_strings})
+            expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+            kwargs = dict(encoding={'x': {'dtype': str}})
+            with self.roundtrip(original, save_kwargs=kwargs) as actual:
+                assert actual['x'].encoding['dtype'] is str
+                assert_identical(actual, expected)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
@@ -1445,7 +1445,7 @@ class BaseZarrTest(CFEncodedDataTest):
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
 
-    def test_encoding_kwarg_string(self):
+    def test_encoding_kwarg_fixed_width_string(self):
         # not relevant for zarr, since we don't use EncodedStringCoder
         pass
 
