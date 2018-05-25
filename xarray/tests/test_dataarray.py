@@ -1771,6 +1771,11 @@ class TestDataArray(TestCase):
         orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords,
                          dims=['x', 'y'])
 
+        actual = orig.cumsum()
+        expected = DataArray([[-1, -1, 0], [-4, -4, 0]], coords,
+                             dims=['x', 'y'])
+        assert_identical(expected, actual)
+
         actual = orig.cumsum('x')
         expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords,
                              dims=['x', 'y'])
