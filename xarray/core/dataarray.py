@@ -785,7 +785,7 @@ class DataArray(AbstractArray, DataWithCoords):
             indexers=indexers, drop=drop, method=method, tolerance=tolerance)
         return self._from_temp_dataset(ds)
 
-    def isel_points(self, indexers=None, dim='points', **indexers_kwargs):
+    def isel_points(self, dim='points', **indexers):
         """Return a new DataArray whose dataset is given by pointwise integer
         indexing along the specified dimension(s).
 
@@ -793,13 +793,11 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel_points
         """
-        indexers = combine_pos_and_kw_args(
-            indexers, indexers_kwargs, 'isel_points')
         ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
         return self._from_temp_dataset(ds)
 
-    def sel_points(self, indexers=None, dim='points', method=None,
-                   tolerance=None, **indexers_kwargs):
+    def sel_points(self, dim='points', method=None, tolerance=None,
+                   **indexers):
         """Return a new DataArray whose dataset is given by pointwise selection
         of index labels along the specified dimension(s).
 
@@ -807,8 +805,6 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.sel_points
         """
-        indexers = combine_pos_and_kw_args(
-            indexers, indexers_kwargs, 'sel_points')
         ds = self._to_temp_dataset().sel_points(
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)
@@ -860,12 +856,18 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
                             **indexers)
 
-    def reindex(self, method=None, tolerance=None, copy=True, **indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
+                **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
         Parameters
         ----------
+        **indexers : dict
+            Dictionary with keys given by dimension names and values given by
+            arrays of coordinates tick labels. Any mis-matched coordinate
+            values will be filled in with NaN, and any mis-matched dimension
+            names will simply be ignored.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -883,11 +885,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-        **indexers : dict
-            Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
-            names will simply be ignored.
+        **indexers_kwargs : {dim: indexer, ...}
+            The keyword arguments form of ``indexers``
 
         Returns
         -------
@@ -900,8 +899,10 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.reindex_like
         align
         """
+        indexers = combine_pos_and_kw_args(
+            indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
-            method=method, tolerance=tolerance, copy=copy, **indexers)
+            indexers=indexers, method=method, tolerance=tolerance, copy=copy)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):

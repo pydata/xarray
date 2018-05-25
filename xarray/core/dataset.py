@@ -1745,7 +1745,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                             **indexers)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
-                **kw_indexers):
+                **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
@@ -1774,7 +1774,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        **kw_indexers : optional
+        **indexers_kwargs : optional
             Keyword arguments in the same form as ``indexers``.
 
         Returns
@@ -1788,7 +1788,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         align
         pandas.Index.get_indexer
         """
-        indexers = utils.combine_pos_and_kw_args(indexers, kw_indexers,
+        indexers = utils.combine_pos_and_kw_args(indexers, indexers_kwargs,
                                                  'reindex')
 
         bad_dims = [d for d in indexers if d not in self.dims]
