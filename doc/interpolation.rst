@@ -50,10 +50,10 @@ array-like, which gives the interpolated result as an array.
 
 .. note::
 
-  Currently, our interpolation only works for gridded (structured) arrays
-  Therefore, as similar to :py:meth:`~xarray.DataArray.sel`,
-  only dimensional coordinates can be used for the original coordinate to be
-  interpolated.
+  Currently, our interpolation only works for regular grids.
+  Therefore, similarly to :py:meth:`~xarray.DataArray.sel`,
+  only 1D coordinates along a dimension can be used as the
+  original coordinate to be interpolated.
 
 
 Multi-dimensional Interpolation
@@ -71,7 +71,7 @@ is carried out.
     # interpolation
     da.interp(time=2.5, space=0.15)
 
-array-like coordinates can be also accepted
+Array-like coordinates are also accepted:
 
 .. ipython:: python
 
@@ -85,10 +85,10 @@ array-like coordinates can be also accepted
 Interpolation methods
 ---------------------
 
-We use scipy.interpolate.interp1d for 1-dimensional interpolation and
-scipy.interpolate.interpn for multi-dimensional interpolation.
+We use :py:func:`scipy.interpolate.interp1d` for 1-dimensional interpolation and
+:py:func:`scipy.interpolate.interpn` for multi-dimensional interpolation.
 
-The interpolation method can be specified by the ``method`` optional argument.
+The interpolation method can be specified by the optional ``method`` argument.
 
 .. ipython:: python
 
@@ -191,9 +191,9 @@ then make the interpolation
 
 If NaNs are distributed rondomly in your multidimensional array,
 dropping all the columns containing more than one NaNs by
-:py:meth:`~xarray.DataArray.dropna` may lose significant amount of information.
+:py:meth:`~xarray.DataArray.dropna` may lose a significant amount of information.
 In such a case, you can fill NaN by :py:meth:`~xarray.DataArray.interpolate_na`,
-which is similar to pandas `interpolate <https://pandas.pydata.org/pandas-docs/stable/generated/pandas.Series.interpolate.html>`_ method.
+which is similar to :py:meth:`pandas.Series.interpolate`.
 
 .. ipython:: python
 
@@ -201,7 +201,7 @@ which is similar to pandas `interpolate <https://pandas.pydata.org/pandas-docs/s
     filled
 
 This fills NaN by interpolating along the specified dimension.
-After filling NaNs, you can interpolate
+After filling NaNs, you can interpolate:
 
 .. ipython:: python
 
