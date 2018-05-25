@@ -24,8 +24,8 @@ from .coordinates import (
     assert_coordinate_consistent, remap_label_indexers)
 from .dtypes import is_datetime_like
 from .merge import (
-    dataset_merge_method, dataset_setitem_method, dataset_update_method,
-    merge_data_and_coords, merge_variables)
+    dataset_merge_method, dataset_update_method, merge_data_and_coords,
+    merge_variables)
 from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
@@ -895,8 +895,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if utils.is_dict_like(key):
             raise NotImplementedError('cannot yet use a dictionary as a key '
                                       'to set Dataset values')
-        variables, coord_names, dims = dataset_setitem_method(self, key, value)
-        self._replace_vars_and_dims(variables, coord_names, dims, inplace=True)
+
+        self.update({key: value})
 
     def __delitem__(self, key):
         """Remove a variable from this dataset.
@@ -2197,6 +2197,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             dataset.
         """
         variables, coord_names, dims = dataset_update_method(self, other)
+
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 

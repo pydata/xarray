@@ -546,24 +546,25 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     return merge_core(objs, compat, join, priority_arg=priority_arg)
 
 
-def dataset_setitem_method(dataset, key, value):
-    """Guts of the Dataset.__setitem__ method.
+def dataset_update_method(dataset, other):
+    """Guts of the Dataset.update method.
 
-    This drops a duplicated coordinates from `other` (GH:2068).
+    This drops a duplicated coordinates from `other` if `other` is not an
+    `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
+    GH2180).
     """
+    from .dataset import Dataset
     from .dataarray import DataArray
 
-    if isinstance(value, DataArray):
-        coord_names = [c for c in value.coords
-                       if c not in value.dims and c in dataset.coords]
-        if coord_names:
-            value = value.drop(coord_names)
+    if not isinstance(other, Dataset):
+        other = OrderedDict(other)
+        for key, value in other.items():
+            if isinstance(value, DataArray):
+                # drop conflicting coordinates
+                coord_names = [c for c in value.coords
+                               if c not in value.dims and c in dataset.coords]
+                if coord_names:
+                    other[key] = value.drop(coord_names)
 
-    return merge_core([dataset, {key: value}], priority_arg=1,
-                      indexes=dataset.indexes)
-
-
-def dataset_update_method(dataset, other, overwrite_coords=False):
-    """Guts of the Dataset.update method."""
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)

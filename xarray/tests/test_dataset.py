@@ -2156,7 +2156,7 @@ class TestDataset(TestCase):
 
         data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
         data.update({'c': DataArray(5, coords={'b': 4})})
-        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 4})
+        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 3})
         assert_identical(data, expected)
 
     def test_update_auto_align(self):
