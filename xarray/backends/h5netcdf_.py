@@ -12,7 +12,7 @@ from .common import (
     HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore, find_root)
 from .netCDF4_ import (
     BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
-    _get_datatype, _nc4_group)
+    _get_datatype, _nc4_require_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -57,11 +57,16 @@ _extract_h5nc_encoding = functools.partial(
     lsd_okay=False, h5py_okay=True, backend='h5netcdf')
 
 
+def _h5netcdf_create_group(dataset, name):
+    return dataset.create_group(name)
+
+
 def _open_h5netcdf_group(filename, mode, group):
     import h5netcdf
     ds = h5netcdf.File(filename, mode=mode)
     with close_on_error(ds):
-        return _nc4_group(ds, group, mode)
+        return _nc4_require_group(
+            ds, group, mode, create_group=_h5netcdf_create_group)
 
 
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):

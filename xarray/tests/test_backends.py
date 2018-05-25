@@ -892,7 +892,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
             # check equivalent ways to specify group
             for group in 'foo', '/foo', 'foo/', '/foo/':
-                with open_dataset(tmp_file, group=group) as actual:
+                with self.open(tmp_file, group=group) as actual:
                     assert_equal(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
@@ -920,18 +920,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
             # check equivalent ways to specify group
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
-                with open_dataset(tmp_file, group=group) as actual:
+                with self.open(tmp_file, group=group) as actual:
                     assert_equal(actual['x'], expected['x'])
 
     def test_write_groups(self):
         data1 = create_test_data()
         data2 = data1 * 2
         with create_tmp_file() as tmp_file:
-            data1.to_netcdf(tmp_file, group='data/1')
-            data2.to_netcdf(tmp_file, group='data/2', mode='a')
-            with open_dataset(tmp_file, group='data/1') as actual1:
+            self.save(data1, tmp_file, group='data/1')
+            self.save(data2, tmp_file, group='data/2', mode='a')
+            with self.open(tmp_file, group='data/1') as actual1:
                 assert_identical(data1, actual1)
-            with open_dataset(tmp_file, group='data/2') as actual2:
+            with self.open(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
