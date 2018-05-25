@@ -52,12 +52,9 @@ Bug fixes
 - Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
   files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
   (:issue:`2134`).
-- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
-  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Fixed a regression where ``update()`` was not overwriting coordinates.
-  By `Stephan Hoyer <https://github.com/shoyer>`_.
-- Removed spurious issued warnings with ``Dataset.update()`` (:issue:`2161`).
+
+- Removed spurious warnings with ``Dataset.update(Dataset)`` (:issue:`2161`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
