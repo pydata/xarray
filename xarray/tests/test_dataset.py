@@ -1435,7 +1435,7 @@ class TestDataset(TestCase):
 
         with raises_regex(TypeError, '``method``'):
             # this should not pass silently
-            data.sel(data)
+            data.sel(method=data)
 
         # cannot pass method if there is no associated coordinate
         with raises_regex(ValueError, 'cannot supply'):

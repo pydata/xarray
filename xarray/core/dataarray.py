@@ -472,7 +472,7 @@ class DataArray(AbstractArray, DataWithCoords):
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
-            return self.isel(indexer_dict=self._item_key_to_dict(key))
+            return self.isel(indexers=self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -754,10 +754,11 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.sel
         """
         indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
-        ds = self._to_temp_dataset().isel(drop=drop, indexer_dict=indexers)
+        ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, drop=False, **indexers):
+    def sel(self, indexers=None, method=None, tolerance=None, drop=False,
+            **indexers_kwargs):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
 
@@ -779,11 +780,12 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.isel
 
         """
-        ds = self._to_temp_dataset().sel(drop=drop, method=method,
-                                         tolerance=tolerance, **indexers)
+        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'sel')
+        ds = self._to_temp_dataset().sel(
+            indexers=indexers, drop=drop, method=method, tolerance=tolerance)
         return self._from_temp_dataset(ds)
 
-    def isel_points(self, dim='points', **indexers):
+    def isel_points(self, indexers=None, dim='points', **indexers_kwargs):
         """Return a new DataArray whose dataset is given by pointwise integer
         indexing along the specified dimension(s).
 
@@ -791,11 +793,13 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.isel_points
         """
+        indexers = combine_pos_and_kw_args(
+            indexers, indexers_kwargs, 'isel_points')
         ds = self._to_temp_dataset().isel_points(dim=dim, **indexers)
         return self._from_temp_dataset(ds)
 
-    def sel_points(self, dim='points', method=None, tolerance=None,
-                   **indexers):
+    def sel_points(self, indexers=None, dim='points', method=None,
+                   tolerance=None, **indexers_kwargs):
         """Return a new DataArray whose dataset is given by pointwise selection
         of index labels along the specified dimension(s).
 
@@ -803,6 +807,8 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         Dataset.sel_points
         """
+        indexers = combine_pos_and_kw_args(
+            indexers, indexers_kwargs, 'sel_points')
         ds = self._to_temp_dataset().sel_points(
             dim=dim, method=method, tolerance=tolerance, **indexers)
         return self._from_temp_dataset(ds)

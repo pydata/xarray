@@ -1387,7 +1387,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        **indexers : {dim: indexer, ...}
+        **indexers_kwarg : {dim: indexer, ...}
             The keyword arguments form of ``indexers``
 
         Returns
@@ -1415,7 +1415,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             var_indexers = {k: v for k, v in indexers_list if k in var.dims}
-            new_var = var.isel(indexer_dict=var_indexers)
+            new_var = var.isel(indexers=var_indexers)
             if not (drop and name in var_indexers):
                 variables[name] = new_var
 
@@ -1431,7 +1431,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                        .union(coord_vars))
         return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
-    def sel(self, method=None, tolerance=None, drop=False, **indexers):
+    def sel(self, indexers=None, method=None, tolerance=None, drop=False,
+            **indexers_kwargs):
         """Returns a new dataset with each array indexed by tick labels
         along the specified dimension(s).
 
@@ -1450,6 +1451,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
+        ----------
+        indexers : dict, optional
+            A dict with keys matching dimensions and values given
+            by scalars, slices or arrays of tick labels. For dimensions with
+            multi-index, the indexer may also be a dict-like object with keys
+            matching index level names.
+            If DataArrays are passed as indexers, xarray-style indexing will be
+            carried out. See :ref:`indexing` for the details.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for inexact matches (requires pandas>=0.16):
 
@@ -1465,13 +1474,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-        **indexers : {dim: indexer, ...}
-            Keyword arguments with names matching dimensions and values given
-            by scalars, slices or arrays of tick labels. For dimensions with
-            multi-index, the indexer may also be a dict-like object with keys
-            matching index level names.
-            If DataArrays are passed as indexers, xarray-style indexing will be
-            carried out. See :ref:`indexing` for the details.
+        **indexers_kwargs : {dim: indexer, ...}
+            The keyword arguments form of ``indexers``
 
         Returns
         -------
@@ -1490,9 +1494,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.isel
         DataArray.sel
         """
-        pos_indexers, new_indexes = remap_label_indexers(self, method,
-                                                         tolerance, **indexers)
-        result = self.isel(drop=drop, **pos_indexers)
+        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'sel')
+        pos_indexers, new_indexes = remap_label_indexers(
+            self, indexers=indexers, method=method, tolerance=tolerance)
+        result = self.isel(indexers=pos_indexers, drop=drop)
         return result._replace_indexes(new_indexes)
 
     def isel_points(self, dim='points', **indexers):
