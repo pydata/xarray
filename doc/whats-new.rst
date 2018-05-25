@@ -54,7 +54,8 @@ Bug fixes
   (:issue:`2134`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- Removed spurious warnings with ``Dataset.update(Dataset)`` (:issue:`2161`).
+- Removed spurious warnings with ``Dataset.update(Dataset)`` (:issue:`2161`)
+  and ``array.equals(array)`` when ``array`` contains ``NaT`` (:issue:`2162`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
