@@ -2314,7 +2314,7 @@ class TestDataArray(TestCase):
         array = DataArray(np.ones(10), [('time', times)])
 
         # Simple mean
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = array.resample('1D', 'time', how='mean')
         new_mean = array.resample(time='1D').mean()
         assert_identical(old_mean, new_mean)
@@ -2323,7 +2323,7 @@ class TestDataArray(TestCase):
         attr_array = array.copy()
         attr_array.attrs['meta'] = 'data'
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = attr_array.resample('1D', dim='time', how='mean',
                                            keep_attrs=True)
         new_mean = attr_array.resample(time='1D').mean(keep_attrs=True)
@@ -2334,7 +2334,7 @@ class TestDataArray(TestCase):
         nan_array = array.copy()
         nan_array[1] = np.nan
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = nan_array.resample('1D', 'time', how='mean',
                                           skipna=False)
         new_mean = nan_array.resample(time='1D').mean(skipna=False)
@@ -2348,12 +2348,12 @@ class TestDataArray(TestCase):
             # Discard attributes on the call using the new api to match
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
         for method in [np.mean, np.sum, np.max, np.min]:
             new_api = resampler.reduce(method)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 

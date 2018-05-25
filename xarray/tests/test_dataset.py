@@ -2794,7 +2794,7 @@ class TestDataset(TestCase):
             # Discard attributes on the call using the new api to match
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = ds.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 
