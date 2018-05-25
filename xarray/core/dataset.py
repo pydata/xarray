@@ -17,8 +17,8 @@ from . import (
     rolling, utils)
 from .. import conventions
 from .alignment import align
-from .common import (DataWithCoords, ImplementsDatasetReduce,
-                     _contains_datetime_like_objects)
+from .common import (
+    DataWithCoords, ImplementsDatasetReduce, _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -30,7 +30,7 @@ from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
-    Frozen, SortedKeysDict, decode_numpy_dict_values,
+    Frozen, SortedKeysDict, combine_pos_and_kw_args, decode_numpy_dict_values,
     ensure_us_time_resolution, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
@@ -1368,7 +1368,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 attached_coords[k] = v
         return attached_coords
 
-    def isel(self, indexer_dict=None, drop=False, **indexers):
+    def isel(self, indexers=None, drop=False, **indexers_kwargs):
         """Returns a new dataset with each array indexed along the specified
         dimension(s).
 
@@ -1378,15 +1378,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        drop : bool, optional
-            If ``drop=True``, drop coordinates variables indexed by integers
-            instead of making them scalar.
-        **indexers : {dim: indexer, ...}
-            Keyword arguments with names matching dimensions and values given
+        indexers : dict, optional
+            A dict with keys matching dimensions and values given
             by integers, slice objects or arrays.
             indexer can be a integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
+        drop : bool, optional
+            If ``drop=True``, drop coordinates variables indexed by integers
+            instead of making them scalar.
+        **indexers : {dim: indexer, ...}
+            The keyword arguments form of ``indexers``
 
         Returns
         -------
@@ -1404,11 +1406,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.sel
         DataArray.isel
         """
-        if indexer_dict is not None:
-            if indexers:
-                raise ValueError("Both indexer_dict and indexers supplied. "
-                                 "Please only provide one")
-            indexers = indexer_dict
+
+        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
         assert isinstance(drop, bool)
 
         indexers_list = self._validate_indexers(indexers)

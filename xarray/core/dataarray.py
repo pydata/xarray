@@ -18,7 +18,9 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
-from .utils import decode_numpy_dict_values, ensure_us_time_resolution
+from .utils import (
+    combine_pos_and_kw_args, decode_numpy_dict_values,
+    ensure_us_time_resolution)
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -742,7 +744,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                            token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
-    def isel(self, indexer_dict=None, drop=False, **indexers):
+    def isel(self, indexers=None, drop=False, **indexers_kwargs):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -751,12 +753,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.isel
         DataArray.sel
         """
-        if indexer_dict is not None:
-            if indexers:
-                # could combine them (easier syntax when we drop Py2)
-                raise ValueError("Both indexer_dict and indexers supplied. "
-                                 "Please only provide one")
-            indexers = indexer_dict
+        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
         ds = self._to_temp_dataset().isel(drop=drop, indexer_dict=indexers)
         return self._from_temp_dataset(ds)
 
