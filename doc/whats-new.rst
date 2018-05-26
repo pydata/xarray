@@ -59,6 +59,10 @@ Bug fixes
   dimension were improperly skipped.
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- Fix :meth:`~DataArray.stack` with non-unique coordinates on pandas 0.23
+  (:issue:`2160`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 - Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
   now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no
   longer falsely returns an empty array when the slice includes the value in
