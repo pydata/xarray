@@ -1408,7 +1408,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
 
         indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
-        assert isinstance(drop, bool)
 
         indexers_list = self._validate_indexers(indexers)
 
