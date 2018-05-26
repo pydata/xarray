@@ -17,7 +17,7 @@ from .indexing import (
     as_indexable)
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
-from .utils import OrderedSet, combine_pos_and_kw_args
+from .utils import OrderedSet, either_dict_or_kwargs
 
 try:
     import dask.array as da
@@ -841,7 +841,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
-        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
 
         invalid = [k for k in indexers if k not in self.dims]
         if invalid:

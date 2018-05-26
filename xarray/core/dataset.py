@@ -30,7 +30,7 @@ from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
-    Frozen, SortedKeysDict, combine_pos_and_kw_args, decode_numpy_dict_values,
+    Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
     ensure_us_time_resolution, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
@@ -1407,7 +1407,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         DataArray.isel
         """
 
-        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
         assert isinstance(drop, bool)
 
         indexers_list = self._validate_indexers(indexers)
@@ -1494,7 +1494,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.isel
         DataArray.sel
         """
-        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'sel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
         pos_indexers, new_indexes = remap_label_indexers(
             self, indexers=indexers, method=method, tolerance=tolerance)
         result = self.isel(indexers=pos_indexers, drop=drop)
@@ -1788,7 +1788,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         align
         pandas.Index.get_indexer
         """
-        indexers = utils.combine_pos_and_kw_args(indexers, indexers_kwargs,
+        indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs,
                                                  'reindex')
 
         bad_dims = [d for d in indexers if d not in self.dims]

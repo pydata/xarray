@@ -183,7 +183,7 @@ def is_full_slice(value):
     return isinstance(value, slice) and value == slice(None)
 
 
-def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
+def either_dict_or_kwargs(pos_kwargs, kw_kwargs, func_name):
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'

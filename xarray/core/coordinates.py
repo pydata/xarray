@@ -9,7 +9,7 @@ from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
-from .utils import Frozen, ReprObject, combine_pos_and_kw_args
+from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 
 # Used as the key corresponding to a DataArray's variable when converting
@@ -345,7 +345,7 @@ def remap_label_indexers(obj, indexers=None, method=None, tolerance=None,
     new_indexes: mapping of new dimensional-coordinate.
     """
     from .dataarray import DataArray
-    indexers = combine_pos_and_kw_args(
+    indexers = either_dict_or_kwargs(
         indexers, indexers_kwargs, 'remap_label_indexers')
 
     v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v

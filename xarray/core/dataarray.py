@@ -19,7 +19,7 @@ from .formatting import format_item
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
-    combine_pos_and_kw_args, decode_numpy_dict_values,
+    either_dict_or_kwargs, decode_numpy_dict_values,
     ensure_us_time_resolution)
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
@@ -753,7 +753,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.isel
         DataArray.sel
         """
-        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'isel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
         ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
         return self._from_temp_dataset(ds)
 
@@ -780,7 +780,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.isel
 
         """
-        indexers = combine_pos_and_kw_args(indexers, indexers_kwargs, 'sel')
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
         ds = self._to_temp_dataset().sel(
             indexers=indexers, drop=drop, method=method, tolerance=tolerance)
         return self._from_temp_dataset(ds)
@@ -899,7 +899,7 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.reindex_like
         align
         """
-        indexers = combine_pos_and_kw_args(
+        indexers = either_dict_or_kwargs(
             indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
             indexers=indexers, method=method, tolerance=tolerance, copy=copy)
