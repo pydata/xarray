@@ -886,7 +886,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-        **indexers_kwargs : {dim: indexer, ...}
+        **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
