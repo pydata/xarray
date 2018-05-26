@@ -1673,6 +1673,13 @@ class TestDataArray(TestCase):
         actual = DataArray(s, dims='z').unstack('z')
         assert_identical(expected, actual)
 
+    def test_stack_nonunique_consistency(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'],
+                         coords={'x': [0, 1], 'y': [0, 0]})
+        actual = orig.stack(z=['x', 'y'])
+        expected = DataArray(orig.to_pandas().stack(), dims='z')
+        assert_identical(expected, actual)
+
     def test_transpose(self):
         assert_equal(self.dv.variable.transpose(),
                      self.dv.transpose().variable)

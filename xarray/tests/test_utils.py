@@ -72,7 +72,8 @@ def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
 
 
 def test_multiindex_from_product_levels():
-    result = utils.multiindex_from_product_levels([['b', 'a'], [1, 3, 2]])
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 3, 2])])
     np.testing.assert_array_equal(
         result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
@@ -80,6 +81,15 @@ def test_multiindex_from_product_levels():
 
     other = pd.MultiIndex.from_product([['b', 'a'], [1, 3, 2]])
     np.testing.assert_array_equal(result.values, other.values)
+
+
+def test_multiindex_from_product_levels_non_unique():
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 1, 2])])
+    np.testing.assert_array_equal(
+        result.labels, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
+    np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
+    np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
 class TestArrayEquiv(TestCase):
