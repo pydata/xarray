@@ -863,11 +863,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **indexers : dict
+        indexers : dict, optional
             Dictionary with keys given by dimension names and values given by
             arrays of coordinates tick labels. Any mis-matched coordinate
             values will be filled in with NaN, and any mis-matched dimension
             names will simply be ignored.
+            One of indexers or indexers_kwargs must be provided.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -886,7 +887,8 @@ class DataArray(AbstractArray, DataWithCoords):
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
         **indexers_kwargs : {dim: indexer, ...}
-            The keyword arguments form of ``indexers``
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
 
         Returns
         -------
