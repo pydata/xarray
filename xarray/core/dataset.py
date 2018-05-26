@@ -1388,7 +1388,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
-        **indexers_kwarg : {dim: indexer, ...}
+        **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1476,7 +1476,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         drop : bool, optional
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
-        **indexers_kwargs : {dim: indexer, ...}
+        **indexers_kwarg : {dim: indexer, ...}, optional
             The keyword arguments form of ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
@@ -1778,7 +1778,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        **indexers_kwargs : optional : {dim: indexer, ...}
+        **indexers_kwarg : {dim: indexer, ...}, optional
             Keyword arguments in the same form as ``indexers``.
             One of indexers or indexers_kwargs must be provided.
 
