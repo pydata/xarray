@@ -1384,11 +1384,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             indexer can be a integer, slice, array-like or DataArray.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
+            One of indexers or indexers_kwargs must be provided.
         drop : bool, optional
             If ``drop=True``, drop coordinates variables indexed by integers
             instead of making them scalar.
         **indexers_kwarg : {dim: indexer, ...}
-            The keyword arguments form of ``indexers``
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
 
         Returns
         -------
@@ -1458,6 +1460,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             matching index level names.
             If DataArrays are passed as indexers, xarray-style indexing will be
             carried out. See :ref:`indexing` for the details.
+            One of indexers or indexers_kwargs must be provided.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for inexact matches (requires pandas>=0.16):
 
@@ -1474,7 +1477,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If ``drop=True``, drop coordinates variables in `indexers` instead
             of making them scalar.
         **indexers_kwargs : {dim: indexer, ...}
-            The keyword arguments form of ``indexers``
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
 
         Returns
         -------
@@ -1755,6 +1759,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             arrays of coordinates tick labels. Any mis-matched coordinate values
             will be filled in with NaN, and any mis-matched dimension names will
             simply be ignored.
+            One of indexers or indexers_kwargs must be provided.
         method : {None, 'nearest', 'pad'/'ffill', 'backfill'/'bfill'}, optional
             Method to use for filling index values in ``indexers`` not found in
             this dataset:
@@ -1773,8 +1778,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             ``copy=False`` and reindexing is unnecessary, or can be performed
             with only slice operations, then the output may share memory with
             the input. In either case, a new xarray object is always returned.
-        **indexers_kwargs : optional
+        **indexers_kwargs : optional : {dim: indexer, ...}
             Keyword arguments in the same form as ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
 
         Returns
         -------
