@@ -1452,7 +1452,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        ----------
         indexers : dict, optional
             A dict with keys matching dimensions and values given
             by scalars, slices or arrays of tick labels. For dimensions with
