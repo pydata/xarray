@@ -46,6 +46,14 @@ Enhancements
   to manage its version strings. (:issue:`1300`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
+  (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
+  as a first argument, as an alternative to the existing approach 
+  of supplying a set of `kwargs`. This allows for more robust behavior
+  of dimension names which conflict with other keyword names, or are 
+  not strings.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
 Bug fixes
 ~~~~~~~~~
 

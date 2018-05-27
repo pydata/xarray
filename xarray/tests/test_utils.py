@@ -1,17 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from datetime import datetime
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
+from xarray.core.utils import either_dict_or_kwargs
+
+from . import (
+    TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
+    requires_dask)
 from .test_coding_times import _all_cftime_date_types
-from . import (TestCase, requires_dask, assert_array_equal,
-               has_cftime_or_netCDF4, has_cftime)
 
 
 class TestAlias(TestCase):
@@ -245,3 +249,17 @@ def test_hidden_key_dict():
         hkd[hidden_key]
     with pytest.raises(KeyError):
         del hkd[hidden_key]
+
+
+def test_either_dict_or_kwargs():
+
+    result = either_dict_or_kwargs(dict(a=1), None, 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    result = either_dict_or_kwargs(None, dict(a=1), 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    with pytest.raises(ValueError, match=r'foo'):
+        result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
