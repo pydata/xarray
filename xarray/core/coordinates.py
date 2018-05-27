@@ -9,9 +9,8 @@ from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
-from .utils import Frozen, ReprObject
+from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
-
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
@@ -332,7 +331,8 @@ def assert_coordinate_consistent(obj, coords):
                     .format(k, obj[k], coords[k]))
 
 
-def remap_label_indexers(obj, method=None, tolerance=None, **indexers):
+def remap_label_indexers(obj, indexers=None, method=None, tolerance=None,
+                         **indexers_kwargs):
     """
     Remap **indexers from obj.coords.
     If indexer is an instance of DataArray and it has coordinate, then this
@@ -345,6 +345,8 @@ def remap_label_indexers(obj, method=None, tolerance=None, **indexers):
     new_indexes: mapping of new dimensional-coordinate.
     """
     from .dataarray import DataArray
+    indexers = either_dict_or_kwargs(
+        indexers, indexers_kwargs, 'remap_label_indexers')
 
     v_indexers = {k: v.variable.data if isinstance(v, DataArray) else v
                   for k, v in indexers.items()}
