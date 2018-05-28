@@ -1270,6 +1270,9 @@ class TestDataArray(TestCase):
         assert renamed.name == 'z'
         assert renamed.dims == ('z',)
 
+        renamed_kwargs = self.dv.x.rename(x='z').rename('z')
+        assert_identical(renamed, renamed_kwargs)
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
         expected = DataArray(array.values, {'y': list('abc')}, dims='y')

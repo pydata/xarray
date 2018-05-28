@@ -1806,7 +1806,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def rename(self, name_dict, inplace=False, **names):
+    def rename(self, name_dict=None, inplace=False, **names):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
