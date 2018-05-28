@@ -8,132 +8,17 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import Dataset, Variable, conventions, open_dataset
+from xarray import (Dataset, Variable, SerializationWarning, coding,
+                    conventions, open_dataset)
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
-from xarray.core import indexing, utils
-from xarray.core.pycompat import iteritems
 from xarray.testing import assert_identical
 
 from . import (
-    IndexerMaker, TestCase, assert_array_equal, raises_regex, requires_netCDF4,
-    requires_netcdftime, unittest)
+    TestCase, assert_array_equal, raises_regex, requires_netCDF4,
+    requires_cftime_or_netCDF4, unittest, requires_dask)
 from .test_backends import CFEncodedDataTest
-
-B = IndexerMaker(indexing.BasicIndexer)
-V = IndexerMaker(indexing.VectorizedIndexer)
-
-
-class TestStackedBytesArray(TestCase):
-    def test_wrapper_class(self):
-        array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
-        actual = conventions.StackedBytesArray(array)
-        expected = np.array([b'abc', b'def'], dtype='S')
-        assert actual.dtype == expected.dtype
-        assert actual.shape == expected.shape
-        assert actual.size == expected.size
-        assert actual.ndim == expected.ndim
-        assert len(actual) == len(expected)
-        assert_array_equal(expected, actual)
-        assert_array_equal(expected[:1], actual[B[:1]])
-        with pytest.raises(IndexError):
-            actual[B[:, :2]]
-
-    def test_scalar(self):
-        array = np.array([b'a', b'b', b'c'], dtype='S')
-        actual = conventions.StackedBytesArray(array)
-
-        expected = np.array(b'abc')
-        assert actual.dtype == expected.dtype
-        assert actual.shape == expected.shape
-        assert actual.size == expected.size
-        assert actual.ndim == expected.ndim
-        with pytest.raises(TypeError):
-            len(actual)
-        np.testing.assert_array_equal(expected, actual)
-        with pytest.raises(IndexError):
-            actual[B[:2]]
-        assert str(actual) == str(expected)
-
-    def test_char_to_bytes(self):
-        array = np.array([['a', 'b', 'c'], ['d', 'e', 'f']])
-        expected = np.array(['abc', 'def'])
-        actual = conventions.char_to_bytes(array)
-        assert_array_equal(actual, expected)
-
-        expected = np.array(['ad', 'be', 'cf'])
-        actual = conventions.char_to_bytes(array.T)  # non-contiguous
-        assert_array_equal(actual, expected)
-
-    def test_char_to_bytes_ndim_zero(self):
-        expected = np.array('a')
-        actual = conventions.char_to_bytes(expected)
-        assert_array_equal(actual, expected)
-
-    def test_char_to_bytes_size_zero(self):
-        array = np.zeros((3, 0), dtype='S1')
-        expected = np.array([b'', b'', b''])
-        actual = conventions.char_to_bytes(array)
-        assert_array_equal(actual, expected)
-
-    def test_bytes_to_char(self):
-        array = np.array([['ab', 'cd'], ['ef', 'gh']])
-        expected = np.array([[['a', 'b'], ['c', 'd']],
-                             [['e', 'f'], ['g', 'h']]])
-        actual = conventions.bytes_to_char(array)
-        assert_array_equal(actual, expected)
-
-        expected = np.array([[['a', 'b'], ['e', 'f']],
-                             [['c', 'd'], ['g', 'h']]])
-        actual = conventions.bytes_to_char(array.T)
-        assert_array_equal(actual, expected)
-
-    def test_vectorized_indexing(self):
-        array = np.array([[b'a', b'b', b'c'], [b'd', b'e', b'f']], dtype='S')
-        stacked = conventions.StackedBytesArray(array)
-        expected = np.array([[b'abc', b'def'], [b'def', b'abc']])
-        indexer = V[np.array([[0, 1], [1, 0]])]
-        actual = stacked[indexer]
-        assert_array_equal(actual, expected)
-
-
-class TestBytesToStringArray(TestCase):
-
-    def test_encoding(self):
-        encoding = 'utf-8'
-        raw_array = np.array([b'abc', u'ß∂µ∆'.encode(encoding)])
-        actual = conventions.BytesToStringArray(raw_array, encoding=encoding)
-        expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
-
-        assert actual.dtype == expected.dtype
-        assert actual.shape == expected.shape
-        assert actual.size == expected.size
-        assert actual.ndim == expected.ndim
-        assert_array_equal(expected, actual)
-        assert_array_equal(expected[0], actual[B[0]])
-
-    def test_scalar(self):
-        expected = np.array(u'abc', dtype=object)
-        actual = conventions.BytesToStringArray(
-            np.array(b'abc'), encoding='utf-8')
-        assert actual.dtype == expected.dtype
-        assert actual.shape == expected.shape
-        assert actual.size == expected.size
-        assert actual.ndim == expected.ndim
-        with pytest.raises(TypeError):
-            len(actual)
-        np.testing.assert_array_equal(expected, actual)
-        with pytest.raises(IndexError):
-            actual[B[:2]]
-        assert str(actual) == str(expected)
-
-    def test_decode_bytes_array(self):
-        encoding = 'utf-8'
-        raw_array = np.array([b'abc', u'ß∂µ∆'.encode(encoding)])
-        expected = np.array([u'abc', u'ß∂µ∆'], dtype=object)
-        actual = conventions.decode_bytes_array(raw_array, encoding)
-        np.testing.assert_array_equal(actual, expected)
 
 
 class TestBoolTypeArray(TestCase):
@@ -156,12 +41,15 @@ class TestNativeEndiannessArray(TestCase):
 
 
 def test_decode_cf_with_conflicting_fill_missing_value():
-    var = Variable(['t'], np.arange(10),
+    expected = Variable(['t'], [np.nan, np.nan, 2], {'units': 'foobar'})
+    var = Variable(['t'], np.arange(3),
                    {'units': 'foobar',
                     'missing_value': 0,
                     '_FillValue': 1})
-    with raises_regex(ValueError, "_FillValue and missing_value"):
-        conventions.decode_cf_variable('t', var)
+    with warnings.catch_warnings(record=True) as w:
+        actual = conventions.decode_cf_variable('t', var)
+        assert_identical(actual, expected)
+        assert 'has multiple fill' in str(w[0].message)
 
     expected = Variable(['t'], np.arange(10), {'units': 'foobar'})
 
@@ -180,7 +68,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
     assert_identical(actual, expected)
 
 
-@requires_netcdftime
+@requires_cftime_or_netCDF4
 class TestEncodeCFVariable(TestCase):
     def test_incompatible_attributes(self):
         invalid_vars = [
@@ -235,8 +123,17 @@ class TestEncodeCFVariable(TestCase):
         # Should not have any global coordinates.
         assert 'coordinates' not in attrs
 
+    @requires_dask
+    def test_string_object_warning(self):
+        original = Variable(
+            ('x',), np.array([u'foo', u'bar'], dtype=object)).chunk()
+        with pytest.warns(SerializationWarning,
+                          match='dask array with dtype=object'):
+            encoded = conventions.encode_cf_variable(original)
+        assert_identical(original, encoded)
 
-@requires_netcdftime
+
+@requires_cftime_or_netCDF4
 class TestDecodeCF(TestCase):
     def test_dataset(self):
         original = Dataset({
@@ -302,7 +199,7 @@ class TestDecodeCF(TestCase):
         with raises_regex(ValueError, 'unable to decode time'):
             decode_cf(ds)
 
-    @requires_netcdftime
+    @requires_cftime_or_netCDF4
     def test_dataset_repr_with_netcdf4_datetimes(self):
         # regression test for #347
         attrs = {'units': 'days since 0001-01-01', 'calendar': 'noleap'}
@@ -315,7 +212,7 @@ class TestDecodeCF(TestCase):
         ds = decode_cf(Dataset({'time': ('time', [0, 1], attrs)}))
         assert '(time) datetime64[ns]' in repr(ds)
 
-    @requires_netcdftime
+    @requires_cftime_or_netCDF4
     def test_decode_cf_datetime_transition_to_invalid(self):
         # manually create dataset with not-decoded date
         from datetime import datetime
@@ -329,32 +226,30 @@ class TestDecodeCF(TestCase):
 
         assert_array_equal(ds_decoded.time.values, expected)
 
+    @requires_dask
+    def test_decode_cf_with_dask(self):
+        import dask.array as da
+        original = Dataset({
+            't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
+            'foo': ('t', [0, 0, 0], {'coordinates': 'y', 'units': 'bar'}),
+            'bar': ('string2', [b'a', b'b']),
+            'baz': (('x'), [b'abc'], {'_Encoding': 'utf-8'}),
+            'y': ('t', [5, 10, -999], {'_FillValue': -999})
+        }).chunk()
+        decoded = conventions.decode_cf(original)
+        print(decoded)
+        assert all(isinstance(var.data, da.Array)
+                   for name, var in decoded.variables.items()
+                   if name not in decoded.indexes)
+        assert_identical(decoded, conventions.decode_cf(original).compute())
+
 
 class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
-    pass
-
-
-class NullWrapper(utils.NDArrayMixin):
-    """
-    Just for testing, this lets us create a numpy array directly
-    but make it look like its not in memory yet.
-    """
-
-    def __init__(self, array):
-        self.array = array
-
-    def __getitem__(self, key):
-        return self.array[indexing.orthogonal_indexer(key, self.shape)]
-
-
-def null_wrap(ds):
-    """
-    Given a data store this wraps each variable in a NullWrapper so that
-    it appears to be out of memory.
-    """
-    variables = dict((k, Variable(v.dims, NullWrapper(v.values), v.attrs))
-                     for k, v in iteritems(ds))
-    return InMemoryDataStore(variables=variables, attributes=ds.attrs)
+    def encode_variable(self, var):
+        """encode one variable"""
+        coder = coding.strings.EncodedStringCoder(allows_unicode=True)
+        var = coder.encode(var)
+        return var
 
 
 @requires_netCDF4

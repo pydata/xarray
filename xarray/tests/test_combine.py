@@ -377,3 +377,22 @@ class TestAutoCombine(TestCase):
         data = Dataset({'x': 0})
         actual = auto_combine([data, data, data], concat_dim=None)
         assert_identical(data, actual)
+
+        # Single object, with a concat_dim explicitly provided
+        # Test the issue reported in GH #1988
+        objs = [Dataset({'x': 0, 'y': 1})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = auto_combine(objs, concat_dim=dim)
+        expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)
+
+        # Just making sure that auto_combine is doing what is
+        # expected for non-scalar values, too.
+        objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = auto_combine(objs, concat_dim=dim)
+        expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
+                            'y': (('baz', 'z'), [[1, 2]])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)

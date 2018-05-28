@@ -1,5 +1,6 @@
 import functools
 import operator
+import pickle
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
@@ -480,11 +481,18 @@ def test_keep_attrs():
 
     a = xr.DataArray([0, 1], [('x', [0, 1])])
     a.attrs['attr'] = 'da'
+    a['x'].attrs['attr'] = 'da_coord'
     b = xr.DataArray([1, 2], [('x', [0, 1])])
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
     actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual['x'].attrs, a['x'].attrs)
+
+    actual = add(a.variable, b.variable, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a.variable, b.variable, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
     a = xr.Dataset({'x': [0, 1]})
@@ -744,10 +752,14 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
-@pytest.mark.parametrize('dask', [True, False])
-def test_dot(dask):
-    if not has_dask:
-        pytest.skip('test for dask.')
+@pytest.mark.parametrize('use_dask', [True, False])
+def test_dot(use_dask):
+    if use_dask:
+        if not has_dask:
+            pytest.skip('test for dask.')
+        import dask
+        if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
+            pytest.skip("needs dask.array.einsum")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -757,7 +769,7 @@ def test_dot(dask):
     da_b = xr.DataArray(b, dims=['a', 'b', 'c'],
                         coords={'a': np.linspace(0, 1, 30)})
     da_c = xr.DataArray(c, dims=['c', 'e'])
-    if dask:
+    if use_dask:
         da_a = da_a.chunk({'a': 3})
         da_b = da_b.chunk({'a': 3})
         da_c = da_c.chunk({'c': 3})
@@ -783,7 +795,7 @@ def test_dot(dask):
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
     assert isinstance(actual.data, type(da_a.variable.data))
 
-    if dask:
+    if use_dask:
         da_a = da_a.chunk({'a': 3})
         da_b = da_b.chunk({'a': 3})
         actual = xr.dot(da_a, da_b, dims=['b'])
@@ -791,10 +803,6 @@ def test_dot(dask):
         assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
         assert isinstance(actual.variable.data, type(da_a.variable.data))
 
-        pytest.skip('dot for dask array requires rechunking for core '
-                    'dimensions.')
-
-    # following requires rechunking
     actual = xr.dot(da_a, da_b, dims=['b'])
     assert actual.dims == ('a', 'c')
     assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
@@ -830,12 +838,37 @@ def test_dot(dask):
     assert actual.dims == ('b', )
     assert (actual.data == np.einsum('ij->j ', a)).all()
 
+    # empty dim
+    actual = xr.dot(da_a.sel(a=[]), da_a.sel(a=[]), dims='a')
+    assert actual.dims == ('b', )
+    assert (actual.data == np.zeros(actual.shape)).all()
+
+    # Invalid cases
+    if not use_dask or LooseVersion(dask.__version__) > LooseVersion('0.17.4'):
+        with pytest.raises(TypeError):
+            xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
-        actual = xr.dot(da_a, dims='a', invalid=None)
+        xr.dot(da_a.to_dataset(name='da'), dims='a')
     with pytest.raises(TypeError):
-        actual = xr.dot(da_a.to_dataset(name='da'), dims='a')
-    with pytest.raises(TypeError):
-        actual = xr.dot(dims='a')
+        xr.dot(dims='a')
+
+    # einsum parameters
+    actual = xr.dot(da_a, da_b, dims=['b'], order='C')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    assert actual.values.flags['C_CONTIGUOUS']
+    assert not actual.values.flags['F_CONTIGUOUS']
+    actual = xr.dot(da_a, da_b, dims=['b'], order='F')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    # dask converts Fortran arrays to C order when merging the final array
+    if not use_dask:
+        assert not actual.values.flags['C_CONTIGUOUS']
+        assert actual.values.flags['F_CONTIGUOUS']
+
+    # einsum has a constant string as of the first parameter, which makes
+    # it hard to pass to xarray.apply_ufunc.
+    # make sure dot() uses functools.partial(einsum, subscripts), which
+    # can be pickled, and not a lambda, which can't.
+    pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
 def test_where():

@@ -18,7 +18,9 @@ from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
-from .utils import decode_numpy_dict_values, ensure_us_time_resolution
+from .utils import (
+    either_dict_or_kwargs, decode_numpy_dict_values,
+    ensure_us_time_resolution)
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -470,7 +472,7 @@ class DataArray(AbstractArray, DataWithCoords):
             return self._getitem_coord(key)
         else:
             # xarray-style array indexing
-            return self.isel(**self._item_key_to_dict(key))
+            return self.isel(indexers=self._item_key_to_dict(key))
 
     def __setitem__(self, key, value):
         if isinstance(key, basestring):
@@ -498,7 +500,7 @@ class DataArray(AbstractArray, DataWithCoords):
     @property
     def _item_sources(self):
         """List of places to look-up items for key-completion"""
-        return [self.coords, {d: self[d] for d in self.dims},
+        return [self.coords, {d: self.coords[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
     def __contains__(self, key):
@@ -742,7 +744,7 @@ class DataArray(AbstractArray, DataWithCoords):
                                            token=token, lock=lock)
         return self._from_temp_dataset(ds)
 
-    def isel(self, drop=False, **indexers):
+    def isel(self, indexers=None, drop=False, **indexers_kwargs):
         """Return a new DataArray whose dataset is given by integer indexing
         along the specified dimension(s).
 
@@ -751,20 +753,36 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.isel
         DataArray.sel
         """
-        ds = self._to_temp_dataset().isel(drop=drop, **indexers)
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
+        ds = self._to_temp_dataset().isel(drop=drop, indexers=indexers)
         return self._from_temp_dataset(ds)
 
-    def sel(self, method=None, tolerance=None, drop=False, **indexers):
+    def sel(self, indexers=None, method=None, tolerance=None, drop=False,
+            **indexers_kwargs):
         """Return a new DataArray whose dataset is given by selecting
         index labels along the specified dimension(s).
+
+        .. warning::
+
+          Do not try to assign values when using any of the indexing methods
+          ``isel`` or ``sel``::
+
+            da = xr.DataArray([0, 1, 2, 3], dims=['x'])
+            # DO NOT do this
+            da.isel(x=[0, 1, 2])[1] = -1
+
+          Assigning values with the chained indexing using ``.sel`` or
+          ``.isel`` fails silently.
 
         See Also
         --------
         Dataset.sel
         DataArray.isel
+
         """
-        ds = self._to_temp_dataset().sel(drop=drop, method=method,
-                                         tolerance=tolerance, **indexers)
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
+        ds = self._to_temp_dataset().sel(
+            indexers=indexers, drop=drop, method=method, tolerance=tolerance)
         return self._from_temp_dataset(ds)
 
     def isel_points(self, dim='points', **indexers):
@@ -838,12 +856,19 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.reindex(method=method, tolerance=tolerance, copy=copy,
                             **indexers)
 
-    def reindex(self, method=None, tolerance=None, copy=True, **indexers):
+    def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
+                **indexers_kwargs):
         """Conform this object onto a new set of indexes, filling in
         missing values with NaN.
 
         Parameters
         ----------
+        indexers : dict, optional
+            Dictionary with keys given by dimension names and values given by
+            arrays of coordinates tick labels. Any mis-matched coordinate
+            values will be filled in with NaN, and any mis-matched dimension
+            names will simply be ignored.
+            One of indexers or indexers_kwargs must be provided.
         copy : bool, optional
             If ``copy=True``, data in the return value is always copied. If
             ``copy=False`` and reindexing is unnecessary, or can be performed
@@ -861,11 +886,9 @@ class DataArray(AbstractArray, DataWithCoords):
             Maximum distance between original and new labels for inexact
             matches. The values of the index at the matching locations most
             satisfy the equation ``abs(index[indexer] - target) <= tolerance``.
-        **indexers : dict
-            Dictionary with keys given by dimension names and values given by
-            arrays of coordinates tick labels. Any mis-matched coordinate
-            values will be filled in with NaN, and any mis-matched dimension
-            names will simply be ignored.
+        **indexers_kwarg : {dim: indexer, ...}, optional
+            The keyword arguments form of ``indexers``.
+            One of indexers or indexers_kwargs must be provided.
 
         Returns
         -------
@@ -878,8 +901,10 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.reindex_like
         align
         """
+        indexers = either_dict_or_kwargs(
+            indexers, indexers_kwargs, 'reindex')
         ds = self._to_temp_dataset().reindex(
-            method=method, tolerance=tolerance, copy=copy, **indexers)
+            indexers=indexers, method=method, tolerance=tolerance, copy=copy)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict):
@@ -1443,8 +1468,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return np.ma.MaskedArray(data=self.values, mask=isnull, copy=copy)
 
     def to_netcdf(self, *args, **kwargs):
-        """
-        Write DataArray contents to a netCDF file.
+        """Write DataArray contents to a netCDF file.
 
         Parameters
         ----------

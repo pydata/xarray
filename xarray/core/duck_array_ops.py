@@ -26,26 +26,32 @@ except ImportError:
     has_bottleneck = False
 
 try:
-    import dask.array as da
-    has_dask = True
+    import dask.array as dask_array
+    from . import dask_array_compat
 except ImportError:
-    has_dask = False
+    dask_array = None
+    dask_array_compat = None
 
 
-def _dask_or_eager_func(name, eager_module=np, list_of_args=False,
-                        n_array_args=1):
+def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
+                        list_of_args=False, array_args=slice(1),
+                        requires_dask=None):
     """Create a function that dispatches to dask for dask array inputs."""
-    if has_dask:
+    if dask_module is not None:
         def f(*args, **kwargs):
             if list_of_args:
                 dispatch_args = args[0]
             else:
-                dispatch_args = args[:n_array_args]
-            if any(isinstance(a, da.Array) for a in dispatch_args):
-                module = da
+                dispatch_args = args[array_args]
+            if any(isinstance(a, dask_array.Array) for a in dispatch_args):
+                try:
+                    wrapped = getattr(dask_module, name)
+                except AttributeError as e:
+                    raise AttributeError("%s: requires dask >=%s" %
+                                         (e, requires_dask))
             else:
-                module = eager_module
-            return getattr(module, name)(*args, **kwargs)
+                wrapped = getattr(eager_module, name)
+            return wrapped(*args, ** kwargs)
     else:
         def f(data, *args, **kwargs):
             return getattr(eager_module, name)(data, *args, **kwargs)
@@ -63,8 +69,8 @@ def fail_on_dask_array_input(values, msg=None, func_name=None):
 
 around = _dask_or_eager_func('around')
 isclose = _dask_or_eager_func('isclose')
-notnull = _dask_or_eager_func('notnull', pd)
-_isnull = _dask_or_eager_func('isnull', pd)
+notnull = _dask_or_eager_func('notnull', eager_module=pd)
+_isnull = _dask_or_eager_func('isnull', eager_module=pd)
 
 
 def isnull(data):
@@ -79,8 +85,9 @@ def isnull(data):
 
 
 transpose = _dask_or_eager_func('transpose')
-_where = _dask_or_eager_func('where', n_array_args=3)
-insert = _dask_or_eager_func('insert')
+_where = _dask_or_eager_func('where', array_args=slice(3))
+isin = _dask_or_eager_func('isin', eager_module=npcompat,
+                           dask_module=dask_array_compat, array_args=slice(2))
 take = _dask_or_eager_func('take')
 broadcast_to = _dask_or_eager_func('broadcast_to')
 
@@ -90,7 +97,13 @@ _stack = _dask_or_eager_func('stack', list_of_args=True)
 array_all = _dask_or_eager_func('all')
 array_any = _dask_or_eager_func('any')
 
-tensordot = _dask_or_eager_func('tensordot', n_array_args=2)
+tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
+einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
+                             requires_dask='0.17.3')
+
+masked_invalid = _dask_or_eager_func(
+    'masked_invalid', eager_module=np.ma,
+    dask_module=getattr(dask_array, 'ma', None))
 
 
 def asarray(data):
@@ -268,8 +281,7 @@ _nan_object_funcs = {
 
 
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
-                           no_bottleneck=False, coerce_strings=False,
-                           keep_dims=False):
+                           no_bottleneck=False, coerce_strings=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
             raise TypeError('`out` is not valid for {}'.format(name))
@@ -330,7 +342,6 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            'or newer to use skipna=True or skipna=None' % name)
                 raise NotImplementedError(msg)
     f.numeric_only = numeric_only
-    f.keep_dims = keep_dims
     f.__name__ = name
     return f
 
@@ -345,10 +356,34 @@ std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
 prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
-cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
-                                 no_bottleneck=True, keep_dims=True)
-cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
-                                no_bottleneck=True, keep_dims=True)
+cumprod_1d = _create_nan_agg_method(
+    'cumprod', numeric_only=True, np_compat=True, no_bottleneck=True)
+cumsum_1d = _create_nan_agg_method(
+    'cumsum', numeric_only=True, np_compat=True, no_bottleneck=True)
+
+
+def _nd_cum_func(cum_func, array, axis, **kwargs):
+    array = asarray(array)
+    if axis is None:
+        axis = tuple(range(array.ndim))
+    if isinstance(axis, int):
+        axis = (axis,)
+
+    out = array
+    for ax in axis:
+        out = cum_func(out, axis=ax, **kwargs)
+    return out
+
+
+def cumprod(array, axis=None, **kwargs):
+    """N-dimensional version of cumprod."""
+    return _nd_cum_func(cumprod_1d, array, axis, **kwargs)
+
+
+def cumsum(array, axis=None, **kwargs):
+    """N-dimensional version of cumsum."""
+    return _nd_cum_func(cumsum_1d, array, axis, **kwargs)
+
 
 _fail_on_dask_array_input_skipna = partial(
     fail_on_dask_array_input,

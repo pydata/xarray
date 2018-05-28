@@ -40,6 +40,7 @@ nosetests.xml
 .testmon*
 .tmontmp/
 .pytest_cache
+dask-worker-space/
 
 # asv environments
 .asv
@@ -52,10 +53,11 @@ nosetests.xml
 .project
 .pydevproject
 
-# PyCharm and Vim
+# IDEs
 .idea
 *.swp
 .DS_Store
+.vscode/
 
 # xarray specific
 doc/_build

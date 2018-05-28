@@ -3,11 +3,11 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - h5py
   - h5netcdf
   - matplotlib
   - netcdf4
-  - netcdftime
   - pytest
   - flake8
   - numpy

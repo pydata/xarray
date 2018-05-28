@@ -1,17 +1,9 @@
 #!/usr/bin/env python
-import os
-import re
 import sys
-import warnings
 
 from setuptools import find_packages, setup
 
-MAJOR = 0
-MINOR = 10
-MICRO = 2
-ISRELEASED = False
-VERSION = '%d.%d.%d' % (MAJOR, MINOR, MICRO)
-QUALIFIER = ''
+import versioneer
 
 
 DISTNAME = 'xarray'
@@ -65,83 +57,10 @@ Important links
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
 """  # noqa
 
-# Code to extract and write the version copied from pandas.
-# Used under the terms of pandas's license, see licenses/PANDAS_LICENSE.
-FULLVERSION = VERSION
-write_version = True
-
-if not ISRELEASED:
-    import subprocess
-    FULLVERSION += '.dev'
-
-    pipe = None
-    for cmd in ['git', 'git.cmd']:
-        try:
-            pipe = subprocess.Popen(
-                [cmd, "describe", "--always", "--match", "v[0-9]*"],
-                stdout=subprocess.PIPE)
-            (so, serr) = pipe.communicate()
-            if pipe.returncode == 0:
-                break
-        except BaseException:
-            pass
-
-    if pipe is None or pipe.returncode != 0:
-        # no git, or not in git dir
-        if os.path.exists('xarray/version.py'):
-            warnings.warn(
-                "WARNING: Couldn't get git revision,"
-                " using existing xarray/version.py")
-            write_version = False
-        else:
-            warnings.warn(
-                "WARNING: Couldn't get git revision,"
-                " using generic version string")
-    else:
-        # have git, in git dir, but may have used a shallow clone (travis does
-        # this)
-        rev = so.strip()
-        # makes distutils blow up on Python 2.7
-        if sys.version_info[0] >= 3:
-            rev = rev.decode('ascii')
-
-        if not rev.startswith('v') and re.match("[a-zA-Z0-9]{7,9}", rev):
-            # partial clone, manually construct version string
-            # this is the format before we started using git-describe
-            # to get an ordering on dev version strings.
-            rev = "v%s+dev.%s" % (VERSION, rev)
-
-        # Strip leading v from tags format "vx.y.z" to get th version string
-        FULLVERSION = rev.lstrip('v')
-
-        # make sure we respect PEP 440
-        FULLVERSION = FULLVERSION.replace("-", "+dev", 1).replace("-", ".")
-
-else:
-    FULLVERSION += QUALIFIER
-
-
-def write_version_py(filename=None):
-    cnt = """\
-version = '%s'
-short_version = '%s'
-"""
-    if not filename:
-        filename = os.path.join(
-            os.path.dirname(__file__), 'xarray', 'version.py')
-
-    a = open(filename, 'w')
-    try:
-        a.write(cnt % (FULLVERSION, VERSION))
-    finally:
-        a.close()
-
-
-if write_version:
-    write_version_py()
 
 setup(name=DISTNAME,
-      version=FULLVERSION,
+      version=versioneer.get_version(),
+      cmdclass=versioneer.get_cmdclass(),
       license=LICENSE,
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,

@@ -7,10 +7,11 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from .. import Variable, conventions
-from ..conventions import pop_to
+from .. import Variable, coding
+from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
+from ..core.pycompat import (
+    PY3, OrderedDict, basestring, iteritems, suppress)
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     HDF5_LOCK, BackendArray, DataStorePickleMixin, WritableCFDataStore,
@@ -82,8 +83,9 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
 
 
 def _encode_nc4_variable(var):
-    if var.dtype.kind == 'S':
-        var = conventions.maybe_encode_as_char_array(var)
+    for coder in [coding.strings.EncodedStringCoder(allows_unicode=True),
+                  coding.strings.CharacterArrayCoder()]:
+        var = coder.encode(var)
     return var
 
 
@@ -96,16 +98,21 @@ def _get_datatype(var, nc_format='NETCDF4'):
 
 
 def _nc4_dtype(var):
-    if var.dtype.kind == 'U':
+    if coding.strings.is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ['i', 'u', 'f', 'c', 'S']:
         dtype = var.dtype
     else:
-        raise ValueError('cannot infer dtype for netCDF4 variable')
+        raise ValueError('unsupported dtype for netCDF4 variable: {}'
+                         .format(var.dtype))
     return dtype
 
 
-def _nc4_group(ds, group, mode):
+def _netcdf4_create_group(dataset, name):
+    return dataset.createGroup(name)
+
+
+def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
     if group in set([None, '', '/']):
         # use the root group
         return ds
@@ -120,7 +127,7 @@ def _nc4_group(ds, group, mode):
                 ds = ds.groups[key]
             except KeyError as e:
                 if mode != 'r':
-                    ds = ds.createGroup(key)
+                    ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
                     raise IOError('group not found: %s' % key, e)
@@ -156,8 +163,8 @@ def _force_native_endianness(var):
 
 
 def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
-                                   lsd_okay=True, backend='netCDF4',
-                                   unlimited_dims=None):
+                                   lsd_okay=True, h5py_okay=False,
+                                   backend='netCDF4', unlimited_dims=None):
     if unlimited_dims is None:
         unlimited_dims = ()
 
@@ -168,6 +175,9 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
                            'chunksizes', 'shuffle', '_FillValue'])
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
+    if h5py_okay:
+        valid_encodings.add('compression')
+        valid_encodings.add('compression_opts')
 
     if not raise_on_invalid and encoding.get('chunksizes') is not None:
         # It's possible to get encoded chunksizes larger than a dimension size
@@ -204,7 +214,7 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     ds = nc4.Dataset(filename, mode=mode, **kwargs)
 
     with close_on_error(ds):
-        ds = _nc4_group(ds, group, mode)
+        ds = _nc4_require_group(ds, group, mode)
 
     _disable_auto_decode_group(ds)
 
@@ -227,6 +237,31 @@ def _disable_auto_decode_group(ds):
     """Disable automatic decoding on all variables in a netCDF4.Group."""
     for var in ds.variables.values():
         _disable_auto_decode_variable(var)
+
+
+def _is_list_of_strings(value):
+    if (np.asarray(value).dtype.kind in ['U', 'S'] and
+            np.asarray(value).size > 1):
+        return True
+    else:
+        return False
+
+
+def _set_nc_attribute(obj, key, value):
+    if _is_list_of_strings(value):
+        # encode as NC_STRING if attr is list of strings
+        try:
+            obj.setncattr_string(key, value)
+        except AttributeError:
+            # Inform users with old netCDF that does not support
+            # NC_STRING that we can't serialize lists of strings
+            # as attrs
+            msg = ('Attributes which are lists of strings are not '
+                   'supported with this version of netCDF. Please '
+                   'upgrade to netCDF4-python 1.2.4 or greater.')
+            raise AttributeError(msg)
+    else:
+        obj.setncattr(key, value)
 
 
 class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
@@ -264,13 +299,13 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         if (len(filename) == 88 and
                 LooseVersion(nc4.__version__) < "1.3.1"):
             warnings.warn(
-                '\nA segmentation fault may occur when the\n'
-                'file path has exactly 88 characters as it does\n'
-                'in this case. The issue is known to occur with\n'
-                'version 1.2.4 of netCDF4 and can be addressed by\n'
-                'upgrading netCDF4 to at least version 1.3.1.\n'
-                'More details can be found here:\n'
-                'https://github.com/pydata/xarray/issues/1745  \n')
+                'A segmentation fault may occur when the '
+                'file path has exactly 88 characters as it does '
+                'in this case. The issue is known to occur with '
+                'version 1.2.4 of netCDF4 and can be addressed by '
+                'upgrading netCDF4 to at least version 1.3.1. '
+                'More details can be found here: '
+                'https://github.com/pydata/xarray/issues/1745')
         if format is None:
             format = 'NETCDF4'
         opener = functools.partial(_open_netcdf4_group, filename, mode=mode,
@@ -347,7 +382,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             if self.format != 'NETCDF4':
                 value = encode_nc3_attr_value(value)
-            self.ds.setncattr(key, value)
+            _set_nc_attribute(self.ds, key, value)
 
     def set_variables(self, *args, **kwargs):
         with self.ensure_open(autoclose=False):
@@ -402,15 +437,15 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
         for k, v in iteritems(attrs):
             # set attributes one-by-one since netCDF4<1.0.10 can't handle
             # OrderedDict as the input to setncatts
-            nc4_var.setncattr(k, v)
+            _set_nc_attribute(nc4_var, k, v)
 
         target = NetCDF4ArrayWrapper(name, self)
 
         return target, variable.data
 
-    def sync(self):
+    def sync(self, compute=True):
         with self.ensure_open(autoclose=True):
-            super(NetCDF4DataStore, self).sync()
+            super(NetCDF4DataStore, self).sync(compute=compute)
             self.ds.sync()
 
     def close(self):

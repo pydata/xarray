@@ -1,16 +1,16 @@
 name: test_env
 channels:
   - conda-forge
-  - ncar
+  - conda-forge/label/dev
 dependencies:
   - python=3.6
+  - cftime
   - dask
   - distributed
   - h5py
   - h5netcdf
   - matplotlib
   - netcdf4
-  - netcdftime
   - pynio=dev
   - pytest
   - numpy

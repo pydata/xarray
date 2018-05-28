@@ -144,6 +144,13 @@ def _get_lock(engine, scheduler, format, path_or_file):
     return lock
 
 
+def _finalize_store(write, store):
+    """ Finalize this store by explicitly syncing and closing"""
+    del write  # ensure writing is done first
+    store.sync()
+    store.close()
+
+
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
                  mask_and_scale=True, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
@@ -453,7 +460,8 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
-                   lock=None, data_vars='all', coords='different', **kwargs):
+                   lock=None, data_vars='all', coords='different',
+                   autoclose=False, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -534,7 +542,9 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition the 'minimal' coordinates.
-
+    parallel : bool, optional
+        If True, the open and preprocess steps of this function will be
+        performed in parallel using ``dask.delayed``. Default is False.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -553,6 +563,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
     if isinstance(paths, basestring):
+        if is_remote_uri(paths):
+            raise ValueError(
+                'cannot do wild-card matching for paths that are remote URLs: '
+                '{!r}. Instead, supply paths as an explicit list of strings.'
+                .format(paths))
         paths = sorted(glob(paths))
     else:
         paths = [str(p) if isinstance(p, path_type) else p for p in paths]
@@ -562,12 +577,30 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if lock is None:
         lock = _default_lock(paths[0], engine)
-    datasets = [open_dataset(p, engine=engine, chunks=chunks or {}, lock=lock,
-                             **kwargs) for p in paths]
-    file_objs = [ds._file_obj for ds in datasets]
 
+    open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
+                       autoclose=autoclose, **kwargs)
+
+    if parallel:
+        import dask
+        # wrap the open_dataset, getattr, and preprocess with delayed
+        open_ = dask.delayed(open_dataset)
+        getattr_ = dask.delayed(getattr)
+        if preprocess is not None:
+            preprocess = dask.delayed(preprocess)
+    else:
+        open_ = open_dataset
+        getattr_ = getattr
+
+    datasets = [open_(p, **open_kwargs) for p in paths]
+    file_objs = [getattr_(ds, '_file_obj') for ds in datasets]
     if preprocess is not None:
         datasets = [preprocess(ds) for ds in datasets]
+
+    if parallel:
+        # calling compute here will return the datasets/file_objs lists,
+        # the underlying datasets will still be stored as dask arrays
+        datasets, file_objs = dask.compute(datasets, file_objs)
 
     # close datasets in case of a ValueError
     try:
@@ -594,7 +627,8 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None):
+              engine=None, writer=None, encoding=None, unlimited_dims=None,
+              compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
@@ -652,21 +686,27 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
+    if isinstance(unlimited_dims, basestring):
+        unlimited_dims = [unlimited_dims]
+
     try:
         dataset.dump_to_store(store, sync=sync, encoding=encoding,
-                              unlimited_dims=unlimited_dims)
+                              unlimited_dims=unlimited_dims, compute=compute)
         if path_or_file is None:
             return target.getvalue()
     finally:
         if sync and isinstance(path_or_file, basestring):
             store.close()
 
+    if not compute:
+        import dask
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
+
     if not sync:
         return store
 
-
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
-                   engine=None):
+                   engine=None, compute=True):
     """Write multiple datasets to disk as netCDF files simultaneously.
 
     This function is intended for use with datasets consisting of dask.array
@@ -715,6 +755,10 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
         Engine to use when writing netCDF files. If not provided, the
         default engine is chosen based on available dependencies, with a
         preference for 'netcdf4' if writing to a file on disk.
+        See `Dataset.to_netcdf` for additional information.
+    compute: boolean
+        If true compute immediately, otherwise return a
+        ``dask.delayed.Delayed`` object that can be computed later.
 
     Examples
     --------
@@ -742,11 +786,17 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
 
-    writer = ArrayWriter()
-    stores = [to_netcdf(ds, path, mode, format, group, engine, writer)
+    writer = ArrayWriter() if compute else None
+    stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
+                        compute=compute)
               for ds, path, group in zip(datasets, paths, groups)]
+
+    if not compute:
+        import dask
+        return dask.delayed(stores)
+
     try:
-        writer.sync()
+        delayed = writer.sync(compute=compute)
         for store in stores:
             store.sync()
     finally:
@@ -755,7 +805,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None):
+            encoding=None, compute=True):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -776,5 +826,9 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     # I think zarr stores should always be sync'd immediately
     # TODO: figure out how to properly handle unlimited_dims
-    dataset.dump_to_store(store, sync=True, encoding=encoding)
+    dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+
+    if not compute:
+        import dask
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
     return store
