@@ -431,9 +431,7 @@ def merge_core(objs,
     _assert_compat_valid(compat)
 
     coerced = coerce_pandas_values(objs)
-
-    aligned = deep_align(coerced, join=join, copy=False,
-                         indexes=indexes)
+    aligned = deep_align(coerced, join=join, copy=False, indexes=indexes)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)
