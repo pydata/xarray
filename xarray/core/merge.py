@@ -360,8 +360,17 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     """Used in Dataset.__init__."""
     objs = [data, coords]
     explicit_coords = coords.keys()
+    indexes = dict(extract_indexes(coords))
     return merge_core(objs, compat, join, explicit_coords=explicit_coords,
-                      indexes=coords)
+                      indexes=indexes)
+
+
+def extract_indexes(coords):
+    """Yields the name & index of valid indexes from a mapping of coords"""
+    for name, variable in coords.items():
+        variable = as_variable(variable, name=name)
+        if variable.dims == (name,):
+            yield name, variable.to_index()
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):
@@ -423,16 +432,8 @@ def merge_core(objs,
 
     coerced = coerce_pandas_values(objs)
 
-    # extract explicit indexes
-    explicit_indexes = {}
-    if indexes:
-        for name, variable in indexes.items():
-            variable = as_variable(variable, name=name)
-            if (name,) == variable.dims:
-                explicit_indexes[name] = variable.to_index()
-
     aligned = deep_align(coerced, join=join, copy=False,
-                         indexes=explicit_indexes)
+                         indexes=indexes)
     expanded = expand_variable_dicts(aligned)
 
     coord_names, noncoord_names = determine_coords(coerced)
