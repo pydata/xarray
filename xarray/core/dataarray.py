@@ -932,7 +932,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.rename
         DataArray.swap_dims
         """
-        if utils.is_dict_like(new_name_or_name_dict):
+        if names or utils.is_dict_like(new_name_or_name_dict):
             name_dict = either_dict_or_kwargs(
                 new_name_or_name_dict, names, 'rename')
             dataset = self._to_temp_dataset().rename(name_dict)
