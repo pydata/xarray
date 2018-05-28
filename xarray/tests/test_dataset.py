@@ -2340,14 +2340,14 @@ class TestDataset(TestCase):
         actual = ds.copy()
         actual['var3'] = other
         assert_identical(expected, actual)
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
 
         # with alignment
         other = ds['var3'].isel(dim3=slice(1, -1))
         other['numbers'] = ('dim3', np.arange(8))
         actual = ds.copy()
         actual['var3'] = other
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
         expected = ds.copy()
         expected['var3'] = ds['var3'].isel(dim3=slice(1, -1))
         assert_identical(expected, actual)
@@ -2358,8 +2358,8 @@ class TestDataset(TestCase):
         other['position'] = ('dim3', np.arange(8))
         actual = ds.copy()
         actual['var3'] = other
-        assert 'position' in actual
-        assert 'position' in other
+        assert 'position' in actual.coords
+        assert 'position' in other.coords
 
         # assigning a coordinate-only dataarray
         actual = ds.copy()
