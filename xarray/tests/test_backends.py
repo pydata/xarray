@@ -363,21 +363,26 @@ class DatasetIOTestCases(object):
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
 
-            with xr.set_options(enable_cftimeindex=True):
-                with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                    abs_diff = abs(actual.t.values - expected_decoded_t)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t.encoding['units'] ==
-                            'days since 0001-01-01 00:00:00.000000')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+            with warnings.catch_warnings():
+                if expected_calendar in {'proleptic_gregorian', 'gregorian'}:
+                    warnings.filterwarnings(
+                        'ignore', 'Unable to decode time axis')
 
-                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t0.encoding['units'] ==
-                            'days since 0001-01-01')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                with xr.set_options(enable_cftimeindex=True):
+                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                        abs_diff = abs(actual.t.values - expected_decoded_t)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t.encoding['units'] ==
+                                'days since 0001-01-01 00:00:00.000000')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
+
+                        abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t0.encoding['units'] ==
+                                'days since 0001-01-01')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -767,8 +772,11 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # Test default encoding for int:
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'int16'}})
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertTrue('_FillValue' not in actual.x.encoding)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore', '.*floating point data as an integer')
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for implicit int:
