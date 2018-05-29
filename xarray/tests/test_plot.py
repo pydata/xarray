@@ -298,12 +298,8 @@ class TestPlot(PlotTestCase):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
     def test_coord_with_interval(self):
-        for dim in self.darray.dims:
-            for method in ['argmax', 'argmin', 'max', 'min',
-                           'mean', 'prod', 'sum',
-                           'std', 'var', 'median']:
-                gp = self.darray.groupby_bins(dim, [-1, 0, 1, 2])
-                getattr(gp, method)().plot()
+        gp = self.darray.groupby_bins('dim_0', [-1, 0, 1, 2])
+        gp.mean().plot()
 
     def test_coord_with_interval_label_contains_center(self):
         for dim in self.darray.dims:
@@ -419,11 +415,8 @@ class TestPlotHistogram(PlotTestCase):
 
     def test_hist_coord_with_interval(self):
         for dim in self.darray.dims:
-            for method in ['argmax', 'argmin', 'max', 'min',
-                           'mean', 'prod', 'sum',
-                           'std', 'var', 'median']:
-                gp = self.darray.groupby_bins(dim, [-1, 0, 1, 2])
-                getattr(gp, method)().plot.hist(range=(-1, 2))
+            gp = self.darray.groupby_bins(dim, [-1, 0, 1, 2])
+            gp.mean().plot.hist(range=(-1, 2))
 
 
 @requires_matplotlib
