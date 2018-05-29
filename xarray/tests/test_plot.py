@@ -298,13 +298,11 @@ class TestPlot(PlotTestCase):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
     def test_coord_with_interval(self):
-        gp = self.darray.groupby_bins('dim_0', [-1, 0, 1, 2])
-        gp.mean().plot()
+        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot()
 
     def test_coord_with_interval_label_contains_center(self):
-        for dim in self.darray.dims:
-            self.darray.groupby_bins(dim, [-1, 0, 1, 2]).mean().plot()
-            assert plt.gca().get_xlabel().endswith('_center')
+        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot()
+        assert plt.gca().get_xlabel().endswith('_center')
 
 
 class TestPlot1D(PlotTestCase):
@@ -414,9 +412,8 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
 
     def test_hist_coord_with_interval(self):
-        for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, [-1, 0, 1, 2])
-            gp.mean().plot.hist(range=(-1, 2))
+        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot.hist(
+            range=(-1, 2))
 
 
 @requires_matplotlib
@@ -975,13 +972,9 @@ class Common2dMixin:
 
     def test_2d_coord_with_interval(self):
         for dim in self.darray.dims:
-            gp = self.darray.groupby_bins(dim, range(15))
-            for method in ['argmax', 'argmin', 'max', 'min',
-                           'mean', 'prod', 'sum',
-                           'std', 'var', 'median']:
-                gp_method = getattr(gp, method)(dim)
-                for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
-                    getattr(gp_method.plot, kind)()
+            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
+                getattr(gp.plot, kind)()
 
 
 @pytest.mark.slow
