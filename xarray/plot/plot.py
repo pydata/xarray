@@ -68,20 +68,35 @@ def _interval_to_mid_points(array):
     return np.asarray(list(map(lambda x: x.mid, array)))
 
 
-def _interval_to_bound_points(xarray,yarray):
+def _interval_to_bound_points(array):
+    """
+    Helper function which returns an array
+    with the Intervals' boundaries.
+    """
+
+    array_boundaries = np.asarray(list(map(lambda x: x.left, array)))
+    array_boundaries = np.concatenate(
+        (array_boundaries, np.array([array[-1].right])))
+
+    return array_boundaries
+
+
+def _interval_to_double_bound_points(xarray, yarray):
     """
     Helper function to deal with a xarray consisting of pd.Intervals. Each
     interval is replaced with both boundaries. I.e. the length of xarray
-    doubles. yarray is modified so it matches the new shape of xarray. 
+    doubles. yarray is modified so it matches the new shape of xarray.
     """
 
     xarray1 = np.asarray(list(map(lambda x: x.left, xarray)))
     xarray2 = np.asarray(list(map(lambda x: x.right, xarray)))
 
-    xarray = ([x for x in itertools.chain.from_iterable(zip(xarray1,xarray2))])
-    yarray = ([y for y in itertools.chain.from_iterable(zip(yarray,yarray))])
+    xarray = ([x for x in itertools.chain.from_iterable(
+        zip(xarray1, xarray2))])
+    yarray = ([y for y in itertools.chain.from_iterable(zip(yarray, yarray))])
 
     return xarray, yarray
+
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
@@ -296,11 +311,11 @@ def line(darray, *args, **kwargs):
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
         if interval_step_plot:
-            xplt_val, yplt_val = _interval_to_bound_points(xplt.values, 
-                yplt.values)
+            xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
+                                                                  yplt.values)
         else:
-            xplt_val = _interval_to_mid_points(xplt.values) 
-            yplt_val = yplt.values 
+            xplt_val = _interval_to_mid_points(xplt.values)
+            yplt_val = yplt.values
             xlabel += '_center'
     else:
         xplt_val = xplt.values
@@ -651,11 +666,19 @@ def _plot2d(plotfunc):
 
         # Replace pd.Intervals if contained in xval or yval.
         if _valid_other_type(xval, [pd.Interval]):
-            xplt = _interval_to_mid_points(xval)
+            if 'pcolormesh' == plotfunc.__name__:
+                xplt = _interval_to_bound_points(xval)
+            else:
+                xplt = _interval_to_mid_points(xval)
+                xlab += '_center'
         else:
             xplt = xval
         if _valid_other_type(yval, [pd.Interval]):
-            yplt = _interval_to_mid_points(yval)
+            if 'pcolormesh' == plotfunc.__name__:
+                yplt = _interval_to_bound_points(yval)
+            else:
+                yplt = _interval_to_mid_points(yval)
+                ylab += '_center'
         else:
             yplt = yval
 
@@ -917,14 +940,22 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         else:
             infer_intervals = True
 
-    if infer_intervals:
+    if (infer_intervals and
+            ((np.shape(x)[0] == np.shape(z)[1]) or
+             ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1])))):
         if len(x.shape) == 1:
             x = _infer_interval_breaks(x)
-            y = _infer_interval_breaks(y)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1)
             x = _infer_interval_breaks(x, axis=0)
+
+    if (infer_intervals and
+            (np.shape(y)[0] == np.shape(z)[0])):
+        if len(y.shape) == 1:
+            y = _infer_interval_breaks(y)
+        else:
+            # we have to infer the intervals on both axes
             y = _infer_interval_breaks(y, axis=1)
             y = _infer_interval_breaks(y, axis=0)
 
