@@ -1435,7 +1435,7 @@ class TestDataset(TestCase):
 
         with raises_regex(TypeError, '``method``'):
             # this should not pass silently
-            data.sel(data)
+            data.sel(method=data)
 
         # cannot pass method if there is no associated coordinate
         with raises_regex(ValueError, 'cannot supply'):
@@ -1915,6 +1915,9 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with pytest.raises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+        renamed_kwargs = data.rename(**newnames)
+        assert_identical(renamed, renamed_kwargs)
 
     def test_rename_old_name(self):
         # regtest for GH1477
@@ -4180,6 +4183,12 @@ def test_dir_non_string(data_set):
     data_set[5] = 'foo'
     result = dir(data_set)
     assert not (5 in result)
+
+    # GH2172
+    sample_data = np.random.uniform(size=[2, 2000, 10000])
+    x = xr.Dataset({"sample_data": (sample_data.shape, sample_data)})
+    x2 = x["sample_data"]
+    dir(x2)
 
 
 def test_dir_unicode(data_set):
