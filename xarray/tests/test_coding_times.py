@@ -130,7 +130,9 @@ def test_decode_cf_datetime_overflow():
     expected = (datetime(1677, 12, 31), datetime(2262, 4, 12))
 
     for i, day in enumerate(days):
-        result = coding.times.decode_cf_datetime(day, units)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'Unable to decode time axis')
+            result = coding.times.decode_cf_datetime(day, units)
         assert result == expected[i]
 
 

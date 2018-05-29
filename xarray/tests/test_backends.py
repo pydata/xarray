@@ -363,21 +363,26 @@ class DatasetIOTestCases(object):
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
 
-            with xr.set_options(enable_cftimeindex=True):
-                with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                    abs_diff = abs(actual.t.values - expected_decoded_t)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t.encoding['units'] ==
-                            'days since 0001-01-01 00:00:00.000000')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+            with warnings.catch_warnings():
+                if expected_calendar in {'proleptic_gregorian', 'gregorian'}:
+                    warnings.filterwarnings(
+                        'ignore', 'Unable to decode time axis')
 
-                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t0.encoding['units'] ==
-                            'days since 0001-01-01')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                with xr.set_options(enable_cftimeindex=True):
+                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                        abs_diff = abs(actual.t.values - expected_decoded_t)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t.encoding['units'] ==
+                                'days since 0001-01-01 00:00:00.000000')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
+
+                        abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t0.encoding['units'] ==
+                                'days since 0001-01-01')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -780,8 +785,11 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # Test default encoding for int:
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'int16'}})
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertTrue('_FillValue' not in actual.x.encoding)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore', '.*floating point data as an integer')
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for implicit int:
@@ -905,7 +913,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
             # check equivalent ways to specify group
             for group in 'foo', '/foo', 'foo/', '/foo/':
-                with open_dataset(tmp_file, group=group) as actual:
+                with self.open(tmp_file, group=group) as actual:
                     assert_equal(actual['x'], expected['x'])
 
             # check that missing group raises appropriate exception
@@ -933,18 +941,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
             # check equivalent ways to specify group
             for group in 'foo/bar', '/foo/bar', 'foo/bar/', '/foo/bar/':
-                with open_dataset(tmp_file, group=group) as actual:
+                with self.open(tmp_file, group=group) as actual:
                     assert_equal(actual['x'], expected['x'])
 
     def test_write_groups(self):
         data1 = create_test_data()
         data2 = data1 * 2
         with create_tmp_file() as tmp_file:
-            data1.to_netcdf(tmp_file, group='data/1')
-            data2.to_netcdf(tmp_file, group='data/2', mode='a')
-            with open_dataset(tmp_file, group='data/1') as actual1:
+            self.save(data1, tmp_file, group='data/1')
+            self.save(data2, tmp_file, group='data/2', mode='a')
+            with self.open(tmp_file, group='data/1') as actual1:
                 assert_identical(data1, actual1)
-            with open_dataset(tmp_file, group='data/2') as actual2:
+            with self.open(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
 
     def test_encoding_kwarg_vlen_string(self):

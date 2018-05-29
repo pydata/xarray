@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 import xarray as xr
+from . import assert_identical
 from xarray.core.groupby import _consolidate_slices
 
 
@@ -71,6 +72,16 @@ def test_groupby_duplicate_coordinate_labels():
     expected = xr.DataArray([3, 3], [('x', [1, 2])])
     actual = array.groupby('x').sum()
     assert expected.equals(actual)
+
+
+def test_groupby_input_mutation():
+    # regression test for GH2153
+    array = xr.DataArray([1, 2, 3], [('x', [2, 2, 1])])
+    array_copy = array.copy()
+    expected = xr.DataArray([3, 3], [('x', [1, 2])])
+    actual = array.groupby('x').sum()
+    assert_identical(expected, actual)
+    assert_identical(array, array_copy)  # should not modify inputs
 
 
 # TODO: move other groupby tests from test_dataset and test_dataarray over here

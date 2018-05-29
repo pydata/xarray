@@ -219,7 +219,9 @@ class TestDecodeCF(TestCase):
         ds = Dataset(coords={'time': [0, 266 * 365]})
         units = 'days since 2000-01-01 00:00:00'
         ds.time.attrs = dict(units=units)
-        ds_decoded = conventions.decode_cf(ds)
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'unable to decode time')
+            ds_decoded = conventions.decode_cf(ds)
 
         expected = [datetime(2000, 1, 1, 0, 0),
                     datetime(2265, 10, 28, 0, 0)]

@@ -125,7 +125,11 @@ def _nc4_dtype(var):
     return dtype
 
 
-def _nc4_group(ds, group, mode):
+def _netcdf4_create_group(dataset, name):
+    return dataset.createGroup(name)
+
+
+def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
     if group in set([None, '', '/']):
         # use the root group
         return ds
@@ -140,7 +144,7 @@ def _nc4_group(ds, group, mode):
                 ds = ds.groups[key]
             except KeyError as e:
                 if mode != 'r':
-                    ds = ds.createGroup(key)
+                    ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
                     raise IOError('group not found: %s' % key, e)
@@ -227,7 +231,7 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     ds = nc4.Dataset(filename, mode=mode, **kwargs)
 
     with close_on_error(ds):
-        ds = _nc4_group(ds, group, mode)
+        ds = _nc4_require_group(ds, group, mode)
 
     _disable_auto_decode_group(ds)
 
