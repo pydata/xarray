@@ -17,8 +17,8 @@ from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_bottleneck, requires_dask,
-    requires_scipy, source_ndarray, unittest, requires_cftime)
+    assert_identical, raises_regex, requires_bottleneck, requires_cftime,
+    requires_dask, requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -1270,6 +1270,9 @@ class TestDataArray(TestCase):
         assert renamed.name == 'z'
         assert renamed.dims == ('z',)
 
+        renamed_kwargs = self.dv.x.rename(x='z').rename('z')
+        assert_identical(renamed, renamed_kwargs)
+
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
         expected = DataArray(array.values, {'y': list('abc')}, dims='y')
@@ -1671,6 +1674,13 @@ class TestDataArray(TestCase):
         s = df.set_index(['x', 'y'])['foo']
         expected = DataArray(s.unstack(), name='foo')
         actual = DataArray(s, dims='z').unstack('z')
+        assert_identical(expected, actual)
+
+    def test_stack_nonunique_consistency(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'],
+                         coords={'x': [0, 1], 'y': [0, 0]})
+        actual = orig.stack(z=['x', 'y'])
+        expected = DataArray(orig.to_pandas().stack(), dims='z')
         assert_identical(expected, actual)
 
     def test_transpose(self):
