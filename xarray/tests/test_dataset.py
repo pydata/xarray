@@ -1916,6 +1916,9 @@ class TestDataset(TestCase):
         with pytest.raises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
 
+        renamed_kwargs = data.rename(**newnames)
+        assert_identical(renamed, renamed_kwargs)
+
     def test_rename_old_name(self):
         # regtest for GH1477
         data = create_test_data()
