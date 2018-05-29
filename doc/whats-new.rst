@@ -62,9 +62,6 @@ Bug fixes
   bug where non-scalar data-variables that did not include the aggregation
   dimension were improperly skipped.
   By `Stephan Hoyer <https://github.com/shoyer>`_
-- Fixed a regression in 0.10.4, where specifying ``{'dtype': 'S1'}`` in
-  ``encoding`` with ``to_netcdf()`` raised an error.
-  `Stephan Hoyer <https://github.com/shoyer>`_
 
 - Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
   now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no

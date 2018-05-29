@@ -79,6 +79,8 @@ def _var_as_tuple(var):
 
 
 def maybe_encode_nonstring_dtype(var, name=None):
+    # can't use dtype in {'S1', str} because numpy dtypes have the wrong hash:
+    # https://github.com/numpy/numpy/issues/7242
     if ('dtype' in var.encoding and
             var.encoding['dtype'] != 'S1' and
             var.encoding['dtype'] is not str):
@@ -309,8 +311,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         data = NativeEndiannessArray(data)
         original_dtype = data.dtype
 
-    if 'dtype' not in encoding:
-        encoding['dtype'] = original_dtype
+    encoding.setdefault('dtype', original_dtype)
 
     if 'dtype' in attributes and attributes['dtype'] == 'bool':
         del attributes['dtype']

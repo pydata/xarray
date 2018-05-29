@@ -270,10 +270,9 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
                                 'CFEncodedInMemoryStore')
 
     def test_invalid_dataarray_names_raise(self):
-        pass
-
-    def test_encoding_kwarg(self):
+        # only relevant for on-disk file formats
         pass
 
     def test_encoding_kwarg_fixed_width_string(self):
+        # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass

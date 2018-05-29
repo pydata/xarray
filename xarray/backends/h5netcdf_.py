@@ -115,12 +115,13 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
             encoding['original_shape'] = var.shape
+
             vlen_dtype = h5py.check_dtype(vlen=var.dtype)
-            if vlen_dtype is not None:
-                if vlen_dtype is not unicode_type:  # pragma: no cover
-                    raise NotImplementedError('unexpected vlen dtype: {!r}'
-                                              .format(vlen_dtype))
+            if vlen_dtype is unicode_type:
                 encoding['dtype'] = str
+            elif vlen_dtype is not None:  # pragma: no cover
+                # xarray doesn't support writing arbitrary vlen dtypes yet.
+                pass
             else:
                 encoding['dtype'] = var.dtype
 

@@ -884,7 +884,6 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
         yield files
 
 
-@requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
     """Tests for both netCDF4-python and h5netcdf."""
 
