@@ -298,11 +298,16 @@ class TestPlot(PlotTestCase):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
     def test_coord_with_interval(self):
-        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot()
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean().plot()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
-    def test_coord_with_interval_label_contains_center(self):
-        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot()
+    def test_coord_with_interval_midPoints(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins(
+            'dim_0', bins).mean().plot(interval_step_plot=False)
         assert plt.gca().get_xlabel().endswith('_center')
+        assert len(plt.gca().lines[0].get_xdata()) == (len(bins) - 1)
 
 
 class TestPlot1D(PlotTestCase):

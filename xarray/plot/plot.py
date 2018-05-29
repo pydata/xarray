@@ -8,6 +8,7 @@ Or use the methods on a DataArray:
 from __future__ import absolute_import, division, print_function
 
 import functools
+import itertools
 import warnings
 from datetime import datetime
 
@@ -66,6 +67,21 @@ def _interval_to_mid_points(array):
 
     return np.asarray(list(map(lambda x: x.mid, array)))
 
+
+def _interval_to_bound_points(xarray,yarray):
+    """
+    Helper function to deal with a xarray consisting of pd.Intervals. Each
+    interval is replaced with both boundaries. I.e. the length of xarray
+    doubles. yarray is modified so it matches the new shape of xarray. 
+    """
+
+    xarray1 = np.asarray(list(map(lambda x: x.left, xarray)))
+    xarray2 = np.asarray(list(map(lambda x: x.right, xarray)))
+
+    xarray = ([x for x in itertools.chain.from_iterable(zip(xarray1,xarray2))])
+    yarray = ([y for y in itertools.chain.from_iterable(zip(yarray,yarray))])
+
+    return xarray, yarray
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
@@ -227,6 +243,7 @@ def line(darray, *args, **kwargs):
     xincrease = kwargs.pop('xincrease', True)
     yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
+    interval_step_plot = kwargs.pop('interval_step_plot', True)
 
     ax = get_axis(figsize, size, aspect, ax)
 
@@ -278,12 +295,18 @@ def line(darray, *args, **kwargs):
 
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
-        xplt_val = _interval_to_mid_points(xplt.values)
-        xlabel += '_center'
+        if interval_step_plot:
+            xplt_val, yplt_val = _interval_to_bound_points(xplt.values, 
+                yplt.values)
+        else:
+            xplt_val = _interval_to_mid_points(xplt.values) 
+            yplt_val = yplt.values 
+            xlabel += '_center'
     else:
         xplt_val = xplt.values
+        yplt_val = yplt.values
 
-    primitive = ax.plot(xplt_val, yplt, *args, **kwargs)
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     if xlabel is not None:
         ax.set_xlabel(xlabel)
