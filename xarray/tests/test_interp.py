@@ -40,6 +40,14 @@ def get_example_data(case):
         return get_example_data(3).chunk({'z': 5})
 
 
+def test_keywargs():
+    if not has_scipy:
+        pytest.skip('scipy is not installed.')
+
+    da = get_example_data(0)
+    assert_equal(da.interp(x=[0.5, 0.8]), da.interp({'x': [0.5, 0.8]}))
+
+
 @pytest.mark.parametrize('method', ['linear', 'cubic'])
 @pytest.mark.parametrize('dim', ['x', 'y'])
 @pytest.mark.parametrize('case', [0, 1])

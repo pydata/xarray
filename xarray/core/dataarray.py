@@ -906,15 +906,15 @@ class DataArray(AbstractArray, DataWithCoords):
             indexers=indexers, method=method, tolerance=tolerance, copy=copy)
         return self._from_temp_dataset(ds)
 
-    def interp(self, method='linear', kwargs={}, assume_sorted=False,
-               **coords):
+    def interp(self, coords=None, method='linear', assume_sorted=False,
+               kwargs={}, **coords_kwargs):
         """ Multidimensional interpolation of variables.
 
-        **coords : {dim: new_coordinate, ...}
-            Keyword arguments with names matching dimensions and values.
-            coords can be an integer, array-like or DataArray.
-            If DataArrays are passed as coords, their dimensions are used
-            for the broadcasting.
+        coords : dict, optional
+            Mapping from dimension names to the new coordinates.
+            new coordinate can be an scalar, array-like or DataArray.
+            If DataArrays are passed as new coordates, their dimensions are
+            used for the broadcasting.
         method: {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
@@ -924,6 +924,9 @@ class DataArray(AbstractArray, DataWithCoords):
             values.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
+        **coords_kwarg : {dim: coordinate, ...}, optional
+            The keyword arguments form of ``coords``.
+            One of coords or coords_kwargs must be provided.
 
         Returns
         -------
@@ -940,8 +943,8 @@ class DataArray(AbstractArray, DataWithCoords):
         scipy.interpolate.interpn
         """
         ds = self._to_temp_dataset().interp(
-            method=method, kwargs=kwargs, assume_sorted=assume_sorted,
-            **coords)
+            coords, method=method, kwargs=kwargs, assume_sorted=assume_sorted,
+            **coords_kwargs)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict=None, **names):

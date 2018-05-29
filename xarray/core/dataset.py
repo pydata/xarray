@@ -1814,17 +1814,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def interp(self, method='linear', assume_sorted=False, kwargs={},
-               **coords):
+    def interp(self, coords=None, method='linear', assume_sorted=False,
+               kwargs={}, **coords_kwargs):
         """ Multidimensional interpolation of Dataset.
 
         Parameters
         ----------
-        **coords : {dim: new_coordinate, ...}
-            Keyword arguments with names matching dimensions and values.
-            coords can be an integer, array-like or DataArray.
-            If DataArrays are passed as coords, their dimensions are used
-            for the broadcasting.
+        coords : dict, optional
+            Mapping from dimension names to the new coordinates.
+            new coordinate can be an scalar, array-like or DataArray.
+            If DataArrays are passed as new coordates, their dimensions are
+            used for the broadcasting.
         method: {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
             for 1-dimensional array.
@@ -1835,6 +1835,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             values.
         kwargs: dictionary, optional
             Additional keyword passed to scipy's interpolator.
+        **coords_kwarg : {dim: coordinate, ...}, optional
+            The keyword arguments form of ``coords``.
+            One of coords or coords_kwargs must be provided.
 
         Returns
         -------
@@ -1852,6 +1855,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         from . import missing
 
+        coords = either_dict_or_kwargs(coords, coords_kwargs, 'rename')
         indexers_list = self._validate_indexers(coords)
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
