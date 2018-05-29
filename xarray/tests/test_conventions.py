@@ -273,6 +273,11 @@ class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
         # only relevant for on-disk file formats
         pass
 
+    def test_encoding_kwarg(self):
+        # we haven't bothered to raise errors yet for unexpected encodings in
+        # this test dummy
+        pass
+
     def test_encoding_kwarg_fixed_width_string(self):
         # CFEncodedInMemoryStore doesn't support explicit string encodings.
         pass
