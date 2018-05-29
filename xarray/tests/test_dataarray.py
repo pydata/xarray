@@ -4,6 +4,7 @@ import pickle
 from copy import deepcopy
 from distutils.version import LooseVersion
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -321,11 +322,14 @@ class TestDataArray(TestCase):
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords('x', drop=True), actual)
 
-        panel = pd.Panel({0: frame})
-        actual = DataArray(panel)
-        expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
-        expected['dim_0'] = [0]
-        assert_identical(expected, actual)
+        if hasattr(pd, 'Panel'):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+                panel = pd.Panel({0: frame})
+            actual = DataArray(panel)
+            expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
+            expected['dim_0'] = [0]
+            assert_identical(expected, actual)
 
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2],
@@ -2320,7 +2324,7 @@ class TestDataArray(TestCase):
         array = DataArray(np.ones(10), [('time', times)])
 
         # Simple mean
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = array.resample('1D', 'time', how='mean')
         new_mean = array.resample(time='1D').mean()
         assert_identical(old_mean, new_mean)
@@ -2329,7 +2333,7 @@ class TestDataArray(TestCase):
         attr_array = array.copy()
         attr_array.attrs['meta'] = 'data'
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = attr_array.resample('1D', dim='time', how='mean',
                                            keep_attrs=True)
         new_mean = attr_array.resample(time='1D').mean(keep_attrs=True)
@@ -2340,7 +2344,7 @@ class TestDataArray(TestCase):
         nan_array = array.copy()
         nan_array[1] = np.nan
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = nan_array.resample('1D', 'time', how='mean',
                                           skipna=False)
         new_mean = nan_array.resample(time='1D').mean(skipna=False)
@@ -2354,12 +2358,12 @@ class TestDataArray(TestCase):
             # Discard attributes on the call using the new api to match
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
         for method in [np.mean, np.sum, np.max, np.min]:
             new_api = resampler.reduce(method)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 
@@ -2713,9 +2717,13 @@ class TestDataArray(TestCase):
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
+            if len(shape) > 2 and not hasattr(pd, 'Panel'):
+                continue
             dims = list('abc')[:len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
-            roundtripped = DataArray(da.to_pandas()).drop(dims)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+                roundtripped = DataArray(da.to_pandas()).drop(dims)
             assert_identical(da, roundtripped)
 
         with raises_regex(ValueError, 'cannot convert'):

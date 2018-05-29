@@ -62,9 +62,14 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
-  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+- Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
+  files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
+  (:issue:`2134`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Removed spurious warnings with ``Dataset.update(Dataset)`` (:issue:`2161`)
+  and ``array.equals(array)`` when ``array`` contains ``NaT`` (:issue:`2162`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
   etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a

@@ -89,7 +89,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
-                                  SerializationWarning, stacklevel=3)
+                                  SerializationWarning, stacklevel=10)
                 data = duck_array_ops.around(data)[...]
             data = data.astype(dtype=dtype)
         var = Variable(dims, data, attrs, encoding)

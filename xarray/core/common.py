@@ -696,7 +696,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                       "how=\"{how}\", instead consider using "
                       ".resample({dim}=\"{freq}\").{how}('{dim}') ".format(
                       dim=dim, freq=freq, how=how),
-                      DeprecationWarning, stacklevel=3)
+                      FutureWarning, stacklevel=3)
 
         if isinstance(dim, basestring):
             dim = self[dim]

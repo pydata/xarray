@@ -6,6 +6,7 @@ from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -138,8 +139,10 @@ class VariableSubclassTestCases(object):
         assert variable.equals(variable.copy())
         assert variable.identical(variable.copy())
         # check value is equal for both ndarray and Variable
-        assert variable.values[0] == expected_value0
-        assert variable[0].values == expected_value0
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
+            assert variable.values[0] == expected_value0
+            assert variable[0].values == expected_value0
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
