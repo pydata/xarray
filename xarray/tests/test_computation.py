@@ -553,7 +553,7 @@ def test_apply_dask():
     array = da.ones((2,), chunks=2)
     variable = xr.Variable('x', array)
     coords = xr.DataArray(variable).coords.variables
-    data_array = xr.DataArray(variable, coords, fastpath=True)
+    data_array = xr.DataArray(variable, dims=['x'], coords=coords)
     dataset = xr.Dataset({'y': variable})
 
     # encountered dask array, but did not set dask='allowed'

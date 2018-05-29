@@ -82,6 +82,11 @@ Bug fixes
   the index) (:issue:`2165`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- Fix ``DataArray.groupby().reduce()`` mutating coordinates on the input array
+  when grouping over dimension coordinates with duplicated entries
+  (:issue:`2153`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+  
 - Fix Dataset.to_netcdf() cannot create group with engine="h5netcdf"
   (:issue:`2177`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
