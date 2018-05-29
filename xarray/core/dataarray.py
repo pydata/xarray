@@ -19,8 +19,7 @@ from .formatting import format_item
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
-    either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution)
+    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution)
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -907,16 +906,20 @@ class DataArray(AbstractArray, DataWithCoords):
             indexers=indexers, method=method, tolerance=tolerance, copy=copy)
         return self._from_temp_dataset(ds)
 
-    def rename(self, new_name_or_name_dict):
+    def rename(self, new_name_or_name_dict=None, **names):
         """Returns a new DataArray with renamed coordinates or a new name.
 
 
         Parameters
         ----------
-        new_name_or_name_dict : str or dict-like
+        new_name_or_name_dict : str or dict-like, optional
             If the argument is dict-like, it it used as a mapping from old
             names to new names for coordinates. Otherwise, use the argument
             as the new name for this array.
+        **names, optional
+            The keyword arguments form of a mapping from old names to
+            new names for coordinates.
+            One of new_name_or_name_dict or names must be provided.
 
 
         Returns
@@ -929,8 +932,10 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.rename
         DataArray.swap_dims
         """
-        if utils.is_dict_like(new_name_or_name_dict):
-            dataset = self._to_temp_dataset().rename(new_name_or_name_dict)
+        if names or utils.is_dict_like(new_name_or_name_dict):
+            name_dict = either_dict_or_kwargs(
+                new_name_or_name_dict, names, 'rename')
+            dataset = self._to_temp_dataset().rename(name_dict)
             return self._from_temp_dataset(dataset)
         else:
             return self._replace(name=new_name_or_name_dict)

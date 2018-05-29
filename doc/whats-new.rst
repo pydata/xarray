@@ -49,9 +49,14 @@ Enhancements
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
   as a first argument, as an alternative to the existing approach 
-  of supplying a set of `kwargs`. This allows for more robust behavior
+  of supplying `kwargs`. This allows for more robust behavior
   of dimension names which conflict with other keyword names, or are 
   not strings.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.rename` now supports supplying `kwargs`, as an
+  alternative to the existing approach of supplying a ``dict`` as the 
+  first argument.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 Bug fixes
