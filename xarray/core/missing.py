@@ -305,10 +305,7 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
             kwargs.get('fill_value', None) == 'extrapolate' and
             not vectorizeable_only):
         kwargs.update(method=method)
-        if has_scipy:
-            interp_class = ScipyInterpolator
-        else:
-            interp_class = NumpyInterpolator
+        interp_class = NumpyInterpolator
 
     elif method in valid_methods:
         if not has_scipy:
