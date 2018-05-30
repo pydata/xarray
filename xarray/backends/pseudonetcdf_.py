@@ -40,34 +40,14 @@ class PncArrayWrapper(BackendArray):
         return array
 
 
-_genericncf = ('Dataset', 'netcdf', 'ncf', 'nc')
-
-
-class _notnetcdf:
-    def __eq__(self, lhs):
-        return lhs not in _genericncf
-
-
 class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
     def open(cls, filename, format=None, writer=None,
              autoclose=False, **format_kwds):
-        from PseudoNetCDF._getreader import getreader, getreaderdict
-        readerdict = getreaderdict()
-        _genreaders = tuple([readerdict[rn] for rn in _genericncf
-                             if rn in readerdict])
-        reader = getreader(filename, format=format, **format_kwds)
-        if isinstance(reader, _genreaders):
-            raise ValueError(('In xarray, PseudoNetCDF should not be used ' +
-                              'to read netcdf files with unknown metadata. ' +
-                              'Instead, use netcdf4. If this is a known ' +
-                              'format, specify it using the format keyword ' +
-                              '(or backend_kwargs={\'format\': <name>} from ' +
-                              'open_dataset).'))
-
-        opener = functools.partial(reader, filename, **format_kwds)
+        from PseudoNetCDF import pncopen
+        opener = functools.partial(pncopen, filename, **format_kwds)
         ds = opener()
         mode = format_kwds.get('mode', 'r')
         return cls(ds, mode=mode, writer=writer, opener=opener,

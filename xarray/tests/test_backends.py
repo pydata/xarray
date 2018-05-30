@@ -2431,34 +2431,21 @@ class PyNioTestAutocloseTrue(PyNioTest):
 
 @requires_pseudonetcdf
 class PseudoNetCDFFormatTest(TestCase):
-    autoclose = False
+    autoclose = True
 
     def open(self, path, **kwargs):
         return open_dataset(path, engine='pseudonetcdf',
                             autoclose=self.autoclose,
                             **kwargs)
 
-    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " +
-                               "netcdf metaddata"))
-    def test_open_ncf(self):
-        open_example_dataset('example_1.nc',
-                             engine='pseudonetcdf',
-                             autoclose=False,
-                             backend_kwargs={'format': 'ncf'})
-
-    @pytest.mark.xfail(reason=("PseudoNetCDF should not be used with " +
-                               "netcdf metaddata"))
-    def test_open_dyn_ncf(self):
-        open_example_dataset('example_1.nc',
-                             engine='pseudonetcdf',
-                             autoclose=False)
-
+    @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
         with create_tmp_file(
                 allow_cleanup_failure=allow_cleanup_failure) as path:
             self.save(data, path, **save_kwargs)
-            return self.open(path, **open_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
 
     def test_ict_format(self):
         """
@@ -2580,7 +2567,7 @@ class PseudoNetCDFFormatTest(TestCase):
                                              '6370000.; consistent with WRF'))
             camxfile = open_example_dataset('example.uamiv',
                                             engine='pseudonetcdf',
-                                            autoclose=False,
+                                            autoclose=True,
                                             backend_kwargs={'format': 'uamiv'})
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
@@ -2597,6 +2584,7 @@ class PseudoNetCDFFormatTest(TestCase):
                                                'global attributes')))
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
+        camxfile.close()
 
     def test_uamiv_format_mfread(self):
         """
@@ -2610,7 +2598,7 @@ class PseudoNetCDFFormatTest(TestCase):
                 ['example.uamiv',
                  'example.uamiv'],
                 engine='pseudonetcdf',
-                autoclose=False,
+                autoclose=True,
                 concat_dim='TSTEP',
                 backend_kwargs={'format': 'uamiv'})
 
@@ -2631,6 +2619,7 @@ class PseudoNetCDFFormatTest(TestCase):
                                                'global attributes')))
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
+        camxfile.close()
 
     def test_uamiv_format_write(self):
         fmtkw = {'format': 'uamiv'}
@@ -2642,10 +2631,10 @@ class PseudoNetCDFFormatTest(TestCase):
                                             engine='pseudonetcdf',
                                             autoclose=False,
                                             backend_kwargs=fmtkw)
-        actual = self.roundtrip(expected,
-                                save_kwargs=fmtkw,
-                                open_kwargs={'backend_kwargs': fmtkw})
-        assert_identical(expected, actual)
+        with self.roundtrip(expected,
+                            save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            assert_identical(expected, actual)
 
     def save(self, dataset, path, **save_kwargs):
         import PseudoNetCDF as pnc
