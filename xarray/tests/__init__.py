@@ -74,7 +74,7 @@ has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
 has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
-has_np112, requires_np112 = _importorskip('numpy', minversion='1.12.0')
+has_np113, requires_np113 = _importorskip('numpy', minversion='1.12.0')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

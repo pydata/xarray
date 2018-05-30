@@ -726,9 +726,6 @@ def pandas_median(x):
 
 
 def test_vectorize():
-    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
-        pytest.skip('numpy 1.12 or later to support vectorize=True.')
-
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
     expected = xr.DataArray([1, 2], dims=['x'])
     actual = apply_ufunc(pandas_median, data_array,
@@ -739,9 +736,6 @@ def test_vectorize():
 
 @requires_dask
 def test_vectorize_dask():
-    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
-        pytest.skip('numpy 1.12 or later to support vectorize=True.')
-
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
     expected = xr.DataArray([1, 2], dims=['x'])
     actual = apply_ufunc(pandas_median, data_array.chunk({'x': 1}),
