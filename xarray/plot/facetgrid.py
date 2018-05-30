@@ -299,10 +299,8 @@ class FacetGrid(object):
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and huelabel:
-            self.fig.legend(handles=self._mappables[-1],
-                            labels=list(self.data.coords[huelabel].values),
-                            title=huelabel,
-                            loc="center right")
+            self.add_line_legend(huelabel)
+
         return self
 
     def _finalize_grid(self, *axlabels):
@@ -314,6 +312,42 @@ class FacetGrid(object):
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is None:
                 ax.set_visible(False)
+
+    def add_line_legend(self, huelabel):
+        figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self.data.coords[huelabel].values),
+            title=huelabel,
+            loc="center right")
+
+        # self._legend = figlegend
+        # figlegend.set_title(title)
+
+        # Set the title size a roundabout way to maintain
+        # compatability with matplotlib 1.1
+        # prop = matplotlib.font_manager.FontProperties(size=title_size)
+        # figlegend._legend_title_box._text.set_font_properties(prop)
+
+        # Draw the plot to set the bounding boxes correctly
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Calculate and set the new width of the figure so the legend fits
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        figure_width = self.fig.get_figwidth()
+        self.fig.set_figwidth(figure_width + legend_width)
+
+        # Draw the plot again to get the new transformations
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Now calculate how much space we need on the right side
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        # margin = .01
+        # _space_needed = margin + space_needed
+        right = 1 - space_needed
+
+        # Place the subplot axes to give space for the legend
+        self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
         """Draw a colorbar
