@@ -206,18 +206,22 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     return ' '.join(cell_methods)
 
 
+def _iris_name(iris_obj):
+    return iris_obj.standard_name or iris_obj.var_name or 'unknown'
+
+
 def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
     from xarray.core.pycompat import dask_array_type
 
-    name = cube.var_name
+    name = _iris_name(cube)
     dims = []
     for i in range(cube.ndim):
         try:
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
-            dims.append(dim_coord.var_name)
+            dims.append(_iris_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
 
@@ -226,13 +230,10 @@ def from_iris(cube):
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
-        if not coord.var_name:
-            raise ValueError("Coordinate '{}' has no "
-                             "var_name attribute".format(coord.name()))
         if coord_dims:
-            coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
+            coords[_iris_name(coord)] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[coord.var_name] = ((),
+            coords[_iris_name(coord)] = ((),
                                       np.asscalar(coord.points), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
