@@ -330,8 +330,6 @@ def _get_interpolator(method, vectorizeable_only=False, **kwargs):
             interp_class = interpolate.PchipInterpolator
         elif method == 'spline':
             kwargs.update(method=method)
-            if 'fill_value' in kwargs:
-                del kwargs['fill_value']
             interp_class = SplineInterpolator
         elif method == 'akima':
             interp_class = interpolate.Akima1DInterpolator
@@ -376,14 +374,14 @@ def _get_valid_fill_mask(arr, dim, limit):
             .sum(new_dim, skipna=False)) <= limit
 
 
-def _assert_single_chunk(obj, axes):
+def _assert_single_chunk(var, axes):
     for axis in axes:
-        if len(obj.chunks[axis]) > 1 or obj.chunks[axis][0] < obj.shape[axis]:
+        if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
             raise ValueError('Chunking along the dimension to be interpolated '
                              '({}) is not allowed.'.format(axis))
 
 
-def _localize(obj, indexes_coords):
+def _localize(var, indexes_coords):
     """ Speed up for linear and nearest neighbor method.
     Only consider a subspace that is needed for the interpolation
     """
@@ -395,15 +393,15 @@ def _localize(obj, indexes_coords):
 
         indexes[dim] = slice(max(imin - 2, 0), imax + 2)
         indexes_coords[dim] = (x[indexes[dim]], new_x)
-    return obj.isel(**indexes), indexes_coords
+    return var.isel(**indexes), indexes_coords
 
 
-def interp(obj, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method, **kwargs):
     """ Make an interpolation of Variable
 
     Parameters
     ----------
-    obj: Variable
+    var: Variable
     index_coord:
         mapping from dimension name to a pair of original and new coordinates.
         Original coordinates should be sorted in strictly ascending order.
@@ -419,11 +417,11 @@ def interp(obj, indexes_coords, method, **kwargs):
     Interpolated Variable
     """
     if not indexes_coords:
-        return obj.copy()
+        return var.copy()
 
     # simple speed up for the local interpolation
     if method in ['linear', 'nearest']:
-        obj, indexes_coords = _localize(obj, indexes_coords)
+        var, indexes_coords = _localize(var, indexes_coords)
 
     # default behavior
     kwargs['bounds_error'] = kwargs.get('bounds_error', False)
@@ -434,32 +432,32 @@ def interp(obj, indexes_coords, method, **kwargs):
     destination = broadcast_variables(*new_x)
 
     # transpose to make the interpolated axis to the last position
-    broadcast_dims = [d for d in obj.dims if d not in dims]
+    broadcast_dims = [d for d in var.dims if d not in dims]
     original_dims = broadcast_dims + dims
     new_dims = broadcast_dims + list(destination[0].dims)
-    interped = interp_func(obj.transpose(*original_dims).data,
+    interped = interp_func(var.transpose(*original_dims).data,
                            x, destination, method, kwargs)
 
-    result = Variable(new_dims, interped, attrs=obj.attrs)
+    result = Variable(new_dims, interped, attrs=var.attrs)
 
     # transpose the result so that the new dimensions are inserted to the
     # original position
     if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
-        result_dims = obj.dims
+        result_dims = var.dims
     else:
-        start = min(obj.get_axis_num(d) for d in dims)
+        start = min(var.get_axis_num(d) for d in dims)
         result_dims = (broadcast_dims[:start] + list(destination[0].dims) +
                        broadcast_dims[start:])
     return result.transpose(*result_dims)
 
 
-def interp_func(obj, x, new_x, method, kwargs):
+def interp_func(var, x, new_x, method, kwargs):
     """
     multi-dimensional interpolation for array-like.
 
     Parameters
     ----------
-    obj: np.ndarray or dask.array.Array
+    var: np.ndarray or dask.array.Array
         Array to be interpolated. The final dimension is interpolated.
     x: a list of 1d array.
         Original coordinates. Should not contain NaN.
@@ -486,7 +484,7 @@ def interp_func(obj, x, new_x, method, kwargs):
     scipy.interpolate.interp1d
     """
     if not x:
-        return obj
+        return var
 
     if len(x) == 1:
         func, kwargs = _get_interpolator(method, vectorizeable_only=True,
@@ -494,40 +492,40 @@ def interp_func(obj, x, new_x, method, kwargs):
     else:
         func, kwargs = _get_interpolator_nd(method, **kwargs)
 
-    if isinstance(obj, dask_array_type):
+    if isinstance(var, dask_array_type):
         import dask.array as da
 
-        _assert_single_chunk(obj, range(obj.ndim - len(x), obj.ndim))
-        chunks = obj.chunks[:-len(x)] + new_x[0].shape
-        drop_axis = range(obj.ndim - len(x), obj.ndim)
-        new_axis = range(obj.ndim - len(x), obj.ndim - len(x) + new_x[0].ndim)
-        return da.map_blocks(_interpnd, obj, x, new_x, func, kwargs,
-                             dtype=obj.dtype, chunks=chunks,
+        _assert_single_chunk(var, range(var.ndim - len(x), var.ndim))
+        chunks = var.chunks[:-len(x)] + new_x[0].shape
+        drop_axis = range(var.ndim - len(x), var.ndim)
+        new_axis = range(var.ndim - len(x), var.ndim - len(x) + new_x[0].ndim)
+        return da.map_blocks(_interpnd, var, x, new_x, func, kwargs,
+                             dtype=var.dtype, chunks=chunks,
                              new_axis=new_axis, drop_axis=drop_axis)
 
-    return _interpnd(obj, x, new_x, func, kwargs)
+    return _interpnd(var, x, new_x, func, kwargs)
 
 
-def _interp1d(obj, x, new_x, func, kwargs):
+def _interp1d(var, x, new_x, func, kwargs):
     # x, new_x are tuples of size 1.
     x, new_x = x[0], new_x[0]
-    rslt = func(x, obj, assume_sorted=True, **kwargs)(np.ravel(new_x))
+    rslt = func(x, var, assume_sorted=True, **kwargs)(np.ravel(new_x))
     if new_x.ndim > 1:
-        return rslt.reshape(obj.shape[:-1] + new_x.shape)
+        return rslt.reshape(var.shape[:-1] + new_x.shape)
     if new_x.ndim == 0:
         return rslt[..., -1]
     return rslt
 
 
-def _interpnd(obj, x, new_x, func, kwargs):
+def _interpnd(var, x, new_x, func, kwargs):
     if len(x) == 1:
-        return _interp1d(obj, x, new_x, func, kwargs)
+        return _interp1d(var, x, new_x, func, kwargs)
 
     # move the interpolation axes to the start position
-    obj = obj.transpose(range(-len(x), obj.ndim - len(x)))
+    var = var.transpose(range(-len(x), var.ndim - len(x)))
     # stack new_x to 1 vector, with reshape
     xi = np.stack([x1.values.ravel() for x1 in new_x], axis=-1)
-    rslt = func(x, obj, xi, **kwargs)
+    rslt = func(x, var, xi, **kwargs)
     # move back the interpolation axes to the last position
     rslt = rslt.transpose(range(-rslt.ndim + 1, 1))
     return rslt.reshape(rslt.shape[:-1] + new_x[0].shape)
