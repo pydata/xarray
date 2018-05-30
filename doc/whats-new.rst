@@ -37,6 +37,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- added a PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
+  By `Barron Henderson <https://github.com/barronh>`_.
+
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
   behavior when dimensions are not specified (previously this raised an error).
@@ -117,9 +121,6 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- added a PseudoNetCDF backend for many Atmospheric data formats including
-  GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
-  By `Barron Henderson <https://github.com/barronh>`_.
 - Add an option for using a ``CFTimeIndex`` for indexing times with
   non-standard calendars and/or outside the Timestamp-valid range; this index
   enables a subset of the functionality of a standard
