@@ -79,11 +79,8 @@ def _var_as_tuple(var):
 
 
 def maybe_encode_nonstring_dtype(var, name=None):
-    # can't use dtype in {'S1', str} because numpy dtypes have the wrong hash:
-    # https://github.com/numpy/numpy/issues/7242
     if ('dtype' in var.encoding and
-            var.encoding['dtype'] != 'S1' and
-            var.encoding['dtype'] is not str):
+            var.encoding['dtype'] not in ('S1', str)):
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype:
