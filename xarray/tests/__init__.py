@@ -87,7 +87,10 @@ if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 if has_dask:
     import dask
-    dask.set_options(get=dask.get)
+    if LooseVersion(dask.__version__) < '0.18':
+        dask.set_options(get=dask.get)
+    else:
+        dask.config.set(scheduler='sync')
 try:
     import_seaborn()
     has_seaborn = True
@@ -191,7 +194,10 @@ def source_ndarray(array):
     """Given an ndarray, return the base object which holds its memory, or the
     object itself.
     """
-    base = getattr(array, 'base', np.asarray(array).base)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'DatetimeIndex.base')
+        warnings.filterwarnings('ignore', 'TimedeltaIndex.base')
+        base = getattr(array, 'base', np.asarray(array).base)
     if base is None:
         base = array
     return base
