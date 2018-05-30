@@ -156,8 +156,12 @@ def to_iris(dataarray):
         if coord.dims:
             axis = dataarray.get_axis_num(coord.dims)
         if coord_name in dataarray.dims:
-            iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
-            dim_coords.append((iris_coord, axis))
+            try:
+                iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
+                dim_coords.append((iris_coord, axis))
+            except ValueError:
+                iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
+                aux_coords.append((iris_coord, axis))
         else:
             iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
             aux_coords.append((iris_coord, axis))
