@@ -190,11 +190,10 @@ Bug fixes
 
 .. _whats-new.0.10.3:
 
-v0.10.3 (unreleased)
---------------------
+v0.10.3 (April 13, 2018)
+------------------------
 
-Documentation
-~~~~~~~~~~~~~
+The minor release includes a number of bug-fixes and backwards compatible enhancements.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -215,9 +214,21 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed ``decode_cf`` function to operate lazily on dask arrays
+  (:issue:`1372`). By `Ryan Abernathey <https://github.com/rabernat>`_.
 - Fixed labeled indexing with slice bounds given by xarray objects with
   datetime64 or timedelta64 dtypes (:issue:`1240`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Attempting to convert an xarray.Dataset into a numpy array now raises an
+  informative error message.
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+- Fixed a bug in decode_cf_datetime where ``int32`` arrays weren't parsed
+  correctly (:issue:`2002`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+- When calling `xr.auto_combine()` or `xr.open_mfdataset()` with a `concat_dim`,
+  the resulting dataset will have that one-element dimension (it was
+  silently dropped, previously) (:issue:`1988`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.10.2:
 
