@@ -374,8 +374,9 @@ def _get_valid_fill_mask(arr, dim, limit):
 def _assert_single_chunk(var, axes):
     for axis in axes:
         if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
-            raise ValueError('Chunking along the dimension to be interpolated '
-                             '({}) is not allowed.'.format(axis))
+            raise NotImplementedError(
+                'Chunking along the dimension to be interpolated '
+                '({}) is not supported.'.format(axis))
 
 
 def _localize(var, indexes_coords):
@@ -399,19 +400,25 @@ def interp(var, indexes_coords, method, **kwargs):
     Parameters
     ----------
     var: Variable
-    index_coord:
-        mapping from dimension name to a pair of original and new coordinates.
+    index_coords:
+        Mapping from dimension name to a pair of original and new coordinates.
         Original coordinates should be sorted in strictly ascending order.
+        Note that all the coordinates should be Variable objects.
     method: string
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
-    kwargs:
+    **kwargs:
         keyword arguments to be passed to scipy.interpolate
 
     Returns
     -------
     Interpolated Variable
+
+    See Also
+    --------
+    DataArray.interp
+    Dataset.interp
     """
     if not indexes_coords:
         return var.copy()
@@ -450,7 +457,8 @@ def interp(var, indexes_coords, method, **kwargs):
 
 def interp_func(var, x, new_x, method, kwargs):
     """
-    multi-dimensional interpolation for array-like.
+    multi-dimensional interpolation for array-like. Interpolated axes should be
+    located in the last position.
 
     Parameters
     ----------
@@ -458,13 +466,13 @@ def interp_func(var, x, new_x, method, kwargs):
         Array to be interpolated. The final dimension is interpolated.
     x: a list of 1d array.
         Original coordinates. Should not contain NaN.
-    new_x: 1d array
-        Original coordinates. Should not contain NaN.
+    new_x: a list of 1d array
+        New coordinates. Should not contain NaN.
     method: string
         {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'} for
         1-dimensional itnterpolation.
         {'linear', 'nearest'} for multidimensional interpolation
-    kwargs:
+    **kwargs:
         Optional keyword arguments to be passed to scipy.interpolator
 
     Returns

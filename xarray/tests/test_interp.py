@@ -62,7 +62,7 @@ def test_interpolate_1d(method, dim, case):
     xdest = np.linspace(0.0, 0.9, 80)
 
     if dim == 'y' and case == 1:
-        with pytest.raises(ValueError):
+        with pytest.raises(NotImplementedError):
             actual = da.interp(method=method, **{dim: xdest})
         pytest.skip('interpolation along chunked dimension is '
                     'not yet supported')
