@@ -1,6 +1,5 @@
 import numpy as np
 import xarray as xr
-import iris
 from iris.coords import DimCoord
 from iris.cube import Cube
 
