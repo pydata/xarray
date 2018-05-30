@@ -363,9 +363,9 @@ var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
 prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
 cumprod_1d = _create_nan_agg_method(
-    'cumprod', numeric_only=True, np_compat=False, no_bottleneck=True)
+    'cumprod', numeric_only=True, no_bottleneck=True)
 cumsum_1d = _create_nan_agg_method(
-    'cumsum', numeric_only=True, np_compat=False, no_bottleneck=True)
+    'cumsum', numeric_only=True, no_bottleneck=True)
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
