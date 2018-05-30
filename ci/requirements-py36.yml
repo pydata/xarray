@@ -20,9 +20,9 @@ dependencies:
   - rasterio
   - bottleneck
   - zarr
+  - pseudonetcdf>=3.0.1
   - pip:
     - coveralls
     - pytest-cov
     - pydap
     - lxml
-    - PseudoNetCDF
