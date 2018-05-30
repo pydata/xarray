@@ -3054,9 +3054,17 @@ class TestDataArray(TestCase):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-        actual.coord('distance').var_name = None
-        with raises_regex(ValueError, 'no var_name attribute'):
-            DataArray.from_iris(actual)
+	    # use standard_name if no var_name available
+        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
+        da = xr.DataArray.from_iris(cube)
+        assert da.coords.dims == ('latitude',)
+
+        # use 'unknown' if no standard_name or var_name available
+        latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
+        da = xr.DataArray.from_iris(cube)
+        assert da.coords.dims == ('unknown',)
 
     @requires_dask
     def test_to_and_from_iris_dask(self):
@@ -3132,9 +3140,17 @@ class TestDataArray(TestCase):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-        actual.coord('distance').var_name = None
-        with raises_regex(ValueError, 'no var_name attribute'):
-            DataArray.from_iris(actual)
+        # use standard_name if no var_name available
+        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
+        da = xr.DataArray.from_iris(cube)
+        assert da.coords.dims == ('latitude',)
+
+        # use 'unknown' if no standard_name or var_name available
+        latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
+        da = xr.DataArray.from_iris(cube)
+        assert da.coords.dims == ('unknown',)
 
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
