@@ -46,6 +46,11 @@ Enhancements
   to manage its version strings. (:issue:`1300`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- `:py:class:`Dataset`s align `:py:class:`DataArray`s to coords that are explicitly
+  passed into the constructor, where previously an error would be raised.
+  (:issue:`674`)
+  By `Maximilian Roos <https://github.com/maxim-lian`_.
+
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
   as a first argument, as an alternative to the existing approach 
