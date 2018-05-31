@@ -757,9 +757,6 @@ def test_dot(use_dask):
     if use_dask:
         if not has_dask:
             pytest.skip('test for dask.')
-        import dask
-        if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
-            pytest.skip("needs dask.array.einsum")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -783,6 +780,10 @@ def test_dot(use_dask):
     assert actual.dims == ('c', )
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+    import dask
+    if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
+        pytest.skip("needs dask.array.einsum")
 
     # for only a single array is passed without dims argument, just return
     # as is

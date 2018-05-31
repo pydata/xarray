@@ -37,6 +37,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
+  dask<01.7.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup`_.
+
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
   behavior when dimensions are not specified (previously this raised an error).
@@ -53,14 +57,14 @@ Enhancements
 
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
-  as a first argument, as an alternative to the existing approach 
+  as a first argument, as an alternative to the existing approach
   of supplying `kwargs`. This allows for more robust behavior
-  of dimension names which conflict with other keyword names, or are 
+  of dimension names which conflict with other keyword names, or are
   not strings.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - :py:meth:`~DataArray.rename` now supports supplying `kwargs`, as an
-  alternative to the existing approach of supplying a ``dict`` as the 
+  alternative to the existing approach of supplying a ``dict`` as the
   first argument.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
@@ -96,7 +100,7 @@ Bug fixes
   when grouping over dimension coordinates with duplicated entries
   (:issue:`2153`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
-  
+
 - Fix Dataset.to_netcdf() cannot create group with engine="h5netcdf"
   (:issue:`2177`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
