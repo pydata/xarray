@@ -67,6 +67,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- :py:func:`apply_ufunc` now directly validates output variables
+  (:issue:`1931`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 - Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
   files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
   (:issue:`2134`).
