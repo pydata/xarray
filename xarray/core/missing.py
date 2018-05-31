@@ -10,7 +10,7 @@ from . import rolling
 from .computation import apply_ufunc
 from .npcompat import flip
 from .pycompat import iteritems
-from .utils import is_scalar
+from .utils import is_scalar, OrderedSet
 from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
 
@@ -444,15 +444,14 @@ def interp(var, indexes_coords, method, **kwargs):
 
     result = Variable(new_dims, interped, attrs=var.attrs)
 
-    # transpose the result so that the new dimensions are inserted to the
-    # original position
-    if all(x1.dims == new_x1.dims for x1, new_x1 in zip(x, new_x)):
-        result_dims = var.dims
-    else:
-        start = min(var.get_axis_num(d) for d in dims)
-        result_dims = (broadcast_dims[:start] + list(destination[0].dims) +
-                       broadcast_dims[start:])
-    return result.transpose(*result_dims)
+    # dimension of the output array
+    out_dims = OrderedSet()
+    for d in var.dims:
+        if d in dims:
+            out_dims.update(indexes_coords[d][1].dims)
+        else:
+            out_dims.add(d)
+    return result.transpose(*tuple(out_dims))
 
 
 def interp_func(var, x, new_x, method, kwargs):

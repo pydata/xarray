@@ -407,3 +407,7 @@ def test_interpolate_dimorder(case):
         actual = da.interp(z=new_z, x=new_x).dims
         expected = da.sel(z=new_z, x=new_x, method='nearest').dims
         assert actual == expected
+
+        actual = da.interp(x=0.5, z=new_z).dims
+        expected = da.sel(x=0.5, z=new_z, method='nearest').dims
+        assert actual == expected
