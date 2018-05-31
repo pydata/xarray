@@ -3065,6 +3065,20 @@ class TestDataArray(TestCase):
         cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         da = xr.DataArray.from_iris(cube)
         assert da.coords.dims == ('unknown',)
+        
+        # non-numeric coord to iris
+        data = [0.1, 0.2, 0.3]
+        locs = ['IA', 'IL', 'IN']
+        da = xr.DataArray(data, coords=[locs], dims=['space'])
+        cube = xr.DataArray.to_iris(da)
+        cube.coords('space')  # has coord
+
+        # non-monotonic coord to iris
+        data = [0.1, 0.2, 0.3]
+        locs = [0, 2, 1]
+        da = xr.DataArray(data, coords=[locs], dims=['space'])
+        cube = xr.DataArray.to_iris(da)
+        cube.coords('space')  # has coord
 
     @requires_dask
     def test_to_and_from_iris_dask(self):
@@ -3151,6 +3165,20 @@ class TestDataArray(TestCase):
         cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         da = xr.DataArray.from_iris(cube)
         assert da.coords.dims == ('unknown',)
+        
+        # non-numeric coord to iris
+        data = [0.1, 0.2, 0.3]
+        locs = ['IA', 'IL', 'IN']
+        da = xr.DataArray(data, coords=[locs], dims=['space'])
+        cube = xr.DataArray.to_iris(da)
+        cube.coords('space')  # has coord
+
+        # non-monotonic coord to iris
+        data = [0.1, 0.2, 0.3]
+        locs = [0, 2, 1]
+        da = xr.DataArray(data, coords=[locs], dims=['space'])
+        cube = xr.DataArray.to_iris(da)
+        cube.coords('space')  # has coord
 
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
