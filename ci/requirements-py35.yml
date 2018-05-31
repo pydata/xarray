@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python=3.5
   - cftime
-  - dask
+  - dask=0.16
   - distributed
   - h5py
   - h5netcdf
