@@ -38,7 +38,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
-  dask<01.7.4. (related to :issue:`2203`)
+  dask<0.17.4. (related to :issue:`2203`)
   By `Keisuke Fujii <https://github.com/fujiisoup`_.
 
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
