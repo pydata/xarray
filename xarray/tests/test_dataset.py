@@ -4193,6 +4193,45 @@ def test_isin_dataset():
         ds.isin(ds)
 
 
+@pytest.mark.parametrize('unaligned_coords', (
+    {'x': [2, 1, 0]},
+    {'x': (['x'], np.asarray([2, 1, 0]))},
+    {'x': (['x'], np.asarray([1, 2, 0]))},
+    {'x': pd.Index([2, 1, 0])},
+    {'x': Variable(dims='x', data=[0, 2, 1])},
+    {'x': IndexVariable(dims='x', data=[0, 1, 2])},
+    {'y': 42},
+    {'y': ('x', [2, 1, 0])},
+    {'y': ('x', np.asarray([2, 1, 0]))},
+    {'y': (['x'], np.asarray([2, 1, 0]))},
+))
+@pytest.mark.parametrize('coords', (
+    {'x': ('x', [0, 1, 2])},
+    {'x': [0, 1, 2]},
+))
+def test_dataset_constructor_aligns_to_explicit_coords(
+        unaligned_coords, coords):
+
+    a = xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
+
+    expected = xr.Dataset(coords=coords)
+    expected['a'] = a
+
+    result = xr.Dataset({'a': a}, coords=coords)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize('unaligned_coords', (
+    {'y': ('b', np.asarray([2, 1, 0]))},
+))
+def test_constructor_raises_with_invalid_coords(unaligned_coords):
+
+    with pytest.raises(ValueError,
+                       message='not a subset of the DataArray dimensions'):
+        xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
+
+
 def test_dir_expected_attrs(data_set):
 
     some_expected_attrs = {'pipe', 'mean', 'isnull', 'var1',
@@ -4205,7 +4244,7 @@ def test_dir_non_string(data_set):
     # add a numbered key to ensure this doesn't break dir
     data_set[5] = 'foo'
     result = dir(data_set)
-    assert not (5 in result)
+    assert 5 not in result
 
     # GH2172
     sample_data = np.random.uniform(size=[2, 2000, 10000])
