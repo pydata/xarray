@@ -1660,15 +1660,9 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_fancy()
 
     def test_getitem_1d_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):

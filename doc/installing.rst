@@ -41,7 +41,7 @@ For accelerating xarray
 For parallel computing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-- `dask.array <http://dask.pydata.org>`__ (0.XX or later): required for
+- `dask.array <http://dask.pydata.org>`__ (0.16 or later): required for
   :ref:`dask`.
 
 For plotting
