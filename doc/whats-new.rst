@@ -37,6 +37,10 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
+  dask<0.17.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup`_.
+
 - added a PseudoNetCDF backend for many Atmospheric data formats including
   GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
   By `Barron Henderson <https://github.com/barronh>`_.
@@ -50,21 +54,35 @@ Enhancements
   to manage its version strings. (:issue:`1300`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- `:py:class:`Dataset`s align `:py:class:`DataArray`s to coords that are explicitly
+  passed into the constructor, where previously an error would be raised.
+  (:issue:`674`)
+  By `Maximilian Roos <https://github.com/maxim-lian`_.
+
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
-  as a first argument, as an alternative to the existing approach 
+  as a first argument, as an alternative to the existing approach
   of supplying `kwargs`. This allows for more robust behavior
-  of dimension names which conflict with other keyword names, or are 
+  of dimension names which conflict with other keyword names, or are
   not strings.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - :py:meth:`~DataArray.rename` now supports supplying `kwargs`, as an
-  alternative to the existing approach of supplying a ``dict`` as the 
+  alternative to the existing approach of supplying a ``dict`` as the
   first argument.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fixed a regression in 0.10.4, where explicitly specifying ``dtype='S1'`` or
+  ``dtype=str`` in ``encoding`` with ``to_netcdf()`` raised an error
+  (:issue:`2149`).
+  `Stephan Hoyer <https://github.com/shoyer>`_
+
+- :py:func:`apply_ufunc` now directly validates output variables
+  (:issue:`1931`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
   files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
@@ -95,7 +113,7 @@ Bug fixes
   when grouping over dimension coordinates with duplicated entries
   (:issue:`2153`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
-  
+
 - Fix Dataset.to_netcdf() cannot create group with engine="h5netcdf"
   (:issue:`2177`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
