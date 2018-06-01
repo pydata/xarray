@@ -436,7 +436,7 @@ arguments to the xarray plotting methods/functions. This returns a
 
 .. ipython:: python
 
-    @savefig plot_facet_dataarray.png height=12in
+    @savefig plot_facet_dataarray.png
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
 
 4 dimensional
@@ -454,7 +454,7 @@ one were much hotter.
     # This is a 4d array
     t4d.coords
 
-    @savefig plot_facet_4d.png height=12in
+    @savefig plot_facet_4d.png
     t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
 
 Other features
@@ -468,7 +468,7 @@ Faceted plotting supports other arguments common to xarray 2d plots.
     hasoutliers[0, 0, 0] = -100
     hasoutliers[-1, -1, -1] = 400
 
-    @savefig plot_facet_robust.png height=12in
+    @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
                                     robust=True, cmap='viridis')
 
@@ -509,7 +509,7 @@ they have been plotted.
     bottomright = g.axes[-1, -1]
     bottomright.annotate('bottom right', (240, 40))
 
-    @savefig plot_facet_iterator.png height=12in
+    @savefig plot_facet_iterator.png
     plt.show()
 
 TODO: add an example of using the ``map`` method to plot dataset variables
