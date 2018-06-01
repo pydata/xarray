@@ -361,22 +361,18 @@ def label_from_attrs(da):
     ''' Makes informative labels if variable metadata (attrs) follows
         CF conventions. '''
 
-    attrs = da.attrs
-
-    if 'long_name' in attrs:
-        name = attrs['long_name']
-    elif 'standard_name' in attrs:
-        name = attrs['standard_name']
+    if da.attrs.get('long_name'):
+        name = da.attrs['long_name']
+    elif da.attrs.get('standard_name'):
+        name = da.attrs['standard_name']
     elif da.name is not None:
         name = da.name
     else:
         name = ''
 
-    if 'units' in da.attrs:
+    if da.attrs.get('units'):
         units = ' [{}]'.format(da.attrs['units'])
     else:
         units = ''
 
-    label = '\n'.join(textwrap.wrap(name + units, 30))
-
-    return label
+    return '\n'.join(textwrap.wrap(name + units, 30))

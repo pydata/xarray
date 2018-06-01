@@ -90,16 +90,24 @@ class TestPlot(PlotTestCase):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_label_from_attrs(self):
-        da = self.darray
+        da = self.darray.copy()
+        assert '' == label_from_attrs(da)
+
         da.name = 'a'
         da.attrs['units'] = 'a_units'
         da.attrs['long_name'] = 'a_long_name'
         da.attrs['standard_name'] = 'a_standard_name'
         assert 'a_long_name [a_units]' == label_from_attrs(da)
+
         da.attrs.pop('long_name')
         assert 'a_standard_name [a_units]' == label_from_attrs(da)
+        da.attrs.pop('units')
+        assert 'a_standard_name' == label_from_attrs(da)
+
+        da.attrs['units'] = 'a_units'
         da.attrs.pop('standard_name')
         assert 'a [a_units]' == label_from_attrs(da)
+
         da.attrs.pop('units')
         assert 'a' == label_from_attrs(da)
 
