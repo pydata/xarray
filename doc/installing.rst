@@ -48,6 +48,7 @@ For plotting
 ~~~~~~~~~~~~
 
 - `matplotlib <http://matplotlib.org/>`__: required for :ref:`plotting`
+  (1.5 or later)
 - `cartopy <http://scitools.org.uk/cartopy/>`__: recommended for
   :ref:`plot-maps`
 - `seaborn <https://stanford.edu/~mwaskom/software/seaborn/>`__: for better

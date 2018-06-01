@@ -8,7 +8,7 @@ dependencies:
   - distributed
   - h5py
   - h5netcdf
-  - matplotlib
+  - matplotlib=1.5
   - netcdf4
   - pytest
   - flake8

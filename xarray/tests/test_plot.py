@@ -414,7 +414,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(self.data, robust=True)
         assert cmap_params['vmin'] == np.percentile(self.data, 2)
         assert cmap_params['vmax'] == np.percentile(self.data, 98)
-        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['cmap'] == 'viridis'
         assert cmap_params['extend'] == 'both'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
@@ -498,7 +498,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Default with negative data will be a divergent cmap
         cmap_params = _determine_cmap_params(neg)
@@ -510,17 +510,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(neg, vmin=-0.1, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(neg, vmax=0.5, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Setting center=False too
         cmap_params = _determine_cmap_params(neg, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # However, I should still be able to set center and have a div cmap
         cmap_params = _determine_cmap_params(neg, center=0)
@@ -550,17 +550,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos, vmin=0.1)
         assert cmap_params['vmin'] == 0.1
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(pos, vmax=0.5)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # If both vmin and vmax are provided, output is non-divergent
         cmap_params = _determine_cmap_params(neg, vmin=-0.2, vmax=0.6)
         assert cmap_params['vmin'] == -0.2
         assert cmap_params['vmax'] == 0.6
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
 
 @requires_matplotlib
