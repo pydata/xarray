@@ -94,6 +94,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         super(H5NetCDFStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
+        import h5py
+
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
             data = indexing.LazilyOuterIndexedArray(
@@ -118,6 +120,15 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
             encoding['original_shape'] = var.shape
+
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is unicode_type:
+                encoding['dtype'] = str
+            elif vlen_dtype is not None:  # pragma: no cover
+                # xarray doesn't support writing arbitrary vlen dtypes yet.
+                pass
+            else:
+                encoding['dtype'] = var.dtype
 
         return Variable(dimensions, data, attrs, encoding)
 
@@ -161,7 +172,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         import h5py
 
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable)
+        dtype = _get_datatype(
+            variable, raise_on_invalid_encoding=check_encoding)
 
         fillvalue = attrs.pop('_FillValue', None)
         if dtype is str and fillvalue is not None:
@@ -189,8 +201,9 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                 raise ValueError("'zlib' and 'compression' encodings mismatch")
             encoding.setdefault('compression', 'gzip')
 
-        if (check_encoding and encoding.get('complevel') not in
-                (None, encoding.get('compression_opts'))):
+        if (check_encoding and
+                'complevel' in encoding and 'compression_opts' in encoding and
+                encoding['complevel'] != encoding['compression_opts']):
             raise ValueError("'complevel' and 'compression_opts' encodings "
                              "mismatch")
         complevel = encoding.pop('complevel', 0)

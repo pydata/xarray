@@ -79,7 +79,8 @@ def _var_as_tuple(var):
 
 
 def maybe_encode_nonstring_dtype(var, name=None):
-    if 'dtype' in var.encoding and var.encoding['dtype'] != 'S1':
+    if ('dtype' in var.encoding and
+            var.encoding['dtype'] not in ('S1', str)):
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype:
@@ -307,12 +308,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         data = NativeEndiannessArray(data)
         original_dtype = data.dtype
 
-    if 'dtype' in encoding:
-        if original_dtype != encoding['dtype']:
-            warnings.warn("CF decoding is overwriting dtype on variable {!r}"
-                          .format(name))
-    else:
-        encoding['dtype'] = original_dtype
+    encoding.setdefault('dtype', original_dtype)
 
     if 'dtype' in attributes and attributes['dtype'] == 'bool':
         del attributes['dtype']
