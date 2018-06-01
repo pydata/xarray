@@ -363,21 +363,26 @@ class DatasetIOTestCases(object):
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
             expected_calendar = times[0].calendar
 
-            with xr.set_options(enable_cftimeindex=True):
-                with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                    abs_diff = abs(actual.t.values - expected_decoded_t)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t.encoding['units'] ==
-                            'days since 0001-01-01 00:00:00.000000')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+            with warnings.catch_warnings():
+                if expected_calendar in {'proleptic_gregorian', 'gregorian'}:
+                    warnings.filterwarnings(
+                        'ignore', 'Unable to decode time axis')
 
-                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t0.encoding['units'] ==
-                            'days since 0001-01-01')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                with xr.set_options(enable_cftimeindex=True):
+                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                        abs_diff = abs(actual.t.values - expected_decoded_t)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t.encoding['units'] ==
+                                'days since 0001-01-01 00:00:00.000000')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
+
+                        abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                        assert (abs_diff <= np.timedelta64(1, 's')).all()
+                        assert (actual.t0.encoding['units'] ==
+                                'days since 0001-01-01')
+                        assert (actual.t.encoding['calendar'] ==
+                                expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -748,12 +753,25 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
+    def test_encoding_kwarg_dates(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
         units = 'days since 1900-01-01'
         kwargs = dict(encoding={'t': {'units': units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.t.encoding['units'], units)
             assert_identical(actual, ds)
+
+    def test_encoding_kwarg_fixed_width_string(self):
+        # regression test for GH2149
+        for strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            ds = Dataset({'x': strings})
+            kwargs = dict(encoding={'x': {'dtype': 'S1'}})
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertEqual(actual['x'].encoding['dtype'], 'S1')
+                assert_identical(actual, ds)
 
     def test_default_fill_value(self):
         # Test default encoding for float:
@@ -767,8 +785,11 @@ class CFEncodedDataTest(DatasetIOTestCases):
         # Test default encoding for int:
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'int16'}})
-        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            self.assertTrue('_FillValue' not in actual.x.encoding)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore', '.*floating point data as an integer')
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertTrue('_FillValue' not in actual.x.encoding)
         self.assertEqual(ds.x.encoding, {})
 
         # Test default encoding for implicit int:
@@ -871,8 +892,8 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
         yield files
 
 
-@requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+    """Tests for both netCDF4-python and h5netcdf."""
 
     engine = 'netcdf4'
 
@@ -933,6 +954,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 assert_identical(data1, actual1)
             with self.open(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
+
+    def test_encoding_kwarg_vlen_string(self):
+        for input_strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            original = Dataset({'x': input_strings})
+            expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+            kwargs = dict(encoding={'x': {'dtype': str}})
+            with self.roundtrip(original, save_kwargs=kwargs) as actual:
+                assert actual['x'].encoding['dtype'] is str
+                assert_identical(actual, expected)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
@@ -1046,6 +1079,23 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             assert_equal(expected, actual)
 
+    def test_encoding_kwarg_compression(self):
+        ds = Dataset({'x': np.arange(10.0)})
+        encoding = dict(dtype='f4', zlib=True, complevel=9, fletcher32=True,
+                        chunksizes=(5,), shuffle=True)
+        kwargs = dict(encoding=dict(x=encoding))
+
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert_equal(actual, ds)
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+            self.assertEqual(actual.x.encoding['fletcher32'], True)
+            self.assertEqual(actual.x.encoding['chunksizes'], (5,))
+            self.assertEqual(actual.x.encoding['shuffle'], True)
+
+        self.assertEqual(ds.x.encoding, {})
+
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
         ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
@@ -1109,7 +1159,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     expected = Dataset({'x': ((), 42)})
                     assert_identical(expected, ds)
 
-    def test_variable_len_strings(self):
+    def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
 
@@ -1402,6 +1452,10 @@ class BaseZarrTest(CFEncodedDataTest):
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
 
+    def test_encoding_kwarg_fixed_width_string(self):
+        # not relevant for zarr, since we don't use EncodedStringCoder
+        pass
+
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
@@ -1570,6 +1624,13 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
+
+    def test_encoding_kwarg_vlen_string(self):
+        original = Dataset({'x': [u'foo', u'bar', u'baz']})
+        kwargs = dict(encoding={'x': {'dtype': str}})
+        with raises_regex(ValueError, 'encoding dtype=str for vlen'):
+            with self.roundtrip(original, save_kwargs=kwargs):
+                pass
 
 
 class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
