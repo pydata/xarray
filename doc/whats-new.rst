@@ -26,6 +26,20 @@ What's New
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 
+.. _whats-new.0.10.6:
+
+v0.10.6 (unreleased)
+--------------------
+
+Documentation
+~~~~~~~~~~~~~
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
 .. _whats-new.0.10.5:
 
 v0.10.5 (31 May 2018)
