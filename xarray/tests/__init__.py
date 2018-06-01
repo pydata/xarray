@@ -54,11 +54,7 @@ def _importorskip(modname, minversion=None):
                 raise ImportError('Minimum version not satisfied')
     except ImportError:
         has = False
-    # TODO: use pytest.skipif instead of unittest.skipUnless
-    # Using `unittest.skipUnless` is a temporary workaround for pytest#568,
-    # wherein class decorators stain inherited classes.
-    # xref: xarray#1531, implemented in xarray #1557.
-    func = unittest.skipUnless(has, reason='requires {}'.format(modname))
+    func = pytest.mark.skipif(not has, reason='requires {}'.format(modname))
     return has, func
 
 
@@ -78,11 +74,11 @@ has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
-requires_scipy_or_netCDF4 = unittest.skipUnless(
-    has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
+requires_scipy_or_netCDF4 = pytest.mark.skipif(
+    not has_scipy_or_netCDF4, reason='requires scipy or netCDF4')
 has_cftime_or_netCDF4 = has_cftime or has_netCDF4
-requires_cftime_or_netCDF4 = unittest.skipUnless(
-    has_cftime_or_netCDF4, reason='requires cftime or netCDF4')
+requires_cftime_or_netCDF4 = pytest.mark.skipif(
+    not has_cftime_or_netCDF4, reason='requires cftime or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 if has_dask:
@@ -96,7 +92,8 @@ try:
     has_seaborn = True
 except ImportError:
     has_seaborn = False
-requires_seaborn = unittest.skipUnless(has_seaborn, reason='requires seaborn')
+requires_seaborn = pytest.mark.skipif(not has_seaborn,
+                                      reason='requires seaborn')
 
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
