@@ -41,6 +41,10 @@ Enhancements
   dask<0.17.4. (related to :issue:`2203`)
   By `Keisuke Fujii <https://github.com/fujiisoup`_.
 
+- added a PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
+  By `Barron Henderson <https://github.com/barronh>`_.
+
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
   behavior when dimensions are not specified (previously this raised an error).
