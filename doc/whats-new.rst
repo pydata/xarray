@@ -71,6 +71,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a regression in 0.10.4, where explicitly specifying ``dtype='S1'`` or
+  ``dtype=str`` in ``encoding`` with ``to_netcdf()`` raised an error
+  (:issue:`2149`).
+  `Stephan Hoyer <https://github.com/shoyer>`_
+
 - :py:func:`apply_ufunc` now directly validates output variables
   (:issue:`1931`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
