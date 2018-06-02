@@ -320,14 +320,6 @@ class FacetGrid(object):
             title=huelabel,
             loc="center right")
 
-        # self._legend = figlegend
-        # figlegend.set_title(title)
-
-        # Set the title size a roundabout way to maintain
-        # compatability with matplotlib 1.1
-        # prop = matplotlib.font_manager.FontProperties(size=title_size)
-        # figlegend._legend_title_box._text.set_font_properties(prop)
-
         # Draw the plot to set the bounding boxes correctly
         self.fig.draw(self.fig.canvas.get_renderer())
 

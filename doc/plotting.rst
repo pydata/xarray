@@ -430,14 +430,14 @@ arguments to the xarray plotting methods/functions. This returns a
 
 .. ipython:: python
 
-    @savefig plot_facet_dataarray.png height=12in
+    @savefig plot_facet_dataarray.png
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
 
 Faceting also works for line plots.
 
 .. ipython:: python
 
-    @savefig plot_facet_dataarray_line.png height=12in
+    @savefig plot_facet_dataarray_line.png
     g_simple_line = t.isel(lat=slice(0,None,4)).plot(x='lon', hue='lat', col='time', col_wrap=3)
 
 4 dimensional

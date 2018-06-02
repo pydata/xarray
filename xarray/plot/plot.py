@@ -153,7 +153,7 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     ndims = len(plot_dims)
 
-    error_msg = ('Only 2d plots are supported for facets in xarray. '
+    error_msg = ('Only 1d and 2d plots are supported for facets in xarray. '
                  'See the package `Seaborn` for more options.')
 
     if ndims in [1, 2]:
@@ -211,7 +211,7 @@ def _infer_line_data(darray, x, y, hue):
             ylabel = dim
     else:
         if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please specify either hue or x.')
+            raise ValueError('For 2D inputs, please specify either hue, x or y.')
 
         if y is None:
             xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)

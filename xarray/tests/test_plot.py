@@ -1497,8 +1497,27 @@ class TestFacetedLinePlots(PlotTestCase):
         g = self.darray.plot(row='row', col='col', hue='hue')
         g.set_axis_labels('longitude', 'latitude')
         alltxt = text_in_fig()
-        for label in ['longitude', 'latitude']:
-            assert label in alltxt
+
+        assert 'longitude' in alltxt
+        assert 'latitude' in alltxt
+
+    def test_both_x_and_y(self):
+        with pytest.raises(ValueError):
+            g = self.darray.plot.line(row='row', col='col', x='x', y='hue')
+
+    def test_axes_in_faceted_plot(self):
+        with pytest.raises(ValueError):
+            g = self.darray.plot.line(row='row', col='col', x='x', ax=plt.axes())
+
+    def test_figsize_and_size(self):
+        with pytest.raises(ValueError):
+            g = self.darray.plot.line(row='row', col='col', x='x', size=3, figsize=4)
+
+    def test_wrong_num_of_dimensions(self):
+        with pytest.raises(ValueError):
+            g = self.darray.plot(row='row', hue='hue')
+            g = self.darray.plot.line(row='row', hue='hue')
+
 
 class TestDatetimePlot(PlotTestCase):
     def setUp(self):
