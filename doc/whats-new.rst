@@ -81,7 +81,7 @@ Enhancements
   behavior when dimensions are not specified (previously this raised an error).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
-- :py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
+- :py:meth:`DataArray.dot` and :py:func:`dot` are partly supported with older
   dask<0.17.4. (related to :issue:`2203`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
