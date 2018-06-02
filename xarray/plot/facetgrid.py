@@ -293,7 +293,7 @@ class FacetGrid(object):
                                 ax=ax, _labels=False,
                                 **kwargs)
                 self._mappables.append(mappable)
-        _, _, xlabel, ylabel, huelabel = _infer_line_data(
+        _, _, _, xlabel, ylabel, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]],
             x=x, y=y, hue=hue)
 

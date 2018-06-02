@@ -202,37 +202,42 @@ def _infer_line_data(darray, x, y, hue):
 
     if ndims == 1:
         dim, = darray.dims  # get the only dimension name
-        huelabel = None
+        huename = None
+        hueplt = None
+        huelabel = ''
 
         if (x is None and y is None) or x == dim:
             xplt = darray.coords[dim]
             yplt = darray
-            xlabel = dim
-            ylabel = darray.name
 
         else:
             yplt = darray.coords[dim]
             xplt = darray
-            xlabel = darray.name
-            ylabel = dim
+
     else:
         if x is None and y is None and hue is None:
             raise ValueError('For 2D inputs, please'
                              'specify either hue, x or y.')
 
         if y is None:
-            xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
-            ylabel = darray.name
-            xplt = darray.coords[xlabel]
-            yplt = darray.transpose(xlabel, huelabel)
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            yname = darray.name
+            xplt = darray.coords[xname]
+            yplt = darray.transpose(xname, huename)
 
         else:
-            ylabel, huelabel = _infer_xy_labels(darray=darray, x=y, y=hue)
-            xlabel = darray.name
-            xplt = darray.transpose(ylabel, huelabel)
-            yplt = darray.coords[ylabel]
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            xname = darray.name
+            xplt = darray.transpose(yname, huename)
+            yplt = darray.coords[yname]
 
-    return xplt, yplt, xlabel, ylabel, huelabel
+        hueplt = darray.coords[huename]
+        huelabel = label_from_attrs(darray[huename])
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
 # This function signature should not change so that it can use
@@ -307,7 +312,8 @@ def line(darray, *args, **kwargs):
     _labels = kwargs.pop('_labels', True)
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, xlabel, ylabel, huelabel = _infer_line_data(darray, x, y, hue)
+    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
+        _infer_line_data(darray, x, y, hue)
 
     _ensure_plottable(xplt)
 
@@ -324,7 +330,7 @@ def line(darray, *args, **kwargs):
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
-                  labels=list(huecoords.values),
+                  labels=list(hueplt.values),
                   title=huelabel)
 
     # Rotate dates on xlabels
