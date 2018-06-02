@@ -217,7 +217,8 @@ def _infer_line_data(darray, x, y, hue):
             ylabel = dim
     else:
         if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please specify either hue, x or y.')
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
 
         if y is None:
             xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
