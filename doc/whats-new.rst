@@ -35,6 +35,8 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Plot labels now make use of metadata that follow CF conventions.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
 
 Bug fixes
 ~~~~~~~~~

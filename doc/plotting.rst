@@ -66,6 +66,13 @@ For these examples we'll use the North American air temperature dataset.
     # Convert to celsius
     air = airtemps.air - 273.15
 
+    # copy attributes to get nice figure labels and change Kelvin to Celsius
+    air.attrs = airtemps.air.attrs
+    air.attrs['units'] = 'deg C'
+
+.. note::
+   Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
+
 
 One Dimension
 -------------
@@ -73,7 +80,7 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-xarray uses the coordinate name to label the x axis.
+The simplest way to make a plot is to call the :py:func:`xarray.DataArray.plot()` method.
 
 .. ipython:: python
 
@@ -81,6 +88,12 @@ xarray uses the coordinate name to label the x axis.
 
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
+
+xarray uses the coordinate name along with  metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+
+.. ipython:: python
+
+    air1d.attrs
 
 Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
