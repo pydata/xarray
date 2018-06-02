@@ -12,6 +12,7 @@ from collections import Iterable, Mapping, MutableMapping, MutableSet
 import numpy as np
 import pandas as pd
 
+from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
@@ -36,6 +37,21 @@ def alias(obj, old_name):
     return wrapper
 
 
+def _maybe_cast_to_cftimeindex(index):
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if not OPTIONS['enable_cftimeindex']:
+        return index
+    else:
+        if index.dtype == 'O':
+            try:
+                return CFTimeIndex(index)
+            except (ImportError, TypeError):
+                return index
+        else:
+            return index
+
+
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
@@ -54,19 +70,18 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
-    return index
+    return _maybe_cast_to_cftimeindex(index)
 
 
 def multiindex_from_product_levels(levels, names=None):
     """Creating a MultiIndex from a product without refactorizing levels.
 
-    Keeping levels the same is faster, and also gives back the original labels
-    when we unstack.
+    Keeping levels the same gives back the original labels when we unstack.
 
     Parameters
     ----------
-    levels : sequence of arrays
-        Unique labels for each level.
+    levels : sequence of pd.Index
+        Values for each MultiIndex level.
     names : optional sequence of objects
         Names for each level.
 
@@ -74,8 +89,11 @@ def multiindex_from_product_levels(levels, names=None):
     -------
     pandas.MultiIndex
     """
-    labels_mesh = np.meshgrid(*[np.arange(len(lev)) for lev in levels],
-                              indexing='ij')
+    if any(not isinstance(lev, pd.Index) for lev in levels):
+        raise TypeError('levels must be a list of pd.Index objects')
+
+    split_labels, levels = zip(*[lev.factorize() for lev in levels])
+    labels_mesh = np.meshgrid(*split_labels, indexing='ij')
     labels = [x.ravel() for x in labels_mesh]
     return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
@@ -167,7 +185,7 @@ def is_full_slice(value):
     return isinstance(value, slice) and value == slice(None)
 
 
-def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
+def either_dict_or_kwargs(pos_kwargs, kw_kwargs, func_name):
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'

@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import pkg_resources
+import textwrap
 
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
@@ -21,6 +22,7 @@ def _load_default_cmap(fname='default_colormap.csv'):
     # Not sure what the first arg here should be
     f = pkg_resources.resource_stream(__name__, fname)
     cm_data = pd.read_csv(f, header=None).values
+    f.close()
 
     return LinearSegmentedColormap.from_list('viridis', cm_data)
 
@@ -159,7 +161,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     """
     import matplotlib as mpl
 
-    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
+    calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:
@@ -353,3 +355,24 @@ def get_axis(figsize, size, aspect, ax):
         ax = plt.gca()
 
     return ax
+
+
+def label_from_attrs(da):
+    ''' Makes informative labels if variable metadata (attrs) follows
+        CF conventions. '''
+
+    if da.attrs.get('long_name'):
+        name = da.attrs['long_name']
+    elif da.attrs.get('standard_name'):
+        name = da.attrs['standard_name']
+    elif da.name is not None:
+        name = da.name
+    else:
+        name = ''
+
+    if da.attrs.get('units'):
+        units = ' [{}]'.format(da.attrs['units'])
+    else:
+        units = ''
+
+    return '\n'.join(textwrap.wrap(name + units, 30))

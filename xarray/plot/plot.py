@@ -14,12 +14,13 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
     ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
-    import_matplotlib_pyplot)
+    import_matplotlib_pyplot, label_from_attrs)
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -53,7 +54,8 @@ def _ensure_plottable(*args):
         if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
                 _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates.')
+                            'or dates of type np.datetime64 or '
+                            'datetime.datetime.')
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -145,6 +147,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
 
     """
     darray = darray.squeeze()
+
+    if contains_cftime_datetimes(darray):
+        raise NotImplementedError('Plotting arrays of cftime.datetime objects '
+                                  'is currently not possible.')
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
@@ -258,6 +264,12 @@ def line(darray, *args, **kwargs):
         Coordinates for x, y axis. Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
+    xincrease : None, True, or False, optional
+        Should the values on the x axes be increasing from left to right?
+        if None, use the default for the matplotlib function.
+    yincrease : None, True, or False, optional
+        Should the values on the y axes be increasing from top to bottom?
+        if None, use the default for the matplotlib function.
     add_legend : boolean, optional
         Add legend with y axis coordinates (2D inputs only).
     *args, **kwargs : optional
@@ -288,11 +300,14 @@ def line(darray, *args, **kwargs):
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     y = kwargs.pop('y', None)
+    xincrease = kwargs.pop('xincrease', True)
+    yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, xlabel, ylabel, huelabel = _infer_line_data(darray, x, y, hue)
+
     _ensure_plottable(xplt)
 
     primitive = ax.plot(xplt, yplt, *args, **kwargs)
@@ -308,12 +323,19 @@ def line(darray, *args, **kwargs):
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
-                  labels=list(darray.coords[huelabel].values),
+                  labels=list(huecoords.values),
                   title=huelabel)
 
     # Rotate dates on xlabels
+    # Do this without calling autofmt_xdate so that x-axes ticks
+    # on other subplots (if any) are not deleted.
+    # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
     if np.issubdtype(xplt.dtype, np.datetime64):
-        ax.get_figure().autofmt_xdate()
+        for xlabels in ax.get_xticklabels():
+            xlabels.set_rotation(30)
+            xlabels.set_ha('right')
+
+    _update_axes_limits(ax, xincrease, yincrease)
 
     return primitive
 
@@ -355,8 +377,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     ax.set_ylabel('Count')
 
-    if darray.name is not None:
-        ax.set_title('Histogram of {0}'.format(darray.name))
+    ax.set_title('Histogram')
+    ax.set_xlabel(label_from_attrs(darray))
 
     return primitive
 
@@ -472,10 +494,10 @@ def _plot2d(plotfunc):
         Use together with ``col`` to wrap faceted plots
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     yincrease : None, True, or False, optional
         Should the values on the y axes be increasing from top to bottom?
-        if None, use the default for the matplotlib function
+        if None, use the default for the matplotlib function.
     add_colorbar : Boolean, optional
         Adds colorbar to axis
     add_labels : Boolean, optional
@@ -674,8 +696,8 @@ def _plot2d(plotfunc):
 
         # Label the plot with metadata
         if add_labels:
-            ax.set_xlabel(xlab)
-            ax.set_ylabel(ylab)
+            ax.set_xlabel(label_from_attrs(darray[xlab]))
+            ax.set_ylabel(label_from_attrs(darray[ylab]))
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
@@ -686,8 +708,8 @@ def _plot2d(plotfunc):
             else:
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
-            if darray.name and add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(darray.name, rotation=90)
+            if add_labels and 'label' not in cbar_kwargs:
+                cbar.set_label(label_from_attrs(darray), rotation=90)
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

@@ -12,7 +12,7 @@ from .common import (
     HDF5_LOCK, DataStorePickleMixin, WritableCFDataStore, find_root)
 from .netCDF4_ import (
     BaseNetCDF4Array, _encode_nc4_variable, _extract_nc4_variable_encoding,
-    _get_datatype, _nc4_group)
+    _get_datatype, _nc4_require_group)
 
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
@@ -45,23 +45,28 @@ def _read_attributes(h5netcdf_var):
     # to ensure conventions decoding works properly on Python 3, decode all
     # bytes attributes to strings
     attrs = OrderedDict()
-    for k in h5netcdf_var.ncattrs():
-        v = h5netcdf_var.getncattr(k)
+    for k, v in h5netcdf_var.attrs.items():
         if k not in ['_FillValue', 'missing_value']:
             v = maybe_decode_bytes(v)
         attrs[k] = v
     return attrs
 
 
-_extract_h5nc_encoding = functools.partial(_extract_nc4_variable_encoding,
-                                           lsd_okay=False, backend='h5netcdf')
+_extract_h5nc_encoding = functools.partial(
+    _extract_nc4_variable_encoding,
+    lsd_okay=False, h5py_okay=True, backend='h5netcdf')
+
+
+def _h5netcdf_create_group(dataset, name):
+    return dataset.create_group(name)
 
 
 def _open_h5netcdf_group(filename, mode, group):
-    import h5netcdf.legacyapi
-    ds = h5netcdf.legacyapi.Dataset(filename, mode=mode)
+    import h5netcdf
+    ds = h5netcdf.File(filename, mode=mode)
     with close_on_error(ds):
-        return _nc4_group(ds, group, mode)
+        return _nc4_require_group(
+            ds, group, mode, create_group=_h5netcdf_create_group)
 
 
 class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
@@ -89,6 +94,8 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         super(H5NetCDFStore, self).__init__(writer, lock=lock)
 
     def open_store_variable(self, name, var):
+        import h5py
+
         with self.ensure_open(autoclose=False):
             dimensions = var.dimensions
             data = indexing.LazilyOuterIndexedArray(
@@ -96,14 +103,32 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
             attrs = _read_attributes(var)
 
             # netCDF4 specific encoding
-            encoding = dict(var.filters())
-            chunking = var.chunking()
-            encoding['chunksizes'] = chunking \
-                if chunking != 'contiguous' else None
+            encoding = {
+                'chunksizes': var.chunks,
+                'fletcher32': var.fletcher32,
+                'shuffle': var.shuffle,
+            }
+            # Convert h5py-style compression options to NetCDF4-Python
+            # style, if possible
+            if var.compression == 'gzip':
+                encoding['zlib'] = True
+                encoding['complevel'] = var.compression_opts
+            elif var.compression is not None:
+                encoding['compression'] = var.compression
+                encoding['compression_opts'] = var.compression_opts
 
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
             encoding['original_shape'] = var.shape
+
+            vlen_dtype = h5py.check_dtype(vlen=var.dtype)
+            if vlen_dtype is unicode_type:
+                encoding['dtype'] = str
+            elif vlen_dtype is not None:  # pragma: no cover
+                # xarray doesn't support writing arbitrary vlen dtypes yet.
+                pass
+            else:
+                encoding['dtype'] = var.dtype
 
         return Variable(dimensions, data, attrs, encoding)
 
@@ -130,14 +155,14 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
     def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
             if is_unlimited:
-                self.ds.createDimension(name, size=None)
+                self.ds.dimensions[name] = None
                 self.ds.resize_dimension(name, length)
             else:
-                self.ds.createDimension(name, size=length)
+                self.ds.dimensions[name] = length
 
     def set_attribute(self, key, value):
         with self.ensure_open(autoclose=False):
-            self.ds.setncattr(key, value)
+            self.ds.attrs[key] = value
 
     def encode_variable(self, variable):
         return _encode_nc4_variable(variable)
@@ -147,10 +172,11 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
         import h5py
 
         attrs = variable.attrs.copy()
-        dtype = _get_datatype(variable)
+        dtype = _get_datatype(
+            variable, raise_on_invalid_encoding=check_encoding)
 
-        fill_value = attrs.pop('_FillValue', None)
-        if dtype is str and fill_value is not None:
+        fillvalue = attrs.pop('_FillValue', None)
+        if dtype is str and fillvalue is not None:
             raise NotImplementedError(
                 'h5netcdf does not yet support setting a fill value for '
                 'variable-length strings '
@@ -166,26 +192,50 @@ class H5NetCDFStore(WritableCFDataStore, DataStorePickleMixin):
                                           raise_on_invalid=check_encoding)
         kwargs = {}
 
-        for key in ['zlib', 'complevel', 'shuffle',
-                    'chunksizes', 'fletcher32']:
+        # Convert from NetCDF4-Python style compression settings to h5py style
+        # If both styles are used together, h5py takes precedence
+        # If set_encoding=True, raise ValueError in case of mismatch
+        if encoding.pop('zlib', False):
+            if (check_encoding and encoding.get('compression')
+                    not in (None, 'gzip')):
+                raise ValueError("'zlib' and 'compression' encodings mismatch")
+            encoding.setdefault('compression', 'gzip')
+
+        if (check_encoding and
+                'complevel' in encoding and 'compression_opts' in encoding and
+                encoding['complevel'] != encoding['compression_opts']):
+            raise ValueError("'complevel' and 'compression_opts' encodings "
+                             "mismatch")
+        complevel = encoding.pop('complevel', 0)
+        if complevel != 0:
+            encoding.setdefault('compression_opts', complevel)
+
+        encoding['chunks'] = encoding.pop('chunksizes', None)
+
+        for key in ['compression', 'compression_opts', 'shuffle',
+                    'chunks', 'fletcher32']:
             if key in encoding:
                 kwargs[key] = encoding[key]
-        if name not in self.ds.variables:
-            nc4_var = self.ds.createVariable(name, dtype, variable.dims,
-                                             fill_value=fill_value, **kwargs)
+        if name not in self.ds:
+            nc4_var = self.ds.create_variable(
+                name, dtype=dtype, dimensions=variable.dims,
+                fillvalue=fillvalue, **kwargs)
         else:
-            nc4_var = self.ds.variables[name]
+            nc4_var = self.ds[name]
 
         for k, v in iteritems(attrs):
-            nc4_var.setncattr(k, v)
+            nc4_var.attrs[k] = v
 
         target = H5NetCDFArrayWrapper(name, self)
 
         return target, variable.data
 
-    def sync(self):
+    def sync(self, compute=True):
+        if not compute:
+            raise NotImplementedError(
+                'compute=False is not supported for the h5netcdf backend yet')
         with self.ensure_open(autoclose=True):
-            super(H5NetCDFStore, self).sync()
+            super(H5NetCDFStore, self).sync(compute=compute)
             self.ds.sync()
 
     def close(self):

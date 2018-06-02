@@ -9,14 +9,15 @@ import pytest
 
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
-    import_seaborn)
+    import_seaborn, label_from_attrs)
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn)
+    requires_matplotlib, requires_seaborn, requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -87,6 +88,28 @@ class PlotTestCase(TestCase):
 class TestPlot(PlotTestCase):
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
+
+    def test_label_from_attrs(self):
+        da = self.darray.copy()
+        assert '' == label_from_attrs(da)
+
+        da.name = 'a'
+        da.attrs['units'] = 'a_units'
+        da.attrs['long_name'] = 'a_long_name'
+        da.attrs['standard_name'] = 'a_standard_name'
+        assert 'a_long_name [a_units]' == label_from_attrs(da)
+
+        da.attrs.pop('long_name')
+        assert 'a_standard_name [a_units]' == label_from_attrs(da)
+        da.attrs.pop('units')
+        assert 'a_standard_name' == label_from_attrs(da)
+
+        da.attrs['units'] = 'a_units'
+        da.attrs.pop('standard_name')
+        assert 'a [a_units]' == label_from_attrs(da)
+
+        da.attrs.pop('units')
+        assert 'a' == label_from_attrs(da)
 
     def test1d(self):
         self.darray[:, 0, 0].plot()
@@ -302,10 +325,11 @@ class TestPlot1D(PlotTestCase):
         d = [0, 1.1, 0, 2]
         self.darray = DataArray(
             d, coords={'period': range(len(d))}, dims='period')
+        self.darray.period.attrs['units'] = 's'
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
-        assert 'period' == plt.gca().get_xlabel()
+        assert 'period [s]' == plt.gca().get_xlabel()
 
     def test_no_label_name_on_x_axis(self):
         self.darray.plot(y='period')
@@ -317,13 +341,15 @@ class TestPlot1D(PlotTestCase):
 
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
+        self.darray.attrs['units'] = 'degrees_Celsius'
         self.darray.plot()
-        assert self.darray.name == plt.gca().get_ylabel()
+        assert 'temperature [degrees_Celsius]' == plt.gca().get_ylabel()
 
     def test_xlabel_is_data_name(self):
         self.darray.name = 'temperature'
+        self.darray.attrs['units'] = 'degrees_Celsius'
         self.darray.plot(y='period')
-        self.assertEqual(self.darray.name, plt.gca().get_xlabel())
+        assert 'temperature [degrees_Celsius]' == plt.gca().get_xlabel()
 
     def test_format_string(self):
         self.darray.plot.line('ro')
@@ -352,6 +378,13 @@ class TestPlot1D(PlotTestCase):
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         assert rotation != 0
 
+    def test_xyincrease_false_changes_axes(self):
+        self.darray.plot.line(xincrease=False, yincrease=False)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
+        diffs = xlim[1] - xlim[0], ylim[1] - ylim[0]
+        assert all(x < 0 for x in diffs)
+
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
         self.darray.plot.line()
@@ -366,18 +399,19 @@ class TestPlotHistogram(PlotTestCase):
     def test_3d_array(self):
         self.darray.plot.hist()
 
-    def test_title_no_name(self):
-        self.darray.plot.hist()
-        assert '' == plt.gca().get_title()
-
-    def test_title_uses_name(self):
+    def test_xlabel_uses_name(self):
         self.darray.name = 'testpoints'
+        self.darray.attrs['units'] = 'testunits'
         self.darray.plot.hist()
-        assert self.darray.name in plt.gca().get_title()
+        assert 'testpoints [testunits]' == plt.gca().get_xlabel()
 
     def test_ylabel_is_count(self):
         self.darray.plot.hist()
         assert 'Count' == plt.gca().get_ylabel()
+
+    def test_title_is_histogram(self):
+        self.darray.plot.hist()
+        assert 'Histogram' == plt.gca().get_title()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
@@ -418,6 +452,15 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_nan_inf_are_ignored(self):
+        cmap_params1 = _determine_cmap_params(self.data)
+        data = self.data
+        data[50:55] = np.nan
+        data[56:60] = np.inf
+        cmap_params2 = _determine_cmap_params(data)
+        assert cmap_params1['vmin'] == cmap_params2['vmin']
+        assert cmap_params1['vmax'] == cmap_params2['vmax']
 
     @pytest.mark.slow
     def test_integer_levels(self):
@@ -637,7 +680,10 @@ class Common2dMixin:
     """
 
     def setUp(self):
-        da = DataArray(easy_array((10, 15), start=-1), dims=['y', 'x'])
+        da = DataArray(easy_array((10, 15), start=-1),
+                       dims=['y', 'x'],
+                       coords={'y': np.arange(10),
+                               'x': np.arange(15)})
         # add 2d coords
         ds = da.to_dataset(name='testvar')
         x, y = np.meshgrid(da.x.values, da.y.values)
@@ -646,12 +692,21 @@ class Common2dMixin:
         ds.set_coords(['x2d', 'y2d'], inplace=True)
         # set darray and plot method
         self.darray = ds.testvar
+
+        # Add CF-compliant metadata
+        self.darray.attrs['long_name'] = 'a_long_name'
+        self.darray.attrs['units'] = 'a_units'
+        self.darray.x.attrs['long_name'] = 'x_long_name'
+        self.darray.x.attrs['units'] = 'x_units'
+        self.darray.y.attrs['long_name'] = 'y_long_name'
+        self.darray.y.attrs['units'] = 'y_units'
+
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
         self.plotmethod()
-        assert 'x' == plt.gca().get_xlabel()
-        assert 'y' == plt.gca().get_ylabel()
+        assert 'x_long_name [x_units]' == plt.gca().get_xlabel()
+        assert 'y_long_name [y_units]' == plt.gca().get_ylabel()
 
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r'DataArray must be 2d'):
@@ -744,19 +799,19 @@ class Common2dMixin:
     def test_xy_strings(self):
         self.plotmethod('y', 'x')
         ax = plt.gca()
-        assert 'y' == ax.get_xlabel()
-        assert 'x' == ax.get_ylabel()
+        assert 'y_long_name [y_units]' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
 
     def test_positional_coord_string(self):
         self.plotmethod(y='x')
         ax = plt.gca()
-        assert 'x' == ax.get_ylabel()
-        assert 'y' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
+        assert 'y_long_name [y_units]' == ax.get_xlabel()
 
         self.plotmethod(x='x')
         ax = plt.gca()
-        assert 'x' == ax.get_xlabel()
-        assert 'y' == ax.get_ylabel()
+        assert 'x_long_name [x_units]' == ax.get_xlabel()
+        assert 'y_long_name [y_units]' == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
         with raises_regex(ValueError, 'x and y must be coordinate variables'):
@@ -780,7 +835,7 @@ class Common2dMixin:
         # Normal case, without transpose
         self.plotfunc(self.darray, x='x', y='newy')
         ax = plt.gca()
-        assert 'x' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_xlabel()
         assert 'newy' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
@@ -795,7 +850,7 @@ class Common2dMixin:
         self.plotfunc(self.darray, x='newy', y='x')
         ax = plt.gca()
         assert 'newy' == ax.get_xlabel()
-        assert 'x' == ax.get_ylabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         assert np.min(ax.get_xlim()) > 100.
@@ -809,19 +864,29 @@ class Common2dMixin:
         assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title
 
     def test_colorbar_default_label(self):
-        self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True)
-        assert self.darray.name in text_in_fig()
+        assert ('a_long_name [a_units]' in text_in_fig())
 
     def test_no_labels(self):
         self.darray.name = 'testvar'
+        self.darray.attrs['units'] = 'test_units'
         self.plotmethod(add_labels=False)
         alltxt = text_in_fig()
-        for string in ['x', 'y', 'testvar']:
+        for string in ['x_long_name [x_units]',
+                       'y_long_name [y_units]',
+                       'testvar [test_units]']:
             assert string not in alltxt
 
     def test_colorbar_kwargs(self):
         # replace label
+        self.darray.attrs.pop('long_name')
+        self.darray.attrs['units'] = 'test_units'
+        # check default colorbar label
+        self.plotmethod(add_colorbar=True)
+        alltxt = text_in_fig()
+        assert 'testvar [test_units]' in alltxt
+        self.darray.attrs.pop('units')
+
         self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True, cbar_kwargs={'label': 'MyLabel'})
         alltxt = text_in_fig()
@@ -1503,20 +1568,23 @@ class TestFacetedLinePlots(PlotTestCase):
 
     def test_both_x_and_y(self):
         with pytest.raises(ValueError):
-            g = self.darray.plot.line(row='row', col='col', x='x', y='hue')
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', y='hue')
 
     def test_axes_in_faceted_plot(self):
         with pytest.raises(ValueError):
-            g = self.darray.plot.line(row='row', col='col', x='x', ax=plt.axes())
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', ax=plt.axes())
 
     def test_figsize_and_size(self):
         with pytest.raises(ValueError):
-            g = self.darray.plot.line(row='row', col='col', x='x', size=3, figsize=4)
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', size=3, figsize=4)
 
     def test_wrong_num_of_dimensions(self):
         with pytest.raises(ValueError):
-            g = self.darray.plot(row='row', hue='hue')
-            g = self.darray.plot.line(row='row', hue='hue')
+            self.darray.plot(row='row', hue='hue')
+            self.darray.plot.line(row='row', hue='hue')
 
 
 class TestDatetimePlot(PlotTestCase):
@@ -1551,3 +1619,24 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
+
+
+@requires_cftime
+def test_plot_cftime_coordinate_error():
+    cftime = _import_cftime()
+    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(np.arange(5), coords=[time], dims=['time'])
+    with raises_regex(TypeError,
+                      'requires coordinates to be numeric or dates'):
+        data.plot()
+
+
+@requires_cftime
+def test_plot_cftime_data_error():
+    cftime = _import_cftime()
+    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
+    with raises_regex(NotImplementedError, 'cftime.datetime'):
+        data.plot()

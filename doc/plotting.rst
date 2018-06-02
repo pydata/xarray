@@ -66,6 +66,13 @@ For these examples we'll use the North American air temperature dataset.
     # Convert to celsius
     air = airtemps.air - 273.15
 
+    # copy attributes to get nice figure labels and change Kelvin to Celsius
+    air.attrs = airtemps.air.attrs
+    air.attrs['units'] = 'deg C'
+
+.. note::
+   Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
+
 
 One Dimension
 -------------
@@ -73,7 +80,7 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-xarray uses the coordinate name to label the x axis.
+The simplest way to make a plot is to call the :py:func:`xarray.DataArray.plot()` method.
 
 .. ipython:: python
 
@@ -81,6 +88,12 @@ xarray uses the coordinate name to label the x axis.
 
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
+
+xarray uses the coordinate name along with  metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+
+.. ipython:: python
+
+    air1d.attrs
 
 Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
@@ -210,6 +223,16 @@ It is also possible to make line plots such that the data are on the x-axis and 
 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
+
+Changing Axes Direction
+-----------------------
+
+The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
+
+.. ipython:: python
+
+    @savefig plotting_example_xincrease_yincrease_kwarg.png
+    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon', xincrease=False, yincrease=False)
 
 Two Dimensions
 --------------
@@ -455,7 +478,7 @@ one were much hotter.
     # This is a 4d array
     t4d.coords
 
-    @savefig plot_facet_4d.png height=12in
+    @savefig plot_facet_4d.png
     t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
 
 Other features
@@ -469,7 +492,7 @@ Faceted plotting supports other arguments common to xarray 2d plots.
     hasoutliers[0, 0, 0] = -100
     hasoutliers[-1, -1, -1] = 400
 
-    @savefig plot_facet_robust.png height=12in
+    @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
                                     robust=True, cmap='viridis')
 
@@ -510,7 +533,7 @@ they have been plotted.
     bottomright = g.axes[-1, -1]
     bottomright.annotate('bottom right', (240, 40))
 
-    @savefig plot_facet_iterator.png height=12in
+    @savefig plot_facet_iterator.png
     plt.show()
 
 TODO: add an example of using the ``map`` method to plot dataset variables

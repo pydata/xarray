@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from distutils.version import LooseVersion
 from io import StringIO
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -338,14 +339,20 @@ class TestDataset(TestCase):
         das = [
             DataArray(np.random.rand(4), dims=['a']),  # series
             DataArray(np.random.rand(4, 3), dims=['a', 'b']),  # df
-            DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']),  # panel
         ]
 
-        for a in das:
-            pandas_obj = a.to_pandas()
-            ds_based_on_pandas = Dataset(pandas_obj)
-            for dim in ds_based_on_pandas.data_vars:
-                assert_array_equal(ds_based_on_pandas[dim], pandas_obj[dim])
+        if hasattr(pd, 'Panel'):
+            das.append(
+                DataArray(np.random.rand(4, 3, 2), dims=['a', 'b', 'c']))
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+            for a in das:
+                pandas_obj = a.to_pandas()
+                ds_based_on_pandas = Dataset(pandas_obj)
+                for dim in ds_based_on_pandas.data_vars:
+                    assert_array_equal(
+                        ds_based_on_pandas[dim], pandas_obj[dim])
 
     def test_constructor_compat(self):
         data = OrderedDict([('x', DataArray(0, coords={'y': 1})),
@@ -1435,7 +1442,7 @@ class TestDataset(TestCase):
 
         with raises_regex(TypeError, '``method``'):
             # this should not pass silently
-            data.sel(data)
+            data.sel(method=data)
 
         # cannot pass method if there is no associated coordinate
         with raises_regex(ValueError, 'cannot supply'):
@@ -1848,7 +1855,9 @@ class TestDataset(TestCase):
         expected = data.isel(x=slice(0, 0))
         assert_identical(expected, actual)
 
-        with pytest.raises(ValueError):
+        # This exception raised by pandas changed from ValueError -> KeyError
+        # in pandas 0.23.
+        with pytest.raises((ValueError, KeyError)):
             # not contained in axis
             data.drop(['c'], dim='x')
 
@@ -1913,6 +1922,9 @@ class TestDataset(TestCase):
         renamed = data.rename(newnames)
         with pytest.raises(UnexpectedDataAccess):
             renamed['renamed_var1'].values
+
+        renamed_kwargs = data.rename(**newnames)
+        assert_identical(renamed, renamed_kwargs)
 
     def test_rename_old_name(self):
         # regtest for GH1477
@@ -2134,6 +2146,22 @@ class TestDataset(TestCase):
         actual.update(other)
         assert_identical(expected, actual)
 
+    def test_update_overwrite_coords(self):
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update(Dataset(coords={'b': 4}))
+        expected = Dataset({'a': ('x', [1, 2])}, {'b': 4})
+        assert_identical(data, expected)
+
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update(Dataset({'c': 5}, coords={'b': 4}))
+        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 4})
+        assert_identical(data, expected)
+
+        data = Dataset({'a': ('x', [1, 2])}, {'b': 3})
+        data.update({'c': DataArray(5, coords={'b': 4})})
+        expected = Dataset({'a': ('x', [1, 2]), 'c': 5}, {'b': 3})
+        assert_identical(data, expected)
+
     def test_update_auto_align(self):
         ds = Dataset({'x': ('t', [3, 4])}, {'t': [0, 1]})
 
@@ -2338,14 +2366,14 @@ class TestDataset(TestCase):
         actual = ds.copy()
         actual['var3'] = other
         assert_identical(expected, actual)
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
 
         # with alignment
         other = ds['var3'].isel(dim3=slice(1, -1))
         other['numbers'] = ('dim3', np.arange(8))
         actual = ds.copy()
         actual['var3'] = other
-        assert 'numbers' in other  # should not change other
+        assert 'numbers' in other.coords  # should not change other
         expected = ds.copy()
         expected['var3'] = ds['var3'].isel(dim3=slice(1, -1))
         assert_identical(expected, actual)
@@ -2357,7 +2385,7 @@ class TestDataset(TestCase):
         actual = ds.copy()
         actual['var3'] = other
         assert 'position' in actual
-        assert 'position' in other
+        assert 'position' in other.coords
 
         # assigning a coordinate-only dataarray
         actual = ds.copy()
@@ -2769,7 +2797,7 @@ class TestDataset(TestCase):
             # Discard attributes on the call using the new api to match
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = ds.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 
@@ -3329,7 +3357,18 @@ class TestDataset(TestCase):
 
         assert_equal(data.mean(dim=[]), data)
 
-        # uint support
+    def test_reduce_coords(self):
+        # regression test for GH1470
+        data = xr.Dataset({'a': ('x', [1, 2, 3])}, coords={'b': 4})
+        expected = xr.Dataset({'a': 2}, coords={'b': 4})
+        actual = data.mean('x')
+        assert_identical(actual, expected)
+
+        # should be consistent
+        actual = data['a'].mean('x').to_dataset()
+        assert_identical(actual, expected)
+
+    def test_mean_uint_dtype(self):
         data = xr.Dataset({'a': (('x', 'y'),
                                  np.arange(6).reshape(3, 2).astype('uint')),
                            'b': (('x', ), np.array([0.1, 0.2, np.nan]))})
@@ -3343,15 +3382,20 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'Dataset does not contain'):
             data.mean(dim='bad_dim')
 
+    def test_reduce_cumsum(self):
+        data = xr.Dataset({'a': 1,
+                           'b': ('x', [1, 2]),
+                           'c': (('x', 'y'), [[np.nan, 3], [0, 4]])})
+        assert_identical(data.fillna(0), data.cumsum('y'))
+
+        expected = xr.Dataset({'a': 1,
+                               'b': ('x', [1, 3]),
+                               'c': (('x', 'y'), [[0, 3], [0, 7]])})
+        assert_identical(expected, data.cumsum())
+
     def test_reduce_cumsum_test_dims(self):
         data = create_test_data()
         for cumfunc in ['cumsum', 'cumprod']:
-            with raises_regex(ValueError,
-                              "must supply either single 'dim' or 'axis'"):
-                getattr(data, cumfunc)()
-            with raises_regex(ValueError,
-                              "must supply either single 'dim' or 'axis'"):
-                getattr(data, cumfunc)(dim=['dim1', 'dim2'])
             with raises_regex(ValueError, 'Dataset does not contain'):
                 getattr(data, cumfunc)(dim='bad_dim')
 
@@ -3456,6 +3500,10 @@ class TestDataset(TestCase):
         ds = Dataset({'x': ('a', [2, 2]), 'y': 2, 'z': ('b', [2])})
         expected = Dataset({'x': 0, 'y': 0, 'z': 0})
         actual = ds.var()
+        assert_identical(expected, actual)
+
+        expected = Dataset({'x': 0, 'y': 0, 'z': ('b', [0])})
+        actual = ds.var('a')
         assert_identical(expected, actual)
 
     def test_reduce_only_one_axis(self):
@@ -4145,6 +4193,45 @@ def test_isin_dataset():
         ds.isin(ds)
 
 
+@pytest.mark.parametrize('unaligned_coords', (
+    {'x': [2, 1, 0]},
+    {'x': (['x'], np.asarray([2, 1, 0]))},
+    {'x': (['x'], np.asarray([1, 2, 0]))},
+    {'x': pd.Index([2, 1, 0])},
+    {'x': Variable(dims='x', data=[0, 2, 1])},
+    {'x': IndexVariable(dims='x', data=[0, 1, 2])},
+    {'y': 42},
+    {'y': ('x', [2, 1, 0])},
+    {'y': ('x', np.asarray([2, 1, 0]))},
+    {'y': (['x'], np.asarray([2, 1, 0]))},
+))
+@pytest.mark.parametrize('coords', (
+    {'x': ('x', [0, 1, 2])},
+    {'x': [0, 1, 2]},
+))
+def test_dataset_constructor_aligns_to_explicit_coords(
+        unaligned_coords, coords):
+
+    a = xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
+
+    expected = xr.Dataset(coords=coords)
+    expected['a'] = a
+
+    result = xr.Dataset({'a': a}, coords=coords)
+
+    assert_equal(expected, result)
+
+
+@pytest.mark.parametrize('unaligned_coords', (
+    {'y': ('b', np.asarray([2, 1, 0]))},
+))
+def test_constructor_raises_with_invalid_coords(unaligned_coords):
+
+    with pytest.raises(ValueError,
+                       message='not a subset of the DataArray dimensions'):
+        xr.DataArray([1, 2, 3], dims=['x'], coords=unaligned_coords)
+
+
 def test_dir_expected_attrs(data_set):
 
     some_expected_attrs = {'pipe', 'mean', 'isnull', 'var1',
@@ -4157,7 +4244,13 @@ def test_dir_non_string(data_set):
     # add a numbered key to ensure this doesn't break dir
     data_set[5] = 'foo'
     result = dir(data_set)
-    assert not (5 in result)
+    assert 5 not in result
+
+    # GH2172
+    sample_data = np.random.uniform(size=[2, 2000, 10000])
+    x = xr.Dataset({"sample_data": (sample_data.shape, sample_data)})
+    x2 = x["sample_data"]
+    dir(x2)
 
 
 def test_dir_unicode(data_set):

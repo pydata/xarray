@@ -1,5 +1,6 @@
 import functools
 import operator
+import pickle
 from collections import OrderedDict
 from distutils.version import LooseVersion
 
@@ -480,11 +481,18 @@ def test_keep_attrs():
 
     a = xr.DataArray([0, 1], [('x', [0, 1])])
     a.attrs['attr'] = 'da'
+    a['x'].attrs['attr'] = 'da_coord'
     b = xr.DataArray([1, 2], [('x', [0, 1])])
 
     actual = add(a, b, keep_attrs=False)
     assert not actual.attrs
     actual = add(a, b, keep_attrs=True)
+    assert_identical(actual.attrs, a.attrs)
+    assert_identical(actual['x'].attrs, a['x'].attrs)
+
+    actual = add(a.variable, b.variable, keep_attrs=False)
+    assert not actual.attrs
+    actual = add(a.variable, b.variable, keep_attrs=True)
     assert_identical(actual.attrs, a.attrs)
 
     a = xr.Dataset({'x': [0, 1]})
@@ -545,7 +553,7 @@ def test_apply_dask():
     array = da.ones((2,), chunks=2)
     variable = xr.Variable('x', array)
     coords = xr.DataArray(variable).coords.variables
-    data_array = xr.DataArray(variable, coords, fastpath=True)
+    data_array = xr.DataArray(variable, dims=['x'], coords=coords)
     dataset = xr.Dataset({'y': variable})
 
     # encountered dask array, but did not set dask='allowed'
@@ -744,14 +752,99 @@ def test_vectorize_dask():
     assert_identical(expected, actual)
 
 
+def test_output_wrong_number():
+    variable = xr.Variable('x', np.arange(10))
+
+    def identity(x):
+        return x
+
+    def tuple3x(x):
+        return (x, x, x)
+
+    with raises_regex(ValueError, 'number of outputs'):
+        apply_ufunc(identity, variable, output_core_dims=[(), ()])
+
+    with raises_regex(ValueError, 'number of outputs'):
+        apply_ufunc(tuple3x, variable, output_core_dims=[(), ()])
+
+
+def test_output_wrong_dims():
+    variable = xr.Variable('x', np.arange(10))
+
+    def add_dim(x):
+        return x[..., np.newaxis]
+
+    def remove_dim(x):
+        return x[..., 0]
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(add_dim, variable, output_core_dims=[('y', 'z')])
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(add_dim, variable)
+
+    with raises_regex(ValueError, 'unexpected number of dimensions'):
+        apply_ufunc(remove_dim, variable)
+
+
+def test_output_wrong_dim_size():
+    array = np.arange(10)
+    variable = xr.Variable('x', array)
+    data_array = xr.DataArray(variable, [('x', -array)])
+    dataset = xr.Dataset({'y': variable}, {'x': -array})
+
+    def truncate(array):
+        return array[:5]
+
+    def apply_truncate_broadcast_invalid(obj):
+        return apply_ufunc(truncate, obj)
+
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_broadcast_invalid(variable)
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_broadcast_invalid(data_array)
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_broadcast_invalid(dataset)
+
+    def apply_truncate_x_x_invalid(obj):
+        return apply_ufunc(truncate, obj, input_core_dims=[['x']],
+                           output_core_dims=[['x']])
+
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_x_x_invalid(variable)
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_x_x_invalid(data_array)
+    with raises_regex(ValueError, 'size of dimension'):
+        apply_truncate_x_x_invalid(dataset)
+
+    def apply_truncate_x_z(obj):
+        return apply_ufunc(truncate, obj, input_core_dims=[['x']],
+                           output_core_dims=[['z']])
+
+    assert_identical(xr.Variable('z', array[:5]),
+                     apply_truncate_x_z(variable))
+    assert_identical(xr.DataArray(array[:5], dims=['z']),
+                     apply_truncate_x_z(data_array))
+    assert_identical(xr.Dataset({'y': ('z', array[:5])}),
+                     apply_truncate_x_z(dataset))
+
+    def apply_truncate_x_x_valid(obj):
+        return apply_ufunc(truncate, obj, input_core_dims=[['x']],
+                           output_core_dims=[['x']], exclude_dims={'x'})
+
+    assert_identical(xr.Variable('x', array[:5]),
+                     apply_truncate_x_x_valid(variable))
+    assert_identical(xr.DataArray(array[:5], dims=['x']),
+                     apply_truncate_x_x_valid(data_array))
+    assert_identical(xr.Dataset({'y': ('x', array[:5])}),
+                     apply_truncate_x_x_valid(dataset))
+
+
 @pytest.mark.parametrize('use_dask', [True, False])
 def test_dot(use_dask):
     if use_dask:
         if not has_dask:
             pytest.skip('test for dask.')
-        import dask
-        if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
-            pytest.skip("needs dask.array.einsum")
 
     a = np.arange(30 * 4).reshape(30, 4)
     b = np.arange(30 * 4 * 5).reshape(30, 4, 5)
@@ -775,6 +868,11 @@ def test_dot(use_dask):
     assert actual.dims == ('c', )
     assert (actual.data == np.einsum('ij,ijk->k', a, b)).all()
     assert isinstance(actual.variable.data, type(da_a.variable.data))
+
+    if use_dask:
+        import dask
+        if LooseVersion(dask.__version__) < LooseVersion('0.17.3'):
+            pytest.skip("needs dask.array.einsum")
 
     # for only a single array is passed without dims argument, just return
     # as is
@@ -835,12 +933,32 @@ def test_dot(use_dask):
     assert actual.dims == ('b', )
     assert (actual.data == np.zeros(actual.shape)).all()
 
-    with pytest.raises(TypeError):
-        xr.dot(da_a, dims='a', invalid=None)
+    # Invalid cases
+    if not use_dask or LooseVersion(dask.__version__) > LooseVersion('0.17.4'):
+        with pytest.raises(TypeError):
+            xr.dot(da_a, dims='a', invalid=None)
     with pytest.raises(TypeError):
         xr.dot(da_a.to_dataset(name='da'), dims='a')
     with pytest.raises(TypeError):
         xr.dot(dims='a')
+
+    # einsum parameters
+    actual = xr.dot(da_a, da_b, dims=['b'], order='C')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    assert actual.values.flags['C_CONTIGUOUS']
+    assert not actual.values.flags['F_CONTIGUOUS']
+    actual = xr.dot(da_a, da_b, dims=['b'], order='F')
+    assert (actual.data == np.einsum('ij,ijk->ik', a, b)).all()
+    # dask converts Fortran arrays to C order when merging the final array
+    if not use_dask:
+        assert not actual.values.flags['C_CONTIGUOUS']
+        assert actual.values.flags['F_CONTIGUOUS']
+
+    # einsum has a constant string as of the first parameter, which makes
+    # it hard to pass to xarray.apply_ufunc.
+    # make sure dot() uses functools.partial(einsum, subscripts), which
+    # can be pickled, and not a lambda, which can't.
+    pickle.loads(pickle.dumps(xr.dot(da_a)))
 
 
 def test_where():

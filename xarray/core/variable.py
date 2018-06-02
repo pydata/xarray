@@ -11,13 +11,13 @@ import pandas as pd
 import xarray as xr  # only for Dataset and DataArray
 
 from . import (
-    arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils,)
+    arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils)
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
-from .utils import OrderedSet
+from .utils import OrderedSet, either_dict_or_kwargs
 
 try:
     import dask.array as da
@@ -824,7 +824,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
-    def isel(self, **indexers):
+    def isel(self, indexers=None, drop=False, **indexers_kwargs):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -841,6 +841,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
+
         invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
@@ -1255,11 +1257,6 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
-
-        if getattr(func, 'keep_dims', False):
-            if dim is None and axis is None:
-                raise ValueError("must supply either single 'dim' or 'axis' "
-                                 "argument to %s" % (func.__name__))
 
         if dim is not None:
             axis = self.get_axis_num(dim)

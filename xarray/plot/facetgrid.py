@@ -8,7 +8,8 @@ import numpy as np
 from ..core.formatting import format_item
 from ..core.pycompat import getargspec
 from .utils import (
-    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot)
+    _determine_cmap_params, _infer_xy_labels, import_matplotlib_pyplot,
+    label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
 # from mpl.rcParams
@@ -347,8 +348,8 @@ class FacetGrid(object):
         kwargs = kwargs.copy()
         if self._cmap_extend is not None:
             kwargs.setdefault('extend', self._cmap_extend)
-        if getattr(self.data, 'name', None) is not None:
-            kwargs.setdefault('label', self.data.name)
+        if 'label' not in kwargs:
+            kwargs.setdefault('label', label_from_attrs(self.data))
         self.cbar = self.fig.colorbar(self._mappables[-1],
                                       ax=list(self.axes.flat),
                                       **kwargs)
@@ -357,17 +358,25 @@ class FacetGrid(object):
     def set_axis_labels(self, x_var=None, y_var=None):
         """Set axis labels on the left column and bottom row of the grid."""
         if x_var is not None:
-            self._x_var = x_var
-            self.set_xlabels(x_var)
+            if x_var in self.data.coords:
+                self._x_var = x_var
+                self.set_xlabels(label_from_attrs(self.data[x_var]))
+            else:
+                # x_var is a string
+                self.set_xlabels(x_var)
+
         if y_var is not None:
-            self._y_var = y_var
-            self.set_ylabels(y_var)
+            if y_var in self.data.coords:
+                self._y_var = y_var
+                self.set_ylabels(label_from_attrs(self.data[y_var]))
+            else:
+                self.set_ylabels(y_var)
         return self
 
     def set_xlabels(self, label=None, **kwargs):
         """Label the x axis on the bottom row of the grid."""
         if label is None:
-            label = self._x_var
+            label = label_from_attrs(self.data[self._x_var])
         for ax in self._bottom_axes:
             ax.set_xlabel(label, **kwargs)
         return self
@@ -375,7 +384,7 @@ class FacetGrid(object):
     def set_ylabels(self, label=None, **kwargs):
         """Label the y axis on the left column of the grid."""
         if label is None:
-            label = self._y_var
+            label = label_from_attrs(self.data[self._y_var])
         for ax in self._left_axes:
             ax.set_ylabel(label, **kwargs)
         return self
