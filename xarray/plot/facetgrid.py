@@ -5,7 +5,6 @@ import itertools
 import warnings
 
 import numpy as np
-
 from ..core.formatting import format_item
 from ..core.pycompat import getargspec
 from .utils import (
@@ -267,6 +266,44 @@ class FacetGrid(object):
 
         return self
 
+    def map_dataarray_line(self, x=None, y=None, hue=None, **kwargs):
+        """
+        Apply a line plot to a 2d facet subset of the data.
+
+        Parameters
+        ----------
+        x, y, hue: string
+            dimension names for the axes and hues of each facet
+
+        Returns
+        -------
+        self : FacetGrid object
+
+        """
+        from .plot import line, _infer_line_data
+
+        add_legend = kwargs.pop('add_legend', True)
+        kwargs['add_legend'] = False
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = line(subset, x=x, y=y, hue=hue,
+                                ax=ax, _labels=False,
+                                **kwargs)
+                self._mappables.append(mappable)
+        _, _, _, xlabel, ylabel, huelabel = _infer_line_data(
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=x, y=y, hue=hue)
+
+        self._finalize_grid(xlabel, ylabel)
+
+        if add_legend and huelabel:
+            self.add_line_legend(huelabel)
+
+        return self
+
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
         self.set_axis_labels(*axlabels)
@@ -276,6 +313,34 @@ class FacetGrid(object):
         for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
             if namedict is None:
                 ax.set_visible(False)
+
+    def add_line_legend(self, huelabel):
+        figlegend = self.fig.legend(
+            handles=self._mappables[-1],
+            labels=list(self.data.coords[huelabel].values),
+            title=huelabel,
+            loc="center right")
+
+        # Draw the plot to set the bounding boxes correctly
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Calculate and set the new width of the figure so the legend fits
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        figure_width = self.fig.get_figwidth()
+        self.fig.set_figwidth(figure_width + legend_width)
+
+        # Draw the plot again to get the new transformations
+        self.fig.draw(self.fig.canvas.get_renderer())
+
+        # Now calculate how much space we need on the right side
+        legend_width = figlegend.get_window_extent().width / self.fig.dpi
+        space_needed = legend_width / (figure_width + legend_width) + 0.02
+        # margin = .01
+        # _space_needed = margin + space_needed
+        right = 1 - space_needed
+
+        # Place the subplot axes to give space for the legend
+        self.fig.subplots_adjust(right=right)
 
     def add_colorbar(self, **kwargs):
         """Draw a colorbar
