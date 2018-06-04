@@ -28,6 +28,9 @@ For netCDF and IO
 - `cftime <https://unidata.github.io/cftime>`__: recommended if you
   want to encode/decode datetimes for non-standard calendars or dates before
   year 1678 or after year 2262.
+- `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
+  for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
+  (ffi1001) and many other.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,9 +69,9 @@ with its recommended dependencies using the conda command line tool::
 
 .. _conda: http://conda.io/
 
-We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel if you need difficult\-to\-build dependencies such as cartopy or pynio::
+We recommend using the community maintained `conda-forge <https://conda-forge.github.io/>`__ channel if you need difficult\-to\-build dependencies such as cartopy, pynio or PseudoNetCDF::
 
-    $ conda install -c conda-forge xarray cartopy pynio
+    $ conda install -c conda-forge xarray cartopy pynio pseudonetcdf
 
 New releases may also appear in conda-forge before being updated in the default
 channel.

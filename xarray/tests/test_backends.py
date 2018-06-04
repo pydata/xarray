@@ -32,7 +32,7 @@ from . import (
     assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr,
+    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf,
     requires_cftime)
 from .test_dataset import create_test_data
 
@@ -61,6 +61,13 @@ ON_WINDOWS = sys.platform == 'win32'
 def open_example_dataset(name, *args, **kwargs):
     return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
                         *args, **kwargs)
+
+
+def open_example_mfdataset(names, *args, **kwargs):
+    return open_mfdataset(
+        [os.path.join(os.path.dirname(__file__), 'data', name)
+         for name in names],
+        *args, **kwargs)
 
 
 def create_masked_and_scaled_data():
@@ -2481,6 +2488,229 @@ class PyNioTest(ScipyWriteTest, TestCase):
 
 class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
+
+
+@requires_pseudonetcdf
+class PseudoNetCDFFormatTest(TestCase):
+    autoclose = True
+
+    def open(self, path, **kwargs):
+        return open_dataset(path, engine='pseudonetcdf',
+                            autoclose=self.autoclose,
+                            **kwargs)
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            self.save(data, path, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    def test_ict_format(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        ictfile = open_example_dataset('example.ict',
+                                       engine='pseudonetcdf',
+                                       autoclose=False,
+                                       backend_kwargs={'format': 'ffi1001'})
+        stdattr = {
+            'fill_value': -9999.0,
+            'missing_value': -9999,
+            'scale': 1,
+            'llod_flag': -8888,
+            'llod_value': 'N/A',
+            'ulod_flag': -7777,
+            'ulod_value': 'N/A'
+        }
+
+        def myatts(**attrs):
+            outattr = stdattr.copy()
+            outattr.update(attrs)
+            return outattr
+
+        input = {
+            'coords': {},
+            'attrs': {
+                'fmt': '1001', 'n_header_lines': 27,
+                'PI_NAME': 'Henderson, Barron',
+                'ORGANIZATION_NAME': 'U.S. EPA',
+                'SOURCE_DESCRIPTION': 'Example file with artificial data',
+                'MISSION_NAME': 'JUST_A_TEST',
+                'VOLUME_INFO': '1, 1',
+                'SDATE': '2018, 04, 27', 'WDATE': '2018, 04, 27',
+                'TIME_INTERVAL': '0',
+                'INDEPENDENT_VARIABLE': 'Start_UTC',
+                'ULOD_FLAG': '-7777', 'ULOD_VALUE': 'N/A',
+                'LLOD_FLAG': '-8888',
+                'LLOD_VALUE': ('N/A, N/A, N/A, N/A, 0.025'),
+                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/' +
+                                   'IcarttDataFormat.htm'),
+                'REVISION': 'R0',
+                'R0': 'No comments for this revision.',
+                'TFLAG': 'Start_UTC'
+            },
+            'dims': {'POINTS': 4},
+            'data_vars': {
+                'Start_UTC': {
+                    'data': [43200.0, 46800.0, 50400.0, 50400.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='Start_UTC',
+                        standard_name='Start_UTC',
+                    )
+                },
+                'lat': {
+                    'data': [41.0, 42.0, 42.0, 42.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='degrees_north',
+                        standard_name='lat',
+                    )
+                },
+                'lon': {
+                    'data': [-71.0, -72.0, -73.0, -74.],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='degrees_east',
+                        standard_name='lon',
+                    )
+                },
+                'elev': {
+                    'data': [5.0, 15.0, 20.0, 25.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='meters',
+                        standard_name='elev',
+                    )
+                },
+                'TEST_ppbv': {
+                    'data': [1.2345, 2.3456, 3.4567, 4.5678],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TEST_ppbv',
+                    )
+                },
+                'TESTM_ppbv': {
+                    'data': [2.22, -9999.0, -7777.0, -8888.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TESTM_ppbv',
+                        llod_value=0.025
+                    )
+                }
+            }
+        }
+        chkfile = Dataset.from_dict(input)
+        assert_identical(ictfile, chkfile)
+
+    def test_ict_format_write(self):
+        fmtkw = {'format': 'ffi1001'}
+        expected = open_example_dataset('example.ict',
+                                        engine='pseudonetcdf',
+                                        autoclose=False,
+                                        backend_kwargs=fmtkw)
+        with self.roundtrip(expected, save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            assert_identical(expected, actual)
+
+    def test_uamiv_format_read(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=True,
+                                            backend_kwargs={'format': 'uamiv'})
+        data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data = np.array(['2002-06-03'], 'datetime64[ns]')
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+        camxfile.close()
+
+    def test_uamiv_format_mfread(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_mfdataset(
+                ['example.uamiv',
+                 'example.uamiv'],
+                engine='pseudonetcdf',
+                autoclose=True,
+                concat_dim='TSTEP',
+                backend_kwargs={'format': 'uamiv'})
+
+        data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        data = np.concatenate([data1] * 2, axis=0)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data1 = np.array(['2002-06-03'], 'datetime64[ns]')
+        data = np.concatenate([data1] * 2, axis=0)
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+        camxfile.close()
+
+    def test_uamiv_format_write(self):
+        fmtkw = {'format': 'uamiv'}
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            expected = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=False,
+                                            backend_kwargs=fmtkw)
+        with self.roundtrip(expected,
+                            save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            assert_identical(expected, actual)
+
+    def save(self, dataset, path, **save_kwargs):
+        import PseudoNetCDF as pnc
+        pncf = pnc.PseudoNetCDFFile()
+        pncf.dimensions = {k: pnc.PseudoNetCDFDimension(pncf, k, v)
+                           for k, v in dataset.dims.items()}
+        pncf.variables = {k: pnc.PseudoNetCDFVariable(pncf, k, v.dtype.char,
+                                                      v.dims,
+                                                      values=v.data[...],
+                                                      **v.attrs)
+                          for k, v in dataset.variables.items()}
+        for pk, pv in dataset.attrs.items():
+            setattr(pncf, pk, pv)
+
+        pnc.pncwrite(pncf, path, **save_kwargs)
 
 
 @requires_rasterio
