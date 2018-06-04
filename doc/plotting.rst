@@ -208,7 +208,11 @@ It is required to explicitly specify either
 2. ``hue``: the dimension you want to represent by multiple lines.
 
 Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
-If required, the automatic legend can be turned off using ``add_legend=False``.
+If required, the automatic legend can be turned off using ``add_legend=False``. Alternatively,
+``hue`` can be passed directly to :py:func:`xarray.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
+
+
+
 
 Dimension along y-axis
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -218,7 +222,7 @@ It is also possible to make line plots such that the data are on the x-axis and 
 .. ipython:: python
 
     @savefig plotting_example_xy_kwarg.png
-    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon')
+    air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
 Changing Axes Direction
 -----------------------
@@ -451,6 +455,13 @@ arguments to the xarray plotting methods/functions. This returns a
 
     @savefig plot_facet_dataarray.png
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
+
+Faceting also works for line plots.
+
+.. ipython:: python
+
+    @savefig plot_facet_dataarray_line.png
+    g_simple_line = t.isel(lat=slice(0,None,4)).plot(x='lon', hue='lat', col='time', col_wrap=3)
 
 4 dimensional
 ~~~~~~~~~~~~~
