@@ -304,6 +304,23 @@ def test_errors(use_dask):
     with pytest.raises(ValueError):
         da.interp(y=[2, 0], method='boo')
 
+    # object-type DataArray cannot be interpolated
+    da = xr.DataArray(['a', 'b', 'c'], dims='x', coords={'x': [0, 1, 2]})
+    with pytest.raises(TypeError):
+        da.interp(x=0)
+
+
+@requires_scipy
+def test_dtype():
+    ds = xr.Dataset({'var1': ('x', [0, 1, 2]), 'var2': ('x', ['a', 'b', 'c'])},
+                    coords={'x': [0.1, 0.2, 0.3], 'z': ('x', ['a', 'b', 'c'])})
+    actual = ds.interp(x=[0.15, 0.25])
+    assert 'var1' in actual
+    assert 'var2' not in actual
+    # object array should be dropped
+    assert 'z' not in actual.coords
+
+
 
 @requires_scipy
 def test_sorted():
@@ -353,6 +370,7 @@ def test_dataset():
     interpolated = ds.interp(dim2=new_dim2)
 
     assert_allclose(interpolated['var1'], ds['var1'].interp(dim2=new_dim2))
+    assert interpolated['var3'].equals(ds['var3'])
 
     # make sure modifying interpolated does not affect the original dataset
     interpolated['var1'][:, 1] = 1.0

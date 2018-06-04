@@ -1822,12 +1822,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----------
         coords : dict, optional
             Mapping from dimension names to the new coordinates.
-            new coordinate can be an scalar, array-like or DataArray.
+            New coordinate can be a scalar, array-like or DataArray.
             If DataArrays are passed as new coordates, their dimensions are
             used for the broadcasting.
-        method: {'linear', 'nearest'} for multidimensional array,
+        method: string, optional.
+            {'linear', 'nearest'} for multidimensional array,
             {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
-            for 1-dimensional array.
+            for 1-dimensional array. 'linear' is used by default.
         assume_sorted: boolean, optional
             If False, values of coordinates that are interpolated over can be
             in any order and they are sorted first. If True, interpolated
@@ -1856,11 +1857,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         from . import missing
 
         coords = either_dict_or_kwargs(coords, coords_kwargs, 'rename')
-        indexers_list = self._validate_indexers(coords)
+        indexers = OrderedDict(self._validate_indexers(coords))
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
 
         def maybe_variable(obj, k):
+            # workaround to get variable for dimension without coordinate.
             try:
                 return obj._variables[k]
             except KeyError:
@@ -1868,17 +1870,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
-            if name not in [k for k, v in indexers_list]:
-                var_indexers = {k: (maybe_variable(obj, k), v) for k, v
-                                in indexers_list if k in var.dims}
-                variables[name] = missing.interp(
-                    var, var_indexers, method, **kwargs)
+            if name not in indexers:
+                if var.dtype.kind in 'uifc':
+                    var_indexers = {k: (maybe_variable(obj, k), v) for k, v
+                                    in indexers.items() if k in var.dims}
+                    variables[name] = missing.interp(
+                        var, var_indexers, method, **kwargs)
+                elif all(d not in indexers for d in var.dims):
+                    # keep unrelated object array
+                    variables[name] = var
 
         coord_names = set(variables).intersection(obj._coord_names)
         selected = obj._replace_vars_and_dims(variables,
                                               coord_names=coord_names)
         # attach indexer as coordinate
-        variables.update({k: v for k, v in indexers_list})
+        variables.update(indexers)
         # Extract coordinates from indexers
         coord_vars = selected._get_indexers_coordinates(coords)
         variables.update(coord_vars)

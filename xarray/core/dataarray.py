@@ -942,6 +942,10 @@ class DataArray(AbstractArray, DataWithCoords):
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
         """
+        if self.dtype.kind not in 'uifc':
+            raise TypeError('interp only works for a numeric type array. '
+                            'Given {}.'.format(self.dtype))
+
         ds = self._to_temp_dataset().interp(
             coords, method=method, kwargs=kwargs, assume_sorted=assume_sorted,
             **coords_kwargs)
