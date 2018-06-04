@@ -25,10 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
+.. _whats-new.0.10.7:
 
-.. _whats-new.0.10.5:
-
-v0.10.5 (unreleased)
+v0.10.7 (unreleased)
 --------------------
 
 Documentation
@@ -36,6 +35,8 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Plot labels now make use of metadata that follow CF conventions.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
 
 - :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
   methods are newly added.
@@ -46,24 +47,30 @@ Enhancements
 - `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
   dask<0.17.4. (related to :issue:`2203`)
   By `Keisuke Fujii <https://github.com/fujiisoup`_.
+Bug fixes
+~~~~~~~~~
 
-- added a PseudoNetCDF backend for many Atmospheric data formats including
-  GEOS-Chem, CAMx, NOAA arlpacked bit and many others.
+.. _whats-new.0.10.6:
+
+v0.10.6 (31 May 2018)
+---------------------
+
+The minor release includes a number of bug-fixes and backwards compatible
+enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
+  :ref:`io.PseudoNetCDF` for more details.
   By `Barron Henderson <https://github.com/barronh>`_.
 
-- :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
-  aggregation over multiple dimensions at the same time. This is the default
-  behavior when dimensions are not specified (previously this raised an error).
-  By `Stephan Hoyer <https://github.com/shoyer>`_
-
-- Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
-  to manage its version strings. (:issue:`1300`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
-
-- `:py:class:`Dataset`s align `:py:class:`DataArray`s to coords that are explicitly
-  passed into the constructor, where previously an error would be raised.
+- The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`
+  arguments in ``data_vars`` to indexes set explicitly in ``coords``,
+  where previously an error would be raised.
   (:issue:`674`)
-  By `Maximilian Roos <https://github.com/maxim-lian`_.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
   (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
@@ -73,10 +80,23 @@ Enhancements
   not strings.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
-- :py:meth:`~DataArray.rename` now supports supplying `kwargs`, as an
+- :py:meth:`~DataArray.rename` now supports supplying ``**kwargs``, as an
   alternative to the existing approach of supplying a ``dict`` as the
   first argument.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
+  aggregation over multiple dimensions at the same time. This is the default
+  behavior when dimensions are not specified (previously this raised an error).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- :py:meth:`DataArray.dot` and :py:func:`dot` are partly supported with older
+  dask<0.17.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
+  to manage its version strings. (:issue:`1300`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -120,13 +140,13 @@ Bug fixes
   (:issue:`2153`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
-- Fix Dataset.to_netcdf() cannot create group with engine="h5netcdf"
+- Fix ``Dataset.to_netcdf()`` cannot create group with ``engine="h5netcdf"``
   (:issue:`2177`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
 .. _whats-new.0.10.4:
 
-v0.10.4 (May 16, 2018)
+v0.10.4 (16 May 2018)
 ----------------------
 
 The minor release includes a number of bug-fixes and backwards compatible
@@ -215,7 +235,7 @@ Bug fixes
 
 .. _whats-new.0.10.3:
 
-v0.10.3 (April 13, 2018)
+v0.10.3 (13 April 2018)
 ------------------------
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.

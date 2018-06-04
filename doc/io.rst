@@ -669,7 +669,7 @@ To use PseudoNetCDF to read such files, supply
 Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
 options are listed on the PseudoNetCDF page.
 
-.. _PseuodoNetCDF: http://github.com/barronh/PseudoNetCDF
+.. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
 Formats supported by Pandas
