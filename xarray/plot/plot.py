@@ -317,6 +317,8 @@ def line(darray, *args, **kwargs):
                 'steps-pre', '').replace(
                 'steps-post', '').replace(
                 'steps-mid', '')
+            if kwargs['linestyle'] == '':
+                kwargs.pop('linestyle')
         else:
             xplt_val = _interval_to_mid_points(xplt.values)
             yplt_val = yplt.values
