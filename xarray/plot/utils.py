@@ -357,7 +357,7 @@ def get_axis(figsize, size, aspect, ax):
     return ax
 
 
-def label_from_attrs(da):
+def label_from_attrs(da, extra=''):
     ''' Makes informative labels if variable metadata (attrs) follows
         CF conventions. '''
 
@@ -375,4 +375,4 @@ def label_from_attrs(da):
     else:
         units = ''
 
-    return '\n'.join(textwrap.wrap(name + units, 30))
+    return '\n'.join(textwrap.wrap(name + extra + units, 30))

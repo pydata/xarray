@@ -359,6 +359,7 @@ def line(darray, *args, **kwargs):
 
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
+        # Is it a step plot?
         if kwargs.get('linestyle', '').startswith('steps-'):
             xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
                                                                   yplt.values)
@@ -769,19 +770,23 @@ def _plot2d(plotfunc):
         if _valid_other_type(xval, [pd.Interval]):
             if 'pcolormesh' == plotfunc.__name__:
                 xplt = _interval_to_bound_points(xval)
+                xlab_extra = ''
             else:
                 xplt = _interval_to_mid_points(xval)
-                xlab += '_center'
+                xlab_extra = '_center'
         else:
             xplt = xval
+            xlab_extra = ''
         if _valid_other_type(yval, [pd.Interval]):
             if 'pcolormesh' == plotfunc.__name__:
                 yplt = _interval_to_bound_points(yval)
+                ylab_extra = ''
             else:
                 yplt = _interval_to_mid_points(yval)
-                ylab += '_center'
+                ylab_extra = '_center'
         else:
             yplt = yval
+            ylab_extra = ''
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
@@ -825,8 +830,8 @@ def _plot2d(plotfunc):
 
         # Label the plot with metadata
         if add_labels:
-            ax.set_xlabel(label_from_attrs(darray[xlab]))
-            ax.set_ylabel(label_from_attrs(darray[ylab]))
+            ax.set_xlabel(label_from_attrs(darray[xlab], xlab_extra))
+            ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
