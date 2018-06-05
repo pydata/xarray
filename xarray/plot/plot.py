@@ -258,7 +258,6 @@ def line(darray, *args, **kwargs):
     xincrease = kwargs.pop('xincrease', True)
     yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
-    interval_step_plot = kwargs.pop('interval_step_plot', True)
 
     ax = get_axis(figsize, size, aspect, ax)
 
@@ -310,9 +309,14 @@ def line(darray, *args, **kwargs):
 
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
-        if interval_step_plot:
+        if kwargs.get('linestyle', '').startswith('steps-'):
             xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
                                                                   yplt.values)
+            # just to be sure that matplotlib is not confused
+            kwargs['linestyle'] = kwargs['linestyle'].replace(
+                'steps-pre', '').replace(
+                'steps-post', '').replace(
+                'steps-mid', '')
         else:
             xplt_val = _interval_to_mid_points(xplt.values)
             yplt_val = yplt.values
@@ -348,6 +352,46 @@ def line(darray, *args, **kwargs):
     _update_axes_limits(ax, xincrease, yincrease)
 
     return primitive
+
+
+def step(darray, *args, **kwargs):
+    """
+    Step plot of DataArray index against values
+
+    Similar to :func:`matplotlib:matplotlib.pyplot.step`
+
+    Parameters
+    ----------
+    where : {'pre', 'post', 'mid'}, optional, default 'pre'
+        Define where the steps should be placed:
+        - 'pre': The y value is continued constantly to the left from
+          every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
+          value ``y[i]``.
+        - 'post': The y value is continued constantly to the right from
+          every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
+          value ``y[i]``.
+        - 'mid': Steps occur half-way between the *x* positions.
+        Note that this parameter is ignored if the x coordinate consists of
+        :py:func:`pandas.Interval` values, e.g. as a result of
+        :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
+        boundaries of the interval are used.
+
+    *args, **kwargs : optional
+        Additional arguments following :py:func:`xarray.plot.line`
+
+    """
+    if ('ls' in kwargs.keys()) and ('linestyle' not in kwargs.keys()):
+        kwargs['linestyle'] = kwargs.pop('ls')
+
+    where = kwargs.pop('where', 'pre')
+
+    if where not in ('pre', 'post', 'mid'):
+        raise ValueError("'where' argument to step must be "
+                         "'pre', 'post' or 'mid'")
+
+    kwargs['linestyle'] = 'steps-' + where + kwargs.get('linestyle', '')
+
+    return line(darray, *args, **kwargs)
 
 
 def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
@@ -434,6 +478,10 @@ class _PlotMethods(object):
     @functools.wraps(line)
     def line(self, *args, **kwargs):
         return line(self._da, *args, **kwargs)
+
+    @functools.wraps(step)
+    def step(self, *args, **kwargs):
+        return step(self._da, *args, **kwargs)
 
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):

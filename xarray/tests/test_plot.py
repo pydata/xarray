@@ -300,14 +300,6 @@ class TestPlot(PlotTestCase):
     def test_coord_with_interval(self):
         bins = [-1, 0, 1, 2]
         self.darray.groupby_bins('dim_0', bins).mean().plot()
-        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
-
-    def test_coord_with_interval_midPoints(self):
-        bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins(
-            'dim_0', bins).mean().plot(interval_step_plot=False)
-        assert plt.gca().get_xlabel().endswith('_center')
-        assert len(plt.gca().lines[0].get_xdata()) == (len(bins) - 1)
 
 
 class TestPlot1D(PlotTestCase):
@@ -377,6 +369,19 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot.line()
         title = plt.gca().get_title()
         assert 'd = 10' == title
+
+
+class TestPlotStep(PlotTestCase):
+    def setUp(self):
+        self.darray = DataArray(easy_array((2, 3, 4)))
+
+    def test_step(self):
+        self.darray[0, 0].plot.step()
+
+    def test_coord_with_interval_step(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean().plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
 class TestPlotHistogram(PlotTestCase):
