@@ -68,6 +68,7 @@ has_pydap, requires_pydap = _importorskip('pydap.client')
 has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')
 has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
+has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
 has_cftime, requires_cftime = _importorskip('cftime')
 has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
@@ -87,7 +88,10 @@ if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
 if has_dask:
     import dask
-    dask.set_options(get=dask.get)
+    if LooseVersion(dask.__version__) < '0.18':
+        dask.set_options(get=dask.get)
+    else:
+        dask.config.set(scheduler='sync')
 try:
     import_seaborn()
     has_seaborn = True
@@ -191,7 +195,10 @@ def source_ndarray(array):
     """Given an ndarray, return the base object which holds its memory, or the
     object itself.
     """
-    base = getattr(array, 'base', np.asarray(array).base)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'DatetimeIndex.base')
+        warnings.filterwarnings('ignore', 'TimedeltaIndex.base')
+        base = getattr(array, 'base', np.asarray(array).base)
     if base is None:
         base = array
     return base

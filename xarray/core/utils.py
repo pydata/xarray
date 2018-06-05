@@ -76,13 +76,12 @@ def safe_cast_to_index(array):
 def multiindex_from_product_levels(levels, names=None):
     """Creating a MultiIndex from a product without refactorizing levels.
 
-    Keeping levels the same is faster, and also gives back the original labels
-    when we unstack.
+    Keeping levels the same gives back the original labels when we unstack.
 
     Parameters
     ----------
-    levels : sequence of arrays
-        Unique labels for each level.
+    levels : sequence of pd.Index
+        Values for each MultiIndex level.
     names : optional sequence of objects
         Names for each level.
 
@@ -90,8 +89,11 @@ def multiindex_from_product_levels(levels, names=None):
     -------
     pandas.MultiIndex
     """
-    labels_mesh = np.meshgrid(*[np.arange(len(lev)) for lev in levels],
-                              indexing='ij')
+    if any(not isinstance(lev, pd.Index) for lev in levels):
+        raise TypeError('levels must be a list of pd.Index objects')
+
+    split_labels, levels = zip(*[lev.factorize() for lev in levels])
+    labels_mesh = np.meshgrid(*split_labels, indexing='ij')
     labels = [x.ravel() for x in labels_mesh]
     return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
@@ -183,7 +185,7 @@ def is_full_slice(value):
     return isinstance(value, slice) and value == slice(None)
 
 
-def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
+def either_dict_or_kwargs(pos_kwargs, kw_kwargs, func_name):
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'

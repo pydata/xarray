@@ -25,10 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
+.. _whats-new.0.10.7:
 
-.. _whats-new.0.10.5:
-
-v0.10.5 (unreleased)
+v0.10.7 (unreleased)
 --------------------
 
 Documentation
@@ -36,6 +35,46 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
+- Plot labels now make use of metadata that follow CF conventions.
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
+
+Bug fixes
+~~~~~~~~~
+
+.. _whats-new.0.10.6:
+
+v0.10.6 (31 May 2018)
+---------------------
+
+The minor release includes a number of bug-fixes and backwards compatible
+enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
+  :ref:`io.PseudoNetCDF` for more details.
+  By `Barron Henderson <https://github.com/barronh>`_.
+
+- The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`
+  arguments in ``data_vars`` to indexes set explicitly in ``coords``,
+  where previously an error would be raised.
+  (:issue:`674`)
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
+  (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
+  as a first argument, as an alternative to the existing approach
+  of supplying `kwargs`. This allows for more robust behavior
+  of dimension names which conflict with other keyword names, or are
+  not strings.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.rename` now supports supplying ``**kwargs``, as an
+  alternative to the existing approach of supplying a ``dict`` as the
+  first argument.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
 - DataArrays created with groupby_bins supported by plotting routines. 
   By `Maximilian Maahn <https://github.com/maahn>`_.
@@ -45,6 +84,10 @@ Enhancements
   behavior when dimensions are not specified (previously this raised an error).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- :py:meth:`DataArray.dot` and :py:func:`dot` are partly supported with older
+  dask<0.17.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
   to manage its version strings. (:issue:`1300`).
   By `Joe Hamman <https://github.com/jhamman>`_.
@@ -52,9 +95,23 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed a bug where `to_netcdf(..., unlimited_dims='bar'` yielded NetCDF files
-  with spurious 0-length dimensions (i.e. `b`, `a`, and `r`) (:issue:`2134`).
+- Fixed a regression in 0.10.4, where explicitly specifying ``dtype='S1'`` or
+  ``dtype=str`` in ``encoding`` with ``to_netcdf()`` raised an error
+  (:issue:`2149`).
+  `Stephan Hoyer <https://github.com/shoyer>`_
+
+- :py:func:`apply_ufunc` now directly validates output variables
+  (:issue:`1931`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
+  files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
+  (:issue:`2134`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Removed spurious warnings with ``Dataset.update(Dataset)`` (:issue:`2161`)
+  and ``array.equals(array)`` when ``array`` contains ``NaT`` (:issue:`2162`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Aggregations with :py:meth:`Dataset.reduce` (including ``mean``, ``sum``,
   etc) no longer drop unrelated coordinates (:issue:`1470`). Also fixed a
@@ -62,15 +119,28 @@ Bug fixes
   dimension were improperly skipped.
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- Fix :meth:`~DataArray.stack` with non-unique coordinates on pandas 0.23
+  (:issue:`2160`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 - Selecting data indexed by a length-1 ``CFTimeIndex`` with a slice of strings
   now behaves as it does when using a length-1 ``DatetimeIndex`` (i.e. it no
   longer falsely returns an empty array when the slice includes the value in
   the index) (:issue:`2165`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-  
+
+- Fix ``DataArray.groupby().reduce()`` mutating coordinates on the input array
+  when grouping over dimension coordinates with duplicated entries
+  (:issue:`2153`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
+- Fix ``Dataset.to_netcdf()`` cannot create group with ``engine="h5netcdf"``
+  (:issue:`2177`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+
 .. _whats-new.0.10.4:
 
-v0.10.4 (May 16, 2018)
+v0.10.4 (16 May 2018)
 ----------------------
 
 The minor release includes a number of bug-fixes and backwards compatible
@@ -158,7 +228,7 @@ Bug fixes
 
 .. _whats-new.0.10.3:
 
-v0.10.3 (April 13, 2018)
+v0.10.3 (13 April 2018)
 ------------------------
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.

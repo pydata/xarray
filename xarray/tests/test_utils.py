@@ -1,17 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from datetime import datetime
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
+from xarray.core.utils import either_dict_or_kwargs
+
+from . import (
+    TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
+    requires_dask)
 from .test_coding_times import _all_cftime_date_types
-from . import (TestCase, requires_dask, assert_array_equal,
-               has_cftime_or_netCDF4, has_cftime)
 
 
 class TestAlias(TestCase):
@@ -72,7 +76,8 @@ def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
 
 
 def test_multiindex_from_product_levels():
-    result = utils.multiindex_from_product_levels([['b', 'a'], [1, 3, 2]])
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 3, 2])])
     np.testing.assert_array_equal(
         result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
@@ -80,6 +85,15 @@ def test_multiindex_from_product_levels():
 
     other = pd.MultiIndex.from_product([['b', 'a'], [1, 3, 2]])
     np.testing.assert_array_equal(result.values, other.values)
+
+
+def test_multiindex_from_product_levels_non_unique():
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 1, 2])])
+    np.testing.assert_array_equal(
+        result.labels, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
+    np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
+    np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
 class TestArrayEquiv(TestCase):
@@ -235,3 +249,17 @@ def test_hidden_key_dict():
         hkd[hidden_key]
     with pytest.raises(KeyError):
         del hkd[hidden_key]
+
+
+def test_either_dict_or_kwargs():
+
+    result = either_dict_or_kwargs(dict(a=1), None, 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    result = either_dict_or_kwargs(None, dict(a=1), 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    with pytest.raises(ValueError, match=r'foo'):
+        result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
