@@ -907,7 +907,7 @@ class DataArray(AbstractArray, DataWithCoords):
         return self._from_temp_dataset(ds)
 
     def interp(self, coords=None, method='linear', assume_sorted=False,
-               kwargs={}, **coords_kwargs):
+               keep_attrs=False, kwargs={}, **coords_kwargs):
         """ Multidimensional interpolation of variables.
 
         coords : dict, optional
@@ -922,6 +922,10 @@ class DataArray(AbstractArray, DataWithCoords):
             If False, values of x can be in any order and they are sorted
             first. If True, x has to be an array of monotonically increasing
             values.
+        keep_attrs : bool, optional
+            If True, the variable's attributes (`attrs`) will be copied from
+            the original object to the new one.  If False (default), the new
+            object will be returned without attributes.
         kwargs: dictionary
             Additional keyword passed to scipy's interpolator.
         **coords_kwarg : {dim: coordinate, ...}, optional
@@ -948,7 +952,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         ds = self._to_temp_dataset().interp(
             coords, method=method, kwargs=kwargs, assume_sorted=assume_sorted,
-            **coords_kwargs)
+            keep_attrs=keep_attrs, **coords_kwargs)
         return self._from_temp_dataset(ds)
 
     def rename(self, new_name_or_name_dict=None, **names):

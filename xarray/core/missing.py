@@ -394,7 +394,7 @@ def _localize(var, indexes_coords):
     return var.isel(**indexes), indexes_coords
 
 
-def interp(var, indexes_coords, method, **kwargs):
+def interp(var, indexes_coords, method, keep_attrs, **kwargs):
     """ Make an interpolation of Variable
 
     Parameters
@@ -408,6 +408,8 @@ def interp(var, indexes_coords, method, **kwargs):
         One of {'linear', 'nearest', 'zero', 'slinear', 'quadratic',
         'cubic'}. For multidimensional interpolation, only
         {'linear', 'nearest'} can be used.
+    keep_attrs: boolean
+        If True, variable's attributes (`attrs`) will be copied
     **kwargs:
         keyword arguments to be passed to scipy.interpolate
 
@@ -442,7 +444,8 @@ def interp(var, indexes_coords, method, **kwargs):
     interped = interp_func(var.transpose(*original_dims).data,
                            x, destination, method, kwargs)
 
-    result = Variable(new_dims, interped, attrs=var.attrs)
+    attrs = var.attrs if keep_attrs else {}
+    result = Variable(new_dims, interped, attrs=attrs)
 
     # dimension of the output array
     out_dims = OrderedSet()

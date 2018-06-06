@@ -377,7 +377,11 @@ def test_dataset():
 
     assert not interpolated['var1'].equals(ds['var1'])
     assert not interpolated['var3'].equals(ds['var3'])
-    # attrs should be kept
+    # attrs should not be tracked
+    assert 'foo' not in interpolated.attrs
+    assert 'buz' not in interpolated['var1'].attrs
+
+    interpolated = ds.interp(dim2=new_dim2, keep_attrs=True)
     assert interpolated.attrs['foo'] == 'var'
     assert interpolated['var1'].attrs['buz'] == 'var2'
 
