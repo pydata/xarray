@@ -373,9 +373,11 @@ def test_dataset():
 
     # make sure modifying interpolated does not affect the original dataset
     interpolated['var1'][:, 1] = 1.0
+    interpolated['var2'][:, 1] = 1.0
     interpolated['var3'][:, 1] = 1.0
 
     assert not interpolated['var1'].equals(ds['var1'])
+    assert not interpolated['var2'].equals(ds['var2'])
     assert not interpolated['var3'].equals(ds['var3'])
     # attrs should be kept
     assert interpolated.attrs['foo'] == 'var'

@@ -355,7 +355,8 @@ def _get_interpolator_nd(method, **kwargs):
         kwargs.update(method=method)
         interp_class = interpolate.interpn
     else:
-        raise ValueError('%s is not a valid interpolator' % method)
+        raise ValueError('%s is not a valid interpolator for interpolating '
+                         'over multiple dimensions.' % method)
 
     return interp_class, kwargs
 
@@ -376,7 +377,7 @@ def _assert_single_chunk(var, axes):
         if len(var.chunks[axis]) > 1 or var.chunks[axis][0] < var.shape[axis]:
             raise NotImplementedError(
                 'Chunking along the dimension to be interpolated '
-                '({}) is not supported.'.format(axis))
+                '({}) is not yet supported.'.format(axis))
 
 
 def _localize(var, indexes_coords):
@@ -488,7 +489,7 @@ def interp_func(var, x, new_x, method, kwargs):
     scipy.interpolate.interp1d
     """
     if not x:
-        return var
+        return var.copy()
 
     if len(x) == 1:
         func, kwargs = _get_interpolator(method, vectorizeable_only=True,
