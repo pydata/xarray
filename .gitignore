@@ -38,6 +38,7 @@ nosetests.xml
 .ropeproject/
 .tags*
 .testmon*
+.tmontmp/
 .pytest_cache
 dask-worker-space/
 

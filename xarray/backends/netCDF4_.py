@@ -89,16 +89,33 @@ def _encode_nc4_variable(var):
     return var
 
 
-def _get_datatype(var, nc_format='NETCDF4'):
+def _check_encoding_dtype_is_vlen_string(dtype):
+    if dtype is not str:
+        raise AssertionError(  # pragma: no cover
+            "unexpected dtype encoding %r. This shouldn't happen: please "
+            "file a bug report at github.com/pydata/xarray" % dtype)
+
+
+def _get_datatype(var, nc_format='NETCDF4', raise_on_invalid_encoding=False):
     if nc_format == 'NETCDF4':
         datatype = _nc4_dtype(var)
     else:
+        if 'dtype' in var.encoding:
+            encoded_dtype = var.encoding['dtype']
+            _check_encoding_dtype_is_vlen_string(encoded_dtype)
+            if raise_on_invalid_encoding:
+                raise ValueError(
+                    'encoding dtype=str for vlen strings is only supported '
+                    'with format=\'NETCDF4\'.')
         datatype = var.dtype
     return datatype
 
 
 def _nc4_dtype(var):
-    if coding.strings.is_unicode_dtype(var.dtype):
+    if 'dtype' in var.encoding:
+        dtype = var.encoding.pop('dtype')
+        _check_encoding_dtype_is_vlen_string(dtype)
+    elif coding.strings.is_unicode_dtype(var.dtype):
         dtype = str
     elif var.dtype.kind in ['i', 'u', 'f', 'c', 'S']:
         dtype = var.dtype
@@ -108,7 +125,11 @@ def _nc4_dtype(var):
     return dtype
 
 
-def _nc4_group(ds, group, mode):
+def _netcdf4_create_group(dataset, name):
+    return dataset.createGroup(name)
+
+
+def _nc4_require_group(ds, group, mode, create_group=_netcdf4_create_group):
     if group in set([None, '', '/']):
         # use the root group
         return ds
@@ -123,7 +144,7 @@ def _nc4_group(ds, group, mode):
                 ds = ds.groups[key]
             except KeyError as e:
                 if mode != 'r':
-                    ds = ds.createGroup(key)
+                    ds = create_group(ds, key)
                 else:
                     # wrap error to provide slightly more helpful message
                     raise IOError('group not found: %s' % key, e)
@@ -168,7 +189,7 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
     safe_to_drop = set(['source', 'original_shape'])
     valid_encodings = set(['zlib', 'complevel', 'fletcher32', 'contiguous',
-                           'chunksizes', 'shuffle', '_FillValue'])
+                           'chunksizes', 'shuffle', '_FillValue', 'dtype'])
     if lsd_okay:
         valid_encodings.add('least_significant_digit')
     if h5py_okay:
@@ -210,7 +231,7 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
     ds = nc4.Dataset(filename, mode=mode, **kwargs)
 
     with close_on_error(ds):
-        ds = _nc4_group(ds, group, mode)
+        ds = _nc4_require_group(ds, group, mode)
 
     _disable_auto_decode_group(ds)
 
@@ -340,6 +361,7 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
             # save source so __repr__ can detect if it's local or not
             encoding['source'] = self._filename
             encoding['original_shape'] = var.shape
+            encoding['dtype'] = var.dtype
 
         return Variable(dimensions, data, attributes, encoding)
 
@@ -394,7 +416,8 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
-        datatype = _get_datatype(variable, self.format)
+        datatype = _get_datatype(variable, self.format,
+                                 raise_on_invalid_encoding=check_encoding)
         attrs = variable.attrs.copy()
 
         fill_value = attrs.pop('_FillValue', None)
@@ -439,9 +462,9 @@ class NetCDF4DataStore(WritableCFDataStore, DataStorePickleMixin):
 
         return target, variable.data
 
-    def sync(self):
+    def sync(self, compute=True):
         with self.ensure_open(autoclose=True):
-            super(NetCDF4DataStore, self).sync()
+            super(NetCDF4DataStore, self).sync(compute=compute)
             self.ds.sync()
 
     def close(self):

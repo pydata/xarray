@@ -20,7 +20,7 @@ from xarray.core.pycompat import basestring
 from .facetgrid import FacetGrid
 from .utils import (
     ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
-    import_matplotlib_pyplot)
+    import_matplotlib_pyplot, label_from_attrs)
 
 
 def _valid_numpy_subdtype(x, numpy_types):
@@ -83,8 +83,32 @@ def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
     return g.map_dataarray(plotfunc, x, y, **kwargs)
 
 
-def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
-         subplot_kws=None, **kwargs):
+def _line_facetgrid(darray, row=None, col=None, hue=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=None,
+                    size=None, subplot_kws=None, **kwargs):
+    """
+    Convenience method to call xarray.plot.FacetGrid for line plots
+    kwargs are the arguments to pyplot.plot()
+    """
+    ax = kwargs.pop('ax', None)
+    figsize = kwargs.pop('figsize', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
+
+    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+    return g.map_dataarray_line(hue=hue, **kwargs)
+
+
+def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
+         rtol=0.01, subplot_kws=None, **kwargs):
     """
     Default plot of DataArray using matplotlib.pyplot.
 
@@ -106,6 +130,8 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
         If passed, make row faceted plots on this dimension name
     col : string, optional
         If passed, make column faceted plots on this dimension name
+    hue : string, optional
+        If passed, make faceted line plots with hue on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
     ax : matplotlib axes, optional
@@ -129,32 +155,89 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, rtol=0.01,
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
     plot_dims.discard(col)
+    plot_dims.discard(hue)
 
     ndims = len(plot_dims)
 
-    error_msg = ('Only 2d plots are supported for facets in xarray. '
+    error_msg = ('Only 1d and 2d plots are supported for facets in xarray. '
                  'See the package `Seaborn` for more options.')
 
-    if ndims == 1:
+    if ndims in [1, 2]:
         if row or col:
-            raise ValueError(error_msg)
-        plotfunc = line
-    elif ndims == 2:
-        # Only 2d can FacetGrid
-        kwargs['row'] = row
-        kwargs['col'] = col
-        kwargs['col_wrap'] = col_wrap
-        kwargs['subplot_kws'] = subplot_kws
-
-        plotfunc = pcolormesh
+            kwargs['row'] = row
+            kwargs['col'] = col
+            kwargs['col_wrap'] = col_wrap
+            kwargs['subplot_kws'] = subplot_kws
+        if ndims == 1:
+            plotfunc = line
+            kwargs['hue'] = hue
+        elif ndims == 2:
+            if hue:
+                raise ValueError('hue is not compatible with 2d data')
+            plotfunc = pcolormesh
     else:
-        if row or col:
+        if row or col or hue:
             raise ValueError(error_msg)
         plotfunc = hist
 
     kwargs['ax'] = ax
 
     return plotfunc(darray, **kwargs)
+
+
+def _infer_line_data(darray, x, y, hue):
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
+    ndims = len(darray.dims)
+
+    if x is not None and x not in darray.dims:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
+
+    if ndims == 1:
+        dim, = darray.dims  # get the only dimension name
+        huename = None
+        hueplt = None
+        huelabel = ''
+
+        if (x is None and y is None) or x == dim:
+            xplt = darray.coords[dim]
+            yplt = darray
+
+        else:
+            yplt = darray.coords[dim]
+            xplt = darray
+
+    else:
+        if x is None and y is None and hue is None:
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
+
+        if y is None:
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            yname = darray.name
+            xplt = darray.coords[xname]
+            yplt = darray.transpose(xname, huename)
+
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            xname = darray.name
+            xplt = darray.transpose(yname, huename)
+            yplt = darray.coords[yname]
+
+        hueplt = darray.coords[huename]
+        huelabel = label_from_attrs(darray[huename])
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
 # This function signature should not change so that it can use
@@ -182,8 +265,7 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
-        Coordinate for which you want multiple lines plotted
-        (2D DataArrays only).
+        Coordinate for which you want multiple lines plotted.
     x, y : string, optional
         Coordinates for x, y axis. Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
@@ -200,6 +282,15 @@ def line(darray, *args, **kwargs):
         Additional arguments to matplotlib.pyplot.plot
 
     """
+
+    # Handle facetgrids first
+    row = kwargs.pop('row', None)
+    col = kwargs.pop('col', None)
+    if row or col:
+        allargs = locals().copy()
+        allargs.update(allargs.pop('kwargs'))
+        allargs.update(allargs.pop('args'))
+        return _line_facetgrid(**allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -218,68 +309,28 @@ def line(darray, *args, **kwargs):
     xincrease = kwargs.pop('xincrease', True)
     yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
+    _labels = kwargs.pop('_labels', True)
 
     ax = get_axis(figsize, size, aspect, ax)
-
-    error_msg = ('must be either None or one of ({0:s})'
-                 .format(', '.join([repr(dd) for dd in darray.dims])))
-
-    if x is not None and x not in darray.dims:
-        raise ValueError('x ' + error_msg)
-
-    if y is not None and y not in darray.dims:
-        raise ValueError('y ' + error_msg)
-
-    if x is not None and y is not None:
-        raise ValueError('You cannot specify both x and y kwargs'
-                         'for line plots.')
-
-    if ndims == 1:
-        dim, = darray.dims  # get the only dimension name
-
-        if (x is None and y is None) or x == dim:
-            xplt = darray.coords[dim]
-            yplt = darray
-            xlabel = dim
-            ylabel = darray.name
-
-        else:
-            yplt = darray.coords[dim]
-            xplt = darray
-            xlabel = darray.name
-            ylabel = dim
-
-    else:
-        if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please specify either hue or x.')
-
-        if y is None:
-            xlabel, huelabel = _infer_xy_labels(darray=darray, x=x, y=hue)
-            ylabel = darray.name
-            xplt = darray.coords[xlabel]
-            yplt = darray.transpose(xlabel, huelabel)
-
-        else:
-            ylabel, huelabel = _infer_xy_labels(darray=darray, x=y, y=hue)
-            xlabel = darray.name
-            xplt = darray.transpose(ylabel, huelabel)
-            yplt = darray.coords[ylabel]
+    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
+        _infer_line_data(darray, x, y, hue)
 
     _ensure_plottable(xplt)
 
     primitive = ax.plot(xplt, yplt, *args, **kwargs)
 
-    if xlabel is not None:
-        ax.set_xlabel(xlabel)
+    if _labels:
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
 
-    if ylabel is not None:
-        ax.set_ylabel(ylabel)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
 
-    ax.set_title(darray._title_for_slice())
+        ax.set_title(darray._title_for_slice())
 
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
-                  labels=list(darray.coords[huelabel].values),
+                  labels=list(hueplt.values),
                   title=huelabel)
 
     # Rotate dates on xlabels
@@ -333,8 +384,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     ax.set_ylabel('Count')
 
-    if darray.name is not None:
-        ax.set_title('Histogram of {0}'.format(darray.name))
+    ax.set_title('Histogram')
+    ax.set_xlabel(label_from_attrs(darray))
 
     return primitive
 
@@ -652,8 +703,8 @@ def _plot2d(plotfunc):
 
         # Label the plot with metadata
         if add_labels:
-            ax.set_xlabel(xlab)
-            ax.set_ylabel(ylab)
+            ax.set_xlabel(label_from_attrs(darray[xlab]))
+            ax.set_ylabel(label_from_attrs(darray[ylab]))
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
@@ -664,8 +715,8 @@ def _plot2d(plotfunc):
             else:
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
-            if darray.name and add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(darray.name, rotation=90)
+            if add_labels and 'label' not in cbar_kwargs:
+                cbar.set_label(label_from_attrs(darray), rotation=90)
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

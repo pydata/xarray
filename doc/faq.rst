@@ -1,3 +1,5 @@
+.. _faq:
+
 Frequently Asked Questions
 ==========================
 
@@ -129,8 +131,8 @@ What other netCDF related Python libraries should I know about?
 `netCDF4-python`__ provides a lower level interface for working with
 netCDF and OpenDAP datasets in Python. We use netCDF4-python internally in
 xarray, and have contributed a number of improvements and fixes upstream. xarray
-does not yet support all of netCDF4-python's features, such as writing to
-netCDF groups or modifying files on-disk.
+does not yet support all of netCDF4-python's features, such as modifying files
+on-disk.
 
 __ https://github.com/Unidata/netcdf4-python
 
@@ -153,10 +155,12 @@ __ http://drclimate.wordpress.com/2014/01/02/a-beginners-guide-to-scripting-with
 
 We think the design decisions we have made for xarray (namely, basing it on
 pandas) make it a faster and more flexible data analysis tool. That said, Iris
-and CDAT have some great domain specific functionality, and we would love to
-have support for converting their native objects to and from xarray (see
-:issue:`37` and :issue:`133`)
+and CDAT have some great domain specific functionality, and xarray includes
+methods for converting back and forth between xarray and these libraries. See
+:py:meth:`~xarray.DataArray.to_iris` and :py:meth:`~xarray.DataArray.to_cdms2`
+for more details.
 
+.. _faq.other_projects:
 
 What other projects leverage xarray?
 ------------------------------------
@@ -207,6 +211,7 @@ Extend xarray capabilities
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
+- `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
 ~~~~~~~~~~~~~
@@ -262,5 +267,5 @@ would certainly appreciate it. We recommend two citations.
                  month  = aug,
                  year   = 2016,
                  doi    = {10.5281/zenodo.59499},
-                 url    = {http://dx.doi.org/10.5281/zenodo.59499}
+                 url    = {https://doi.org/10.5281/zenodo.59499}
                 }

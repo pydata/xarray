@@ -4,6 +4,7 @@ import pickle
 from copy import deepcopy
 from distutils.version import LooseVersion
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,8 +18,8 @@ from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_bottleneck, requires_dask,
-    requires_scipy, source_ndarray, unittest, requires_cftime)
+    assert_identical, raises_regex, requires_bottleneck, requires_cftime,
+    requires_dask, requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -321,11 +322,14 @@ class TestDataArray(TestCase):
         actual = DataArray(series)
         assert_equal(expected[0].reset_coords('x', drop=True), actual)
 
-        panel = pd.Panel({0: frame})
-        actual = DataArray(panel)
-        expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
-        expected['dim_0'] = [0]
-        assert_identical(expected, actual)
+        if hasattr(pd, 'Panel'):
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+                panel = pd.Panel({0: frame})
+            actual = DataArray(panel)
+            expected = DataArray([data], expected.coords, ['dim_0', 'x', 'y'])
+            expected['dim_0'] = [0]
+            assert_identical(expected, actual)
 
         expected = DataArray(data,
                              coords={'x': ['a', 'b'], 'y': [-1, -2],
@@ -1180,6 +1184,13 @@ class TestDataArray(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             self.mda.assign_coords(level_1=range(4))
 
+        # GH: 2112
+        da = xr.DataArray([0, 1, 2], dims='x')
+        with pytest.raises(ValueError):
+            da['x'] = [0, 1, 2, 3]  # size conflict
+        with pytest.raises(ValueError):
+            da.coords['x'] = [0, 1, 2, 3]  # size conflict
+
     def test_coords_alignment(self):
         lhs = DataArray([1, 2, 3], [('x', [0, 1, 2])])
         rhs = DataArray([2, 3, 4], [('x', [1, 2, 3])])
@@ -1262,6 +1273,9 @@ class TestDataArray(TestCase):
             renamed, self.ds.rename({'x': 'z'}).z)
         assert renamed.name == 'z'
         assert renamed.dims == ('z',)
+
+        renamed_kwargs = self.dv.x.rename(x='z').rename('z')
+        assert_identical(renamed, renamed_kwargs)
 
     def test_swap_dims(self):
         array = DataArray(np.random.randn(3), {'y': ('x', list('abc'))}, 'x')
@@ -1666,6 +1680,13 @@ class TestDataArray(TestCase):
         actual = DataArray(s, dims='z').unstack('z')
         assert_identical(expected, actual)
 
+    def test_stack_nonunique_consistency(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'],
+                         coords={'x': [0, 1], 'y': [0, 0]})
+        actual = orig.stack(z=['x', 'y'])
+        expected = DataArray(orig.to_pandas().stack(), dims='z')
+        assert_identical(expected, actual)
+
     def test_transpose(self):
         assert_equal(self.dv.variable.transpose(),
                      self.dv.transpose().variable)
@@ -1759,6 +1780,11 @@ class TestDataArray(TestCase):
                   'c': -999}
         orig = DataArray([[-1, 0, 1], [-3, 0, 3]], coords,
                          dims=['x', 'y'])
+
+        actual = orig.cumsum()
+        expected = DataArray([[-1, -1, 0], [-4, -4, 0]], coords,
+                             dims=['x', 'y'])
+        assert_identical(expected, actual)
 
         actual = orig.cumsum('x')
         expected = DataArray([[-1, 0, 1], [-4, 0, 4]], coords,
@@ -2298,7 +2324,7 @@ class TestDataArray(TestCase):
         array = DataArray(np.ones(10), [('time', times)])
 
         # Simple mean
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = array.resample('1D', 'time', how='mean')
         new_mean = array.resample(time='1D').mean()
         assert_identical(old_mean, new_mean)
@@ -2307,7 +2333,7 @@ class TestDataArray(TestCase):
         attr_array = array.copy()
         attr_array.attrs['meta'] = 'data'
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = attr_array.resample('1D', dim='time', how='mean',
                                            keep_attrs=True)
         new_mean = attr_array.resample(time='1D').mean(keep_attrs=True)
@@ -2318,7 +2344,7 @@ class TestDataArray(TestCase):
         nan_array = array.copy()
         nan_array[1] = np.nan
 
-        with pytest.warns(DeprecationWarning):
+        with pytest.warns(FutureWarning):
             old_mean = nan_array.resample('1D', 'time', how='mean',
                                           skipna=False)
         new_mean = nan_array.resample(time='1D').mean(skipna=False)
@@ -2332,12 +2358,12 @@ class TestDataArray(TestCase):
             # Discard attributes on the call using the new api to match
             # convention from old api
             new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
         for method in [np.mean, np.sum, np.max, np.min]:
             new_api = resampler.reduce(method)
-            with pytest.warns(DeprecationWarning):
+            with pytest.warns(FutureWarning):
                 old_api = array.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 
@@ -2691,9 +2717,13 @@ class TestDataArray(TestCase):
 
         # roundtrips
         for shape in [(3,), (3, 4), (3, 4, 5)]:
+            if len(shape) > 2 and not hasattr(pd, 'Panel'):
+                continue
             dims = list('abc')[:len(shape)]
             da = DataArray(np.random.randn(*shape), dims=dims)
-            roundtripped = DataArray(da.to_pandas()).drop(dims)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'\W*Panel is deprecated')
+                roundtripped = DataArray(da.to_pandas()).drop(dims)
             assert_identical(da, roundtripped)
 
         with raises_regex(ValueError, 'cannot convert'):

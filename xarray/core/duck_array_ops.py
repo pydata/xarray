@@ -145,10 +145,13 @@ def array_equiv(arr1, arr2):
     if arr1.shape != arr2.shape:
         return False
 
-    flag_array = (arr1 == arr2)
-    flag_array |= (isnull(arr1) & isnull(arr2))
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
 
-    return bool(flag_array.all())
+        flag_array = (arr1 == arr2)
+        flag_array |= (isnull(arr1) & isnull(arr2))
+
+        return bool(flag_array.all())
 
 
 def array_notnull_equiv(arr1, arr2):
@@ -159,11 +162,14 @@ def array_notnull_equiv(arr1, arr2):
     if arr1.shape != arr2.shape:
         return False
 
-    flag_array = (arr1 == arr2)
-    flag_array |= isnull(arr1)
-    flag_array |= isnull(arr2)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
 
-    return bool(flag_array.all())
+        flag_array = (arr1 == arr2)
+        flag_array |= isnull(arr1)
+        flag_array |= isnull(arr2)
+
+        return bool(flag_array.all())
 
 
 def count(data, axis=None):
@@ -281,8 +287,7 @@ _nan_object_funcs = {
 
 
 def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
-                           no_bottleneck=False, coerce_strings=False,
-                           keep_dims=False):
+                           no_bottleneck=False, coerce_strings=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
             raise TypeError('`out` is not valid for {}'.format(name))
@@ -343,7 +348,6 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                            'or newer to use skipna=True or skipna=None' % name)
                 raise NotImplementedError(msg)
     f.numeric_only = numeric_only
-    f.keep_dims = keep_dims
     f.__name__ = name
     return f
 
@@ -358,10 +362,34 @@ std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
 prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
-cumprod = _create_nan_agg_method('cumprod', numeric_only=True, np_compat=True,
-                                 no_bottleneck=True, keep_dims=True)
-cumsum = _create_nan_agg_method('cumsum', numeric_only=True, np_compat=True,
-                                no_bottleneck=True, keep_dims=True)
+cumprod_1d = _create_nan_agg_method(
+    'cumprod', numeric_only=True, np_compat=True, no_bottleneck=True)
+cumsum_1d = _create_nan_agg_method(
+    'cumsum', numeric_only=True, np_compat=True, no_bottleneck=True)
+
+
+def _nd_cum_func(cum_func, array, axis, **kwargs):
+    array = asarray(array)
+    if axis is None:
+        axis = tuple(range(array.ndim))
+    if isinstance(axis, int):
+        axis = (axis,)
+
+    out = array
+    for ax in axis:
+        out = cum_func(out, axis=ax, **kwargs)
+    return out
+
+
+def cumprod(array, axis=None, **kwargs):
+    """N-dimensional version of cumprod."""
+    return _nd_cum_func(cumprod_1d, array, axis, **kwargs)
+
+
+def cumsum(array, axis=None, **kwargs):
+    """N-dimensional version of cumsum."""
+    return _nd_cum_func(cumsum_1d, array, axis, **kwargs)
+
 
 _fail_on_dask_array_input_skipna = partial(
     fail_on_dask_array_input,
