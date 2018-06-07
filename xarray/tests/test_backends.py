@@ -2725,7 +2725,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
-    with create_tmp_file(suffix='.tif') as tmp_file:
+    with create_tmp_file(suffix='.tif',
+                         allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         # allow 2d or 3d shapes
         if nz == 1:
             data_shape = ny, nx
