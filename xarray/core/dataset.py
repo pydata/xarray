@@ -1815,7 +1815,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return self._replace_vars_and_dims(variables, coord_names)
 
     def interp(self, coords=None, method='linear', assume_sorted=False,
-               keep_attrs=False, kwargs={}, **coords_kwargs):
+               kwargs={}, **coords_kwargs):
         """ Multidimensional interpolation of Dataset.
 
         Parameters
@@ -1834,10 +1834,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             in any order and they are sorted first. If True, interpolated
             coordinates are assumed to be an array of monotonically increasing
             values.
-        keep_attrs : bool, optional
-            If True, the dataset's attributes (`attrs`) will be copied from
-            the original object to the new one.  If False (default), the new
-            object will be returned without attributes.
         kwargs: dictionary, optional
             Additional keyword passed to scipy's interpolator.
         **coords_kwarg : {dim: coordinate, ...}, optional
@@ -1879,15 +1875,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     var_indexers = {k: (maybe_variable(obj, k), v) for k, v
                                     in indexers.items() if k in var.dims}
                     variables[name] = missing.interp(
-                        var, var_indexers, method, keep_attrs, **kwargs)
+                        var, var_indexers, method, **kwargs)
                 elif all(d not in indexers for d in var.dims):
                     # keep unrelated object array
                     variables[name] = var
 
         coord_names = set(variables).intersection(obj._coord_names)
-
-        selected = obj._replace_vars_and_dims(
-                variables, coord_names=coord_names)
+        selected = obj._replace_vars_and_dims(variables,
+                                              coord_names=coord_names)
         # attach indexer as coordinate
         variables.update(indexers)
         # Extract coordinates from indexers
@@ -1896,10 +1891,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names = (set(variables)
                        .intersection(obj._coord_names)
                        .union(coord_vars))
-
-        attrs = self.attrs if keep_attrs else None
-        return obj._replace_vars_and_dims(
-            variables, coord_names=coord_names, attrs=attrs)
+        return obj._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def rename(self, name_dict=None, inplace=False, **names):
         """Returns a new object with renamed variables and dimensions.
