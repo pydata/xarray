@@ -3275,7 +3275,7 @@ def test_pickle_reconstructor():
 
     lines = ['foo bar spam eggs']
 
-    with create_tmp_file() as tmp:
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
         with open(tmp, 'w') as f:
             f.writelines(lines)
 
