@@ -321,7 +321,6 @@ def test_dtype():
     assert 'z' not in actual.coords
 
 
-
 @requires_scipy
 def test_sorted():
     # unsorted non-uniform gridded data
