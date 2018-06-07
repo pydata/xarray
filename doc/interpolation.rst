@@ -156,7 +156,7 @@ If you want to add a coordinate to the new dimension ``z``, you can supply
 
     x = xr.DataArray([0.5, 1.5, 2.5], dims='z', coords={'z': ['a', 'b','c']})
     y = xr.DataArray([0.15, 0.25, 0.35], dims='z',
-                     coords={'z': ['a', 'b','c']}))
+                     coords={'z': ['a', 'b','c']})
     da.interp(x=x, y=y)
 
 For the details of the advanced indexing,
@@ -256,6 +256,6 @@ The remapping can be done as follows
     axes[0].set_title('Raw data')
 
     dsi = ds.interp(lon=lon, lat=lat)
-    dsi.air.isel(time=0).T.plot(ax=axes[1])
+    dsi.air.isel(time=0).plot(ax=axes[1])
     @savefig interpolation_sample4.png width=8in
     axes[1].set_title('Remapped data')
