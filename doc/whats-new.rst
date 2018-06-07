@@ -41,6 +41,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
+  The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+
 .. _whats-new.0.10.6:
 
 v0.10.6 (31 May 2018)
@@ -220,6 +223,7 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
   By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
