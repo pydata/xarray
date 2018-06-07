@@ -19,7 +19,8 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
     save_mfdataset)
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import (robust_getitem,
+                                    PickleByReconstructionWrapper)
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
@@ -2724,7 +2725,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
-    with create_tmp_file(suffix='.tif') as tmp_file:
+    with create_tmp_file(suffix='.tif',
+                         allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         # allow 2d or 3d shapes
         if nz == 1:
             data_shape = ny, nx
@@ -2996,6 +2998,14 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
+    def test_pickle_rasterio(self):
+        # regression test for https://github.com/pydata/xarray/issues/2121
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with xr.open_rasterio(tmp_file) as rioda:
+                temp = pickle.dumps(rioda)
+                with pickle.loads(temp) as actual:
+                    assert_equal(actual, rioda)
+
     def test_ENVI_tags(self):
         rasterio = pytest.importorskip('rasterio', minversion='1.0a')
         from rasterio.transform import from_origin
@@ -3260,3 +3270,29 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
+
+
+def test_pickle_reconstructor():
+
+    lines = ['foo bar spam eggs']
+
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
+        with open(tmp, 'w') as f:
+            f.writelines(lines)
+
+        obj = PickleByReconstructionWrapper(open, tmp)
+
+        assert obj.value.readlines() == lines
+
+        p_obj = pickle.dumps(obj)
+        obj.value.close()  # for windows
+        obj2 = pickle.loads(p_obj)
+
+        assert obj2.value.readlines() == lines
+
+        # roundtrip again to make sure we can fully restore the state
+        p_obj2 = pickle.dumps(obj2)
+        obj2.value.close()  # for windows
+        obj3 = pickle.loads(p_obj2)
+
+        assert obj3.value.readlines() == lines
