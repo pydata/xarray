@@ -523,8 +523,8 @@ class PickleByReconstructionWrapper(object):
         return self._ds
 
     def __getstate__(self):
-        del self._ds
         state = self.__dict__.copy()
+        del state['_ds']
         if self.mode == 'w':
             # file has already been created, don't override when restoring
             state['mode'] = 'a'

@@ -3288,3 +3288,10 @@ def test_pickle_reconstructor():
         obj2 = pickle.loads(p_obj)
 
         assert obj2.value.readlines() == lines
+
+        # roundtrip again to make sure we can fully restore the state
+        p_obj2 = pickle.dumps(obj2)
+        obj2.value.close()  # for windows
+        obj3 = pickle.loads(p_obj2)
+
+        assert obj3.value.readlines() == lines
