@@ -35,8 +35,14 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-- Plot labels now make use of metadata that follow CF conventions.
+
+- Plot labels now make use of metadata that follow CF conventions
+  (:issue:`2135`).
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Line plots now support facetting with ``row`` and ``col`` arguments
+  (:issue:`2107`).
+  By `Yohai Bar Sinai <https://github.com/yohai>`_.
 
 - :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
   methods are newly added.
@@ -44,9 +50,6 @@ Enhancements
   (:issue:`2079`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
   
-- `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
-  dask<0.17.4. (related to :issue:`2203`)
-  By `Keisuke Fujii <https://github.com/fujiisoup`_.
 Bug fixes
 ~~~~~~~~~
 
