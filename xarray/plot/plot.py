@@ -65,7 +65,7 @@ def _interval_to_mid_points(array):
     with the Intervals' mid points.
     """
 
-    return np.asarray(list(map(lambda x: x.mid, array)))
+    return np.array([x.mid for x in array])
 
 
 def _interval_to_bound_points(array):
@@ -74,7 +74,7 @@ def _interval_to_bound_points(array):
     with the Intervals' boundaries.
     """
 
-    array_boundaries = np.asarray(list(map(lambda x: x.left, array)))
+    array_boundaries = np.array([x.left for x in array])
     array_boundaries = np.concatenate(
         (array_boundaries, np.array([array[-1].right])))
 
@@ -88,14 +88,30 @@ def _interval_to_double_bound_points(xarray, yarray):
     doubles. yarray is modified so it matches the new shape of xarray.
     """
 
-    xarray1 = np.asarray(list(map(lambda x: x.left, xarray)))
-    xarray2 = np.asarray(list(map(lambda x: x.right, xarray)))
+    xarray1 = np.array([x.left for x in xarray])
+    xarray2 = np.array([x.right for x in xarray])
 
-    xarray = ([x for x in itertools.chain.from_iterable(
-        zip(xarray1, xarray2))])
-    yarray = ([y for y in itertools.chain.from_iterable(zip(yarray, yarray))])
+    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
+    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
 
     return xarray, yarray
+
+
+def _resolve_intervals_2dplot(val, func_name):
+    """
+    Helper function to replace the values of a coordinate array containing
+    pd.Interval with their mid-points or - for pcolormesh - boundaries which
+    increases length by 1.
+    """
+    label_extra = ''
+    if _valid_other_type(val, [pd.Interval]):
+        if func_name == 'pcolormesh':
+            val = _interval_to_bound_points(val)
+        else:
+            val = _interval_to_mid_points(val)
+            label_extra = '_center'
+
+    return val, label_extra
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -767,26 +783,8 @@ def _plot2d(plotfunc):
         _ensure_plottable(xval, yval)
 
         # Replace pd.Intervals if contained in xval or yval.
-        if _valid_other_type(xval, [pd.Interval]):
-            if 'pcolormesh' == plotfunc.__name__:
-                xplt = _interval_to_bound_points(xval)
-                xlab_extra = ''
-            else:
-                xplt = _interval_to_mid_points(xval)
-                xlab_extra = '_center'
-        else:
-            xplt = xval
-            xlab_extra = ''
-        if _valid_other_type(yval, [pd.Interval]):
-            if 'pcolormesh' == plotfunc.__name__:
-                yplt = _interval_to_bound_points(yval)
-                ylab_extra = ''
-            else:
-                yplt = _interval_to_mid_points(yval)
-                ylab_extra = '_center'
-        else:
-            yplt = yval
-            ylab_extra = ''
+        xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
+        yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
