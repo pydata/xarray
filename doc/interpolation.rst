@@ -219,16 +219,16 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
 .. ipython:: python
 
     # Raw data
-    ds = xr.tutorial.load_dataset('air_temperature')
+    ds = xr.tutorial.load_dataset('air_temperature').isel(time=0)
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
-    ds.air.isel(time=0).plot(ax=axes[0])
+    ds.air.plot(ax=axes[0])
     axes[0].set_title('Raw data')
 
     # Interpolated data
     new_lon = np.linspace(ds.lon[0], ds.lon[-1], ds.dims['lon'] * 4)
     new_lat = np.linspace(ds.lat[0], ds.lat[-1], ds.dims['lat'] * 4)
     dsi = ds.interp(lat=new_lat, lon=new_lon)
-    dsi.air.isel(time=0).plot(ax=axes[1])
+    dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample3.png width=8in
     axes[1].set_title('Interpolated data')
 
@@ -247,7 +247,7 @@ The remapping can be done as follows
                        dims=['x', 'z'], coords={'x': x, 'z': z})
 
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
-    ds.air.isel(time=0).plot(ax=axes[0])
+    ds.air.plot(ax=axes[0])
     # draw the new coordinate on the original coordinates.
     for idx in [0, 33, 66, 99]:
         axes[0].plot(lon.isel(x=idx), lat, '--k')
@@ -256,6 +256,6 @@ The remapping can be done as follows
     axes[0].set_title('Raw data')
 
     dsi = ds.interp(lon=lon, lat=lat)
-    dsi.air.isel(time=0).plot(ax=axes[1])
+    dsi.air.plot(ax=axes[1])
     @savefig interpolation_sample4.png width=8in
     axes[1].set_title('Remapped data')
