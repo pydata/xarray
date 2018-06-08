@@ -25,9 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.7:
+.. _whats-new.0.10.8:
 
-v0.10.7 (unreleased)
+v0.10.8 (unreleased)
 --------------------
 
 Documentation
@@ -35,11 +35,37 @@ Documentation
 
 Enhancements
 ~~~~~~~~~~~~
-- Plot labels now make use of metadata that follow CF conventions.
-  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+.. _whats-new.0.10.7:
+
+v0.10.7 (7 June 2018)
+---------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Plot labels now make use of metadata that follow CF conventions
+  (:issue:`2135`).
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Line plots now support facetting with ``row`` and ``col`` arguments
+  (:issue:`2107`).
+  By `Yohai Bar Sinai <https://github.com/yohai>`_.
+
+- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
+  methods are newly added.
+  See :ref:`interpolating values with interp` for the detail.
+  (:issue:`2079`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  
+Bug fixes
+~~~~~~~~~
+
+- Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
+  The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
 
 .. _whats-new.0.10.6:
 
@@ -199,6 +225,7 @@ Enhancements
   currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+
 Bug fixes
 ~~~~~~~~~
 
@@ -223,6 +250,7 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
   By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
