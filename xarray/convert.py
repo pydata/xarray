@@ -211,7 +211,7 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 
 
 def _iris_name(iris_obj):
-    return iris_obj.standard_name or iris_obj.var_name or 'unknown'
+    return iris_obj.var_name or iris_obj.standard_name or 'unknown'
 
 
 def from_iris(cube):
