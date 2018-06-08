@@ -110,6 +110,7 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.squeeze
+   Dataset.interp
    Dataset.reindex
    Dataset.reindex_like
    Dataset.set_index
@@ -263,6 +264,7 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.squeeze
+   DataArray.interp
    DataArray.reindex
    DataArray.reindex_like
    DataArray.set_index

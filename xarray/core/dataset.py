@@ -1318,7 +1318,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         # all indexers should be int, slice, np.ndarrays, or Variable
         indexers_list = []
         for k, v in iteritems(indexers):
-            if isinstance(v, integer_types + (slice, Variable)):
+            if isinstance(v, (slice, Variable)):
                 pass
             elif isinstance(v, DataArray):
                 v = v.variable
@@ -1328,6 +1328,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 raise TypeError('cannot use a Dataset as an indexer')
             else:
                 v = np.asarray(v)
+                if v.ndim == 0:
+                    v = as_variable(v)
+                elif v.ndim == 1:
+                    v = as_variable((k, v))
+                else:
+                    raise IndexError(
+                        "Unlabeled multi-dimensional array cannot be "
+                        "used for indexing: {}".format(k))
             indexers_list.append((k, v))
         return indexers_list
 
@@ -1805,6 +1813,85 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names = set(self._coord_names)
         coord_names.update(indexers)
         return self._replace_vars_and_dims(variables, coord_names)
+
+    def interp(self, coords=None, method='linear', assume_sorted=False,
+               kwargs={}, **coords_kwargs):
+        """ Multidimensional interpolation of Dataset.
+
+        Parameters
+        ----------
+        coords : dict, optional
+            Mapping from dimension names to the new coordinates.
+            New coordinate can be a scalar, array-like or DataArray.
+            If DataArrays are passed as new coordates, their dimensions are
+            used for the broadcasting.
+        method: string, optional.
+            {'linear', 'nearest'} for multidimensional array,
+            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
+            for 1-dimensional array. 'linear' is used by default.
+        assume_sorted: boolean, optional
+            If False, values of coordinates that are interpolated over can be
+            in any order and they are sorted first. If True, interpolated
+            coordinates are assumed to be an array of monotonically increasing
+            values.
+        kwargs: dictionary, optional
+            Additional keyword passed to scipy's interpolator.
+        **coords_kwarg : {dim: coordinate, ...}, optional
+            The keyword arguments form of ``coords``.
+            One of coords or coords_kwargs must be provided.
+
+        Returns
+        -------
+        interpolated: xr.Dataset
+            New dataset on the new coordinates.
+
+        Note
+        ----
+        scipy is required.
+
+        See Also
+        --------
+        scipy.interpolate.interp1d
+        scipy.interpolate.interpn
+        """
+        from . import missing
+
+        coords = either_dict_or_kwargs(coords, coords_kwargs, 'rename')
+        indexers = OrderedDict(self._validate_indexers(coords))
+
+        obj = self if assume_sorted else self.sortby([k for k in coords])
+
+        def maybe_variable(obj, k):
+            # workaround to get variable for dimension without coordinate.
+            try:
+                return obj._variables[k]
+            except KeyError:
+                return as_variable((k, range(obj.dims[k])))
+
+        variables = OrderedDict()
+        for name, var in iteritems(obj._variables):
+            if name not in indexers:
+                if var.dtype.kind in 'uifc':
+                    var_indexers = {k: (maybe_variable(obj, k), v) for k, v
+                                    in indexers.items() if k in var.dims}
+                    variables[name] = missing.interp(
+                        var, var_indexers, method, **kwargs)
+                elif all(d not in indexers for d in var.dims):
+                    # keep unrelated object array
+                    variables[name] = var
+
+        coord_names = set(variables).intersection(obj._coord_names)
+        selected = obj._replace_vars_and_dims(variables,
+                                              coord_names=coord_names)
+        # attach indexer as coordinate
+        variables.update(indexers)
+        # Extract coordinates from indexers
+        coord_vars = selected._get_indexers_coordinates(coords)
+        variables.update(coord_vars)
+        coord_names = (set(variables)
+                       .intersection(obj._coord_names)
+                       .union(coord_vars))
+        return obj._replace_vars_and_dims(variables, coord_names=coord_names)
 
     def rename(self, name_dict=None, inplace=False, **names):
         """Returns a new object with renamed variables and dimensions.

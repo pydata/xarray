@@ -38,6 +38,15 @@ Enhancements
 - Plot labels now make use of metadata that follow CF conventions.
   By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
 
+- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
+  methods are newly added.
+  See :ref:`interpolating values with interp` for the detail.
+  (:issue:`2079`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  
+- `:py:meth:`~DataArray.dot` and :py:func:`~dot` are partly supported with older
+  dask<0.17.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup`_.
 Bug fixes
 ~~~~~~~~~
 
@@ -198,6 +207,7 @@ Enhancements
   allow for the lazy computation of netCDF and zarr stores. This feature is
   currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~

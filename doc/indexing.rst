@@ -510,7 +510,7 @@ where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
 and mapped along a new dimension ``z``.
 
 If you want to add a coordinate to the new dimension ``z``,
-you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
+you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 
 .. ipython:: python
 
