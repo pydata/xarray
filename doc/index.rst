@@ -40,6 +40,7 @@ Documentation
 
 * :doc:`data-structures`
 * :doc:`indexing`
+* :doc:`interpolation`
 * :doc:`computation`
 * :doc:`groupby`
 * :doc:`reshaping`
@@ -57,6 +58,7 @@ Documentation
 
    data-structures
    indexing
+   interpolation
    computation
    groupby
    reshaping
