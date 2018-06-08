@@ -27,11 +27,8 @@ What's New
 
 .. _whats-new.0.10.7:
 
-v0.10.7 (unreleased)
---------------------
-
-Documentation
-~~~~~~~~~~~~~
+v0.10.7 (7 June 2018)
+---------------------
 
 Enhancements
 ~~~~~~~~~~~~
