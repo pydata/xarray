@@ -187,7 +187,7 @@ def _iris_obj_to_attrs(obj):
              'long_name': obj.long_name}
     if obj.units.calendar:
         attrs['calendar'] = obj.units.calendar
-    if obj.units.origin != '1':
+    if obj.units.origin != '1' and not obj.units.is_unknown():
         attrs['units'] = obj.units.origin
     attrs.update(obj.attributes)
     return dict((k, v) for k, v in attrs.items() if v is not None)

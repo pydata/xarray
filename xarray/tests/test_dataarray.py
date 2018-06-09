@@ -3060,8 +3060,7 @@ class TestDataArray(TestCase):
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            coords=[('latitude', [-90, 0, 90])], 
-            attrs={'units': 'unknown'},
+            coords=[('latitude', [-90, 0, 90])],
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3074,7 +3073,6 @@ class TestDataArray(TestCase):
             coords=[
                 ('latitude', [-90, 0, 90], {'standard_name': 'latitude'})
             ],
-            attrs={'units': 'unknown'},
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3085,7 +3083,6 @@ class TestDataArray(TestCase):
         expected = xr.DataArray(
             [0, 0, 0],
             coords=[('unknown', [-90, 0, 90], {'long_name': 'some coord'})],
-            attrs={'units': 'unknown'}
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3188,15 +3185,14 @@ class TestDataArray(TestCase):
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
-        
+
         # use var_name
         latitude = iris.coords.DimCoord([-90, 0, 90], var_name='latitude')
         cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            coords=[('latitude', [-90, 0, 90])], 
-            attrs={'units': 'unknown'},
+            coords=[('latitude', [-90, 0, 90])],
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3209,7 +3205,6 @@ class TestDataArray(TestCase):
             coords=[
                 ('latitude', [-90, 0, 90], {'standard_name': 'latitude'})
             ],
-            attrs={'units': 'unknown'},
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3220,7 +3215,6 @@ class TestDataArray(TestCase):
         expected = xr.DataArray(
             [0, 0, 0],
             coords=[('unknown', [-90, 0, 90], {'long_name': 'some coord'})],
-            attrs={'units': 'unknown'}
         )
         xr.testing.assert_identical(result, expected)
 
