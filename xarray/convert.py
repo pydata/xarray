@@ -221,6 +221,8 @@ def from_iris(cube):
     from xarray.core.pycompat import dask_array_type
 
     name = _iris_name(cube)
+    if name == 'unknown':
+        name = None
     dims = []
     for i in range(cube.ndim):
         try:
