@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -430,3 +431,30 @@ def test_interpolate_dimorder(case):
         actual = da.interp(x=0.5, z=new_z).dims
         expected = da.sel(x=0.5, z=new_z, method='nearest').dims
         assert actual == expected
+
+
+@requires_scipy
+def test_interp_like():
+    ds = create_test_data()
+    ds.attrs['foo'] = 'var'
+    ds['var1'].attrs['buz'] = 'var2'
+
+    other = xr.DataArray(np.random.randn(3), dims=['dim2'],
+                         coords={'dim2': [0, 1, 2]})
+    interpolated = ds.interp_like(other)
+
+    assert_allclose(interpolated['var1'],
+                    ds['var1'].interp(dim2=other['dim2']))
+    assert_allclose(interpolated['var1'],
+                    ds['var1'].interp_like(other))
+    assert interpolated['var3'].equals(ds['var3'])
+
+    # attrs should be kept
+    assert interpolated.attrs['foo'] == 'var'
+    assert interpolated['var1'].attrs['buz'] == 'var2'
+
+    other = xr.DataArray(np.random.randn(3), dims=['dim3'],
+                         coords={'dim3': ['a', 'b', 'c']})
+
+    with pytest.raises(TypeError):
+        ds.interp_like(other)

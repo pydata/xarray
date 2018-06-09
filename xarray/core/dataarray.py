@@ -951,6 +951,52 @@ class DataArray(AbstractArray, DataWithCoords):
             **coords_kwargs)
         return self._from_temp_dataset(ds)
 
+    def interp_like(self, other, method='linear', assume_sorted=False,
+                    kwargs={}):
+        """Interpolate this object onto the coordinates of another object,
+        filling out of range values with NaN.
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object with an 'indexes' attribute giving a mapping from dimension
+            names to an 1d array-like, which provides coordinates upon
+            which to index the variables in this dataset.
+        method: string, optional.
+            {'linear', 'nearest'} for multidimensional array,
+            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
+            for 1-dimensional array. 'linear' is used by default.
+        assume_sorted: boolean, optional
+            If False, values of coordinates that are interpolated over can be
+            in any order and they are sorted first. If True, interpolated
+            coordinates are assumed to be an array of monotonically increasing
+            values.
+        kwargs: dictionary, optional
+            Additional keyword passed to scipy's interpolator.
+
+        Returns
+        -------
+        interpolated: xr.DataArray
+            Another dataarray by interpolating this dataarray's data along the
+            coordinates of the other object.
+
+        Note
+        ----
+        scipy is required.
+
+        See Also
+        --------
+        DataArray.interp
+        DataArray.reindex_like
+        """
+        if self.dtype.kind not in 'uifc':
+            raise TypeError('interp only works for a numeric type array. '
+                            'Given {}.'.format(self.dtype))
+
+        ds = self._to_temp_dataset().interp_like(
+            other, method=method, kwargs=kwargs, assume_sorted=assume_sorted)
+        return self._from_temp_dataset(ds)
+
     def rename(self, new_name_or_name_dict=None, **names):
         """Returns a new DataArray with renamed coordinates or a new name.
 

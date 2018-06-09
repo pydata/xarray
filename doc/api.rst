@@ -111,6 +111,7 @@ Indexing
    Dataset.sel
    Dataset.squeeze
    Dataset.interp
+   Dataset.interp_like
    Dataset.reindex
    Dataset.reindex_like
    Dataset.set_index
@@ -265,6 +266,7 @@ Indexing
    DataArray.sel
    DataArray.squeeze
    DataArray.interp
+   DataArray.interp_like
    DataArray.reindex
    DataArray.reindex_like
    DataArray.set_index
