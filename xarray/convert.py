@@ -212,9 +212,9 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 
 def _name(iris_obj, default='unknown'):
     """ Mimicks `iris_obj.name()` but with different name resolution order.
-    
+
     Same as iris_obj.name() method, but using iris_obj.var_name first to enable
-    roundtripping.    
+    roundtripping.
     """
     return iris_obj.var_name or iris_obj.standard_name or \
         iris_obj.long_name or str(iris_obj.attributes.get('STASH', '')) or \
@@ -237,8 +237,11 @@ def from_iris(cube):
             dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
-            
-    assert len(set(dims)) == len(dims)
+
+    if len(set(dims)) != len(dims):
+        from collections import Counter
+        duplicates = [k for k, v in Counter(dims).items() if v > 1]
+        raise ValueError('Duplicate coordinate name {}.'.format(duplicates))
 
     coords = OrderedDict()
 
