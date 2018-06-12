@@ -3076,13 +3076,13 @@ class TestDataArray(TestCase):
         )
         xr.testing.assert_identical(result, expected)
 
-        # use 'unknown' if no standard_name or var_name available
+        # use long_name if no standard_name or var_name available
         latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
         cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            coords=[('unknown', [-90, 0, 90], {'long_name': 'some coord'})],
+            coords=[('some coord', [-90, 0, 90], {'long_name': 'some coord'})],
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3208,13 +3208,13 @@ class TestDataArray(TestCase):
         )
         xr.testing.assert_identical(result, expected)
 
-        # use 'unknown' if no standard_name or var_name available
+        # use long_name if no standard_name or var_name available
         latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
         cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            coords=[('unknown', [-90, 0, 90], {'long_name': 'some coord'})],
+            coords=[('some coord', [-90, 0, 90], {'long_name': 'some coord'})],
         )
         xr.testing.assert_identical(result, expected)
 

@@ -210,8 +210,15 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     return ' '.join(cell_methods)
 
 
-def _iris_name(iris_obj):
-    return iris_obj.var_name or iris_obj.standard_name or 'unknown'
+def _name(iris_obj, default='unknown'):
+    """ Mimicks `iris_obj.name()` but with different name resolution order.
+    
+    Same as iris_obj.name() method, but using iris_obj.var_name first to enable
+    roundtripping.    
+    """
+    return iris_obj.var_name or iris_obj.standard_name or \
+        iris_obj.long_name or str(iris_obj.attributes.get('STASH', '')) or \
+        default
 
 
 def from_iris(cube):
@@ -220,14 +227,14 @@ def from_iris(cube):
     import iris.exceptions
     from xarray.core.pycompat import dask_array_type
 
-    name = _iris_name(cube)
+    name = _name(cube)
     if name == 'unknown':
         name = None
     dims = []
     for i in range(cube.ndim):
         try:
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
-            dims.append(_iris_name(dim_coord))
+            dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
 
@@ -237,10 +244,9 @@ def from_iris(cube):
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
         if coord_dims:
-            coords[_iris_name(coord)] = (coord_dims, coord.points, coord_attrs)
+            coords[_name(coord)] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[_iris_name(coord)] = ((),
-                                      np.asscalar(coord.points), coord_attrs)
+            coords[_name(coord)] = ((), np.asscalar(coord.points), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)
