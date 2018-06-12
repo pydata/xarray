@@ -293,14 +293,14 @@ class FacetGrid(object):
                                 ax=ax, _labels=False,
                                 **kwargs)
                 self._mappables.append(mappable)
-        _, _, _, xlabel, ylabel, huelabel = _infer_line_data(
+        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
             darray=self.data.loc[self.name_dicts.flat[0]],
             x=x, y=y, hue=hue)
 
         self._finalize_grid(xlabel, ylabel)
 
-        if add_legend and huelabel:
-            self.add_line_legend(huelabel)
+        if add_legend and hueplt is not None and huelabel is not None:
+            self._add_line_legend(hueplt, huelabel)
 
         return self
 
@@ -314,10 +314,10 @@ class FacetGrid(object):
             if namedict is None:
                 ax.set_visible(False)
 
-    def add_line_legend(self, huelabel):
+    def _add_line_legend(self, hueplt, huelabel):
         figlegend = self.fig.legend(
             handles=self._mappables[-1],
-            labels=list(self.data.coords[huelabel].values),
+            labels=list(hueplt.values),
             title=huelabel,
             loc="center right")
 

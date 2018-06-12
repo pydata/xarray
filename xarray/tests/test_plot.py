@@ -1529,6 +1529,12 @@ class TestFacetedLinePlots(PlotTestCase):
                                         range(3), ['A', 'B', 'C', 'C++']],
                                 name='Cornelius Ortega the 1st')
 
+        self.darray.hue.name = 'huename'
+        self.darray.hue.attrs['units'] = 'hunits'
+        self.darray.x.attrs['units'] = 'xunits'
+        self.darray.col.attrs['units'] = 'colunits'
+        self.darray.row.attrs['units'] = 'rowunits'
+
     def test_facetgrid_shape(self):
         g = self.darray.plot(row='row', col='col', hue='hue')
         assert g.axes.shape == (len(self.darray.row), len(self.darray.col))
