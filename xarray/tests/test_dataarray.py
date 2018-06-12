@@ -3186,64 +3186,6 @@ class TestDataArray(TestCase):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-        # use var_name
-        latitude = iris.coords.DimCoord([-90, 0, 90], var_name='latitude')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
-        result = xr.DataArray.from_iris(cube)
-        expected = xr.DataArray(
-            [0, 0, 0],
-            coords=[('latitude', [-90, 0, 90])],
-        )
-        xr.testing.assert_identical(result, expected)
-
-        # use standard_name if no var_name available
-        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
-        result = xr.DataArray.from_iris(cube)
-        expected = xr.DataArray(
-            [0, 0, 0],
-            coords=[
-                ('latitude', [-90, 0, 90], {'standard_name': 'latitude'})
-            ],
-        )
-        xr.testing.assert_identical(result, expected)
-
-        # use long_name if no standard_name or var_name available
-        latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
-        result = xr.DataArray.from_iris(cube)
-        expected = xr.DataArray(
-            [0, 0, 0],
-            coords=[('some coord', [-90, 0, 90], {'long_name': 'some coord'})],
-        )
-        xr.testing.assert_identical(result, expected)
-
-        # non-numeric coord to iris
-        data = [0.1, 0.2, 0.3]
-        locs = ['IA', 'IL', 'IN']
-        da = xr.DataArray(data, coords=[locs], dims=['space'])
-        result = xr.DataArray.to_iris(da)
-        expected = iris.cube.Cube(
-            data,
-            aux_coords_and_dims=[
-                (iris.coords.AuxCoord(locs, var_name='space'), 0)
-            ]
-        )
-        assert result == expected
-
-        # non-monotonic coord to iris
-        data = [0.1, 0.2, 0.3]
-        locs = [0, 2, 1]
-        da = xr.DataArray(data, coords=[locs], dims=['space'])
-        result = xr.DataArray.to_iris(da)
-        expected = iris.cube.Cube(
-            data,
-            aux_coords_and_dims=[
-                (iris.coords.AuxCoord(locs, var_name='space'), 0)
-            ]
-        )
-        assert result == expected
-
     def test_to_dataset_whole(self):
         unnamed = DataArray([1, 2], dims='x')
         with raises_regex(ValueError, 'unable to convert unnamed'):
