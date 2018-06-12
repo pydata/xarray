@@ -152,9 +152,10 @@ def _finalize_store(write, store):
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=True, decode_times=True, autoclose=False,
+                 mask_and_scale=None, decode_times=True, autoclose=False,
                  concat_characters=True, decode_coords=True, engine=None,
-                 chunks=None, lock=None, cache=None, drop_variables=None):
+                 chunks=None, lock=None, cache=None, drop_variables=None,
+                 backend_kwargs=None):
     """Load and decode a dataset from a file or file-like object.
 
     Parameters
@@ -178,7 +179,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA.
+        be replaced by NA. mask_and_scale defaults to True except for the 
+        pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
@@ -194,7 +196,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -219,6 +221,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    backend_kwargs: dictionary, optional
+        A dictionary of keyword arguments to pass on to the backend. This
+        may be useful when backend options would improve performance or 
+        allow user control of dataset processing.
 
     Returns
     -------
@@ -229,6 +235,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
+    
+    if mask_and_scale is None:
+        mask_and_scale = not engine == 'pseudonetcdf'
+
     if not decode_cf:
         mask_and_scale = False
         decode_times = False
@@ -237,6 +247,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if cache is None:
         cache = chunks is None
+
+    if backend_kwargs is None:
+        backend_kwargs = {}
 
     def maybe_decode_store(store, lock=False):
         ds = conventions.decode_cf(
@@ -303,18 +316,26 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         if engine == 'netcdf4':
             store = backends.NetCDF4DataStore.open(filename_or_obj,
                                                    group=group,
-                                                   autoclose=autoclose)
+                                                   autoclose=autoclose,
+                                                   **backend_kwargs)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj,
-                                            autoclose=autoclose)
+                                            autoclose=autoclose,
+                                            **backend_kwargs)
         elif engine == 'pydap':
-            store = backends.PydapDataStore.open(filename_or_obj)
+            store = backends.PydapDataStore.open(filename_or_obj,
+                                                 **backend_kwargs)
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                           autoclose=autoclose)
+                                           autoclose=autoclose,
+                                           **backend_kwargs)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj,
-                                          autoclose=autoclose)
+                                          autoclose=autoclose,
+                                           **backend_kwargs)
+        elif engine == 'pseudonetcdf':
+            store = backends.PseudoNetCDFDataStore.open(
+                filename_or_obj, autoclose=autoclose, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
@@ -334,9 +355,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
-                   mask_and_scale=True, decode_times=True, autoclose=False,
+                   mask_and_scale=None, decode_times=True, autoclose=False,
                    concat_characters=True, decode_coords=True, engine=None,
-                   chunks=None, lock=None, cache=None, drop_variables=None):
+                   chunks=None, lock=None, cache=None, drop_variables=None,
+                   backend_kwargs=None):
     """Open an DataArray from a netCDF file containing a single data variable.
 
     This is designed to read netCDF files with only one data variable. If
@@ -363,7 +385,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA.
+        be replaced by NA. mask_and_scale defaults to True except for the 
+        pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
@@ -403,6 +426,10 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    backend_kwargs: dictionary, optional
+        A dictionary of keyword arguments to pass on to the backend. This
+        may be useful when backend options would improve performance or 
+        allow user control of dataset processing.
 
     Notes
     -----
@@ -417,13 +444,15 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     --------
     open_dataset
     """
+
     dataset = open_dataset(filename_or_obj, group=group, decode_cf=decode_cf,
                            mask_and_scale=mask_and_scale,
                            decode_times=decode_times, autoclose=autoclose,
                            concat_characters=concat_characters,
                            decode_coords=decode_coords, engine=engine,
                            chunks=chunks, lock=lock, cache=cache,
-                           drop_variables=drop_variables)
+                           drop_variables=drop_variables,
+                           backend_kwargs=backend_kwargs)
 
     if len(dataset.data_vars) != 1:
         raise ValueError('Given file dataset contains more than one data '

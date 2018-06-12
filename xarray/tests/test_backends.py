@@ -19,7 +19,8 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
     save_mfdataset)
-from xarray.backends.common import robust_getitem
+from xarray.backends.common import (robust_getitem,
+                                    PickleByReconstructionWrapper)
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
@@ -32,7 +33,7 @@ from . import (
     assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr,
+    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf,
     requires_cftime)
 from .test_dataset import create_test_data
 
@@ -61,6 +62,13 @@ ON_WINDOWS = sys.platform == 'win32'
 def open_example_dataset(name, *args, **kwargs):
     return open_dataset(os.path.join(os.path.dirname(__file__), 'data', name),
                         *args, **kwargs)
+
+
+def open_example_mfdataset(names, *args, **kwargs):
+    return open_mfdataset(
+        [os.path.join(os.path.dirname(__file__), 'data', name)
+         for name in names],
+        *args, **kwargs)
 
 
 def create_masked_and_scaled_data():
@@ -753,12 +761,25 @@ class CFEncodedDataTest(DatasetIOTestCases):
             with self.roundtrip(ds, save_kwargs=kwargs) as actual:
                 pass
 
+    def test_encoding_kwarg_dates(self):
         ds = Dataset({'t': pd.date_range('2000-01-01', periods=3)})
         units = 'days since 1900-01-01'
         kwargs = dict(encoding={'t': {'units': units}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.t.encoding['units'], units)
             assert_identical(actual, ds)
+
+    def test_encoding_kwarg_fixed_width_string(self):
+        # regression test for GH2149
+        for strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            ds = Dataset({'x': strings})
+            kwargs = dict(encoding={'x': {'dtype': 'S1'}})
+            with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+                self.assertEqual(actual['x'].encoding['dtype'], 'S1')
+                assert_identical(actual, ds)
 
     def test_default_fill_value(self):
         # Test default encoding for float:
@@ -879,8 +900,8 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
         yield files
 
 
-@requires_netCDF4
 class BaseNetCDF4Test(CFEncodedDataTest):
+    """Tests for both netCDF4-python and h5netcdf."""
 
     engine = 'netcdf4'
 
@@ -941,6 +962,18 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 assert_identical(data1, actual1)
             with self.open(tmp_file, group='data/2') as actual2:
                 assert_identical(data2, actual2)
+
+    def test_encoding_kwarg_vlen_string(self):
+        for input_strings in [
+            [b'foo', b'bar', b'baz'],
+            [u'foo', u'bar', u'baz'],
+        ]:
+            original = Dataset({'x': input_strings})
+            expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+            kwargs = dict(encoding={'x': {'dtype': str}})
+            with self.roundtrip(original, save_kwargs=kwargs) as actual:
+                assert actual['x'].encoding['dtype'] is str
+                assert_identical(actual, expected)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
         values = np.array([u'ab', u'cdef', np.nan], dtype=object)
@@ -1054,6 +1087,23 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(expected) as actual:
             assert_equal(expected, actual)
 
+    def test_encoding_kwarg_compression(self):
+        ds = Dataset({'x': np.arange(10.0)})
+        encoding = dict(dtype='f4', zlib=True, complevel=9, fletcher32=True,
+                        chunksizes=(5,), shuffle=True)
+        kwargs = dict(encoding=dict(x=encoding))
+
+        with self.roundtrip(ds, save_kwargs=kwargs) as actual:
+            assert_equal(actual, ds)
+            self.assertEqual(actual.x.encoding['dtype'], 'f4')
+            self.assertEqual(actual.x.encoding['zlib'], True)
+            self.assertEqual(actual.x.encoding['complevel'], 9)
+            self.assertEqual(actual.x.encoding['fletcher32'], True)
+            self.assertEqual(actual.x.encoding['chunksizes'], (5,))
+            self.assertEqual(actual.x.encoding['shuffle'], True)
+
+        self.assertEqual(ds.x.encoding, {})
+
     def test_encoding_chunksizes_unlimited(self):
         # regression test for GH1225
         ds = Dataset({'x': [1, 2, 3], 'y': ('x', [2, 3, 4])})
@@ -1117,7 +1167,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                     expected = Dataset({'x': ((), 42)})
                     assert_identical(expected, ds)
 
-    def test_variable_len_strings(self):
+    def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
             values = np.array(['foo', 'bar', 'baz'], dtype=object)
 
@@ -1410,6 +1460,10 @@ class BaseZarrTest(CFEncodedDataTest):
                             open_kwargs={'group': group}) as actual:
             assert_identical(original, actual)
 
+    def test_encoding_kwarg_fixed_width_string(self):
+        # not relevant for zarr, since we don't use EncodedStringCoder
+        pass
+
     # TODO: someone who understand caching figure out whether chaching
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
@@ -1578,6 +1632,13 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF3_CLASSIC') as store:
                 yield store
+
+    def test_encoding_kwarg_vlen_string(self):
+        original = Dataset({'x': [u'foo', u'bar', u'baz']})
+        kwargs = dict(encoding={'x': {'dtype': str}})
+        with raises_regex(ValueError, 'encoding dtype=str for vlen'):
+            with self.roundtrip(original, save_kwargs=kwargs):
+                pass
 
 
 class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
@@ -2430,6 +2491,229 @@ class PyNioTestAutocloseTrue(PyNioTest):
     autoclose = True
 
 
+@requires_pseudonetcdf
+class PseudoNetCDFFormatTest(TestCase):
+    autoclose = True
+
+    def open(self, path, **kwargs):
+        return open_dataset(path, engine='pseudonetcdf',
+                            autoclose=self.autoclose,
+                            **kwargs)
+
+    @contextlib.contextmanager
+    def roundtrip(self, data, save_kwargs={}, open_kwargs={},
+                  allow_cleanup_failure=False):
+        with create_tmp_file(
+                allow_cleanup_failure=allow_cleanup_failure) as path:
+            self.save(data, path, **save_kwargs)
+            with self.open(path, **open_kwargs) as ds:
+                yield ds
+
+    def test_ict_format(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        ictfile = open_example_dataset('example.ict',
+                                       engine='pseudonetcdf',
+                                       autoclose=False,
+                                       backend_kwargs={'format': 'ffi1001'})
+        stdattr = {
+            'fill_value': -9999.0,
+            'missing_value': -9999,
+            'scale': 1,
+            'llod_flag': -8888,
+            'llod_value': 'N/A',
+            'ulod_flag': -7777,
+            'ulod_value': 'N/A'
+        }
+
+        def myatts(**attrs):
+            outattr = stdattr.copy()
+            outattr.update(attrs)
+            return outattr
+
+        input = {
+            'coords': {},
+            'attrs': {
+                'fmt': '1001', 'n_header_lines': 27,
+                'PI_NAME': 'Henderson, Barron',
+                'ORGANIZATION_NAME': 'U.S. EPA',
+                'SOURCE_DESCRIPTION': 'Example file with artificial data',
+                'MISSION_NAME': 'JUST_A_TEST',
+                'VOLUME_INFO': '1, 1',
+                'SDATE': '2018, 04, 27', 'WDATE': '2018, 04, 27',
+                'TIME_INTERVAL': '0',
+                'INDEPENDENT_VARIABLE': 'Start_UTC',
+                'ULOD_FLAG': '-7777', 'ULOD_VALUE': 'N/A',
+                'LLOD_FLAG': '-8888',
+                'LLOD_VALUE': ('N/A, N/A, N/A, N/A, 0.025'),
+                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/' +
+                                   'IcarttDataFormat.htm'),
+                'REVISION': 'R0',
+                'R0': 'No comments for this revision.',
+                'TFLAG': 'Start_UTC'
+            },
+            'dims': {'POINTS': 4},
+            'data_vars': {
+                'Start_UTC': {
+                    'data': [43200.0, 46800.0, 50400.0, 50400.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='Start_UTC',
+                        standard_name='Start_UTC',
+                    )
+                },
+                'lat': {
+                    'data': [41.0, 42.0, 42.0, 42.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='degrees_north',
+                        standard_name='lat',
+                    )
+                },
+                'lon': {
+                    'data': [-71.0, -72.0, -73.0, -74.],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='degrees_east',
+                        standard_name='lon',
+                    )
+                },
+                'elev': {
+                    'data': [5.0, 15.0, 20.0, 25.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='meters',
+                        standard_name='elev',
+                    )
+                },
+                'TEST_ppbv': {
+                    'data': [1.2345, 2.3456, 3.4567, 4.5678],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TEST_ppbv',
+                    )
+                },
+                'TESTM_ppbv': {
+                    'data': [2.22, -9999.0, -7777.0, -8888.0],
+                    'dims': ('POINTS',),
+                    'attrs': myatts(
+                        units='ppbv',
+                        standard_name='TESTM_ppbv',
+                        llod_value=0.025
+                    )
+                }
+            }
+        }
+        chkfile = Dataset.from_dict(input)
+        assert_identical(ictfile, chkfile)
+
+    def test_ict_format_write(self):
+        fmtkw = {'format': 'ffi1001'}
+        expected = open_example_dataset('example.ict',
+                                        engine='pseudonetcdf',
+                                        autoclose=False,
+                                        backend_kwargs=fmtkw)
+        with self.roundtrip(expected, save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            assert_identical(expected, actual)
+
+    def test_uamiv_format_read(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=True,
+                                            backend_kwargs={'format': 'uamiv'})
+        data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data = np.array(['2002-06-03'], 'datetime64[ns]')
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+        camxfile.close()
+
+    def test_uamiv_format_mfread(self):
+        """
+        Open a CAMx file and test data variables
+        """
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            camxfile = open_example_mfdataset(
+                ['example.uamiv',
+                 'example.uamiv'],
+                engine='pseudonetcdf',
+                autoclose=True,
+                concat_dim='TSTEP',
+                backend_kwargs={'format': 'uamiv'})
+
+        data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+        data = np.concatenate([data1] * 2, axis=0)
+        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                               dict(units='ppm', long_name='O3'.ljust(16),
+                                    var_desc='O3'.ljust(80)))
+        actual = camxfile.variables['O3']
+        assert_allclose(expected, actual)
+
+        data1 = np.array(['2002-06-03'], 'datetime64[ns]')
+        data = np.concatenate([data1] * 2, axis=0)
+        expected = xr.Variable(('TSTEP',), data,
+                               dict(bounds='time_bounds',
+                                    long_name=('synthesized time coordinate ' +
+                                               'from SDATE, STIME, STEP ' +
+                                               'global attributes')))
+        actual = camxfile.variables['time']
+        assert_allclose(expected, actual)
+        camxfile.close()
+
+    def test_uamiv_format_write(self):
+        fmtkw = {'format': 'uamiv'}
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning,
+                                    message=('IOAPI_ISPH is assumed to be ' +
+                                             '6370000.; consistent with WRF'))
+            expected = open_example_dataset('example.uamiv',
+                                            engine='pseudonetcdf',
+                                            autoclose=False,
+                                            backend_kwargs=fmtkw)
+        with self.roundtrip(expected,
+                            save_kwargs=fmtkw,
+                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            assert_identical(expected, actual)
+
+    def save(self, dataset, path, **save_kwargs):
+        import PseudoNetCDF as pnc
+        pncf = pnc.PseudoNetCDFFile()
+        pncf.dimensions = {k: pnc.PseudoNetCDFDimension(pncf, k, v)
+                           for k, v in dataset.dims.items()}
+        pncf.variables = {k: pnc.PseudoNetCDFVariable(pncf, k, v.dtype.char,
+                                                      v.dims,
+                                                      values=v.data[...],
+                                                      **v.attrs)
+                          for k, v in dataset.variables.items()}
+        for pk, pv in dataset.attrs.items():
+            setattr(pncf, pk, pv)
+
+        pnc.pncwrite(pncf, path, **save_kwargs)
+
+
 @requires_rasterio
 @contextlib.contextmanager
 def create_tmp_geotiff(nx=4, ny=3, nz=3,
@@ -2441,7 +2725,8 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
     # yields a temporary geotiff file and a corresponding expected DataArray
     import rasterio
     from rasterio.transform import from_origin
-    with create_tmp_file(suffix='.tif') as tmp_file:
+    with create_tmp_file(suffix='.tif',
+                         allow_cleanup_failure=ON_WINDOWS) as tmp_file:
         # allow 2d or 3d shapes
         if nz == 1:
             data_shape = ny, nx
@@ -2713,6 +2998,14 @@ class TestRasterio(TestCase):
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
 
+    def test_pickle_rasterio(self):
+        # regression test for https://github.com/pydata/xarray/issues/2121
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with xr.open_rasterio(tmp_file) as rioda:
+                temp = pickle.dumps(rioda)
+                with pickle.loads(temp) as actual:
+                    assert_equal(actual, rioda)
+
     def test_ENVI_tags(self):
         rasterio = pytest.importorskip('rasterio', minversion='1.0a')
         from rasterio.transform import from_origin
@@ -2977,3 +3270,29 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
+
+
+def test_pickle_reconstructor():
+
+    lines = ['foo bar spam eggs']
+
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
+        with open(tmp, 'w') as f:
+            f.writelines(lines)
+
+        obj = PickleByReconstructionWrapper(open, tmp)
+
+        assert obj.value.readlines() == lines
+
+        p_obj = pickle.dumps(obj)
+        obj.value.close()  # for windows
+        obj2 = pickle.loads(p_obj)
+
+        assert obj2.value.readlines() == lines
+
+        # roundtrip again to make sure we can fully restore the state
+        p_obj2 = pickle.dumps(obj2)
+        obj2.value.close()  # for windows
+        obj3 = pickle.loads(p_obj2)
+
+        assert obj3.value.readlines() == lines

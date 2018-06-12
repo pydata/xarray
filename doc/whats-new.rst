@@ -25,10 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
+.. _whats-new.0.10.8:
 
-.. _whats-new.0.10.5:
-
-v0.10.5 (unreleased)
+v0.10.8 (unreleased)
 --------------------
 
 Documentation
@@ -37,30 +36,96 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+Bug fixes
+~~~~~~~~~
+
+.. _whats-new.0.10.7:
+
+v0.10.7 (7 June 2018)
+---------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+- Plot labels now make use of metadata that follow CF conventions
+  (:issue:`2135`).
+  By `Deepak Cherian <https://github.com/dcherian>`_ and `Ryan Abernathey <https://github.com/rabernat>`_.
+
+- Line plots now support facetting with ``row`` and ``col`` arguments
+  (:issue:`2107`).
+  By `Yohai Bar Sinai <https://github.com/yohai>`_.
+
+- :py:meth:`~xarray.DataArray.interp` and :py:meth:`~xarray.Dataset.interp`
+  methods are newly added.
+  See :ref:`interpolating values with interp` for the detail.
+  (:issue:`2079`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  
+Bug fixes
+~~~~~~~~~
+
+- Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
+  The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+
+.. _whats-new.0.10.6:
+
+v0.10.6 (31 May 2018)
+---------------------
+
+The minor release includes a number of bug-fixes and backwards compatible
+enhancements.
+
+Enhancements
+~~~~~~~~~~~~
+
+- New PseudoNetCDF backend for many Atmospheric data formats including
+  GEOS-Chem, CAMx, NOAA arlpacked bit and many others. See
+  :ref:`io.PseudoNetCDF` for more details.
+  By `Barron Henderson <https://github.com/barronh>`_.
+
+- The :py:class:`Dataset` constructor now aligns :py:class:`DataArray`
+  arguments in ``data_vars`` to indexes set explicitly in ``coords``,
+  where previously an error would be raised.
+  (:issue:`674`)
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
+  (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
+  as a first argument, as an alternative to the existing approach
+  of supplying `kwargs`. This allows for more robust behavior
+  of dimension names which conflict with other keyword names, or are
+  not strings.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
+- :py:meth:`~DataArray.rename` now supports supplying ``**kwargs``, as an
+  alternative to the existing approach of supplying a ``dict`` as the
+  first argument.
+  By `Maximilian Roos <https://github.com/maxim-lian>`_.
+
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
   behavior when dimensions are not specified (previously this raised an error).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
+- :py:meth:`DataArray.dot` and :py:func:`dot` are partly supported with older
+  dask<0.17.4. (related to :issue:`2203`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Xarray now uses `Versioneer <https://github.com/warner/python-versioneer>`__
   to manage its version strings. (:issue:`1300`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- :py:meth:`~DataArray.sel`, :py:meth:`~DataArray.isel` & :py:meth:`~DataArray.reindex`,
-  (and their :py:class:`Dataset` counterparts) now support supplying a ``dict``
-  as a first argument, as an alternative to the existing approach 
-  of supplying `kwargs`. This allows for more robust behavior
-  of dimension names which conflict with other keyword names, or are 
-  not strings.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
-
-- :py:meth:`~DataArray.rename` now supports supplying `kwargs`, as an
-  alternative to the existing approach of supplying a ``dict`` as the 
-  first argument.
-  By `Maximilian Roos <https://github.com/maxim-lian>`_.
-
 Bug fixes
 ~~~~~~~~~
+
+- Fixed a regression in 0.10.4, where explicitly specifying ``dtype='S1'`` or
+  ``dtype=str`` in ``encoding`` with ``to_netcdf()`` raised an error
+  (:issue:`2149`).
+  `Stephan Hoyer <https://github.com/shoyer>`_
+
+- :py:func:`apply_ufunc` now directly validates output variables
+  (:issue:`1931`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 - Fixed a bug where ``to_netcdf(..., unlimited_dims='bar')`` yielded NetCDF
   files with spurious 0-length dimensions (i.e. ``b``, ``a``, and ``r``)
@@ -91,14 +156,14 @@ Bug fixes
   when grouping over dimension coordinates with duplicated entries
   (:issue:`2153`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
-  
-- Fix Dataset.to_netcdf() cannot create group with engine="h5netcdf"
+
+- Fix ``Dataset.to_netcdf()`` cannot create group with ``engine="h5netcdf"``
   (:issue:`2177`).
   By `Stephan Hoyer <https://github.com/shoyer>`_
 
 .. _whats-new.0.10.4:
 
-v0.10.4 (May 16, 2018)
+v0.10.4 (16 May 2018)
 ----------------------
 
 The minor release includes a number of bug-fixes and backwards compatible
@@ -157,6 +222,7 @@ Enhancements
   currently only supported by the netCDF4 and zarr backends. (:issue:`1784`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+
 Bug fixes
 ~~~~~~~~~
 
@@ -181,12 +247,13 @@ Bug fixes
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Colorbar limits are now determined by excluding ±Infs too.
   By `Deepak Cherian <https://github.com/dcherian>`_.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 - Fixed ``to_iris`` to maintain lazy dask array after conversion (:issue:`2046`).
   By `Alex Hilson <https://github.com/AlexHilson>`_ and `Stephan Hoyer <https://github.com/shoyer>`_.
 
 .. _whats-new.0.10.3:
 
-v0.10.3 (April 13, 2018)
+v0.10.3 (13 April 2018)
 ------------------------
 
 The minor release includes a number of bug-fixes and backwards compatible enhancements.

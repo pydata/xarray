@@ -650,7 +650,26 @@ We recommend installing PyNIO via conda::
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
-.. _combining multiple files:
+.. _io.PseudoNetCDF:
+
+Formats supported by PseudoNetCDF
+---------------------------------
+
+xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
+formats supported by PseudoNetCDF_, if PseudoNetCDF is installed. 
+PseudoNetCDF can also provide Climate Forecasting Conventions to
+CMAQ files. In addition, PseudoNetCDF can automatically register custom
+readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
+identify readers heuristically, or format can be specified via a key in
+`backend_kwargs`.
+
+To use PseudoNetCDF to read such files, supply
+``engine='pseudonetcdf'`` to :py:func:`~xarray.open_dataset`.
+
+Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
+options are listed on the PseudoNetCDF page.
+
+.. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
 Formats supported by Pandas
@@ -661,6 +680,8 @@ exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
 
+
+.. _combining multiple files:
 
 
 Combining multiple files

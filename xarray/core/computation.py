@@ -10,7 +10,7 @@ from collections import Counter
 
 import numpy as np
 
-from . import duck_array_ops, utils, dtypes
+from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, dask_array_type, basestring
@@ -513,7 +513,7 @@ def broadcast_compat_data(variable, broadcast_dims, core_dims):
 def apply_variable_ufunc(func, *args, **kwargs):
     """apply_variable_ufunc(func, *args, signature, exclude_dims=frozenset())
     """
-    from .variable import Variable
+    from .variable import Variable, as_compatible_data
 
     signature = kwargs.pop('signature')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
@@ -559,20 +559,42 @@ def apply_variable_ufunc(func, *args, **kwargs):
                              'apply_ufunc: {}'.format(dask))
     result_data = func(*input_data)
 
-    if signature.num_outputs > 1:
-        output = []
-        for dims, data in zip(output_dims, result_data):
-            var = Variable(dims, data)
-            if keep_attrs and isinstance(args[0], Variable):
-                var.attrs.update(args[0].attrs)
-            output.append(var)
-        return tuple(output)
-    else:
-        dims, = output_dims
-        var = Variable(dims, result_data)
+    if signature.num_outputs == 1:
+        result_data = (result_data,)
+    elif (not isinstance(result_data, tuple) or
+            len(result_data) != signature.num_outputs):
+        raise ValueError('applied function does not have the number of '
+                         'outputs specified in the ufunc signature. '
+                         'Result is not a tuple of {} elements: {!r}'
+                         .format(signature.num_outputs, result_data))
+
+    output = []
+    for dims, data in zip(output_dims, result_data):
+        data = as_compatible_data(data)
+        if data.ndim != len(dims):
+            raise ValueError(
+                'applied function returned data with unexpected '
+                'number of dimensions: {} vs {}, for dimensions {}'
+                .format(data.ndim, len(dims), dims))
+
+        var = Variable(dims, data, fastpath=True)
+        for dim, new_size in var.sizes.items():
+            if dim in dim_sizes and new_size != dim_sizes[dim]:
+                raise ValueError(
+                    'size of dimension {!r} on inputs was unexpectedly '
+                    'changed by applied function from {} to {}. Only '
+                    'dimensions specified in ``exclude_dims`` with '
+                    'xarray.apply_ufunc are allowed to change size.'
+                    .format(dim, dim_sizes[dim], new_size))
+
         if keep_attrs and isinstance(args[0], Variable):
             var.attrs.update(args[0].attrs)
-        return var
+        output.append(var)
+
+    if signature.num_outputs == 1:
+        return output[0]
+    else:
+        return tuple(output)
 
 
 def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
@@ -719,7 +741,8 @@ def apply_ufunc(func, *args, **kwargs):
         Core dimensions on the inputs to exclude from alignment and
         broadcasting entirely. Any input coordinates along these dimensions
         will be dropped. Each excluded dimension must also appear in
-        ``input_core_dims`` for at least one argument.
+        ``input_core_dims`` for at least one argument. Only dimensions listed
+        here are allowed to change size between input and output objects.
     vectorize : bool, optional
         If True, then assume ``func`` only takes arrays defined over core
         dimensions as input and vectorize it automatically with
@@ -777,15 +800,38 @@ def apply_ufunc(func, *args, **kwargs):
 
     Examples
     --------
-    For illustrative purposes only, here are examples of how you could use
-    ``apply_ufunc`` to write functions to (very nearly) replicate existing
-    xarray functionality:
 
-    Calculate the vector magnitude of two arguments::
+    Calculate the vector magnitude of two arguments:
 
-        def magnitude(a, b):
-            func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
-            return xr.apply_func(func, a, b)
+    >>> def magnitude(a, b):
+    ...     func = lambda x, y: np.sqrt(x ** 2 + y ** 2)
+    ...     return xr.apply_ufunc(func, a, b)
+
+    You can now apply ``magnitude()`` to ``xr.DataArray`` and ``xr.Dataset``
+    objects, with automatically preserved dimensions and coordinates, e.g.,
+
+    >>> array = xr.DataArray([1, 2, 3], coords=[('x', [0.1, 0.2, 0.3])])
+    >>> magnitude(array, -array)
+    <xarray.DataArray (x: 3)>
+    array([1.414214, 2.828427, 4.242641])
+    Coordinates:
+      * x        (x) float64 0.1 0.2 0.3
+
+    Plain scalars, numpy arrays and a mix of these with xarray objects is also
+    supported:
+
+    >>> magnitude(4, 5)
+    5.0
+    >>> magnitude(3, np.array([0, 4]))
+    array([3., 5.])
+    >>> magnitude(array, 0)
+    <xarray.DataArray (x: 3)>
+    array([1., 2., 3.])
+    Coordinates:
+      * x        (x) float64 0.1 0.2 0.3
+
+    Other examples of how you could use ``apply_ufunc`` to write functions to
+    (very nearly) replicate existing xarray functionality:
 
     Compute the mean (``.mean``) over one dimension::
 
@@ -795,7 +841,7 @@ def apply_ufunc(func, *args, **kwargs):
                                input_core_dims=[[dim]],
                                kwargs={'axis': -1})
 
-    Inner product over a specific dimension::
+    Inner product over a specific dimension (like ``xr.dot``)::
 
         def _inner(x, y):
             result = np.matmul(x[..., np.newaxis, :], y[..., :, np.newaxis])
@@ -1014,6 +1060,19 @@ def dot(*arrays, **kwargs):
                        for arr in arrays]
     output_core_dims = [tuple(d for d in all_dims if d not in
                               dims + broadcast_dims)]
+
+    # older dask than 0.17.4, we use tensordot if possible.
+    if isinstance(arr.data, dask_array_type):
+        import dask
+        if LooseVersion(dask.__version__) < LooseVersion('0.17.4'):
+            if len(broadcast_dims) == 0 and len(arrays) == 2:
+                axes = [[arr.get_axis_num(d) for d in arr.dims if d in dims]
+                        for arr in arrays]
+                return apply_ufunc(duck_array_ops.tensordot, *arrays,
+                                   dask='allowed',
+                                   input_core_dims=input_core_dims,
+                                   output_core_dims=output_core_dims,
+                                   kwargs={'axes': axes})
 
     # construct einsum subscripts, such as '...abc,...ab->...c'
     # Note: input_core_dims are always moved to the last position
