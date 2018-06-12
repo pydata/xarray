@@ -237,6 +237,8 @@ def from_iris(cube):
             dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
+            
+    assert len(set(dims)) == len(dims)
 
     coords = OrderedDict()
 
