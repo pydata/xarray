@@ -1330,6 +1330,17 @@ class BaseZarrTest(CFEncodedDataTest):
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
 
+    def test_write_uneven_dask_chunks(self):
+        # regression for GH#2225
+        original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
+
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
+            for k, v in actual.data_vars.items():
+                print(k)
+                assert v.chunks == actual[k].chunks
+
+
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in
         # encoding
