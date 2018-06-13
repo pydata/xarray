@@ -78,24 +78,18 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and enc_chunks is None:
-        all_var_chunks = list(product(*var_chunks))
-        first_var_chunk = all_var_chunks[0]
-        # all but the last chunk have to match exactly
-        for this_chunk in all_var_chunks[:-1]:
-            if this_chunk != first_var_chunk:
-                raise ValueError(
-                    "Zarr requires uniform chunk sizes excpet for final chunk."
-                    " Variable %r has incompatible chunks. Consider "
-                    "rechunking using `chunk()`." % (var_chunks,))
-        # last chunk is allowed to be smaller
-        last_var_chunk = all_var_chunks[-1]
-        for len_first, len_last in zip(first_var_chunk, last_var_chunk):
-            if len_last > len_first:
-                raise ValueError(
-                    "Final chunk of Zarr array must be smaller than first. "
-                    "Variable %r has incompatible chunks. Consider rechunking "
-                    "using `chunk()`." % var_chunks)
-        return first_var_chunk
+        if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
+            raise ValueError(
+                "Zarr requires uniform chunk sizes excpet for final chunk."
+                " Variable %r has incompatible chunks. Consider "
+                "rechunking using `chunk()`." % (var_chunks,))
+        if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
+            raise ValueError(
+                "Final chunk of Zarr array must be smaller than first. "
+                "Variable %r has incompatible chunks. Consider rechunking "
+                "using `chunk()`." % var_chunks)
+        # return the first chunk for each dimension
+        return tuple(chunk[0] for chunk in var_chunks)
 
     # from here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
