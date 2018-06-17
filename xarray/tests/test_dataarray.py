@@ -3772,9 +3772,9 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
-    
 
-class TestIrisConversion(object):   
+
+class TestIrisConversion(object):
     @requires_iris
     def test_to_and_from_iris(self):
         import iris
@@ -3834,88 +3834,83 @@ class TestIrisConversion(object):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-
     @requires_iris
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
-        ('var_name', 'height', 'Height', 
+        ('var_name', 'height', 'Height',
             'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
-        (None, 'height', 'Height', 
+        (None, 'height', 'Height',
             'height', {'standard_name': 'height', 'long_name': 'Height'}),
-        (None, None, 'Height', 'Height', {'long_name': 'Height'}),
-        (None, None, None, None, {}),
+        (None, None, 'Height',
+            'Height', {'long_name': 'Height'}),
+        (None, None, None,
+            None, {}),
     ])
-    def test_da_name_from_cube(self, std_name, long_name, var_name, name, 
+    def test_da_name_from_cube(self, std_name, long_name, var_name, name,
                                attrs):
-        import iris
+        from iris.cube import Cube
 
         data = []
-        cube = iris.cube.Cube(data, var_name=var_name, standard_name=std_name, 
-                              long_name=long_name)
+        cube = Cube(data, var_name=var_name, standard_name=std_name,
+                    long_name=long_name)
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(data, name=name, attrs=attrs)
         xr.testing.assert_identical(result, expected)
 
-
     @requires_iris
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
-        ('var_name', 'height', 'Height', 
+        ('var_name', 'height', 'Height',
             'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
-        (None, 'height', 'Height', 
+        (None, 'height', 'Height',
             'height', {'standard_name': 'height', 'long_name': 'Height'}),
-        (None, None, 'Height', 
+        (None, None, 'Height',
             'Height', {'long_name': 'Height'}),
-        (None, None, None, 
+        (None, None, None,
             'unknown', {}),
     ])
-    def test_da_coord_name_from_cube(self, std_name, long_name, var_name, 
+    def test_da_coord_name_from_cube(self, std_name, long_name, var_name,
                                      name, attrs):
-        import iris
+        from iris.cube import Cube
+        from iris.coords import DimCoord
 
-        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name=std_name, 
-                                        var_name=var_name, long_name=long_name)
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
+        latitude = DimCoord([-90, 0, 90], standard_name=std_name,
+                            var_name=var_name, long_name=long_name)
+        data = [0, 0, 0]
+        cube = Cube(data, dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
-        expected = xr.DataArray(
-            [0, 0, 0],
-            coords=[(name, [-90, 0, 90], attrs)],
-        )
+        expected = xr.DataArray(data, coords=[(name, [-90, 0, 90], attrs)])
         xr.testing.assert_identical(result, expected)
-
 
     @requires_iris
     def test_prevent_duplicate_coord_names(self):
-        import iris
-    
+        from iris.cube import Cube
+        from iris.coords import DimCoord
+
         # Iris enforces unique coordinate names. Because we use a different
         # name resolution order there is this edge case where a valid iris Cube
         # would lead to duplicate dimension names in the DataArray
-        longitude = iris.coords.DimCoord([0, 360], standard_name='longitude',
-                                         var_name='duplicate')
-        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude',
-                                        var_name='duplicate')
-        cube = iris.cube.Cube([[0, 0, 0], [0, 0, 0]], dim_coords_and_dims=[
-            (longitude, 0), (latitude, 1)])
+        longitude = DimCoord([0, 360], standard_name='longitude',
+                             var_name='duplicate')
+        latitude = DimCoord([-90, 0, 90], standard_name='latitude',
+                            var_name='duplicate')
+        data = [[0, 0, 0], [0, 0, 0]]
+        cube = Cube(data, dim_coords_and_dims=[(longitude, 0), (latitude, 1)])
         with pytest.raises(ValueError):
             xr.DataArray.from_iris(cube)
-
 
     @requires_iris
     @pytest.mark.parametrize('coord_values', [
         ['IA', 'IL', 'IN'],  # non-numeric values
         [0, 2, 1],  # non-monotonic values
     ])
-    def test_to_iris_fallback_to_AuxCoord(self, coord_values):
-        import iris
+    def test_fallback_to_iris_AuxCoord(self, coord_values):
+        from iris.cube import Cube
+        from iris.coords import AuxCoord
 
-        data = [0.1, 0.2, 0.3]
+        data = [0, 0, 0]
         da = xr.DataArray(data, coords=[coord_values], dims=['space'])
         result = xr.DataArray.to_iris(da)
-        expected = iris.cube.Cube(
-            data,
-            aux_coords_and_dims=[
-                (iris.coords.AuxCoord(coord_values, var_name='space'), 0)
-            ]
-        )
+        expected = Cube(data, aux_coords_and_dims=[
+            (AuxCoord(coord_values, var_name='space'), 0)])
         assert result == expected
 
     @requires_iris
