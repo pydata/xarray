@@ -3835,6 +3835,77 @@ class TestIrisConversion(object):
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
     @requires_iris
+    @requires_dask
+    def test_to_and_from_iris_dask(self):
+        import dask.array as da
+        import iris
+        import cf_units  # iris requirement
+
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        original = DataArray(
+            da.from_array(np.arange(-1, 5, dtype='float').reshape(2, 3), 3),
+            coord_dict,
+            name='Temperature',
+            attrs=dict(baz=123, units='Kelvin',
+                       standard_name='fire_temperature',
+                       long_name='Fire Temperature'),
+            dims=('distance', 'time'))
+
+        # Set a bad value to test the masking logic
+        original.data = da.ma.masked_less(original.data, 0)
+
+        original.attrs['cell_methods'] = \
+            'height: mean (comment: A cell method)'
+        actual = original.to_iris()
+
+        # Be careful not to trigger the loading of the iris data
+        actual_data = actual.core_data() if \
+            hasattr(actual, 'core_data') else actual.data
+        assert_array_equal(actual_data, original.data)
+        assert actual.var_name == original.name
+        assert tuple(d.var_name for d in actual.dim_coords) == original.dims
+        assert (actual.cell_methods == (iris.coords.CellMethod(
+            method='mean',
+            coords=('height', ),
+            intervals=(),
+            comments=('A cell method', )), ))
+
+        for coord, orginal_key in zip((actual.coords()), original.coords):
+            original_coord = original.coords[orginal_key]
+            assert coord.var_name == original_coord.name
+            assert_array_equal(
+                coord.points, CFDatetimeCoder().encode(original_coord).values)
+            assert (actual.coord_dims(coord) ==
+                    original.get_axis_num(
+                        original.coords[coord.var_name].dims))
+
+        assert (actual.coord('distance2').attributes['foo'] == original.coords[
+            'distance2'].attrs['foo'])
+        assert (actual.coord('distance').units ==
+                cf_units.Unit(original.coords['distance'].units))
+        assert actual.attributes['baz'] == original.attrs['baz']
+        assert actual.standard_name == original.attrs['standard_name']
+
+        roundtripped = DataArray.from_iris(actual)
+        assert_identical(original, roundtripped)
+
+        # If the Iris version supports it then we should have a dask array
+        # at each stage of the conversion
+        if hasattr(actual, 'core_data'):
+            assert isinstance(original.data, type(actual.core_data()))
+            assert isinstance(original.data, type(roundtripped.data))
+
+        actual.remove_coord('time')
+        auto_time_dimension = DataArray.from_iris(actual)
+        assert auto_time_dimension.dims == ('distance', 'dim_1')
+
+    @requires_iris
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
         ('var_name', 'height', 'Height',
             'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
@@ -3912,74 +3983,3 @@ class TestIrisConversion(object):
         expected = Cube(data, aux_coords_and_dims=[
             (AuxCoord(coord_values, var_name='space'), 0)])
         assert result == expected
-
-    @requires_iris
-    @requires_dask
-    def test_to_and_from_iris_dask(self):
-        import dask.array as da
-        import iris
-        import cf_units  # iris requirement
-
-        coord_dict = OrderedDict()
-        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
-        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
-        coord_dict['height'] = 10
-        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
-        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
-
-        original = DataArray(
-            da.from_array(np.arange(-1, 5, dtype='float').reshape(2, 3), 3),
-            coord_dict,
-            name='Temperature',
-            attrs=dict(baz=123, units='Kelvin',
-                       standard_name='fire_temperature',
-                       long_name='Fire Temperature'),
-            dims=('distance', 'time'))
-
-        # Set a bad value to test the masking logic
-        original.data = da.ma.masked_less(original.data, 0)
-
-        original.attrs['cell_methods'] = \
-            'height: mean (comment: A cell method)'
-        actual = original.to_iris()
-
-        # Be careful not to trigger the loading of the iris data
-        actual_data = actual.core_data() if \
-            hasattr(actual, 'core_data') else actual.data
-        assert_array_equal(actual_data, original.data)
-        assert actual.var_name == original.name
-        assert tuple(d.var_name for d in actual.dim_coords) == original.dims
-        assert (actual.cell_methods == (iris.coords.CellMethod(
-            method='mean',
-            coords=('height', ),
-            intervals=(),
-            comments=('A cell method', )), ))
-
-        for coord, orginal_key in zip((actual.coords()), original.coords):
-            original_coord = original.coords[orginal_key]
-            assert coord.var_name == original_coord.name
-            assert_array_equal(
-                coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
-                        original.coords[coord.var_name].dims))
-
-        assert (actual.coord('distance2').attributes['foo'] == original.coords[
-            'distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
-        assert actual.attributes['baz'] == original.attrs['baz']
-        assert actual.standard_name == original.attrs['standard_name']
-
-        roundtripped = DataArray.from_iris(actual)
-        assert_identical(original, roundtripped)
-
-        # If the Iris version supports it then we should have a dask array
-        # at each stage of the conversion
-        if hasattr(actual, 'core_data'):
-            assert isinstance(original.data, type(actual.core_data()))
-            assert isinstance(original.data, type(roundtripped.data))
-
-        actual.remove_coord('time')
-        auto_time_dimension = DataArray.from_iris(actual)
-        assert auto_time_dimension.dims == ('distance', 'dim_1')
