@@ -3839,39 +3839,31 @@ class TestIrisConversion(object):
         ## dim name/var name
         # use var_name
         latitude = iris.coords.DimCoord([-90, 0, 90], var_name='latitude')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)],
-                              var_name='cube_name')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            name='cube_name',
             coords=[('latitude', [-90, 0, 90])],
         )
         xr.testing.assert_identical(result, expected)
 
         # use standard_name if no var_name available
         latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)],
-                              standard_name='air_temperature')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            name='air_temperature',
             coords=[('latitude', [-90, 0, 90], {'standard_name': 'latitude'})],
-            attrs={'standard_name': 'air_temperature'},
         )
         xr.testing.assert_identical(result, expected)
 
         # use long_name if no var_name or standard_name available
         latitude = iris.coords.DimCoord([-90, 0, 90], long_name='some coord')
-        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)],
-                              long_name='cube name')
+        cube = iris.cube.Cube([0, 0, 0], dim_coords_and_dims=[(latitude, 0)])
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            name='cube name',
             coords=[('some coord', [-90, 0, 90], {'long_name': 'some coord'})],
-            attrs={'long_name': 'cube name'},
         )
         xr.testing.assert_identical(result, expected)
 
@@ -3881,7 +3873,6 @@ class TestIrisConversion(object):
         result = xr.DataArray.from_iris(cube)
         expected = xr.DataArray(
             [0, 0, 0],
-            name=None,
             coords=[('unknown', [-90, 0, 90])],
         )
         xr.testing.assert_identical(result, expected)
@@ -3923,6 +3914,31 @@ class TestIrisConversion(object):
             ]
         )
         assert result == expected
+
+
+    @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
+        ('var_name', 'height', 'Height', 
+            'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
+        (None, 'height', 'Height', 
+            'height', {'standard_name': 'height', 'long_name': 'Height'}),
+        (None, None, 'Height', 'Height', {'long_name': 'Height'}),
+        (None, None, None, None, {}),
+    ])
+    def test_da_name_from_cube(self, std_name, long_name, var_name, name, 
+                               attrs):
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        data = []
+        cube = iris.cube.Cube(data, var_name=var_name, standard_name=std_name, 
+                              long_name=long_name)
+        result = xr.DataArray.from_iris(cube)
+        expected = xr.DataArray(data, name=name, attrs=attrs)
+        xr.testing.assert_identical(result, expected)
+
 
     @requires_dask
     def test_to_and_from_iris_dask(self):
