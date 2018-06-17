@@ -19,7 +19,7 @@ from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
     assert_identical, raises_regex, requires_bottleneck, requires_cftime,
-    requires_dask, requires_np113, requires_scipy, source_ndarray, unittest)
+    requires_dask, requires_np113, requires_scipy, requires_iris, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -3773,14 +3773,12 @@ def test_raise_no_warning_for_nan_in_binary_ops():
         xr.DataArray([1, 2, np.NaN]) > 0
     assert len(record) == 0
     
-    
-class TestIrisConversion(object):
+
+class TestIrisConversion(object):   
+    @requires_iris
     def test_to_and_from_iris(self):
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
+        import cf_units  # iris requirement
 
         # to iris
         coord_dict = OrderedDict()
@@ -3837,6 +3835,7 @@ class TestIrisConversion(object):
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
 
+    @requires_iris
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
         ('var_name', 'height', 'Height', 
             'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
@@ -3847,11 +3846,7 @@ class TestIrisConversion(object):
     ])
     def test_da_name_from_cube(self, std_name, long_name, var_name, name, 
                                attrs):
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
 
         data = []
         cube = iris.cube.Cube(data, var_name=var_name, standard_name=std_name, 
@@ -3861,6 +3856,7 @@ class TestIrisConversion(object):
         xr.testing.assert_identical(result, expected)
 
 
+    @requires_iris
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
         ('var_name', 'height', 'Height', 
             'var_name', {'standard_name': 'height', 'long_name': 'Height'}),
@@ -3873,11 +3869,7 @@ class TestIrisConversion(object):
     ])
     def test_da_coord_name_from_cube(self, std_name, long_name, var_name, 
                                      name, attrs):
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
 
         latitude = iris.coords.DimCoord([-90, 0, 90], standard_name=std_name, 
                                         var_name=var_name, long_name=long_name)
@@ -3890,12 +3882,9 @@ class TestIrisConversion(object):
         xr.testing.assert_identical(result, expected)
 
 
+    @requires_iris
     def test_prevent_duplicate_coord_names(self):
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
     
         # Iris enforces unique coordinate names. Because we use a different
         # name resolution order there is this edge case where a valid iris Cube
@@ -3910,16 +3899,13 @@ class TestIrisConversion(object):
             xr.DataArray.from_iris(cube)
 
 
+    @requires_iris
     @pytest.mark.parametrize('coord_values', [
         ['IA', 'IL', 'IN'],  # non-numeric values
         [0, 2, 1],  # non-monotonic values
     ])
     def test_to_iris_fallback_to_AuxCoord(self, coord_values):
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
 
         data = [0.1, 0.2, 0.3]
         da = xr.DataArray(data, coords=[coord_values], dims=['space'])
@@ -3932,15 +3918,12 @@ class TestIrisConversion(object):
         )
         assert result == expected
 
-
+    @requires_iris
     @requires_dask
     def test_to_and_from_iris_dask(self):
         import dask.array as da
-        try:
-            import iris
-            import cf_units
-        except ImportError:
-            raise unittest.SkipTest('iris not installed')
+        import iris
+        import cf_units  # iris requirement
 
         coord_dict = OrderedDict()
         coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
