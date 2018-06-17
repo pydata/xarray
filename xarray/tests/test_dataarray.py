@@ -3977,8 +3977,8 @@ class TestIrisConversion(object):
         # If the Iris version supports it then we should have a dask array
         # at each stage of the conversion
         if hasattr(actual, 'core_data'):
-            assert type(original.data) == type(actual.core_data())
-            assert type(original.data) == type(roundtripped.data)
+            assert isinstance(original.data, type(actual.core_data()))
+            assert isinstance(original.data, type(roundtripped.data))
 
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)
