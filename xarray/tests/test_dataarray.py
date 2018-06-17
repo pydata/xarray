@@ -3805,8 +3805,7 @@ class TestIrisConversion(object):
         actual = original.to_iris()
         assert_array_equal(actual.data, original.data)
         assert actual.var_name == original.name
-        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
-                                original.dims)
+        assert tuple(d.var_name for d in actual.dim_coords) == original.dims
         assert (actual.cell_methods == (iris.coords.CellMethod(
             method='mean',
             coords=('height', ),
@@ -3962,8 +3961,7 @@ class TestIrisConversion(object):
             hasattr(actual, 'core_data') else actual.data
         assert_array_equal(actual_data, original.data)
         assert actual.var_name == original.name
-        self.assertItemsEqual([d.var_name for d in actual.dim_coords],
-                              original.dims)
+        assert tuple(d.var_name for d in actual.dim_coords) == original.dims
         assert (actual.cell_methods == (iris.coords.CellMethod(
             method='mean',
             coords=('height', ),
@@ -3992,8 +3990,8 @@ class TestIrisConversion(object):
         # If the Iris version supports it then we should have a dask array
         # at each stage of the conversion
         if hasattr(actual, 'core_data'):
-            self.assertEqual(type(original.data), type(actual.core_data()))
-            self.assertEqual(type(original.data), type(roundtripped.data))
+            assert type(original.data) == type(actual.core_data())
+            assert type(original.data) == type(roundtripped.data)
 
         actual.remove_coord('time')
         auto_time_dimension = DataArray.from_iris(actual)
