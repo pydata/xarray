@@ -176,7 +176,7 @@ def array_notnull_equiv(arr1, arr2):
 def count(data, axis=None):
     """Count the number of non-NA in this array along the given axis or axes
     """
-    return sum(~isnull(data), axis=axis)
+    return np.sum(~isnull(data), axis=axis)
 
 
 def where(condition, x, y):
@@ -227,12 +227,34 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
+        np_module = npcompat if np_compat else np
+        func = None
         if skipna or (skipna is None and values.dtype.kind in 'cfO'):
             nanname = 'nan' + name
-            func = getattr(nanops, nanname)
-        else:
-            func = _dask_or_eager_func(name)
-        return func(values, axis=axis, **kwargs)
+            func = getattr(
+                nanops, nanname, _dask_or_eager_func(
+                    nanname, eager_module=np_module))
+        if func is None:
+            if dtype is None:
+                func = _dask_or_eager_func(name)
+            else:
+                func = getattr(np, name)
+
+        try:
+            return func(values, axis=axis, **kwargs)
+        except AttributeError:
+            if isinstance(values, dask_array_type):
+                try:  # dask/dask#3133 dask sometimes needs dtype argument
+                    return func(values, axis=axis, dtype=values.dtype,
+                                **kwargs)
+                except AttributeError:
+                    msg = '%s is not yet implemented on dask arrays' % name
+            else:
+                msg = ('%s is not available with skipna=False with the '
+                       'installed version of numpy; upgrade to numpy 1.12 '
+                       'or newer to use skipna=True or skipna=None' % name)
+            raise NotImplementedError(msg)
+
     f.numeric_only = numeric_only
     f.__name__ = name
     return f
@@ -247,11 +269,11 @@ mean = _create_nan_agg_method('mean', numeric_only=True)
 std = _create_nan_agg_method('std', numeric_only=True)
 var = _create_nan_agg_method('var', numeric_only=True)
 median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True, no_bottleneck=True)
+prod = _create_nan_agg_method('prod', numeric_only=True)
 cumprod_1d = _create_nan_agg_method(
-    'cumprod', numeric_only=True, np_compat=True, no_bottleneck=True)
+    'cumprod', numeric_only=True, np_compat=True)
 cumsum_1d = _create_nan_agg_method(
-    'cumsum', numeric_only=True, np_compat=True, no_bottleneck=True)
+    'cumsum', numeric_only=True, np_compat=True)
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

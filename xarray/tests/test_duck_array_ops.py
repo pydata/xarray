@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 from distutils.version import LooseVersion
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy import array, nan
 import warnings
@@ -238,6 +239,11 @@ def series_reduce(da, func, dim, **kwargs):
         return concat(da1, dim=d)
 
 
+def assert_dask_array(da, dask):
+    if dask and da.ndim > 0:
+        assert isinstance(da.data, dask_array_type)
+
+
 @pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
@@ -278,8 +284,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
                     expected = getattr(np, func)(da.values, axis=axis)
 
                 actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-                if dask:
-                    isinstance(da.data, dask_array_type)
+                assert_dask_array(actual, dask)
                 assert np.allclose(actual.values, np.array(expected),
                                    rtol=1.0e-4, equal_nan=True)
             except (TypeError, AttributeError, ZeroDivisionError):
@@ -307,8 +312,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         # make sure the dtype argument
         if func not in ['max', 'min']:
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
-            if dask:
-                isinstance(da.data, dask_array_type)
+            assert_dask_array(actual, dask)
             assert actual.dtype == float
 
         # without nan
@@ -402,3 +406,26 @@ def test_dask_rolling(axis, window, center):
     with pytest.raises(ValueError):
         rolling_window(dx, axis=axis, window=100, center=center,
                        fill_value=np.nan)
+
+
+@pytest.mark.parametrize('dim_num', [1, 2])
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+@pytest.mark.parametrize('aggdim', [None, 'x'])
+def test_min_count(dim_num, dtype, dask, func, aggdim):
+    if dask and not has_dask:
+        pytest.skip('requires dask')
+
+    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    min_count = 3
+
+    actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
+
+    if LooseVersion(pd.__version__) >= LooseVersion('0.22.0'):
+        # min_count has pandas > 0.22
+        expected = series_reduce(da, func, skipna=True, dim=aggdim,
+                                 min_count=min_count)
+        assert_allclose(actual, expected)
+
+    assert_dask_array(actual, dask)
