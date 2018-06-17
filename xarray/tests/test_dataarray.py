@@ -3836,18 +3836,6 @@ class TestIrisConversion(object):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-        # Iris enforces unique coordinate names. Because we use a different
-        # name resolution order there is this edge case where a valid iris Cube
-        # would lead to duplicate dimension names in the DataArray
-        longitude = iris.coords.DimCoord([0, 360], standard_name='longitude',
-                                         var_name='duplicate')
-        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude',
-                                        var_name='duplicate')
-        cube = iris.cube.Cube([[0, 0, 0], [0, 0, 0]], dim_coords_and_dims=[
-            (longitude, 0), (latitude, 1)])
-        with pytest.raises(ValueError):
-            xr.DataArray.from_iris(cube)
-
         # non-numeric coord to iris
         data = [0.1, 0.2, 0.3]
         locs = ['IA', 'IL', 'IN']
@@ -3926,6 +3914,26 @@ class TestIrisConversion(object):
             coords=[(name, [-90, 0, 90], attrs)],
         )
         xr.testing.assert_identical(result, expected)
+
+
+    def test_prevent_duplicate_coord_names(self):
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+    
+        # Iris enforces unique coordinate names. Because we use a different
+        # name resolution order there is this edge case where a valid iris Cube
+        # would lead to duplicate dimension names in the DataArray
+        longitude = iris.coords.DimCoord([0, 360], standard_name='longitude',
+                                         var_name='duplicate')
+        latitude = iris.coords.DimCoord([-90, 0, 90], standard_name='latitude',
+                                        var_name='duplicate')
+        cube = iris.cube.Cube([[0, 0, 0], [0, 0, 0]], dim_coords_and_dims=[
+            (longitude, 0), (latitude, 1)])
+        with pytest.raises(ValueError):
+            xr.DataArray.from_iris(cube)
 
 
     @requires_dask
