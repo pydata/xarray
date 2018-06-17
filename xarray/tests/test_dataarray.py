@@ -3836,32 +3836,6 @@ class TestIrisConversion(object):
         auto_time_dimension = DataArray.from_iris(actual)
         assert auto_time_dimension.dims == ('distance', 'dim_1')
 
-        # non-numeric coord to iris
-        data = [0.1, 0.2, 0.3]
-        locs = ['IA', 'IL', 'IN']
-        da = xr.DataArray(data, coords=[locs], dims=['space'])
-        result = xr.DataArray.to_iris(da)
-        expected = iris.cube.Cube(
-            data,
-            aux_coords_and_dims=[
-                (iris.coords.AuxCoord(locs, var_name='space'), 0)
-            ]
-        )
-        assert result == expected
-
-        # non-monotonic coord to iris
-        data = [0.1, 0.2, 0.3]
-        locs = [0, 2, 1]
-        da = xr.DataArray(data, coords=[locs], dims=['space'])
-        result = xr.DataArray.to_iris(da)
-        expected = iris.cube.Cube(
-            data,
-            aux_coords_and_dims=[
-                (iris.coords.AuxCoord(locs, var_name='space'), 0)
-            ]
-        )
-        assert result == expected
-
 
     @pytest.mark.parametrize('var_name, std_name, long_name, name, attrs', [
         ('var_name', 'height', 'Height', 
@@ -3934,6 +3908,29 @@ class TestIrisConversion(object):
             (longitude, 0), (latitude, 1)])
         with pytest.raises(ValueError):
             xr.DataArray.from_iris(cube)
+
+
+    @pytest.mark.parametrize('coord_values', [
+        ['IA', 'IL', 'IN'],  # non-numeric values
+        [0, 2, 1],  # non-monotonic values
+    ])
+    def test_to_iris_fallback_to_AuxCoord(self, coord_values):
+        try:
+            import iris
+            import cf_units
+        except ImportError:
+            raise unittest.SkipTest('iris not installed')
+
+        data = [0.1, 0.2, 0.3]
+        da = xr.DataArray(data, coords=[coord_values], dims=['space'])
+        result = xr.DataArray.to_iris(da)
+        expected = iris.cube.Cube(
+            data,
+            aux_coords_and_dims=[
+                (iris.coords.AuxCoord(coord_values, var_name='space'), 0)
+            ]
+        )
+        assert result == expected
 
 
     @requires_dask
