@@ -101,7 +101,10 @@ class TestOps(TestCase):
         assert_array_equal(result, np.array([1, 'b'], dtype=object))
 
     def test_all_nan_arrays(self):
-        assert np.isnan(mean([np.nan, np.nan]))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'All-NaN slice')
+            warnings.filterwarnings('ignore', 'Mean of empty slice')
+            assert np.isnan(mean([np.nan, np.nan]))
 
 
 def test_cumsum_1d():
@@ -260,6 +263,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     # TODO: remove these after resolving
     # https://github.com/dask/dask/issues/3245
     with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'Mean of empty slice')
         warnings.filterwarnings('ignore', 'All-NaN slice')
         warnings.filterwarnings('ignore', 'invalid value encountered in')
 
@@ -274,6 +278,8 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
                     expected = getattr(np, func)(da.values, axis=axis)
 
                 actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+                if dask:
+                    isinstance(da.data, dask_array_type)
                 assert np.allclose(actual.values, np.array(expected),
                                    rtol=1.0e-4, equal_nan=True)
             except (TypeError, AttributeError, ZeroDivisionError):
@@ -289,6 +295,8 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             assert_allclose(actual, expected, rtol=rtol)
             # also check ddof!=0 case
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
+            if dask:
+                isinstance(da.data, dask_array_type)
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=5)
             assert_allclose(actual, expected, rtol=rtol)
@@ -299,11 +307,15 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         # make sure the dtype argument
         if func not in ['max', 'min']:
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
+            if dask:
+                isinstance(da.data, dask_array_type)
             assert actual.dtype == float
 
         # without nan
         da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
         actual = getattr(da, func)(skipna=skipna)
+        if dask:
+            isinstance(da.data, dask_array_type)
         expected = getattr(np, 'nan{}'.format(func))(da.values)
         if actual.dtype == object:
             assert actual.values == np.array(expected)
