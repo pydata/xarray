@@ -3826,7 +3826,6 @@ class TestIrisConversion(object):
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
-        # from iris/roundtripping
         roundtripped = DataArray.from_iris(actual)
         assert_identical(original, roundtripped)
 
@@ -3957,8 +3956,9 @@ class TestIrisConversion(object):
         from iris.coords import DimCoord
 
         # Iris enforces unique coordinate names. Because we use a different
-        # name resolution order there is this edge case where a valid iris Cube
-        # would lead to duplicate dimension names in the DataArray
+        # name resolution order a valid iris Cube with coords that have the
+        # same var_name would lead to duplicate dimension names in the 
+        # DataArray
         longitude = DimCoord([0, 360], standard_name='longitude',
                              var_name='duplicate')
         latitude = DimCoord([-90, 0, 90], standard_name='latitude',
