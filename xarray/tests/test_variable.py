@@ -1508,8 +1508,8 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert_identical(v.all(dim='x'), Variable([], False))
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
-        with pytest.raises(NotImplementedError):
-            v.argmax(skipna=True)
+        v.argmax(skipna=True)
+        
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
