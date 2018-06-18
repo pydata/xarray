@@ -3957,7 +3957,7 @@ class TestIrisConversion(object):
 
         # Iris enforces unique coordinate names. Because we use a different
         # name resolution order a valid iris Cube with coords that have the
-        # same var_name would lead to duplicate dimension names in the 
+        # same var_name would lead to duplicate dimension names in the
         # DataArray
         longitude = DimCoord([0, 360], standard_name='longitude',
                              var_name='duplicate')
