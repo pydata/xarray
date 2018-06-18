@@ -98,9 +98,6 @@ def maybe_promote(dtype):
     return np.dtype(dtype), fill_value
 
 
-NAT_TYPES = (np.datetime64('NaT'), np.timedelta64('NaT'))
-
-
 def get_fill_value(dtype):
     """Return an appropriate fill value for this dtype.
 
