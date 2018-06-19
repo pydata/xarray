@@ -395,6 +395,20 @@ def _localize(var, indexes_coords):
     return var.isel(**indexes), indexes_coords
 
 
+def _floatize_x(x, new_x):
+    """ Make x and new_x float. This is particulary useful for datetime dtype.
+    x, new_x: tuple of np.ndarray
+    """
+    x = list(x)
+    new_x = list(new_x)
+    for i in range(len(x)):
+        if x[i].dtype.kind in 'Mm':
+            xmin = np.min(x[i])
+            x[i] = (x[i] - xmin).astype(float)
+            new_x[i] = (new_x[i] - xmin).astype(float)
+    return x, new_x
+
+
 def interp(var, indexes_coords, method, **kwargs):
     """ Make an interpolation of Variable
 
@@ -523,6 +537,8 @@ def _interp1d(var, x, new_x, func, kwargs):
 
 
 def _interpnd(var, x, new_x, func, kwargs):
+    x, new_x = _floatize_x(x, new_x)
+
     if len(x) == 1:
         return _interp1d(var, x, new_x, func, kwargs)
 
