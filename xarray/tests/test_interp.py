@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -457,3 +458,22 @@ def test_interp_like():
 
     with pytest.raises(TypeError):
         ds.interp_like(other)
+
+
+@requires_scipy
+def test_datetime():
+    da = xr.DataArray(np.random.randn(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+
+    x_new = pd.date_range('2000-01-02', periods=3)
+    actual = da.interp(time=x_new)
+    expected = da.isel(time=[1, 2, 3])
+    assert_allclose(actual, expected)
+
+    x_new = np.array([np.datetime64('2000-01-01T12:00'),
+                      np.datetime64('2000-01-02T12:00')])
+    actual = da.interp(time=x_new)
+    assert_allclose(actual.isel(time=0).drop('time'),
+                    0.5 * (da.isel(time=0) + da.isel(time=1)))
+    assert_allclose(actual.isel(time=1).drop('time'),
+                    0.5 * (da.isel(time=1) + da.isel(time=2)))

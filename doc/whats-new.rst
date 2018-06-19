@@ -45,6 +45,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  incomplete chunks in multiple dimensions (:issue:`2225`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 .. _whats-new.0.10.7:
 
 v0.10.7 (7 June 2018)
@@ -72,6 +76,7 @@ Bug fixes
 
 - Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
   The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.6:
 
