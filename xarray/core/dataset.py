@@ -1933,12 +1933,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         coords = alignment.reindex_like_indexers(self, other)
 
+        numeric_coords = OrderedDict()
+        object_coords = OrderedDict()
         for k, v in coords.items():
-            if v.dtype.kind not in 'uifcMm':
-                raise TypeError('Interpolation along non-numeric coordinate '
-                                '{} (dtype: {}) is not supported.'.format(
-                                    k, v.dtype))
-        return self.interp(coords, method, assume_sorted, kwargs)
+            if v.dtype.kind in 'uifcMm':
+                numeric_coords[k] = v
+            else:
+                object_coords[k] = v
+        # We do not support interpolation along object coordinate.
+        # reindex instead.
+        ds = self.reindex(object_coords)
+        return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     def rename(self, name_dict=None, inplace=False, **names):
         """Returns a new object with renamed variables and dimensions.

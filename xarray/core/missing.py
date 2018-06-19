@@ -396,15 +396,19 @@ def _localize(var, indexes_coords):
 
 
 def _floatize_x(x, new_x):
-    """ Make x and new_x float. This is particulary useful for datetime dtype.
+    """ Make x and new_x float.
+    This is particulary useful for datetime dtype.
     x, new_x: tuple of np.ndarray
     """
     x = list(x)
     new_x = list(new_x)
     for i in range(len(x)):
         if x[i].dtype.kind in 'Mm':
+            # Scipy cast np.float_ for coordinate, but 64bit float is not
+            # sufficient for datetime64 (uses 64bit integer).
+            # We assumes x - min(x) can be well presented by 64bit float.
             xmin = np.min(x[i])
-            x[i] = (x[i] - xmin).astype(float)
+            x[i] = (x[i] - xmin).astype(np.float_)
             new_x[i] = (new_x[i] - xmin).astype(float)
     return x, new_x
 

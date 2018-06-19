@@ -456,8 +456,9 @@ def test_interp_like():
     other = xr.DataArray(np.random.randn(3), dims=['dim3'],
                          coords={'dim3': ['a', 'b', 'c']})
 
-    with pytest.raises(TypeError):
-        ds.interp_like(other)
+    actual = ds.interp_like(other)
+    expected = ds.reindex_like(other)
+    assert_allclose(actual, expected)
 
 
 @requires_scipy
