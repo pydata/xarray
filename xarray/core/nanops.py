@@ -50,6 +50,7 @@ class bottleneck_switch(object):
                 kwds.pop('min_count', 1)
                 result = bn_func(values, axis=axis, **kwds)
             else:
+                print(kwds)
                 result = alt(values, axis=axis, **kwds)
 
             return result
@@ -122,7 +123,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 
 @bottleneck_switch()
-def nanmin(a, axis=None, out=None, keepdims=np._NoValue):
+def nanmin(a, axis=None, out=None):
     if a.dtype.kind == 'O':
         return _nan_minmax_object('min', dtypes.get_pos_infinity, a, axis)
 
@@ -132,7 +133,7 @@ def nanmin(a, axis=None, out=None, keepdims=np._NoValue):
 
 
 @bottleneck_switch()
-def nanmax(a, axis=None, out=None, keepdims=np._NoValue):
+def nanmax(a, axis=None, out=None):
     if a.dtype.kind == 'O':
         return _nan_minmax_object('max', dtypes.get_neg_infinity, a, axis)
 
@@ -207,10 +208,9 @@ def nanargmax(a, axis=None):
 
 
 @bottleneck_switch()
-def nansum(a, axis=None, dtype=None, out=None, keepdims=np._NoValue,
-           min_count=None):
+def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 0)
-    result = np.sum(a, axis=axis, dtype=dtype, keepdims=keepdims)
+    result = np.sum(a, axis=axis, dtype=dtype)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -236,7 +236,7 @@ def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
 
 
 @bottleneck_switch()
-def nanmean(a, axis=None, dtype=None, out=None, keepdims=np._NoValue):
+def nanmean(a, axis=None, dtype=None, out=None):
     if a.dtype.kind == 'O':
         return _nanmean_ddof_object(0, a, axis=axis, dtype=dtype)
 
@@ -246,10 +246,9 @@ def nanmean(a, axis=None, dtype=None, out=None, keepdims=np._NoValue):
     return np.nanmean(a, axis=axis, dtype=dtype)
 
 
-def nanprod(a, axis=None, dtype=None, out=None, keepdims=np._NoValue,
-            min_count=None):
+def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 1)
-    result = np.prod(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
+    result = np.prod(a, axis=axis, dtype=dtype, out=out)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
