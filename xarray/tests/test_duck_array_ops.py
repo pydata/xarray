@@ -248,6 +248,7 @@ def assert_dask_array(da, dask):
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
 @pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean', 'var'])
+# TODO test cumsum, cumprod
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', [None, 'x'])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
@@ -429,3 +430,16 @@ def test_min_count(dim_num, dtype, dask, func, aggdim):
         assert_allclose(actual, expected)
 
     assert_dask_array(actual, dask)
+
+
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+def test_multiple_dims(dtype, dask, func):
+    if dask and not has_dask:
+        pytest.skip('requires dask')
+    da = construct_dataarray(3, dtype, contains_nan=True, dask=dask)
+
+    actual = getattr(da, func)(('x', 'y'))
+    expected = getattr(getattr(da, func)('x'), func)('y')
+    assert_allclose(actual, expected)
