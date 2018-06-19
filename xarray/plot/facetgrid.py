@@ -297,10 +297,12 @@ class FacetGrid(object):
             darray=self.data.loc[self.name_dicts.flat[0]],
             x=x, y=y, hue=hue)
 
+        self._hue_var = hueplt
+        self._hue_label = huelabel
         self._finalize_grid(xlabel, ylabel)
 
         if add_legend and hueplt is not None and huelabel is not None:
-            self._add_line_legend(hueplt, huelabel)
+            self.add_legend()
 
         return self
 
@@ -314,12 +316,12 @@ class FacetGrid(object):
             if namedict is None:
                 ax.set_visible(False)
 
-    def _add_line_legend(self, hueplt, huelabel):
+    def add_legend(self, **kwargs):
         figlegend = self.fig.legend(
             handles=self._mappables[-1],
-            labels=list(hueplt.values),
-            title=huelabel,
-            loc="center right")
+            labels=list(self._hue_var.values),
+            title=self._hue_label,
+            loc="center right", **kwargs)
 
         # Draw the plot to set the bounding boxes correctly
         self.fig.draw(self.fig.canvas.get_renderer())
