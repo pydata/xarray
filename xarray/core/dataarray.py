@@ -983,6 +983,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Note
         ----
         scipy is required.
+        If the dataarray has object-type coordinates, reindex is used for these
+        coordinates instead of the interpolation.
 
         See Also
         --------

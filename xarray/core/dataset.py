@@ -1925,6 +1925,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Note
         ----
         scipy is required.
+        If the dataset has object-type coordinates, reindex is used for these
+        coordinates instead of the interpolation.
 
         See Also
         --------
@@ -1940,9 +1942,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 numeric_coords[k] = v
             else:
                 object_coords[k] = v
-        # We do not support interpolation along object coordinate.
-        # reindex instead.
-        ds = self.reindex(object_coords)
+
+        ds = self
+        if object_coords:
+            # We do not support interpolation along object coordinate.
+            # reindex instead.
+            ds = self.reindex(object_coords)
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
     def rename(self, name_dict=None, inplace=False, **names):
