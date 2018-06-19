@@ -1934,7 +1934,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coords = alignment.reindex_like_indexers(self, other)
 
         for k, v in coords.items():
-            if v.dtype.kind not in 'uifc':
+            if v.dtype.kind not in 'uifcMm':
                 raise TypeError('Interpolation along non-numeric coordinate '
                                 '{} (dtype: {}) is not supported.'.format(
                                     k, v.dtype))
