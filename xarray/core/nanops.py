@@ -50,7 +50,6 @@ class bottleneck_switch(object):
                 kwds.pop('min_count', 1)
                 result = bn_func(values, axis=axis, **kwds)
             else:
-                print(kwds)
                 result = alt(values, axis=axis, **kwds)
 
             return result
