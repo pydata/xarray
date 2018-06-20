@@ -234,10 +234,7 @@ def _create_nan_agg_method(name, np_compat=False, coerce_strings=False):
                 nanops, nanname, _dask_or_eager_func(
                     nanname, eager_module=np_module))
         else:
-            if dtype is None:
-                func = _dask_or_eager_func(name)
-            else:
-                func = getattr(np_module, name)
+            func = _dask_or_eager_func(name)
 
         try:
             return func(values, axis=axis, **kwargs)

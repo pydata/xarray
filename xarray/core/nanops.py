@@ -85,20 +85,10 @@ def _replace_nan(a, val):
     https://github.com/numpy/numpy/blob/v1.14.0/numpy/lib/nanfunctions.py
     but slightly modified to take care of dask.array
     """
-    if a.dtype == np.object_:
-        # object arrays do not support `isnan` (gh-9009), so make a guess
-        mask = a != a
-    elif issubclass(a.dtype.type, np.inexact):
-        mask = np.isnan(a)
-    else:
-        mask = None
+    from .duck_array_ops import isnull, where_method
 
-    if mask is not None:
-        if isinstance(a, dask_array_type):
-            return dask_array.where(mask, val, a), mask
-        return np.where(mask, val, a), mask
-
-    return a, mask
+    mask = isnull(a)
+    return where_method(val, mask, a), mask
 
 
 def _maybe_null_out(result, axis, mask, min_count=1):
