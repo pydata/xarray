@@ -37,14 +37,14 @@ class bottleneck_switch(object):
         @functools.wraps(alt)
         def f(values, axis=None, **kwds):
             dtype = kwds.get('dtype', None)
-            min_count = kwds.get('min_count', 1)
+            min_count = kwds.get('min_count', None)
 
             if (not isinstance(values, dask_array_type) and _USE_BOTTLENECK and
                     not isinstance(axis, tuple) and
                     values.dtype.kind in 'uifc' and
                     values.dtype.isnative and
                     (dtype is None or np.dtype(dtype) == values.dtype) and
-                    min_count != 1):
+                    min_count is None):
                 # bottleneck does not take care dtype, min_count
                 kwds.pop('dtype', None)
                 kwds.pop('min_count', 1)

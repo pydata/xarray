@@ -36,6 +36,11 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum` and
+  :py:meth:`~xarray.Dataset.mean`.
+  (:issue:`2230`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Bug fixes
 ~~~~~~~~~
 

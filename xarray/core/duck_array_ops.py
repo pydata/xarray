@@ -214,8 +214,7 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
-                           no_bottleneck=False, coerce_strings=False):
+def _create_nan_agg_method(name, np_compat=False, coerce_strings=False):
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
             raise TypeError('`out` is not valid for {}'.format(name))
@@ -255,25 +254,34 @@ def _create_nan_agg_method(name, numeric_only=False, np_compat=False,
                        'or newer to use skipna=True or skipna=None' % name)
             raise NotImplementedError(msg)
 
-    f.numeric_only = numeric_only
     f.__name__ = name
     return f
 
 
+# Attributes `numeric_only`, `available_min_count` is used for docs.
+# See ops.inject_reduce_methods
 argmax = _create_nan_agg_method('argmax', coerce_strings=True)
 argmin = _create_nan_agg_method('argmin', coerce_strings=True)
 max = _create_nan_agg_method('max', coerce_strings=True)
 min = _create_nan_agg_method('min', coerce_strings=True)
-sum = _create_nan_agg_method('sum', numeric_only=True)
-mean = _create_nan_agg_method('mean', numeric_only=True)
-std = _create_nan_agg_method('std', numeric_only=True)
-var = _create_nan_agg_method('var', numeric_only=True)
-median = _create_nan_agg_method('median', numeric_only=True)
-prod = _create_nan_agg_method('prod', numeric_only=True)
-cumprod_1d = _create_nan_agg_method(
-    'cumprod', numeric_only=True, np_compat=True)
-cumsum_1d = _create_nan_agg_method(
-    'cumsum', numeric_only=True, np_compat=True)
+sum = _create_nan_agg_method('sum')
+sum.numeric_only = True
+sum.available_min_count = True
+mean = _create_nan_agg_method('mean')
+mean.numeric_only = True
+std = _create_nan_agg_method('std')
+std.numeric_only = True
+var = _create_nan_agg_method('var')
+var.numeric_only = True
+median = _create_nan_agg_method('median')
+median.numeric_only = True
+prod = _create_nan_agg_method('prod')
+prod.numeric_only = True
+sum.available_min_count = True
+cumprod_1d = _create_nan_agg_method('cumprod', np_compat=True)
+cumprod_1d.numeric_only = True
+cumsum_1d = _create_nan_agg_method('cumsum', np_compat=True)
+cumsum_1d.numeric_only = True
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):

@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 import pytest
+from textwrap import dedent
 from numpy import array, nan
 import warnings
 
@@ -443,3 +444,77 @@ def test_multiple_dims(dtype, dask, func):
     actual = getattr(da, func)(('x', 'y'))
     expected = getattr(getattr(da, func)('x'), func)('y')
     assert_allclose(actual, expected)
+
+
+def test_docs():
+    # with min_count
+    actual = DataArray.sum.__doc__
+    expected = dedent("""\
+        Reduce this DataArray's data by applying `sum` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `sum`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `sum`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `sum` is calculated over axes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        min_count : int, default None
+            The required number of valid values to perform the operation. If fewer than
+            min_count non-NA values are present the result will be NA.
+            New in version 0.10.8: Added with the default being None.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating `sum` on this object's data.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `sum` applied to its data and the
+            indicated dimension(s) removed.
+        """)
+    assert actual == expected
+
+    # without min_count
+    actual = DataArray.mean.__doc__
+    expected = dedent("""\
+        Reduce this DataArray's data by applying `mean` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `mean`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `mean`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `mean` is calculated over axes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating `mean` on this object's data.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `mean` applied to its data and the
+            indicated dimension(s) removed.
+        """)
+    assert actual == expected
