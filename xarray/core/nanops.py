@@ -105,6 +105,10 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     """
     xarray version of pandas.core.nanops._maybe_null_out
     """
+    if hasattr(axis, '__len__'):  # if tuple or list
+        raise ValueError('min_count is not available for reduction '
+                         'with more than one dimensions.')
+
     if axis is not None and getattr(result, 'ndim', False):
         null_mask = (mask.shape[axis] - mask.sum(axis) - min_count) < 0
         if np.any(null_mask):
@@ -112,8 +116,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
             result = result.astype(dtype)
             result[null_mask] = fill_value
 
-    elif (not isinstance(result, dask_array_type) and
-            result not in dtypes.NAT_TYPES):
+    elif getattr(result, 'dtype', None) not in dtypes.NAT_TYPES:
         null_mask = mask.size - mask.sum()
         if null_mask < min_count:
             result = np.nan
@@ -243,6 +246,27 @@ def nanmean(a, axis=None, dtype=None, out=None):
         return dask_array.nanmean(a, axis=axis, dtype=dtype)
 
     return np.nanmean(a, axis=axis, dtype=dtype)
+
+
+def _nanvar_object(value, axis=None, **kwargs):
+    ddof = kwargs.pop('ddof', 0)
+    kwargs_mean = kwargs.copy()
+    kwargs_mean.pop('keepdims', None)
+    value_mean = _nanmean_ddof_object(ddof=0, value=value, axis=axis,
+                                      keepdims=True, **kwargs_mean)
+    squared = (value.astype(value_mean.dtype) - value_mean)**2
+    return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
+
+
+@bottleneck_switch()
+def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
+    if a.dtype.kind == 'O':
+        return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
+
+    if isinstance(a, dask_array_type):
+        return dask_array.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+
+    return np.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):

@@ -10,7 +10,7 @@ from numpy import array, nan
 import warnings
 
 from xarray import DataArray, concat
-from xarray.core import duck_array_ops
+from xarray.core import duck_array_ops, dtypes
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
     stack, where)
@@ -203,10 +203,15 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
         array = rng.choice(['a', 'b', 'c', 'd'], size=shapes)
     else:
         raise ValueError
-    da = DataArray(array, dims=dims, coords={'x': np.arange(16)}, name='da')
 
     if contains_nan:
-        da = da.reindex(x=np.arange(20))
+        inds = rng.choice(range(array.size), int(array.size * 0.2))
+        dtype, fill_value = dtypes.maybe_promote(array.dtype)
+        array = array.astype(dtype)
+        array.flat[inds] = fill_value
+
+    da = DataArray(array, dims=dims, coords={'x': np.arange(16)}, name='da')
+
     if dask and has_dask:
         chunks = {d: 4 for d in dims}
         da = da.chunk(chunks)
@@ -263,6 +268,9 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         pytest.skip('requires dask')
 
+    if dask and skipna is False and dtype in [np.bool_]:
+        pytest.skip('dask does not compute object-typed array')
+
     rtol = 1e-04 if dtype == np.float32 else 1e-05
 
     da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
@@ -294,8 +302,13 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
                 # nanmean for object dtype
                 pass
 
-        # make sure the compatiblility with pandas' results.
         actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+
+        # for dask case, make sure the result is the same for numpy backend
+        expected = getattr(da.compute(), func)(skipna=skipna, dim=aggdim)
+        assert_allclose(actual, expected, rtol=rtol)
+
+        # make sure the compatiblility with pandas' results.
         if func == 'var':
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=0)
@@ -358,13 +371,6 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'All-NaN slice')
 
-        if aggdim == 'y' and contains_nan and skipna:
-            with pytest.raises(ValueError):
-                actual = da.isel(**{
-                    aggdim: getattr(da, 'arg' + func)(
-                        dim=aggdim, skipna=skipna).compute()})
-            return
-
         actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
                             (dim=aggdim, skipna=skipna).compute()})
         expected = getattr(da, func)(dim=aggdim, skipna=skipna)
@@ -374,6 +380,7 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
 
 def test_argmin_max_error():
     da = construct_dataarray(2, np.bool_, contains_nan=True, dask=False)
+    da[0] = np.nan
     with pytest.raises(ValueError):
         da.argmin(dim='y')
 
@@ -425,7 +432,7 @@ def test_min_count(dim_num, dtype, dask, func, aggdim):
     actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
 
     if LooseVersion(pd.__version__) >= LooseVersion('0.22.0'):
-        # min_count has pandas > 0.22
+        # min_count is only implenented in pandas > 0.22
         expected = series_reduce(da, func, skipna=True, dim=aggdim,
                                  min_count=min_count)
         assert_allclose(actual, expected)
