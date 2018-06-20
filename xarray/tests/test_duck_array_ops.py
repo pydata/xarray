@@ -466,9 +466,9 @@ def test_docs():
             have a sentinel missing value (int) or skipna=True has not been
             implemented (object, datetime64 or timedelta64).
         min_count : int, default None
-            The required number of valid values to perform the operation. If fewer than
-            min_count non-NA values are present the result will be NA.
-            New in version 0.10.8: Added with the default being None.
+            The required number of valid values to perform the operation.
+            If fewer than min_count non-NA values are present the result will
+            be NA. New in version 0.10.8: Added with the default being None.
         keep_attrs : bool, optional
             If True, the attributes (`attrs`) will be copied from the original
             object to the new one.  If False (default), the new object will be
@@ -486,18 +486,18 @@ def test_docs():
     assert actual == expected
 
     # without min_count
-    actual = DataArray.mean.__doc__
+    actual = DataArray.std.__doc__
     expected = dedent("""\
-        Reduce this DataArray's data by applying `mean` along some dimension(s).
+        Reduce this DataArray's data by applying `std` along some dimension(s).
 
         Parameters
         ----------
         dim : str or sequence of str, optional
-            Dimension(s) over which to apply `mean`.
+            Dimension(s) over which to apply `std`.
         axis : int or sequence of int, optional
-            Axis(es) over which to apply `mean`. Only one of the 'dim'
+            Axis(es) over which to apply `std`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `mean` is calculated over axes.
+            `std` is calculated over axes.
         skipna : bool, optional
             If True, skip missing values (as marked by NaN). By default, only
             skips missing values for float dtypes; other dtypes either do not
@@ -509,12 +509,12 @@ def test_docs():
             returned without attributes.
         **kwargs : dict
             Additional keyword arguments passed on to the appropriate array
-            function for calculating `mean` on this object's data.
+            function for calculating `std` on this object's data.
 
         Returns
         -------
         reduced : DataArray
-            New DataArray object with `mean` applied to its data and the
+            New DataArray object with `std` applied to its data and the
             indicated dimension(s) removed.
         """)
     assert actual == expected

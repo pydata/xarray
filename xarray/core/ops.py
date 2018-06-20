@@ -104,9 +104,9 @@ reduced : {cls}
 
 _MINCOUNT_DOCSTRING = """
 min_count : int, default None
-    The required number of valid values to perform the operation. If fewer than
-    min_count non-NA values are present the result will be NA.
-    New in version 0.10.8: Added with the default being None."""
+    The required number of valid values to perform the operation.
+    If fewer than min_count non-NA values are present the result will
+    be NA. New in version 0.10.8: Added with the default being None."""
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
