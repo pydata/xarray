@@ -214,12 +214,11 @@ def _iris_cell_methods_to_str(cell_methods_obj):
 def _name(iris_obj, default='unknown'):
     """ Mimicks `iris_obj.name()` but with different name resolution order.
 
-    Same as iris_obj.name() method, but using iris_obj.var_name first to enable
-    roundtripping.
+    Similar to iris_obj.name() method, but using iris_obj.var_name first to
+    enable roundtripping.
     """
-    return iris_obj.var_name or iris_obj.standard_name or \
-        iris_obj.long_name or str(iris_obj.attributes.get('STASH', '')) or \
-        default
+    return (iris_obj.var_name or iris_obj.standard_name or
+            iris_obj.long_name or default)
 
 
 def from_iris(cube):
