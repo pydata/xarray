@@ -193,6 +193,14 @@ Indexing axes with monotonic decreasing labels also works, as long as the
    reversed_da.loc[3.1:0.9]
 
 
+.. note::
+
+  If you want to interpolate along coordinates rather than looking up the
+  nearest neighbors, use :py:meth:`~xarray.Dataset.interp` and
+  :py:meth:`~xarray.Dataset.interp_like`.
+  See :ref:`interpolation <interp>` for the details.
+
+
 Dataset indexing
 ----------------
 
