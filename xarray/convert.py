@@ -2,7 +2,8 @@
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
+from collections import Counter, OrderedDict
+
 import numpy as np
 import pandas as pd
 
@@ -239,7 +240,6 @@ def from_iris(cube):
             dims.append("dim_{}".format(i))
 
     if len(set(dims)) != len(dims):
-        from collections import Counter
         duplicates = [k for k, v in Counter(dims).items() if v > 1]
         raise ValueError('Duplicate coordinate name {}.'.format(duplicates))
 
