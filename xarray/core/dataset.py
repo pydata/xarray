@@ -1893,6 +1893,63 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                        .union(coord_vars))
         return obj._replace_vars_and_dims(variables, coord_names=coord_names)
 
+    def interp_like(self, other, method='linear', assume_sorted=False,
+                    kwargs={}):
+        """Interpolate this object onto the coordinates of another object,
+        filling the out of range values with NaN.
+
+        Parameters
+        ----------
+        other : Dataset or DataArray
+            Object with an 'indexes' attribute giving a mapping from dimension
+            names to an 1d array-like, which provides coordinates upon
+            which to index the variables in this dataset.
+        method: string, optional.
+            {'linear', 'nearest'} for multidimensional array,
+            {'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'}
+            for 1-dimensional array. 'linear' is used by default.
+        assume_sorted: boolean, optional
+            If False, values of coordinates that are interpolated over can be
+            in any order and they are sorted first. If True, interpolated
+            coordinates are assumed to be an array of monotonically increasing
+            values.
+        kwargs: dictionary, optional
+            Additional keyword passed to scipy's interpolator.
+
+        Returns
+        -------
+        interpolated: xr.Dataset
+            Another dataset by interpolating this dataset's data along the
+            coordinates of the other object.
+
+        Note
+        ----
+        scipy is required.
+        If the dataset has object-type coordinates, reindex is used for these
+        coordinates instead of the interpolation.
+
+        See Also
+        --------
+        Dataset.interp
+        Dataset.reindex_like
+        """
+        coords = alignment.reindex_like_indexers(self, other)
+
+        numeric_coords = OrderedDict()
+        object_coords = OrderedDict()
+        for k, v in coords.items():
+            if v.dtype.kind in 'uifcMm':
+                numeric_coords[k] = v
+            else:
+                object_coords[k] = v
+
+        ds = self
+        if object_coords:
+            # We do not support interpolation along object coordinate.
+            # reindex instead.
+            ds = self.reindex(object_coords)
+        return ds.interp(numeric_coords, method, assume_sorted, kwargs)
+
     def rename(self, name_dict=None, inplace=False, **names):
         """Returns a new object with renamed variables and dimensions.
 

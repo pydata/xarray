@@ -36,6 +36,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.interp_like` and
+  :py:meth:`~xarray.Dataset.interp_like` methods are newly added.
+  (:issue:`2218`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 Bug fixes
 ~~~~~~~~~
 
