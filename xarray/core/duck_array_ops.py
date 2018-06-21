@@ -16,15 +16,6 @@ import pandas as pd
 from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
-from . import nanops
-
-try:
-    import bottleneck as bn
-    has_bottleneck = True
-except ImportError:
-    # use numpy methods instead
-    bn = np
-    has_bottleneck = False
 
 try:
     import dask.array as dask_array
@@ -214,25 +205,22 @@ def _ignore_warnings_if(condition):
         yield
 
 
-def _create_nan_agg_method(name, np_compat=False, coerce_strings=False):
+def _create_nan_agg_method(name, coerce_strings=False):
+    from . import nanops
+
     def f(values, axis=None, skipna=None, **kwargs):
         if kwargs.pop('out', None) is not None:
             raise TypeError('`out` is not valid for {}'.format(name))
 
-        # If dtype is supplied, we use numpy's method.
-        dtype = kwargs.get('dtype', None)
         values = asarray(values)
 
         if coerce_strings and values.dtype.kind in 'SU':
             values = values.astype(object)
 
-        np_module = npcompat if np_compat else np
         func = None
         if skipna or (skipna is None and values.dtype.kind in 'cfO'):
             nanname = 'nan' + name
-            func = getattr(
-                nanops, nanname, _dask_or_eager_func(
-                    nanname, eager_module=np_module))
+            func = getattr(nanops, nanname)
         else:
             func = _dask_or_eager_func(name)
 
@@ -275,9 +263,9 @@ median.numeric_only = True
 prod = _create_nan_agg_method('prod')
 prod.numeric_only = True
 sum.available_min_count = True
-cumprod_1d = _create_nan_agg_method('cumprod', np_compat=True)
+cumprod_1d = _create_nan_agg_method('cumprod')
 cumprod_1d.numeric_only = True
-cumsum_1d = _create_nan_agg_method('cumsum', np_compat=True)
+cumsum_1d = _create_nan_agg_method('cumsum')
 cumsum_1d.numeric_only = True
 
 

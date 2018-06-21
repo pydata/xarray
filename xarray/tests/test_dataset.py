@@ -3352,7 +3352,6 @@ class TestDataset(TestCase):
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
             actual = data.min(dim=reduct).dims
-            print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
         assert_equal(data.mean(dim=[]), data)
@@ -3407,7 +3406,6 @@ class TestDataset(TestCase):
                 ('time', ['dim1', 'dim2', 'dim3'])
             ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
-                print(reduct, actual, expected)
                 self.assertItemsEqual(actual, expected)
 
     def test_reduce_non_numeric(self):

@@ -1,92 +1,24 @@
 from __future__ import absolute_import, division, print_function
 
-import functools
-
 import numpy as np
 
 from . import dtypes
 from .pycompat import dask_array_type
-
-
-try:
-    import bottleneck as bn
-    _USE_BOTTLENECK = True
-except ImportError:
-    # use numpy methods instead
-    bn = np
-    _USE_BOTTLENECK = False
+from . duck_array_ops import (count, isnull, fillna, where_method,
+                              _dask_or_eager_func)
+from . import nputils
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat
 except ImportError:
     dask_array = None
-    dask_array_compat = None
-
-
-class bottleneck_switch(object):
-    """ xarray-version of pandas.core.nanops.bottleneck_switch """
-    def __call__(self, alt):
-        bn_name = alt.__name__
-
-        try:
-            bn_func = getattr(bn, bn_name)
-        except (AttributeError, NameError):  # pragma: no cover
-            bn_func = None
-
-        @functools.wraps(alt)
-        def f(values, axis=None, **kwds):
-            dtype = kwds.get('dtype', None)
-            min_count = kwds.get('min_count', None)
-
-            if (not isinstance(values, dask_array_type) and _USE_BOTTLENECK and
-                    not isinstance(axis, tuple) and
-                    values.dtype.kind in 'uifc' and
-                    values.dtype.isnative and
-                    (dtype is None or np.dtype(dtype) == values.dtype) and
-                    min_count is None):
-                # bottleneck does not take care dtype, min_count
-                kwds.pop('dtype', None)
-                kwds.pop('min_count', 1)
-                result = bn_func(values, axis=axis, **kwds)
-            else:
-                result = alt(values, axis=axis, **kwds)
-
-            return result
-
-        return f
 
 
 def _replace_nan(a, val):
     """
-    If `a` is of inexact type, make a copy of `a`, replace NaNs with
-    the `val` value, and return the copy together with a boolean mask
-    marking the locations where NaNs were present. If `a` is not of
-    inexact type, do nothing and return `a` together with a mask of None.
-    Note that scalars will end up as array scalars, which is important
-    for using the result as the value of the out argument in some
-    operations.
-    Parameters
-    ----------
-    a : array-like
-        Input array.
-    val : float
-        NaN values are set to val before doing the operation.
-    Returns
-    -------
-    y : ndarray
-        If `a` is of inexact type, return a copy of `a` with the NaNs
-        replaced by the fill value, otherwise return `a`.
-    mask: {bool, None}
-        If `a` is of inexact type, return a boolean mask marking locations of
-        NaNs, otherwise return None.
-
-    This function is taken from
-    https://github.com/numpy/numpy/blob/v1.14.0/numpy/lib/nanfunctions.py
-    but slightly modified to take care of dask.array
+    replace nan in a by val, and returns the replaced array and the nan
+    position
     """
-    from .duck_array_ops import isnull, where_method
-
     mask = isnull(a)
     return where_method(val, mask, a), mask
 
@@ -114,32 +46,9 @@ def _maybe_null_out(result, axis, mask, min_count=1):
     return result
 
 
-@bottleneck_switch()
-def nanmin(a, axis=None, out=None):
-    if a.dtype.kind == 'O':
-        return _nan_minmax_object('min', dtypes.get_pos_infinity, a, axis)
-
-    if isinstance(a, dask_array_type):
-        return dask_array.nanmin(a, axis=axis)
-    return np.nanmin(a, axis=axis)
-
-
-@bottleneck_switch()
-def nanmax(a, axis=None, out=None):
-    if a.dtype.kind == 'O':
-        return _nan_minmax_object('max', dtypes.get_neg_infinity, a, axis)
-
-    if isinstance(a, dask_array_type):
-        return dask_array.nanmax(a, axis=axis)
-    return np.nanmax(a, axis=axis)
-
-
-def _nan_argminmax_object(func, get_fill_value, value, axis=None, **kwargs):
+def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
     type """
-    from .duck_array_ops import count, fillna
-
-    fill_value = get_fill_value(value.dtype)
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = getattr(np, func)(value, axis=axis, **kwargs)
@@ -153,11 +62,8 @@ def _nan_argminmax_object(func, get_fill_value, value, axis=None, **kwargs):
     return np.array(data, dtype=int)
 
 
-def _nan_minmax_object(func, get_fill_value, value, axis=None, **kwargs):
+def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
     """ In house nanmin and nanmax for object array """
-    from .duck_array_ops import count, fillna, where_method
-
-    fill_value = get_fill_value(value.dtype)
     valid_count = count(value, axis=axis)
     filled_value = fillna(value, fill_value)
     data = getattr(np, func)(filled_value, axis=axis, **kwargs)
@@ -167,13 +73,36 @@ def _nan_minmax_object(func, get_fill_value, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-@bottleneck_switch()
+def nanmin(a, axis=None, out=None):
+    if a.dtype.kind == 'O':
+        return _nan_minmax_object(
+            'min', dtypes.get_pos_infinity(a.dtype), a, axis)
+
+    if isinstance(a, dask_array_type):
+        return dask_array.nanmin(a, axis=axis)
+    return nputils.nanmin(a, axis=axis)
+
+
+def nanmax(a, axis=None, out=None):
+    if a.dtype.kind == 'O':
+        return _nan_minmax_object(
+            'max', dtypes.get_neg_infinity(a.dtype), a, axis)
+
+    if isinstance(a, dask_array_type):
+        return dask_array.nanmax(a, axis=axis)
+    return nputils.nanmax(a, axis=axis)
+
+
 def nanargmin(a, axis=None):
+    fill_value = dtypes.get_pos_infinity(a.dtype)
     if a.dtype.kind == 'O':
-        return _nan_argminmax_object('argmin', dtypes.get_pos_infinity,
-                                     a, axis=axis)
-    a, mask = _replace_nan(a, np.inf)
-    res = np.argmin(a, axis=axis)
+        return _nan_argminmax_object('argmin', fill_value, a, axis=axis)
+    a, mask = _replace_nan(a, fill_value)
+    if isinstance(a, dask_array_type):
+        res = dask_array.argmin(a, axis=axis)
+    else:
+        res = np.argmin(a, axis=axis)
+
     if mask is not None:
         mask = np.all(mask, axis=axis)
         if np.any(mask):
@@ -181,17 +110,17 @@ def nanargmin(a, axis=None):
     return res
 
 
-@bottleneck_switch()
 def nanargmax(a, axis=None):
-    """
-    taken from
-    https://github.com/numpy/numpy/blob/v1.14.0/numpy/lib/nanfunctions.py
-    """
+    fill_value = dtypes.get_neg_infinity(a.dtype)
     if a.dtype.kind == 'O':
-        return _nan_argminmax_object('argmax', dtypes.get_neg_infinity,
-                                     a, axis=axis)
-    a, mask = _replace_nan(a, -np.inf)
-    res = np.argmax(a, axis=axis)
+        return _nan_argminmax_object('argmax', fill_value, a, axis=axis)
+
+    a, mask = _replace_nan(a, fill_value)
+    if isinstance(a, dask_array_type):
+        res = dask_array.argmax(a, axis=axis)
+    else:
+        res = np.argmax(a, axis=axis)
+
     if mask is not None:
         mask = np.all(mask, axis=axis)
         if np.any(mask):
@@ -199,10 +128,9 @@ def nanargmax(a, axis=None):
     return res
 
 
-@bottleneck_switch()
 def nansum(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 0)
-    result = np.sum(a, axis=axis, dtype=dtype)
+    result = _dask_or_eager_func('sum')(a, axis=axis, dtype=dtype)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
@@ -227,7 +155,6 @@ def _nanmean_ddof_object(ddof, value, axis=None, **kwargs):
     return where_method(data, valid_count != 0)
 
 
-@bottleneck_switch()
 def nanmean(a, axis=None, dtype=None, out=None):
     if a.dtype.kind == 'O':
         return _nanmean_ddof_object(0, a, axis=axis, dtype=dtype)
@@ -236,6 +163,11 @@ def nanmean(a, axis=None, dtype=None, out=None):
         return dask_array.nanmean(a, axis=axis, dtype=dtype)
 
     return np.nanmean(a, axis=axis, dtype=dtype)
+
+
+def nanmedian(a, axis=None, dtype=None, out=None):
+    return _dask_or_eager_func('nanmedian', eager_module=nputils)(
+        a, axis=axis, dtype=dtype)
 
 
 def _nanvar_object(value, axis=None, **kwargs):
@@ -248,21 +180,33 @@ def _nanvar_object(value, axis=None, **kwargs):
     return _nanmean_ddof_object(ddof, squared, axis=axis, **kwargs)
 
 
-@bottleneck_switch()
 def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
     if a.dtype.kind == 'O':
         return _nanvar_object(a, axis=axis, dtype=dtype, ddof=ddof)
 
-    if isinstance(a, dask_array_type):
-        return dask_array.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+    return _dask_or_eager_func('nanvar', eager_module=nputils)(
+        a, axis=axis, dtype=dtype, ddof=ddof)
 
-    return np.nanvar(a, axis=axis, dtype=dtype, ddof=ddof)
+
+def nanstd(a, axis=None, dtype=None, out=None):
+    return _dask_or_eager_func('nanstd', eager_module=nputils)(
+        a, axis=axis, dtype=dtype)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
     a, mask = _replace_nan(a, 1)
-    result = np.prod(a, axis=axis, dtype=dtype, out=out)
+    result = _dask_or_eager_func('nanprod')(a, axis=axis, dtype=dtype, out=out)
     if min_count is not None:
         return _maybe_null_out(result, axis, mask, min_count)
     else:
         return result
+
+
+def nancumsum(a, axis=None, dtype=None, out=None):
+    return _dask_or_eager_func('nancumsum', eager_module=nputils)(
+        a, axis=axis, dtype=dtype)
+
+
+def nancumprod(a, axis=None, dtype=None, out=None):
+    return _dask_or_eager_func('nancumprod', eager_module=nputils)(
+        a, axis=axis, dtype=dtype)
