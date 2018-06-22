@@ -165,9 +165,8 @@ def nanmean(a, axis=None, dtype=None, out=None):
     return np.nanmean(a, axis=axis, dtype=dtype)
 
 
-def nanmedian(a, axis=None, dtype=None, out=None):
-    return _dask_or_eager_func('nanmedian', eager_module=nputils)(
-        a, axis=axis, dtype=dtype)
+def nanmedian(a, axis=None, out=None):
+    return _dask_or_eager_func('nanmedian', eager_module=nputils)(a, axis=axis)
 
 
 def _nanvar_object(value, axis=None, **kwargs):
