@@ -176,6 +176,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         Chunk sizes along each dimension, e.g., ``5``, ``(5, 5)`` or
         ``{'x': 5, 'y': 5}``. If chunks is provided, it used to load the new
         DataArray into a dask array.
+        Chunks can also be set to ``True`` or ``"auto"`` to choose sensible
+        chunk sizes according to ``dask.config.get("array.chunk-size")``
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -283,6 +285,30 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
+    if chunks in (True, 'auto'):
+        if not attrs.get('is_tiled', False):
+            msg = "Data store is not tiled. Automatic chunking is not sensible"
+            raise ValueError(msg)
+
+        import dask.array
+        if dask.__version__ < '0.18.0':
+            msg = ("Automatic chunking requires dask.__version__ >= 0.18.0 . "
+                   "You currently have version %s" % dask.__version__)
+            raise NotImplementedError(msg)
+
+        img = riods._ds
+        block_shapes = set(img.block_shapes)
+        block_shape = (1,) + list(block_shapes)[0]
+        previous_chunks = tuple((c,) for c in block_shape)
+        shape = (img.count, img.height, img.width)
+        dtype = img.dtypes[0]
+        chunks = dask.array.core.normalize_chunks(
+            'auto',
+            shape=shape,
+            previous_chunks=previous_chunks,
+            dtype=dtype
+        )
+
     if cache and (chunks is None):
         data = indexing.MemoryCachedArray(data)
 

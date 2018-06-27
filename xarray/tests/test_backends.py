@@ -1340,7 +1340,6 @@ class BaseZarrTest(CFEncodedDataTest):
                 print(k)
                 assert v.chunks == actual[k].chunks
 
-
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in
         # encoding
@@ -3008,6 +3007,15 @@ class TestRasterio(TestCase):
                 ac = actual.sel(band=1).mean(dim='x')
                 ex = expected.sel(band=1).mean(dim='x')
                 assert_allclose(ac, ex)
+
+    @requires_dask
+    def test_chunks_auto(self):
+        import dask
+        with dask.config.set({'array.chunk-size': '1kiB'}):
+            with create_tmp_geotiff(1024, 1024, 3) as (tmp_file, expected):
+                with xr.open_rasterio(tmp_file, chunks=True) as actual:
+                    assert actual.chunks
+                    # TODO: enhance create_tmp_geotiff to support tiled images
 
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
