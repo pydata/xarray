@@ -36,8 +36,18 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.interp_like` and
+  :py:meth:`~xarray.Dataset.interp_like` methods are newly added.
+  (:issue:`2218`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
 Bug fixes
 ~~~~~~~~~
+
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  incomplete chunks in multiple dimensions (:issue:`2225`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.7:
 
@@ -60,12 +70,13 @@ Enhancements
   See :ref:`interpolating values with interp` for the detail.
   (:issue:`2079`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-  
+
 Bug fixes
 ~~~~~~~~~
 
 - Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
   The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.6:
 
