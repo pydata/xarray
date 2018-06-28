@@ -286,28 +286,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
     if chunks in (True, 'auto'):
-        if not attrs.get('is_tiled', False):
-            msg = "Data store is not tiled. Automatic chunking is not sensible"
-            raise ValueError(msg)
-
-        import dask.array
-        if dask.__version__ < '0.18.0':
-            msg = ("Automatic chunking requires dask.__version__ >= 0.18.0 . "
-                   "You currently have version %s" % dask.__version__)
-            raise NotImplementedError(msg)
-
-        img = riods._ds
-        block_shapes = set(img.block_shapes)
-        block_shape = (1,) + list(block_shapes)[0]
-        previous_chunks = tuple((c,) for c in block_shape)
-        shape = (img.count, img.height, img.width)
-        dtype = img.dtypes[0]
-        chunks = dask.array.core.normalize_chunks(
-            'auto',
-            shape=shape,
-            previous_chunks=previous_chunks,
-            dtype=dtype
-        )
+        chunks = (1, 'auto', 'auto')
 
     if cache and (chunks is None):
         data = indexing.MemoryCachedArray(data)
@@ -327,6 +306,30 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         name_prefix = 'open_rasterio-%s' % token
         if lock is None:
             lock = RASTERIO_LOCK
+
+        if not attrs.get('is_tiled', False):
+            msg = "Data store is not tiled. Automatic chunking is not sensible"
+            raise ValueError(msg)
+
+        import dask.array
+        if dask.__version__ < '0.18.0':
+            msg = ("Automatic chunking requires dask.__version__ >= 0.18.0 . "
+                   "You currently have version %s" % dask.__version__)
+            raise NotImplementedError(msg)
+
+        img = riods._ds
+        block_shapes = set(img.block_shapes)
+        block_shape = (1,) + list(block_shapes)[0]
+        previous_chunks = tuple((c,) for c in block_shape)
+        shape = (img.count, img.height, img.width)
+        dtype = img.dtypes[0]
+        chunks = dask.array.core.normalize_chunks(
+            chunks,
+            shape=shape,
+            previous_chunks=previous_chunks,
+            dtype=dtype
+        )
+
         result = result.chunk(chunks, name_prefix=name_prefix, token=token,
                               lock=lock)
 

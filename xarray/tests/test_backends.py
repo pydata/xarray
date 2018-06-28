@@ -3011,11 +3011,17 @@ class TestRasterio(TestCase):
     @requires_dask
     def test_chunks_auto(self):
         import dask
-        with dask.config.set({'array.chunk-size': '1kiB'}):
-            with create_tmp_geotiff(1024, 1024, 3) as (tmp_file, expected):
+        with dask.config.set({'array.chunk-size': '64kiB'}):
+            # TODO: enhance create_tmp_geotiff to support tiled images
+            with create_tmp_geotiff(1024, 2048, 3) as (tmp_file, expected):
                 with xr.open_rasterio(tmp_file, chunks=True) as actual:
-                    assert actual.chunks
-                    # TODO: enhance create_tmp_geotiff to support tiled images
+                    assert actual.chunks[0] == (1, 1, 1)
+                    assert actual.chunks[1] == (256,) * 4
+                    assert actual.chunks[2] == (256,) * 8
+                with xr.open_rasterio(tmp_file, chunks=(3, 'auto', 'auto')) as actual:
+                    assert actual.chunks[0] == (3,)
+                    assert actual.chunks[1] == (128,) * 8
+                    assert actual.chunks[2] == (128,) * 16
 
     def test_pickle_rasterio(self):
         # regression test for https://github.com/pydata/xarray/issues/2121
