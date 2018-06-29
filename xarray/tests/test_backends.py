@@ -1275,6 +1275,23 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
+    def test_write_inconsistent_chunks(self):
+        # Construct two variables with the same dimensions, but different
+        # chunk sizes.
+        x = da.zeros((100, 100), dtype='f4', chunks=(50, 100))
+        x = DataArray(data=x, dims=('lat', 'lon'), name='x')
+        x.encoding['chunksizes'] = (50, 100)
+        x.encoding['original_shape'] = (100, 100)
+        y = da.ones((100, 100), dtype='f4', chunks=(100, 50))
+        y = DataArray(data=y, dims=('lat', 'lon'), name='y')
+        y.encoding['chunksizes'] = (100, 50)
+        y.encoding['original_shape'] = (100, 100)
+        # Put them both into the same dataset
+        ds = Dataset({'x': x, 'y': y})
+        with self.roundtrip(ds) as actual:
+            assert actual['x'].encoding['chunksizes'] == (50, 100)
+            assert actual['y'].encoding['chunksizes'] == (100, 50)
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -1339,7 +1356,6 @@ class BaseZarrTest(CFEncodedDataTest):
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks
-
 
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in

@@ -700,13 +700,14 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     # handle scheduler specific logic
     scheduler = get_scheduler()
-    if (dataset.chunks and scheduler in ['distributed', 'multiprocessing'] and
+    have_chunks = any(v.chunks for v in dataset.variables.values())
+    if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
             engine != 'netcdf4'):
         raise NotImplementedError("Writing netCDF files with the %s backend "
                                   "is not currently supported with dask's %s "
                                   "scheduler" % (engine, scheduler))
     lock = _get_lock(engine, scheduler, format, path_or_file)
-    autoclose = (dataset.chunks and
+    autoclose = (have_chunks and
                  scheduler in ['distributed', 'multiprocessing'])
 
     target = path_or_file if path_or_file is not None else BytesIO()

@@ -49,6 +49,10 @@ Bug fixes
   incomplete chunks in multiple dimensions (:issue:`2225`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Fixed a bug in :py:meth:`~Dataset.to_netcdf` which prevented writing
+  datasets when the arrays had different chunk sizes (:issue:`2254`).
+  By `Mike Neish <https://github.com/neishm>`_.
+
 .. _whats-new.0.10.7:
 
 v0.10.7 (7 June 2018)
