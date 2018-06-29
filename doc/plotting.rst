@@ -228,7 +228,7 @@ It is also possible to make line plots such that the data are on the x-axis and 
 Step plots
 ~~~~~~~~~~
 
-As an alternative, also a step lot similar to matplotlib's ``plt.step`` can be
+As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
 made using 1D data. 
 
 .. ipython:: python
