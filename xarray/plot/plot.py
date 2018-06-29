@@ -310,6 +310,8 @@ def line(darray, *args, **kwargs):
     yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
+    if args is ():
+        args = kwargs.pop('args', ())
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
