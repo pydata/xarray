@@ -1546,7 +1546,7 @@ class TestFacetedLinePlots(PlotTestCase):
         g = self.darray.plot.line('o--', row='row', col='col', hue='hue')
         lines = [q for q in g.axes.flat[0].get_children()
                  if isinstance(q, mpl.lines.Line2D)]
-        # passing '.' as argument should set the marker
+        # passing 'o--' as argument should set marker and linestyle
         assert lines[0].get_marker() == 'o'
         assert lines[0].get_linestyle() == '--'
 
