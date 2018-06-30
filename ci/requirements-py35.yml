@@ -5,7 +5,6 @@ dependencies:
   - python=3.5
   - cftime
   - dask=0.16
-  - distributed=1.20
   - h5py
   - h5netcdf
   - matplotlib=1.5
