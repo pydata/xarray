@@ -53,6 +53,10 @@ Bug fixes
   datasets when the arrays had different chunk sizes (:issue:`2254`).
   By `Mike Neish <https://github.com/neishm>`_.
 
+- Fixed a bug in 2D plots which incorrectly raised an error when 2D coordinates
+  weren't monotonic (:issue:`2250`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 .. _whats-new.0.10.7:
 
 v0.10.7 (7 June 2018)
