@@ -508,30 +508,3 @@ class DataStorePickleMixin(object):
         if not self._isopen:
             raise AssertionError('internal failure: file must be open '
                                  'if `autoclose=True` is used.')
-
-
-class PickleByReconstructionWrapper(object):
-
-    def __init__(self, opener, file, mode='r', **kwargs):
-        self.opener = partial(opener, file, mode=mode, **kwargs)
-        self.mode = mode
-        self._ds = None
-
-    @property
-    def value(self):
-        self._ds = self.opener()
-        return self._ds
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['_ds']
-        if self.mode == 'w':
-            # file has already been created, don't override when restoring
-            state['mode'] = 'a'
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-
-    def close(self):
-        self._ds.close()
