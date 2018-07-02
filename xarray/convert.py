@@ -3,6 +3,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import pandas as pd
 
 from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
@@ -46,7 +47,7 @@ def from_cdms2(variable):
     return decode_cf(dataarray.to_dataset())[dataarray.name]
 
 
-def to_cdms2(dataarray):
+def to_cdms2(dataarray, copy=True):
     """Convert a DataArray into a cdms2 variable
     """
     # we don't want cdms2 to be a hard dependency
@@ -56,6 +57,7 @@ def to_cdms2(dataarray):
         for k, v in attrs.items():
             setattr(var, k, v)
 
+    # 1D axes
     axes = []
     for dim in dataarray.dims:
         coord = encode(dataarray.coords[dim])
@@ -63,9 +65,30 @@ def to_cdms2(dataarray):
         set_cdms2_attrs(axis, coord.attrs)
         axes.append(axis)
 
+    # Data
     var = encode(dataarray)
-    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name)
+    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name,
+                                     mask=pd.isnull(var.values), copy=copy)
+
+    # Attributes
     set_cdms2_attrs(cdms2_var, var.attrs)
+
+    # Curvilinear grid
+    if dataarray.name not in dataarray.coords:
+        cdms2_axes2d = {}
+        for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
+            if dataarray.coords[coord_name].ndim == 2:
+                cdms2_axis2d = cdms2.coord.TransientAxis2D(
+                        dataarray.coords[coord_name].to_cdms2())
+                if cdms2_axis2d.isLongitude():
+                    cdms2_axes2d['lon'] = cdms2_axis2d
+                elif cdms2_axis2d.isLatitude():
+                    cdms2_axes2d['lat'] = cdms2_axis2d
+        if 'lon' in cdms2_axes2d and 'lat' in cdms2_axes2d:
+            cdms2_grid = cdms2.hgrid.TransientCurveGrid(cdms2_axes2d['lat'],
+                                                        cdms2_axes2d['lon'])
+            cdms2_var.setGrid(cdms2_grid)
+
     return cdms2_var
 
 
