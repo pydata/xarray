@@ -79,7 +79,7 @@ def to_cdms2(dataarray, copy=True):
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
             if dataarray.coords[coord_name].ndim == 2:
                 cdms2_axis2d = cdms2.coord.TransientAxis2D(
-                        dataarray.coords[coord_name].to_cdms2())
+                    dataarray.coords[coord_name].to_cdms2())
                 if cdms2_axis2d.isLongitude():
                     cdms2_axes2d['lon'] = cdms2_axis2d
                 elif cdms2_axis2d.isLatitude():
