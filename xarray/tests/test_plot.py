@@ -148,6 +148,9 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_0', hue='dim_1')
         self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1')
 
+        with raises_regex(ValueError, 'xerr, yerr'):
+            self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1', xerr=1)
+
         with raises_regex(ValueError, 'cannot'):
             self.darray[:, :, 0].plot.line(x='dim_1', y='dim_0', hue='dim_1')
 
@@ -390,6 +393,12 @@ class TestPlot1D(PlotTestCase):
         self.darray.plot.line()
         title = plt.gca().get_title()
         assert 'd = 10' == title
+
+    def test_errorbars(self):
+        primitive = self.darray.plot(xerr=self.darray / 2,
+                                     yerr=self.darray / 2,
+                                     ecolor='r')
+        assert isinstance(primitive, mpl.container.ErrorbarContainer)
 
 
 class TestPlotHistogram(PlotTestCase):

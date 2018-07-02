@@ -41,6 +41,9 @@ Enhancements
   (:issue:`2218`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- :py:meth:`~xarray.DataArray.plot()` will now plot errorbars if provided with kwargs ``xerr, yerr``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 Bug fixes
 ~~~~~~~~~

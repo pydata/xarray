@@ -212,8 +212,6 @@ If required, the automatic legend can be turned off using ``add_legend=False``. 
 ``hue`` can be passed directly to :py:func:`xarray.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
 
 
-
-
 Dimension along y-axis
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -225,7 +223,7 @@ It is also possible to make line plots such that the data are on the x-axis and 
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
 Changing Axes Direction
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
 
@@ -233,6 +231,16 @@ The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes d
 
     @savefig plotting_example_xincrease_yincrease_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon', xincrease=False, yincrease=False)
+
+Errorbars
+~~~~~~~~~
+
+If provided with the keyword arguments ``xerr`` and ``yerr``, errorbars will be added. Additional ``kwargs`` will be passed to matplotlib's ``errorbar()``. Currently this functionality is only supported for 1D DataArrays; i.e. the following would not work with ``air.isel(time=10, lon=[10, 11])``.
+
+.. ipython:: python
+
+    @savefig plotting_example_yerr_kwarg.png
+    air.isel(time=10, lon=10).plot.line(y='lat', xerr=3, yerr=1.5, ecolor='r')
 
 Two Dimensions
 --------------

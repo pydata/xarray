@@ -270,6 +270,7 @@ def line(darray, *args, **kwargs):
         Coordinates for x, y axis. Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
+    xerr, yerr : Errorbar sizes (optional)
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
@@ -308,6 +309,8 @@ def line(darray, *args, **kwargs):
     y = kwargs.pop('y', None)
     xincrease = kwargs.pop('xincrease', True)
     yincrease = kwargs.pop('yincrease', True)
+    xerr = kwargs.pop('xerr', None)
+    yerr = kwargs.pop('yerr', None)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
 
@@ -317,7 +320,13 @@ def line(darray, *args, **kwargs):
 
     _ensure_plottable(xplt)
 
-    primitive = ax.plot(xplt, yplt, *args, **kwargs)
+    if xerr is None and yerr is None:
+        primitive = ax.plot(xplt, yplt, *args, **kwargs)
+    else:
+        if xplt.ndim > 1 or yplt.ndim > 1:
+            raise ValueError('xerr, yerr can only be used with 1D data.')
+
+        primitive = ax.errorbar(xplt, yplt, xerr=xerr, yerr=yerr, **kwargs)
 
     if _labels:
         if xlabel is not None:
