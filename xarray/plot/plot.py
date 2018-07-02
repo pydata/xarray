@@ -906,7 +906,13 @@ def contour(x, y, z, ax, **kwargs):
 
     Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
+    labels = kwargs.pop('labels', False)
+
     primitive = ax.contour(x, y, z, **kwargs)
+
+    if labels:
+        ax.clabel(primitive, primitive.levels)
+
     return primitive
 
 
