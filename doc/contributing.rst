@@ -721,7 +721,7 @@ some common prefixes along with general guidelines for when to use them:
 
 The following defines how a commit message should be structured:
 
-    * A subject line with `< 80` chars.
+    * A subject line with `< 72` chars.
     * One blank line.
     * Optionally, a commit message body.
 
