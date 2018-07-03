@@ -301,7 +301,7 @@ Navigate to your local ``xarray/doc/`` directory in the console and run::
 
     make html
 
-Then you can find the HTML output in the folder ``xarray/doc/build/html/``.
+Then you can find the HTML output in the folder ``xarray/doc/_build/html/``.
 
 The first time you build the docs, it will take quite a while because it has to run
 all the code examples and build all the generated docstring pages. In subsequent
