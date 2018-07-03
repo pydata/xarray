@@ -18,7 +18,7 @@ Where to start?
 All contributions, bug reports, bug fixes, documentation improvements,
 enhancements, and ideas are welcome.
 
-If you are brand new to xarray or open-source development, we recommend going
+If you are brand new to *xarray* or open-source development, we recommend going
 through the `GitHub "issues" tab <https://github.com/pydata/xarray/issues>`_
 to find issues that interest you. There are a number of issues listed under
 `Documentation <https://github.com/pydata/xarray/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation>`_
@@ -35,14 +35,14 @@ Feel free to ask questions on the `mailing list
 Bug reports and enhancement requests
 ====================================
 
-Bug reports are an important part of making *xarray* more stable. Having a complete bug report
-will allow others to reproduce the bug and provide insight into fixing. See
+Bug reports are an important part of making *xarray* more stable. Having a complete bug
+report will allow others to reproduce the bug and provide insight into fixing. See
 `this stackoverflow article <https://stackoverflow.com/help/mcve>`_ for tips on
 writing a good bug report.
 
 Trying the bug-producing code out on the *master* branch is often a worthwhile exercise
-to confirm the bug still exists. It is also worth searching existing bug reports and pull requests
-to see if the issue has already been reported and/or fixed.
+to confirm the bug still exists. It is also worth searching existing bug reports and
+pull requests to see if the issue has already been reported and/or fixed.
 
 Bug reports must:
 
@@ -56,32 +56,34 @@ Bug reports must:
       ...
       ```
 
-#. Include the full version string of *xarray* and its dependencies. You can use the built in function::
+#. Include the full version string of *xarray* and its dependencies. You can use the
+   built in function::
 
       >>> import xarray as xr
       >>> xr.show_versions()
 
 #. Explain why the current behavior is wrong/not desired and what you expect instead.
 
-The issue will then show up to the *xarray* community and be open to comments/ideas from others.
+The issue will then show up to the *xarray* community and be open to comments/ideas
+from others.
 
 .. _contributing.github:
 
 Working with the code
 =====================
 
-Now that you have an issue you want to fix, enhancement to add, or documentation to improve,
-you need to learn how to work with GitHub and the *xarray* code base.
+Now that you have an issue you want to fix, enhancement to add, or documentation
+to improve, you need to learn how to work with GitHub and the *xarray* code base.
 
 .. _contributing.version_control:
 
 Version control, Git, and GitHub
 --------------------------------
 
-To the new user, working with Git is one of the more daunting aspects of contributing to *xarray*.
-It can very quickly become overwhelming, but sticking to the guidelines below will help keep the process
-straightforward and mostly trouble free.  As always, if you are having difficulties please
-feel free to ask for help.
+To the new user, working with Git is one of the more daunting aspects of contributing
+to *xarray*.  It can very quickly become overwhelming, but sticking to the guidelines
+below will help keep the process straightforward and mostly trouble free.  As always,
+if you are having difficulties please feel free to ask for help.
 
 The code is hosted on `GitHub <https://www.github.com/pydata/xarray>`_. To
 contribute you will need to sign up for a `free GitHub account
@@ -122,7 +124,7 @@ the upstream (main project) *xarray* repository.
 Creating a development environment
 ----------------------------------
 
-To test out code changes, you'll need to build xarray from source, which
+To test out code changes, you'll need to build *xarray* from source, which
 requires a Python environment. If you're making documentation changes, you can
 skip to :ref:`contributing.documentation` but you won't be able to build the
 documentation locally before pushing your changes.
@@ -158,7 +160,7 @@ We'll now kick off a two-step process:
    # Build and install xarray
    pip install -e .
 
-At this point you should be able to import xarray from your locally built version::
+At this point you should be able to import *xarray* from your locally built version::
 
    $ python  # start an interpreter
    >>> import xarray
@@ -201,11 +203,11 @@ To update this branch, you need to retrieve the changes from the master branch::
     git fetch upstream
     git rebase upstream/master
 
-This will replay your commits on top of the latest xarray git master.  If this
+This will replay your commits on top of the latest *xarray* git master.  If this
 leads to merge conflicts, you must resolve these before submitting your pull
-request.  If you have uncommitted changes, you will need to ``stash`` them prior
-to updating.  This will effectively store your changes and they can be reapplied
-after updating.
+request.  If you have uncommitted changes, you will need to ``git stash`` them
+prior to updating.  This will effectively store your changes and they can be
+reapplied after updating.
 
 .. _contributing.documentation:
 
@@ -379,17 +381,18 @@ services need to be hooked to your GitHub repository. Instructions are here
 for `Travis-CI <http://about.travis-ci.org/docs/user/getting-started/>`__, and
 `Appveyor <https://www.appveyor.com/docs/>`__.
 
-A pull-request will be considered for merging when you have an all 'green' build. If any tests are failing,
-then you will get a red 'X', where you can click through to see the individual failed tests.
-This is an example of a green build.
+A pull-request will be considered for merging when you have an all 'green' build. If any
+tests are failing, then you will get a red 'X', where you can click through to see the
+individual failed tests. This is an example of a green build.
 
 .. image:: _static/ci.png
 
 .. note::
 
-   Each time you push to *your* fork, a *new* run of the tests will be triggered on the CI. Appveyor will auto-cancel
-   any non-currently-running tests for that same pull-request. You can also enable the auto-cancel feature for
-   `Travis-CI here <https://docs.travis-ci.com/user/customizing-the-build/#Building-only-the-latest-commit>`__.
+   Each time you push to your PR branch, a new run of the tests will be triggered on the CI.
+   Appveyor will auto-cancel any non-currently-running tests for that same pull-request.
+   You can also enable the auto-cancel feature for `Travis-CI here
+   <https://docs.travis-ci.com/user/customizing-the-build/#Building-only-the-latest-commit>`__.
 
 .. _contributing.tdd:
 
@@ -437,7 +440,8 @@ the expected correct result::
 Transitioning to ``pytest``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*xarray* existing test structure is *mostly* classed based, meaning that you will typically find tests wrapped in a class.
+*xarray* existing test structure is *mostly* classed based, meaning that you will
+typically find tests wrapped in a class.
 
 .. code-block:: python
 
@@ -460,16 +464,19 @@ Using ``pytest``
 Here is an example of a self-contained set of tests that illustrate multiple
 features that we like to use.
 
-- functional style: tests are like ``test_*`` and *only* take arguments that are either fixtures or parameters
+- functional style: tests are like ``test_*`` and *only* take arguments that are either
+  fixtures or parameters
 - ``pytest.mark`` can be used to set metadata on test functions, e.g. ``skip`` or ``xfail``.
 - using ``parametrize``: allow testing of multiple cases
 - to set a mark on a parameter, ``pytest.param(..., marks=...)`` syntax should be used
 - ``fixture``, code for object construction, on a per-test basis
 - using bare ``assert`` for scalars and truth-testing
-- ``tm.assert_series_equal`` (and its counter part ``tm.assert_frame_equal``), for xarray object comparisons.
+- ``tm.assert_series_equal`` (and its counter part ``tm.assert_frame_equal``), for xarray
+  object comparisons.
 - the typical pattern of constructing an ``expected`` and comparing versus the ``result``
 
-We would name this file ``test_cool_feature.py`` and put in an appropriate place in the ``xarray/tests/`` structure.
+We would name this file ``test_cool_feature.py`` and put in an appropriate place in the
+``xarray/tests/`` structure.
 
 .. TODO: confirm that this actually works
 
@@ -640,9 +647,9 @@ using ``.`` as a separator. For example::
 
 will only run the ``GroupByMethods`` benchmark defined in ``groupby.py``.
 
-You can also run the benchmark suite using the version of ``xarray``
+You can also run the benchmark suite using the version of *xarray*
 already installed in your current Python environment. This can be
-useful if you do not have virtualenv or conda, or are using the
+useful if you do not have ``virtualenv`` or ``conda``, or are using the
 ``setup.py develop`` approach discussed above; for the in-place build
 you need to set ``PYTHONPATH``, e.g.
 ``PYTHONPATH="$PWD/.." asv [remaining arguments]``.
@@ -661,7 +668,7 @@ This will display stderr from the benchmarks, and use your local
 Information on how to write a benchmark and how to use asv can be found in the
 `asv documentation <https://asv.readthedocs.io/en/latest/writing_benchmarks.html>`_.
 
-The ``xarray`` benchmarking suite is run remotely and the results are
+The *xarray* benchmarking suite is run remotely and the results are
 available `here <http://pandas.pydata.org/speed/xarray/>`_.
 
 Documenting your code
@@ -670,7 +677,7 @@ Documenting your code
 Changes should be reflected in the release notes located in ``doc/whats-new.rst``.
 This file contains an ongoing change log for each release.  Add an entry to this file to
 document your fix, enhancement or (unavoidable) breaking change.  Make sure to include the
-GitHub issue number when adding your entry (using ``:issue:`1234```, where `1234` is the
+GitHub issue number when adding your entry (using ``:issue:`1234```, where ``1234`` is the
 issue/pull request number).
 
 If your code is an enhancement, it is most likely necessary to add usage
@@ -704,21 +711,22 @@ Finally, commit your changes to your local repository with an explanatory messag
 *Xarray* uses a convention for commit message prefixes and layout.  Here are
 some common prefixes along with general guidelines for when to use them:
 
-    * ENH: Enhancement, new functionality
-    * BUG: Bug fix
-    * DOC: Additions/updates to documentation
-    * TST: Additions/updates to tests
-    * BLD: Updates to the build process/scripts
-    * PERF: Performance improvement
-    * CLN: Code cleanup
+    * ``ENH``: Enhancement, new functionality
+    * ``BUG``: Bug fix
+    * ``DOC``: Additions/updates to documentation
+    * ``TST``: Additions/updates to tests
+    * ``BLD``: Updates to the build process/scripts
+    * ``PERF``: Performance improvement
+    * ``CLN``: Code cleanup
 
-The following defines how a commit message should be structured.  Please reference the
-relevant GitHub issues in your commit message using GH1234 or #1234.  Either style
-is fine, but the former is generally preferred:
+The following defines how a commit message should be structured:
 
-    * a subject line with `< 80` chars.
+    * A subject line with `< 80` chars.
     * One blank line.
     * Optionally, a commit message body.
+
+Please reference the relevant GitHub issues in your commit message using ``GH1234`` or
+``#1234``.  Either style is fine, but the former is generally preferred.
 
 Now you can commit your changes in your local repository::
 
