@@ -361,8 +361,8 @@ Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Please try to maintain backward compatibility. *xarray* has growing number of users with
-lots of existing code, so don't break it if at all possible.  If you think breakage is,
-required clearly state why as part of the pull request.  Also, be careful when changing
+lots of existing code, so don't break it if at all possible.  If you think breakage is
+required, clearly state why as part of the pull request.  Also, be careful when changing
 method signatures and add deprecation warnings where needed. Also, add the deprecated
 sphinx directive to the deprecated functions or methods.
 
@@ -670,7 +670,7 @@ Documenting your code
 Changes should be reflected in the release notes located in ``doc/whats-new.rst``.
 This file contains an ongoing change log for each release.  Add an entry to this file to
 document your fix, enhancement or (unavoidable) breaking change.  Make sure to include the
-GitHub issue number when adding your entry (using `` :issue:`1234` `` where `1234` is the
+GitHub issue number when adding your entry (using ``:issue:`1234```, where `1234` is the
 issue/pull request number).
 
 If your code is an enhancement, it is most likely necessary to add usage
