@@ -13,6 +13,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
@@ -2917,6 +2918,7 @@ class TestDataArray(TestCase):
     def test_to_and_from_cdms2(self):
         pytest.importorskip('cdms2')
 
+        # Classic with 1D axes
         original = DataArray(
             np.arange(6).reshape(2, 3),
             [('distance', [-2, 2], {'units': 'meters'}),
@@ -2939,6 +2941,39 @@ class TestDataArray(TestCase):
 
         roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
+
+        # Curvilinear grid
+        lonlat = np.mgrid[:3, :4]
+        lon = DataArray(lonlat[1], dims=['y', 'x'], name='lon')
+        lat = DataArray(lonlat[0], dims=['y', 'x'], name='lat')
+        original = DataArray(lonlat.sum(axis=0), dims=['y', 'x'],
+                             coords={'lon': lon, 'lat': lat})
+        actual = original.to_cdms2()
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert_array_equal(original.coords['lon'], actual.getLongitude())
+        assert_array_equal(original.coords['lat'], actual.getLatitude())
+        back = from_cdms2(actual)
+        assert_array_equal(original.coords['lat'], back.coords['lat'])
+        assert_array_equal(original.coords['lon'], back.coords['lon'])
+        self.assertItemsEqual(original.dims, back.dims)
+
+        # Unstructured grid
+        lon = DataArray(np.random.uniform(size=5), dims=['cell'], name='lon')
+        lat = DataArray(np.random.uniform(size=5), dims=['cell'], name='lat')
+        cell = DataArray(np.arange(5), dims=['cell'], name='cell')
+        original = DataArray(np.arange(5), dims=['cell'],
+                             coords={'lon': lon, 'lat': lat, 'cell': cell})
+        actual = original.to_cdms2()
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert_array_equal(original.coords['lon'], actual.getLongitude())
+        assert_array_equal(original.coords['lat'], actual.getLatitude())
+        back = from_cdms2(actual)
+        assert_array_equal(original.coords['lat'], back.coords['lat'])
+        assert_array_equal(original.coords['lon'], back.coords['lon'])
+        self.assertItemsEqual(original.dims, back.dims)
+
+
+
 
     def test_to_and_from_iris(self):
         try:
