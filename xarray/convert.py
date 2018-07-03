@@ -42,16 +42,18 @@ def from_cdms2(variable):
     dims = variable.getAxisIds()
     coords = {}
     for axis in variable.getAxisList():
-        coords[axis.id] = DataArray(np.asarray(axis), dims=[axis.id],
-            attrs=_filter_attrs(axis.attributes, cdms2_ignored_attrs))
+        coords[axis.id] = DataArray(
+                np.asarray(axis), dims=[axis.id],
+                attrs=_filter_attrs(axis.attributes, cdms2_ignored_attrs))
     grid = variable.getGrid()
     if grid is not None:
         ids = [a.id for a in grid.getAxisList()]
         for axis in grid.getLongitude(), grid.getLatitude():
             if axis.id not in variable.getAxisIds():
-                coords[axis.id] = DataArray(np.asarray(axis[:]), dims=ids,
-                    attrs=_filter_attrs(axis.attributes,
-                                        cdms2_ignored_attrs))
+                coords[axis.id] = DataArray(
+                        np.asarray(axis[:]), dims=ids,
+                        attrs=_filter_attrs(axis.attributes,
+                                            cdms2_ignored_attrs))
 
     attrs = _filter_attrs(variable.attributes, cdms2_ignored_attrs)
     dataarray = DataArray(values, dims=dims, coords=coords, name=name,
