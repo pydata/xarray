@@ -228,9 +228,31 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(xref, x)
         np.testing.assert_allclose(yref, y)
 
-        # test that warning is raised for non-monotonic inputs
+        # test that ValueError is raised for non-monotonic 1D inputs
         with pytest.raises(ValueError):
-            _infer_interval_breaks(np.array([0, 2, 1]))
+            _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
+
+    def test_geo_data(self):
+        # Regression test for gh2250
+        # Realistic coordinates taken from the example dataset
+        lat = np.array([[16.28, 18.48, 19.58, 19.54, 18.35],
+                        [28.07, 30.52, 31.73, 31.68, 30.37],
+                        [39.65, 42.27, 43.56, 43.51, 42.11],
+                        [50.52, 53.22, 54.55, 54.50, 53.06]])
+        lon = np.array([[-126.13, -113.69, -100.92, -88.04, -75.29],
+                        [-129.27, -115.62, -101.54, -87.32, -73.26],
+                        [-133.10, -118.00, -102.31, -86.42, -70.76],
+                        [-137.85, -120.99, -103.28, -85.28, -67.62]])
+        data = np.sqrt(lon ** 2 + lat ** 2)
+        da = DataArray(data, dims=('y', 'x'),
+                       coords={'lon': (('y', 'x'), lon),
+                               'lat': (('y', 'x'), lat)})
+        da.plot(x='lon', y='lat')
+        ax = plt.gca()
+        assert ax.has_data()
+        da.plot(x='lat', y='lon')
+        ax = plt.gca()
+        assert ax.has_data()
 
     def test_datetime_dimension(self):
         nrow = 3
