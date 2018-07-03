@@ -54,7 +54,6 @@ def from_cdms2(variable):
                     np.asarray(axis[:]), dims=ids,
                     attrs=_filter_attrs(axis.attributes,
                                         cdms2_ignored_attrs))
-
     attrs = _filter_attrs(variable.attributes, cdms2_ignored_attrs)
     dataarray = DataArray(values, dims=dims, coords=coords, name=name,
                           attrs=attrs)
