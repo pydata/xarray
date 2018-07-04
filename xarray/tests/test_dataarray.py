@@ -2915,10 +2915,10 @@ class TestDataArray(TestCase):
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
-    def test_to_and_from_cdms2(self):
+    def test_to_and_from_cdms2_classic(self):
+        """Classic with 1D axes"""
         pytest.importorskip('cdms2')
 
-        # Classic with 1D axes
         original = DataArray(
             np.arange(6).reshape(2, 3),
             [('distance', [-2, 2], {'units': 'meters'}),
@@ -2942,22 +2942,43 @@ class TestDataArray(TestCase):
         roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
 
-        # Curvilinear grid
+        back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        for coord_name in original.coords.keys():
+            assert_array_equal(original.coords[coord_name],
+                               back.coords[coord_name])
+
+    def test_to_and_from_cdms2_sgrid(self):
+        """Curvilinear (structured) grid
+
+        The rectangular grid case is covered by the classic case
+        """
+        pytest.importorskip('cdms2')
+
         lonlat = np.mgrid[:3, :4]
         lon = DataArray(lonlat[1], dims=['y', 'x'], name='lon')
         lat = DataArray(lonlat[0], dims=['y', 'x'], name='lat')
+        x = DataArray(np.arange(lon.shape[1]), dims=['x'], name='x')
+        y = DataArray(np.arange(lon.shape[0]), dims=['y'], name='y')
         original = DataArray(lonlat.sum(axis=0), dims=['y', 'x'],
-                             coords={'lon': lon, 'lat': lat})
+                             coords=OrderedDict(x=x, y=y, lon=lon, lat=lat),
+                             name='sst')
         actual = original.to_cdms2()
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
         assert_array_equal(original.coords['lon'], actual.getLongitude())
         assert_array_equal(original.coords['lat'], actual.getLatitude())
+
         back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
-        self.assertItemsEqual(original.dims, back.dims)
 
-        # Unstructured grid
+    def test_to_and_from_cdms2_ugrid(self):
+        """Unstructured grid"""
+        pytest.importorskip('cdms2')
+
         lon = DataArray(np.random.uniform(size=5), dims=['cell'], name='lon')
         lat = DataArray(np.random.uniform(size=5), dims=['cell'], name='lat')
         cell = DataArray(np.arange(5), dims=['cell'], name='cell')
@@ -2967,13 +2988,12 @@ class TestDataArray(TestCase):
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
         assert_array_equal(original.coords['lon'], actual.getLongitude())
         assert_array_equal(original.coords['lat'], actual.getLatitude())
+
         back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
-        self.assertItemsEqual(original.dims, back.dims)
-
-
-
 
     def test_to_and_from_iris(self):
         try:

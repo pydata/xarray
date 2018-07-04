@@ -2,6 +2,7 @@
 """
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
@@ -89,7 +90,7 @@ def to_cdms2(dataarray, copy=True):
     # Curvilinear and unstructured grids
     if dataarray.name not in dataarray.coords:
 
-        cdms2_axes = {}
+        cdms2_axes = OrderedDict()
         for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
 
             coord_array = dataarray.coords[coord_name].to_cdms2()
