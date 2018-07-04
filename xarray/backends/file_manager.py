@@ -27,7 +27,7 @@ class FileManager(object):
             Callable that opens a given file when called, returning a file
             object.
         mode : str, optional
-            If provided, passed to opener as a keyword argument. 
+            If provided, passed to opener as a keyword argument.
         """
         raise NotImplementedError
 

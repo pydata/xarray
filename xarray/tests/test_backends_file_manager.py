@@ -11,6 +11,7 @@ FILE_MANAGERS = [
     ExplicitFileManager, LazyFileManager, AutoclosingFileManager,
 ]
 
+
 @pytest.mark.parametrize('manager_type', FILE_MANAGERS)
 def test_file_manager_write_consecutive(tmpdir, manager_type):
     path = str(tmpdir.join('testing.txt'))
