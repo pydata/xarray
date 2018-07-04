@@ -2,7 +2,9 @@
 """
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 import numpy as np
+import pandas as pd
 
 from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
@@ -38,15 +40,28 @@ def from_cdms2(variable):
     """
     values = np.asarray(variable)
     name = variable.id
-    coords = [(v.id, np.asarray(v),
-               _filter_attrs(v.attributes, cdms2_ignored_attrs))
-              for v in variable.getAxisList()]
+    dims = variable.getAxisIds()
+    coords = {}
+    for axis in variable.getAxisList():
+        coords[axis.id] = DataArray(
+            np.asarray(axis), dims=[axis.id],
+            attrs=_filter_attrs(axis.attributes, cdms2_ignored_attrs))
+    grid = variable.getGrid()
+    if grid is not None:
+        ids = [a.id for a in grid.getAxisList()]
+        for axis in grid.getLongitude(), grid.getLatitude():
+            if axis.id not in variable.getAxisIds():
+                coords[axis.id] = DataArray(
+                    np.asarray(axis[:]), dims=ids,
+                    attrs=_filter_attrs(axis.attributes,
+                                        cdms2_ignored_attrs))
     attrs = _filter_attrs(variable.attributes, cdms2_ignored_attrs)
-    dataarray = DataArray(values, coords=coords, name=name, attrs=attrs)
+    dataarray = DataArray(values, dims=dims, coords=coords, name=name,
+                          attrs=attrs)
     return decode_cf(dataarray.to_dataset())[dataarray.name]
 
 
-def to_cdms2(dataarray):
+def to_cdms2(dataarray, copy=True):
     """Convert a DataArray into a cdms2 variable
     """
     # we don't want cdms2 to be a hard dependency
@@ -56,6 +71,7 @@ def to_cdms2(dataarray):
         for k, v in attrs.items():
             setattr(var, k, v)
 
+    # 1D axes
     axes = []
     for dim in dataarray.dims:
         coord = encode(dataarray.coords[dim])
@@ -63,9 +79,42 @@ def to_cdms2(dataarray):
         set_cdms2_attrs(axis, coord.attrs)
         axes.append(axis)
 
+    # Data
     var = encode(dataarray)
-    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name)
+    cdms2_var = cdms2.createVariable(var.values, axes=axes, id=dataarray.name,
+                                     mask=pd.isnull(var.values), copy=copy)
+
+    # Attributes
     set_cdms2_attrs(cdms2_var, var.attrs)
+
+    # Curvilinear and unstructured grids
+    if dataarray.name not in dataarray.coords:
+
+        cdms2_axes = OrderedDict()
+        for coord_name in set(dataarray.coords.keys()) - set(dataarray.dims):
+
+            coord_array = dataarray.coords[coord_name].to_cdms2()
+
+            cdms2_axis_cls = (cdms2.coord.TransientAxis2D
+                              if coord_array.ndim else
+                              cdms2.auxcoord.TransientAuxAxis1D)
+            cdms2_axis = cdms2_axis_cls(coord_array)
+            if cdms2_axis.isLongitude():
+                cdms2_axes['lon'] = cdms2_axis
+            elif cdms2_axis.isLatitude():
+                cdms2_axes['lat'] = cdms2_axis
+
+        if 'lon' in cdms2_axes and 'lat' in cdms2_axes:
+            if len(cdms2_axes['lon'].shape) == 2:
+                cdms2_grid = cdms2.hgrid.TransientCurveGrid(
+                    cdms2_axes['lat'], cdms2_axes['lon'])
+            else:
+                cdms2_grid = cdms2.gengrid.AbstractGenericGrid(
+                    cdms2_axes['lat'], cdms2_axes['lon'])
+            for axis in cdms2_grid.getAxisList():
+                cdms2_var.setAxis(cdms2_var.getAxisIds().index(axis.id), axis)
+            cdms2_var.setGrid(cdms2_grid)
+
     return cdms2_var
 
 
