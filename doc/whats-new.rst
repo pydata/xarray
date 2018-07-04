@@ -62,6 +62,10 @@ Bug fixes
   :py:meth:`~xarray.DataArray.to_cdms2` (:issue:`2262`).
   By `Stephane Raynaud <https://github.com/stefraynaud>`_.
 
+- Fixed a bug in 2D plots which incorrectly raised an error when 2D coordinates
+  weren't monotonic (:issue:`2250`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 
 .. _whats-new.0.10.7:
 
