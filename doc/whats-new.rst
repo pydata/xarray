@@ -41,6 +41,11 @@ Enhancements
   (:issue:`2218`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Added support for curvilinear and unstructured generic grids
+  to :py:meth:`~xarray.DataArray.to_cdms2` and
+  :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
+  By `Stephane Raynaud <https://github.com/stefraynaud>`_.
+
 
 Bug fixes
 ~~~~~~~~~
@@ -48,6 +53,19 @@ Bug fixes
 - Fixed a bug in ``zarr`` backend which prevented use with datasets with
   incomplete chunks in multiple dimensions (:issue:`2225`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fixed a bug in :py:meth:`~Dataset.to_netcdf` which prevented writing
+  datasets when the arrays had different chunk sizes (:issue:`2254`).
+  By `Mike Neish <https://github.com/neishm>`_.
+
+- Fixed masking during the conversion to cdms2 objects by
+  :py:meth:`~xarray.DataArray.to_cdms2` (:issue:`2262`).
+  By `Stephane Raynaud <https://github.com/stefraynaud>`_.
+
+- Fixed a bug in 2D plots which incorrectly raised an error when 2D coordinates
+  weren't monotonic (:issue:`2250`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 
 .. _whats-new.0.10.7:
 

@@ -289,7 +289,6 @@ def line(darray, *args, **kwargs):
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
-        allargs.update(allargs.pop('args'))
         return _line_facetgrid(**allargs)
 
     ndims = len(darray.dims)
@@ -310,6 +309,8 @@ def line(darray, *args, **kwargs):
     yincrease = kwargs.pop('yincrease', True)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
+    if args is ():
+        args = kwargs.pop('args', ())
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
@@ -872,7 +873,7 @@ def _is_monotonic(coord, axis=0):
         return np.all(delta_pos) or np.all(delta_neg)
 
 
-def _infer_interval_breaks(coord, axis=0):
+def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
@@ -882,7 +883,7 @@ def _infer_interval_breaks(coord, axis=0):
     """
     coord = np.asarray(coord)
 
-    if not _is_monotonic(coord, axis=axis):
+    if check_monotonic and not _is_monotonic(coord, axis=axis):
         raise ValueError("The input coordinate is not sorted in increasing "
                          "order along axis %d. This can lead to unexpected "
                          "results. Consider calling the `sortby` method on "
@@ -921,8 +922,8 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 
     if infer_intervals:
         if len(x.shape) == 1:
-            x = _infer_interval_breaks(x)
-            y = _infer_interval_breaks(y)
+            x = _infer_interval_breaks(x, check_monotonic=True)
+            y = _infer_interval_breaks(y, check_monotonic=True)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1)
