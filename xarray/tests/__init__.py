@@ -59,6 +59,8 @@ def _importorskip(modname, minversion=None):
 
 
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
+has_matplotlib2, requires_matplotlib2 = _importorskip('matplotlib',
+                                                      minversion='2')
 has_scipy, requires_scipy = _importorskip('scipy')
 has_pydap, requires_pydap = _importorskip('pydap.client')
 has_netCDF4, requires_netCDF4 = _importorskip('netCDF4')

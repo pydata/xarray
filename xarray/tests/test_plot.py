@@ -17,7 +17,8 @@ from xarray.plot.utils import (
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn, requires_cftime)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -283,6 +284,7 @@ class TestPlot(PlotTestCase):
             d[0].plot(x='x', y='y', col='z', ax=plt.gca())
 
     @pytest.mark.slow
+    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -295,12 +297,9 @@ class TestPlot(PlotTestCase):
             cmap='cool',
             subplot_kws=dict(facecolor='r'))
         for ax in g.axes.flat:
-            try:
-                # mpl V2
-                assert ax.get_facecolor()[0:3] == \
-                    mpl.colors.to_rgb('r')
-            except AttributeError:
-                assert ax.get_axis_bgcolor() == 'r'
+            # mpl V2
+            assert ax.get_facecolor()[0:3] == \
+                mpl.colors.to_rgb('r')
 
     @pytest.mark.slow
     def test_plot_size(self):
