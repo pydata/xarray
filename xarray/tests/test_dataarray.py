@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 import pickle
 from copy import deepcopy
-from distutils.version import LooseVersion
 from textwrap import dedent
 import warnings
 
@@ -13,13 +12,14 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
     assert_identical, raises_regex, requires_bottleneck, requires_cftime,
-    requires_dask, requires_scipy, source_ndarray, unittest)
+    requires_dask, requires_np113, requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -2914,7 +2914,8 @@ class TestDataArray(TestCase):
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
-    def test_to_and_from_cdms2(self):
+    def test_to_and_from_cdms2_classic(self):
+        """Classic with 1D axes"""
         pytest.importorskip('cdms2')
 
         original = DataArray(
@@ -2939,6 +2940,59 @@ class TestDataArray(TestCase):
 
         roundtripped = DataArray.from_cdms2(actual)
         assert_identical(original, roundtripped)
+
+        back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        for coord_name in original.coords.keys():
+            assert_array_equal(original.coords[coord_name],
+                               back.coords[coord_name])
+
+    def test_to_and_from_cdms2_sgrid(self):
+        """Curvilinear (structured) grid
+
+        The rectangular grid case is covered by the classic case
+        """
+        pytest.importorskip('cdms2')
+
+        lonlat = np.mgrid[:3, :4]
+        lon = DataArray(lonlat[1], dims=['y', 'x'], name='lon')
+        lat = DataArray(lonlat[0], dims=['y', 'x'], name='lat')
+        x = DataArray(np.arange(lon.shape[1]), dims=['x'], name='x')
+        y = DataArray(np.arange(lon.shape[0]), dims=['y'], name='y')
+        original = DataArray(lonlat.sum(axis=0), dims=['y', 'x'],
+                             coords=OrderedDict(x=x, y=y, lon=lon, lat=lat),
+                             name='sst')
+        actual = original.to_cdms2()
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert_array_equal(original.coords['lon'], actual.getLongitude())
+        assert_array_equal(original.coords['lat'], actual.getLatitude())
+
+        back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        assert_array_equal(original.coords['lat'], back.coords['lat'])
+        assert_array_equal(original.coords['lon'], back.coords['lon'])
+
+    def test_to_and_from_cdms2_ugrid(self):
+        """Unstructured grid"""
+        pytest.importorskip('cdms2')
+
+        lon = DataArray(np.random.uniform(size=5), dims=['cell'], name='lon')
+        lat = DataArray(np.random.uniform(size=5), dims=['cell'], name='lat')
+        cell = DataArray(np.arange(5), dims=['cell'], name='cell')
+        original = DataArray(np.arange(5), dims=['cell'],
+                             coords={'lon': lon, 'lat': lat, 'cell': cell})
+        actual = original.to_cdms2()
+        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert_array_equal(original.coords['lon'], actual.getLongitude())
+        assert_array_equal(original.coords['lat'], actual.getLatitude())
+
+        back = from_cdms2(actual)
+        self.assertItemsEqual(original.dims, back.dims)
+        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        assert_array_equal(original.coords['lat'], back.coords['lat'])
+        assert_array_equal(original.coords['lon'], back.coords['lon'])
 
     def test_to_and_from_iris(self):
         try:
@@ -3324,9 +3378,6 @@ class TestDataArray(TestCase):
         actual = da.sortby([day, dax])
         assert_equal(actual, expected)
 
-        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
-            pytest.skip('numpy 1.11.0 or later to support object data-type.')
-
         expected = sorted1d
         actual = da.sortby('x')
         assert_equal(actual, expected)
@@ -3596,9 +3647,7 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13'),
-                    reason='Old numpy does not support nansum / nanmax for '
-                    'object typed arrays.')
+@requires_np113
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))

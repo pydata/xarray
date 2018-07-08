@@ -18,7 +18,8 @@ from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
 
 from . import (
-    TestCase, assert_array_equal, has_dask, raises_regex, requires_dask)
+    TestCase, assert_array_equal, has_dask, has_np113, raises_regex,
+    requires_dask)
 
 
 class TestOps(TestCase):
@@ -283,8 +284,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         warnings.filterwarnings('ignore', 'All-NaN slice')
         warnings.filterwarnings('ignore', 'invalid value encountered in')
 
-        if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
-                da.dtype.kind == 'O' and skipna):
+        if has_np113 and da.dtype.kind == 'O' and skipna:
             # Numpy < 1.13 does not handle object-type array.
             try:
                 if skipna:

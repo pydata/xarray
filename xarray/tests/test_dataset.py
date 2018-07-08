@@ -2,7 +2,6 @@
 from __future__ import absolute_import, division, print_function
 
 from copy import copy, deepcopy
-from distutils.version import LooseVersion
 from io import StringIO
 from textwrap import dedent
 import warnings
@@ -4033,9 +4032,6 @@ class TestDataset(TestCase):
         with pytest.raises(ValueError) as excinfo:
             actual = ds.sortby(ds['A'])
         assert "DataArray is not 1-D" in str(excinfo.value)
-
-        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
-            pytest.skip('numpy 1.11.0 or later to support object data-type.')
 
         expected = sorted1d
         actual = ds.sortby('x')

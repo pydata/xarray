@@ -603,7 +603,7 @@ pass to xarray::
     # write to the bucket
     ds.to_zarr(store=gcsmap)
     # read it back
-    ds_gcs = xr.open_zarr(gcsmap, mode='r')
+    ds_gcs = xr.open_zarr(gcsmap)
 
 .. _Zarr: http://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/

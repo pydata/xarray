@@ -5,8 +5,6 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import npcompat
-
 try:
     import bottleneck as bn
     _USE_BOTTLENECK = True
@@ -202,8 +200,8 @@ def _rolling_window(a, window, axis=-1):
 
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    rolling = npcompat.as_strided(a, shape=shape, strides=strides,
-                                  writeable=False)
+    rolling = np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides,
+                                              writeable=False)
     return np.swapaxes(rolling, -2, axis)
 
 
@@ -236,5 +234,5 @@ nanmedian = _create_bottleneck_method('nanmedian')
 nanvar = _create_bottleneck_method('nanvar')
 nanstd = _create_bottleneck_method('nanstd')
 nanprod = _create_bottleneck_method('nanprod')
-nancumsum = _create_bottleneck_method('nancumsum', npmodule=npcompat)
-nancumprod = _create_bottleneck_method('nancumprod', npmodule=npcompat)
+nancumsum = _create_bottleneck_method('nancumsum')
+nancumprod = _create_bottleneck_method('nancumprod')
