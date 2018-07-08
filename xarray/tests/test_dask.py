@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import pickle
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -208,8 +207,6 @@ class TestVariable(DaskTestCase):
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_var
         v = self.lazy_var
@@ -220,8 +217,6 @@ class TestVariable(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_var
         v = self.lazy_var + 1
@@ -281,8 +276,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_array
         v = self.lazy_array
@@ -293,8 +286,6 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_array
         v = self.lazy_array + 1
@@ -384,10 +375,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert ds3['c'].data is c3
 
     def test_groupby(self):
-        if LooseVersion(dask.__version__) == LooseVersion('0.15.3'):
-            pytest.xfail('upstream bug in dask: '
-                         'https://github.com/dask/dask/issues/2718')
-
         u = self.eager_array
         v = self.lazy_array
 
@@ -779,12 +766,8 @@ def build_dask_array(name):
 
 # test both the perist method and the dask.persist function
 # the dask.persist function requires a new version of dask
-@pytest.mark.parametrize('persist', [
-    lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                       lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16')
-])
+@pytest.mark.parametrize('persist', [lambda x: x.persist(),
+                                     lambda x: dask.persist(x)[0]])
 def test_persist_Dataset(persist):
     ds = Dataset({'foo': ('x', range(5)),
                   'bar': ('x', range(5))}).chunk()
@@ -797,12 +780,8 @@ def test_persist_Dataset(persist):
     assert len(ds.foo.data.dask) == n  # doesn't mutate in place
 
 
-@pytest.mark.parametrize('persist', [
-    lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                       lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16')
-])
+@pytest.mark.parametrize('persist', [lambda x: x.persist(),
+                                     lambda x: dask.persist(x)[0]])
 def test_persist_DataArray(persist):
     x = da.arange(10, chunks=(5,))
     y = DataArray(x)
@@ -815,8 +794,6 @@ def test_persist_DataArray(persist):
     assert len(zz.data.dask) == zz.data.npartitions
 
 
-@pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                    reason='Need dask 0.16 for new interface')
 def test_dataarray_with_dask_coords():
     import toolz
     x = xr.Variable('x', da.arange(8, chunks=(4,)))

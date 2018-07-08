@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 import pickle
 from copy import deepcopy
-from distutils.version import LooseVersion
 from textwrap import dedent
 import warnings
 
@@ -20,7 +19,7 @@ from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
     assert_identical, raises_regex, requires_bottleneck, requires_cftime,
-    requires_dask, requires_scipy, source_ndarray, unittest)
+    requires_dask, requires_np113, requires_scipy, source_ndarray, unittest)
 
 
 class TestDataArray(TestCase):
@@ -3379,9 +3378,6 @@ class TestDataArray(TestCase):
         actual = da.sortby([day, dax])
         assert_equal(actual, expected)
 
-        if LooseVersion(np.__version__) < LooseVersion('1.11.0'):
-            pytest.skip('numpy 1.11.0 or later to support object data-type.')
-
         expected = sorted1d
         actual = da.sortby('x')
         assert_equal(actual, expected)
@@ -3647,9 +3643,7 @@ def test_rolling_reduce(da, center, min_periods, window, name):
     assert actual.dims == expected.dims
 
 
-@pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.13'),
-                    reason='Old numpy does not support nansum / nanmax for '
-                    'object typed arrays.')
+@requires_np113
 @pytest.mark.parametrize('center', (True, False))
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))

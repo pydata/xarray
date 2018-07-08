@@ -1496,12 +1496,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert_identical(v.cumprod(axis=0),
                          Variable('x', np.array([1, 1, 2, 6])))
         assert_identical(v.var(), Variable([], 2.0 / 3))
-
-        if LooseVersion(np.__version__) < '1.9':
-            with pytest.raises(NotImplementedError):
-                v.median()
-        else:
-            assert_identical(v.median(), Variable([], 2))
+        assert_identical(v.median(), Variable([], 2))
 
         v = Variable('x', [True, False, False])
         assert_identical(v.any(), Variable([], True))
@@ -1665,15 +1660,9 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_fancy()
 
     def test_getitem_1d_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
 
     def test_getitem_with_mask_nd_indexer(self):

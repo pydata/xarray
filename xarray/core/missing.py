@@ -8,7 +8,6 @@ import pandas as pd
 
 from . import rolling
 from .computation import apply_ufunc
-from .npcompat import flip
 from .pycompat import iteritems
 from .utils import is_scalar, OrderedSet
 from .variable import Variable, broadcast_variables
@@ -245,13 +244,13 @@ def _bfill(arr, n=None, axis=-1):
     '''inverse of ffill'''
     import bottleneck as bn
 
-    arr = flip(arr, axis=axis)
+    arr = np.flip(arr, axis=axis)
 
     # fill
     arr = bn.push(arr, axis=axis, n=n)
 
     # reverse back to original
-    return flip(arr, axis=axis)
+    return np.flip(arr, axis=axis)
 
 
 def ffill(arr, dim=None, limit=None):
