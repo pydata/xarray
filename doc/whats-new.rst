@@ -46,6 +46,9 @@ Enhancements
   :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
   By `Stephane Raynaud <https://github.com/stefraynaud>`_.
 
+- Added support for Python 3.7. (:issue:`XXXX`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 
 Bug fixes
 ~~~~~~~~~
