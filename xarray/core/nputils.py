@@ -5,8 +5,6 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import npcompat
-
 
 def _validate_axis(data, axis):
     ndim = data.ndim
@@ -194,6 +192,6 @@ def _rolling_window(a, window, axis=-1):
 
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    rolling = npcompat.as_strided(a, shape=shape, strides=strides,
-                                  writeable=False)
+    rolling = np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides,
+                                              writeable=False)
     return np.swapaxes(rolling, -2, axis)

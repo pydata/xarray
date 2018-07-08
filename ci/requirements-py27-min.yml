@@ -4,8 +4,8 @@ dependencies:
   - pytest
   - flake8
   - mock
-  - numpy==1.11
-  - pandas==0.18.0
+  - numpy=1.12
+  - pandas=0.19
   - pip:
     - coveralls
     - pytest-cov

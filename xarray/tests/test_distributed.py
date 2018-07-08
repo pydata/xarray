@@ -7,8 +7,8 @@ import tempfile
 
 import pytest
 
-dask = pytest.importorskip('dask')  # isort:skip
-distributed = pytest.importorskip('distributed')  # isort:skip
+dask = pytest.importorskip('dask', minversion='0.18')  # isort:skip
+distributed = pytest.importorskip('distributed', minversion='1.21')  # isort:skip
 
 from dask import array
 from dask.distributed import Client, Lock
