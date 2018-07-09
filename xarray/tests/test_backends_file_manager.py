@@ -1,21 +1,11 @@
-import functools
 import pickle
 
-import pytest
-
-from xarray.backends.file_manager import (
-    ExplicitFileManager, LazyFileManager, AutoclosingFileManager
-)
-
-FILE_MANAGERS = [
-    ExplicitFileManager, LazyFileManager, AutoclosingFileManager,
-]
+from xarray.backends.file_manager import FileManager, FILE_CACHE
 
 
-@pytest.mark.parametrize('manager_type', FILE_MANAGERS)
-def test_file_manager_write_consecutive(tmpdir, manager_type):
+def test_file_manager_write_consecutive(tmpdir):
     path = str(tmpdir.join('testing.txt'))
-    manager = manager_type(functools.partial(open, path), mode='w')
+    manager = FileManager(open, path, mode='w')
     with manager.acquire() as f:
         f.write('foo')
     with manager.acquire() as f:
@@ -26,10 +16,9 @@ def test_file_manager_write_consecutive(tmpdir, manager_type):
         assert f.read() == 'foobar'
 
 
-@pytest.mark.parametrize('manager_type', FILE_MANAGERS)
-def test_file_manager_write_concurrent(tmpdir, manager_type):
+def test_file_manager_write_concurrent(tmpdir):
     path = str(tmpdir.join('testing.txt'))
-    manager = manager_type(functools.partial(open, path), mode='w')
+    manager = FileManager(open, path, mode='w')
     with manager.acquire() as f1:
         with manager.acquire() as f2:
             f1.write('foo')
@@ -40,11 +29,9 @@ def test_file_manager_write_concurrent(tmpdir, manager_type):
         assert f.read() == 'foobar'
 
 
-@pytest.mark.parametrize('manager_type', FILE_MANAGERS)
-def test_file_manager_write_pickle(tmpdir, manager_type):
+def test_file_manager_write_pickle(tmpdir):
     path = str(tmpdir.join('testing.txt'))
-    manager = manager_type(
-        functools.partial(open, path), mode='w')
+    manager = FileManager(open, path, mode='w')
     with manager.acquire() as f:
         f.write('foo')
         f.flush()
@@ -58,14 +45,16 @@ def test_file_manager_write_pickle(tmpdir, manager_type):
         assert f.read() == 'foobar'
 
 
-@pytest.mark.parametrize('manager_type', FILE_MANAGERS)
-def test_file_manager_read(tmpdir, manager_type):
+def test_file_manager_read(tmpdir):
     path = str(tmpdir.join('testing.txt'))
 
     with open(path, 'w') as f:
         f.write('foobar')
 
-    manager = manager_type(functools.partial(open, path))
+    manager = FileManager(open, path)
     with manager.acquire() as f:
         assert f.read() == 'foobar'
     manager.close()
+
+
+# TODO(shoyer): add test coverage for exceeding the max size of the file cache

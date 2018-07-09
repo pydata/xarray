@@ -10,7 +10,7 @@ from .. import DataArray
 from ..core import indexing
 from ..core.utils import is_scalar
 from .common import BackendArray
-from .file_manager import LazyFileManager
+from .file_manager import FileManager
 
 try:
     from dask.utils import SerializableLock as Lock
@@ -199,8 +199,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     import rasterio
 
-    manager = LazyFileManager(
-        functools.partial(rasterio.open, filename), mode='r')
+    manager = FileManager(rasterio.open, filename, mode='r')
 
     if cache is None:
         cache = chunks is None

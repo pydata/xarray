@@ -1,155 +1,118 @@
 import contextlib
 import threading
 
+from .lru_cache import LRUCache
+
+
+# Global cache for storing open files.
+FILE_CACHE = LRUCache(512, on_evict=lambda k, v: v.close())
+
+# TODO(shoyer): add an option (xarray.set_options) for resizing the cache.
+
 
 class FileManager(object):
-    """Base class for context managers for managing file objects.
+    """Wrapper for automatically opening and closing file objects.
 
-    Unlike files, FileManager objects should be safely. They must be explicitly
-    closed.
+    Unlike files, FileManager objects can be safely pickled and passed between
+    processes. They should be explicitly closed to release resources, but
+    a per-process least-recently-used cache for open files ensures that you can
+    safely create arbitrarily large numbers of FileManager objects.
 
     Example usage:
 
-        import functools
-
-        manager = FileManager(functools.partial(open, filename), mode='w')
+        manager = FileManager(open, 'example.txt', mode='w')
         with manager.acquire() as f:
             f.write(...)
         manager.close()
     """
 
-    def __init__(self, opener, mode=None):
+    def __init__(self, opener, *args, **kwargs):
         """Initialize a FileManager.
 
         Parameters
         ----------
         opener : callable
-            Callable that opens a given file when called, returning a file
-            object.
-        mode : str, optional
-            If provided, passed to opener as a keyword argument.
+            Function that when called like ``opener(*args, **kwargs)`` returns
+            an open file object. The file object must implement a ``close()``
+            method.
+        *args
+            Positional arguments for opener. A ``mode`` argument should be
+            provided as a keyword argument (see below).
+        **kwargs
+            Keyword arguments for opener. The keyword argument ``mode`` has
+            special handling if it is provided with a value of 'w': on all
+            calls after the first, it is changed to 'a' instead to avoid
+            overriding the newly created file. All argument values must be
+            hashable.
         """
-        raise NotImplementedError
+        self._opener = opener
+        self._args = args
+        self._kwargs = kwargs
+        self._key = _make_key(opener, args, kwargs)
+        self._lock = threading.RLock()
 
     @contextlib.contextmanager
     def acquire(self):
         """Context manager for acquiring a file object.
 
-        This method must be thread-safe: it should be safe to simultaneously
-        acquire a file in multiple threads at the same time (assuming that
-        the underlying file object is thread-safe).
+        A new file is only opened if it has expired from the
+        least-recently-used cache.
+
+        This method uses a reentrant lock, which ensures that it is
+        thread-safe. You can safely acquire a file in multiple threads at the
+        same time, as long as the underlying file object is thread-safe.
 
         Yields
         ------
-        Open file object, as returned by opener().
+        Open file object, as returned by ``opener(*args, **kwargs)``.
         """
-        raise NotImplementedError
+        with self._lock:
+            try:
+                file = FILE_CACHE[self._key]
+            except KeyError:
+                file = self._opener(*self._args, **self._kwargs)
+                if self._kwargs.get('mode') == 'w':
+                    # ensure file doesn't get overriden when opened again
+                    self._kwargs['mode'] = 'a'
+                    self._key = _make_key(
+                        self._opener, self._args, self._kwargs)
+                FILE_CACHE[self._key] = file
+        yield file
 
     def close(self):
         """Explicitly close any associated file object (if necessary)."""
-        raise NotImplementedError
+        file = FILE_CACHE.pop(self._key, default=None)
+        if file is not None:
+            file.close()
+
+    def __getstate__(self):
+        """State for pickling."""
+        return (self._opener, self._args, self._kwargs)
+
+    def __setstate__(self, state):
+        """Restore from a pickle."""
+        opener, args, kwargs = state
+        self.__init__(opener, *args, **kwargs)
 
 
-_DEFAULT_MODE = object()
+class _HashedSequence(list):
+    """Speedup repeated look-ups by caching hash values.
 
+    Based on what Python uses internally in functools.lru_cache.
 
-def _open(opener, mode):
-    return opener() if mode is _DEFAULT_MODE else opener(mode=mode)
-
-
-class ExplicitFileManager(FileManager):
-    """A file manager that holds a file open until explicitly closed.
-
-    This is mostly a reference implementation: must real use cases should use
-    ExplicitLazyFileContext for better performance.
+    Python doesn't perform this optimization automatically:
+    https://bugs.python.org/issue1462796
     """
 
-    def __init__(self, opener, mode=_DEFAULT_MODE):
-        self._opener = opener
-        # file has already been created, don't override when restoring
-        self._mode = 'a' if mode == 'w' else mode
-        self._file = _open(opener, mode)
+    def __init__(self, tuple_value):
+        self[:] = tuple_value
+        self.hashvalue = hash(tuple_value)
 
-    @contextlib.contextmanager
-    def acquire(self):
-        yield self._file
-
-    def close(self):
-        self._file.close()
-
-    def __getstate__(self):
-        return {'opener': self._opener, 'mode': self._mode}
-
-    def __setstate__(self, state):
-        self.__init__(**state)
+    def __hash__(self):
+        return self.hashvalue
 
 
-class LazyFileManager(FileManager):
-    """An explicit file manager that lazily opens files."""
-
-    def __init__(self, opener, mode=_DEFAULT_MODE):
-        self._opener = opener
-        self._mode = mode
-        self._lock = threading.Lock()
-        self._file = None
-
-    @contextlib.contextmanager
-    def acquire(self):
-        with self._lock:
-            if self._file is None:
-                self._file = _open(self._opener, self._mode)
-                # file has already been created, don't override when restoring
-                if self._mode == 'w':
-                    self._mode = 'a'
-        yield self._file
-
-    def close(self):
-        if self._file is not None:
-            self._file.close()
-
-    def __getstate__(self):
-        return {'opener': self._opener, 'mode': self._mode}
-
-    def __setstate__(self, state):
-        self.__init__(**state)
-
-
-class AutoclosingFileManager(FileManager):
-    """A FileManager that automatically opens/closes files when used."""
-
-    def __init__(self, opener, mode=_DEFAULT_MODE):
-        self._opener = opener
-        self._mode = mode
-        self._lock = threading.Lock()
-        self._file = None
-        self._references = 0
-
-    @contextlib.contextmanager
-    def acquire(self):
-        with self._lock:
-            if self._file is None:
-                self._file = _open(self._opener, self._mode)
-                # file has already been created, don't override when restoring
-                if self._mode == 'w':
-                    self._mode = 'a'
-            self._references += 1
-
-        yield self._file
-
-        with self._lock:
-            self._references -= 1
-            if not self._references:
-                self._file.close()
-                self._file = None
-
-    def close(self):
-        pass
-
-    def __getstate__(self):
-        return {'opener': self._opener, 'mode': self._mode}
-
-    def __setstate__(self, state):
-        self.__init__(**state)
-
-
-# TODO: write a FileManager that makes use of an LRU cache.
+def _make_key(opener, args, kwargs):
+    """Make a key for caching files in the LRU cache."""
+    value = (opener, args, tuple(sorted(kwargs.items())))
+    return _HashedSequence(value)
