@@ -13,8 +13,8 @@ class LRUCache(collections.MutableMapping):
     When a new item is set and the maximum size of the cache is exceeded, the
     oldest item is dropped and called with ``on_evict(key, value)``.
 
-    The ``maxsize`` property can be used to view or resize the capacity of
-    the cache.
+    The ``maxsize`` property can be used to view or adjust the capacity of
+    the cache, e.g., ``cache.maxsize = new_size``.
     """
     def __init__(self, maxsize, on_evict=None):
         """
@@ -26,6 +26,8 @@ class LRUCache(collections.MutableMapping):
             Function to call like ``on_evict(key, value)`` when items are
             evicted.
         """
+        if maxsize < 0:
+            raise ValueError('maxsize must be non-negative')
         self._maxsize = maxsize
         self._on_evict = on_evict
         self._cache = collections.OrderedDict()
@@ -47,12 +49,16 @@ class LRUCache(collections.MutableMapping):
 
     def __setitem__(self, key, value):
         with self._lock:
-            if self._maxsize:
-                if key in self._cache:
-                    self._cache.move_to_end(key)
-                elif len(self._cache) >= self._maxsize:
-                    self._shrink(self._maxsize - 1)
+            if key in self._cache:
+                self._cache.move_to_end(key)
                 self._cache[key] = value
+            elif self._maxsize:
+                # make room if necessary
+                self._shrink(self._maxsize - 1)
+                self._cache[key] = value
+            elif self._on_evict is not None:
+                # not saving, immediately evict
+                self._on_evict(key, value)
 
     def __delitem__(self, key):
         del self._cache[key]
@@ -73,6 +79,8 @@ class LRUCache(collections.MutableMapping):
     @maxsize.setter
     def maxsize(self, size):
         """Resize the cache, evicting the oldest items if necessary."""
+        if size < 0:
+            raise ValueError('maxsize must be non-negative')
         with self._lock:
             self._shrink(size)
             self._maxsize = size

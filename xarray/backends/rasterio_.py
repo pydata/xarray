@@ -1,6 +1,5 @@
 import os
 from collections import OrderedDict
-import functools
 from distutils.version import LooseVersion
 import warnings
 
@@ -27,16 +26,17 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
 
-    def __init__(self, manager, riods):
+    def __init__(self, manager):
         self.manager = manager
 
-        # cannot save riods as an attribute: this would break pickleability.
-        self._shape = (riods.count, riods.height, riods.width)
+        with manager.acquire() as riods:
+            # cannot save riods as an attribute: this would break pickleability
+            self._shape = (riods.count, riods.height, riods.width)
 
-        dtypes = riods.dtypes
-        if not np.all(np.asarray(dtypes) == dtypes[0]):
-            raise ValueError('All bands should have the same dtype')
-        self._dtype = np.dtype(dtypes[0])
+            dtypes = riods.dtypes
+            if not np.all(np.asarray(dtypes) == dtypes[0]):
+                raise ValueError('All bands should have the same dtype')
+            self._dtype = np.dtype(dtypes[0])
 
     @property
     def dtype(self):
@@ -287,8 +287,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                 else:
                     attrs[k] = v
 
-        data = indexing.LazilyOuterIndexedArray(
-            RasterioArrayWrapper(manager, riods))
+        data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)

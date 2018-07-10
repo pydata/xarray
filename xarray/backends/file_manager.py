@@ -8,6 +8,7 @@ from .lru_cache import LRUCache
 FILE_CACHE = LRUCache(512, on_evict=lambda k, v: v.close())
 
 # TODO(shoyer): add an option (xarray.set_options) for resizing the cache.
+# Note: the cache has a minimum size of one.
 
 
 class FileManager(object):
@@ -48,8 +49,11 @@ class FileManager(object):
         self._opener = opener
         self._args = args
         self._kwargs = kwargs
-        self._key = _make_key(opener, args, kwargs)
+        self._key = self._make_key()
         self._lock = threading.RLock()
+
+    def _make_key(self):
+        return _make_key(self._opener, self._args, self._kwargs)
 
     @contextlib.contextmanager
     def acquire(self):
@@ -74,8 +78,7 @@ class FileManager(object):
                 if self._kwargs.get('mode') == 'w':
                     # ensure file doesn't get overriden when opened again
                     self._kwargs['mode'] = 'a'
-                    self._key = _make_key(
-                        self._opener, self._args, self._kwargs)
+                    self._key = self._make_key()
                 FILE_CACHE[self._key] = file
         yield file
 
