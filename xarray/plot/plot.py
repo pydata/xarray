@@ -775,8 +775,13 @@ def _plot2d(plotfunc):
                      xticks, yticks, xlim, ylim)
 
         # Rotate dates on xlabels
+        # Do this without calling autofmt_xdate so that x-axes ticks
+        # on other subplots (if any) are not deleted.
+        # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
         if np.issubdtype(xval.dtype, np.datetime64):
-            ax.get_figure().autofmt_xdate()
+            for xlabels in ax.get_xticklabels():
+                xlabels.set_rotation(30)
+                xlabels.set_ha('right')
 
         return primitive
 
