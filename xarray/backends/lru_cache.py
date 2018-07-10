@@ -37,7 +37,9 @@ class LRUCache(collections.MutableMapping):
         # record recent use of the key by moving it to the front of the list
         with self._lock:
             value = self._cache[key]
-            self._cache.move_to_end(key)
+            # On Python 3, could just use: self._cache.move_to_end(key)
+            del self._cache[key]
+            self._cache[key] = value
             return value
 
     def _shrink(self, capacity):
@@ -50,7 +52,7 @@ class LRUCache(collections.MutableMapping):
     def __setitem__(self, key, value):
         with self._lock:
             if key in self._cache:
-                self._cache.move_to_end(key)
+                del self._cache[key]
                 self._cache[key] = value
             elif self._maxsize:
                 # make room if necessary
