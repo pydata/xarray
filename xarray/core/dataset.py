@@ -33,6 +33,7 @@ from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
     ensure_us_time_resolution, hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+from ..plot.plot import dataset_scatter
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -3591,6 +3592,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     @property
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
+
+    def scatter(self,  x=None, y=None, hue=None, col=None, row=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=None,
+                    size=None, subplot_kws=None,  add_legend=True, **kwargs):
+        lc = locals()
+        ds = lc.pop('self')
+        return dataset_scatter(ds=ds, **lc)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
