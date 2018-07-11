@@ -34,11 +34,7 @@ class FileManager(object):
         manager.close()  # ensures file is closed
     """
 
-    def __init__(self, opener, *args,
-                 mode=_DEFAULT_MODE,
-                 kwargs=None,
-                 lock=None,
-                 cache=FILE_CACHE):
+    def __init__(self, opener, *args, **keywords):
         """Initialize a FileManager.
 
         Parameters
@@ -70,6 +66,12 @@ class FileManager(object):
             unpickled FileManager objects will be restored with the default
             cache.
         """
+        # TODO: replace with real keyword arguments when we drop Python 2
+        # support
+        mode = keywords.pop('mode', _DEFAULT_MODE)
+        kwargs = keywords.pop('kwargs', None)
+        lock = keywords.pop('lock', None)
+        cache = keywords.pop('cache', FILE_CACHE)
         self._opener = opener
         self._args = args
         self._mode = mode
