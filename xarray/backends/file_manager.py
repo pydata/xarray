@@ -32,6 +32,14 @@ class FileManager(object):
         f = manager.acquire()
         f.write(...)
         manager.close()  # ensures file is closed
+
+    Note that as long as previous files are still cached, acquiring a file
+    multiple times from the same FileManager is essentially free:
+
+        f1 = manager.acquire()
+        f2 = manager.acquire()
+        assert f1 is f2
+
     """
 
     def __init__(self, opener, *args, **keywords):
