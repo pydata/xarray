@@ -1,14 +1,14 @@
 import threading
 
 from ..core import utils
+from ..core.options import OPTIONS
 from .lru_cache import LRUCache
 
 
 # Global cache for storing open files.
-FILE_CACHE = LRUCache(512, on_evict=lambda k, v: v.close())
-
-# TODO(shoyer): add an option (xarray.set_options) for resizing the cache.
 # Note: the cache has a minimum size of one.
+FILE_CACHE = LRUCache(
+    OPTIONS['file_cache_maxsize'], on_evict=lambda k, v: v.close())
 
 
 _DEFAULT_MODE = utils.ReprObject('<unused>')
