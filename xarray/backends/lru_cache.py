@@ -42,7 +42,7 @@ class LRUCache(collections.MutableMapping):
             self._cache[key] = value
             return value
 
-    def _maybe_shrink(self, capacity):
+    def _enforce_size_limit(self, capacity):
         """Shrink the cache if necessary, evicting the oldest items."""
         while len(self._cache) > capacity:
             key, value = self._cache.popitem(last=False)
@@ -57,7 +57,7 @@ class LRUCache(collections.MutableMapping):
                 self._cache[key] = value
             elif self._maxsize:
                 # make room if necessary
-                self._maybe_shrink(self._maxsize - 1)
+                self._enforce_size_limit(self._maxsize - 1)
                 self._cache[key] = value
             elif self._on_evict is not None:
                 # not saving, immediately evict
@@ -85,5 +85,5 @@ class LRUCache(collections.MutableMapping):
         if size < 0:
             raise ValueError('maxsize must be non-negative')
         with self._lock:
-            self._maybe_shrink(size)
+            self._enforce_size_limit(size)
             self._maxsize = size

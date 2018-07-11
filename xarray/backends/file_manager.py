@@ -1,6 +1,6 @@
-import contextlib
 import threading
 
+from ..core import utils
 from .lru_cache import LRUCache
 
 
@@ -11,6 +11,9 @@ FILE_CACHE = LRUCache(512, on_evict=lambda k, v: v.close())
 # Note: the cache has a minimum size of one.
 
 
+_DEFAULT_MODE = utils.ReprObject('<unused>')
+
+
 class FileManager(object):
     """Wrapper for automatically opening and closing file objects.
 
@@ -19,15 +22,23 @@ class FileManager(object):
     a per-process least-recently-used cache for open files ensures that you can
     safely create arbitrarily large numbers of FileManager objects.
 
+    Don't directly close files acquired from a FileManager. Instead, call
+    FileManager.close(), which ensures that closed files are removed from the
+    cache as well.
+
     Example usage:
 
         manager = FileManager(open, 'example.txt', mode='w')
-        with manager.acquire() as f:
-            f.write(...)
-        manager.close()
+        f = manager.acquire()
+        f.write(...)
+        manager.close()  # ensures file is closed
     """
 
-    def __init__(self, opener, *args, **kwargs):
+    def __init__(self, opener, *args,
+                 mode=_DEFAULT_MODE,
+                 kwargs=None,
+                 lock=None,
+                 cache=FILE_CACHE):
         """Initialize a FileManager.
 
         Parameters
@@ -38,26 +49,46 @@ class FileManager(object):
             method.
         *args
             Positional arguments for opener. A ``mode`` argument should be
-            provided as a keyword argument (see below).
-        **kwargs
-            Keyword arguments for opener. The keyword argument ``mode`` has
-            special handling if it is provided with a value of 'w': on all
-            calls after the first, it is changed to 'a' instead to avoid
-            overriding the newly created file. All argument values must be
+            provided as a keyword argument (see below). All arguments must be
             hashable.
+        mode : optional
+            If provided, passed as a keyword argument to ``opener`` along with
+            ``**kwargs``. ``mode='w' `` has special treatment: after the first
+            call it is replaced by ``mode='a'`` in all subsequent function to
+            avoid overriding the newly created file.
+        kwargs : dict, optional
+            Keyword arguments for opener, excluding ``mode``. All values must
+            be hashable.
+        lock : duck-compatible threading.Lock, optional
+            Lock to use when modifying the cache inside acquire() and close().
+            By default, uses a new threading.Lock() object. If set, this object
+            should be pickleable.
+        cache : MutableMapping, optional
+            Mapping to use as a cache for open files. By default, uses xarray's
+            global LRU file cache. Because ``cache`` typically points to a
+            global variable and contains non-picklable file objects, an
+            unpickled FileManager objects will be restored with the default
+            cache.
         """
         self._opener = opener
         self._args = args
-        self._kwargs = kwargs
+        self._mode = mode
+        self._kwargs = {} if kwargs is None else dict(kwargs)
+        self._default_lock = lock is None
+        self._lock = threading.Lock() if self._default_lock else lock
+        self._cache = cache
         self._key = self._make_key()
-        self._lock = threading.RLock()
 
     def _make_key(self):
-        return _make_key(self._opener, self._args, self._kwargs)
+        """Make a key for caching files in the LRU cache."""
+        value = (self._opener,
+                 self._args,
+                 self._mode,
+                 tuple(sorted(self._kwargs.items())))
+        return _HashedSequence(value)
 
-    @contextlib.contextmanager
     def acquire(self):
-        """Context manager for acquiring a file object.
+        """Acquiring a file object from the manager.
 
         A new file is only opened if it has expired from the
         least-recently-used cache.
@@ -66,36 +97,42 @@ class FileManager(object):
         thread-safe. You can safely acquire a file in multiple threads at the
         same time, as long as the underlying file object is thread-safe.
 
-        Yields
-        ------
-        Open file object, as returned by ``opener(*args, **kwargs)``.
+        Returns
+        -------
+        An open file object, as returned by ``opener(*args, **kwargs)``.
         """
         with self._lock:
             try:
-                file = FILE_CACHE[self._key]
+                file = self._cache[self._key]
             except KeyError:
-                file = self._opener(*self._args, **self._kwargs)
-                if self._kwargs.get('mode') == 'w':
+                kwargs = self._kwargs
+                if self._mode is not _DEFAULT_MODE:
+                    kwargs = kwargs.copy()
+                    kwargs['mode'] = self._mode
+                file = self._opener(*self._args, **kwargs)
+                if self._mode == 'w':
                     # ensure file doesn't get overriden when opened again
-                    self._kwargs['mode'] = 'a'
+                    self._mode = 'a'
                     self._key = self._make_key()
-                FILE_CACHE[self._key] = file
-        yield file
+                self._cache[self._key] = file
+        return file
 
     def close(self):
         """Explicitly close any associated file object (if necessary)."""
-        file = FILE_CACHE.pop(self._key, default=None)
-        if file is not None:
-            file.close()
+        with self._lock:
+            file = self._cache.pop(self._key, default=None)
+            if file is not None:
+                file.close()
 
     def __getstate__(self):
         """State for pickling."""
-        return (self._opener, self._args, self._kwargs)
+        lock = None if self._default_lock else self._lock
+        return (self._opener, self._args, self._mode, self._kwargs, lock)
 
     def __setstate__(self, state):
         """Restore from a pickle."""
-        opener, args, kwargs = state
-        self.__init__(opener, *args, **kwargs)
+        opener, args, mode, kwargs, lock = state
+        self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock)
 
 
 class _HashedSequence(list):
@@ -113,9 +150,3 @@ class _HashedSequence(list):
 
     def __hash__(self):
         return self.hashvalue
-
-
-def _make_key(opener, args, kwargs):
-    """Make a key for caching files in the LRU cache."""
-    value = (opener, args, tuple(sorted(kwargs.items())))
-    return _HashedSequence(value)
