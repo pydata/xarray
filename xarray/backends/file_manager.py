@@ -6,9 +6,9 @@ from .lru_cache import LRUCache
 
 
 # Global cache for storing open files.
-# Note: the cache has a minimum size of one.
 FILE_CACHE = LRUCache(
     OPTIONS['file_cache_maxsize'], on_evict=lambda k, v: v.close())
+assert FILE_CACHE.maxsize, 'file cache must be at least size one'
 
 
 _DEFAULT_MODE = utils.ReprObject('<unused>')
