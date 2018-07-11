@@ -281,7 +281,7 @@ class FacetGrid(object):
 
         """
         from .plot import (_infer_line_data, _infer_scatter_data,
-                          line, dataset_scatter)
+                           line, dataset_scatter)
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False

@@ -913,7 +913,7 @@ def _is_monotonic(coord, axis=0):
         return np.all(delta_pos) or np.all(delta_neg)
 
 
-def _infer_interval_breaks(coord, axis=0):
+def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     """
     >>> _infer_interval_breaks(np.arange(5))
     array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
@@ -923,7 +923,7 @@ def _infer_interval_breaks(coord, axis=0):
     """
     coord = np.asarray(coord)
 
-    if not _is_monotonic(coord, axis=axis):
+    if check_monotonic and not _is_monotonic(coord, axis=axis):
         raise ValueError("The input coordinate is not sorted in increasing "
                          "order along axis %d. This can lead to unexpected "
                          "results. Consider calling the `sortby` method on "
@@ -962,8 +962,8 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 
     if infer_intervals:
         if len(x.shape) == 1:
-            x = _infer_interval_breaks(x)
-            y = _infer_interval_breaks(y)
+            x = _infer_interval_breaks(x, check_monotonic=True)
+            y = _infer_interval_breaks(y, check_monotonic=True)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1)
@@ -985,7 +985,7 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 
 def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None,  add_legend=True, **kwargs):
+                    size=None, subplot_kws=None, add_legend=True, **kwargs):
     if col or row:
         ax = kwargs.pop('ax', None)
         figsize = kwargs.pop('figsize', None)
@@ -996,14 +996,17 @@ def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
         if size is None:
             size = 3
         elif figsize is not None:
-            raise ValueError('cannot provide both `figsize` and `size` arguments')
+            raise ValueError('cannot provide both `figsize` and'
+                             '`size` arguments')
 
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
                       sharex=sharex, sharey=sharey, figsize=figsize,
                       aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_dataarray_line(x=x, y=y, hue=hue, plotfunc=dataset_scatter, **kwargs)
+        return g.map_dataarray_line(x=x, y=y, hue=hue,
+                                    plotfunc=dataset_scatter, **kwargs)
 
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(ds, x, y, hue)
+    xplt, yplt, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(ds, x,
+                                                                       y, hue)
 
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
