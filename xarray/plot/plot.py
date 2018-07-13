@@ -104,7 +104,7 @@ def _line_facetgrid(darray, row=None, col=None, hue=None,
     g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
                   sharex=sharex, sharey=sharey, figsize=figsize,
                   aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray_line(line, hue=hue, **kwargs)
+    return g.map_dataarray_line(hue=hue, **kwargs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -265,14 +265,11 @@ def _infer_scatter_data(ds, x, y, hue):
         dims.remove(hue)
         xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
         yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
-    else:
-        xplt = ds[x].values.flatten()
-        yplt = ds[y].values.flatten()
-
-    if hue:
         hueplt = ds[x].coords[hue]
         huelabel = label_from_attrs(ds[x][hue])
     else:
+        xplt = ds[x].values.flatten()
+        yplt = ds[y].values.flatten()
         hueplt = None
         huelabel = None
 

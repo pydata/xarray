@@ -266,7 +266,7 @@ class FacetGrid(object):
 
         return self
 
-    def map_dataarray_line(self, plotfunc, x=None, y=None, hue=None, **kwargs):
+    def map_dataarray_line(self, x=None, y=None, hue=None, **kwargs):
         """
         Apply a line plot to a 2d facet subset of the data.
 
@@ -280,8 +280,7 @@ class FacetGrid(object):
         self : FacetGrid object
 
         """
-        from .plot import (_infer_line_data, _infer_scatter_data,
-                           line, dataset_scatter)
+        from .plot import _infer_line_data, line
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
@@ -290,17 +289,52 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = plotfunc(subset, x=x, y=y, hue=hue,
+                mappable = line(subset, x=x, y=y, hue=hue,
                                 ax=ax, _labels=False,
                                 **kwargs)
                 self._mappables.append(mappable)
 
-        if plotfunc == line:
-            _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
                 darray=self.data.loc[self.name_dicts.flat[0]],
                 x=x, y=y, hue=hue)
-        elif plotfunc == dataset_scatter:
-            _, _, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(
+
+        self._hue_var = hueplt
+        self._hue_label = huelabel
+        self._finalize_grid(xlabel, ylabel)
+
+        if add_legend and hueplt is not None and huelabel is not None:
+            self.add_legend()
+
+        return self
+
+    def map_scatter(self, x=None, y=None, hue=None, **kwargs):
+        """
+        Apply a line plot to a 2d facet subset of the data.
+
+        Parameters
+        ----------
+        x, y, hue: string
+            dimension names for the axes and hues of each facet
+
+        Returns
+        -------
+        self : FacetGrid object
+
+        """
+        from .plot import _infer_scatter_data, dataset_scatter
+
+        add_legend = kwargs.pop('add_legend', True)
+        kwargs['add_legend'] = False
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = scatter(subset, x=x, y=y, hue=hue,
+                                   ax=ax, _labels=False, **kwargs)
+                self._mappables.append(mappable)
+
+        _, _, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(
                 ds=self.data.loc[self.name_dicts.flat[0]],
                 x=x, y=y, hue=hue)
 
