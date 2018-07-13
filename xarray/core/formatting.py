@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 import contextlib
 import functools
 from datetime import datetime, timedelta
+from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
@@ -64,13 +65,13 @@ class ReprMixin(object):
         return ensure_valid_repr(self.__unicode__())
 
 
-def _get_indexer_at_least_n_items(shape, n_desired):
+def _get_indexer_at_least_n_items(shape, n_desired, from_end):
     assert 0 < n_desired <= np.prod(shape)
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0,) * (len(shape) - 1 - n_steps) +
-               (slice(stop),) +
+    indexer = (((-1 if from_end else 0),) * (len(shape) - 1 - n_steps) +
+               ((slice(-stop, None) if from_end else slice(stop)),) +
                (slice(None),) * n_steps)
     return indexer
 
@@ -89,9 +90,24 @@ def first_n_items(array, n_desired):
         return []
 
     if n_desired < array.size:
-        indexer = _get_indexer_at_least_n_items(array.shape, n_desired)
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired, False)
         array = array[indexer]
     return np.asarray(array).flat[:n_desired]
+
+
+def last_n_items(array, n_desired):
+    """Returns the last n_desired items of an array"""
+    # Unfortunately, we can't just do array.flat[-n_desired:] here because it
+    # might not be a numpy.ndarray. Moreover, access to elements of the array
+    # could be very expensive (e.g. if it's only available over DAP), so go out
+    # of our way to get them in a single call to __getitem__ using only slices.
+    if (n_desired == 0) or (array.size == 0):
+        return []
+
+    if n_desired < array.size:
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired, True)
+        array = array[indexer]
+    return np.asarray(array).flat[-n_desired:]
 
 
 def last_item(array):
@@ -181,19 +197,28 @@ def format_array_flat(array, max_width):
     """
     # every item will take up at least two characters, but we always want to
     # print at least one item
-    max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
-    relevant_items = first_n_items(array, max_possibly_relevant)
+    max_possibly_relevant = min(max(array.size, 1),
+                                max(int(np.ceil(max_width / 2.)), 2))
+    relevant_items = \
+        sum(zip_longest(
+            first_n_items(array, (max_possibly_relevant + 1) // 2),
+            reversed(last_n_items(array, max_possibly_relevant // 2))),
+            ())[:max_possibly_relevant]
     pprint_items = format_items(relevant_items)
 
     cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
     if (max_possibly_relevant < array.size or (cum_len > max_width).any()):
-        end_padding = u' ...'
-        count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
-        pprint_items = pprint_items[:count]
+        padding = u' ... '
+        count = min(array.size,
+                    max(np.argmax((cum_len + len(padding)) > max_width), 2))
     else:
-        end_padding = u''
+        count = array.size
+        padding = u'' if (count <= 1) else u' '
 
-    pprint_str = u' '.join(pprint_items) + end_padding
+    pprint_str = u' '.join(np.take(pprint_items, range(0, count, 2))) + \
+                 padding + \
+                 u' '.join(np.take(pprint_items,
+                                   range(count - (count % 2) - 1, 0, -2)))
     return pprint_str
 
 
