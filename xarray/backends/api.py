@@ -13,7 +13,7 @@ from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, ArrayWriter, CombinedLock, get_scheduler, get_scheduler_lock)
+    HDF5_LOCK, ArrayWriter, CombinedLock, _get_scheduler, _get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -136,7 +136,7 @@ def _get_lock(engine, scheduler, format, path_or_file):
     locks = []
     if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
         locks.append(HDF5_LOCK)
-    locks.append(get_scheduler_lock(scheduler, path_or_file))
+    locks.append(_get_scheduler_lock(scheduler, path_or_file))
 
     # When we have more than one lock, use the CombinedLock wrapper class
     lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
@@ -179,7 +179,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. mask_and_scale defaults to True except for the 
+        be replaced by NA. mask_and_scale defaults to True except for the
         pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
@@ -223,7 +223,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         inconsistent values.
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or 
+        may be useful when backend options would improve performance or
         allow user control of dataset processing.
 
     Returns
@@ -235,7 +235,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
-    
+
     if mask_and_scale is None:
         mask_and_scale = not engine == 'pseudonetcdf'
 
@@ -385,7 +385,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         taken from variable attributes (if they exist).  If the `_FillValue` or
         `missing_value` attribute contains multiple values a warning will be
         issued and all array values matching one of the multiple values will
-        be replaced by NA. mask_and_scale defaults to True except for the 
+        be replaced by NA. mask_and_scale defaults to True except for the
         pseudonetcdf backend.
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
@@ -428,7 +428,7 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
         inconsistent values.
     backend_kwargs: dictionary, optional
         A dictionary of keyword arguments to pass on to the backend. This
-        may be useful when backend options would improve performance or 
+        may be useful when backend options would improve performance or
         allow user control of dataset processing.
 
     Notes
@@ -699,7 +699,7 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     sync = writer is None
 
     # handle scheduler specific logic
-    scheduler = get_scheduler()
+    scheduler = _get_scheduler()
     have_chunks = any(v.chunks for v in dataset.variables.values())
     if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
             engine != 'netcdf4'):

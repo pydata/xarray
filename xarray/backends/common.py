@@ -31,36 +31,42 @@ logger = logging.getLogger(__name__)
 NONE_VAR_NAME = '__values__'
 
 
-def get_scheduler(get=None, collection=None):
+def _get_scheduler(get=None, collection=None):
     """ Determine the dask scheduler that is being used.
 
     None is returned if not dask scheduler is active.
 
     See also
     --------
-    dask.utils.effective_get
+    dask.base.get_scheduler
     """
     try:
-        from dask.utils import effective_get
-        actual_get = effective_get(get, collection)
-        try:
-            from dask.distributed import Client
-            if isinstance(actual_get.__self__, Client):
-                return 'distributed'
-        except (ImportError, AttributeError):
-            try:
-                import dask.multiprocessing
-                if actual_get == dask.multiprocessing.get:
-                    return 'multiprocessing'
-                else:
-                    return 'threaded'
-            except ImportError:
-                return 'threaded'
+        # dask 0.18.1 and later
+        from dask.base import get_scheduler
+        actual_get = get_scheduler(get, collection)
     except ImportError:
-        return None
+        try:
+            from dask.utils import effective_get
+            actual_get = effective_get(get, collection)
+        except ImportError:
+            return None
+
+    try:
+        from dask.distributed import Client
+        if isinstance(actual_get.__self__, Client):
+            return 'distributed'
+    except (ImportError, AttributeError):
+        try:
+            import dask.multiprocessing
+            if actual_get == dask.multiprocessing.get:
+                return 'multiprocessing'
+            else:
+                return 'threaded'
+        except ImportError:
+            return 'threaded'
 
 
-def get_scheduler_lock(scheduler, path_or_file=None):
+def _get_scheduler_lock(scheduler, path_or_file=None):
     """ Get the appropriate lock for a certain situation based onthe dask
        scheduler used.
 
