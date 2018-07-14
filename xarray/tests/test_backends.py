@@ -3325,6 +3325,7 @@ def test_pickle_reconstructor():
         assert obj3.value.readlines() == lines
 
 
+@requires_scipy_or_netCDF4
 def test_no_warning_from_dask_effective_get():
     with create_tmp_file() as tmpfile:
         with pytest.warns(None) as record:
