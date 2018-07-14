@@ -66,6 +66,10 @@ Bug fixes
   weren't monotonic (:issue:`2250`).
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
+- Fixed warning raised in :py:meth:`~Dataset.to_netcdf` due to deprecation of
+  `effective_get` in dask (:issue:`2238`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 

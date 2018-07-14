@@ -3323,3 +3323,11 @@ def test_pickle_reconstructor():
         obj3 = pickle.loads(p_obj2)
 
         assert obj3.value.readlines() == lines
+
+
+def test_no_warning_from_dask_effective_get():
+    with create_tmp_file() as tmpfile:
+        with pytest.warns(None) as record:
+            ds = Dataset()
+            ds.to_netcdf(tmpfile)
+        assert len(record) == 0
