@@ -3593,12 +3593,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def imag(self):
         return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
 
-    def scatter(self,  x=None, y=None, hue=None, col=None, row=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None,  add_legend=True, **kwargs):
-        lc = locals()
-        ds = lc.pop('self')
-        return dataset_scatter(ds=ds, **lc)
+    def scatter(self,  x, y, **kwargs):
+        return dataset_scatter(ds=self, x=x, y=y, **kwargs)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.

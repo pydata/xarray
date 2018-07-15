@@ -307,7 +307,8 @@ class FacetGrid(object):
 
         return self
 
-    def map_scatter(self, x=None, y=None, hue=None, **kwargs):
+    def map_scatter(self, x=None, y=None, hue=None, discrete_legend=False,
+                    **kwargs):
         """
         Apply a line plot to a 2d facet subset of the data.
 
@@ -325,25 +326,29 @@ class FacetGrid(object):
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
-
+        kwargs['discrete_legend'] = discrete_legend
+        kwargs['_labels'] = False
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = scatter(subset, x=x, y=y, hue=hue,
-                                   ax=ax, _labels=False, **kwargs)
+                mappable = dataset_scatter(subset, x=x, y=y, hue=hue,
+                                           ax=ax, **kwargs)
                 self._mappables.append(mappable)
 
-        _, _, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(
+        data = _infer_scatter_data(
                 ds=self.data.loc[self.name_dicts.flat[0]],
-                x=x, y=y, hue=hue)
+                x=x, y=y, hue=hue, discrete_legend=discrete_legend)
 
-        self._hue_var = hueplt
-        self._hue_label = huelabel
-        self._finalize_grid(xlabel, ylabel)
+        self._finalize_grid(data['xlabel'], data['ylabel'])
 
-        if add_legend and hueplt is not None and huelabel is not None:
-            self.add_legend()
+        if hue and  add_legend:
+            self._hue_var = data['hue_values']
+            self._hue_label = data.pop('hue_label', None)
+            if discrete_legend:
+                self.add_legend()
+            else:
+                self.add_colorbar(label=self._hue_label)
 
         return self
 

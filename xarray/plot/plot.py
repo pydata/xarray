@@ -204,7 +204,7 @@ def _infer_line_data(darray, x, y, hue):
         dim, = darray.dims  # get the only dimension name
         huename = None
         hueplt = None
-        huelabel = ''
+        hue_label = ''
 
         if (x is None and y is None) or x == dim:
             xplt = darray.coords[dim]
@@ -232,15 +232,20 @@ def _infer_line_data(darray, x, y, hue):
             yplt = darray.coords[yname]
 
         hueplt = darray.coords[huename]
-        huelabel = label_from_attrs(darray[huename])
+        hue_label = label_from_attrs(darray[huename])
 
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
 
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    return xplt, yplt, hueplt, xlabel, ylabel, hue_label
 
 
-def _infer_scatter_data(ds, x, y, hue):
+def _ensure_numeric(arr):
+    numpy_types = [np.floating, np.integer]
+    return _valid_numpy_subdtype(arr, numpy_types)
+
+
+def _infer_scatter_data(ds, x, y, hue, discrete_legend):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -256,26 +261,35 @@ def _infer_scatter_data(ds, x, y, hue):
         raise ValueError('{} and {} must have the same dimensions.'
                          ''.format(x, y))
 
-    if hue is not None and hue not in dims:
-        raise ValueError(hue + 'must be either one of ({0:s})'
-                         ''.format(', '.join(dims)))
+    if hue is not None and hue not in ds.coords:
+        raise ValueError(hue + ' must be either one of ({0:s})'
+                         ''.format(', '.join(ds.coords)))
 
-    dims = set(dims)
+    data = {'xlabel': label_from_attrs(ds[x]),
+            'ylabel': label_from_attrs(ds[y])}
     if hue:
+        data.update({'hue_label': label_from_attrs(ds.coords[hue])})
+        data.update({'hue_values': ds[x].coords[hue]})
+    dims = set(dims)
+    if hue and discrete_legend:
         dims.remove(hue)
         xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
         yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
-        hueplt = ds[x].coords[hue]
-        huelabel = label_from_attrs(ds[x][hue])
-    else:
-        xplt = ds[x].values.flatten()
-        yplt = ds[y].values.flatten()
-        hueplt = None
-        huelabel = None
+        data.update({'x': xplt, 'y': yplt})
+        return data
 
-    xlabel = label_from_attrs(ds[x])
-    ylabel = label_from_attrs(ds[y])
-    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+    data.update({'x': ds[x].values.flatten(),
+                 'y': ds[y].values.flatten(),
+                 'color': None})
+    if hue:
+        # this is a hack to make a dataarray of the shape of ds[x] whose
+        # values are the coordinate hue. There's probably a better way
+        color = ds[x]
+        color[:] = 0
+        color += ds.coords[hue]
+        data.update({'color': color.values.flatten()})
+
+    return data
 
 
 # This function signature should not change so that it can use
@@ -351,7 +365,7 @@ def line(darray, *args, **kwargs):
         args = kwargs.pop('args', ())
 
     ax = get_axis(figsize, size, aspect, ax)
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
+    xplt, yplt, hueplt, xlabel, ylabel, hue_label = \
         _infer_line_data(darray, x, y, hue)
 
     _ensure_plottable(xplt)
@@ -370,7 +384,7 @@ def line(darray, *args, **kwargs):
     if darray.ndim == 2 and add_legend:
         ax.legend(handles=primitive,
                   labels=list(hueplt.values),
-                  title=huelabel)
+                  title=hue_label)
 
     # Rotate dates on xlabels
     # Do this without calling autofmt_xdate so that x-axes ticks
@@ -983,7 +997,15 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 
 def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
                     col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, add_legend=True, **kwargs):
+                    size=None, subplot_kws=None, add_legend=True,
+                    discrete_legend=None, **kwargs):
+
+    if hue and not _ensure_numeric(ds[hue].values):
+        if discrete_legend is None:
+            discrete_legend = True
+        elif discrete_legend is False:
+            raise TypeError('Cannot create a colorbar for a non numeric'
+                            'coordinate')
     if col or row:
         ax = kwargs.pop('ax', None)
         figsize = kwargs.pop('figsize', None)
@@ -1000,26 +1022,34 @@ def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
                       sharex=sharex, sharey=sharey, figsize=figsize,
                       aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_dataarray_line(x=x, y=y, hue=hue,
-                                    plotfunc=dataset_scatter, **kwargs)
+        return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
+                             discrete_legend=discrete_legend, **kwargs)
 
-    xplt, yplt, hueplt, xlabel, ylabel, huelabel = _infer_scatter_data(ds, x,
-                                                                       y, hue)
+    if add_legend and not hue:
+            raise ValueError('hue must be speicifed for generating a lengend')
+    data = _infer_scatter_data(ds, x, y, hue, discrete_legend)
 
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
     ax = get_axis(figsize, size, aspect, ax)
-    primitive = ax.plot(xplt, yplt, '.')
+    if discrete_legend:
+        primitive = ax.plot(data['x'], data['y'], '.')
+    else:
+        primitive = ax.scatter(data['x'], data['y'], c=data['color'])
 
     if kwargs.get('_labels', True):
-        if xlabel is not None:
-            ax.set_xlabel(xlabel)
+        if data.get('xlabel', None):
+            ax.set_xlabel(data.get('xlabel'))
 
-        if ylabel is not None:
-            ax.set_ylabel(ylabel)
-
-    if add_legend and huelabel is not None:
+        if data.get('ylabel', None):
+            ax.set_ylabel(data.get('ylabel'))
+    if add_legend and discrete_legend:
         ax.legend(handles=primitive,
-                  labels=list(hueplt.values),
-                  title=huelabel)
+                  labels=list(data['hue_values'].values),
+                  title=data.get('hue_label', None))
+    if add_legend and not discrete_legend:
+        cbar = ax.figure.colorbar(primitive)
+        if data.get('hue_label', None):
+            cbar.ax.set_ylabel(data.get('hue_label'))
+
     return primitive
