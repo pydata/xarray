@@ -11,6 +11,7 @@ from .pynio_ import NioDataStore
 from .scipy_ import ScipyDataStore
 from .h5netcdf_ import H5NetCDFStore
 from .pseudonetcdf_ import PseudoNetCDFDataStore
+from .imageio import ImageioDataStore
 from .zarr import ZarrStore
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     'H5NetCDFStore',
     'ZarrStore',
     'PseudoNetCDFDataStore',
+    'ImageioDataStore'
 ]

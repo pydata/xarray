@@ -336,6 +336,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'pseudonetcdf':
             store = backends.PseudoNetCDFDataStore.open(
                 filename_or_obj, autoclose=autoclose, **backend_kwargs)
+        elif engine == 'imageio':
+            store = backends.ImageioDataStore(filename_or_obj,
+                                              autoclose=autoclose,
+                                              **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
