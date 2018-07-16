@@ -322,7 +322,7 @@ class FacetGrid(object):
         self : FacetGrid object
 
         """
-        from .plot import _infer_scatter_data, dataset_scatter
+        from .plot import _infer_scatter_data, scatter
 
         add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
@@ -332,8 +332,8 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = dataset_scatter(subset, x=x, y=y, hue=hue,
-                                           ax=ax, **kwargs)
+                mappable = scatter(subset, x=x, y=y, hue=hue,
+                                   ax=ax, **kwargs)
                 self._mappables.append(mappable)
 
         data = _infer_scatter_data(ds=self.data.loc[self.name_dicts.flat[0]],

@@ -261,7 +261,7 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
         raise ValueError('{} and {} must have the same dimensions.'
                          ''.format(x, y))
 
-    dims_coords = set(list(ds.coords)+list(ds.dims))
+    dims_coords = set(list(ds.coords) + list(ds.dims))
     if hue is not None and hue not in dims_coords:
         raise ValueError(hue + ' must be either one of ({0:s})'
                          ''.format(', '.join(dims_coords)))
@@ -997,10 +997,10 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     return primitive
 
 
-def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, add_legend=True,
-                    discrete_legend=None, **kwargs):
+def scatter(ds, x, y, hue=None, col=None, row=None,
+            col_wrap=None, sharex=True, sharey=True, aspect=None,
+            size=None, subplot_kws=None, add_legend=True,
+            discrete_legend=None, **kwargs):
 
     if hue and not _ensure_numeric(ds[hue].values):
         if discrete_legend is None:
@@ -1055,3 +1055,21 @@ def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
             cbar.ax.set_ylabel(data.get('hue_label'))
 
     return primitive
+
+
+class _Dataset_PlotMethods(object):
+    """
+    Enables use of xarray.plot functions as attributes on a Dataset.
+    For example, Dataset.plot.scatter
+    """
+
+    def __init__(self, dataset):
+        self._ds = dataset
+
+    def __call__(self, *args, **kwargs):
+        raise ValueError('Dataset.plot cannot be called directly. Use'
+                         'an explicit plot method, e.g. ds.plot.scatter(...)')
+
+    @functools.wraps(scatter)
+    def scatter(self, *args, **kwargs):
+        return scatter(self._ds, *args, **kwargs)
