@@ -88,15 +88,15 @@ class TestFormatting(TestCase):
 
     def test_format_array_flat(self):
         actual = formatting.format_array_flat(np.arange(100), 13)
-        expected = '0 1 2 3 4 ...'
+        expected = '0 1 ... 99'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = '0.0 1.0 ...'
+        expected = '0.0 ... 99.0'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 1)
-        expected = '0.0 ...'
+        expected = '0.0 ... 99.0'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(3), 5)
@@ -104,11 +104,11 @@ class TestFormatting(TestCase):
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4.0), 11)
-        expected = '0.0 1.0 ...'
+        expected = '0.0 ... 3.0'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = '0 ...'
+        expected = '0 ... 3'
         assert expected == actual
 
     def test_pretty_print(self):
