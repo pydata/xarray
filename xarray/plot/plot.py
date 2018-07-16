@@ -265,8 +265,8 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
         if discrete_legend is None:
             discrete_legend = True
         elif discrete_legend is False:
-            raise TypeError('Cannot create a colorbar for a non numeric'
-                            ' coordinate')
+            raise ValueError('Cannot create a colorbar for a non numeric'
+                             ' coordinate')
 
     dims = ds[x].dims
     if ds[y].dims != dims:

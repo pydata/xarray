@@ -1601,11 +1601,6 @@ class TestFacetedLinePlots(PlotTestCase):
         assert 'longitude' in alltxt
         assert 'latitude' in alltxt
 
-    def test_both_x_and_y(self):
-        with pytest.raises(ValueError):
-            self.darray.plot.line(row='row', col='col',
-                                  x='x', y='hue')
-
     def test_axes_in_faceted_plot(self):
         with pytest.raises(ValueError):
             self.darray.plot.line(row='row', col='col',
@@ -1647,9 +1642,6 @@ class TestScatterPlots(PlotTestCase):
 
     def test_default_labels(self):
         g = self.ds.plot.scatter('A', 'B', row='row', col='col', hue='hue')
-        # Rightmost column should be labeled
-        for label, ax in zip(self.ds.coords['row'].values, g.axes[:, -1]):
-            assert substring_in_axes(label, ax)
 
         # Top row should be labeled
         for label, ax in zip(self.ds.coords['col'].values, g.axes[0, :]):
@@ -1662,11 +1654,6 @@ class TestScatterPlots(PlotTestCase):
         # Leftmost column should have name of y array name and units
         for ax in g.axes[:, 0]:
             assert ax.get_ylabel() == 'B [Bunits]'
-
-    def test_both_x_and_y(self):
-        with pytest.raises(ValueError):
-            self.darray.plot.line(row='row', col='col',
-                                  x='x', y='hue')
 
     def test_axes_in_faceted_plot(self):
         with pytest.raises(ValueError):
