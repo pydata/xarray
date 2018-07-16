@@ -1692,7 +1692,7 @@ class TestAxesKwargs(object):
 
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('yincrease', [True, False])
-    def test_xincrease_kwarg(self, da, yincrease):
+    def test_yincrease_kwarg(self, da, yincrease):
         plt.clf()
         da.plot(yincrease=yincrease)
         assert(plt.gca().yaxis_inverted() == (not yincrease))
