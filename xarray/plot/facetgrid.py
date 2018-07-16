@@ -336,16 +336,16 @@ class FacetGrid(object):
                                            ax=ax, **kwargs)
                 self._mappables.append(mappable)
 
-        data = _infer_scatter_data(
-                ds=self.data.loc[self.name_dicts.flat[0]],
-                x=x, y=y, hue=hue, discrete_legend=discrete_legend)
+        data = _infer_scatter_data(ds=self.data.loc[self.name_dicts.flat[0]],
+                                   x=x, y=y, hue=hue,
+                                   discrete_legend=discrete_legend)
 
         self._finalize_grid(data['xlabel'], data['ylabel'])
 
-        if hue and  add_legend:
-            self._hue_var = data['hue_values']
+        if hue and add_legend:
             self._hue_label = data.pop('hue_label', None)
             if discrete_legend:
+                self._hue_var = data['hue_values']
                 self.add_legend()
             else:
                 self.add_colorbar(label=self._hue_label)

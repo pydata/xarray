@@ -261,21 +261,23 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
         raise ValueError('{} and {} must have the same dimensions.'
                          ''.format(x, y))
 
-    if hue is not None and hue not in ds.coords:
+    dims_coords = set(list(ds.coords)+list(ds.dims))
+    if hue is not None and hue not in dims_coords:
         raise ValueError(hue + ' must be either one of ({0:s})'
-                         ''.format(', '.join(ds.coords)))
+                         ''.format(', '.join(dims_coords)))
 
     data = {'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y])}
     if hue:
         data.update({'hue_label': label_from_attrs(ds.coords[hue])})
-        data.update({'hue_values': ds[x].coords[hue]})
+
     dims = set(dims)
     if hue and discrete_legend:
         dims.remove(hue)
         xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
         yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
         data.update({'x': xplt, 'y': yplt})
+        data.update({'hue_values': ds[x].coords[hue]})
         return data
 
     data.update({'x': ds[x].values.flatten(),
@@ -1004,7 +1006,7 @@ def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
         if discrete_legend is None:
             discrete_legend = True
         elif discrete_legend is False:
-            raise TypeError('Cannot create a colorbar for a non numeric'
+            raise TypeError('Cannot create a colorbar for a non numeric '
                             'coordinate')
     if col or row:
         ax = kwargs.pop('ax', None)
@@ -1016,7 +1018,7 @@ def dataset_scatter(ds, x=None, y=None, hue=None, col=None, row=None,
         if size is None:
             size = 3
         elif figsize is not None:
-            raise ValueError('cannot provide both `figsize` and'
+            raise ValueError('cannot provide both `figsize` and '
                              '`size` arguments')
 
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
