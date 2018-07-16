@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 import xarray.plot as xplt
-from xarray import DataArray
+from xarray import DataArray, Dataset
 from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
@@ -1620,6 +1620,86 @@ class TestFacetedLinePlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.darray.plot(row='row', hue='hue')
             self.darray.plot.line(row='row', hue='hue')
+
+
+class TestScatterPlots(PlotTestCase):
+    def setUp(self):
+        das = [DataArray(np.random.randn(3, 3, 4, 4),
+                          dims=['x', 'row', 'col', 'hue'],
+                          coords=[range(k) for k in [3, 3, 4, 4]])
+                for _ in [1, 2]]
+        ds = Dataset({'A': das[0], 'B': das[1]})
+        ds.hue.name = 'huename'
+        ds.hue.attrs['units'] = 'hunits'
+        ds.x.attrs['units'] = 'xunits'
+        ds.col.attrs['units'] = 'colunits'
+        ds.row.attrs['units'] = 'rowunits'
+        ds.A.attrs['units'] = 'Aunits'
+        ds.B.attrs['units'] = 'Bunits'
+        self.ds = ds
+
+    def test_facetgrid_shape(self):
+        g = self.ds.plot.scatter(x='A', y='B', row='row', col='col')
+        assert g.axes.shape == (len(self.ds.row), len(self.ds.col))
+
+        g = self.ds.plot.scatter(x='A', y='B', row='col', col='row')
+        assert g.axes.shape == (len(self.ds.col), len(self.ds.row))
+
+    def test_default_labels(self):
+        g = self.ds.plot.scatter('A', 'B', row='row', col='col', hue='hue')
+        # Rightmost column should be labeled
+        for label, ax in zip(self.ds.coords['row'].values, g.axes[:, -1]):
+            assert substring_in_axes(label, ax)
+
+        # Top row should be labeled
+        for label, ax in zip(self.ds.coords['col'].values, g.axes[0, :]):
+            assert substring_in_axes(str(label), ax)
+
+        # Bottom row should have name of x array name and units
+        for ax in g.axes[-1, :]:
+            assert ax.get_xlabel() == 'A [Aunits]'
+
+        # Leftmost column should have name of y array name and units
+        for ax in g.axes[:, 0]:
+            assert ax.get_ylabel() == 'B [Bunits]'
+
+    def test_both_x_and_y(self):
+        with pytest.raises(ValueError):
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', y='hue')
+
+    def test_axes_in_faceted_plot(self):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', row='row', ax=plt.axes())
+
+    def test_figsize_and_size(self):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
+
+    def test_bad_args(self):
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', add_legend=True)
+            self.ds.plot.scatter(x='A', y='The Spanish Inquisition')
+            self.ds.plot.scatter(x='The Spanish Inquisition', y='B')
+
+    def test_non_numeric_legened(self):
+        self.ds['hue'] = pd.date_range('2000-01-01', periods=4)
+        lines = self.ds.plot.scatter(x='A', y='B', hue='hue')
+        # should make a discrete legend
+        assert lines[0].axes.legend_ is not None
+        # and raise an error if explicitly not allowed to do so
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B', hue='hue',
+                                 discrete_legend=False)
+
+    def test_add_legened_by_default(self):
+        sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
+        assert len(sc.figure.axes) == 2
+
+    def test_not_same_dimensions(self):
+        self.ds['A'] = self.ds['A'].isel(x=0)
+        with pytest.raises(ValueError):
+            self.ds.plot.scatter(x='A', y='B')
 
 
 class TestDatetimePlot(PlotTestCase):
