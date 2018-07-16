@@ -421,17 +421,17 @@ def _update_axes(ax, xincrease, yincrease,
     """
     if xincrease is None:
         pass
-    elif xincrease:
-        ax.set_xlim(sorted(ax.get_xlim()))
-    elif not xincrease:
-        ax.set_xlim(sorted(ax.get_xlim(), reverse=True))
+    elif xincrease and ax.xaxis_inverted():
+        ax.invert_xaxis()
+    elif not xincrease and not ax.xaxis_inverted():
+        ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease:
-        ax.set_ylim(sorted(ax.get_ylim()))
-    elif not yincrease:
-        ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
+    elif yincrease and ax.yaxis_inverted():
+        ax.invert_yaxis()
+    elif not yincrease and not ax.yaxis_inverted():
+        ax.invert_yaxis()
 
     # The default xscale, yscale needs to be None.
     # If we set a scale it resets the axes formatters,
