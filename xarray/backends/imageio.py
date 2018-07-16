@@ -1,15 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
 import functools
-import warnings
 
 import numpy as np
 
 from xarray import Variable
 from xarray.core.indexing import NumpyIndexingAdapter
-from xarray.core.pycompat import OrderedDict, basestring, iteritems
+from xarray.core.pycompat import iteritems
 from xarray.core.utils import Frozen, FrozenOrderedDict
-from xarray.backends.common import BackendArray, DataStorePickleMixin, AbstractWritableDataStore
+from xarray.backends.common import (
+    BackendArray, DataStorePickleMixin, AbstractWritableDataStore)
 
 
 class ImageioArrayWrapper(BackendArray):
@@ -29,15 +29,13 @@ class ImageioArrayWrapper(BackendArray):
     def __getitem__(self, key):
         with self.datastore.ensure_open(autoclose=True):
             data = NumpyIndexingAdapter(self.get_array())[key]
-            # Since data is always read to memory for generic imageio interface,
-            # no need to duplicate to ensure their presence in the memory.
+            # Since data is always read to memory for imageio no need for copy
+            # to ensure their presence in the memory.
             return np.array(data, dtype=self.dtype, copy=False)
 
 
 class ImageioDataStore(AbstractWritableDataStore, DataStorePickleMixin):
     """Store for reading and writing data via imageio.
-
-    TBA
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, order='xyzct',
@@ -72,7 +70,7 @@ class ImageioDataStore(AbstractWritableDataStore, DataStorePickleMixin):
 
     def get_variables(self):
         with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((i, self.open_store_variable(i))
+            return FrozenOrderedDict((str(i), self.open_store_variable(i))
                                      for i in range(len(self.ds)))
 
     def get_attrs(self):
@@ -91,7 +89,7 @@ class ImageioDataStore(AbstractWritableDataStore, DataStorePickleMixin):
             dim_len = data.shape
             return Frozen({k: v for k, v in zip(dim_key, dim_len)})
 
-    #TODO
+    # TODO
     def set_dimension(self, name, length, is_unlimited=False):
         with self.ensure_open(autoclose=False):
             if name in self.ds.dimensions:
@@ -104,7 +102,7 @@ class ImageioDataStore(AbstractWritableDataStore, DataStorePickleMixin):
         with self.ensure_open(autoclose=False):
             self.ds[key] = value
 
-    #TODO
+    # TODO
     def prepare_variable(self, name, variable, check_encoding=False,
                          unlimited_dims=None):
         if check_encoding and variable.encoding:
@@ -126,14 +124,14 @@ class ImageioDataStore(AbstractWritableDataStore, DataStorePickleMixin):
 
         return target, data
 
-    #TODO
+    # TODO
     def sync(self, compute=True):
         if not compute:
             raise NotImplementedError(
                 'compute=False is not supported for the scipy backend yet')
         with self.ensure_open(autoclose=True):
             super(ImageioDataStore, self).sync(compute=compute)
-            #TODO retrieve 'Writer' object
+            # TODO retrieve 'Writer' object
             raise NotImplementedError
             #self.ds.flush()
 
