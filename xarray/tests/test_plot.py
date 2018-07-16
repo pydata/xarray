@@ -1625,9 +1625,9 @@ class TestFacetedLinePlots(PlotTestCase):
 class TestScatterPlots(PlotTestCase):
     def setUp(self):
         das = [DataArray(np.random.randn(3, 3, 4, 4),
-                          dims=['x', 'row', 'col', 'hue'],
-                          coords=[range(k) for k in [3, 3, 4, 4]])
-                for _ in [1, 2]]
+                         dims=['x', 'row', 'col', 'hue'],
+                         coords=[range(k) for k in [3, 3, 4, 4]])
+               for _ in [1, 2]]
         ds = Dataset({'A': das[0], 'B': das[1]})
         ds.hue.name = 'huename'
         ds.hue.attrs['units'] = 'hunits'
