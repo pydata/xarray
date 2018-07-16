@@ -61,6 +61,9 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 - :py:meth:`~xarray.DataArray.interp_like` and
   :py:meth:`~xarray.Dataset.interp_like` methods are newly added.
   (:issue:`2218`)
