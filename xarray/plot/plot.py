@@ -245,7 +245,7 @@ def _ensure_numeric(arr):
     return _valid_numpy_subdtype(arr, numpy_types)
 
 
-def _infer_scatter_data(ds, x, y, hue, discrete_legend):
+def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -256,6 +256,18 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
     if y not in dvars:
         raise ValueError(y + error_msg)
 
+    if hue and add_legend is None:
+        add_legend = True
+    if add_legend and not hue:
+            raise ValueError('hue must be speicifed for generating a lengend')
+
+    if hue and not _ensure_numeric(ds[hue].values):
+        if discrete_legend is None:
+            discrete_legend = True
+        elif discrete_legend is False:
+            raise TypeError('Cannot create a colorbar for a non numeric'
+                            ' coordinate')
+
     dims = ds[x].dims
     if ds[y].dims != dims:
         raise ValueError('{} and {} must have the same dimensions.'
@@ -264,34 +276,40 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
     dims_coords = set(list(ds.coords) + list(ds.dims))
     if hue is not None and hue not in dims_coords:
         raise ValueError(hue + ' must be either one of ({0:s})'
-                         ''.format(', '.join(dims_coords)))
+                               ''.format(', '.join(dims_coords)))
 
-    data = {'xlabel': label_from_attrs(ds[x]),
-            'ylabel': label_from_attrs(ds[y])}
     if hue:
-        data.update({'hue_label': label_from_attrs(ds.coords[hue])})
+        hue_label = label_from_attrs(ds.coords[hue])
+    else:
+        hue_label = None
 
-    dims = set(dims)
-    if hue and discrete_legend:
+    return {'add_legend': add_legend,
+            'discrete_legend': discrete_legend,
+            'hue_label': hue_label,
+            'xlabel': label_from_attrs(ds[x]),
+            'ylabel': label_from_attrs(ds[y]),
+            'hue_values': ds[x].coords[hue] if discrete_legend else None}
+
+
+def _infer_scatter_data(ds, x, y, hue, discrete_legend):
+    dims = set(ds[x].dims)
+    if discrete_legend:
         dims.remove(hue)
         xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
         yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
-        data.update({'x': xplt, 'y': yplt})
-        data.update({'hue_values': ds[x].coords[hue]})
+        return {'x': xplt, 'y': yplt}
+    else:
+        data = {'x': ds[x].values.flatten(),
+                'y': ds[y].values.flatten(),
+                'color': None}
+        if hue:
+            # this is a hack to make a dataarray of the shape of ds[x] whose
+            # values are the coordinate hue. There's probably a better way
+            color = ds[x]
+            color[:] = 0
+            color += ds.coords[hue]
+            data['color'] = color.values.flatten()
         return data
-
-    data.update({'x': ds[x].values.flatten(),
-                 'y': ds[y].values.flatten(),
-                 'color': None})
-    if hue:
-        # this is a hack to make a dataarray of the shape of ds[x] whose
-        # values are the coordinate hue. There's probably a better way
-        color = ds[x]
-        color[:] = 0
-        color += ds.coords[hue]
-        data.update({'color': color.values.flatten()})
-
-    return data
 
 
 # This function signature should not change so that it can use
@@ -999,15 +1017,17 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
 
 def scatter(ds, x, y, hue=None, col=None, row=None,
             col_wrap=None, sharex=True, sharey=True, aspect=None,
-            size=None, subplot_kws=None, add_legend=True,
+            size=None, subplot_kws=None, add_legend=None,
             discrete_legend=None, **kwargs):
 
-    if hue and not _ensure_numeric(ds[hue].values):
-        if discrete_legend is None:
-            discrete_legend = True
-        elif discrete_legend is False:
-            raise TypeError('Cannot create a colorbar for a non numeric '
-                            'coordinate')
+    if kwargs.get('_meta_data', None):
+        discrete_legend = kwargs['_meta_data']['discrete_legend']
+    else:
+        meta_data = _infer_scatter_meta_data(ds, x, y, hue,
+                                             add_legend, discrete_legend)
+        discrete_legend = meta_data['discrete_legend']
+        add_legend = meta_data['add_legend']
+
     if col or row:
         ax = kwargs.pop('ax', None)
         figsize = kwargs.pop('figsize', None)
@@ -1027,8 +1047,6 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
                              discrete_legend=discrete_legend, **kwargs)
 
-    if add_legend and not hue:
-            raise ValueError('hue must be speicifed for generating a lengend')
     data = _infer_scatter_data(ds, x, y, hue, discrete_legend)
 
     figsize = kwargs.pop('figsize', None)
@@ -1038,21 +1056,22 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         primitive = ax.plot(data['x'], data['y'], '.')
     else:
         primitive = ax.scatter(data['x'], data['y'], c=data['color'])
+    if '_meta_data' in kwargs:  # if this was called from map_scatter,
+        return primitive        # finish here. Else, make labels
 
-    if kwargs.get('_labels', True):
-        if data.get('xlabel', None):
-            ax.set_xlabel(data.get('xlabel'))
+    if meta_data.get('xlabel', None):
+        ax.set_xlabel(meta_data.get('xlabel'))
 
-        if data.get('ylabel', None):
-            ax.set_ylabel(data.get('ylabel'))
+    if meta_data.get('ylabel', None):
+        ax.set_ylabel(meta_data.get('ylabel'))
     if add_legend and discrete_legend:
         ax.legend(handles=primitive,
-                  labels=list(data['hue_values'].values),
-                  title=data.get('hue_label', None))
+                  labels=list(meta_data['hue_values'].values),
+                  title=meta_data.get('hue_label', None))
     if add_legend and not discrete_legend:
         cbar = ax.figure.colorbar(primitive)
-        if data.get('hue_label', None):
-            cbar.ax.set_ylabel(data.get('hue_label'))
+        if meta_data.get('hue_label', None):
+            cbar.ax.set_ylabel(meta_data.get('hue_label'))
 
     return primitive
 

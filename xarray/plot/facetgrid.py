@@ -308,26 +308,14 @@ class FacetGrid(object):
         return self
 
     def map_scatter(self, x=None, y=None, hue=None, discrete_legend=False,
-                    **kwargs):
-        """
-        Apply a line plot to a 2d facet subset of the data.
+                    add_legend=None, **kwargs):
+        from .plot import _infer_scatter_meta_data, scatter
 
-        Parameters
-        ----------
-        x, y, hue: string
-            dimension names for the axes and hues of each facet
-
-        Returns
-        -------
-        self : FacetGrid object
-
-        """
-        from .plot import _infer_scatter_data, scatter
-
-        add_legend = kwargs.pop('add_legend', True)
         kwargs['add_legend'] = False
         kwargs['discrete_legend'] = discrete_legend
-        kwargs['_labels'] = False
+        meta_data = _infer_scatter_meta_data(self.data, x, y, hue,
+                                             add_legend, discrete_legend)
+        kwargs['_meta_data'] = meta_data
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
@@ -336,16 +324,12 @@ class FacetGrid(object):
                                    ax=ax, **kwargs)
                 self._mappables.append(mappable)
 
-        data = _infer_scatter_data(ds=self.data.loc[self.name_dicts.flat[0]],
-                                   x=x, y=y, hue=hue,
-                                   discrete_legend=discrete_legend)
+        self._finalize_grid(meta_data['xlabel'], meta_data['ylabel'])
 
-        self._finalize_grid(data['xlabel'], data['ylabel'])
-
-        if hue and add_legend:
-            self._hue_label = data.pop('hue_label', None)
-            if discrete_legend:
-                self._hue_var = data['hue_values']
+        if hue and meta_data['add_legend']:
+            self._hue_label = meta_data.pop('hue_label', None)
+            if meta_data['discrete_legend']:
+                self._hue_var = meta_data['hue_values']
                 self.add_legend()
             else:
                 self.add_colorbar(label=self._hue_label)
