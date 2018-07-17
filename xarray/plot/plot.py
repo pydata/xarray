@@ -403,7 +403,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
     primitive = ax.hist(no_nan, **kwargs)
 
-    ax.set_ylabel('Count')
     ax.set_title('Histogram')
     ax.set_xlabel(label_from_attrs(darray))
 
@@ -415,7 +414,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 
 def _update_axes(ax, xincrease, yincrease,
                  xscale=None, yscale=None,
-                 xticks=None, yticks=None, xlim=None, ylim=None):
+                 xticks=None, yticks=None,
+                 xlim=None, ylim=None):
     """
     Update axes with provided parameters
     """

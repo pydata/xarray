@@ -426,10 +426,6 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
         assert 'testpoints [testunits]' == plt.gca().get_xlabel()
 
-    def test_ylabel_is_count(self):
-        self.darray.plot.hist()
-        assert 'Count' == plt.gca().get_ylabel()
-
     def test_title_is_histogram(self):
         self.darray.plot.hist()
         assert 'Histogram' == plt.gca().get_title()
@@ -1682,6 +1678,7 @@ test_da_list = [DataArray(easy_array((10, ))),
                 DataArray(easy_array((10, 3, 2)))]
 
 
+@requires_matplotlib
 class TestAxesKwargs(object):
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('xincrease', [True, False])
