@@ -63,7 +63,10 @@ class _ElementwiseFunctionArray(indexing.ExplicitlyIndexedNDArrayMixin):
         return np.dtype(self._dtype)
 
     def __getitem__(self, key):
-        return self.func(self.array[key])
+        return type(self)(self.array[key], self.func, self.dtype)
+
+    def __array__(self, dtype=None):
+        return self.func(self.array)
 
     def __repr__(self):
         return ("%s(%r, func=%r, dtype=%r)" %
