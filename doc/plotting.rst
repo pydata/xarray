@@ -223,7 +223,7 @@ It is also possible to make line plots such that the data are on the x-axis and 
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
 Other axes kwargs
------------------------
+-----------------
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
 
