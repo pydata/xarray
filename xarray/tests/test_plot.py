@@ -1685,21 +1685,21 @@ class TestAxesKwargs(object):
     def test_xincrease_kwarg(self, da, xincrease):
         plt.clf()
         da.plot(xincrease=xincrease)
-        assert(plt.gca().xaxis_inverted() == (not xincrease))
+        assert plt.gca().xaxis_inverted() == (not xincrease)
 
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('yincrease', [True, False])
     def test_yincrease_kwarg(self, da, yincrease):
         plt.clf()
         da.plot(yincrease=yincrease)
-        assert(plt.gca().yaxis_inverted() == (not yincrease))
+        assert plt.gca().yaxis_inverted() == (not yincrease)
 
     @pytest.mark.parametrize('da', test_da_list)
     @pytest.mark.parametrize('xscale', ['linear', 'log', 'logit', 'symlog'])
     def test_xscale_kwarg(self, da, xscale):
         plt.clf()
         da.plot(xscale=xscale)
-        assert(plt.gca().get_xscale() == xscale)
+        assert plt.gca().get_xscale() == xscale
 
     @pytest.mark.parametrize('da', [DataArray(easy_array((10, ))),
                                     DataArray(easy_array((10, 3)))])
@@ -1707,32 +1707,32 @@ class TestAxesKwargs(object):
     def test_yscale_kwarg(self, da, yscale):
         plt.clf()
         da.plot(yscale=yscale)
-        assert(plt.gca().get_yscale() == yscale)
+        assert plt.gca().get_yscale() == yscale
 
     @pytest.mark.parametrize('da', test_da_list)
     def test_xlim_kwarg(self, da):
         plt.clf()
         expected = (0.0, 1000.0)
         da.plot(xlim=[0, 1000])
-        assert(plt.gca().get_xlim() == expected)
+        assert plt.gca().get_xlim() == expected
 
     @pytest.mark.parametrize('da', test_da_list)
     def test_ylim_kwarg(self, da):
         plt.clf()
         da.plot(ylim=[0, 1000])
         expected = (0.0, 1000.0)
-        assert(plt.gca().get_ylim() == expected)
+        assert plt.gca().get_ylim() == expected
 
     @pytest.mark.parametrize('da', test_da_list)
     def test_xticks_kwarg(self, da):
         plt.clf()
         da.plot(xticks=np.arange(5))
         expected = np.arange(5).tolist()
-        assert(np.all(plt.gca().get_xticks() == expected))
+        assert np.all(plt.gca().get_xticks() == expected)
 
     @pytest.mark.parametrize('da', test_da_list)
     def test_yticks_kwarg(self, da):
         plt.clf()
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
-        assert(np.all(plt.gca().get_yticks() == expected))
+        assert np.all(plt.gca().get_yticks() == expected)
