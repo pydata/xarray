@@ -27,11 +27,21 @@ What's New
 
 .. _whats-new.0.10.8:
 
-v0.10.8 (unreleased)
---------------------
+v0.10.8 (18 July 2018)
+----------------------
 
-Documentation
-~~~~~~~~~~~~~
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray no longer supports python 3.4. Additionally, the minimum supported
+  versions of the following dependencies has been updated and/or clarified:
+
+  - Pandas: 0.18 -> 0.19
+  - NumPy: 1.11 -> 1.12
+  - Dask: 0.9 -> 0.16
+  - Matplotlib: unspecified -> 1.5
+
+  (:issue:`2204`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -69,19 +79,6 @@ Bug fixes
 - Fixed warning raised in :py:meth:`~Dataset.to_netcdf` due to deprecation of
   `effective_get` in dask (:issue:`2238`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-- Xarray no longer supports python 3.4. Additionally, the minimum supported
-  versions of the following dependencies has been updated and/or clarified:
-
-  - Pandas: 0.18 -> 0.19
-  - NumPy: 1.11 -> 1.12
-  - Dask: 0.9 -> 0.16
-  - Matplotlib: unspecified -> 1.5
-
-  (:issue:`2204`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.7:
 
