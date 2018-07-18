@@ -39,6 +39,11 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by 
+  falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
+  attribute being set.
+  (:issue:`2201`)
+  By `Thomas Voigt <https://github.com/tv3141>`_.
 
 .. _whats-new.0.10.8:
 
@@ -94,11 +99,6 @@ Bug fixes
 - Fixed warning raised in :py:meth:`~Dataset.to_netcdf` due to deprecation of
   `effective_get` in dask (:issue:`2238`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by 
-  falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
-  attribute being set.
-  (:issue:`2201`)
-  By `Thomas Voigt <https://github.com/tv3141>`_.
 
 .. _whats-new.0.10.7:
 
