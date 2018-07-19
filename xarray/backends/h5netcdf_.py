@@ -17,20 +17,16 @@ from .netCDF4_ import (
 
 class H5NetCDFArrayWrapper(BaseNetCDF4Array):
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR,
+            self._getitem)
 
+    def _getitem(self, key):
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
-        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in
-                    key.tuple)
+        key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
         with self.datastore.ensure_open(autoclose=True):
-            array = self.get_array()[key]
-
-        if len(np_inds.tuple) > 0:
-            array = indexing.NumpyIndexingAdapter(array)[np_inds]
-
-        return array
+            return self.get_array()[key]
 
 
 def maybe_decode_bytes(txt):

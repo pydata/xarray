@@ -28,16 +28,13 @@ class PncArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(
-            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER_1VECTOR,
+            self._getitem)
 
+    def _getitem(self, key):
         with self.datastore.ensure_open(autoclose=True):
-            array = self.get_array()[key.tuple]  # index backend array
-
-        if len(np_inds.tuple) > 0:
-            # index the loaded np.ndarray
-            array = indexing.NumpyIndexingAdapter(array)[np_inds]
-        return array
+            return self.get_array()[key]
 
 
 class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):

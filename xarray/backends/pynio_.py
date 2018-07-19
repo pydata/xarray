@@ -24,19 +24,16 @@ class NioArrayWrapper(BackendArray):
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key, np_inds = indexing.decompose_indexer(
-            key, self.shape, indexing.IndexingSupport.BASIC)
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
+    def _getitem(self, key):
         with self.datastore.ensure_open(autoclose=True):
             array = self.get_array()
-            if key.tuple == () and self.ndim == 0:
+            if key == () and self.ndim == 0:
                 return array.get_value()
 
-            array = array[key.tuple]
-            if len(np_inds.tuple) > 0:
-                array = indexing.NumpyIndexingAdapter(array)[np_inds]
-
-            return array
+            return array[key]
 
 
 class NioDataStore(AbstractDataStore, DataStorePickleMixin):

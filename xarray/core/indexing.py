@@ -749,6 +749,37 @@ class IndexingSupport(object):  # could inherit from enum.Enum on Python 3
     VECTORIZED = 'VECTORIZED'
 
 
+def explicit_indexing_adapter(
+        key, shape, indexing_support, raw_indexing_method):
+    """Support explicit indexing by delegating to a raw indexing method.
+
+    Outer and/or vectorized indexers are supported by indexing a second time
+    with a NumPy array.
+
+    Parameters
+    ----------
+    key : ExplicitIndexer
+        Explicit indexing object.
+    shape : Tuple[int, ...]
+        Shape of the indexed array.
+    indexing_support : IndexingSupport enum
+        Form of indexing supported by raw_indexing_method.
+    raw_indexing_method: callable
+        Function (like ndarray.__getitem__) that when called with indexing key
+        in the form of a tuple returns an indexed array.
+
+    Returns
+    -------
+    Indexing result, in the form of a duck numpy-array.
+    """
+    raw_key, numpy_indices = decompose_indexer(key, shape, indexing_support)
+    result = raw_indexing_method(raw_key.tuple)
+    if numpy_indices.tuple:
+        # index the loaded np.ndarray
+        result = NumpyIndexingAdapter(np.asarray(result))[numpy_indices]
+    return result
+
+
 def decompose_indexer(indexer, shape, indexing_support):
     if isinstance(indexer, VectorizedIndexer):
         return _decompose_vectorized_indexer(indexer, shape, indexing_support)
