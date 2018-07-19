@@ -121,6 +121,23 @@ def dec_days(date_type):
         return 31
 
 
+@pytest.fixture
+def index_with_name(date_type):
+    dates = [date_type(1, 1, 1), date_type(1, 2, 1),
+             date_type(2, 1, 1), date_type(2, 2, 1)]
+    return CFTimeIndex(dates, name='foo')
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize(
+    ('name', 'expected_name'),
+    [('bar', 'bar'),
+     (None, 'foo')])
+def test_constructor_with_name(index_with_name, name, expected_name):
+    result = CFTimeIndex(index_with_name, name=name).name
+    assert result == expected_name
+
+
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_assert_all_valid_date_type(date_type, index):
     import cftime

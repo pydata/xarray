@@ -555,6 +555,13 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   date_range
+
 Plotting
 ========
 

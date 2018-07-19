@@ -149,10 +149,13 @@ class CFTimeIndex(pd.Index):
                                   'The microseconds of the datetime')
     date_type = property(get_date_type)
 
-    def __new__(cls, data):
+    def __new__(cls, data, name=None):
+        if name is None and hasattr(data, 'name'):
+            name = data.name
         result = object.__new__(cls)
         assert_all_valid_date_type(data)
         result._data = np.array(data)
+        result.name = name
         return result
 
     def _partial_date_slice(self, resolution, parsed):
