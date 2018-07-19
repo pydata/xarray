@@ -11,6 +11,7 @@ from collections import Counter
 import numpy as np
 
 from . import duck_array_ops
+from . import indexing
 from . import utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
@@ -519,6 +520,7 @@ def apply_variable_ufunc(func, *args, **kwargs):
     signature = kwargs.pop('signature')
     exclude_dims = kwargs.pop('exclude_dims', _DEFAULT_FROZEN_SET)
     dask = kwargs.pop('dask', 'forbidden')
+    lazy = kwargs.pop('lazy', False)
     output_dtypes = kwargs.pop('output_dtypes', None)
     output_sizes = kwargs.pop('output_sizes', None)
     keep_attrs = kwargs.pop('keep_attrs', False)
@@ -537,14 +539,18 @@ def apply_variable_ufunc(func, *args, **kwargs):
                   else arg
                   for arg, core_dims in zip(args, signature.input_core_dims)]
 
+    if lazy:
+        if signature.all_output_core_dims or signature.all_input_core_dims:
+            raise ValueError(
+                'ufunc core dimensions not supported with lazy=True: {}'
+                .format(signature))
+        if signature.num_outputs > 1:
+            raise ValueError('only a single output supported with lazy=True')
+        if output_dtypes is None:
+            raise ValueError('must supply output dtypes with lazy=True')
+
     if any(isinstance(array, dask_array_type) for array in input_data):
-        if dask == 'forbidden':
-            raise ValueError('apply_ufunc encountered a dask array on an '
-                             'argument, but handling for dask arrays has not '
-                             'been enabled. Either set the ``dask`` argument '
-                             'or load your data into memory first with '
-                             '``.load()`` or ``.compute()``')
-        elif dask == 'parallelized':
+        if lazy or dask == 'parallelized':
             input_dims = [broadcast_dims + dims
                           for dims in signature.input_core_dims]
             numpy_func = func
@@ -553,11 +559,28 @@ def apply_variable_ufunc(func, *args, **kwargs):
                 return _apply_with_dask_atop(
                     numpy_func, arrays, input_dims, output_dims,
                     signature, output_dtypes, output_sizes)
+
         elif dask == 'allowed':
             pass
+        elif dask == 'forbidden':
+            raise ValueError('apply_ufunc encountered a dask array on an '
+                             'argument, but handling for dask arrays has not '
+                             'been enabled. Either set the ``dask`` argument '
+                             'or load your data into memory first with '
+                             '``.load()`` or ``.compute()``')
         else:
             raise ValueError('unknown setting for dask array handling in '
                              'apply_ufunc: {}'.format(dask))
+    elif lazy:
+        numpy_func = func
+        input_dims = [broadcast_dims + dims
+                      for dims in signature.input_core_dims]
+        (output_dtype,) = output_dtypes
+
+        def func(*arrays):
+            return LazyElementwiseFunctionArray(
+                numpy_func, output_dims[0], arrays, input_dims, output_dtype)
+
     result_data = func(*input_data)
 
     if signature.num_outputs == 1:
@@ -654,6 +677,94 @@ def _apply_with_dask_atop(func, args, input_dims, output_dims, signature,
 
     return da.atop(func, out_ind, *atop_args, dtype=dtype, concatenate=True,
                    new_axes=output_sizes)
+
+
+class LazyElementwiseFunctionArray(
+        indexing.ExplicitlyIndexed, utils.NdimSizeLenMixin):
+    """Lazily computed array holding values of elemwise-function.
+
+    Do not construct this object directly: call lazy_elemwise_func instead.
+
+    Values are computed upon indexing or coercion to a NumPy array.
+    """
+
+    def __init__(self, func, output_dims, inputs, all_input_dims, dtype):
+        assert not any(isinstance(array, dask_array_type) for array in inputs)
+
+        input_dims_set = set()
+        for dims in all_input_dims:
+            input_dims_set |= set(dims)
+        output_dims_set = set(output_dims)
+        if input_dims_set != output_dims_set:
+            raise ValueError(
+                'elementwise lazy functions must be elementwise, but the set '
+                'of output dimensions %r differs from the set of input '
+                'dimensions %r' % (output_dims_set, input_dims_set))
+
+        dim_sizes = {}
+        for dims, arg in zip(dims, inputs):
+            for dim, size in zip(dims, arg.shape):
+                if dim not in dim_sizes:
+                    dim_sizes[dim] = size
+                elif dim_sizes[dim] != size:
+                    raise ValueError('inconsistent dimension sizes')
+
+        self.func = func
+        self.output_dims = output_dims
+        self.inputs = tuple(indexing.as_indexable(array) for array in inputs)
+        self.all_input_dims = all_input_dims
+        self._dtype = np.dtype(dtype)
+        self._shape = tuple(dim_sizes[d] for d in output_dims)
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @property
+    def shape(self):
+        return self._shape
+
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
+
+    def _getitem(self, key):
+        assert len(key) == self.ndim
+
+        dim_indices = {d: k for d, k in zip(self.output_dims, key)}
+
+        output_dims = tuple(d for d in self.output_dims
+                            if not isinstance(dim_indices[d], int))
+
+        def explicit_indexer(indices):
+            indices = tuple(indices)
+            type_ = (indexing.OuterIndexer
+                     if any(isinstance(ind, np.ndarray) for ind in indices)
+                     else indexing.BasicIndexer)
+            return type_(indices)
+
+        all_input_indices = [explicit_indexer(dim_indices[d] for d in dims)
+                             for dims in self.all_input_dims]
+        indexed = tuple(x[k] for x, k in zip(self.inputs, all_input_indices))
+        all_input_dims = tuple(tuple(d for d in dims
+                                     if not isinstance(dim_indices[d], int))
+                               for dims in self.all_input_dims)
+        return type(self)(
+            self.func, output_dims, indexed, all_input_dims, self.dtype)
+
+    def __array__(self, dtype=None):
+        inputs = tuple(np.asarray(array) for array in self.inputs)
+        result = self.func(*inputs)
+        if result.dtype != self.dtype:
+            raise ValueError('unexpected dtype for elementwise function: '
+                             '%r vs %r' % (result.dtype, self.dtype))
+        return result
+
+    def __repr__(self):
+        return ("%s(func=%r, output_dims=%r, inputs=%r, all_input_dims=%r, "
+                "dtype=%r)" %
+                (type(self).__name__, self.func, self.output_dims, self.inputs,
+                 self.all_input_dims, self.dtype))
 
 
 def apply_array_ufunc(func, *args, **kwargs):
@@ -912,6 +1023,7 @@ def apply_ufunc(func, *args, **kwargs):
     dataset_fill_value = kwargs.pop('dataset_fill_value', _NO_FILL_VALUE)
     kwargs_ = kwargs.pop('kwargs', None)
     dask = kwargs.pop('dask', 'forbidden')
+    lazy = kwargs.pop('lazy', False)
     output_dtypes = kwargs.pop('output_dtypes', None)
     output_sizes = kwargs.pop('output_sizes', None)
     if kwargs:
@@ -931,27 +1043,18 @@ def apply_ufunc(func, *args, **kwargs):
         func = functools.partial(func, **kwargs_)
 
     if vectorize:
-        if signature.all_core_dims:
-            # we need the signature argument
-            if LooseVersion(np.__version__) < '1.12':  # pragma: no cover
-                raise NotImplementedError(
-                    'numpy 1.12 or newer required when using vectorize=True '
-                    'in xarray.apply_ufunc with non-scalar output core '
-                    'dimensions.')
-            func = np.vectorize(func,
-                                otypes=output_dtypes,
-                                signature=signature.to_gufunc_string(),
-                                excluded=set(kwargs))
-        else:
-            func = np.vectorize(func,
-                                otypes=output_dtypes,
-                                excluded=set(kwargs))
+        sig_str = (signature.to_gufunc_string()
+                   if signature.all_core_dims
+                   else None)
+        func = np.vectorize(func, otypes=output_dtypes, signature=sig_str,
+                            excluded=set(kwargs))
 
     variables_ufunc = functools.partial(apply_variable_ufunc, func,
                                         signature=signature,
                                         exclude_dims=exclude_dims,
                                         keep_attrs=keep_attrs,
                                         dask=dask,
+                                        lazy=lazy,
                                         output_dtypes=output_dtypes,
                                         output_sizes=output_sizes)
 
@@ -965,7 +1068,8 @@ def apply_ufunc(func, *args, **kwargs):
                                        dataset_join=dataset_join,
                                        dataset_fill_value=dataset_fill_value,
                                        keep_attrs=keep_attrs,
-                                       dask=dask)
+                                       dask=dask,
+                                       lazy=lazy)
         return apply_groupby_ufunc(this_apply, *args)
     elif any(is_dict_like(a) for a in args):
         return apply_dataset_ufunc(variables_ufunc, *args,
