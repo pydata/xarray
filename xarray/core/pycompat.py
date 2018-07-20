@@ -23,6 +23,7 @@ if PY3:  # pragma: no cover
 
     range = range
     zip = zip
+    from itertools import zip_longest
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
@@ -41,7 +42,9 @@ else:  # pragma: no cover
         return d.itervalues()
 
     range = xrange
-    from itertools import izip as zip, imap as map
+    from itertools import (
+        izip as zip, imap as map, izip_longest as zip_longest,
+    )
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve

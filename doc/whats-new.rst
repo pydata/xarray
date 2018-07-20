@@ -36,6 +36,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- DataArray coordinates and Dataset coordinates and data variables are
+  now displayed as `a b ... y z` rather than `a b c d ...`.
+  (:issue:`1186`)
+  By `Seth P <https://github.com/seth-p>`_.
+
+
 Bug fixes
 ~~~~~~~~~
 

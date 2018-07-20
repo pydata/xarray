@@ -93,15 +93,15 @@ class TestDataset(TestCase):
         <xarray.Dataset>
         Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
           * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
           * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
         Dimensions without coordinates: dim1
         Data variables:
-            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 ...
-            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
-            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
+            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.1995 0.4684 -0.8312
+            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 0.1302 1.267 0.3328
+            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
         Attributes:
             foo:      bar""") % data['dim3'].dtype  # noqa: E501
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
