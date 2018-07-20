@@ -525,7 +525,7 @@ The ``x`` and ``y`` coordinates are generated out of the file's metadata
 (``bounds``, ``width``, ``height``), and they can be understood as cartesian
 coordinates defined in the file's projection provided by the ``crs`` attribute.
 ``crs`` is a PROJ4 string which can be parsed by e.g. `pyproj`_ or rasterio.
-See :ref:`recipes.rasterio` for an example of how to convert these to
+See :ref:`gallery.rasterio` for an example of how to convert these to
 longitudes and latitudes.
 
 .. warning::
