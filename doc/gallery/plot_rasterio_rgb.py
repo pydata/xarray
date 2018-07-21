@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-.. gallery.rasterio_rgb:
+.. _recipes.rasterio_rgb:
 
 ============================
 imshow() and map projections
@@ -8,7 +8,7 @@ imshow() and map projections
 
 Using rasterio's projection information for more accurate plots.
 
-This example extends :ref:`gallery.rasterio` and plots the image in the
+This example extends :ref:`recipes.rasterio` and plots the image in the
 original map projection instead of relying on pcolormesh and a map
 transformation.
 """

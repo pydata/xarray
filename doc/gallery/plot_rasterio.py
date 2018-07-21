@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-.. gallery.rasterio:
+.. _recipes.rasterio:
 
 =================================
 Parsing rasterio's geocoordinates
@@ -13,7 +13,7 @@ latitudes.
 These new coordinates might be handy for plotting and indexing, but it should
 be kept in mind that a grid which is regular in projection coordinates will
 likely be irregular in lon/lat. It is often recommended to work in the data's
-original map projection (see :ref:`gallery.rasterio_rgb`).
+original map projection (see :ref:`recipes.rasterio_rgb`).
 """
 
 import os
