@@ -680,7 +680,8 @@ def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
 @pytest.mark.parametrize(
     ('start', 'end', 'periods', 'freq', 'name'),
     [('0001', None, 5, 'A', 'foo'),
-     ('2000', None, 5, 'A', 'foo')]
+     ('2000', None, 5, 'A', 'foo'),
+     ('2000', '1999', None, 'A', 'foo')]
 )
 def test_date_range(start, end, periods, freq, name, calendar):
     result = date_range(start, end, periods,

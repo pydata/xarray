@@ -35,7 +35,7 @@ def get_date_type(calendar):
             'proleptic_gregorian': cftime.DatetimeProlepticGregorian,
             'julian': cftime.DatetimeJulian,
             'all_leap': cftime.DatetimeAllLeap,
-            'standard': cftime.DatetimeGregorian
+            'standard': cftime.DatetimeProlepticGregorian
         }
         return calendars[calendar]
 
@@ -657,23 +657,23 @@ def date_range(start=None, end=None, periods=None, freq='D',
 
     Finally, the following calendar aliases are supported.
 
-    +----------------------+----------------------------------------------------------------+
-    | Alias                | Date type                                                      |
-    +======================+================================================================+
-    | standard             | ``np.datetime64`` (falls back to ``cftime.DatetimeGregorian``) |
-    +----------------------+----------------------------------------------------------------+
-    | gregorian            | ``cftime.DatetimeGregorian``                                   |
-    +----------------------+----------------------------------------------------------------+
-    | proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian``                          |
-    +----------------------+----------------------------------------------------------------+
-    | noleap, 365_day      | ``cftime.DatetimeNoLeap``                                      |
-    +----------------------+----------------------------------------------------------------+
-    | all_leap, 366_day    | ``cftime.DatetimeAllLeap``                                     |
-    +----------------------+----------------------------------------------------------------+
-    | 360_day              | ``cftime.Datetime360Day``                                      |
-    +----------------------+----------------------------------------------------------------+
-    | julian               | ``cftime.DatetimeJulian``                                      |
-    +----------------------+----------------------------------------------------------------+
+    +----------------------+-------------------------------------------------------------------------+
+    | Alias                | Date type                                                               |
+    +======================+=========================================================================+
+    | standard             | ``np.datetime64`` (falls back to ``cftime.DatetimeProlepticGregorian``) |
+    +----------------------+-------------------------------------------------------------------------+
+    | gregorian            | ``cftime.DatetimeGregorian``                                            |
+    +----------------------+-------------------------------------------------------------------------+
+    | proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian``                                   |
+    +----------------------+-------------------------------------------------------------------------+
+    | noleap, 365_day      | ``cftime.DatetimeNoLeap``                                               |
+    +----------------------+-------------------------------------------------------------------------+
+    | all_leap, 366_day    | ``cftime.DatetimeAllLeap``                                              |
+    +----------------------+-------------------------------------------------------------------------+
+    | 360_day              | ``cftime.Datetime360Day``                                               |
+    +----------------------+-------------------------------------------------------------------------+
+    | julian               | ``cftime.DatetimeJulian``                                               |
+    +----------------------+-------------------------------------------------------------------------+
 
     The ``CFTimeIndex``-enabled portion of this function supports most of the
     features of ``pandas.date_range`` (e.g. specifying how the index is
@@ -711,7 +711,7 @@ def date_range(start=None, end=None, periods=None, freq='D',
     >>> xr.date_range(start='2000', periods=6, freq='2MS', calendar='noleap')
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
-                dtype='object')
+                dtype='object', calendar='noleap')
 
     If a 'standard' calendar is specified, but the dates are outside the
     ``pandas.Timestamp``-valid range, a ``CFTimeIndex`` composed of
@@ -720,7 +720,7 @@ def date_range(start=None, end=None, periods=None, freq='D',
     >>> xr.date_range(start='0001', periods=6, freq='2MS', calendar='standard')
     CFTimeIndex([0001-01-01 00:00:00, 0001-03-01 00:00:00, 0001-05-01 00:00:00,
                  0001-07-01 00:00:00, 0001-09-01 00:00:00, 0001-11-01 00:00:00],
-                dtype='object')
+                dtype='object', calendar='proleptic_gregorian')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import pytest
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -9,6 +10,7 @@ from datetime import timedelta
 from xarray.coding.cftimeindex import (
     parse_iso8601, CFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
+from xarray.coding.times import infer_calendar_name
 from xarray.tests import assert_array_equal, assert_identical
 
 from . import has_cftime, has_cftime_or_netCDF4
@@ -142,18 +144,21 @@ def test_constructor_with_name(index_with_name, name, expected_name):
 def test_assert_all_valid_date_type(date_type, index):
     import cftime
     if date_type is cftime.DatetimeNoLeap:
-        mixed_date_types = [date_type(1, 1, 1),
-                            cftime.DatetimeAllLeap(1, 2, 1)]
+        mixed_date_types = np.array(
+            [date_type(1, 1, 1),
+             cftime.DatetimeAllLeap(1, 2, 1)])
     else:
-        mixed_date_types = [date_type(1, 1, 1),
-                            cftime.DatetimeNoLeap(1, 2, 1)]
+        mixed_date_types = np.array(
+            [date_type(1, 1, 1),
+             cftime.DatetimeNoLeap(1, 2, 1)])
     with pytest.raises(TypeError):
         assert_all_valid_date_type(mixed_date_types)
 
     with pytest.raises(TypeError):
-        assert_all_valid_date_type([1, date_type(1, 1, 1)])
+        assert_all_valid_date_type(np.array([1, date_type(1, 1, 1)]))
 
-    assert_all_valid_date_type([date_type(1, 1, 1), date_type(1, 2, 1)])
+    assert_all_valid_date_type(
+        np.array([date_type(1, 1, 1), date_type(1, 2, 1)]))
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
@@ -606,3 +611,29 @@ def test_concat_cftimeindex(date_type, enable_cftimeindex):
     else:
         assert isinstance(da.indexes['time'], pd.Index)
         assert not isinstance(da.indexes['time'], CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_empty_cftimeindex():
+    index = CFTimeIndex([])
+    assert index.date_type is None
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_repr(date_type):
+    index = CFTimeIndex([date_type(1, 1, 1)])
+    result = repr(index)
+    expected = ("CFTimeIndex([0001-01-01 00:00:00], "
+                "dtype='object', calendar={})")
+    expected = expected.format(repr(infer_calendar_name(index._data)))
+    assert result == expected
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_repr_empty():
+    index = CFTimeIndex([])
+    result = repr(index)
+    expected = ("CFTimeIndex([], "
+                "dtype='object', calendar={})")
+    expected = expected.format(None)
+    assert result == expected
