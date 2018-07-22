@@ -744,18 +744,14 @@ def date_range(start=None, end=None, periods=None, freq='D',
                 raise ValueError(
                     "'tz' can only be specified if the resulting"
                     "index is a DatetimeIndex.")
-            dates = _cftime_range(
-                start=start, end=end, periods=periods,
-                freq=freq, closed=closed, normalize=normalize,
-                calendar=calendar)
-            return CFTimeIndex(dates, name=name)
+            return CFTimeIndex(start=start, end=end, periods=periods,
+                               freq=freq, closed=closed, normalize=normalize,
+                               calendar=calendar, name=name)
     else:
         if tz is not None:
             raise ValueError(
                 "'tz' cannot be specified for non-standard calendars."
             )
-        dates = _cftime_range(
-            start=start, end=end, periods=periods,
-            freq=freq, closed=closed, normalize=normalize,
-            calendar=calendar)
-        return CFTimeIndex(dates, name=name)
+        return CFTimeIndex(start=start, end=end, periods=periods,
+                           freq=freq, closed=closed, normalize=normalize,
+                           calendar=calendar, name=name)
