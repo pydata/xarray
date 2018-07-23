@@ -1,5 +1,5 @@
 .. _recipes:
 
-Recipes
+Gallery
 =======
 
