@@ -191,16 +191,18 @@ non-computer scientists or users less familiar with the pydata ecosystem
 might find it difficult to learn xarray and realize how xarray can help
 them in their daily work.
 
-In order to lower this adoption barrier, we propose to: - Develop
-entry-level tutorials for users with different backgrounds. For example,
-we would like to develop tutorials for users with or without previous
-knowledge of pandas, numpy, netCDF, etc. These tutorials may be built as
-part of xarray's documentation or included in a seperate repository to
-enable interactive use (e.g. mybinder.org). - Document typical user
-workflows in a dedicated website, following the example of
-`dask-stories <https://matthewrocklin.com/blog/work/2018/07/16/dask-stories>`__.
-- Write a basic glossary that defines terms that might not be familiar
-to all (e.g. "lazy", "labeled", "serialization", "indexing", "backend").
+In order to lower this adoption barrier, we propose to:
+
+-  Develop entry-level tutorials for users with different backgrounds. For
+   example, we would like to develop tutorials for users with or without
+   previous knowledge of pandas, numpy, netCDF, etc. These tutorials may be
+   built as part of xarray's documentation or included in a seperate repository
+   to enable interactive use (e.g. mybinder.org).
+-  Document typical user workflows in a dedicated website, following the example
+   of `dask-stories
+   <https://matthewrocklin.com/blog/work/2018/07/16/dask-stories>`__.
+-  Write a basic glossary that defines terms that might not be familiar to all
+   (e.g. "lazy", "labeled", "serialization", "indexing", "backend").
 
 Administrative
 --------------
