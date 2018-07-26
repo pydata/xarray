@@ -1,7 +1,6 @@
 name: xarray-docs
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python=3.6
   - numpy
@@ -16,7 +15,7 @@ dependencies:
   - sphinx
   - netCDF4
   - cartopy
-  - conda-forge/label/dev::rasterio
+  - rasterio
   - sphinx-gallery
   - zarr
   - iris
