@@ -48,6 +48,23 @@ array-like, which gives the interpolated result as an array.
     # interpolation
     da.interp(time=[2.5, 3.5])
 
+
+To interpolate data with a :py:func:`numpy.datetime64` coordinate you have to 
+wrap it explicitly in a :py:func:`numpy.datetime64` object.
+
+.. ipython:: python
+
+    da_dt64 = xr.DataArray([1, 3],
+                           [('time', pd.date_range('1/1/2000', '1/3/2000', periods=2))])
+    da_dt64.interp(time=np.datetime64('2000-01-02'))
+
+The interpolated data can be merged into the original :py:class:`~xarray.DataArray`
+using :py:meth:`~xarray.concat`.
+
+.. ipython:: python
+
+    xr.concat([da_dt64, da_dt64.interp(time=np.datetime64('2000-01-02'))], dim='time')
+
 .. note::
 
   Currently, our interpolation only works for regular grids.
