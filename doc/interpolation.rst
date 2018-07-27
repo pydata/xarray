@@ -58,12 +58,12 @@ wrap it explicitly in a :py:func:`numpy.datetime64` object.
                            [('time', pd.date_range('1/1/2000', '1/3/2000', periods=2))])
     da_dt64.interp(time=np.datetime64('2000-01-02'))
 
-The interpolated data can be merged into the original :py:class:`~xarray.DataArray`
-using :py:meth:`~xarray.concat`.
+The interpolated data can be merged into the original :py:class:`~xarray.DataArray` 
+by specifing the time periods required.
 
 .. ipython:: python
 
-    xr.concat([da_dt64, da_dt64.interp(time=np.datetime64('2000-01-02'))], dim='time')
+    da_dt64.interp(time=pd.date_range('1/1/2000', '1/3/2000', periods=3))
 
 .. note::
 
