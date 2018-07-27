@@ -22,6 +22,7 @@ For netCDF and IO
 - `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
+- `h5py <https://www.h5py.org/>`__: used by h5netcdf to read and write netCDF files
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
@@ -31,6 +32,10 @@ For netCDF and IO
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
+- `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
+  other gridded raster datasets.
+- `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
+  Cube objects.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
