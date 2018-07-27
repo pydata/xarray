@@ -45,11 +45,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by 
+- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  invalid chunk size encoding after reading from an existing store
+  (:issue:`2278`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.8:
 

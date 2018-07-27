@@ -1522,6 +1522,20 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.open(store) as actual:
                 assert_identical(original, actual)
 
+    def test_encoding_chunksizes(self):
+        # regression test for GH2278
+        nx, ny, nt = 4, 4, 5
+        original = xr.Dataset({}, coords={'x': np.arange(nx),
+                                          'y': np.arange(ny),
+                                          't': np.arange(nt)})
+        original['v'] = xr.Variable(('x', 'y', 't'), np.zeros((nx, ny, nt)))
+        original = original.chunk({'t': 1, 'x': 2, 'y': 2})
+
+        with self.roundtrip(original) as ds1:
+            assert_equal(ds1, original)
+            with self.roundtrip(ds1.isel(t=0)) as ds2:
+                assert_equal(ds2, original.isel(t=0))
+
 
 @requires_zarr
 class ZarrDictStoreTest(BaseZarrTest, TestCase):

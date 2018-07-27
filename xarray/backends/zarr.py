@@ -103,9 +103,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
         enc_chunks_tuple = tuple(enc_chunks)
 
     if len(enc_chunks_tuple) != ndim:
-        raise ValueError("zarr chunks tuple %r must have same length as "
-                         "variable.ndim %g" %
-                         (enc_chunks_tuple, ndim))
+        # throw away encoding chunks, start over
+        return _determine_zarr_chunks(None, var_chunks, ndim)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
