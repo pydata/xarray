@@ -1404,12 +1404,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 self.assertEqual((4,), actual['var1'].encoding['chunks'])
 
-        # specify incompatible encoding
-        ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
-        with pytest.raises(ValueError) as e_info:
-            with self.roundtrip(ds_chunk4) as actual:
-                pass
-        assert e_info.match('chunks')
 
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
