@@ -10,7 +10,8 @@ from collections import Counter
 
 import numpy as np
 
-from . import duck_array_ops, utils
+from . import duck_array_ops
+from . import utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, dask_array_type, basestring

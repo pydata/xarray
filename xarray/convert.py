@@ -2,7 +2,8 @@
 """
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
+from collections import Counter, OrderedDict
+
 import numpy as np
 import pandas as pd
 
@@ -156,8 +157,12 @@ def to_iris(dataarray):
         if coord.dims:
             axis = dataarray.get_axis_num(coord.dims)
         if coord_name in dataarray.dims:
-            iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
-            dim_coords.append((iris_coord, axis))
+            try:
+                iris_coord = iris.coords.DimCoord(coord.values, **coord_args)
+                dim_coords.append((iris_coord, axis))
+            except ValueError:
+                iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
+                aux_coords.append((iris_coord, axis))
         else:
             iris_coord = iris.coords.AuxCoord(coord.values, **coord_args)
             aux_coords.append((iris_coord, axis))
@@ -183,7 +188,7 @@ def _iris_obj_to_attrs(obj):
              'long_name': obj.long_name}
     if obj.units.calendar:
         attrs['calendar'] = obj.units.calendar
-    if obj.units.origin != '1':
+    if obj.units.origin != '1' and not obj.units.is_unknown():
         attrs['units'] = obj.units.origin
     attrs.update(obj.attributes)
     return dict((k, v) for k, v in attrs.items() if v is not None)
@@ -206,34 +211,46 @@ def _iris_cell_methods_to_str(cell_methods_obj):
     return ' '.join(cell_methods)
 
 
+def _name(iris_obj, default='unknown'):
+    """ Mimicks `iris_obj.name()` but with different name resolution order.
+
+    Similar to iris_obj.name() method, but using iris_obj.var_name first to
+    enable roundtripping.
+    """
+    return (iris_obj.var_name or iris_obj.standard_name or
+            iris_obj.long_name or default)
+
+
 def from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
     from xarray.core.pycompat import dask_array_type
 
-    name = cube.var_name
+    name = _name(cube)
+    if name == 'unknown':
+        name = None
     dims = []
     for i in range(cube.ndim):
         try:
             dim_coord = cube.coord(dim_coords=True, dimensions=(i,))
-            dims.append(dim_coord.var_name)
+            dims.append(_name(dim_coord))
         except iris.exceptions.CoordinateNotFoundError:
             dims.append("dim_{}".format(i))
+
+    if len(set(dims)) != len(dims):
+        duplicates = [k for k, v in Counter(dims).items() if v > 1]
+        raise ValueError('Duplicate coordinate name {}.'.format(duplicates))
 
     coords = OrderedDict()
 
     for coord in cube.coords():
         coord_attrs = _iris_obj_to_attrs(coord)
         coord_dims = [dims[i] for i in cube.coord_dims(coord)]
-        if not coord.var_name:
-            raise ValueError("Coordinate '{}' has no "
-                             "var_name attribute".format(coord.name()))
         if coord_dims:
-            coords[coord.var_name] = (coord_dims, coord.points, coord_attrs)
+            coords[_name(coord)] = (coord_dims, coord.points, coord_attrs)
         else:
-            coords[coord.var_name] = ((),
-                                      np.asscalar(coord.points), coord_attrs)
+            coords[_name(coord)] = ((), np.asscalar(coord.points), coord_attrs)
 
     array_attrs = _iris_obj_to_attrs(cube)
     cell_methods = _iris_cell_methods_to_str(cube.cell_methods)
