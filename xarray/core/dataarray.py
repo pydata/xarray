@@ -943,7 +943,7 @@ class DataArray(AbstractArray, DataWithCoords):
         scipy.interpolate.interpn
 
         Examples
-        -------
+        --------
         >>> da = xr.DataArray([1, 3], [('x', np.arange(2))])
         >>> da.interp(x=0.5)
         <xarray.DataArray ()>
