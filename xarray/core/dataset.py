@@ -1331,7 +1331,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             else:
                 v = np.asarray(v)
 
-                if (v.dtype.kind == 'U'
+                if ((v.dtype.kind == 'U' or v.dtype.kind == 'S')
                     and isinstance(self.coords[k].to_index(),
                                  pd.DatetimeIndex)):
                     v = v.astype('datetime64[ns]')
