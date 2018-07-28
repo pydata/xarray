@@ -22,7 +22,6 @@ For netCDF and IO
 - `pydap <http://www.pydap.org/>`__: used as a fallback for accessing OPeNDAP
 - `h5netcdf <https://github.com/shoyer/h5netcdf>`__: an alternative library for
   reading and writing netCDF4 files that does not use the netCDF-C libraries
-- `h5py <https://www.h5py.org/>`__: used by h5netcdf to read and write netCDF files
 - `pynio <https://www.pyngl.ucar.edu/Nio.shtml>`__: for reading GRIB and other
   geoscience specific file formats
 - `zarr <http://zarr.readthedocs.io/>`__: for chunked, compressed, N-dimensional arrays.
