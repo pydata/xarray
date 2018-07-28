@@ -1308,6 +1308,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
+        * string indexers are cast to datetime64
+          if associated index is DatetimeIndex
         """
         from .dataarray import DataArray
 
@@ -1328,6 +1330,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 raise TypeError('cannot use a Dataset as an indexer')
             else:
                 v = np.asarray(v)
+
+                if (v.dtype.kind == 'U'
+                    and isinstance(self.coords[k].to_index(),
+                                 pd.DatetimeIndex)):
+                    v = v.astype('datetime64[ns]')
+
                 if v.ndim == 0:
                     v = as_variable(v)
                 elif v.ndim == 1:

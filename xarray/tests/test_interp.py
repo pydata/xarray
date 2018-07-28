@@ -478,3 +478,11 @@ def test_datetime():
                     0.5 * (da.isel(time=0) + da.isel(time=1)))
     assert_allclose(actual.isel(time=1).drop('time'),
                     0.5 * (da.isel(time=1) + da.isel(time=2)))
+
+    x_new = np.array(['2000-01-01T12:00',
+                      '2000-01-02T12:00'])
+    actual = da.interp(time=x_new)
+    assert_allclose(actual.isel(time=0).drop('time'),
+                    0.5 * (da.isel(time=0) + da.isel(time=1)))
+    assert_allclose(actual.isel(time=1).drop('time'),
+                    0.5 * (da.isel(time=1) + da.isel(time=2)))
