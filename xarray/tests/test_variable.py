@@ -1665,6 +1665,12 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
     def test_getitem_1d_fancy(self):
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
 
+    def test_equals_all_dtypes(self):
+        import dask
+        if '0.18.2' <= LooseVersion(dask.__version__) < '0.18.3':
+            pytest.xfail('https://github.com/pydata/xarray/issues/2318')
+        super(TestVariableWithDask, self).test_equals_all_dtypes()
+
     def test_getitem_with_mask_nd_indexer(self):
         import dask.array as da
         v = Variable(['x'], da.arange(3, chunks=3))
