@@ -1274,6 +1274,23 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
+    def test_write_inconsistent_chunks(self):
+        # Construct two variables with the same dimensions, but different
+        # chunk sizes.
+        x = da.zeros((100, 100), dtype='f4', chunks=(50, 100))
+        x = DataArray(data=x, dims=('lat', 'lon'), name='x')
+        x.encoding['chunksizes'] = (50, 100)
+        x.encoding['original_shape'] = (100, 100)
+        y = da.ones((100, 100), dtype='f4', chunks=(100, 50))
+        y = DataArray(data=y, dims=('lat', 'lon'), name='y')
+        y.encoding['chunksizes'] = (100, 50)
+        y.encoding['original_shape'] = (100, 100)
+        # Put them both into the same dataset
+        ds = Dataset({'x': x, 'y': y})
+        with self.roundtrip(ds) as actual:
+            assert actual['x'].encoding['chunksizes'] == (50, 100)
+            assert actual['y'].encoding['chunksizes'] == (100, 50)
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -1338,7 +1355,6 @@ class BaseZarrTest(CFEncodedDataTest):
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks
-
 
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in
@@ -2915,9 +2931,13 @@ class TestRasterio(TestCase):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                # None is selected
+                # empty selection
                 ind = {'band': np.array([2, 1, 0]),
                        'x': 1, 'y': slice(2, 2, 1)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': slice(0, 0), 'x': 1, 'y': 2}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -3280,3 +3300,38 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
+
+
+def test_pickle_reconstructor():
+
+    lines = ['foo bar spam eggs']
+
+    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
+        with open(tmp, 'w') as f:
+            f.writelines(lines)
+
+        obj = PickleByReconstructionWrapper(open, tmp)
+
+        assert obj.value.readlines() == lines
+
+        p_obj = pickle.dumps(obj)
+        obj.value.close()  # for windows
+        obj2 = pickle.loads(p_obj)
+
+        assert obj2.value.readlines() == lines
+
+        # roundtrip again to make sure we can fully restore the state
+        p_obj2 = pickle.dumps(obj2)
+        obj2.value.close()  # for windows
+        obj3 = pickle.loads(p_obj2)
+
+        assert obj3.value.readlines() == lines
+
+
+@requires_scipy_or_netCDF4
+def test_no_warning_from_dask_effective_get():
+    with create_tmp_file() as tmpfile:
+        with pytest.warns(None) as record:
+            ds = Dataset()
+            ds.to_netcdf(tmpfile)
+        assert len(record) == 0

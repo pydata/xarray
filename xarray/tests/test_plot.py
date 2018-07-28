@@ -17,7 +17,8 @@ from xarray.plot.utils import (
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn, requires_cftime)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -228,9 +229,31 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(xref, x)
         np.testing.assert_allclose(yref, y)
 
-        # test that warning is raised for non-monotonic inputs
+        # test that ValueError is raised for non-monotonic 1D inputs
         with pytest.raises(ValueError):
-            _infer_interval_breaks(np.array([0, 2, 1]))
+            _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
+
+    def test_geo_data(self):
+        # Regression test for gh2250
+        # Realistic coordinates taken from the example dataset
+        lat = np.array([[16.28, 18.48, 19.58, 19.54, 18.35],
+                        [28.07, 30.52, 31.73, 31.68, 30.37],
+                        [39.65, 42.27, 43.56, 43.51, 42.11],
+                        [50.52, 53.22, 54.55, 54.50, 53.06]])
+        lon = np.array([[-126.13, -113.69, -100.92, -88.04, -75.29],
+                        [-129.27, -115.62, -101.54, -87.32, -73.26],
+                        [-133.10, -118.00, -102.31, -86.42, -70.76],
+                        [-137.85, -120.99, -103.28, -85.28, -67.62]])
+        data = np.sqrt(lon ** 2 + lat ** 2)
+        da = DataArray(data, dims=('y', 'x'),
+                       coords={'lon': (('y', 'x'), lon),
+                               'lat': (('y', 'x'), lat)})
+        da.plot(x='lon', y='lat')
+        ax = plt.gca()
+        assert ax.has_data()
+        da.plot(x='lat', y='lon')
+        ax = plt.gca()
+        assert ax.has_data()
 
     def test_datetime_dimension(self):
         nrow = 3
@@ -261,6 +284,7 @@ class TestPlot(PlotTestCase):
             d[0].plot(x='x', y='y', col='z', ax=plt.gca())
 
     @pytest.mark.slow
+    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -273,12 +297,9 @@ class TestPlot(PlotTestCase):
             cmap='cool',
             subplot_kws=dict(facecolor='r'))
         for ax in g.axes.flat:
-            try:
-                # mpl V2
-                assert ax.get_facecolor()[0:3] == \
-                    mpl.colors.to_rgb('r')
-            except AttributeError:
-                assert ax.get_axis_bgcolor() == 'r'
+            # mpl V2
+            assert ax.get_facecolor()[0:3] == \
+                mpl.colors.to_rgb('r')
 
     @pytest.mark.slow
     def test_plot_size(self):
@@ -440,7 +461,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(self.data, robust=True)
         assert cmap_params['vmin'] == np.percentile(self.data, 2)
         assert cmap_params['vmax'] == np.percentile(self.data, 98)
-        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['cmap'] == 'viridis'
         assert cmap_params['extend'] == 'both'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
@@ -524,7 +545,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Default with negative data will be a divergent cmap
         cmap_params = _determine_cmap_params(neg)
@@ -536,17 +557,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(neg, vmin=-0.1, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(neg, vmax=0.5, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Setting center=False too
         cmap_params = _determine_cmap_params(neg, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # However, I should still be able to set center and have a div cmap
         cmap_params = _determine_cmap_params(neg, center=0)
@@ -576,17 +597,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos, vmin=0.1)
         assert cmap_params['vmin'] == 0.1
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(pos, vmax=0.5)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # If both vmin and vmax are provided, output is non-divergent
         cmap_params = _determine_cmap_params(neg, vmin=-0.2, vmax=0.6)
         assert cmap_params['vmin'] == -0.2
         assert cmap_params['vmax'] == 0.6
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
 
 @requires_matplotlib
@@ -1541,6 +1562,14 @@ class TestFacetedLinePlots(PlotTestCase):
 
         g = self.darray.plot(row='col', col='row', hue='hue')
         assert g.axes.shape == (len(self.darray.col), len(self.darray.row))
+
+    def test_unnamed_args(self):
+        g = self.darray.plot.line('o--', row='row', col='col', hue='hue')
+        lines = [q for q in g.axes.flat[0].get_children()
+                 if isinstance(q, mpl.lines.Line2D)]
+        # passing 'o--' as argument should set marker and linestyle
+        assert lines[0].get_marker() == 'o'
+        assert lines[0].get_linestyle() == '--'
 
     def test_default_labels(self):
         g = self.darray.plot(row='row', col='col', hue='hue')

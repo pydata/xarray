@@ -52,7 +52,7 @@ class RasterioArrayWrapper(BackendArray):
 
         Parameter
         ---------
-        key: ExplicitIndexer
+        key: tuple of int
 
         Returns
         -------
@@ -65,13 +65,11 @@ class RasterioArrayWrapper(BackendArray):
         --------
         indexing.decompose_indexer
         """
-        key, np_inds = indexing.decompose_indexer(
-            key, self.shape, indexing.IndexingSupport.OUTER)
+        assert len(key) == 3, 'rasterio datasets should always be 3D'
 
         # bands cannot be windowed but they can be listed
-        band_key = key.tuple[0]
-        new_shape = []
-        np_inds2 = []
+        band_key = key[0]
+        np_inds = []
         # bands (axis=0) cannot be windowed but they can be listed
         if isinstance(band_key, slice):
             start, stop, step = band_key.indices(self.shape[0])
@@ -79,18 +77,16 @@ class RasterioArrayWrapper(BackendArray):
         # be sure we give out a list
         band_key = (np.asarray(band_key) + 1).tolist()
         if isinstance(band_key, list):  # if band_key is not a scalar
-            new_shape.append(len(band_key))
-            np_inds2.append(slice(None))
+            np_inds.append(slice(None))
 
         # but other dims can only be windowed
         window = []
         squeeze_axis = []
-        for i, (k, n) in enumerate(zip(key.tuple[1:], self.shape[1:])):
+        for i, (k, n) in enumerate(zip(key[1:], self.shape[1:])):
             if isinstance(k, slice):
                 # step is always positive. see indexing.decompose_indexer
                 start, stop, step = k.indices(n)
-                np_inds2.append(slice(None, None, step))
-                new_shape.append(stop - start)
+                np_inds.append(slice(None, None, step))
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
@@ -99,21 +95,34 @@ class RasterioArrayWrapper(BackendArray):
                 stop = k + 1
             else:
                 start, stop = np.min(k), np.max(k) + 1
-                np_inds2.append(k - start)
-                new_shape.append(stop - start)
+                np_inds.append(k - start)
             window.append((start, stop))
 
-        np_inds = indexing._combine_indexers(
-            indexing.OuterIndexer(tuple(np_inds2)), new_shape, np_inds)
-        return band_key, window, tuple(squeeze_axis), np_inds
+        if isinstance(key[1], np.ndarray) and isinstance(key[2], np.ndarray):
+            # do outer-style indexing
+            np_inds[1:] = np.ix_(*np_inds[1:])
 
-    def __getitem__(self, key):
+        return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
+
+    def _getitem(self, key):
         band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
-        riods = self.manager.acquire()
-        out = riods.read(band_key, window=tuple(window))
+
+        if not band_key or any(start == stop for (start, stop) in window):
+            # no need to do IO
+            shape = (len(band_key),) + tuple(
+                stop - start for (start, stop) in window)
+            out = np.zeros(shape, dtype=self.dtype)
+        else:
+            riods = self.manager.acquire()
+            out = riods.read(band_key, window=window)
+
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
-        return indexing.NumpyIndexingAdapter(out)[np_inds]
+        return out[np_inds]
+
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
 
 
 def _parse_envi(meta):
