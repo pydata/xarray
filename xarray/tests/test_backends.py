@@ -2705,9 +2705,10 @@ class PseudoNetCDFFormatTest(TestCase):
                                             engine='pseudonetcdf',
                                             autoclose=False,
                                             backend_kwargs=fmtkw)
-            with self.roundtrip(expected,
-                                save_kwargs=fmtkw,
-                                open_kwargs={'backend_kwargs': fmtkw}) as actual:
+            with self.roundtrip(
+                    expected,
+                    save_kwargs=fmtkw,
+                    open_kwargs={'backend_kwargs': fmtkw}) as actual:
                 assert_identical(expected, actual)
 
     def save(self, dataset, path, **save_kwargs):
