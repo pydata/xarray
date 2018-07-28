@@ -176,7 +176,7 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 class AbstractDataStore(Mapping):
     _autoclose = None
     _ds = None
-    _isopen = False
+    _isopen = None
 
     def __iter__(self):
         return iter(self.variables)
@@ -330,7 +330,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError
 
     def sync(self, compute=True):
-        if self._isopen and self._autoclose:
+        if self._isopen is not None and self._isopen and self._autoclose:
             # datastore will be reopened during write
             self.close()
         self.delayed_store = self.writer.sync(compute=compute)

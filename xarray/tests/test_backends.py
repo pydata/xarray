@@ -1565,10 +1565,9 @@ class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
         # regression test for GH1321
         Dataset({'foo': 42}).to_netcdf(engine='scipy')
 
-    @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
-    def test_bytesio_pickle(self):
+    def test_bytes_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
-        fobj = BytesIO(data.to_netcdf())
+        fobj = data.to_netcdf()
         with open_dataset(fobj, autoclose=self.autoclose) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
@@ -1896,6 +1895,10 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             self.assertEqual(actual.x.encoding['compression'], 'lzf')
             self.assertEqual(actual.x.encoding['compression_opts'], None)
+
+    @pytest.mark.xfail(reason="won't work until we use FileManager here")
+    def test_roundtrip_bytes_with_fill_value(self):
+        super(H5NetCDFDataTest, self).test_roundtrip_bytes_with_fill_value()
 
 
 # tests pending h5netcdf fix
@@ -2348,20 +2351,6 @@ class DaskTest(TestCase, DatasetIOTestCases):
         self.assertTrue(computed._in_memory)
         assert_allclose(actual, computed, decode_bytes=False)
 
-    def test_to_netcdf_compute_false_roundtrip(self):
-        from dask.delayed import Delayed
-
-        original = create_test_data().chunk()
-
-        with create_tmp_file() as tmp_file:
-            # dataset, path, **kwargs):
-            delayed_obj = self.save(original, tmp_file, compute=False)
-            assert isinstance(delayed_obj, Delayed)
-            delayed_obj.compute()
-
-            with self.open(tmp_file) as actual:
-                assert_identical(original, actual)
-
     def test_save_mfdataset_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
@@ -2651,28 +2640,27 @@ class PseudoNetCDFFormatTest(TestCase):
         """
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
+                                    message='IOAPI_ISPH')
             camxfile = open_example_dataset('example.uamiv',
                                             engine='pseudonetcdf',
                                             autoclose=True,
                                             backend_kwargs={'format': 'uamiv'})
-        data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
-        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
-                               dict(units='ppm', long_name='O3'.ljust(16),
-                                    var_desc='O3'.ljust(80)))
-        actual = camxfile.variables['O3']
-        assert_allclose(expected, actual)
+            data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+            expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                                   dict(units='ppm', long_name='O3'.ljust(16),
+                                        var_desc='O3'.ljust(80)))
+            actual = camxfile.variables['O3']
+            assert_allclose(expected, actual)
 
-        data = np.array(['2002-06-03'], 'datetime64[ns]')
-        expected = xr.Variable(('TSTEP',), data,
-                               dict(bounds='time_bounds',
-                                    long_name=('synthesized time coordinate ' +
-                                               'from SDATE, STIME, STEP ' +
-                                               'global attributes')))
-        actual = camxfile.variables['time']
-        assert_allclose(expected, actual)
-        camxfile.close()
+            data = np.array(['2002-06-03'], 'datetime64[ns]')
+            attrs = dict(bounds='time_bounds',
+                         long_name=('synthesized time coordinate ' +
+                                    'from SDATE, STIME, STEP ' +
+                                    'global attributes'))
+            expected = xr.Variable(('TSTEP',), data, attrs)
+            actual = camxfile.variables['time']
+            assert_allclose(expected, actual)
+            camxfile.close()
 
     def test_uamiv_format_mfread(self):
         """
@@ -2680,8 +2668,7 @@ class PseudoNetCDFFormatTest(TestCase):
         """
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
+                                    message='IOAPI_ISPH')
             camxfile = open_example_mfdataset(
                 ['example.uamiv',
                  'example.uamiv'],
@@ -2690,39 +2677,38 @@ class PseudoNetCDFFormatTest(TestCase):
                 concat_dim='TSTEP',
                 backend_kwargs={'format': 'uamiv'})
 
-        data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
-        data = np.concatenate([data1] * 2, axis=0)
-        expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
-                               dict(units='ppm', long_name='O3'.ljust(16),
-                                    var_desc='O3'.ljust(80)))
-        actual = camxfile.variables['O3']
-        assert_allclose(expected, actual)
+            data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
+            data = np.concatenate([data1] * 2, axis=0)
+            expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
+                                   dict(units='ppm', long_name='O3'.ljust(16),
+                                        var_desc='O3'.ljust(80)))
+            actual = camxfile.variables['O3']
+            assert_allclose(expected, actual)
 
-        data1 = np.array(['2002-06-03'], 'datetime64[ns]')
-        data = np.concatenate([data1] * 2, axis=0)
-        expected = xr.Variable(('TSTEP',), data,
-                               dict(bounds='time_bounds',
-                                    long_name=('synthesized time coordinate ' +
-                                               'from SDATE, STIME, STEP ' +
-                                               'global attributes')))
-        actual = camxfile.variables['time']
-        assert_allclose(expected, actual)
-        camxfile.close()
+            data1 = np.array(['2002-06-03'], 'datetime64[ns]')
+            data = np.concatenate([data1] * 2, axis=0)
+            attrs = dict(bounds='time_bounds',
+                         long_name=('synthesized time coordinate ' +
+                                    'from SDATE, STIME, STEP ' +
+                                    'global attributes'))
+            expected = xr.Variable(('TSTEP',), data, attrs)
+            actual = camxfile.variables['time']
+            assert_allclose(expected, actual)
+            camxfile.close()
 
     def test_uamiv_format_write(self):
         fmtkw = {'format': 'uamiv'}
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
+                                    message='IOAPI_ISPH')
             expected = open_example_dataset('example.uamiv',
                                             engine='pseudonetcdf',
                                             autoclose=False,
                                             backend_kwargs=fmtkw)
-        with self.roundtrip(expected,
-                            save_kwargs=fmtkw,
-                            open_kwargs={'backend_kwargs': fmtkw}) as actual:
-            assert_identical(expected, actual)
+            with self.roundtrip(expected,
+                                save_kwargs=fmtkw,
+                                open_kwargs={'backend_kwargs': fmtkw}) as actual:
+                assert_identical(expected, actual)
 
     def save(self, dataset, path, **save_kwargs):
         import PseudoNetCDF as pnc
@@ -3300,32 +3286,6 @@ class TestDataArrayToNetCDF(TestCase):
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
-
-
-def test_pickle_reconstructor():
-
-    lines = ['foo bar spam eggs']
-
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
-        with open(tmp, 'w') as f:
-            f.writelines(lines)
-
-        obj = PickleByReconstructionWrapper(open, tmp)
-
-        assert obj.value.readlines() == lines
-
-        p_obj = pickle.dumps(obj)
-        obj.value.close()  # for windows
-        obj2 = pickle.loads(p_obj)
-
-        assert obj2.value.readlines() == lines
-
-        # roundtrip again to make sure we can fully restore the state
-        p_obj2 = pickle.dumps(obj2)
-        obj2.value.close()  # for windows
-        obj3 = pickle.loads(p_obj2)
-
-        assert obj3.value.readlines() == lines
 
 
 @requires_scipy_or_netCDF4
