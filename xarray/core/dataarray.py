@@ -941,6 +941,15 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         scipy.interpolate.interp1d
         scipy.interpolate.interpn
+
+        Examples
+        -------
+        >>> da = xr.DataArray([1, 3], [('x', np.arange(2))])
+        >>> da.interp(x=0.5)
+        <xarray.DataArray ()>
+        array(2.0)
+        Coordinates:
+            x        float64 0.5
         """
         if self.dtype.kind not in 'uifc':
             raise TypeError('interp only works for a numeric type array. '
