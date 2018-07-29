@@ -7,13 +7,17 @@ except ImportError:
 
 import pytest
 
-from xarray.backends.file_manager import FileManager
+from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 
 
-@pytest.fixture(params=[1, 2, 3])
+@pytest.fixture(params=[1, 2, 3, None])
 def file_cache(request):
-    yield LRUCache(maxsize=request.param)
+    maxsize = request.param
+    if maxsize is None:
+        yield {}
+    else:
+        yield LRUCache(maxsize)
 
 
 def test_file_manager_mock_write(file_cache):
@@ -21,7 +25,8 @@ def test_file_manager_mock_write(file_cache):
     opener = mock.Mock(spec=open, return_value=mock_file)
     lock = mock.MagicMock(spec=threading.Lock())
 
-    manager = FileManager(opener, 'filename', lock=lock, cache=file_cache)
+    manager = CachingFileManager(
+        opener, 'filename', lock=lock, cache=file_cache)
     f = manager.acquire()
     f.write('contents')
     manager.close()
@@ -36,8 +41,8 @@ def test_file_manager_mock_write(file_cache):
 def test_file_manager_write_consecutive(tmpdir, file_cache):
     path1 = str(tmpdir.join('testing1.txt'))
     path2 = str(tmpdir.join('testing2.txt'))
-    manager1 = FileManager(open, path1, mode='w', cache=file_cache)
-    manager2 = FileManager(open, path2, mode='w', cache=file_cache)
+    manager1 = CachingFileManager(open, path1, mode='w', cache=file_cache)
+    manager2 = CachingFileManager(open, path2, mode='w', cache=file_cache)
     f1a = manager1.acquire()
     f1a.write('foo')
     f1a.flush()
@@ -46,7 +51,7 @@ def test_file_manager_write_consecutive(tmpdir, file_cache):
     f2.flush()
     f1b = manager1.acquire()
     f1b.write('baz')
-    assert (file_cache.maxsize > 1) == (f1a is f1b)
+    assert (getattr(file_cache, 'maxsize', float('inf')) > 1) == (f1a is f1b)
     manager1.close()
     manager2.close()
 
@@ -58,7 +63,7 @@ def test_file_manager_write_consecutive(tmpdir, file_cache):
 
 def test_file_manager_write_concurrent(tmpdir, file_cache):
     path = str(tmpdir.join('testing.txt'))
-    manager = FileManager(open, path, mode='w', cache=file_cache)
+    manager = CachingFileManager(open, path, mode='w', cache=file_cache)
     f1 = manager.acquire()
     f2 = manager.acquire()
     f3 = manager.acquire()
@@ -78,7 +83,7 @@ def test_file_manager_write_concurrent(tmpdir, file_cache):
 
 def test_file_manager_write_pickle(tmpdir, file_cache):
     path = str(tmpdir.join('testing.txt'))
-    manager = FileManager(open, path, mode='w', cache=file_cache)
+    manager = CachingFileManager(open, path, mode='w', cache=file_cache)
     f = manager.acquire()
     f.write('foo')
     f.flush()
@@ -98,7 +103,12 @@ def test_file_manager_read(tmpdir, file_cache):
     with open(path, 'w') as f:
         f.write('foobar')
 
-    manager = FileManager(open, path, cache=file_cache)
+    manager = CachingFileManager(open, path, cache=file_cache)
     f = manager.acquire()
     assert f.read() == 'foobar'
     manager.close()
+
+
+def test_file_manager_invalid_kwargs():
+    with pytest.raises(TypeError):
+        CachingFileManager(open, 'dummy', mode='w', invalid=True)

@@ -25,10 +25,22 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.9:
+.. _whats-new.0.11.0:
 
-v0.10.9 (unreleased)
+v0.11.0 (unreleased)
 --------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's storage backends now automatically open and close files when
+  necessary, rather than requiring opening a file with ``autoclose=True``. A
+  global least-recently-used cache is used to store open files; the default
+  limit of 512 open files should suffice in most cases, but can be adjusted if
+  necessary with
+  ``xarray.set_options(file_cache_maxsize=...)``.
+
+  TODO: Add some note about performance benefits.
 
 Documentation
 ~~~~~~~~~~~~~

@@ -32,6 +32,8 @@ def test_trivial():
 
 
 def test_invalid():
+    with pytest.raises(TypeError):
+        LRUCache(maxsize=None)
     with pytest.raises(ValueError):
         LRUCache(maxsize=-1)
 

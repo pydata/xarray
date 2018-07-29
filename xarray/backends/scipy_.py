@@ -11,7 +11,7 @@ from ..core.indexing import NumpyIndexingAdapter
 from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
-from .file_manager import FileManager
+from .file_manager import CachingFileManager
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
@@ -113,7 +113,7 @@ class ScipyDataStore(WritableCFDataStore):
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, autoclose=None, lock=None):
+                 writer=None, mmap=None, lock=None):
         import scipy
         import scipy.io
 
@@ -137,7 +137,7 @@ class ScipyDataStore(WritableCFDataStore):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
-        self._manager = FileManager(
+        self._manager = CachingFileManager(
             _open_scipy_netcdf, filename_or_obj, mode=mode,
             kwargs=dict(mmap=mmap, version=version))
         super(ScipyDataStore, self).__init__(writer, lock=lock)

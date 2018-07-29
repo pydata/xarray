@@ -1,6 +1,8 @@
 import collections
 import threading
 
+from ..pycompat import move_to_end
+
 
 class LRUCache(collections.MutableMapping):
     """Thread-safe LRUCache based on an OrderedDict.
@@ -26,6 +28,8 @@ class LRUCache(collections.MutableMapping):
             Function to call like ``on_evict(key, value)`` when items are
             evicted.
         """
+        if not isinstance(maxsize, int):
+            raise TypeError('maxsize must be an integer')
         if maxsize < 0:
             raise ValueError('maxsize must be non-negative')
         self._maxsize = maxsize
@@ -37,9 +41,7 @@ class LRUCache(collections.MutableMapping):
         # record recent use of the key by moving it to the front of the list
         with self._lock:
             value = self._cache[key]
-            # On Python 3, could just use: self._cache.move_to_end(key)
-            del self._cache[key]
-            self._cache[key] = value
+            move_to_end(self._cache, key)
             return value
 
     def _enforce_size_limit(self, capacity):

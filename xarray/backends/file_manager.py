@@ -15,12 +15,29 @@ _DEFAULT_MODE = utils.ReprObject('<unused>')
 
 
 class FileManager(object):
+    """Manager for acquiring and closing a file object.
+
+    Use FileManager subclasses (CachingFileManager in particular) on backend
+    storage classes to automatically handle issues related to keeping track of
+    many open files and transferring them between multiple processes.
+    """
+
+    def acquire(self):
+        """Acquire the file object from this manager."""
+        raise NotImplementedError
+
+    def close(self):
+        """Close the file object associated with this manager, if needed."""
+        raise NotImplementedError
+
+
+class CachingFileManager(FileManager):
     """Wrapper for automatically opening and closing file objects.
 
-    Unlike files, FileManager objects can be safely pickled and passed between
-    processes. They should be explicitly closed to release resources, but
-    a per-process least-recently-used cache for open files ensures that you can
-    safely create arbitrarily large numbers of FileManager objects.
+    Unlike files, CachingFileManager objects can be safely pickled and passed
+    between processes. They should be explicitly closed to release resources,
+    but a per-process least-recently-used cache for open files ensures that you
+    can safely create arbitrarily large numbers of FileManager objects.
 
     Don't directly close files acquired from a FileManager. Instead, call
     FileManager.close(), which ensures that closed files are removed from the
@@ -80,6 +97,10 @@ class FileManager(object):
         kwargs = keywords.pop('kwargs', None)
         lock = keywords.pop('lock', None)
         cache = keywords.pop('cache', FILE_CACHE)
+        if keywords:
+            raise TypeError('FileManager() got unexpected keyword arguments: '
+                            '%s' % list(keywords))
+
         self._opener = opener
         self._args = args
         self._mode = mode
@@ -130,7 +151,8 @@ class FileManager(object):
     def close(self):
         """Explicitly close any associated file object (if necessary)."""
         with self._lock:
-            file = self._cache.pop(self._key, default=None)
+            default = None
+            file = self._cache.pop(self._key, default)
             if file is not None:
                 file.close()
 
@@ -160,3 +182,16 @@ class _HashedSequence(list):
 
     def __hash__(self):
         return self.hashvalue
+
+
+class DummyFileManager(FileManager):
+    """FileManager that simply wraps an open file in the FileManager interface.
+    """
+    def __init__(self, value):
+        self._value = value
+
+    def acquire(self):
+        return self._value
+
+    def close(self):
+        self._value.close()

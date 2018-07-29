@@ -1,13 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
-import functools
-
 import numpy as np
 
 from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
-from .common import AbstractDataStore, BackendArray, DataStorePickleMixin
+from .common import AbstractDataStore, BackendArray
+from .file_manager import CachingFileManager
 
 
 class NioArrayWrapper(BackendArray):
@@ -20,7 +19,6 @@ class NioArrayWrapper(BackendArray):
         self.dtype = np.dtype(array.typecode())
 
     def get_array(self):
-        self.datastore.assert_open()
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
@@ -28,26 +26,20 @@ class NioArrayWrapper(BackendArray):
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
-        with self.datastore.ensure_open(autoclose=True):
-            array = self.get_array()
-            if key == () and self.ndim == 0:
-                return array.get_value()
+        array = self.get_array()
+        if key == () and self.ndim == 0:
+            return array.get_value()
 
-            return array[key]
+        return array[key]
 
 
-class NioDataStore(AbstractDataStore, DataStorePickleMixin):
+class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r', autoclose=False):
+    def __init__(self, filename, mode='r'):
         import Nio
-        opener = functools.partial(Nio.open_file, filename, mode=mode)
-        self._ds = opener()
-        self._autoclose = autoclose
-        self._isopen = True
-        self._opener = opener
-        self._mode = mode
+        self._manager = CachingFileManager(Nio.open_file, filename, mode=mode)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')
@@ -57,17 +49,14 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.items())
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.attributes)
+        return Frozen(self.ds.attributes)
 
     def get_dimensions(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.dimensions)
+        return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
@@ -76,6 +65,4 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         return encoding
 
     def close(self):
-        if self._isopen:
-            self.ds.close()
-            self._isopen = False
+        self._manager.close()

@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import functools
-
 import numpy as np
 
 from .. import Variable
@@ -11,7 +9,8 @@ from ..core.pycompat import OrderedDict
 from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
-from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
+from .common import AbstractDataStore, BackendArray
+from .file_manager import CachingFileManager
 
 
 class PncArrayWrapper(BackendArray):
@@ -24,7 +23,6 @@ class PncArrayWrapper(BackendArray):
         self.dtype = np.dtype(array.dtype)
 
     def get_array(self):
-        self.datastore.assert_open()
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
@@ -33,57 +31,49 @@ class PncArrayWrapper(BackendArray):
             self._getitem)
 
     def _getitem(self, key):
-        with self.datastore.ensure_open(autoclose=True):
-            return self.get_array()[key]
+        return self.get_array()[key]
 
 
-class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
+class PseudoNetCDFDataStore(AbstractDataStore):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
-    def open(cls, filename, format=None, writer=None,
-             autoclose=False, **format_kwds):
+    def open(cls, filename, **format_kwds):
         from PseudoNetCDF import pncopen
-        opener = functools.partial(pncopen, filename, **format_kwds)
-        ds = opener()
-        mode = format_kwds.get('mode', 'r')
-        return cls(ds, mode=mode, writer=writer, opener=opener,
-                   autoclose=autoclose)
 
-    def __init__(self, pnc_dataset, mode='r', writer=None, opener=None,
-                 autoclose=False):
+        keywords = dict(kwargs=format_kwds)
+        # only include mode if explicitly passed
+        mode = format_kwds.pop('mode', None)
+        if mode is not None:
+            keywords['mode'] = mode
 
-        if autoclose and opener is None:
-            raise ValueError('autoclose requires an opener')
+        manager = CachingFileManager(pncopen, filename, **keywords)
+        return cls(manager)
 
-        self._ds = pnc_dataset
-        self._autoclose = autoclose
-        self._isopen = True
-        self._opener = opener
-        self._mode = mode
-        super(PseudoNetCDFDataStore, self).__init__()
+    def __init__(self, manager):
+        self._manager = manager
+
+    @property
+    def ds(self):
+        return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        with self.ensure_open(autoclose=False):
-            data = indexing.LazilyOuterIndexedArray(
-                PncArrayWrapper(name, self)
-            )
+        data = indexing.LazilyOuterIndexedArray(
+            PncArrayWrapper(name, self)
+        )
         attrs = OrderedDict((k, getattr(var, k)) for k in var.ncattrs())
         return Variable(var.dimensions, data, attrs)
 
     def get_variables(self):
-        with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.items())
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(dict([(k, getattr(self.ds, k))
-                                for k in self.ds.ncattrs()]))
+        return Frozen(dict([(k, getattr(self.ds, k))
+                            for k in self.ds.ncattrs()]))
 
     def get_dimensions(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.dimensions)
+        return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
@@ -93,6 +83,4 @@ class PseudoNetCDFDataStore(AbstractDataStore, DataStorePickleMixin):
         return encoding
 
     def close(self):
-        if self._isopen:
-            self.ds.close()
-        self._isopen = False
+        self._manager.close()

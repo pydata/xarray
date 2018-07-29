@@ -174,9 +174,6 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 
 class AbstractDataStore(Mapping):
-    _autoclose = None
-    _ds = None
-    _isopen = None
 
     def __iter__(self):
         return iter(self.variables)
@@ -330,9 +327,6 @@ class AbstractWritableDataStore(AbstractDataStore):
         raise NotImplementedError
 
     def sync(self, compute=True):
-        if self._isopen is not None and self._isopen and self._autoclose:
-            # datastore will be reopened during write
-            self.close()
         self.delayed_store = self.writer.sync(compute=compute)
 
     def store_dataset(self, dataset):
@@ -457,60 +451,3 @@ class WritableCFDataStore(AbstractWritableDataStore):
         attributes = OrderedDict([(k, self.encode_attribute(v))
                                   for k, v in attributes.items()])
         return variables, attributes
-
-
-class DataStorePickleMixin(object):
-    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
-
-    Do not subclass this class: it is not part of xarray's external API.
-    """
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['_ds']
-        del state['_isopen']
-        if self._mode == 'w':
-            # file has already been created, don't override when restoring
-            state['_mode'] = 'a'
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self._ds = None
-        self._isopen = False
-
-    @property
-    def ds(self):
-        if self._ds is not None and self._isopen:
-            return self._ds
-        ds = self._opener(mode=self._mode)
-        self._isopen = True
-        return ds
-
-    @contextlib.contextmanager
-    def ensure_open(self, autoclose=None):
-        """
-        Helper function to make sure datasets are closed and opened
-        at appropriate times to avoid too many open file errors.
-
-        Use requires `autoclose=True` argument to `open_mfdataset`.
-        """
-
-        if autoclose is None:
-            autoclose = self._autoclose
-
-        if not self._isopen:
-            try:
-                self._ds = self._opener()
-                self._isopen = True
-                yield
-            finally:
-                if autoclose:
-                    self.close()
-        else:
-            yield
-
-    def assert_open(self):
-        if not self._isopen:
-            raise AssertionError('internal failure: file must be open '
-                                 'if `autoclose=True` is used.')
