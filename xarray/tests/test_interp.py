@@ -467,7 +467,8 @@ def test_interp_like():
     (np.array([np.datetime64('2000-01-01T12:00'),
                np.datetime64('2000-01-02T12:00')]), [0.5, 1.5]),
     (['2000-01-01T12:00', '2000-01-02T12:00'], [0.5, 1.5]),
-    (['2000-01-01T12:00'], 0.5)  # needs to be list, see #2327
+    (['2000-01-01T12:00'], 0.5),
+    pytest.param('2000-01-01T12:00', 0.5, marks=pytest.mark.xfail)
 ])
 def test_datetime(x_new, expected):
     da = xr.DataArray(np.arange(24), dims='time',
@@ -479,3 +480,12 @@ def test_datetime(x_new, expected):
                                                 .astype('datetime64[ns]'))})
 
     assert_allclose(actual, expected_da)
+
+
+def test_datetime_single_string():
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+    actual = da.interp(time='2000-01-01T12:00')
+    expected = xr.DataArray(0.5)
+
+    assert_allclose(actual.drop('time'), expected)
