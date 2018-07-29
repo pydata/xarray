@@ -412,15 +412,16 @@ def _floatize_x(x, new_x):
     x = list(x)
     new_x = list(new_x)
     for i in range(len(x)):
-        if x[i].dtype.kind in 'Mm':
-            # Scipy casts coordinates to np.float64, which is not accurate
-            # enough for datetime64 (uses 64bit integer).
-            # We assume that the most of the bits are used to represent the
-            # offset (min(x)) and the variation (x - min(x)) can be
-            # represented by float.
-            xmin = np.min(x[i])
-            x[i] = (x[i] - xmin).astype(np.float64)
-            new_x[i] = (new_x[i] - xmin).astype(np.float64)
+        # Scipy casts coordinates to np.float64, which is not accurate
+        # enough for datetime64 (uses 64bit integer).
+        # We assume that the most of the bits are used to represent the
+        # offset (min(x)) and the variation (x - min(x)) can be
+        # represented by float.
+        # Let's be defensive and always rescale (x)
+        xmin = np.min(x[i])
+        xstd = np.std(x[i].astype(np.float64))
+        x[i] = (x[i] - xmin).astype(np.float64) / xstd
+        new_x[i] = (new_x[i] - xmin).astype(np.float64) / xstd
     return x, new_x
 
 
