@@ -24,8 +24,11 @@ dd = pytest.importorskip('dask.dataframe')
 
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
-        with dask.config.set(get=dask.get):
+
+        with (dask.config.set(get=dask.get) if hasattr(dask, 'config')
+              else dask.set_options(get=dask.get)):
             test(actual, expected)
+
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
@@ -824,7 +827,8 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with dask.config.set(get=get):
+        with (dask.config.set(get=get) if hasattr(dask, 'config')
+              else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()
