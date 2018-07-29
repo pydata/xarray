@@ -1568,7 +1568,7 @@ class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
     def test_bytes_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
         fobj = data.to_netcdf()
-        with open_dataset(fobj, autoclose=self.autoclose) as ds:
+        with self.open(fobj) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
 
