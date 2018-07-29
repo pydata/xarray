@@ -44,6 +44,11 @@ Enhancements
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
 
+- When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
+  (:issue:`2284`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
 Bug fixes
 ~~~~~~~~~
 
