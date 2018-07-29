@@ -482,6 +482,7 @@ def test_datetime(x_new, expected):
     assert_allclose(actual, expected_da)
 
 
+@requires_scipy
 def test_datetime_single_string():
     da = xr.DataArray(np.arange(24), dims='time',
                       coords={'time': pd.date_range('2000-01-01', periods=24)})
