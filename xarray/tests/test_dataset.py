@@ -1350,6 +1350,7 @@ class TestDataset(TestCase):
         with pytest.raises(KeyError):
             data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
+    @pytest.mark.filterwarnings('ignore::DeprecationWarning')
     def test_sel_fancy(self):
         data = create_test_data()
 
@@ -1422,7 +1423,7 @@ class TestDataset(TestCase):
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
         with pytest.raises(KeyError):
-            data.sel(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
