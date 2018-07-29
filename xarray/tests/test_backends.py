@@ -1789,6 +1789,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
+    @pytest.mark.filterwarnings('ignore:complex dtypes are supported by h5py')
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:

@@ -1240,6 +1240,7 @@ class TestDataset(TestCase):
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_isel_points(self):
         data = create_test_data()
 
@@ -1317,6 +1318,8 @@ class TestDataset(TestCase):
                          dim2=stations['dim2s'],
                          dim=np.array([4, 5, 6]))
 
+    @pytest.mark.filterwarnings("ignore:Dataset.sel_points")
+    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_sel_points(self):
         data = create_test_data()
 
@@ -1419,7 +1422,7 @@ class TestDataset(TestCase):
         assert_identical(actual['b'].drop('y'), idx_y['b'])
 
         with pytest.raises(KeyError):
-            data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
+            data.sel(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
     def test_sel_method(self):
         data = create_test_data()
