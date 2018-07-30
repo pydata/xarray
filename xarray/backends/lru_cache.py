@@ -1,7 +1,7 @@
 import collections
 import threading
 
-from ..pycompat import move_to_end
+from ..core.pycompat import move_to_end
 
 
 class LRUCache(collections.MutableMapping):
