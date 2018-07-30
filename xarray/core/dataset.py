@@ -3609,7 +3609,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         has the exact value ``value`` or the callable passed into
         ``key=callable`` returns True. The callable will be passed a single
         value, either the value of the attribute ``key`` or ``None`` if the
-        DataArray does not have an attribue with the name ``key``.
+        DataArray does not have an attribute with the name ``key``.
 
         Parameters
         ----------
@@ -3680,7 +3680,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         selection = []
         for var_name, variable in self.data_vars.items():
-            has_value_flag  = False
+            has_value_flag = False
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value)) or
