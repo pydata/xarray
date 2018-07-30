@@ -1,7 +1,6 @@
 name: test_env
 channels:
   - conda-forge
-  - conda-forge/label/dev
 dependencies:
   - python=3.6
   - cftime
@@ -17,7 +16,7 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio>=1.*
+  - rasterio=0.36.0
   - bottleneck
   - pip:
     - coveralls
