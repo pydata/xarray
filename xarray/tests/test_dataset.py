@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -4216,6 +4216,18 @@ def test_dataset_constructor_aligns_to_explicit_coords(
     result = xr.Dataset({'a': a}, coords=coords)
 
     assert_equal(expected, result)
+
+
+def test_constructor_with_dataset(data_set):
+    result = xr.Dataset(data_set)
+    assert_identical(result, data_set)
+
+
+def test_constructor_raises_with_dataset_and_others(data_set):
+    with pytest.raises(ValueError):
+        xr.Dataset(data_set, coords=data_set.attrs)
+    with pytest.raises(ValueError):
+        xr.Dataset(data_set, coords=data_set.coords)
 
 
 @pytest.mark.parametrize('unaligned_coords', (
