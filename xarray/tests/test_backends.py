@@ -1524,6 +1524,7 @@ class BaseZarrTest(CFEncodedDataTest):
 
     def test_encoding_chunksizes(self):
         # regression test for GH2278
+        # see also test_encoding_chunksizes_unlimited
         nx, ny, nt = 4, 4, 5
         original = xr.Dataset({}, coords={'x': np.arange(nx),
                                           'y': np.arange(ny),
