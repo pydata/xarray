@@ -36,6 +36,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 - DataArray coordinates and Dataset coordinates and data variables are
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
