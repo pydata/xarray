@@ -17,7 +17,7 @@ from xarray.testing import assert_allclose, assert_equal
 
 from . import (
     assert_array_equal, has_dask, has_np113, raises_regex, requires_cftime,
-    requires_dask)
+    requires_dask, arm_xfail)
 
 
 class TestOps:
@@ -251,7 +251,7 @@ def assert_dask_array(da, dask):
     if dask and da.ndim > 0:
         assert isinstance(da.data, dask_array_type)
 
-
+@arm_xfail
 @pytest.mark.parametrize('dask', [False, True])
 def test_datetime_reduce(dask):
     time = np.array(pd.date_range('15/12/1999', periods=11))
