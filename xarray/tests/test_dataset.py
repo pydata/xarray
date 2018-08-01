@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
 import warnings
+import sys
 
 import numpy as np
 import pandas as pd
@@ -182,15 +183,16 @@ class TestDataset(TestCase):
         data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
         repr(data)  # should not raise
 
+        byteorder = '<' if sys.byteorder == 'little' else '>'
         expected = dedent(u"""\
         <xarray.Dataset>
         Dimensions:  (foø: 1)
         Coordinates:
-          * foø      (foø) <U3 %r
+          * foø      (foø) %cU3 %r
         Data variables:
             *empty*
         Attributes:
-            å:        ∑""" % u'ba®')
+            å:        ∑""" % (byteorder, u'ba®'))
         actual = unicode_type(data)
         assert expected == actual
 
