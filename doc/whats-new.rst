@@ -48,6 +48,10 @@ Enhancements
   (:issue:`2284`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
+  (:issue:`2331`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 
 Bug fixes
 ~~~~~~~~~

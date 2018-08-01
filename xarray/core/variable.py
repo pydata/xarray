@@ -92,6 +92,9 @@ def as_variable(obj, name=None):
         obj = Variable([], obj)
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
+    elif isinstance(obj, (set, dict)):
+        raise TypeError(
+            "variable %r has invalid type %r" % (name, type(obj)))
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
