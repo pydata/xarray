@@ -64,7 +64,9 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             getitem = operator.getitem
 
         try:
-            array = getitem(self.get_array(), key)
+            original_array = self.get_array()
+            with self.datastore._lock:
+                array = getitem(original_array, key)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative
             # error message.  This is most often called when an unsorted
@@ -223,15 +225,21 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
 
 class GroupWrapper(object):
-    def __init__(self, value):
+    def __init__(self, value, lock=HDF5_LOCK):
         self.value = value
+        self.lock = lock
+
+    def sync(self):
+        with self.lock:
+            self.value.sync()
 
     def close(self):
         # netCDF4 only allows closing the root group
-        find_root(self.value).close()
+        with self.lock:
+            find_root(self.value).close()
 
 
-def _open_netcdf4_group(filename, mode, group=None, **kwargs):
+def _open_netcdf4_group(filename, lock, mode, group=None, **kwargs):
     import netCDF4 as nc4
 
     ds = nc4.Dataset(filename, mode=mode, **kwargs)
@@ -241,7 +249,7 @@ def _open_netcdf4_group(filename, mode, group=None, **kwargs):
 
     _disable_auto_decode_group(ds)
 
-    return GroupWrapper(ds)
+    return GroupWrapper(ds, lock)
 
 
 def _disable_auto_decode_variable(var):
@@ -304,6 +312,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.format = self.ds.data_model
         self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
+        self._lock = lock
         super(NetCDF4DataStore, self).__init__(writer, lock=lock)
 
     @classmethod
@@ -324,7 +333,7 @@ class NetCDF4DataStore(WritableCFDataStore):
         if format is None:
             format = 'NETCDF4'
         manager = CachingFileManager(
-            _open_netcdf4_group, filename, mode=mode,
+            _open_netcdf4_group, filename, lock, mode=mode,
             kwargs=dict(group=group, clobber=clobber, diskless=diskless,
                         persist=persist, format=format))
         return cls(manager, writer=writer, lock=lock)

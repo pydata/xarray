@@ -33,6 +33,11 @@ from . import (
 da = pytest.importorskip('dask.array')
 
 
+@pytest.fixture
+def tmp_netcdf_filename(tmpdir):
+    return str(tmpdir.join('testfile.nc'))
+
+
 ENGINES = []
 if has_scipy:
     ENGINES.append('scipy')
@@ -45,81 +50,68 @@ NC_FORMATS = {'netcdf4': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT_OFFSET',
                           'NETCDF3_64BIT_DATA', 'NETCDF4_CLASSIC', 'NETCDF4'],
               'scipy': ['NETCDF3_CLASSIC', 'NETCDF3_64BIT'],
               'h5netcdf': ['NETCDF4']}
-TEST_FORMATS = ['NETCDF3_CLASSIC', 'NETCDF4_CLASSIC', 'NETCDF4']
+
+ENGINES_AND_FORMATS = [
+    ('netcdf4', 'NETCDF3_CLASSIC'),
+    ('netcdf4', 'NETCDF4_CLASSIC'),
+    ('netcdf4', 'NETCDF4'),
+    ('h5netcdf', 'NETCDF4'),
+    ('scipy', 'NETCDF3_64BIT'),
+]
 
 
 @pytest.mark.xfail(sys.platform == 'win32',
                    reason='https://github.com/pydata/xarray/issues/1738')
-@pytest.mark.parametrize('engine', ['netcdf4'])
-@pytest.mark.parametrize('autoclose', [True, False])
-@pytest.mark.parametrize('nc_format', TEST_FORMATS)
-def test_dask_distributed_netcdf_roundtrip(monkeypatch, loop,
-                                           engine, autoclose, nc_format):
+@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
+def test_dask_distributed_netcdf_roundtrip(
+        monkeypatch, loop, tmp_netcdf_filename, engine, nc_format):
+
+    if engine not in ENGINES:
+        pytest.skip('engine not available')
 
     monkeypatch.setenv('HDF5_USE_FILE_LOCKING', 'FALSE')
 
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
+    with cluster() as (s, [a, b]):
+        with Client(s['address'], loop=loop) as c:
 
-                original = create_test_data().chunk(chunks)
-                original.to_netcdf(filename, engine=engine, format=nc_format)
+            original = create_test_data().chunk(chunks)
+            original.to_netcdf(tmp_netcdf_filename,
+                               engine=engine, format=nc_format)
 
-                with xr.open_dataset(filename,
-                                     chunks=chunks,
-                                     engine=engine,
-                                     autoclose=autoclose) as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
+            with xr.open_dataset(tmp_netcdf_filename,
+                                 chunks=chunks, engine=engine) as restored:
+                assert isinstance(restored.var1.data, da.Array)
+                computed = restored.compute()
+                assert_allclose(original, computed)
 
 
 @pytest.mark.xfail(sys.platform == 'win32',
                    reason='https://github.com/pydata/xarray/issues/1738')
-@pytest.mark.parametrize('engine', ENGINES)
-@pytest.mark.parametrize('autoclose', [True, False])
-@pytest.mark.parametrize('nc_format', TEST_FORMATS)
-def test_dask_distributed_read_netcdf_integration_test(loop, engine, autoclose,
-                                                       nc_format):
+@pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
+def test_dask_distributed_read_netcdf_integration_test(
+        loop, tmp_netcdf_filename, engine, nc_format):
 
-    if engine == 'h5netcdf' and autoclose:
-        pytest.skip('h5netcdf does not support autoclose')
-
-    if nc_format not in NC_FORMATS[engine]:
-        pytest.skip('invalid format for engine')
+    if engine not in ENGINES:
+        pytest.skip('engine not available')
 
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
+    with cluster() as (s, [a, b]):
+        with Client(s['address'], loop=loop) as c:
 
-                original = create_test_data()
-                original.to_netcdf(filename, engine=engine, format=nc_format)
+            original = create_test_data()
+            original.to_netcdf(tmp_netcdf_filename,
+                               engine=engine, format=nc_format)
 
-                with xr.open_dataset(filename,
-                                     chunks=chunks,
-                                     engine=engine,
-                                     autoclose=autoclose) as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
+            with xr.open_dataset(tmp_netcdf_filename,
+                                 chunks=chunks,
+                                 engine=engine) as restored:
+                assert isinstance(restored.var1.data, da.Array)
+                computed = restored.compute()
+                assert_allclose(original, computed)
 
-
-@pytest.mark.parametrize('engine', ['h5netcdf', 'scipy'])
-def test_dask_distributed_netcdf_integration_test_not_implemented(loop, engine):
-    chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
-
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as filename:
-        with cluster() as (s, [a, b]):
-            with Client(s['address'], loop=loop) as c:
-
-                original = create_test_data().chunk(chunks)
-
-                with raises_regex(NotImplementedError, 'distributed'):
-                    original.to_netcdf(filename, engine=engine)
 
 
 @requires_zarr

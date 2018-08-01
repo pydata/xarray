@@ -82,8 +82,8 @@ class CachingFileManager(FileManager):
             be hashable.
         lock : duck-compatible threading.Lock, optional
             Lock to use when modifying the cache inside acquire() and close().
-            By default, uses a new threading.Lock() object. If set, this object
-            should be pickleable.
+            Must be reentrant. By default, uses a new threading.RLock() object.
+            If set, this object should be pickleable.
         cache : MutableMapping, optional
             Mapping to use as a cache for open files. By default, uses xarray's
             global LRU file cache. Because ``cache`` typically points to a
@@ -106,7 +106,7 @@ class CachingFileManager(FileManager):
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
         self._default_lock = lock is None
-        self._lock = threading.Lock() if self._default_lock else lock
+        self._lock = threading.RLock() if self._default_lock else lock
         self._cache = cache
         self._key = self._make_key()
 
@@ -140,6 +140,7 @@ class CachingFileManager(FileManager):
                 if self._mode is not _DEFAULT_MODE:
                     kwargs = kwargs.copy()
                     kwargs['mode'] = self._mode
+                print("OPENING", id(self), self._opener, self._args, kwargs)
                 file = self._opener(*self._args, **kwargs)
                 if self._mode == 'w':
                     # ensure file doesn't get overriden when opened again

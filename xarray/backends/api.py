@@ -53,16 +53,16 @@ def _normalize_path(path):
         return os.path.abspath(os.path.expanduser(path))
 
 
-def _default_lock(filename, engine):
+def _default_read_lock(filename, engine):
     if filename.endswith('.gz'):
-        lock = False
+        lock = None
     else:
         if engine is None:
             engine = _get_default_engine(filename, allow_remote=True)
 
         if engine == 'netcdf4':
             if is_remote_uri(filename):
-                lock = False
+                lock = None
             else:
                 # TODO: identify netcdf3 files and don't use the global lock
                 # for them
@@ -70,8 +70,23 @@ def _default_lock(filename, engine):
         elif engine in {'h5netcdf', 'pynio'}:
             lock = HDF5_LOCK
         else:
-            lock = False
+            lock = None
     return lock
+
+
+def _get_write_lock(engine, scheduler, format, path_or_file):
+    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
+
+    locks = []
+
+    if (engine == 'h5netcdf' or engine == 'netcdf4' and
+            (format is None or format.startswith('NETCDF4'))):
+        locks.append(HDF5_LOCK)
+
+    locks.append(_get_scheduler_lock(scheduler, path_or_file))
+
+    return CombinedLock(locks)
+
 
 
 def _validate_dataset_names(dataset):
@@ -131,18 +146,19 @@ def _protect_dataset_variables_inplace(dataset, cache):
             variable.data = data
 
 
-def _get_lock(engine, scheduler, format, path_or_file):
+def _get_write_lock(engine, scheduler, format, path_or_file):
     """ Get the lock(s) that apply to a particular scheduler/engine/format"""
 
     locks = []
-    if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
+    # if (engine == 'h5netcdf' or engine == 'netcdf4' and
+    #         (format is None or format.startswith('NETCDF4'))):
+    #     locks.append(HDF5_LOCK)
+    if (engine == 'h5netcdf' or engine == 'netcdf4'):
         locks.append(HDF5_LOCK)
+
     locks.append(_get_scheduler_lock(scheduler, path_or_file))
 
-    # When we have more than one lock, use the CombinedLock wrapper class
-    lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
-
-    return lock
+    return CombinedLock(locks)
 
 
 def _finalize_store(write, store):
@@ -281,8 +297,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              mask_and_scale, decode_times, concat_characters,
                              decode_coords, engine, chunks, drop_variables)
             name_prefix = 'open_dataset-%s' % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
-                           lock=lock)
+            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
@@ -313,12 +328,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 engine = 'scipy'
 
+        if lock is None:
+            lock = _default_read_lock(filename_or_obj, engine)
+
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
             store = backends.NetCDF4DataStore.open(
-                filename_or_obj, group=group, **backend_kwargs)
+                filename_or_obj, group=group, lock=lock, **backend_kwargs)
         elif engine == 'scipy':
             store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
         elif engine == 'pydap':
@@ -326,7 +344,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                 filename_or_obj, **backend_kwargs)
         elif engine == 'h5netcdf':
             store = backends.H5NetCDFStore(
-                filename_or_obj, group=group, **backend_kwargs)
+                filename_or_obj, group=group, lock=lock, **backend_kwargs)
         elif engine == 'pynio':
             store = backends.NioDataStore(filename_or_obj, **backend_kwargs)
         elif engine == 'pseudonetcdf':
@@ -336,10 +354,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
 
-        if lock is None:
-            lock = _default_lock(filename_or_obj, engine)
         with close_on_error(store):
-            return maybe_decode_store(store, lock)
+            return maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
@@ -593,7 +609,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         raise IOError('no files to open')
 
     if lock is None:
-        lock = _default_lock(paths[0], engine)
+        lock = _default_read_lock(paths[0], engine)
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
@@ -688,13 +704,13 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    have_chunks = any(v.chunks for v in dataset.variables.values())
-    if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
-            engine != 'netcdf4'):
-        raise NotImplementedError("Writing netCDF files with the %s backend "
-                                  "is not currently supported with dask's %s "
-                                  "scheduler" % (engine, scheduler))
-    lock = _get_lock(engine, scheduler, format, path_or_file)
+    # have_chunks = any(v.chunks for v in dataset.variables.values())
+    # if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
+    #         engine != 'netcdf4'):
+    #     raise NotImplementedError("Writing netCDF files with the %s backend "
+    #                               "is not currently supported with dask's %s "
+    #                               "scheduler" % (engine, scheduler))
+    lock = _get_write_lock(engine, scheduler, format, path_or_file)
 
     target = path_or_file if path_or_file is not None else BytesIO()
     store = store_open(target, mode, format, group, writer, lock=lock)

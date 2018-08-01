@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import contextlib
 import logging
 import multiprocessing
 import threading
@@ -8,7 +7,6 @@ import time
 import traceback
 import warnings
 from collections import Mapping, OrderedDict
-from functools import partial
 
 import numpy as np
 

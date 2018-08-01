@@ -71,7 +71,7 @@ class H5NetCDFStore(WritableCFDataStore):
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None, autoclose=False, lock=HDF5_LOCK):
+                 writer=None, lock=HDF5_LOCK):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         self._manager = CachingFileManager(
@@ -81,6 +81,7 @@ class H5NetCDFStore(WritableCFDataStore):
         self.format = format
         self._filename = filename
         self._mode = mode
+        self._lock = lock
         super(H5NetCDFStore, self).__init__(writer, lock=lock)
 
     @property
