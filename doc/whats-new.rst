@@ -61,6 +61,7 @@ Bug fixes
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
+- Tests can be run in parallel with pytest-xdist
 
 .. _whats-new.0.10.8:
 
