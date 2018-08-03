@@ -62,6 +62,12 @@ Bug fixes
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
 
+- Fixed ``Dataset.filter_by_attrs()`` behavior not matching ``netCDF4.Dataset.get_variables_by_attributes()``.
+  When more than one ``key=value`` is passed into ``Dataset.filter_by_attrs()`` it will now return a Dataset with variables which pass
+  all the filters.
+  (:issue:`2315`)
+  By `Andrew Barna <https://github.com/docotak`_.
+
 .. _whats-new.0.10.8:
 
 v0.10.8 (18 July 2018)
