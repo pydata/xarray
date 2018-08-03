@@ -12,9 +12,13 @@ dependencies:
   - flake8
   - numpy
   - pandas
-  - seaborn
   - scipy
+  - seaborn
   - toolz
+  - rasterio
+  - bottleneck
+  - zarr
+  - pseudonetcdf>=3.0.1
   - pip:
     - coveralls
     - pytest-cov

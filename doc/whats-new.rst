@@ -36,6 +36,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 - DataArray coordinates and Dataset coordinates and data variables are
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
@@ -43,6 +46,15 @@ Enhancements
 - A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
   generating dates from standard or non-standard calendars.  By `Spencer Clark 
   <https://github.com/spencerkclark>`_. 
+
+- When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
+  (:issue:`2284`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
+  (:issue:`2331`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
 
 Bug fixes
 ~~~~~~~~~
