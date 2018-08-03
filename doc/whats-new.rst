@@ -40,7 +40,7 @@ Enhancements
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
-- A new CFTimeIndex-enabled :py:func:`date_range` function for use in
+- A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
   generating dates from standard or non-standard calendars.  By `Spencer Clark 
   <https://github.com/spencerkclark>`_. 
 

@@ -9,7 +9,7 @@ from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset, YearBegin, YearEnd, MonthBegin, MonthEnd,
     Day, Hour, Minute, Second, _days_in_month,
     to_offset, get_date_type, _MONTH_ABBREVIATIONS, _cftime_range,
-    to_cftime_datetime, date_range)
+    to_cftime_datetime, cftime_range)
 from xarray import CFTimeIndex
 from . import has_cftime
 
@@ -637,7 +637,7 @@ _CFTIME_RANGE_TESTS = [
      'expected_date_args'),
     _CFTIME_RANGE_TESTS, ids=_id_func
 )
-def test_cftime_range(
+def test_private_cftime_range(
         start, end, periods, freq, closed, normalize, calendar,
         expected_date_args):
     date_type = get_date_type(calendar)
@@ -683,9 +683,9 @@ def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
      ('2000', None, 5, 'A', 'foo'),
      ('2000', '1999', None, 'A', 'foo')]
 )
-def test_date_range(start, end, periods, freq, name, calendar):
-    result = date_range(start, end, periods,
-                        freq, name=name, calendar=calendar)
+def test_cftime_range(start, end, periods, freq, name, calendar):
+    result = cftime_range(start, end, periods,
+                          freq, name=name, calendar=calendar)
     if start == '2000' and calendar == 'standard':
         assert isinstance(result, pd.DatetimeIndex)
     else:
@@ -694,7 +694,7 @@ def test_date_range(start, end, periods, freq, name, calendar):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_date_range_invalid_tz_input(calendar):
+def test_cftime_range_invalid_tz_input(calendar):
     with pytest.raises(ValueError):
-        date_range('0001', '0002', None, 'M', tz='Asia/Hong_Kong',
-                   calendar=calendar)
+        cftime_range('0001', '0002', None, 'M', tz='Asia/Hong_Kong',
+                     calendar=calendar)

@@ -565,9 +565,9 @@ def _cftime_range(start=None, end=None, periods=None, freq=None,
     return dates
 
 
-def date_range(start=None, end=None, periods=None, freq='D',
-               tz=None, normalize=False, name=None, closed=None,
-               calendar='standard'):
+def cftime_range(start=None, end=None, periods=None, freq='D',
+                 tz=None, normalize=False, name=None, closed=None,
+                 calendar='standard'):
     """Return a fixed frequency DatetimeIndex or CFTimeIndex.
 
     Parameters
@@ -699,7 +699,7 @@ def date_range(start=None, end=None, periods=None, freq='D',
     range, this function operates as a thin wrapper around
     ``pandas.date_range``.
 
-    >>> xr.date_range(start='2000', periods=6, freq='2MS')
+    >>> xr.cftime_range(start='2000', periods=6, freq='2MS')
     DatetimeIndex(['2000-01-01', '2000-03-01', '2000-05-01', '2000-07-01',
                    '2000-09-01', '2000-11-01'],
                   dtype='datetime64[ns]', freq='2MS')
@@ -708,7 +708,7 @@ def date_range(start=None, end=None, periods=None, freq='D',
     ``CFTimeIndex``, populated with ``cftime.datetime`` objects associated with
     the specified calendar type, e.g.
 
-    >>> xr.date_range(start='2000', periods=6, freq='2MS', calendar='noleap')
+    >>> xr.cftime_range(start='2000', periods=6, freq='2MS', calendar='noleap')
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', calendar='noleap')
@@ -717,7 +717,7 @@ def date_range(start=None, end=None, periods=None, freq='D',
     ``pandas.Timestamp``-valid range, a ``CFTimeIndex`` composed of
     ``cftime.DatetimeGregorian`` objects will be returned.
 
-    >>> xr.date_range(start='0001', periods=6, freq='2MS', calendar='standard')
+    >>> xr.cftime_range(start='0001', periods=6, freq='2MS', calendar='standard')
     CFTimeIndex([0001-01-01 00:00:00, 0001-03-01 00:00:00, 0001-05-01 00:00:00,
                  0001-07-01 00:00:00, 0001-09-01 00:00:00, 0001-11-01 00:00:00],
                 dtype='object', calendar='proleptic_gregorian')

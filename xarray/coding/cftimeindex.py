@@ -143,7 +143,7 @@ class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
     All elements of a CFTimeIndex must be cftime.datetime objects.  Note unlike
-    :py:func:`date_range`, if the 'standard' calendar is specified in the
+    :py:func:`cftime_range`, if the 'standard' calendar is specified in the
     CFTimeIndex constructor, ``cftime.DatetimeProlepticGregorian`` objects will
     always be used, regardless of whether the dates can be represented using a
     DatetimeIndex.
@@ -170,7 +170,7 @@ class CFTimeIndex(pd.Index):
 
     See Also
     --------
-    date_range
+    cftime_range
     """
     year = _field_accessor('year', 'The year of the datetime')
     month = _field_accessor('month', 'The month of the datetime')

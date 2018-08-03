@@ -26,7 +26,7 @@ from .backends.zarr import open_zarr
 
 from .conventions import decode_cf, SerializationWarning
 
-from .coding.cftime_offsets import date_range
+from .coding.cftime_offsets import cftime_range
 from .coding.cftimeindex import CFTimeIndex
 
 from .util.print_versions import show_versions

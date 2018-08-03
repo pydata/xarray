@@ -560,7 +560,7 @@ Creating custom indexes
 .. autosummary::
    :toctree: generated/
 
-   date_range
+   cftime_range
 
 Plotting
 ========
