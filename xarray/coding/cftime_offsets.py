@@ -87,11 +87,23 @@ class BaseCFTimeOffset(object):
     def __apply__(self):
         raise NotImplementedError
 
-    def on_offset(self, date):
+    def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         test_date = (self + date) - self
         return date == test_date
+
+    def rollforward(self, date):
+        if self.onOffset(date):
+            return date
+        else:
+            return date + type(self)()
+
+    def rollback(self, date):
+        if self.onOffset(date):
+            return date
+        else:
+            return date - type(self)()
 
     def __str__(self):
         return '<{}: n={}>'.format(type(self).__name__, self.n)
@@ -162,18 +174,10 @@ class MonthBegin(BaseCFTimeOffset):
         n = _adjust_n_months(other.day, self.n, 1)
         return _shift_months(other, n, 'start')
 
-    def on_offset(self, date):
+    def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == 1
-
-    def roll_forward(self, date):
-        """Roll date forward to nearest start of month"""
-        return date + MonthBegin()
-
-    def roll_backward(self, date):
-        """Roll date backward to nearest start of month"""
-        return date - MonthBegin()
 
 
 class MonthEnd(BaseCFTimeOffset):
@@ -183,18 +187,10 @@ class MonthEnd(BaseCFTimeOffset):
         n = _adjust_n_months(other.day, self.n, _days_in_month(other))
         return _shift_months(other, n, 'end')
 
-    def on_offset(self, date):
+    def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == _days_in_month(date)
-
-    def roll_forward(self, date):
-        """Roll date forward to nearest end of month"""
-        return date + MonthEnd()
-
-    def roll_backward(self, date):
-        """Roll date backward to nearest end of month"""
-        return date - MonthEnd()
 
 
 _MONTH_ABBREVIATIONS = {
@@ -262,18 +258,24 @@ class YearBegin(YearOffset):
     _day_option = 'start'
     _default_month = 1
 
-    def on_offset(self, date):
+    def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == 1 and date.month == self.month
 
-    def roll_forward(self, date):
+    def rollforward(self, date):
         """Roll date forward to nearest start of year"""
-        return date + YearBegin(month=self.month)
+        if self.onOffset(date):
+            return date
+        else:
+            return date + YearBegin(month=self.month)
 
-    def roll_backward(self, date):
+    def rollback(self, date):
         """Roll date backward to nearest start of year"""
-        return date - YearBegin(month=self.month)
+        if self.onOffset(date):
+            return date
+        else:
+            return date - YearBegin(month=self.month)
 
 
 class YearEnd(YearOffset):
@@ -281,18 +283,24 @@ class YearEnd(YearOffset):
     _day_option = 'end'
     _default_month = 12
 
-    def on_offset(self, date):
+    def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
         using a length-one version of this offset class."""
         return date.day == _days_in_month(date) and date.month == self.month
 
-    def roll_forward(self, date):
+    def rollforward(self, date):
         """Roll date forward to nearest end of year"""
-        return date + YearEnd(month=self.month)
+        if self.onOffset(date):
+            return date
+        else:
+            return date + YearEnd(month=self.month)
 
-    def roll_backward(self, date):
+    def rollback(self, date):
         """Roll date backward to nearest end of year"""
-        return date - YearEnd(month=self.month)
+        if self.onOffset(date):
+            return date
+        else:
+            return date - YearEnd(month=self.month)
 
 
 class Day(BaseCFTimeOffset):
@@ -454,11 +462,11 @@ def _generate_range(start, end, periods, offset):
     -------
     A generator object
     """
-    if start and not offset.on_offset(start):
-        start = offset.roll_forward(start)
+    if start:
+        start = offset.rollforward(start)
 
-    if end and not offset.on_offset(end):
-        end = offset.roll_backward(end)
+    if end:
+        end = offset.rollback(end)
 
     if periods is None and end < start:
         end = None

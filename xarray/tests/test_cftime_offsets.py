@@ -388,7 +388,7 @@ def test_add_month_end(
      ((1, 2), (5, 5, 5, 5), MonthEnd(n=-1), (1, 1), (5, 5, 5, 5))],
     ids=_id_func
 )
-def test_add_month_end_on_offset(
+def test_add_month_end_onOffset(
     calendar, initial_year_month, initial_sub_day, offset, expected_year_month,
     expected_sub_day
 ):
@@ -474,7 +474,7 @@ def test_add_year_end(
      ((2, 12), (5, 5, 5, 5), YearEnd(n=-1), (1, 12), (5, 5, 5, 5))],
     ids=_id_func
 )
-def test_add_year_end_on_offset(
+def test_add_year_end_onOffset(
     calendar, initial_year_month, initial_sub_day, offset, expected_year_month,
     expected_sub_day
 ):
@@ -495,7 +495,7 @@ def test_add_year_end_on_offset(
     assert result == expected
 
 
-# Note for all sub-monthly offsets, pandas always returns True for on_offset
+# Note for all sub-monthly offsets, pandas always returns True for onOffset
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('date_args', 'offset', 'expected'),
@@ -514,10 +514,10 @@ def test_add_year_end_on_offset(
      ((1, 1, 1), Second(), True)],
     ids=_id_func
 )
-def test_on_offset(calendar, date_args, offset, expected):
+def test_onOffset(calendar, date_args, offset, expected):
     date_type = get_date_type(calendar)
     date = date_type(*date_args)
-    result = offset.on_offset(date)
+    result = offset.onOffset(date)
     assert result == expected
 
 
@@ -530,74 +530,97 @@ def test_on_offset(calendar, date_args, offset, expected):
      ((1, 1), (), YearEnd(month=1))],
     ids=_id_func
 )
-def test_on_offset_month_or_year_end(
+def test_onOffset_month_or_year_end(
         calendar, year_month_args, sub_day_args, offset):
     date_type = get_date_type(calendar)
     reference_args = year_month_args + (1,)
     reference = date_type(*reference_args)
     date_args = year_month_args + (_days_in_month(reference),) + sub_day_args
     date = date_type(*date_args)
-    result = offset.on_offset(date)
+    result = offset.onOffset(date)
     assert result
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ('offset', 'initial_date_args', 'expected_month_year'),
+    ('offset', 'initial_date_args', 'partial_expected_date_args'),
     [(YearBegin(), (1, 3, 1), (2, 1)),
+     (YearBegin(), (1, 1, 1), (1, 1)),
      (YearBegin(n=2), (1, 3, 1), (2, 1)),
      (YearBegin(n=2, month=2), (1, 3, 1), (2, 2)),
      (YearEnd(), (1, 3, 1), (1, 12)),
      (YearEnd(n=2), (1, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (1, 3, 1), (2, 2)),
+     (YearEnd(n=2, month=4), (1, 4, 30), (1, 4)),
      (MonthBegin(), (1, 3, 2), (1, 4)),
+     (MonthBegin(), (1, 3, 1), (1, 3)),
      (MonthBegin(n=2), (1, 3, 2), (1, 4)),
      (MonthEnd(), (1, 3, 2), (1, 3)),
-     (MonthEnd(n=2), (1, 3, 2), (1, 3))],
+     (MonthEnd(), (1, 4, 30), (1, 4)),
+     (MonthEnd(n=2), (1, 3, 2), (1, 3)),
+     (Day(), (1, 3, 2, 1), (1, 3, 2, 1)),
+     (Hour(), (1, 3, 2, 1, 1), (1, 3, 2, 1, 1)),
+     (Minute(), (1, 3, 2, 1, 1, 1), (1, 3, 2, 1, 1, 1)),
+     (Second(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1))],
     ids=_id_func
 )
-def test_roll_forward(calendar, offset, initial_date_args,
-                      expected_month_year):
+def test_rollforward(calendar, offset, initial_date_args,
+                     partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
     if isinstance(offset, (MonthBegin, YearBegin)):
-        expected_date_args = expected_month_year + (1,)
-    else:
-        reference_args = expected_month_year + (1,)
+        expected_date_args = partial_expected_date_args + (1,)
+    elif isinstance(offset, (MonthEnd, YearEnd)):
+        reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
-        expected_date_args = expected_month_year + (_days_in_month(reference),)
+        expected_date_args = (partial_expected_date_args +
+                              (_days_in_month(reference),))
+    else:
+        expected_date_args = partial_expected_date_args
     expected = date_type(*expected_date_args)
-    result = offset.roll_forward(initial)
+    result = offset.rollforward(initial)
     assert result == expected
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
-    ('offset', 'initial_date_args', 'expected_month_year'),
+    ('offset', 'initial_date_args', 'partial_expected_date_args'),
     [(YearBegin(), (1, 3, 1), (1, 1)),
      (YearBegin(n=2), (1, 3, 1), (1, 1)),
      (YearBegin(n=2, month=2), (1, 3, 1), (1, 2)),
+     (YearBegin(), (1, 1, 1), (1, 1)),
+     (YearBegin(n=2, month=2), (1, 2, 1), (1, 2)),
      (YearEnd(), (2, 3, 1), (1, 12)),
      (YearEnd(n=2), (2, 3, 1), (1, 12)),
      (YearEnd(n=2, month=2), (2, 3, 1), (2, 2)),
+     (YearEnd(month=4), (1, 4, 30), (1, 4)),
      (MonthBegin(), (1, 3, 2), (1, 3)),
      (MonthBegin(n=2), (1, 3, 2), (1, 3)),
+     (MonthBegin(), (1, 3, 1), (1, 3)),
      (MonthEnd(), (1, 3, 2), (1, 2)),
-     (MonthEnd(n=2), (1, 3, 2), (1, 2))],
+     (MonthEnd(n=2), (1, 3, 2), (1, 2)),
+     (MonthEnd(), (1, 4, 30), (1, 4)),
+     (Day(), (1, 3, 2, 1), (1, 3, 2, 1)),
+     (Hour(), (1, 3, 2, 1, 1), (1, 3, 2, 1, 1)),
+     (Minute(), (1, 3, 2, 1, 1, 1), (1, 3, 2, 1, 1, 1)),
+     (Second(), (1, 3, 2, 1, 1, 1, 1), (1, 3, 2, 1, 1, 1, 1))],
     ids=_id_func
 )
-def test_roll_backward(calendar, offset, initial_date_args,
-                       expected_month_year):
+def test_rollback(calendar, offset, initial_date_args,
+                  partial_expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
     if isinstance(offset, (MonthBegin, YearBegin)):
-        expected_date_args = expected_month_year + (1,)
-    else:
-        reference_args = expected_month_year + (1,)
+        expected_date_args = partial_expected_date_args + (1,)
+    elif isinstance(offset, (MonthEnd, YearEnd)):
+        reference_args = partial_expected_date_args + (1,)
         reference = date_type(*reference_args)
-        expected_date_args = expected_month_year + (_days_in_month(reference),)
+        expected_date_args = (partial_expected_date_args +
+                              (_days_in_month(reference),))
+    else:
+        expected_date_args = partial_expected_date_args
     expected = date_type(*expected_date_args)
-    result = offset.roll_backward(initial)
+    result = offset.rollback(initial)
     assert result == expected
 
 
