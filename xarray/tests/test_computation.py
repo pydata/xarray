@@ -274,16 +274,20 @@ def test_apply_input_core_dimension():
     assert_identical(expected_dataset_x,
                      first_element(dataset.groupby('y'), 'x'))
 
+    def multiply(*args):
+        val = args[0]
+        for arg in args[1:]:
+            val = val * arg
+        return val
+
     # regression test for GH:2341
     with pytest.raises(ValueError):
-        apply_ufunc(np.gradient, data_array, data_array['y'].values,
-                    kwargs={'axis': -1}, input_core_dims=[['y']],
-                    output_core_dims=[['y']])
-    expected = xr.DataArray(np.gradient(data_array, data_array['y'], axis=-1),
+        apply_ufunc(multiply, data_array, data_array['y'].values,
+                    input_core_dims=[['y']], output_core_dims=[['y']])
+    expected = xr.DataArray(multiply(data_array, data_array['y']),
                             dims=['x', 'y'], coords=data_array.coords)
-    actual = apply_ufunc(np.gradient, data_array, data_array['y'].values,
-                         kwargs={'axis': -1}, input_core_dims=[['y'], []],
-                         output_core_dims=[['y']])
+    actual = apply_ufunc(multiply, data_array, data_array['y'].values,
+                         input_core_dims=[['y'], []], output_core_dims=[['y']])
     assert_identical(expected, actual)
 
 
