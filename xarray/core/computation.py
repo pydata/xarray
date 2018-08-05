@@ -920,6 +920,11 @@ def apply_ufunc(func, *args, **kwargs):
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
+    if len(input_core_dims) != len(args):
+        raise ValueError(
+            'input_core_dims must be None or a tuple with the length same to '
+            'the number of arguments. Given input_core_dims: {}, '
+            'number of args: {}.'.format(input_core_dims, len(args)))
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
