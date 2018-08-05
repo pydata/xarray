@@ -9,4 +9,4 @@ def test_coords_are_dataset():
     c = xr.Dataset(coords=coords)
     with warnings.catch_warnings():
         warnings.filterwarnings("error", "iteration over an xarray.Dataset")
-        a = xr.DataArray(n, dims=['x'], coords=c)
+        xr.DataArray(n, dims=['x'], coords=c)
