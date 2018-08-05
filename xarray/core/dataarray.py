@@ -60,8 +60,13 @@ def _infer_coords_and_dims(shape, coords, dims):
     new_coords = OrderedDict()
 
     if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
+        if isinstance(coords, Dataset):
+            for k in coords.variables:
+                v = coords.variables[k]
+                new_coords[k] = as_variable(v, name=k)
+        else:
+            for k, v in coords.items():
+                new_coords[k] = as_variable(v, name=k)
     elif coords is not None:
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
