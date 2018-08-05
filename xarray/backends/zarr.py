@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from itertools import product
 from distutils.version import LooseVersion
 
 import numpy as np

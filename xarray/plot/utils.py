@@ -3,8 +3,6 @@ from __future__ import absolute_import, division, print_function
 import warnings
 
 import numpy as np
-import pandas as pd
-import pkg_resources
 import textwrap
 
 from ..core.pycompat import basestring
