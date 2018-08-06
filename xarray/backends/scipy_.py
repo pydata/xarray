@@ -140,7 +140,6 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager = CachingFileManager(
             _open_scipy_netcdf, filename_or_obj, mode=mode,
             kwargs=dict(mmap=mmap, version=version))
-        print('LOCKING', lock)
         super(ScipyDataStore, self).__init__(writer, lock=lock)
 
     @property
@@ -218,7 +217,3 @@ class ScipyDataStore(WritableCFDataStore):
 
     def __exit__(self, type, value, tb):
         self.close()
-
-    def __getstate__(self):
-        self.sync()
-        return super(ScipyDataStore, self).__getstate__()
