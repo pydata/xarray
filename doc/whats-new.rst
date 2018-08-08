@@ -56,12 +56,15 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
-- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by 
+- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
 - Tests can be run in parallel with pytest-xdist
+- Now raises a ValueError when there is a conflict between dimension names and
+  level names of MultiIndex. (:issue:`2299`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.10.8:
 

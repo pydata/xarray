@@ -1876,12 +1876,15 @@ def assert_unique_multiindex_level_names(variables):
     objects.
     """
     level_names = defaultdict(list)
+    all_level_names = set()
     for var_name, var in variables.items():
         if isinstance(var._data, PandasIndexAdapter):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
                     level_names[n].append('%r (%s)' % (n, var_name))
+            if idx_level_names:
+                all_level_names.update(idx_level_names)
 
     for k, v in level_names.items():
         if k in variables:
@@ -1892,3 +1895,9 @@ def assert_unique_multiindex_level_names(variables):
         conflict_str = '\n'.join([', '.join(v) for v in duplicate_names])
         raise ValueError('conflicting MultiIndex level name(s):\n%s'
                          % conflict_str)
+    # Check confliction between level names and dimensions GH:2299
+    for k, v in variables.items():
+        for d in v.dims:
+            if d in all_level_names:
+                raise ValueError('conflicting level / dimension names. {} '
+                                 'already exists as a level name.'.format(d))
