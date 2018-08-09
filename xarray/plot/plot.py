@@ -1106,7 +1106,6 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
              ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1])))):
         if len(x.shape) == 1:
             x = _infer_interval_breaks(x, check_monotonic=True)
-            y = _infer_interval_breaks(y, check_monotonic=True)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1)
@@ -1115,7 +1114,7 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
     if (infer_intervals and
             (np.shape(y)[0] == np.shape(z)[0])):
         if len(y.shape) == 1:
-            y = _infer_interval_breaks(y)
+            y = _infer_interval_breaks(y, check_monotonic=True)
         else:
             # we have to infer the intervals on both axes
             y = _infer_interval_breaks(y, axis=1)
