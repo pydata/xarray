@@ -74,6 +74,7 @@ Documentation
 * :doc:`whats-new`
 * :doc:`api`
 * :doc:`internals`
+* :doc:`roadmap`
 * :doc:`contributing`
 
 .. toctree::
@@ -84,6 +85,7 @@ Documentation
    whats-new
    api
    internals
+   roadmap
    contributing
 
 See also

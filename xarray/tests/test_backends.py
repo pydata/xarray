@@ -1275,6 +1275,23 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         # caching behavior differs for dask
         pass
 
+    def test_write_inconsistent_chunks(self):
+        # Construct two variables with the same dimensions, but different
+        # chunk sizes.
+        x = da.zeros((100, 100), dtype='f4', chunks=(50, 100))
+        x = DataArray(data=x, dims=('lat', 'lon'), name='x')
+        x.encoding['chunksizes'] = (50, 100)
+        x.encoding['original_shape'] = (100, 100)
+        y = da.ones((100, 100), dtype='f4', chunks=(100, 50))
+        y = DataArray(data=y, dims=('lat', 'lon'), name='y')
+        y.encoding['chunksizes'] = (100, 50)
+        y.encoding['original_shape'] = (100, 100)
+        # Put them both into the same dataset
+        ds = Dataset({'x': x, 'y': y})
+        with self.roundtrip(ds) as actual:
+            assert actual['x'].encoding['chunksizes'] == (50, 100)
+            assert actual['y'].encoding['chunksizes'] == (100, 50)
+
 
 class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
     autoclose = True
@@ -1329,6 +1346,16 @@ class BaseZarrTest(CFEncodedDataTest):
                 self.assertEqual(v._in_memory, k in actual.dims)
                 # chunk size should be the same as original
                 self.assertEqual(v.chunks, original[k].chunks)
+
+    def test_write_uneven_dask_chunks(self):
+        # regression for GH#2225
+        original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
+
+        with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
+            for k, v in actual.data_vars.items():
+                print(k)
+                assert v.chunks == actual[k].chunks
 
     def test_chunk_encoding(self):
         # These datasets have no dask chunks. All chunking specified in
@@ -2905,9 +2932,13 @@ class TestRasterio(TestCase):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                # None is selected
+                # empty selection
                 ind = {'band': np.array([2, 1, 0]),
                        'x': 1, 'y': slice(2, 2, 1)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': slice(0, 0), 'x': 1, 'y': 2}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -3296,3 +3327,12 @@ def test_pickle_reconstructor():
         obj3 = pickle.loads(p_obj2)
 
         assert obj3.value.readlines() == lines
+
+
+@requires_scipy_or_netCDF4
+def test_no_warning_from_dask_effective_get():
+    with create_tmp_file() as tmpfile:
+        with pytest.warns(None) as record:
+            ds = Dataset()
+            ds.to_netcdf(tmpfile)
+        assert len(record) == 0

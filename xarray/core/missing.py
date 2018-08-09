@@ -8,7 +8,6 @@ import pandas as pd
 
 from . import rolling
 from .computation import apply_ufunc
-from .npcompat import flip
 from .pycompat import iteritems
 from .utils import is_scalar, OrderedSet
 from .variable import Variable, broadcast_variables
@@ -245,13 +244,13 @@ def _bfill(arr, n=None, axis=-1):
     '''inverse of ffill'''
     import bottleneck as bn
 
-    arr = flip(arr, axis=axis)
+    arr = np.flip(arr, axis=axis)
 
     # fill
     arr = bn.push(arr, axis=axis, n=n)
 
     # reverse back to original
-    return flip(arr, axis=axis)
+    return np.flip(arr, axis=axis)
 
 
 def ffill(arr, dim=None, limit=None):
@@ -395,6 +394,26 @@ def _localize(var, indexes_coords):
     return var.isel(**indexes), indexes_coords
 
 
+def _floatize_x(x, new_x):
+    """ Make x and new_x float.
+    This is particulary useful for datetime dtype.
+    x, new_x: tuple of np.ndarray
+    """
+    x = list(x)
+    new_x = list(new_x)
+    for i in range(len(x)):
+        if x[i].dtype.kind in 'Mm':
+            # Scipy casts coordinates to np.float64, which is not accurate
+            # enough for datetime64 (uses 64bit integer).
+            # We assume that the most of the bits are used to represent the
+            # offset (min(x)) and the variation (x - min(x)) can be
+            # represented by float.
+            xmin = np.min(x[i])
+            x[i] = (x[i] - xmin).astype(np.float64)
+            new_x[i] = (new_x[i] - xmin).astype(np.float64)
+    return x, new_x
+
+
 def interp(var, indexes_coords, method, **kwargs):
     """ Make an interpolation of Variable
 
@@ -523,6 +542,8 @@ def _interp1d(var, x, new_x, func, kwargs):
 
 
 def _interpnd(var, x, new_x, func, kwargs):
+    x, new_x = _floatize_x(x, new_x)
+
     if len(x) == 1:
         return _interp1d(var, x, new_x, func, kwargs)
 

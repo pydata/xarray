@@ -14,8 +14,6 @@ matrix:
     env: CONDA_ENV=py27-min
   - python: 2.7
     env: CONDA_ENV=py27-cdat+iris+pynio
-  - python: 3.4
-    env: CONDA_ENV=py34
   - python: 3.5
     env: CONDA_ENV=py35
   - python: 3.6
@@ -42,7 +40,7 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
+    env: CONDA_ENV=py36-rasterio-0.36
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
   - python: 3.5
@@ -62,8 +60,6 @@ matrix:
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
-  - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
     env: CONDA_ENV=py36-bottleneck-dev
@@ -71,8 +67,6 @@ matrix:
     env: CONDA_ENV=py36-condaforge-rc
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
 
@@ -102,7 +96,7 @@ install:
 
 script:
   # TODO: restore this check once the upstream pandas issue is fixed:
-  # https://github.com/pandas-dev/pandas/issues/21071 
+  # https://github.com/pandas-dev/pandas/issues/21071
   # - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;

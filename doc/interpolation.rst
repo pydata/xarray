@@ -34,7 +34,7 @@ indexing of a :py:class:`~xarray.DataArray`,
     da.sel(time=3)
 
     # interpolation
-    da.interp(time=3.5)
+    da.interp(time=2.5)
 
 
 Similar to the indexing, :py:meth:`~xarray.DataArray.interp` also accepts an
@@ -47,6 +47,21 @@ array-like, which gives the interpolated result as an array.
 
     # interpolation
     da.interp(time=[2.5, 3.5])
+
+To interpolate data with a :py:func:`numpy.datetime64` coordinate you can pass a string.
+
+.. ipython:: python
+
+    da_dt64 = xr.DataArray([1, 3],
+                           [('time', pd.date_range('1/1/2000', '1/3/2000', periods=2))])
+    da_dt64.interp(time='2000-01-02')
+
+The interpolated data can be merged into the original :py:class:`~xarray.DataArray`
+by specifing the time periods required.
+
+.. ipython:: python
+
+    da_dt64.interp(time=pd.date_range('1/1/2000', '1/3/2000', periods=3))
 
 .. note::
 
@@ -80,6 +95,31 @@ Array-like coordinates are also accepted:
 
     # interpolation
     da.interp(time=[1.5, 2.5], space=[0.15, 0.25])
+
+
+:py:meth:`~xarray.DataArray.interp_like` method is a useful shortcut. This
+method interpolates an xarray object onto the coordinates of another xarray
+object. For example, if we want to compute the difference between
+two :py:class:`~xarray.DataArray` s (``da`` and ``other``) staying on slightly
+different coordinates,
+
+.. ipython:: python
+
+  other = xr.DataArray(np.sin(0.4 * np.arange(9).reshape(3, 3)),
+                       [('time', [0.9, 1.9, 2.9]),
+                       ('space', [0.15, 0.25, 0.35])])
+
+it might be a good idea to first interpolate ``da`` so that it will stay on the
+same coordinates of ``other``, and then subtract it.
+:py:meth:`~xarray.DataArray.interp_like` can be used for such a case,
+
+.. ipython:: python
+
+  # interpolate da along other's coordinates
+  interpolated = da.interp_like(other)
+  interpolated
+
+It is now possible to safely compute the difference ``other - interpolated``.
 
 
 Interpolation methods

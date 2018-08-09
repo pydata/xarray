@@ -20,13 +20,12 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
+INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 if sys.version_info[0] < 3:
     TESTS_REQUIRE.append('mock')
@@ -71,4 +70,4 @@ setup(name=DISTNAME,
       tests_require=TESTS_REQUIRE,
       url=URL,
       packages=find_packages(),
-      package_data={'xarray': ['tests/data/*', 'plot/default_colormap.csv']})
+      package_data={'xarray': ['tests/data/*']})

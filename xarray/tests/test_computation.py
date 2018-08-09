@@ -274,6 +274,22 @@ def test_apply_input_core_dimension():
     assert_identical(expected_dataset_x,
                      first_element(dataset.groupby('y'), 'x'))
 
+    def multiply(*args):
+        val = args[0]
+        for arg in args[1:]:
+            val = val * arg
+        return val
+
+    # regression test for GH:2341
+    with pytest.raises(ValueError):
+        apply_ufunc(multiply, data_array, data_array['y'].values,
+                    input_core_dims=[['y']], output_core_dims=[['y']])
+    expected = xr.DataArray(multiply(data_array, data_array['y']),
+                            dims=['x', 'y'], coords=data_array.coords)
+    actual = apply_ufunc(multiply, data_array, data_array['y'].values,
+                         input_core_dims=[['y'], []], output_core_dims=[['y']])
+    assert_identical(expected, actual)
+
 
 def test_apply_output_core_dimension():
 
@@ -726,9 +742,6 @@ def pandas_median(x):
 
 
 def test_vectorize():
-    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
-        pytest.skip('numpy 1.12 or later to support vectorize=True.')
-
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
     expected = xr.DataArray([1, 2], dims=['x'])
     actual = apply_ufunc(pandas_median, data_array,
@@ -739,9 +752,6 @@ def test_vectorize():
 
 @requires_dask
 def test_vectorize_dask():
-    if LooseVersion(np.__version__) < LooseVersion('1.12.0'):
-        pytest.skip('numpy 1.12 or later to support vectorize=True.')
-
     data_array = xr.DataArray([[0, 1, 2], [1, 2, 3]], dims=('x', 'y'))
     expected = xr.DataArray([1, 2], dims=['x'])
     actual = apply_ufunc(pandas_median, data_array.chunk({'x': 1}),

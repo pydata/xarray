@@ -25,9 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.8:
+.. _whats-new.0.10.9:
 
-v0.10.8 (unreleased)
+v0.10.9 (unreleased)
 --------------------
 
 Documentation
@@ -36,8 +36,95 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
+- DataArray coordinates and Dataset coordinates and data variables are
+  now displayed as `a b ... y z` rather than `a b c d ...`.
+  (:issue:`1186`)
+  By `Seth P <https://github.com/seth-p>`_.
+
+- When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
+  (:issue:`2284`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
+  (:issue:`2331`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+
 Bug fixes
 ~~~~~~~~~
+
+- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
+  falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
+  attribute being set.
+  (:issue:`2201`)
+  By `Thomas Voigt <https://github.com/tv3141>`_.
+- Tests can be run in parallel with pytest-xdist
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
+- Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
+``input_core_dims`` is inconsistent with the number of arguments.
+  (:issue:`2341`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+.. _whats-new.0.10.8:
+
+v0.10.8 (18 July 2018)
+----------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray no longer supports python 3.4. Additionally, the minimum supported
+  versions of the following dependencies has been updated and/or clarified:
+
+  - Pandas: 0.18 -> 0.19
+  - NumPy: 1.11 -> 1.12
+  - Dask: 0.9 -> 0.16
+  - Matplotlib: unspecified -> 1.5
+
+  (:issue:`2204`). By `Joe Hamman <https://github.com/jhamman>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- :py:meth:`~xarray.DataArray.interp_like` and
+  :py:meth:`~xarray.Dataset.interp_like` methods are newly added.
+  (:issue:`2218`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Added support for curvilinear and unstructured generic grids
+  to :py:meth:`~xarray.DataArray.to_cdms2` and
+  :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
+  By `Stephane Raynaud <https://github.com/stefraynaud>`_.
+
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  incomplete chunks in multiple dimensions (:issue:`2225`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Fixed a bug in :py:meth:`~Dataset.to_netcdf` which prevented writing
+  datasets when the arrays had different chunk sizes (:issue:`2254`).
+  By `Mike Neish <https://github.com/neishm>`_.
+
+- Fixed masking during the conversion to cdms2 objects by
+  :py:meth:`~xarray.DataArray.to_cdms2` (:issue:`2262`).
+  By `Stephane Raynaud <https://github.com/stefraynaud>`_.
+
+- Fixed a bug in 2D plots which incorrectly raised an error when 2D coordinates
+  weren't monotonic (:issue:`2250`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
+- Fixed warning raised in :py:meth:`~Dataset.to_netcdf` due to deprecation of
+  `effective_get` in dask (:issue:`2238`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.7:
 
@@ -60,12 +147,13 @@ Enhancements
   See :ref:`interpolating values with interp` for the detail.
   (:issue:`2079`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-  
+
 Bug fixes
 ~~~~~~~~~
 
 - Fixed a bug in ``rasterio`` backend which prevented use with ``distributed``.
   The ``rasterio`` backend now returns pickleable objects (:issue:`2021`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.6:
 

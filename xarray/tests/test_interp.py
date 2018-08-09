@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import xarray as xr
@@ -430,3 +431,62 @@ def test_interpolate_dimorder(case):
         actual = da.interp(x=0.5, z=new_z).dims
         expected = da.sel(x=0.5, z=new_z, method='nearest').dims
         assert actual == expected
+
+
+@requires_scipy
+def test_interp_like():
+    ds = create_test_data()
+    ds.attrs['foo'] = 'var'
+    ds['var1'].attrs['buz'] = 'var2'
+
+    other = xr.DataArray(np.random.randn(3), dims=['dim2'],
+                         coords={'dim2': [0, 1, 2]})
+    interpolated = ds.interp_like(other)
+
+    assert_allclose(interpolated['var1'],
+                    ds['var1'].interp(dim2=other['dim2']))
+    assert_allclose(interpolated['var1'],
+                    ds['var1'].interp_like(other))
+    assert interpolated['var3'].equals(ds['var3'])
+
+    # attrs should be kept
+    assert interpolated.attrs['foo'] == 'var'
+    assert interpolated['var1'].attrs['buz'] == 'var2'
+
+    other = xr.DataArray(np.random.randn(3), dims=['dim3'],
+                         coords={'dim3': ['a', 'b', 'c']})
+
+    actual = ds.interp_like(other)
+    expected = ds.reindex_like(other)
+    assert_allclose(actual, expected)
+
+
+@requires_scipy
+@pytest.mark.parametrize('x_new, expected', [
+    (pd.date_range('2000-01-02', periods=3), [1, 2, 3]),
+    (np.array([np.datetime64('2000-01-01T12:00'),
+               np.datetime64('2000-01-02T12:00')]), [0.5, 1.5]),
+    (['2000-01-01T12:00', '2000-01-02T12:00'], [0.5, 1.5]),
+    (['2000-01-01T12:00'], 0.5),
+    pytest.param('2000-01-01T12:00', 0.5, marks=pytest.mark.xfail)
+])
+def test_datetime(x_new, expected):
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+
+    actual = da.interp(time=x_new)
+    expected_da = xr.DataArray(np.atleast_1d(expected), dims=['time'],
+                               coords={'time': (np.atleast_1d(x_new)
+                                                .astype('datetime64[ns]'))})
+
+    assert_allclose(actual, expected_da)
+
+
+@requires_scipy
+def test_datetime_single_string():
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+    actual = da.interp(time='2000-01-01T12:00')
+    expected = xr.DataArray(0.5)
+
+    assert_allclose(actual.drop('time'), expected)

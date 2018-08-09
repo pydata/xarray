@@ -630,12 +630,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da.resample(time="Q-DEC").mean()
+        >>> da.resample(time="QS-DEC").mean()
         <xarray.DataArray (time: 4)>
         array([ 1.,  4.,  7., 10.])
         Coordinates:
-          * time     (time) datetime64[ns] 2000-02-29 2000-05-31 2000-08-31 2000-11-30
-          
+          * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
+
         Upsample monthly time-series data to daily data:
         
         >>> da.resample(time='1D').interpolate('linear')

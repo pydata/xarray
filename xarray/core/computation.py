@@ -10,7 +10,8 @@ from collections import Counter
 
 import numpy as np
 
-from . import duck_array_ops, utils
+from . import duck_array_ops
+from . import utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, dask_array_type, basestring
@@ -919,6 +920,11 @@ def apply_ufunc(func, *args, **kwargs):
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
+    elif len(input_core_dims) != len(args):
+        raise ValueError(
+            'input_core_dims must be None or a tuple with the length same to '
+            'the number of arguments. Given input_core_dims: {}, '
+            'number of args: {}.'.format(input_core_dims, len(args)))
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 
