@@ -76,6 +76,7 @@ Documentation
 * :doc:`internals`
 * :doc:`roadmap`
 * :doc:`contributing`
+* :doc:`related-projects`
 
 .. toctree::
    :maxdepth: 1
@@ -87,6 +88,7 @@ Documentation
    internals
    roadmap
    contributing
+   related-projects
 
 See also
 --------
