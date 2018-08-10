@@ -3355,14 +3355,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables)
 
-    def roll(self, **shifts):
+    def roll(self, coords=None, **shifts):
         """Roll this dataset by an offset along one or more dimensions.
 
-        Unlike shift, roll rotates all variables, including coordinates. The
-        direction of rotation is consistent with :py:func:`numpy.roll`.
+        Unlike shift, roll may rotate all variables, including coordinates
+        if specified. The direction of rotation is consistent with
+        :py:func:`numpy.roll`.
 
         Parameters
         ----------
+        coords : bool
+            Indicates whether to  roll the coordinates by the offset
+            The current default of coords (None, equivalent to True) is
+            deprecated and will change to False in a future version.
+            Explicitly pass coords to silence the warning and sort.
         **shifts : keyword arguments of the form {dim: offset}
             Integer offset to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.
@@ -3395,9 +3401,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            var_shifts = dict((k, v) for k, v in shifts.items()
-                              if k in var.dims)
-            variables[name] = var.roll(**var_shifts)
+            if name in self.data_vars or coords:
+                if coords is None:
+                    warnings.warn("Coords will be set to False in the future."
+                                  " Explicitly set coords to silence warning.",
+                                   DeprecationWarning, stacklevel=3)
+                var_shifts = dict((k, v) for k, v in shifts.items()
+                                  if k in var.dims)
+                variables[name] = var.roll(**var_shifts)
+            else:
+                variables[name] = var
 
         return self._replace_vars_and_dims(variables)
 
