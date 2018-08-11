@@ -9,7 +9,7 @@ from textwrap import dedent
 from numpy import array, nan
 import warnings
 
-from xarray import DataArray, concat
+from xarray import DataArray, Dataset, concat
 from xarray.core import duck_array_ops, dtypes
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
@@ -438,6 +438,15 @@ def test_min_count(dim_num, dtype, dask, func, aggdim):
         assert_allclose(actual, expected)
 
     assert_dask_array(actual, dask)
+
+
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+def test_min_count_dataset(func):
+    da = construct_dataarray(2, dtype=float, contains_nan=True, dask=False)
+    ds = Dataset({'var1': da}, coords={'scalar': 0})
+    actual = getattr(ds, func)(dim='x', skipna=True, min_count=3)['var1']
+    expected = getattr(ds['var1'], func)(dim='x', skipna=True, min_count=3)
+    assert_allclose(actual, expected)
 
 
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
