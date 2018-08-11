@@ -2932,9 +2932,13 @@ class TestRasterio(TestCase):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                # None is selected
+                # empty selection
                 ind = {'band': np.array([2, 1, 0]),
                        'x': 1, 'y': slice(2, 2, 1)}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
+                ind = {'band': slice(0, 0), 'x': 1, 'y': 2}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -3323,3 +3327,12 @@ def test_pickle_reconstructor():
         obj3 = pickle.loads(p_obj2)
 
         assert obj3.value.readlines() == lines
+
+
+@requires_scipy_or_netCDF4
+def test_no_warning_from_dask_effective_get():
+    with create_tmp_file() as tmpfile:
+        with pytest.warns(None) as record:
+            ds = Dataset()
+            ds.to_netcdf(tmpfile)
+        assert len(record) == 0

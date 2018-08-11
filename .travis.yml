@@ -40,7 +40,7 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
+    env: CONDA_ENV=py36-rasterio-0.36
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
   - python: 3.5
@@ -60,8 +60,6 @@ matrix:
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
-  - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
     env: CONDA_ENV=py36-bottleneck-dev
@@ -69,8 +67,6 @@ matrix:
     env: CONDA_ENV=py36-condaforge-rc
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
 
