@@ -2725,7 +2725,7 @@ class TestDataset(TestCase):
 
         actual = ds.resample(time='1D').sum(min_count=1)
         expected = xr.concat([
-            ds.isel(time=slice(i*4, (i+1)*4)).sum('time', min_count=1)
+            ds.isel(time=slice(i * 4, (i + 1) * 4)).sum('time', min_count=1)
             for i in range(3)], dim=actual['time'])
         assert_equal(expected, actual)
 
