@@ -36,7 +36,8 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum` and
+- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
+  :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
   :py:meth:`~xarray.Dataset.prod`.
   (:issue:`2230`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -66,10 +67,11 @@ Bug fixes
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
+
 - Tests can be run in parallel with pytest-xdist
+
 - Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
 
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
 ``input_core_dims`` is inconsistent with the number of arguments.
