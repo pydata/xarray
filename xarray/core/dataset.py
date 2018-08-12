@@ -3400,12 +3400,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             raise ValueError("dimensions %r do not exist" % invalid)
 
         variables = OrderedDict()
+        coord_names = set(k for k in self.coords if k in self.variables)
         for name, var in iteritems(self.variables):
-            if name in self.data_vars or roll_coords or roll_coords is None:
-                if roll_coords is None:
-                    warnings.warn("roll_coords will be set to False in the future."
-                                  " Explicitly set roll_coords to silence warning.",
-                                   DeprecationWarning, stacklevel=3)
+            if name in self.data_vars:
+                var_shifts = dict((k, v) for k, v in shifts.items()
+                                  if k in var.dims)
+                variables[name] = var.roll(**var_shifts)
+            elif name in coord_names and roll_coords:
+                var_shifts = dict((k, v) for k, v in shifts.items()
+                                  if k in var.dims)
+                variables[name] = var.roll(**var_shifts)
+            elif name in coord_names and roll_coords is None:
+                warnings.warn("roll_coords will be set to False in the future."
+                              " Explicitly set roll_coords to silence warning.",
+                               DeprecationWarning, stacklevel=3)
                 var_shifts = dict((k, v) for k, v in shifts.items()
                                   if k in var.dims)
                 variables[name] = var.roll(**var_shifts)
