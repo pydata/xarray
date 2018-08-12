@@ -3401,7 +3401,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            if name in self.data_vars or roll_coords:
+            if name in self.data_vars or roll_coords or roll_coords is None:
                 if roll_coords is None:
                     warnings.warn("roll_coords will be set to False in the future."
                                   " Explicitly set roll_coords to silence warning.",
