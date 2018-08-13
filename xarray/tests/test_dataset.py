@@ -2113,7 +2113,7 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'does not have a MultiIndex'):
             ds.unstack('x')
 
-    def test_stack_unstack(self):
+    def test_stack_unstack_fast(self):
         ds = Dataset({'a': ('x', [0, 1]),
                       'b': (('x', 'y'), [[0, 1], [2, 3]]),
                       'x': [0, 1],
@@ -2122,6 +2122,19 @@ class TestDataset(TestCase):
         assert actual.broadcast_equals(ds)
 
         actual = ds[['b']].stack(z=['x', 'y']).unstack('z')
+        assert actual.identical(ds[['b']])
+
+    def test_stack_unstack_slow(self):
+        ds = Dataset({'a': ('x', [0, 1]),
+                      'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                      'x': [0, 1],
+                      'y': ['a', 'b']})
+        stacked = ds.stack(z=['x', 'y'])
+        actual = stacked.isel(z=range(len(stacked.z))[::-1]).unstack('z')
+        assert actual.broadcast_equals(ds)
+
+        stacked = ds[['b']].stack(z=['x', 'y'])
+        actual = stacked.isel(z=range(len(stacked.z))[::-1]).unstack('z')
         assert actual.identical(ds[['b']])
 
     def test_update(self):
