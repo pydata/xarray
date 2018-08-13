@@ -2324,12 +2324,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              'a MultiIndex')
 
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
-        if not index.equals(full_idx):
-            print('slow2')
-            obj = self.reindex(copy=False, **{dim: full_idx})
-        else:
-            print('fast2')
+        
+        # take a shortcut in case the MultiIndex was not modified.
+        if index.equals(full_idx):
             obj = self
+        else:
+            obj = self.reindex(copy=False, **{dim: full_idx})
             
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
