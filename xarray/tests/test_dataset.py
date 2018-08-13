@@ -2130,11 +2130,11 @@ class TestDataset(TestCase):
                       'x': [0, 1],
                       'y': ['a', 'b']})
         stacked = ds.stack(z=['x', 'y'])
-        actual = stacked.isel(z=slice(None,None,-1)).unstack('z')
+        actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.broadcast_equals(ds)
 
         stacked = ds[['b']].stack(z=['x', 'y'])
-        actual = stacked.isel(z=slice(None,None,-1)).unstack('z')
+        actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
 
     def test_update(self):
