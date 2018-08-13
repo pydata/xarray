@@ -64,6 +64,13 @@ Bug fixes
 - Tests can be run in parallel with pytest-xdist
 - Now raises a ValueError when there is a conflict between dimension names and
   level names of MultiIndex. (:issue:`2299`)
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+
+- Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
+``input_core_dims`` is inconsistent with the number of arguments.
+  (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.10.8:
