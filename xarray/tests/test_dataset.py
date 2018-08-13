@@ -2456,6 +2456,18 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
+        # raise an Error when any level name is used as dimension GH:2299
+        with pytest.raises(ValueError):
+            data['y'] = ('level_1', [0, 1])
+
+    def test_merge_multiindex_level(self):
+        data = create_test_multiindex()
+        other = Dataset({'z': ('level_1', [0, 1])})  # conflict dimension
+        with pytest.raises(ValueError):
+            data.merge(other)
+        other = Dataset({'level_1': ('x', [0, 1])})  # conflict variable name
+        with pytest.raises(ValueError):
+            data.merge(other)
 
     def test_setitem_original_non_unique_index(self):
         # regression test for GH943
