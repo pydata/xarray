@@ -2015,7 +2015,7 @@ class DataArray(AbstractArray, DataWithCoords):
         variable = self.variable.shift(**shifts)
         return self._replace(variable)
 
-    def roll(self, roll_coords=None, **shifts):
+    def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this array by an offset along one or more dimensions.
 
         Unlike shift, roll may rotate all variables, including coordinates
@@ -2052,6 +2052,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 2 0 1
         """
+        shifts = either_dict_or_kwargs(shifts,
+                                       shifts_kwargs,
+                                       'roll')
         ds = self._to_temp_dataset().roll(roll_coords=roll_coords, **shifts)
         return self._from_temp_dataset(ds)
 
