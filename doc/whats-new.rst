@@ -36,10 +36,21 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 - DataArray coordinates and Dataset coordinates and data variables are
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
+
+- When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
+  (:issue:`2284`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
+  (:issue:`2331`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 
 
 Bug fixes
@@ -54,6 +65,21 @@ Bug fixes
   invalid chunk size encoding after reading from an existing store
   (:issue:`2278`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Tests can be run in parallel with pytest-xdist
+  By `Tony Tung <https://github.com/ttung>`_.
+
+- Now raises a ValueError when there is a conflict between dimension names and
+  level names of MultiIndex. (:issue:`2299`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
+``input_core_dims`` is inconsistent with the number of arguments.
+  (:issue:`2341`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.10.8:
 
