@@ -3110,7 +3110,10 @@ class TestDataArray(TestCase):
 
     def test_roll_coords_none(self):
         arr = DataArray([1, 2, 3], coords={'x': range(3)}, dims='x')
-        actual = arr.roll(x=1, roll_coords=None)
+
+        with pytest.warns(FutureWarning):
+            actual = arr.roll(x=1, roll_coords=None)
+
         expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
         assert_identical(expected, actual)
 

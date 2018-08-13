@@ -2028,7 +2028,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Indicates whether to  roll the coordinates by the offset
             The current default of roll_coords (None, equivalent to True) is
             deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning and sort.
+            Explicitly pass roll_coords to silence the warning.
         **shifts : keyword arguments of the form {dim: offset}
             Integer offset to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.

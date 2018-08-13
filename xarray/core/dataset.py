@@ -3368,7 +3368,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Indicates whether to  roll the coordinates by the offset
             The current default of roll_coords (None, equivalent to True) is
             deprecated and will change to False in a future version.
-            Explicitly pass roll_coords to silence the warning and sort.
+            Explicitly pass roll_coords to silence the warning.
         **shifts : keyword arguments of the form {dim: offset}
             Integer offset to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.
@@ -3395,6 +3395,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
             foo      (x) object 'd' 'e' 'a' 'b' 'c'
         """
+        shifts = either_dict_or_kwargs(None,
+                                       shifts,
+                                       'roll')
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
@@ -3402,7 +3405,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if roll_coords is None:
             warnings.warn("roll_coords will be set to False in the future."
                           " Explicitly set roll_coords to silence warning.",
-                          DeprecationWarning, stacklevel=3)
+                          FutureWarning, stacklevel=2)
             roll_coords = True
 
         unrolled_vars = () if roll_coords else self.coords
