@@ -259,13 +259,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
         attrs['is_tiled'] = np.uint8(riods.value.is_tiled)
-    with warnings.catch_warnings():
-        # casting riods.value.transform to a tuple makes this future proof
-        warnings.simplefilter('ignore', FutureWarning)
-        if hasattr(riods.value, 'transform'):
-            # Affine transformation matrix (tuple of floats)
-            # Describes coefficients mapping pixel coordinates to CRS
-            attrs['transform'] = tuple(riods.value.transform)
     if hasattr(riods.value, 'nodatavals'):
         # The nodata values for the raster bands
         attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval

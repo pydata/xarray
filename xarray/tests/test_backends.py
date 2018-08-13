@@ -2809,6 +2809,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [np.NaN, np.NaN, np.NaN])
 
@@ -2830,6 +2831,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
 
             # See if a warning is raised if we force it
             with self.assertWarns("transformation isn't rectilinear"):
@@ -2849,6 +2851,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [-9765.])
 
@@ -2886,6 +2889,7 @@ class TestRasterio(TestCase):
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)
+                    assert len(rioda.attrs['transform']) == 6
 
     def test_indexing(self):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
@@ -3080,6 +3084,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 # from ENVI tags
                 assert isinstance(rioda.attrs['description'], basestring)
                 assert isinstance(rioda.attrs['map_info'], basestring)
