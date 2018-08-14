@@ -9,7 +9,11 @@ import pandas as pd
 from . import duck_array_ops, dtypes, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import Frozen, SortedKeysDict
+from .utils import Frozen, SortedKeysDict, ReprObject
+
+
+# Use as a sentinel value to indicate a all dimensions, which
+ALL_DIMS = ReprObject('<all-dims>')
 
 
 class ImplementsArrayReduce(object):
