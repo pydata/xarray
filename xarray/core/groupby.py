@@ -6,11 +6,10 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import dtypes, duck_array_ops, nputils, ops
+from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
 from .combine import concat
-from .common import (
-    ImplementsArrayReduce, ImplementsDatasetReduce, ALL_DIMS, DEFAULT_DIMS)
+from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import integer_types, range, zip
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
@@ -569,22 +568,40 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim == DEFAULT_DIMS:
+        if dim is DEFAULT_DIMS:
             dim = ALL_DIMS
             # TODO change this to dim = self._group_dim after
             # the deprecation process
             if self._obj.ndim > 1:
                 warnings.warn("Default reduction dimension will be changed to "
                               "the grouped dimension. To silence warning, set "
-                              "dim=xarray.ALL_DIMS or dim=None explicitly.",
+                              "dim=xarray.ALL_DIMS explicitly.",
                               FutureWarning, stacklevel=2)
-        elif dim is None:
+        if dim is None:  # TODO enable this after the deprecation
             dim = self._group_dim
 
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
 
+    # TODO remove the following class method and DEFAULT_DIMS after the
+    # deprecation cycle
+    @classmethod
+    def _reduce_method(cls, func, include_skipna, numeric_only):
+        if include_skipna:
+            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
+                             keep_attrs=False, **kwargs):
+                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                                   skipna=skipna, allow_lazy=True, **kwargs)
+        else:
+            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, keep_attrs=False,
+                             **kwargs):
+                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                                   allow_lazy=True, **kwargs)
+        return wrapped_func
+
+
+DEFAULT_DIMS = utils.ReprObject('<default-dims>')
 
 ops.inject_reduce_methods(DataArrayGroupBy)
 ops.inject_binary_ops(DataArrayGroupBy)

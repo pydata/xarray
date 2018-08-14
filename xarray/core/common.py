@@ -6,27 +6,22 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, dtypes, formatting, ops, utils
+from . import duck_array_ops, dtypes, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import Frozen, SortedKeysDict
-
-
-# Use as a sentinel value to indicate a all dimensions, which
-ALL_DIMS = utils.ReprObject('<all-dims>')
-DEFAULT_DIMS = utils.ReprObject('<default-dims>')
 
 
 class ImplementsArrayReduce(object):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
+            def wrapped_func(self, dim=None, axis=None, skipna=None,
                              keep_attrs=False, **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, keep_attrs=False,
+            def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
                              **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    allow_lazy=True, **kwargs)
@@ -52,13 +47,13 @@ class ImplementsDatasetReduce(object):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False, skipna=None,
+            def wrapped_func(self, dim=None, keep_attrs=False, skipna=None,
                              **kwargs):
                 return self.reduce(func, dim, keep_attrs, skipna=skipna,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False, **kwargs):
+            def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
                 return self.reduce(func, dim, keep_attrs,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
@@ -313,12 +308,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         assigned : same type as caller
             A new object with the new coordinates in addition to the existing
             data.
-
+            
         Examples
         --------
-
+        
         Convert longitude coordinates from 0-359 to -180-179:
-
+        
         >>> da = xr.DataArray(np.random.rand(4),
         ...                   coords=[np.array([358, 359, 0, 1])],
         ...                   dims='lon')
@@ -450,11 +445,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
-
+            
         Examples
         --------
         Calculate daily anomalies for daily data:
-
+        
         >>> da = xr.DataArray(np.linspace(0, 1826, num=1827),
         ...                   coords=[pd.date_range('1/1/2000', '31/12/2004',
         ...                           freq='D')],
@@ -470,7 +465,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time       (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
             dayofyear  (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 ...
-
+        
         See Also
         --------
         core.groupby.DataArrayGroupBy
@@ -594,7 +589,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no
+        Handles both downsampling and upsampling. If any intervals contain no 
         values from the original object, they will be given the value ``NaN``.
 
         Parameters
@@ -621,11 +616,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         -------
         resampled : same type as caller
             This object resampled.
-
+            
         Examples
         --------
         Downsample monthly time-series data to seasonal data:
-
+        
         >>> da = xr.DataArray(np.linspace(0, 11, num=12),
         ...                   coords=[pd.date_range('15/12/1999',
         ...                           periods=12, freq=pd.DateOffset(months=1))],
@@ -642,13 +637,13 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
 
         Upsample monthly time-series data to daily data:
-
+        
         >>> da.resample(time='1D').interpolate('linear')
         <xarray.DataArray (time: 337)>
         array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
-
+          
         References
         ----------
 
@@ -962,8 +957,8 @@ def contains_cftime_datetimes(var):
                     sample = sample.item()
             return isinstance(sample, cftime_datetime)
         else:
-            return False
-
+            return False        
+                    
 
 def _contains_datetime_like_objects(var):
     """Check if a variable contains datetime like objects (either

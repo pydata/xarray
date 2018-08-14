@@ -10,7 +10,7 @@ from . import computation, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
-from .common import AbstractArray, DataWithCoords, ALL_DIMS, DEFAULT_DIMS
+from .common import AbstractArray, DataWithCoords, ALL_DIMS
 from .coordinates import (
     DataArrayCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -1460,7 +1460,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return ops.fillna(self, other, join="outer")
 
-    def reduce(self, func, dim=DEFAULT_DIMS, axis=None, keep_attrs=False,
+    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
                **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
