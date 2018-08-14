@@ -30,6 +30,14 @@ What's New
 v0.10.9 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+  without dimension argument will change in the next release.
+  Now we warn a FutureWarning.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Documentation
 ~~~~~~~~~~~~~
 
