@@ -8,7 +8,7 @@ from . import requires_dask
 
 class Unstacking(object):
     def setup(self):
-        data = np.random.RandomState(0).randn(1, 1000, 4000)
+        data = np.random.RandomState(0).randn(1, 1000, 500)
         self.ds = xr.DataArray(data).stack(flat_dim=['dim_1', 'dim_2'])
 
     def time_unstack_fast(self):
