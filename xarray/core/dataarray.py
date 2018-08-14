@@ -10,7 +10,7 @@ from . import computation, groupby, indexing, ops, resample, rolling, utils
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
-from .common import AbstractArray, DataWithCoords, ALL_DIMS
+from .common import AbstractArray, DataWithCoords
 from .coordinates import (
     DataArrayCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
