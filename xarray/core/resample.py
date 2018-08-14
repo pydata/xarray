@@ -296,8 +296,6 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        print(self._dim)
-        print(self._group_dim)
         return super(DatasetResample, self).reduce(
             func, None, keep_attrs, **kwargs)
 
