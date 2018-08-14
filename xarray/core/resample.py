@@ -277,9 +277,6 @@ class DatasetResample(DatasetGroupBy, Resample):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 
-        Note that `dim` is by default here and ignored if passed by the user;
-        this ensures compatibility with the existing reduce interface.
-
         Parameters
         ----------
         func : function
@@ -299,8 +296,10 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        print(self._dim)
+        print(self._group_dim)
         return super(DatasetResample, self).reduce(
-            func, self._dim, keep_attrs, **kwargs)
+            func, None, keep_attrs, **kwargs)
 
     def _interpolate(self, kind='linear'):
         """Apply scipy.interpolate.interp1d along resampling dimension."""

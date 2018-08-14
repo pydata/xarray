@@ -577,7 +577,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
                               "the grouped dimension. To silence warning, set "
                               "dim=xarray.ALL_DIMS explicitly.",
                               FutureWarning, stacklevel=2)
-        if dim is None:  # TODO enable this after the deprecation
+        elif dim is None:
             dim = self._group_dim
 
         def reduce_array(ar):
@@ -680,9 +680,38 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim is DEFAULT_DIMS:
+            dim = ALL_DIMS
+            # TODO change this to dim = self._group_dim after
+            # the deprecation process
+            warnings.warn("Default reduction dimension will be changed to "
+                          "the grouped dimension. To silence warning, set "
+                          "dim=xarray.ALL_DIMS explicitly.",
+                          FutureWarning, stacklevel=2)
+        elif dim is None:
+            dim = self._group_dim
+
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
+
+    # TODO remove the following class method and DEFAULT_DIMS after the
+    # deprecation cycle
+    @classmethod
+    def _reduce_method(cls, func, include_skipna, numeric_only):
+        if include_skipna:
+            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False,
+                             skipna=None, **kwargs):
+                return self.reduce(func, dim, keep_attrs, skipna=skipna,
+                                   numeric_only=numeric_only, allow_lazy=True,
+                                   **kwargs)
+        else:
+            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False,
+                             **kwargs):
+                return self.reduce(func, dim, keep_attrs,
+                                   numeric_only=numeric_only, allow_lazy=True,
+                                   **kwargs)
+        return wrapped_func
 
     def assign(self, **kwargs):
         """Assign data variables by group.
