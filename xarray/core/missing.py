@@ -57,7 +57,7 @@ class NumpyInterpolator(BaseInterpolator):
 
         if self.cons_kwargs:
             raise ValueError(
-                'recieved invalid kwargs: %r' % self.cons_kwargs.keys())
+                'received invalid kwargs: %r' % self.cons_kwargs.keys())
 
         if fill_value is None:
             self._left = np.nan
