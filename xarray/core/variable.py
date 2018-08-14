@@ -1228,8 +1228,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=common.DEFAULT_DIMS, axis=None,
+               keep_attrs=False, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1258,6 +1258,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim == common.DEFAULT_DIMS or dim == common.ALL_DIMS:
+            dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 

@@ -18,7 +18,8 @@ from . import (
 from .. import conventions
 from .alignment import align
 from .common import (
-    DataWithCoords, ImplementsDatasetReduce, _contains_datetime_like_objects)
+    ALL_DIMS, DEFAULT_DIMS, DataWithCoords, ImplementsDatasetReduce,
+    _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -2722,8 +2723,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
-    def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=DEFAULT_DIMS, keep_attrs=False,
+               numeric_only=False, allow_lazy=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
         Parameters
@@ -2750,6 +2751,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if dim == DEFAULT_DIMS or dim == ALL_DIMS:
+            dim = None
         if isinstance(dim, basestring):
             dims = set([dim])
         elif dim is None:

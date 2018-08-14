@@ -14,7 +14,7 @@ from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
 from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
-from xarray.core.common import full_like
+from xarray.core.common import full_like, ALL_DIMS
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
@@ -1983,15 +1983,15 @@ class TestDataArray(TestCase):
                                                 self.x[:, 10:].sum(),
                                                 self.x[:, 9:10].sum()]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        assert_allclose(expected_sum_all, grouped.reduce(np.sum))
-        assert_allclose(expected_sum_all, grouped.sum())
+        assert_allclose(expected_sum_all, grouped.reduce(np.sum, dim=ALL_DIMS))
+        assert_allclose(expected_sum_all, grouped.sum(ALL_DIMS))
 
         expected = DataArray([array['y'].values[idx].sum() for idx
                               in [slice(9), slice(10, None), slice(9, 10)]],
                              [['a', 'b', 'c']], ['abc'])
         actual = array['y'].groupby('abc').apply(np.sum)
         assert_allclose(expected, actual)
-        actual = array['y'].groupby('abc').sum()
+        actual = array['y'].groupby('abc').sum(ALL_DIMS)
         assert_allclose(expected, actual)
 
         expected_sum_axis1 = Dataset(
@@ -2001,6 +2001,24 @@ class TestDataArray(TestCase):
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
         assert_allclose(expected_sum_axis1, grouped.reduce(np.sum, 'y'))
         assert_allclose(expected_sum_axis1, grouped.sum('y'))
+
+    def test_groupby_warning(self):
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+        with pytest.warns(FutureWarning):
+            grouped.sum()
+
+    def test_groupby_sum_default(self):
+        array = self.make_groupby_example_array()
+        grouped = array.groupby('abc')
+
+        expected_sum_all = Dataset(
+            {'foo': Variable(['x', 'abc'],
+             np.array([self.x[:, :9].sum(axis=-1),
+                       self.x[:, 10:].sum(axis=-1),
+                       self.x[:, 9:10].sum(axis=-1)]).T),
+             'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
+        assert_allclose(expected_sum_all, grouped.sum(dim=None))
 
     def test_groupby_count(self):
         array = DataArray(
@@ -2082,9 +2100,9 @@ class TestDataArray(TestCase):
             assert_identical(expected, actual)
 
         grouped = array.groupby('abc')
-        expected_agg = (grouped.mean() - np.arange(3)).rename(None)
+        expected_agg = (grouped.mean(ALL_DIMS) - np.arange(3)).rename(None)
         actual = grouped - DataArray(range(3), [('abc', ['a', 'b', 'c'])])
-        actual_agg = actual.groupby('abc').mean()
+        actual_agg = actual.groupby('abc').mean(ALL_DIMS)
         assert_allclose(expected_agg, actual_agg)
 
         with raises_regex(TypeError, 'only support binary ops'):
@@ -2158,7 +2176,7 @@ class TestDataArray(TestCase):
                 ('lon', DataArray([5, 28, 23],
                                   coords=[('lon', [30., 40., 50.])])),
                 ('lat', DataArray([16, 40], coords=[('lat', [10., 20.])]))]:
-            actual_sum = array.groupby(dim).sum()
+            actual_sum = array.groupby(dim).sum(ALL_DIMS)
             assert_identical(expected_sum, actual_sum)
 
     def test_groupby_multidim_apply(self):

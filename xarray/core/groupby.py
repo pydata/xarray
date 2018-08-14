@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import functools
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,8 @@ import pandas as pd
 from . import dtypes, duck_array_ops, nputils, ops
 from .arithmetic import SupportsArithmetic
 from .combine import concat
-from .common import ImplementsArrayReduce, ImplementsDatasetReduce
+from .common import (
+    ImplementsArrayReduce, ImplementsDatasetReduce, ALL_DIMS, DEFAULT_DIMS)
 from .pycompat import integer_types, range, zip
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
@@ -567,6 +569,18 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim == DEFAULT_DIMS:
+            dim = ALL_DIMS
+            # TODO change this to dim = self._group_dim after
+            # the deprecation process
+            if self._obj.ndim > 1:
+                warnings.warn("Default reduction dimension will be changed to "
+                              "the grouped dimension. To silence warning, set "
+                              "dim=xarray.ALL_DIMS or dim=None explicitly.",
+                              FutureWarning, stacklevel=2)
+        elif dim is None:
+            dim = self._group_dim
+
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
