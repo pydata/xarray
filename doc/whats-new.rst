@@ -52,12 +52,15 @@ Enhancements
   (:issue:`2331`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Applying ``unstack`` to a large DataArray or Dataset is now much faster if the MultiIndex has not been modified after stacking the indices.
+  (:issue:`1560`)
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+
 - You can now control whether or not to offset the coordinates when using
   the ``roll`` method and the current behavior, coordinates rolled by default,
   raises a deprecation warning unless explicitly setting the keyword argument.
   (:issue:`1875`)
   By `Andrew Huang <https://github.com/ahuang11>`_.
-
 
 Bug fixes
 ~~~~~~~~~
@@ -67,10 +70,20 @@ Bug fixes
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  invalid chunk size encoding after reading from an existing store
+  (:issue:`2278`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 - Tests can be run in parallel with pytest-xdist
-- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Tony Tung <https://github.com/ttung>`_.
+
+- Now raises a ValueError when there is a conflict between dimension names and
+  level names of MultiIndex. (:issue:`2299`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
 ``input_core_dims`` is inconsistent with the number of arguments.
