@@ -2324,13 +2324,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              'a MultiIndex')
 
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
-        
+
         # take a shortcut in case the MultiIndex was not modified.
         if index.equals(full_idx):
             obj = self
         else:
             obj = self.reindex(copy=False, **{dim: full_idx})
-            
+
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
 
@@ -3404,9 +3404,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
             foo      (x) object 'd' 'e' 'a' 'b' 'c'
         """
-        shifts = either_dict_or_kwargs(shifts,
-                                       shifts_kwargs,
-                                       'roll')
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'roll')
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)

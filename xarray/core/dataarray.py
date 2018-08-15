@@ -2052,10 +2052,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 2 0 1
         """
-        shifts = either_dict_or_kwargs(shifts,
-                                       shifts_kwargs,
-                                       'roll')
-        ds = self._to_temp_dataset().roll(roll_coords=roll_coords, **shifts)
+        ds = self._to_temp_dataset().roll(
+            shifts=shifts, roll_coords=roll_coords, **shifts_kwargs)
         return self._from_temp_dataset(ds)
 
     @property
