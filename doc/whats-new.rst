@@ -52,6 +52,10 @@ Enhancements
   (:issue:`2331`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Applying ``unstack`` to a large DataArray or Dataset is now much faster if the MultiIndex has not been modified after stacking the indices.
+  (:issue:`1560`)
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+
 
 Bug fixes
 ~~~~~~~~~
