@@ -56,6 +56,11 @@ Enhancements
   (:issue:`1560`)
   By `Maximilian Maahn <https://github.com/maahn>`_.
 
+- You can now control whether or not to offset the coordinates when using
+  the ``roll`` method and the current behavior, coordinates rolled by default,
+  raises a deprecation warning unless explicitly setting the keyword argument.
+  (:issue:`1875`)
+  By `Andrew Huang <https://github.com/ahuang11>`_.
 
 Bug fixes
 ~~~~~~~~~
