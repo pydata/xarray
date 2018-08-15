@@ -3862,18 +3862,42 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'dimensions'):
             ds.shift(foo=123)
 
-    def test_roll(self):
+    def test_roll_coords(self):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
-        actual = ds.roll(x=1)
+        actual = ds.roll(x=1, roll_coords=True)
 
         ex_coords = {'bar': ('x', list('cab')), 'x': [2, -4, 3]}
         expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'dimensions'):
-            ds.roll(foo=123)
+            ds.roll(foo=123, roll_coords=True)
+
+    def test_roll_no_coords(self):
+        coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
+        attrs = {'meta': 'data'}
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
+        actual = ds.roll(x=1, roll_coords=False)
+
+        expected = Dataset({'foo': ('x', [3, 1, 2])}, coords, attrs)
+        assert_identical(expected, actual)
+
+        with raises_regex(ValueError, 'dimensions'):
+            ds.roll(abc=321, roll_coords=False)
+
+    def test_roll_coords_none(self):
+        coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
+        attrs = {'meta': 'data'}
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
+
+        with pytest.warns(FutureWarning):
+            actual = ds.roll(x=1, roll_coords=None)
+
+        ex_coords = {'bar': ('x', list('cab')), 'x': [2, -4, 3]}
+        expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
+        assert_identical(expected, actual)
 
     def test_real_and_imag(self):
         attrs = {'foo': 'bar'}

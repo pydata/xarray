@@ -2015,14 +2015,20 @@ class DataArray(AbstractArray, DataWithCoords):
         variable = self.variable.shift(**shifts)
         return self._replace(variable)
 
-    def roll(self, **shifts):
+    def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this array by an offset along one or more dimensions.
 
-        Unlike shift, roll rotates all variables, including coordinates. The
-        direction of rotation is consistent with :py:func:`numpy.roll`.
+        Unlike shift, roll may rotate all variables, including coordinates
+        if specified. The direction of rotation is consistent with
+        :py:func:`numpy.roll`.
 
         Parameters
         ----------
+        roll_coords : bool
+            Indicates whether to  roll the coordinates by the offset
+            The current default of roll_coords (None, equivalent to True) is
+            deprecated and will change to False in a future version.
+            Explicitly pass roll_coords to silence the warning.
         **shifts : keyword arguments of the form {dim: offset}
             Integer offset to rotate each of the given dimensions. Positive
             offsets roll to the right; negative offsets roll to the left.
@@ -2046,7 +2052,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 2 0 1
         """
-        ds = self._to_temp_dataset().roll(**shifts)
+        ds = self._to_temp_dataset().roll(
+            shifts=shifts, roll_coords=roll_coords, **shifts_kwargs)
         return self._from_temp_dataset(ds)
 
     @property
