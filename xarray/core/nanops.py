@@ -33,7 +33,7 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
     if axis is not None and getattr(result, 'ndim', False):
         null_mask = (mask.shape[axis] - mask.sum(axis) - min_count) < 0
-        if np.any(null_mask):
+        if null_mask.any():
             dtype, fill_value = dtypes.maybe_promote(result.dtype)
             result = result.astype(dtype)
             result[null_mask] = fill_value
@@ -61,7 +61,7 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     if (valid_count == 0).any():
         raise ValueError('All-NaN slice encountered')
 
-    return np.array(data, dtype=int)
+    return data
 
 
 def _nan_minmax_object(func, fill_value, value, axis=None, **kwargs):
@@ -122,8 +122,8 @@ def nanargmax(a, axis=None):
         res = np.argmax(a, axis=axis)
 
     if mask is not None:
-        mask = np.all(mask, axis=axis)
-        if np.any(mask):
+        mask = mask.all(axis=axis)
+        if mask.any():
             raise ValueError("All-NaN slice encountered")
     return res
 
