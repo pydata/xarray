@@ -568,7 +568,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim is DEFAULT_DIMS:
+        if dim == DEFAULT_DIMS:
             dim = ALL_DIMS
             # TODO change this to dim = self._group_dim after
             # the deprecation process
@@ -681,7 +681,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
-        if dim is DEFAULT_DIMS:
+        if dim == DEFAULT_DIMS:
             dim = ALL_DIMS
             # TODO change this to dim = self._group_dim after
             # the deprecation process. Do not forget to remove _reduce_method
