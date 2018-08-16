@@ -48,14 +48,16 @@ def _maybe_null_out(result, axis, mask, min_count=1):
 
 def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     """ In house nanargmin, nanargmax for object arrays. Always return integer
-    type """
+    type
+    """
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
-    data = getattr(np, func)(value, axis=axis, **kwargs)
+    data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
     # dask seems return non-integer type
     if isinstance(value, dask_array_type):
         data = data.astype(int)
 
+    # TODO This will evaluate dask arrays and might be costly.
     if (valid_count == 0).any():
         raise ValueError('All-NaN slice encountered')
 
@@ -78,9 +80,8 @@ def nanmin(a, axis=None, out=None):
         return _nan_minmax_object(
             'min', dtypes.get_pos_infinity(a.dtype), a, axis)
 
-    if isinstance(a, dask_array_type):
-        return dask_array.nanmin(a, axis=axis)
-    return nputils.nanmin(a, axis=axis)
+    module = dask_array if isinstance(a, dask_array_type) else nputils
+    return module.nanmin(a, axis=axis)
 
 
 def nanmax(a, axis=None, out=None):
@@ -88,9 +89,8 @@ def nanmax(a, axis=None, out=None):
         return _nan_minmax_object(
             'max', dtypes.get_neg_infinity(a.dtype), a, axis)
 
-    if isinstance(a, dask_array_type):
-        return dask_array.nanmax(a, axis=axis)
-    return nputils.nanmax(a, axis=axis)
+    module = dask_array if isinstance(a, dask_array_type) else nputils
+    return module.nanmax(a, axis=axis)
 
 
 def nanargmin(a, axis=None):

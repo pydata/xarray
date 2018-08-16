@@ -316,7 +316,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
             # also check ddof!=0 case
             actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
             if dask:
-                isinstance(da.data, dask_array_type)
+                assert isinstance(da.data, dask_array_type)
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=5)
             assert_allclose(actual, expected, rtol=rtol)
@@ -334,7 +334,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
         actual = getattr(da, func)(skipna=skipna)
         if dask:
-            isinstance(da.data, dask_array_type)
+            assert isinstance(da.data, dask_array_type)
         expected = getattr(np, 'nan{}'.format(func))(da.values)
         if actual.dtype == object:
             assert actual.values == np.array(expected)
