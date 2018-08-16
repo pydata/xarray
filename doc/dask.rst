@@ -13,7 +13,7 @@ dependency in a future version of xarray.
 For a full example of how to use xarray's dask integration, read the
 `blog post introducing xarray and dask`_.
 
-.. _blog post introducing xarray and dask: https://www.anaconda.com/blog/developer-blog/xray-dask-out-core-labeled-arrays-python/
+.. _blog post introducing xarray and dask: http://stephanhoyer.com/2015/06/11/xray-dask-out-of-core-labeled-arrays/
 
 What is a dask array?
 ---------------------
@@ -49,7 +49,7 @@ argument to :py:func:`~xarray.open_dataset` or using the
 :py:func:`~xarray.open_mfdataset` function.
 
 .. ipython:: python
-   :suppress:
+    :suppress:
 
     import numpy as np
     import pandas as pd
@@ -99,6 +99,29 @@ from the first block). To reveal the true nature of an array, print a DataArray:
 Once you've manipulated a dask array, you can still write a dataset too big to
 fit into memory back to disk by using :py:meth:`~xarray.Dataset.to_netcdf` in the
 usual way.
+
+.. ipython:: python
+
+    ds.to_netcdf('manipulated-example-data.nc')
+
+By setting the ``compute`` argument to ``False``, :py:meth:`~xarray.Dataset.to_netcdf`
+will return a dask delayed object that can be computed later.
+
+.. ipython:: python
+
+    from dask.diagnostics import ProgressBar
+    # or distributed.progress when using the distributed scheduler
+    delayed_obj = ds.to_netcdf('manipulated-example-data.nc', compute=False)
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+.. note::
+
+    When using dask's distributed scheduler to write NETCDF4 files,
+    it may be necessary to set the environment variable `HDF5_USE_FILE_LOCKING=FALSE`
+    to avoid competing locks within the HDF5 SWMR file locking scheme. Note that
+    writing netCDF files with dask's distributed scheduler is only supported for
+    the `netcdf4` backend.
 
 A dataset can also be converted to a dask DataFrame using :py:meth:`~xarray.Dataset.to_dask_dataframe`.
 

@@ -1,14 +1,14 @@
 import os
-import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
+import warnings
 
 import numpy as np
 
 from .. import DataArray
 from ..core import indexing
 from ..core.utils import is_scalar
-from .common import BackendArray
+from .common import BackendArray, PickleByReconstructionWrapper
 
 try:
     from dask.utils import SerializableLock as Lock
@@ -25,15 +25,15 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
 
-    def __init__(self, rasterio_ds):
-        self.rasterio_ds = rasterio_ds
-        self._shape = (rasterio_ds.count, rasterio_ds.height,
-                       rasterio_ds.width)
+    def __init__(self, riods):
+        self.riods = riods
+        self._shape = (riods.value.count, riods.value.height,
+                       riods.value.width)
         self._ndims = len(self.shape)
 
     @property
     def dtype(self):
-        dtypes = self.rasterio_ds.dtypes
+        dtypes = self.riods.value.dtypes
         if not np.all(np.asarray(dtypes) == dtypes[0]):
             raise ValueError('All bands should have the same dtype')
         return np.dtype(dtypes[0])
@@ -42,48 +42,81 @@ class RasterioArrayWrapper(BackendArray):
     def shape(self):
         return self._shape
 
-    def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, self, allow=(indexing.BasicIndexer, indexing.OuterIndexer))
+    def _get_indexer(self, key):
+        """ Get indexer for rasterio array.
+
+        Parameter
+        ---------
+        key: tuple of int
+
+        Returns
+        -------
+        band_key: an indexer for the 1st dimension
+        window: two tuples. Each consists of (start, stop).
+        squeeze_axis: axes to be squeezed
+        np_ind: indexer for loaded numpy array
+
+        See also
+        --------
+        indexing.decompose_indexer
+        """
+        assert len(key) == 3, 'rasterio datasets should always be 3D'
 
         # bands cannot be windowed but they can be listed
         band_key = key[0]
-        n_bands = self.shape[0]
+        np_inds = []
+        # bands (axis=0) cannot be windowed but they can be listed
         if isinstance(band_key, slice):
-            start, stop, step = band_key.indices(n_bands)
-            if step is not None and step != 1:
-                raise IndexError(_ERROR_MSG)
-            band_key = np.arange(start, stop)
+            start, stop, step = band_key.indices(self.shape[0])
+            band_key = np.arange(start, stop, step)
         # be sure we give out a list
         band_key = (np.asarray(band_key) + 1).tolist()
+        if isinstance(band_key, list):  # if band_key is not a scalar
+            np_inds.append(slice(None))
 
         # but other dims can only be windowed
         window = []
         squeeze_axis = []
         for i, (k, n) in enumerate(zip(key[1:], self.shape[1:])):
             if isinstance(k, slice):
+                # step is always positive. see indexing.decompose_indexer
                 start, stop, step = k.indices(n)
-                if step is not None and step != 1:
-                    raise IndexError(_ERROR_MSG)
+                np_inds.append(slice(None, None, step))
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
-                squeeze_axis.append(i + 1)
+                squeeze_axis.append(- (2 - i))
                 start = k
                 stop = k + 1
             else:
-                k = np.asarray(k)
-                start = k[0]
-                stop = k[-1] + 1
-                ids = np.arange(start, stop)
-                if not ((k.shape == ids.shape) and np.all(k == ids)):
-                    raise IndexError(_ERROR_MSG)
+                start, stop = np.min(k), np.max(k) + 1
+                np_inds.append(k - start)
             window.append((start, stop))
 
-        out = self.rasterio_ds.read(band_key, window=tuple(window))
+        if isinstance(key[1], np.ndarray) and isinstance(key[2], np.ndarray):
+            # do outer-style indexing
+            np_inds[1:] = np.ix_(*np_inds[1:])
+
+        return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
+
+    def _getitem(self, key):
+        band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
+
+        if not band_key or any(start == stop for (start, stop) in window):
+            # no need to do IO
+            shape = (len(band_key),) + tuple(
+                stop - start for (start, stop) in window)
+            out = np.zeros(shape, dtype=self.dtype)
+        else:
+            out = self.riods.value.read(band_key, window=window)
+
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
-        return out
+        return out[np_inds]
+
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
 
 
 def _parse_envi(meta):
@@ -169,7 +202,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     """
 
     import rasterio
-    riods = rasterio.open(filename, mode='r')
+
+    riods = PickleByReconstructionWrapper(rasterio.open, filename, mode='r')
 
     if cache is None:
         cache = chunks is None
@@ -177,20 +211,20 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     coords = OrderedDict()
 
     # Get bands
-    if riods.count < 1:
+    if riods.value.count < 1:
         raise ValueError('Unknown dims')
-    coords['band'] = np.asarray(riods.indexes)
+    coords['band'] = np.asarray(riods.value.indexes)
 
     # Get coordinates
     if LooseVersion(rasterio.__version__) < '1.0':
-        transform = riods.affine
+        transform = riods.value.affine
     else:
-        transform = riods.transform
+        transform = riods.value.transform
     if transform.is_rectilinear:
         # 1d coordinates
         parse = True if parse_coordinates is None else parse_coordinates
         if parse:
-            nx, ny = riods.width, riods.height
+            nx, ny = riods.value.width, riods.value.height
             # xarray coordinates are pixel centered
             x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * transform
             _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * transform
@@ -213,43 +247,40 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     # For serialization store as tuple of 6 floats, the last row being
     # always (0, 0, 1) per definition (see https://github.com/sgillies/affine)
     attrs['transform'] = tuple(transform)[:6]
-    if hasattr(riods, 'crs') and riods.crs:
+    if hasattr(riods.value, 'crs') and riods.value.crs:
         # CRS is a dict-like object specific to rasterio
         # If CRS is not None, we convert it back to a PROJ4 string using
         # rasterio itself
-        attrs['crs'] = riods.crs.to_string()
-    if hasattr(riods, 'res'):
+        attrs['crs'] = riods.value.crs.to_string()
+    if hasattr(riods.value, 'res'):
         # (width, height) tuple of pixels in units of CRS
-        attrs['res'] = riods.res
-    if hasattr(riods, 'is_tiled'):
+        attrs['res'] = riods.value.res
+    if hasattr(riods.value, 'is_tiled'):
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
-        attrs['is_tiled'] = np.uint8(riods.is_tiled)
-    if hasattr(riods, 'transform'):
-        # Affine transformation matrix (tuple of floats)
-        # Describes coefficients mapping pixel coordinates to CRS
-        attrs['transform'] = tuple(riods.transform)
-    if hasattr(riods, 'nodatavals'):
+        attrs['is_tiled'] = np.uint8(riods.value.is_tiled)
+    if hasattr(riods.value, 'nodatavals'):
         # The nodata values for the raster bands
         attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
-                                     for nodataval in riods.nodatavals])
+                                     for nodataval in riods.value.nodatavals])
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
 
-    driver = riods.driver
+    driver = riods.value.driver
     if driver in parsers:
-        meta = parsers[driver](riods.tags(ns=driver))
+        meta = parsers[driver](riods.value.tags(ns=driver))
 
         for k, v in meta.items():
             # Add values as coordinates if they match the band count,
             # as attributes otherwise
-            if isinstance(v, (list, np.ndarray)) and len(v) == riods.count:
+            if (isinstance(v, (list, np.ndarray)) and
+               len(v) == riods.value.count):
                 coords[k] = ('band', np.asarray(v))
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyIndexedArray(RasterioArrayWrapper(riods))
+    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(riods))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)

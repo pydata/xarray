@@ -360,7 +360,17 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     """Used in Dataset.__init__."""
     objs = [data, coords]
     explicit_coords = coords.keys()
-    return merge_core(objs, compat, join, explicit_coords=explicit_coords)
+    indexes = dict(extract_indexes(coords))
+    return merge_core(objs, compat, join, explicit_coords=explicit_coords,
+                      indexes=indexes)
+
+
+def extract_indexes(coords):
+    """Yields the name & index of valid indexes from a mapping of coords"""
+    for name, variable in coords.items():
+        variable = as_variable(variable, name=name)
+        if variable.dims == (name,):
+            yield name, variable.to_index()
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):
@@ -547,6 +557,24 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
 
 
 def dataset_update_method(dataset, other):
-    """Guts of the Dataset.update method"""
+    """Guts of the Dataset.update method.
+
+    This drops a duplicated coordinates from `other` if `other` is not an
+    `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
+    GH2180).
+    """
+    from .dataset import Dataset
+    from .dataarray import DataArray
+
+    if not isinstance(other, Dataset):
+        other = OrderedDict(other)
+        for key, value in other.items():
+            if isinstance(value, DataArray):
+                # drop conflicting coordinates
+                coord_names = [c for c in value.coords
+                               if c not in value.dims and c in dataset.coords]
+                if coord_names:
+                    other[key] = value.drop(coord_names)
+
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)

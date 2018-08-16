@@ -3,10 +3,14 @@ from __future__ import absolute_import, division, print_function
 from distutils.version import LooseVersion
 
 import numpy as np
+import pandas as pd
 import pytest
+from textwrap import dedent
 from numpy import array, nan
+import warnings
 
-from xarray import DataArray, concat
+from xarray import DataArray, Dataset, concat
+from xarray.core import duck_array_ops, dtypes
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
     stack, where)
@@ -14,7 +18,8 @@ from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
 
 from . import (
-    TestCase, assert_array_equal, has_dask, raises_regex, requires_dask)
+    TestCase, assert_array_equal, has_dask, has_np113, raises_regex,
+    requires_dask)
 
 
 class TestOps(TestCase):
@@ -99,7 +104,57 @@ class TestOps(TestCase):
         assert_array_equal(result, np.array([1, 'b'], dtype=object))
 
     def test_all_nan_arrays(self):
-        assert np.isnan(mean([np.nan, np.nan]))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'All-NaN slice')
+            warnings.filterwarnings('ignore', 'Mean of empty slice')
+            assert np.isnan(mean([np.nan, np.nan]))
+
+
+def test_cumsum_1d():
+    inputs = np.array([0, 1, 2, 3])
+    expected = np.array([0, 1, 3, 6])
+    actual = duck_array_ops.cumsum(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=0)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=-1)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=(0,))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=())
+    assert_array_equal(inputs, actual)
+
+
+def test_cumsum_2d():
+    inputs = np.array([[1, 2], [3, 4]])
+
+    expected = np.array([[1, 3], [4, 10]])
+    actual = duck_array_ops.cumsum(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=(0, 1))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumsum(inputs, axis=())
+    assert_array_equal(inputs, actual)
+
+
+def test_cumprod_2d():
+    inputs = np.array([[1, 2], [3, 4]])
+
+    expected = np.array([[1, 2], [3, 2 * 3 * 4]])
+    actual = duck_array_ops.cumprod(inputs)
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumprod(inputs, axis=(0, 1))
+    assert_array_equal(expected, actual)
+
+    actual = duck_array_ops.cumprod(inputs, axis=())
+    assert_array_equal(inputs, actual)
 
 
 class TestArrayNotNullEquiv():
@@ -149,10 +204,15 @@ def construct_dataarray(dim_num, dtype, contains_nan, dask):
         array = rng.choice(['a', 'b', 'c', 'd'], size=shapes)
     else:
         raise ValueError
-    da = DataArray(array, dims=dims, coords={'x': np.arange(16)}, name='da')
 
     if contains_nan:
-        da = da.reindex(x=np.arange(20))
+        inds = rng.choice(range(array.size), int(array.size * 0.2))
+        dtype, fill_value = dtypes.maybe_promote(array.dtype)
+        array = array.astype(dtype)
+        array.flat[inds] = fill_value
+
+    da = DataArray(array, dims=dims, coords={'x': np.arange(16)}, name='da')
+
     if dask and has_dask:
         chunks = {d: 4 for d in dims}
         da = da.chunk(chunks)
@@ -186,10 +246,16 @@ def series_reduce(da, func, dim, **kwargs):
         return concat(da1, dim=d)
 
 
+def assert_dask_array(da, dask):
+    if dask and da.ndim > 0:
+        assert isinstance(da.data, dask_array_type)
+
+
 @pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
 @pytest.mark.parametrize('dask', [False, True])
 @pytest.mark.parametrize('func', ['sum', 'min', 'max', 'mean', 'var'])
+# TODO test cumsum, cumprod
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', [None, 'x'])
 def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
@@ -203,55 +269,77 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
     if dask and not has_dask:
         pytest.skip('requires dask')
 
+    if dask and skipna is False and dtype in [np.bool_]:
+        pytest.skip('dask does not compute object-typed array')
+
     rtol = 1e-04 if dtype == np.float32 else 1e-05
 
     da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
     axis = None if aggdim is None else da.get_axis_num(aggdim)
 
-    if (LooseVersion(np.__version__) >= LooseVersion('1.13.0') and
-            da.dtype.kind == 'O' and skipna):
-        # Numpy < 1.13 does not handle object-type array.
-        try:
-            if skipna:
-                expected = getattr(np, 'nan{}'.format(func))(da.values,
-                                                             axis=axis)
-            else:
-                expected = getattr(np, func)(da.values, axis=axis)
+    # TODO: remove these after resolving
+    # https://github.com/dask/dask/issues/3245
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'Mean of empty slice')
+        warnings.filterwarnings('ignore', 'All-NaN slice')
+        warnings.filterwarnings('ignore', 'invalid value encountered in')
 
-            actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-            assert np.allclose(actual.values, np.array(expected), rtol=1.0e-4,
-                               equal_nan=True)
-        except (TypeError, AttributeError, ZeroDivisionError):
-            # TODO currently, numpy does not support some methods such as
-            # nanmean for object dtype
-            pass
+        if has_np113 and da.dtype.kind == 'O' and skipna:
+            # Numpy < 1.13 does not handle object-type array.
+            try:
+                if skipna:
+                    expected = getattr(np, 'nan{}'.format(func))(da.values,
+                                                                 axis=axis)
+                else:
+                    expected = getattr(np, func)(da.values, axis=axis)
 
-    # make sure the compatiblility with pandas' results.
-    actual = getattr(da, func)(skipna=skipna, dim=aggdim)
-    if func == 'var':
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=0)
+                actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+                assert_dask_array(actual, dask)
+                assert np.allclose(actual.values, np.array(expected),
+                                   rtol=1.0e-4, equal_nan=True)
+            except (TypeError, AttributeError, ZeroDivisionError):
+                # TODO currently, numpy does not support some methods such as
+                # nanmean for object dtype
+                pass
+
+        actual = getattr(da, func)(skipna=skipna, dim=aggdim)
+
+        # for dask case, make sure the result is the same for numpy backend
+        expected = getattr(da.compute(), func)(skipna=skipna, dim=aggdim)
         assert_allclose(actual, expected, rtol=rtol)
-        # also check ddof!=0 case
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim, ddof=5)
-        assert_allclose(actual, expected, rtol=rtol)
-    else:
-        expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
-        assert_allclose(actual, expected, rtol=rtol)
 
-    # make sure the dtype argument
-    if func not in ['max', 'min']:
-        actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
-        assert actual.dtype == float
+        # make sure the compatiblility with pandas' results.
+        if func == 'var':
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
+                                     ddof=0)
+            assert_allclose(actual, expected, rtol=rtol)
+            # also check ddof!=0 case
+            actual = getattr(da, func)(skipna=skipna, dim=aggdim, ddof=5)
+            if dask:
+                assert isinstance(da.data, dask_array_type)
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
+                                     ddof=5)
+            assert_allclose(actual, expected, rtol=rtol)
+        else:
+            expected = series_reduce(da, func, skipna=skipna, dim=aggdim)
+            assert_allclose(actual, expected, rtol=rtol)
 
-    # without nan
-    da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
-    actual = getattr(da, func)(skipna=skipna)
-    expected = getattr(np, 'nan{}'.format(func))(da.values)
-    if actual.dtype == object:
-        assert actual.values == np.array(expected)
-    else:
-        assert np.allclose(actual.values, np.array(expected), rtol=rtol)
+        # make sure the dtype argument
+        if func not in ['max', 'min']:
+            actual = getattr(da, func)(skipna=skipna, dim=aggdim, dtype=float)
+            assert_dask_array(actual, dask)
+            assert actual.dtype == float
+
+        # without nan
+        da = construct_dataarray(dim_num, dtype, contains_nan=False, dask=dask)
+        actual = getattr(da, func)(skipna=skipna)
+        if dask:
+            assert isinstance(da.data, dask_array_type)
+        expected = getattr(np, 'nan{}'.format(func))(da.values)
+        if actual.dtype == object:
+            assert actual.values == np.array(expected)
+        else:
+            assert np.allclose(actual.values, np.array(expected), rtol=rtol)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
@@ -280,21 +368,19 @@ def test_argmin_max(dim_num, dtype, contains_nan, dask, func, skipna, aggdim):
     da = construct_dataarray(dim_num, dtype, contains_nan=contains_nan,
                              dask=dask)
 
-    if aggdim == 'y' and contains_nan and skipna:
-        with pytest.raises(ValueError):
-            actual = da.isel(**{
-                aggdim: getattr(da, 'arg' + func)(dim=aggdim,
-                                                  skipna=skipna).compute()})
-        return
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'All-NaN slice')
 
-    actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
-                        (dim=aggdim, skipna=skipna).compute()})
-    expected = getattr(da, func)(dim=aggdim, skipna=skipna)
-    assert_allclose(actual.drop(actual.coords), expected.drop(expected.coords))
+        actual = da.isel(**{aggdim: getattr(da, 'arg' + func)
+                            (dim=aggdim, skipna=skipna).compute()})
+        expected = getattr(da, func)(dim=aggdim, skipna=skipna)
+        assert_allclose(actual.drop(actual.coords),
+                        expected.drop(expected.coords))
 
 
 def test_argmin_max_error():
     da = construct_dataarray(2, np.bool_, contains_nan=True, dask=False)
+    da[0] = np.nan
     with pytest.raises(ValueError):
         da.argmin(dim='y')
 
@@ -329,3 +415,122 @@ def test_dask_rolling(axis, window, center):
     with pytest.raises(ValueError):
         rolling_window(dx, axis=axis, window=100, center=center,
                        fill_value=np.nan)
+
+
+@pytest.mark.parametrize('dim_num', [1, 2])
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+@pytest.mark.parametrize('aggdim', [None, 'x'])
+def test_min_count(dim_num, dtype, dask, func, aggdim):
+    if dask and not has_dask:
+        pytest.skip('requires dask')
+
+    da = construct_dataarray(dim_num, dtype, contains_nan=True, dask=dask)
+    min_count = 3
+
+    actual = getattr(da, func)(dim=aggdim, skipna=True, min_count=min_count)
+
+    if LooseVersion(pd.__version__) >= LooseVersion('0.22.0'):
+        # min_count is only implenented in pandas > 0.22
+        expected = series_reduce(da, func, skipna=True, dim=aggdim,
+                                 min_count=min_count)
+        assert_allclose(actual, expected)
+
+    assert_dask_array(actual, dask)
+
+
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+def test_min_count_dataset(func):
+    da = construct_dataarray(2, dtype=float, contains_nan=True, dask=False)
+    ds = Dataset({'var1': da}, coords={'scalar': 0})
+    actual = getattr(ds, func)(dim='x', skipna=True, min_count=3)['var1']
+    expected = getattr(ds['var1'], func)(dim='x', skipna=True, min_count=3)
+    assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])
+@pytest.mark.parametrize('dask', [False, True])
+@pytest.mark.parametrize('func', ['sum', 'prod'])
+def test_multiple_dims(dtype, dask, func):
+    if dask and not has_dask:
+        pytest.skip('requires dask')
+    da = construct_dataarray(3, dtype, contains_nan=True, dask=dask)
+
+    actual = getattr(da, func)(('x', 'y'))
+    expected = getattr(getattr(da, func)('x'), func)('y')
+    assert_allclose(actual, expected)
+
+
+def test_docs():
+    # with min_count
+    actual = DataArray.sum.__doc__
+    expected = dedent("""\
+        Reduce this DataArray's data by applying `sum` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `sum`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `sum`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `sum` is calculated over axes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        min_count : int, default None
+            The required number of valid values to perform the operation.
+            If fewer than min_count non-NA values are present the result will
+            be NA. New in version 0.10.8: Added with the default being None.
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating `sum` on this object's data.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `sum` applied to its data and the
+            indicated dimension(s) removed.
+        """)
+    assert actual == expected
+
+    # without min_count
+    actual = DataArray.std.__doc__
+    expected = dedent("""\
+        Reduce this DataArray's data by applying `std` along some dimension(s).
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `std`.
+        axis : int or sequence of int, optional
+            Axis(es) over which to apply `std`. Only one of the 'dim'
+            and 'axis' arguments can be supplied. If neither are supplied, then
+            `std` is calculated over axes.
+        skipna : bool, optional
+            If True, skip missing values (as marked by NaN). By default, only
+            skips missing values for float dtypes; other dtypes either do not
+            have a sentinel missing value (int) or skipna=True has not been
+            implemented (object, datetime64 or timedelta64).
+        keep_attrs : bool, optional
+            If True, the attributes (`attrs`) will be copied from the original
+            object to the new one.  If False (default), the new object will be
+            returned without attributes.
+        **kwargs : dict
+            Additional keyword arguments passed on to the appropriate array
+            function for calculating `std` on this object's data.
+
+        Returns
+        -------
+        reduced : DataArray
+            New DataArray object with `std` applied to its data and the
+            indicated dimension(s) removed.
+        """)
+    assert actual == expected

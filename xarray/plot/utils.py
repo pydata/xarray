@@ -3,26 +3,12 @@ from __future__ import absolute_import, division, print_function
 import warnings
 
 import numpy as np
-import pandas as pd
-import pkg_resources
+import textwrap
 
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
-
-
-def _load_default_cmap(fname='default_colormap.csv'):
-    """
-    Returns viridis color map
-    """
-    from matplotlib.colors import LinearSegmentedColormap
-
-    # Not sure what the first arg here should be
-    f = pkg_resources.resource_stream(__name__, fname)
-    cm_data = pd.read_csv(f, header=None).values
-
-    return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
 def import_seaborn():
@@ -159,7 +145,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     """
     import matplotlib as mpl
 
-    calc_data = np.ravel(plot_data[~pd.isnull(plot_data)])
+    calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
 
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:
@@ -223,10 +209,6 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
             cmap = "RdBu_r"
         else:
             cmap = "viridis"
-
-    # Allow viridis before matplotlib 1.5
-    if cmap == "viridis":
-        cmap = _load_default_cmap()
 
     # Handle discrete levels
     if levels is not None:
@@ -296,7 +278,7 @@ def _infer_xy_labels_3d(darray, x, y, rgb):
     assert rgb is not None
 
     # Finally, we pick out the red slice and delegate to the 2D version:
-    return _infer_xy_labels(darray.isel(**{rgb: 0}).squeeze(), x, y)
+    return _infer_xy_labels(darray.isel(**{rgb: 0}), x, y)
 
 
 def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
@@ -353,3 +335,24 @@ def get_axis(figsize, size, aspect, ax):
         ax = plt.gca()
 
     return ax
+
+
+def label_from_attrs(da):
+    ''' Makes informative labels if variable metadata (attrs) follows
+        CF conventions. '''
+
+    if da.attrs.get('long_name'):
+        name = da.attrs['long_name']
+    elif da.attrs.get('standard_name'):
+        name = da.attrs['standard_name']
+    elif da.name is not None:
+        name = da.name
+    else:
+        name = ''
+
+    if da.attrs.get('units'):
+        units = ' [{}]'.format(da.attrs['units'])
+    else:
+        units = ''
+
+    return '\n'.join(textwrap.wrap(name + units, 30))

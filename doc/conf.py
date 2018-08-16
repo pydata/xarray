@@ -25,7 +25,8 @@ allowed_failures = set()
 print("python exec:", sys.executable)
 print("sys.path:", sys.path)
 for name in ('numpy scipy pandas matplotlib dask IPython seaborn '
-             'cartopy netCDF4 rasterio zarr').split():
+             'cartopy netCDF4 rasterio zarr iris flake8 '
+             'sphinx_gallery cftime').split():
     try:
         module = importlib.import_module(name)
         if name == 'matplotlib':
@@ -102,7 +103,7 @@ copyright = '2014-%s, xarray Developers' % datetime.datetime.now().year
 # built documents.
 #
 # The short X.Y version.
-version = xarray.version.short_version
+version = xarray.__version__.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = xarray.__version__
 
@@ -149,22 +150,14 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from
-# docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-
-# otherwise, readthedocs.org uses their theme by default, so no need to specify it
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {}
+html_theme_options = {
+    'logo_only': True,
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -178,12 +171,12 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = "_static/dataset-diagram-logo.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = None
+html_favicon = '_static/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

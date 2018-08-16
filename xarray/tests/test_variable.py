@@ -6,6 +6,7 @@ from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -16,9 +17,9 @@ from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
-    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter, LazilyIndexedArray,
-    MemoryCachedArray, NumpyIndexingAdapter, OuterIndexer, PandasIndexAdapter,
-    VectorizedIndexer)
+    BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
+    LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
+    OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
@@ -138,8 +139,10 @@ class VariableSubclassTestCases(object):
         assert variable.equals(variable.copy())
         assert variable.identical(variable.copy())
         # check value is equal for both ndarray and Variable
-        assert variable.values[0] == expected_value0
-        assert variable[0].values == expected_value0
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
+            assert variable.values[0] == expected_value0
+            assert variable[0].values == expected_value0
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
@@ -988,9 +991,9 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert expected == repr(v)
 
     def test_repr_lazy_data(self):
-        v = Variable('x', LazilyIndexedArray(np.arange(2e5)))
+        v = Variable('x', LazilyOuterIndexedArray(np.arange(2e5)))
         assert '200000 values with dtype' in repr(v)
-        assert isinstance(v._data, LazilyIndexedArray)
+        assert isinstance(v._data, LazilyOuterIndexedArray)
 
     def test_detect_indexer_type(self):
         """ Tests indexer type was correctly detected. """
@@ -1422,8 +1425,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         with raises_regex(ValueError, 'cannot supply both'):
             v.mean(dim='x', axis=0)
 
-    @pytest.mark.skipif(LooseVersion(np.__version__) < LooseVersion('1.10.0'),
-                        reason='requires numpy version 1.10.0 or later')
     def test_quantile(self):
         v = Variable(['x', 'y'], self.d)
         for q in [0.25, [0.50], [0.25, 0.75]]:
@@ -1495,20 +1496,15 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert_identical(v.cumprod(axis=0),
                          Variable('x', np.array([1, 1, 2, 6])))
         assert_identical(v.var(), Variable([], 2.0 / 3))
-
-        if LooseVersion(np.__version__) < '1.9':
-            with pytest.raises(NotImplementedError):
-                v.median()
-        else:
-            assert_identical(v.median(), Variable([], 2))
+        assert_identical(v.median(), Variable([], 2))
 
         v = Variable('x', [True, False, False])
         assert_identical(v.any(), Variable([], True))
         assert_identical(v.all(dim='x'), Variable([], False))
 
         v = Variable('t', pd.date_range('2000-01-01', periods=3))
-        with pytest.raises(NotImplementedError):
-            v.argmax(skipna=True)
+        assert v.argmax(skipna=True) == 2
+
         assert_identical(
             v.max(), Variable([], pd.Timestamp('2000-01-03')))
 
@@ -1664,16 +1660,16 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
         super(TestVariableWithDask, self).test_eq_all_dtypes()
 
     def test_getitem_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_fancy()
 
     def test_getitem_1d_fancy(self):
-        import dask
-        if LooseVersion(dask.__version__) <= LooseVersion('0.15.1'):
-            pytest.xfail("vindex from latest dask is required")
         super(TestVariableWithDask, self).test_getitem_1d_fancy()
+
+    def test_equals_all_dtypes(self):
+        import dask
+        if '0.18.2' <= LooseVersion(dask.__version__) < '0.18.3':
+            pytest.xfail('https://github.com/pydata/xarray/issues/2318')
+        super(TestVariableWithDask, self).test_equals_all_dtypes()
 
     def test_getitem_with_mask_nd_indexer(self):
         import dask.array as da
@@ -1798,7 +1794,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
 
 class TestAsCompatibleData(TestCase):
     def test_unchanged_types(self):
-        types = (np.asarray, PandasIndexAdapter, indexing.LazilyIndexedArray)
+        types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
             for data in [np.arange(3),
                          pd.date_range('2000-01-01', periods=3),
@@ -1961,18 +1957,19 @@ class TestBackendIndexing(TestCase):
             v = Variable(dims=('x', 'y'), data=NumpyIndexingAdapter(
                 NumpyIndexingAdapter(self.d)))
 
-    def test_LazilyIndexedArray(self):
-        v = Variable(dims=('x', 'y'), data=LazilyIndexedArray(self.d))
+    def test_LazilyOuterIndexedArray(self):
+        v = Variable(dims=('x', 'y'), data=LazilyOuterIndexedArray(self.d))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyIndexedArray(LazilyIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
         # hierarchical wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=LazilyIndexedArray(NumpyIndexingAdapter(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=LazilyOuterIndexedArray(NumpyIndexingAdapter(self.d)))
         self.check_orthogonal_indexing(v)
 
     def test_CopyOnWriteArray(self):
@@ -1980,11 +1977,11 @@ class TestBackendIndexing(TestCase):
         self.check_orthogonal_indexing(v)
         self.check_vectorized_indexing(v)
         # doubly wrapping
-        v = Variable(dims=('x', 'y'),
-                     data=CopyOnWriteArray(LazilyIndexedArray(self.d)))
+        v = Variable(
+            dims=('x', 'y'),
+            data=CopyOnWriteArray(LazilyOuterIndexedArray(self.d)))
         self.check_orthogonal_indexing(v)
-        with raises_regex(NotImplementedError, 'Vectorized indexing for '):
-            self.check_vectorized_indexing(v)
+        self.check_vectorized_indexing(v)
 
     def test_MemoryCachedArray(self):
         v = Variable(dims=('x', 'y'), data=MemoryCachedArray(self.d))

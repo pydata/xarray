@@ -7,8 +7,9 @@ Control the plot's colorbar
 Use ``cbar_kwargs`` keyword to specify the number of ticks.
 The ``spacing`` kwarg can be used to draw proportional ticks.
 """
-import xarray as xr
 import matplotlib.pyplot as plt
+
+import xarray as xr
 
 # Load the data
 air_temp = xr.tutorial.load_dataset('air_temperature')

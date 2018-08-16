@@ -151,33 +151,20 @@ class DataArrayRolling(Rolling):
         """
         super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
                                                center=center, **windows)
-        self.window_indices = None
-        self.window_labels = None
 
-        self._setup_windows()
+        self.window_labels = self.obj[self.dim]
 
     def __iter__(self):
-        for (label, indices) in zip(self.window_labels, self.window_indices):
-            window = self.obj.isel(**{self.dim: indices})
+        stops = np.arange(1, len(self.window_labels) + 1)
+        starts = stops - int(self.window)
+        starts[:int(self.window)] = 0
+        for (label, start, stop) in zip(self.window_labels, starts, stops):
+            window = self.obj.isel(**{self.dim: slice(start, stop)})
 
             counts = window.count(dim=self.dim)
             window = window.where(counts >= self._min_periods)
 
             yield (label, window)
-
-    def _setup_windows(self):
-        """
-        Find the indices and labels for each window
-        """
-        self.window_labels = self.obj[self.dim]
-        window = int(self.window)
-        dim_size = self.obj[self.dim].size
-
-        stops = np.arange(dim_size) + 1
-        starts = np.maximum(stops - window, 0)
-
-        self.window_indices = [slice(start, stop)
-                               for start, stop in zip(starts, stops)]
 
     def construct(self, window_dim, stride=1, fill_value=dtypes.NA):
         """
@@ -195,11 +182,8 @@ class DataArrayRolling(Rolling):
 
         Returns
         -------
-        DataArray that is a view of the original array.
-
-        Note
-        ----
-        The return array is not writeable.
+        DataArray that is a view of the original array. The returned array is
+        not writeable.
 
         Examples
         --------
@@ -301,18 +285,26 @@ class DataArrayRolling(Rolling):
 
             padded = self.obj.variable
             if self.center:
-                shift = (-self.window // 2) + 1
-
                 if (LooseVersion(np.__version__) < LooseVersion('1.13') and
                         self.obj.dtype.kind == 'b'):
                     # with numpy < 1.13 bottleneck cannot handle np.nan-Boolean
                     # mixed array correctly. We cast boolean array to float.
                     padded = padded.astype(float)
+
+                if isinstance(padded.data, dask_array_type):
+                    # Workaround to make the padded chunk size is larger than
+                    # self.window-1
+                    shift = - (self.window + 1) // 2
+                    offset = (self.window - 1) // 2
+                    valid = (slice(None), ) * axis + (
+                        slice(offset, offset + self.obj.shape[axis]), )
+                else:
+                    shift = (-self.window // 2) + 1
+                    valid = (slice(None), ) * axis + (slice(-shift, None), )
                 padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
-                valid = (slice(None), ) * axis + (slice(-shift, None), )
 
             if isinstance(padded.data, dask_array_type):
-                values = dask_rolling_wrapper(func, self.obj.data,
+                values = dask_rolling_wrapper(func, padded,
                                               window=self.window,
                                               min_count=min_count,
                                               axis=axis)

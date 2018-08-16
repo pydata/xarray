@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - cftime
   - dask
   - distributed
   - h5py
@@ -19,6 +20,7 @@ dependencies:
   - rasterio
   - bottleneck
   - zarr
+  - pseudonetcdf>=3.0.1
   - pip:
     - coveralls
     - pytest-cov

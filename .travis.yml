@@ -14,8 +14,6 @@ matrix:
     env: CONDA_ENV=py27-min
   - python: 2.7
     env: CONDA_ENV=py27-cdat+iris+pynio
-  - python: 3.4
-    env: CONDA_ENV=py34
   - python: 3.5
     env: CONDA_ENV=py35
   - python: 3.6
@@ -42,13 +40,13 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
+    env: CONDA_ENV=py36-rasterio-0.36
   - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdftime-dev
   - python: 3.5
     env: CONDA_ENV=docs
+  - python: 3.6
+    env: CONDA_ENV=py36-hypothesis
   allow_failures:
   - python: 3.6
     env:
@@ -62,8 +60,6 @@ matrix:
         - netcdf-bin
         - libnetcdf-dev
   - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
-  - python: 3.6
     env: CONDA_ENV=py36-pandas-dev
   - python: 3.6
     env: CONDA_ENV=py36-bottleneck-dev
@@ -72,11 +68,7 @@ matrix:
   - python: 3.6
     env: CONDA_ENV=py36-pynio-dev
   - python: 3.6
-    env: CONDA_ENV=py36-rasterio1.0alpha
-  - python: 3.6
     env: CONDA_ENV=py36-zarr-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdftime-dev
 
 before_install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -103,11 +95,12 @@ install:
   - python xarray/util/print_versions.py
 
 script:
-  - flake8 -j auto xarray
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
-      conda install -c conda-forge sphinx_rtd_theme;
-      sphinx-build -n -b html -d _build/doctrees doc _build/html;
+      conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
+      sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
+    elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
+      pytest properties ;
     else
       py.test xarray --cov=xarray --cov-config ci/.coveragerc --cov-report term-missing --verbose $EXTRA_FLAGS;
     fi

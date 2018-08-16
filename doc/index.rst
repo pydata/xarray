@@ -1,11 +1,5 @@
-.. image:: _static/dataset-diagram-logo.png
-   :width: 300 px
-   :align: center
-
-|
-
-N-D labeled arrays and datasets in Python
-=========================================
+xarray: N-D labeled arrays and datasets in Python
+=================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
 that aims to bring the labeled data power of pandas_ to the physical sciences,
@@ -16,12 +10,6 @@ analytics on multi-dimensional arrays, rather than the tabular data for which
 pandas excels. Our approach adopts the `Common Data Model`_ for self-
 describing scientific data in widespread use in the Earth sciences:
 ``xarray.Dataset`` is an in-memory representation of a netCDF file.
-
-.. note::
-
-   xray is now xarray! See :ref:`the v0.7.0 release notes<whats-new.0.7.0>`
-   for more details. The preferred URL for these docs is now
-   http://xarray.pydata.org.
 
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
@@ -52,6 +40,7 @@ Documentation
 
 * :doc:`data-structures`
 * :doc:`indexing`
+* :doc:`interpolation`
 * :doc:`computation`
 * :doc:`groupby`
 * :doc:`reshaping`
@@ -69,6 +58,7 @@ Documentation
 
    data-structures
    indexing
+   interpolation
    computation
    groupby
    reshaping
@@ -84,7 +74,9 @@ Documentation
 * :doc:`whats-new`
 * :doc:`api`
 * :doc:`internals`
+* :doc:`roadmap`
 * :doc:`contributing`
+* :doc:`related-projects`
 
 .. toctree::
    :maxdepth: 1
@@ -94,7 +86,9 @@ Documentation
    whats-new
    api
    internals
+   roadmap
    contributing
+   related-projects
 
 See also
 --------

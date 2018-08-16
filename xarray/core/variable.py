@@ -10,13 +10,14 @@ import pandas as pd
 
 import xarray as xr  # only for Dataset and DataArray
 
-from . import common, dtypes, duck_array_ops, indexing, nputils, ops, utils
+from . import (
+    arithmetic, common, dtypes, duck_array_ops, indexing, nputils, ops, utils)
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
-from .utils import OrderedSet
+from .utils import OrderedSet, either_dict_or_kwargs
 
 try:
     import dask.array as da
@@ -91,6 +92,9 @@ def as_variable(obj, name=None):
         obj = Variable([], obj)
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
         obj = Variable(obj.name, obj)
+    elif isinstance(obj, (set, dict)):
+        raise TypeError(
+            "variable %r has invalid type %r" % (name, type(obj)))
     elif name is not None:
         data = as_compatible_data(obj)
         if data.ndim != 1:
@@ -121,7 +125,7 @@ def _maybe_wrap_data(data):
     Put pandas.Index and numpy.ndarray arguments in adapter objects to ensure
     they can be indexed properly.
 
-    NumpyArrayAdapter, PandasIndexAdapter and LazilyIndexedArray should
+    NumpyArrayAdapter, PandasIndexAdapter and LazilyOuterIndexedArray should
     all pass through unmodified.
     """
     if isinstance(data, pd.Index):
@@ -216,8 +220,8 @@ def _as_array_or_item(data):
     return data
 
 
-class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
-
+class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
+               utils.NdimSizeLenMixin):
     """A netcdf-like variable consisting of dimensions, data and attributes
     which describe a single Array. A single Variable object is not fully
     described outside the context of its parent Dataset (if you want such a
@@ -678,7 +682,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             value = as_compatible_data(value)
             if value.ndim > len(dims):
                 raise ValueError(
-                    'shape mismatch: value array of shape %s could not be'
+                    'shape mismatch: value array of shape %s could not be '
                     'broadcast to indexing result with %s dimensions'
                     % (value.shape, len(dims)))
             if value.ndim == 0:
@@ -823,7 +827,7 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         return type(self)(self.dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
-    def isel(self, **indexers):
+    def isel(self, indexers=None, drop=False, **indexers_kwargs):
         """Return a new array indexed along the specified dimension(s).
 
         Parameters
@@ -840,6 +844,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
             unless numpy fancy indexing was triggered by using an array
             indexer, in which case the data will be a copy.
         """
+        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'isel')
+
         invalid = [k for k in indexers if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
@@ -1053,7 +1059,8 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         axes = self.get_axis_num(dims)
         if len(dims) < 2:  # no need to transpose if only one dimension
             return self.copy(deep=False)
-        data = duck_array_ops.transpose(self.data, axes)
+
+        data = as_indexable(self._data).transpose(axes)
         return type(self)(dims, data, self._attrs, self._encoding,
                           fastpath=True)
 
@@ -1253,11 +1260,6 @@ class Variable(common.AbstractArray, utils.NdimSizeLenMixin):
         """
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
-
-        if getattr(func, 'keep_dims', False):
-            if dim is None and axis is None:
-                raise ValueError("must supply either single 'dim' or 'axis' "
-                                 "argument to %s" % (func.__name__))
 
         if dim is not None:
             axis = self.get_axis_num(dim)
@@ -1874,12 +1876,15 @@ def assert_unique_multiindex_level_names(variables):
     objects.
     """
     level_names = defaultdict(list)
+    all_level_names = set()
     for var_name, var in variables.items():
         if isinstance(var._data, PandasIndexAdapter):
             idx_level_names = var.to_index_variable().level_names
             if idx_level_names is not None:
                 for n in idx_level_names:
                     level_names[n].append('%r (%s)' % (n, var_name))
+            if idx_level_names:
+                all_level_names.update(idx_level_names)
 
     for k, v in level_names.items():
         if k in variables:
@@ -1890,3 +1895,9 @@ def assert_unique_multiindex_level_names(variables):
         conflict_str = '\n'.join([', '.join(v) for v in duplicate_names])
         raise ValueError('conflicting MultiIndex level name(s):\n%s'
                          % conflict_str)
+    # Check confliction between level names and dimensions GH:2299
+    for k, v in variables.items():
+        for d in v.dims:
+            if d in all_level_names:
+                raise ValueError('conflicting level / dimension names. {} '
+                                 'already exists as a level name.'.format(d))

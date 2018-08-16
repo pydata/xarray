@@ -22,9 +22,10 @@ class PydapArrayWrapper(BackendArray):
         return self.array.dtype
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
+    def _getitem(self, key):
         # pull the data from the array attribute if possible, to avoid
         # downloading coordinate data twice
         array = getattr(self.array, 'array', self.array)
@@ -34,6 +35,7 @@ class PydapArrayWrapper(BackendArray):
                      if isinstance(k, integer_types))
         if len(axis) > 0:
             result = np.squeeze(result, axis)
+
         return result
 
 
@@ -74,7 +76,7 @@ class PydapDataStore(AbstractDataStore):
         return cls(ds)
 
     def open_store_variable(self, var):
-        data = indexing.LazilyIndexedArray(PydapArrayWrapper(var))
+        data = indexing.LazilyOuterIndexedArray(PydapArrayWrapper(var))
         return Variable(var.dimensions, data,
                         _fix_attributes(var.attributes))
 

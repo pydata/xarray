@@ -9,14 +9,16 @@ import pytest
 
 import xarray.plot as xplt
 from xarray import DataArray
+from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
-    import_seaborn)
+    import_seaborn, label_from_attrs)
 
 from . import (
     TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_seaborn)
+    requires_matplotlib, requires_matplotlib2, requires_seaborn,
+    requires_cftime)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -88,17 +90,67 @@ class TestPlot(PlotTestCase):
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
+    def test_label_from_attrs(self):
+        da = self.darray.copy()
+        assert '' == label_from_attrs(da)
+
+        da.name = 'a'
+        da.attrs['units'] = 'a_units'
+        da.attrs['long_name'] = 'a_long_name'
+        da.attrs['standard_name'] = 'a_standard_name'
+        assert 'a_long_name [a_units]' == label_from_attrs(da)
+
+        da.attrs.pop('long_name')
+        assert 'a_standard_name [a_units]' == label_from_attrs(da)
+        da.attrs.pop('units')
+        assert 'a_standard_name' == label_from_attrs(da)
+
+        da.attrs['units'] = 'a_units'
+        da.attrs.pop('standard_name')
+        assert 'a [a_units]' == label_from_attrs(da)
+
+        da.attrs.pop('units')
+        assert 'a' == label_from_attrs(da)
+
     def test1d(self):
         self.darray[:, 0, 0].plot()
 
-        with raises_regex(ValueError, 'dimension'):
+        with raises_regex(ValueError, 'None'):
             self.darray[:, 0, 0].plot(x='dim_1')
+
+    def test_1d_x_y_kw(self):
+        z = np.arange(10)
+        da = DataArray(np.cos(z), dims=['z'], coords=[z], name='f')
+
+        xy = [[None, None],
+              [None, 'z'],
+              ['z', None]]
+
+        f, ax = plt.subplots(3, 1)
+        for aa, (x, y) in enumerate(xy):
+            da.plot(x=x, y=y, ax=ax.flat[aa])
+
+        with raises_regex(ValueError, 'cannot'):
+            da.plot(x='z', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='f', y='z')
+
+        with raises_regex(ValueError, 'None'):
+            da.plot(x='z', y='f')
 
     def test_2d_line(self):
         with raises_regex(ValueError, 'hue'):
             self.darray[:, :, 0].plot.line()
 
         self.darray[:, :, 0].plot.line(hue='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_1')
+        self.darray[:, :, 0].plot.line(x='dim_0', hue='dim_1')
+        self.darray[:, :, 0].plot.line(y='dim_0', hue='dim_1')
+
+        with raises_regex(ValueError, 'cannot'):
+            self.darray[:, :, 0].plot.line(x='dim_1', y='dim_0', hue='dim_1')
 
     def test_2d_line_accepts_legend_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=False)
@@ -177,9 +229,31 @@ class TestPlot(PlotTestCase):
         np.testing.assert_allclose(xref, x)
         np.testing.assert_allclose(yref, y)
 
-        # test that warning is raised for non-monotonic inputs
+        # test that ValueError is raised for non-monotonic 1D inputs
         with pytest.raises(ValueError):
-            _infer_interval_breaks(np.array([0, 2, 1]))
+            _infer_interval_breaks(np.array([0, 2, 1]), check_monotonic=True)
+
+    def test_geo_data(self):
+        # Regression test for gh2250
+        # Realistic coordinates taken from the example dataset
+        lat = np.array([[16.28, 18.48, 19.58, 19.54, 18.35],
+                        [28.07, 30.52, 31.73, 31.68, 30.37],
+                        [39.65, 42.27, 43.56, 43.51, 42.11],
+                        [50.52, 53.22, 54.55, 54.50, 53.06]])
+        lon = np.array([[-126.13, -113.69, -100.92, -88.04, -75.29],
+                        [-129.27, -115.62, -101.54, -87.32, -73.26],
+                        [-133.10, -118.00, -102.31, -86.42, -70.76],
+                        [-137.85, -120.99, -103.28, -85.28, -67.62]])
+        data = np.sqrt(lon ** 2 + lat ** 2)
+        da = DataArray(data, dims=('y', 'x'),
+                       coords={'lon': (('y', 'x'), lon),
+                               'lat': (('y', 'x'), lat)})
+        da.plot(x='lon', y='lat')
+        ax = plt.gca()
+        assert ax.has_data()
+        da.plot(x='lat', y='lon')
+        ax = plt.gca()
+        assert ax.has_data()
 
     def test_datetime_dimension(self):
         nrow = 3
@@ -210,6 +284,7 @@ class TestPlot(PlotTestCase):
             d[0].plot(x='x', y='y', col='z', ax=plt.gca())
 
     @pytest.mark.slow
+    @requires_matplotlib2
     def test_subplot_kws(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -222,12 +297,9 @@ class TestPlot(PlotTestCase):
             cmap='cool',
             subplot_kws=dict(facecolor='r'))
         for ax in g.axes.flat:
-            try:
-                # mpl V2
-                assert ax.get_facecolor()[0:3] == \
-                    mpl.colors.to_rgb('r')
-            except AttributeError:
-                assert ax.get_axis_bgcolor() == 'r'
+            # mpl V2
+            assert ax.get_facecolor()[0:3] == \
+                mpl.colors.to_rgb('r')
 
     @pytest.mark.slow
     def test_plot_size(self):
@@ -274,10 +346,15 @@ class TestPlot1D(PlotTestCase):
         d = [0, 1.1, 0, 2]
         self.darray = DataArray(
             d, coords={'period': range(len(d))}, dims='period')
+        self.darray.period.attrs['units'] = 's'
 
     def test_xlabel_is_index_name(self):
         self.darray.plot()
-        assert 'period' == plt.gca().get_xlabel()
+        assert 'period [s]' == plt.gca().get_xlabel()
+
+    def test_no_label_name_on_x_axis(self):
+        self.darray.plot(y='period')
+        self.assertEqual('', plt.gca().get_xlabel())
 
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()
@@ -285,8 +362,15 @@ class TestPlot1D(PlotTestCase):
 
     def test_ylabel_is_data_name(self):
         self.darray.name = 'temperature'
+        self.darray.attrs['units'] = 'degrees_Celsius'
         self.darray.plot()
-        assert self.darray.name == plt.gca().get_ylabel()
+        assert 'temperature [degrees_Celsius]' == plt.gca().get_ylabel()
+
+    def test_xlabel_is_data_name(self):
+        self.darray.name = 'temperature'
+        self.darray.attrs['units'] = 'degrees_Celsius'
+        self.darray.plot(y='period')
+        assert 'temperature [degrees_Celsius]' == plt.gca().get_xlabel()
 
     def test_format_string(self):
         self.darray.plot.line('ro')
@@ -315,6 +399,13 @@ class TestPlot1D(PlotTestCase):
         rotation = plt.gca().get_xticklabels()[0].get_rotation()
         assert rotation != 0
 
+    def test_xyincrease_false_changes_axes(self):
+        self.darray.plot.line(xincrease=False, yincrease=False)
+        xlim = plt.gca().get_xlim()
+        ylim = plt.gca().get_ylim()
+        diffs = xlim[1] - xlim[0], ylim[1] - ylim[0]
+        assert all(x < 0 for x in diffs)
+
     def test_slice_in_title(self):
         self.darray.coords['d'] = 10
         self.darray.plot.line()
@@ -329,18 +420,15 @@ class TestPlotHistogram(PlotTestCase):
     def test_3d_array(self):
         self.darray.plot.hist()
 
-    def test_title_no_name(self):
-        self.darray.plot.hist()
-        assert '' == plt.gca().get_title()
-
-    def test_title_uses_name(self):
+    def test_xlabel_uses_name(self):
         self.darray.name = 'testpoints'
+        self.darray.attrs['units'] = 'testunits'
         self.darray.plot.hist()
-        assert self.darray.name in plt.gca().get_title()
+        assert 'testpoints [testunits]' == plt.gca().get_xlabel()
 
-    def test_ylabel_is_count(self):
+    def test_title_is_histogram(self):
         self.darray.plot.hist()
-        assert 'Count' == plt.gca().get_ylabel()
+        assert 'Histogram' == plt.gca().get_title()
 
     def test_can_pass_in_kwargs(self):
         nbins = 5
@@ -369,7 +457,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(self.data, robust=True)
         assert cmap_params['vmin'] == np.percentile(self.data, 2)
         assert cmap_params['vmax'] == np.percentile(self.data, 98)
-        assert cmap_params['cmap'].name == 'viridis'
+        assert cmap_params['cmap'] == 'viridis'
         assert cmap_params['extend'] == 'both'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
@@ -381,6 +469,15 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_nan_inf_are_ignored(self):
+        cmap_params1 = _determine_cmap_params(self.data)
+        data = self.data
+        data[50:55] = np.nan
+        data[56:60] = np.inf
+        cmap_params2 = _determine_cmap_params(data)
+        assert cmap_params1['vmin'] == cmap_params2['vmin']
+        assert cmap_params1['vmax'] == cmap_params2['vmax']
 
     @pytest.mark.slow
     def test_integer_levels(self):
@@ -444,7 +541,7 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Default with negative data will be a divergent cmap
         cmap_params = _determine_cmap_params(neg)
@@ -456,17 +553,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(neg, vmin=-0.1, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(neg, vmax=0.5, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # Setting center=False too
         cmap_params = _determine_cmap_params(neg, center=False)
         assert cmap_params['vmin'] == -0.1
         assert cmap_params['vmax'] == 0.9
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # However, I should still be able to set center and have a div cmap
         cmap_params = _determine_cmap_params(neg, center=0)
@@ -496,17 +593,17 @@ class TestDetermineCmapParams(TestCase):
         cmap_params = _determine_cmap_params(pos, vmin=0.1)
         assert cmap_params['vmin'] == 0.1
         assert cmap_params['vmax'] == 1
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
         cmap_params = _determine_cmap_params(pos, vmax=0.5)
         assert cmap_params['vmin'] == 0
         assert cmap_params['vmax'] == 0.5
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
         # If both vmin and vmax are provided, output is non-divergent
         cmap_params = _determine_cmap_params(neg, vmin=-0.2, vmax=0.6)
         assert cmap_params['vmin'] == -0.2
         assert cmap_params['vmax'] == 0.6
-        assert cmap_params['cmap'].name == "viridis"
+        assert cmap_params['cmap'] == "viridis"
 
 
 @requires_matplotlib
@@ -600,7 +697,10 @@ class Common2dMixin:
     """
 
     def setUp(self):
-        da = DataArray(easy_array((10, 15), start=-1), dims=['y', 'x'])
+        da = DataArray(easy_array((10, 15), start=-1),
+                       dims=['y', 'x'],
+                       coords={'y': np.arange(10),
+                               'x': np.arange(15)})
         # add 2d coords
         ds = da.to_dataset(name='testvar')
         x, y = np.meshgrid(da.x.values, da.y.values)
@@ -609,12 +709,21 @@ class Common2dMixin:
         ds.set_coords(['x2d', 'y2d'], inplace=True)
         # set darray and plot method
         self.darray = ds.testvar
+
+        # Add CF-compliant metadata
+        self.darray.attrs['long_name'] = 'a_long_name'
+        self.darray.attrs['units'] = 'a_units'
+        self.darray.x.attrs['long_name'] = 'x_long_name'
+        self.darray.x.attrs['units'] = 'x_units'
+        self.darray.y.attrs['long_name'] = 'y_long_name'
+        self.darray.y.attrs['units'] = 'y_units'
+
         self.plotmethod = getattr(self.darray.plot, self.plotfunc.__name__)
 
     def test_label_names(self):
         self.plotmethod()
-        assert 'x' == plt.gca().get_xlabel()
-        assert 'y' == plt.gca().get_ylabel()
+        assert 'x_long_name [x_units]' == plt.gca().get_xlabel()
+        assert 'y_long_name [y_units]' == plt.gca().get_ylabel()
 
     def test_1d_raises_valueerror(self):
         with raises_regex(ValueError, r'DataArray must be 2d'):
@@ -707,19 +816,19 @@ class Common2dMixin:
     def test_xy_strings(self):
         self.plotmethod('y', 'x')
         ax = plt.gca()
-        assert 'y' == ax.get_xlabel()
-        assert 'x' == ax.get_ylabel()
+        assert 'y_long_name [y_units]' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
 
     def test_positional_coord_string(self):
         self.plotmethod(y='x')
         ax = plt.gca()
-        assert 'x' == ax.get_ylabel()
-        assert 'y' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
+        assert 'y_long_name [y_units]' == ax.get_xlabel()
 
         self.plotmethod(x='x')
         ax = plt.gca()
-        assert 'x' == ax.get_xlabel()
-        assert 'y' == ax.get_ylabel()
+        assert 'x_long_name [x_units]' == ax.get_xlabel()
+        assert 'y_long_name [y_units]' == ax.get_ylabel()
 
     def test_bad_x_string_exception(self):
         with raises_regex(ValueError, 'x and y must be coordinate variables'):
@@ -743,7 +852,7 @@ class Common2dMixin:
         # Normal case, without transpose
         self.plotfunc(self.darray, x='x', y='newy')
         ax = plt.gca()
-        assert 'x' == ax.get_xlabel()
+        assert 'x_long_name [x_units]' == ax.get_xlabel()
         assert 'newy' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
@@ -758,7 +867,7 @@ class Common2dMixin:
         self.plotfunc(self.darray, x='newy', y='x')
         ax = plt.gca()
         assert 'newy' == ax.get_xlabel()
-        assert 'x' == ax.get_ylabel()
+        assert 'x_long_name [x_units]' == ax.get_ylabel()
         # ax limits might change between plotfuncs
         # simply ensure that these high coords were passed over
         assert np.min(ax.get_xlim()) > 100.
@@ -772,19 +881,29 @@ class Common2dMixin:
         assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title
 
     def test_colorbar_default_label(self):
-        self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True)
-        assert self.darray.name in text_in_fig()
+        assert ('a_long_name [a_units]' in text_in_fig())
 
     def test_no_labels(self):
         self.darray.name = 'testvar'
+        self.darray.attrs['units'] = 'test_units'
         self.plotmethod(add_labels=False)
         alltxt = text_in_fig()
-        for string in ['x', 'y', 'testvar']:
+        for string in ['x_long_name [x_units]',
+                       'y_long_name [y_units]',
+                       'testvar [test_units]']:
             assert string not in alltxt
 
     def test_colorbar_kwargs(self):
         # replace label
+        self.darray.attrs.pop('long_name')
+        self.darray.attrs['units'] = 'test_units'
+        # check default colorbar label
+        self.plotmethod(add_colorbar=True)
+        alltxt = text_in_fig()
+        assert 'testvar [test_units]' in alltxt
+        self.darray.attrs.pop('units')
+
         self.darray.name = 'testvar'
         self.plotmethod(add_colorbar=True, cbar_kwargs={'label': 'MyLabel'})
         alltxt = text_in_fig()
@@ -900,6 +1019,10 @@ class Common2dMixin:
         assert len(set(m.get_clim() for m in fg._mappables)) == 1
         # check that all colormaps are the same
         assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
+
+    def test_cmap_and_color_both(self):
+        with pytest.raises(ValueError):
+            self.plotmethod(colors='k', cmap='RdBu')
 
 
 @pytest.mark.slow
@@ -1156,6 +1279,11 @@ class TestImshow(Common2dMixin, PlotTestCase):
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
+    def test_regression_rgb_imshow_dim_size_one(self):
+        # Regression: https://github.com/pydata/xarray/issues/1966
+        da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
+        da.plot.imshow()
+
 
 class TestFacetGrid(PlotTestCase):
     def setUp(self):
@@ -1410,6 +1538,86 @@ class TestFacetGrid4d(PlotTestCase):
             assert substring_in_axes(label, ax)
 
 
+class TestFacetedLinePlots(PlotTestCase):
+    def setUp(self):
+        self.darray = DataArray(np.random.randn(10, 6, 3, 4),
+                                dims=['hue', 'x', 'col', 'row'],
+                                coords=[range(10), range(6),
+                                        range(3), ['A', 'B', 'C', 'C++']],
+                                name='Cornelius Ortega the 1st')
+
+        self.darray.hue.name = 'huename'
+        self.darray.hue.attrs['units'] = 'hunits'
+        self.darray.x.attrs['units'] = 'xunits'
+        self.darray.col.attrs['units'] = 'colunits'
+        self.darray.row.attrs['units'] = 'rowunits'
+
+    def test_facetgrid_shape(self):
+        g = self.darray.plot(row='row', col='col', hue='hue')
+        assert g.axes.shape == (len(self.darray.row), len(self.darray.col))
+
+        g = self.darray.plot(row='col', col='row', hue='hue')
+        assert g.axes.shape == (len(self.darray.col), len(self.darray.row))
+
+    def test_unnamed_args(self):
+        g = self.darray.plot.line('o--', row='row', col='col', hue='hue')
+        lines = [q for q in g.axes.flat[0].get_children()
+                 if isinstance(q, mpl.lines.Line2D)]
+        # passing 'o--' as argument should set marker and linestyle
+        assert lines[0].get_marker() == 'o'
+        assert lines[0].get_linestyle() == '--'
+
+    def test_default_labels(self):
+        g = self.darray.plot(row='row', col='col', hue='hue')
+        # Rightmost column should be labeled
+        for label, ax in zip(self.darray.coords['row'].values, g.axes[:, -1]):
+            assert substring_in_axes(label, ax)
+
+        # Top row should be labeled
+        for label, ax in zip(self.darray.coords['col'].values, g.axes[0, :]):
+            assert substring_in_axes(str(label), ax)
+
+        # Leftmost column should have array name
+        for ax in g.axes[:, 0]:
+            assert substring_in_axes(self.darray.name, ax)
+
+    def test_test_empty_cell(self):
+        g = self.darray.isel(row=1).drop('row').plot(col='col',
+                                                     hue='hue',
+                                                     col_wrap=2)
+        bottomright = g.axes[-1, -1]
+        assert not bottomright.has_data()
+        assert not bottomright.get_visible()
+
+    def test_set_axis_labels(self):
+        g = self.darray.plot(row='row', col='col', hue='hue')
+        g.set_axis_labels('longitude', 'latitude')
+        alltxt = text_in_fig()
+
+        assert 'longitude' in alltxt
+        assert 'latitude' in alltxt
+
+    def test_both_x_and_y(self):
+        with pytest.raises(ValueError):
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', y='hue')
+
+    def test_axes_in_faceted_plot(self):
+        with pytest.raises(ValueError):
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', ax=plt.axes())
+
+    def test_figsize_and_size(self):
+        with pytest.raises(ValueError):
+            self.darray.plot.line(row='row', col='col',
+                                  x='x', size=3, figsize=4)
+
+    def test_wrong_num_of_dimensions(self):
+        with pytest.raises(ValueError):
+            self.darray.plot(row='row', hue='hue')
+            self.darray.plot.line(row='row', hue='hue')
+
+
 class TestDatetimePlot(PlotTestCase):
     def setUp(self):
         '''
@@ -1442,3 +1650,89 @@ def test_plot_seaborn_no_import_warning():
     with pytest.warns(None) as record:
         _color_palette('Blues', 4)
     assert len(record) == 0
+
+
+@requires_cftime
+def test_plot_cftime_coordinate_error():
+    cftime = _import_cftime()
+    time = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(np.arange(5), coords=[time], dims=['time'])
+    with raises_regex(TypeError,
+                      'requires coordinates to be numeric or dates'):
+        data.plot()
+
+
+@requires_cftime
+def test_plot_cftime_data_error():
+    cftime = _import_cftime()
+    data = cftime.num2date(np.arange(5), units='days since 0001-01-01',
+                           calendar='noleap')
+    data = DataArray(data, coords=[np.arange(5)], dims=['x'])
+    with raises_regex(NotImplementedError, 'cftime.datetime'):
+        data.plot()
+
+
+test_da_list = [DataArray(easy_array((10, ))),
+                DataArray(easy_array((10, 3))),
+                DataArray(easy_array((10, 3, 2)))]
+
+
+@requires_matplotlib
+class TestAxesKwargs(object):
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('xincrease', [True, False])
+    def test_xincrease_kwarg(self, da, xincrease):
+        plt.clf()
+        da.plot(xincrease=xincrease)
+        assert plt.gca().xaxis_inverted() == (not xincrease)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('yincrease', [True, False])
+    def test_yincrease_kwarg(self, da, yincrease):
+        plt.clf()
+        da.plot(yincrease=yincrease)
+        assert plt.gca().yaxis_inverted() == (not yincrease)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('xscale', ['linear', 'log', 'logit', 'symlog'])
+    def test_xscale_kwarg(self, da, xscale):
+        plt.clf()
+        da.plot(xscale=xscale)
+        assert plt.gca().get_xscale() == xscale
+
+    @pytest.mark.parametrize('da', [DataArray(easy_array((10, ))),
+                                    DataArray(easy_array((10, 3)))])
+    @pytest.mark.parametrize('yscale', ['linear', 'log', 'logit', 'symlog'])
+    def test_yscale_kwarg(self, da, yscale):
+        plt.clf()
+        da.plot(yscale=yscale)
+        assert plt.gca().get_yscale() == yscale
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_xlim_kwarg(self, da):
+        plt.clf()
+        expected = (0.0, 1000.0)
+        da.plot(xlim=[0, 1000])
+        assert plt.gca().get_xlim() == expected
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_ylim_kwarg(self, da):
+        plt.clf()
+        da.plot(ylim=[0, 1000])
+        expected = (0.0, 1000.0)
+        assert plt.gca().get_ylim() == expected
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_xticks_kwarg(self, da):
+        plt.clf()
+        da.plot(xticks=np.arange(5))
+        expected = np.arange(5).tolist()
+        assert np.all(plt.gca().get_xticks() == expected)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_yticks_kwarg(self, da):
+        plt.clf()
+        da.plot(yticks=np.arange(5))
+        expected = np.arange(5)
+        assert np.all(plt.gca().get_yticks() == expected)
