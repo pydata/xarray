@@ -73,6 +73,15 @@ Bug fixes
 - Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+  By `Tony Tung <https://github.com/ttung>`_.
+
+- Now raises a ValueError when there is a conflict between dimension names and
+  level names of MultiIndex. (:issue:`2299`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
 ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
