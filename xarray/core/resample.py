@@ -283,6 +283,8 @@ class DatasetResample(DatasetGroupBy, Resample):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -297,7 +299,7 @@ class DatasetResample(DatasetGroupBy, Resample):
             removed.
         """
         return super(DatasetResample, self).reduce(
-            func, None, keep_attrs, **kwargs)
+            func, dim, keep_attrs, **kwargs)
 
     def _interpolate(self, kind='linear'):
         """Apply scipy.interpolate.interp1d along resampling dimension."""
