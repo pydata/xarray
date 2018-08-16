@@ -53,9 +53,6 @@ def _nan_argminmax_object(func, fill_value, value, axis=None, **kwargs):
     valid_count = count(value, axis=axis)
     value = fillna(value, fill_value)
     data = _dask_or_eager_func(func)(value, axis=axis, **kwargs)
-    # dask seems return non-integer type
-    if isinstance(value, dask_array_type):
-        data = data.astype(int)
 
     # TODO This will evaluate dask arrays and might be costly.
     if (valid_count == 0).any():
