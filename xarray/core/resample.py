@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from . import ops
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+from .groupby import DataArrayGroupBy, DatasetGroupBy, DEFAULT_DIMS
 from .pycompat import OrderedDict, dask_array_type
 
 RESAMPLE_DIM = '__resample_dim__'
@@ -298,6 +298,9 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim == DEFAULT_DIMS:
+            dim = None
+
         return super(DatasetResample, self).reduce(
             func, dim, keep_attrs, **kwargs)
 
