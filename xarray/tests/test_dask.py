@@ -378,8 +378,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.groupby('x').mean()
-        actual = v.groupby('x').mean()
+        expected = u.groupby('x').mean(xr.ALL_DIMS)
+        actual = v.groupby('x').mean(xr.ALL_DIMS)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):

@@ -2004,7 +2004,7 @@ class TestDataArray(TestCase):
 
     def test_groupby_warning(self):
         array = self.make_groupby_example_array()
-        grouped = array.groupby('abc')
+        grouped = array.groupby('y')
         with pytest.warns(FutureWarning):
             grouped.sum()
 
