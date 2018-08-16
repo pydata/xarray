@@ -69,11 +69,10 @@ Bug fixes
   By `Thomas Voigt <https://github.com/tv3141>`_.
 
 - Tests can be run in parallel with pytest-xdist
-
-- Follow up the renamings in dask; from dask.ghost to dask.overlap
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
   By `Tony Tung <https://github.com/ttung>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now raises a ValueError when there is a conflict between dimension names and
   level names of MultiIndex. (:issue:`2299`)
