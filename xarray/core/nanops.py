@@ -104,8 +104,8 @@ def nanargmin(a, axis=None):
         res = np.argmin(a, axis=axis)
 
     if mask is not None:
-        mask = np.all(mask, axis=axis)
-        if np.any(mask):
+        mask = mask.all(axis=axis)
+        if mask.any():
             raise ValueError("All-NaN slice encountered")
     return res
 
