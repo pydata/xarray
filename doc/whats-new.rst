@@ -36,6 +36,12 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
+  :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
+  :py:meth:`~xarray.Dataset.prod`.
+  (:issue:`2230`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
@@ -77,6 +83,9 @@ Bug fixes
 
 - Tests can be run in parallel with pytest-xdist
   By `Tony Tung <https://github.com/ttung>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now raises a ValueError when there is a conflict between dimension names and
   level names of MultiIndex. (:issue:`2299`)
