@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable
+from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
