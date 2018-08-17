@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
 import warnings
+import sys
 
 import numpy as np
 import pandas as pd
@@ -182,15 +183,16 @@ class TestDataset(TestCase):
         data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
         repr(data)  # should not raise
 
+        byteorder = '<' if sys.byteorder == 'little' else '>'
         expected = dedent(u"""\
         <xarray.Dataset>
         Dimensions:  (foø: 1)
         Coordinates:
-          * foø      (foø) <U3 %r
+          * foø      (foø) %cU3 %r
         Data variables:
             *empty*
         Attributes:
-            å:        ∑""" % u'ba®')
+            å:        ∑""" % (byteorder, u'ba®'))
         actual = unicode_type(data)
         assert expected == actual
 
@@ -845,7 +847,7 @@ class TestDataset(TestCase):
                     inds = np.nonzero(np.array(data[v].dims) == d)[0]
                     for ind in inds:
                         slice_list[ind] = s
-            expected = data[v].values[slice_list]
+            expected = data[v].values[tuple(slice_list)]
             actual = ret[v].values
             np.testing.assert_array_equal(expected, actual)
 
@@ -4216,6 +4218,11 @@ def test_dataset_constructor_aligns_to_explicit_coords(
     result = xr.Dataset({'a': a}, coords=coords)
 
     assert_equal(expected, result)
+
+
+def test_error_message_on_set_supplied():
+    with pytest.raises(TypeError, message='has invalid type set'):
+        xr.Dataset(dict(date=[1, 2, 3], sec={4}))
 
 
 @pytest.mark.parametrize('unaligned_coords', (
