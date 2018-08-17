@@ -938,21 +938,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert not isinstance(ds['x'], Variable)
         assert isinstance(as_variable(ds['x']), Variable)
 
-        FakeVariable = namedtuple('FakeVariable', 'values dims')
-        fake_xarray = FakeVariable(expected.values, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable', 'data dims')
-        fake_xarray = FakeVariable(expected.data, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable',
-                                  'data values dims attrs encoding')
-        fake_xarray = FakeVariable(expected_extra.data, expected_extra.values,
-                                   expected_extra.dims, expected_extra.attrs,
-                                   expected_extra.encoding)
-        assert_identical(expected_extra, as_variable(fake_xarray))
-
         xarray_tuple = (expected_extra.dims, expected_extra.values,
                         expected_extra.attrs, expected_extra.encoding)
         assert_identical(expected_extra, as_variable(xarray_tuple))

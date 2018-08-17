@@ -190,10 +190,13 @@ def expand_variable_dicts(list_of_variable_dicts):
     an input's values. The values of each ordered dictionary are all
     xarray.Variable objects.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     var_dicts = []
 
     for variables in list_of_variable_dicts:
-        if hasattr(variables, 'variables'):  # duck-type Dataset
+        if isinstance(variables, Dataset): 
             sanitized_vars = variables.variables
         else:
             # append coords to var_dicts before appending sanitized_vars,
@@ -201,7 +204,7 @@ def expand_variable_dicts(list_of_variable_dicts):
             sanitized_vars = OrderedDict()
 
             for name, var in variables.items():
-                if hasattr(var, '_coords'):  # duck-type DataArray
+                if isinstance(var, DataArray):
                     # use private API for speed
                     coords = var._coords.copy()
                     # explicitly overwritten variables should take precedence
@@ -232,17 +235,19 @@ def determine_coords(list_of_variable_dicts):
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     coord_names = set()
     noncoord_names = set()
 
     for variables in list_of_variable_dicts:
-        if hasattr(variables, 'coords') and hasattr(variables, 'data_vars'):
-            # duck-type Dataset
+        if isinstance(variables, Dataset):
             coord_names.update(variables.coords)
             noncoord_names.update(variables.data_vars)
         else:
             for name, var in variables.items():
-                if hasattr(var, '_coords'):  # duck-type DataArray
+                if isinstance(var, DataArray):
                     coords = set(var._coords)  # use private API for speed
                     # explicitly overwritten variables should take precedence
                     coords.discard(name)

@@ -125,16 +125,17 @@ def _calc_concat_dim_coord(dim):
     Infer the dimension name and 1d coordinate variable (if appropriate)
     for concatenating along the new dimension.
     """
+    from .dataarray import DataArray
+    
     if isinstance(dim, basestring):
         coord = None
-    elif not hasattr(dim, 'dims'):
-        # dim is not a DataArray or IndexVariable
+    elif not isinstance(dim, (DataArray, Variable)):
         dim_name = getattr(dim, 'name', None)
         if dim_name is None:
             dim_name = 'concat_dim'
         coord = IndexVariable(dim_name, dim)
         dim = dim_name
-    elif not hasattr(dim, 'name'):
+    elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
         dim, = coord.dims
     else:

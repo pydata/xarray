@@ -11,7 +11,7 @@ from . import utils
 from .indexing import get_indexer_nd
 from .pycompat import OrderedDict, iteritems, suppress
 from .utils import is_dict_like, is_full_slice
-from .variable import IndexVariable
+from .variable import IndexVariable, Variable
 
 
 def _get_joiner(join):
@@ -174,11 +174,14 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
 
     This function is not public API.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     if indexes is None:
         indexes = {}
 
     def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+        return isinstance(obj, (DataArray, Dataset))
 
     positions = []
     keys = []

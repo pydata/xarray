@@ -2253,7 +2253,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         # consider dropping levels that are unused?
         levels = [self.get_index(dim) for dim in dims]
-        if hasattr(pd, 'RangeIndex'):
+        if LooseVersion(pd.__version__) < LooseVersion('0.19.0'):
             # RangeIndex levels in a MultiIndex are broken for appending in
             # pandas before v0.19.0
             levels = [pd.Int64Index(level)
@@ -3155,10 +3155,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def _binary_op(f, reflexive=False, join=None):
         @functools.wraps(f)
         def func(self, other):
+            from .dataarray import DataArray
+
             if isinstance(other, groupby.GroupBy):
                 return NotImplemented
             align_type = OPTIONS['arithmetic_join'] if join is None else join
-            if hasattr(other, 'indexes'):
+            if isinstance(other, (DataArray, Dataset)):
                 self, other = align(self, other, join=align_type, copy=False)
             g = f if not reflexive else lambda x, y: f(y, x)
             ds = self._calculate_binary_op(g, other, join=align_type)
@@ -3170,12 +3172,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def _inplace_binary_op(f):
         @functools.wraps(f)
         def func(self, other):
+            from .dataarray import DataArray
+
             if isinstance(other, groupby.GroupBy):
                 raise TypeError('in-place operations between a Dataset and '
                                 'a grouped object are not permitted')
             # we don't actually modify arrays in-place with in-place Dataset
             # arithmetic -- this lets us automatically align things
-            if hasattr(other, 'indexes'):
+            if isinstance(other, (DataArray, Dataset)):
                 other = other.reindex_like(self, copy=False)
             g = ops.inplace_to_noninplace_op(f)
             ds = self._calculate_binary_op(g, other, inplace=True)

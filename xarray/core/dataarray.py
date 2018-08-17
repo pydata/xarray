@@ -1856,7 +1856,7 @@ class DataArray(AbstractArray, DataWithCoords):
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
-            if hasattr(other, 'indexes'):
+            if isinstance(other, DataArray):
                 align_type = (OPTIONS['arithmetic_join']
                               if join is None else join)
                 self, other = align(self, other, join=align_type, copy=False)
