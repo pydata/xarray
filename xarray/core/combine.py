@@ -126,7 +126,7 @@ def _calc_concat_dim_coord(dim):
     for concatenating along the new dimension.
     """
     from .dataarray import DataArray
-    
+
     if isinstance(dim, basestring):
         coord = None
     elif not isinstance(dim, (DataArray, Variable)):

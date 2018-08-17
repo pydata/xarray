@@ -11,7 +11,7 @@ from . import utils
 from .indexing import get_indexer_nd
 from .pycompat import OrderedDict, iteritems, suppress
 from .utils import is_dict_like, is_full_slice
-from .variable import IndexVariable, Variable
+from .variable import IndexVariable
 
 
 def _get_joiner(join):

@@ -196,7 +196,7 @@ def expand_variable_dicts(list_of_variable_dicts):
     var_dicts = []
 
     for variables in list_of_variable_dicts:
-        if isinstance(variables, Dataset): 
+        if isinstance(variables, Dataset):
             sanitized_vars = variables.variables
         else:
             # append coords to var_dicts before appending sanitized_vars,
