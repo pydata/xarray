@@ -2915,6 +2915,7 @@ class TestDataArray(TestCase):
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
+    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_classic(self):
         """Classic with 1D axes"""
         pytest.importorskip('cdms2')
@@ -2949,6 +2950,7 @@ class TestDataArray(TestCase):
             assert_array_equal(original.coords[coord_name],
                                back.coords[coord_name])
 
+    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_sgrid(self):
         """Curvilinear (structured) grid
 
@@ -2975,6 +2977,7 @@ class TestDataArray(TestCase):
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
+    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_ugrid(self):
         """Unstructured grid"""
         pytest.importorskip('cdms2')
@@ -3096,9 +3099,24 @@ class TestDataArray(TestCase):
             actual = arr.shift(x=offset)
             assert_identical(expected, actual)
 
-    def test_roll(self):
+    def test_roll_coords(self):
         arr = DataArray([1, 2, 3], coords={'x': range(3)}, dims='x')
-        actual = arr.roll(x=1)
+        actual = arr.roll(x=1, roll_coords=True)
+        expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
+        assert_identical(expected, actual)
+
+    def test_roll_no_coords(self):
+        arr = DataArray([1, 2, 3], coords={'x': range(3)}, dims='x')
+        actual = arr.roll(x=1, roll_coords=False)
+        expected = DataArray([3, 1, 2], coords=[('x', [0, 1, 2])])
+        assert_identical(expected, actual)
+
+    def test_roll_coords_none(self):
+        arr = DataArray([1, 2, 3], coords={'x': range(3)}, dims='x')
+
+        with pytest.warns(FutureWarning):
+            actual = arr.roll(x=1, roll_coords=None)
+
         expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
         assert_identical(expected, actual)
 
@@ -3326,7 +3344,9 @@ def test_isin(da):
 def test_rolling_iter(da):
 
     rolling_obj = da.rolling(time=7)
-    rolling_obj_mean = rolling_obj.mean()
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'Mean of empty slice')
+        rolling_obj_mean = rolling_obj.mean()
 
     assert len(rolling_obj.window_labels) == len(da['time'])
     assert_identical(rolling_obj.window_labels, da['time'])
@@ -3334,8 +3354,10 @@ def test_rolling_iter(da):
     for i, (label, window_da) in enumerate(rolling_obj):
         assert label == da['time'].isel(time=i)
 
-        actual = rolling_obj_mean.isel(time=i)
-        expected = window_da.mean('time')
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'Mean of empty slice')
+            actual = rolling_obj_mean.isel(time=i)
+            expected = window_da.mean('time')
 
         # TODO add assert_allclose_with_nan, which compares nan position
         # as well as the closeness of the values.
