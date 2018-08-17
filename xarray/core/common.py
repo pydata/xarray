@@ -587,8 +587,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DatasetRolling
         """
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
-        return self._rolling_cls(self, min_periods=min_periods,
-                                 center=center, **dim)
+        return self._rolling_cls(self, dim, min_periods=min_periods,
+                                 center=center)
 
     def resample(self, freq=None, dim=None, how=None, skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
