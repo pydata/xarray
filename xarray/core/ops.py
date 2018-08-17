@@ -86,7 +86,7 @@ skipna : bool, optional
     If True, skip missing values (as marked by NaN). By default, only
     skips missing values for float dtypes; other dtypes either do not
     have a sentinel missing value (int) or skipna=True has not been
-    implemented (object, datetime64 or timedelta64).
+    implemented (object, datetime64 or timedelta64).{min_count_docs}
 keep_attrs : bool, optional
     If True, the attributes (`attrs`) will be copied from the original
     object to the new one.  If False (default), the new object will be
@@ -101,6 +101,12 @@ reduced : {cls}
     New {cls} object with `{name}` applied to its data and the
     indicated dimension(s) removed.
 """
+
+_MINCOUNT_DOCSTRING = """
+min_count : int, default None
+    The required number of valid values to perform the operation.
+    If fewer than min_count non-NA values are present the result will
+    be NA. New in version 0.10.8: Added with the default being None."""
 
 _ROLLING_REDUCE_DOCSTRING_TEMPLATE = """\
 Reduce this {da_or_ds}'s data windows by applying `{name}` along its dimension.
@@ -234,11 +240,15 @@ def inject_reduce_methods(cls):
                [('count', duck_array_ops.count, False)])
     for name, f, include_skipna in methods:
         numeric_only = getattr(f, 'numeric_only', False)
+        available_min_count = getattr(f, 'available_min_count', False)
+        min_count_docs = _MINCOUNT_DOCSTRING if available_min_count else ''
+
         func = cls._reduce_method(f, include_skipna, numeric_only)
         func.__name__ = name
         func.__doc__ = _REDUCE_DOCSTRING_TEMPLATE.format(
             name=name, cls=cls.__name__,
-            extra_args=cls._reduce_extra_args_docstring.format(name=name))
+            extra_args=cls._reduce_extra_args_docstring.format(name=name),
+            min_count_docs=min_count_docs)
         setattr(cls, name, func)
 
 

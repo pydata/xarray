@@ -2740,6 +2740,20 @@ class TestDataset(TestCase):
             result = actual.reduce(method)
             assert_equal(expected, result)
 
+    def test_resample_min_count(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        # inject nan
+        ds['foo'] = xr.where(ds['foo'] > 2.0, np.nan, ds['foo'])
+
+        actual = ds.resample(time='1D').sum(min_count=1)
+        expected = xr.concat([
+            ds.isel(time=slice(i * 4, (i + 1) * 4)).sum('time', min_count=1)
+            for i in range(3)], dim=actual['time'])
+        assert_equal(expected, actual)
+
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
@@ -3378,7 +3392,6 @@ class TestDataset(TestCase):
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
             actual = data.min(dim=reduct).dims
-            print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
         assert_equal(data.mean(dim=[]), data)
@@ -3433,7 +3446,6 @@ class TestDataset(TestCase):
                 ('time', ['dim1', 'dim2', 'dim3'])
             ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
-                print(reduct, actual, expected)
                 self.assertItemsEqual(actual, expected)
 
     def test_reduce_non_numeric(self):
