@@ -1399,12 +1399,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 self.assertEqual((4,), actual['var1'].encoding['chunks'])
 
-        # specify incompatible encoding
-        ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
-        with pytest.raises(ValueError) as e_info:
-            with self.roundtrip(ds_chunk4) as actual:
-                pass
-        assert e_info.match('chunks')
 
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
@@ -1516,6 +1510,21 @@ class BaseZarrTest(CFEncodedDataTest):
 
             with self.open(store) as actual:
                 assert_identical(original, actual)
+
+    def test_encoding_chunksizes(self):
+        # regression test for GH2278
+        # see also test_encoding_chunksizes_unlimited
+        nx, ny, nt = 4, 4, 5
+        original = xr.Dataset({}, coords={'x': np.arange(nx),
+                                          'y': np.arange(ny),
+                                          't': np.arange(nt)})
+        original['v'] = xr.Variable(('x', 'y', 't'), np.zeros((nx, ny, nt)))
+        original = original.chunk({'t': 1, 'x': 2, 'y': 2})
+
+        with self.roundtrip(original) as ds1:
+            assert_equal(ds1, original)
+            with self.roundtrip(ds1.isel(t=0)) as ds2:
+                assert_equal(ds2, original.isel(t=0))
 
 
 @requires_zarr
@@ -2738,6 +2747,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [np.NaN, np.NaN, np.NaN])
 
@@ -2759,6 +2769,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
 
             # See if a warning is raised if we force it
             with self.assertWarns("transformation isn't rectilinear"):
@@ -2778,6 +2789,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [-9765.])
 
@@ -2815,6 +2827,7 @@ class TestRasterio(TestCase):
                     assert isinstance(rioda.attrs['res'], tuple)
                     assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                     assert isinstance(rioda.attrs['transform'], tuple)
+                    assert len(rioda.attrs['transform']) == 6
 
     def test_indexing(self):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
@@ -3009,6 +3022,7 @@ class TestRasterio(TestCase):
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
+                assert len(rioda.attrs['transform']) == 6
                 # from ENVI tags
                 assert isinstance(rioda.attrs['description'], basestring)
                 assert isinstance(rioda.attrs['map_info'], basestring)

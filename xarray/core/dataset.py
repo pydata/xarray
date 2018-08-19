@@ -2326,7 +2326,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              'a MultiIndex')
 
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
-        obj = self.reindex(copy=False, **{dim: full_idx})
+
+        # take a shortcut in case the MultiIndex was not modified.
+        if index.equals(full_idx):
+            obj = self
+        else:
+            obj = self.reindex(copy=False, **{dim: full_idx})
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -3357,18 +3362,28 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables)
 
-    def roll(self, **shifts):
+    def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this dataset by an offset along one or more dimensions.
 
-        Unlike shift, roll rotates all variables, including coordinates. The
-        direction of rotation is consistent with :py:func:`numpy.roll`.
+        Unlike shift, roll may rotate all variables, including coordinates
+        if specified. The direction of rotation is consistent with
+        :py:func:`numpy.roll`.
 
         Parameters
         ----------
-        **shifts : keyword arguments of the form {dim: offset}
-            Integer offset to rotate each of the given dimensions. Positive
-            offsets roll to the right; negative offsets roll to the left.
 
+        shifts : dict, optional
+            A dict with keys matching dimensions and values given
+            by integers to rotate each of the given dimensions. Positive
+            offsets roll to the right; negative offsets roll to the left.
+        roll_coords : bool
+            Indicates whether to  roll the coordinates by the offset
+            The current default of roll_coords (None, equivalent to True) is
+            deprecated and will change to False in a future version.
+            Explicitly pass roll_coords to silence the warning.
+        **shifts_kwargs : {dim: offset, ...}, optional
+            The keyword arguments form of ``shifts``.
+            One of shifts or shifts_kwargs must be provided.
         Returns
         -------
         rolled : Dataset
@@ -3391,15 +3406,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
             foo      (x) object 'd' 'e' 'a' 'b' 'c'
         """
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'roll')
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
 
+        if roll_coords is None:
+            warnings.warn("roll_coords will be set to False in the future."
+                          " Explicitly set roll_coords to silence warning.",
+                          FutureWarning, stacklevel=2)
+            roll_coords = True
+
+        unrolled_vars = () if roll_coords else self.coords
+
         variables = OrderedDict()
-        for name, var in iteritems(self.variables):
-            var_shifts = dict((k, v) for k, v in shifts.items()
-                              if k in var.dims)
-            variables[name] = var.roll(**var_shifts)
+        for k, v in iteritems(self.variables):
+            if k not in unrolled_vars:
+                variables[k] = v.roll(**shifts)
+            else:
+                variables[k] = v
 
         return self._replace_vars_and_dims(variables)
 

@@ -795,7 +795,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
     for obj in datasets:
         if not isinstance(obj, Dataset):
             raise TypeError('save_mfdataset only supports writing Dataset '
-                            'objects, recieved type %s' % type(obj))
+                            'objects, received type %s' % type(obj))
 
     if groups is None:
         groups = [None] * len(datasets)
