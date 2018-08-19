@@ -290,7 +290,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 results[k] = v
         return results
 
-    def assign_coords(self, coords=None, **coords_kwargs):
+    def assign_coords(self, **kwargs):
         """Assign new coordinates to this object.
 
         Returns a new object with all the original data in addition to the new
@@ -298,14 +298,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         Parameters
         ----------
-        coords : dict, optional
-            Mapping from coordate names to the new values. If the values are
-            callable, they are computed on this object and assigned to new
-            coordinate variables. If the values are not callable, (e.g. a
-            DataArray, scalar, or array), they are simply assigned.
-        **coords_kwargs : {coord_name: new_coordinate, ...}, optional
-            The keyword arguments form of ``coords``.
-            One of coords or coords_kwarg must be provided.
+        kwargs : keyword, value pairs
+            keywords are the variables names. If the values are callable, they
+            are computed on this object and assigned to new coordinate
+            variables. If the values are not callable, (e.g. a DataArray,
+            scalar, or array), they are simply assigned.
 
         Returns
         -------
@@ -344,9 +341,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         Dataset.assign
         """
-        coords = either_dict_or_kwargs(coords, coords_kwargs, 'assign_coords')
         data = self.copy(deep=False)
-        results = self._calc_assign_results(coords)
+        results = self._calc_assign_results(kwargs)
         data.coords.update(results)
         return data
 
@@ -538,7 +534,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to create the rolling iterator
-            along (e.g. `time`) to its moging window size.
+            along (e.g. `time`) to its moving window size.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
@@ -654,7 +650,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
-        # TODO support non-string indexer after deprecating the old API.
+        # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
