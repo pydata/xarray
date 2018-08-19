@@ -8,8 +8,7 @@ from .. import Variable
 from ..core import indexing
 from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from .common import (
-    HDF5_LOCK, WritableCFDataStore, find_root)
+from .common import HDF5_LOCK, WritableCFDataStore
 from .file_manager import CachingFileManager
 from .netCDF4_ import (
     BaseNetCDF4Array, GroupWrapper, _encode_nc4_variable,
@@ -26,7 +25,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
         key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
-        return self.get_array()[key]
+        with self.datastore.lock:
+            return self.get_array()[key]
 
 
 def maybe_decode_bytes(txt):
@@ -71,7 +71,7 @@ class H5NetCDFStore(WritableCFDataStore):
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
-                 writer=None, lock=HDF5_LOCK):
+                 writer=None, lock=HDF5_LOCK, autoclose=False):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         self._manager = CachingFileManager(
@@ -81,8 +81,9 @@ class H5NetCDFStore(WritableCFDataStore):
         self.format = format
         self._filename = filename
         self._mode = mode
-        self._lock = lock
-        super(H5NetCDFStore, self).__init__(writer, lock=lock)
+        self.lock = lock
+        self.autoclose = autoclose
+        super(H5NetCDFStore, self).__init__(writer)
 
     @property
     def ds(self):
@@ -219,8 +220,10 @@ class H5NetCDFStore(WritableCFDataStore):
         return target, variable.data
 
     def sync(self, compute=True):
-        super(H5NetCDFStore, self).sync(compute=compute)
         self.ds.sync()
+        if self.autoclose:
+            self.close()
+        super(H5NetCDFStore, self).sync(compute=compute)
 
-    def close(self):
-        self._manager.close()
+    def close(self, **kwargs):
+        self._manager.close(**kwargs)

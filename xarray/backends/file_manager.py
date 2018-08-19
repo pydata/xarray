@@ -82,8 +82,8 @@ class CachingFileManager(FileManager):
             be hashable.
         lock : duck-compatible threading.Lock, optional
             Lock to use when modifying the cache inside acquire() and close().
-            Must be reentrant. By default, uses a new threading.RLock() object.
-            If set, this object should be pickleable.
+            By default, uses a new threading.Lock() object. If set, this object
+            should be pickleable.
         cache : MutableMapping, optional
             Mapping to use as a cache for open files. By default, uses xarray's
             global LRU file cache. Because ``cache`` typically points to a
@@ -106,7 +106,7 @@ class CachingFileManager(FileManager):
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
         self._default_lock = lock is None
-        self._lock = threading.RLock() if self._default_lock else lock
+        self._lock = threading.Lock() if self._default_lock else lock
         self._cache = cache
         self._key = self._make_key()
 
@@ -140,7 +140,6 @@ class CachingFileManager(FileManager):
                 if self._mode is not _DEFAULT_MODE:
                     kwargs = kwargs.copy()
                     kwargs['mode'] = self._mode
-                print("OPENING", id(self), self._opener, self._args, kwargs)
                 file = self._opener(*self._args, **kwargs)
                 if self._mode == 'w':
                     # ensure file doesn't get overriden when opened again
@@ -149,13 +148,21 @@ class CachingFileManager(FileManager):
                 self._cache[self._key] = file
         return file
 
-    def close(self):
+    def _close(self):
+        default = None
+        file = self._cache.pop(self._key, default)
+        if file is not None:
+            file.close()
+
+    def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
-        with self._lock:
-            default = None
-            file = self._cache.pop(self._key, default)
-            if file is not None:
-                file.close()
+        # TODO: remove needs_lock if/when we have a reentrant lock in
+        # dask.distributed: https://github.com/dask/dask/issues/3832
+        if needs_lock:
+            with self._lock:
+                self._close()
+        else:
+            self._close()
 
     def __getstate__(self):
         """State for pickling."""
@@ -194,5 +201,6 @@ class DummyFileManager(FileManager):
     def acquire(self):
         return self._value
 
-    def close(self):
+    def close(self, needs_lock=True):
+        del needs_lock  # ignored
         self._value.close()

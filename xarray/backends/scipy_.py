@@ -44,10 +44,8 @@ class ScipyArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         data = NumpyIndexingAdapter(self.get_array())[key]
-        # Copy data if the source file is mmapped.
-        # This makes things consistent
-        # with the netCDF4 library by ensuring
-        # we can safely read arrays even
+        # Copy data if the source file is mmapped. This makes things consistent
+        # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
         copy = self.datastore.ds.use_mmap
         return np.array(data, dtype=self.dtype, copy=copy)
@@ -140,7 +138,7 @@ class ScipyDataStore(WritableCFDataStore):
         self._manager = CachingFileManager(
             _open_scipy_netcdf, filename_or_obj, mode=mode,
             kwargs=dict(mmap=mmap, version=version))
-        super(ScipyDataStore, self).__init__(writer, lock=lock)
+        super(ScipyDataStore, self).__init__(writer)
 
     @property
     def ds(self):
@@ -210,7 +208,7 @@ class ScipyDataStore(WritableCFDataStore):
 
     def sync(self, compute=True):
         super(ScipyDataStore, self).sync(compute=compute)
-        self.ds.flush()
+        self.ds.sync()
 
     def close(self):
         self._manager.close()

@@ -14,8 +14,7 @@ from ..core.pycompat import (
     PY3, OrderedDict, basestring, iteritems, suppress)
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, BackendArray, WritableCFDataStore,
-    find_root, robust_getitem)
+    HDF5_LOCK, BackendArray, WritableCFDataStore, find_root, robust_getitem)
 from .file_manager import CachingFileManager, DummyFileManager
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
@@ -44,8 +43,11 @@ class BaseNetCDF4Array(BackendArray):
         self.dtype = dtype
 
     def __setitem__(self, key, value):
-        data = self.get_array()
-        data[key] = value
+        with self.datastore.lock:
+            data = self.get_array()
+            data[key] = value
+            if self.datastore.autoclose:
+                self.datastore.close(needs_lock=False)
 
     def get_array(self):
         return self.datastore.ds.variables[self.variable_name]
@@ -64,8 +66,8 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
             getitem = operator.getitem
 
         try:
-            original_array = self.get_array()
-            with self.datastore._lock:
+            with self.datastore.lock:
+                original_array = self.get_array()
                 array = getitem(original_array, key)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative
@@ -225,18 +227,13 @@ def _extract_nc4_variable_encoding(variable, raise_on_invalid=False,
 
 
 class GroupWrapper(object):
-    def __init__(self, value, lock=HDF5_LOCK):
+    """Wrap netCDF4.Group objects so closing them closes the root group."""
+    def __init__(self, value):
         self.value = value
-        self.lock = lock
-
-    def sync(self):
-        with self.lock:
-            self.value.sync()
 
     def close(self):
         # netCDF4 only allows closing the root group
-        with self.lock:
-            find_root(self.value).close()
+        find_root(self.value).close()
 
 
 def _open_netcdf4_group(filename, lock, mode, group=None, **kwargs):
@@ -249,7 +246,7 @@ def _open_netcdf4_group(filename, lock, mode, group=None, **kwargs):
 
     _disable_auto_decode_group(ds)
 
-    return GroupWrapper(ds, lock)
+    return GroupWrapper(ds)
 
 
 def _disable_auto_decode_variable(var):
@@ -301,7 +298,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
 
-    def __init__(self, manager, writer=None, lock=HDF5_LOCK):
+    def __init__(self, manager, writer=None, lock=HDF5_LOCK, autoclose=False):
         import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
@@ -312,13 +309,14 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.format = self.ds.data_model
         self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
-        self._lock = lock
-        super(NetCDF4DataStore, self).__init__(writer, lock=lock)
+        self.lock = lock
+        self.autoclose = autoclose
+        super(NetCDF4DataStore, self).__init__(writer)
 
     @classmethod
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
              writer=None, clobber=True, diskless=False, persist=False,
-             lock=HDF5_LOCK):
+             lock=HDF5_LOCK, autoclose=False):
         import netCDF4
         if (len(filename) == 88 and
                 LooseVersion(netCDF4.__version__) < "1.3.1"):
@@ -336,7 +334,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             _open_netcdf4_group, filename, lock, mode=mode,
             kwargs=dict(group=group, clobber=clobber, diskless=diskless,
                         persist=persist, format=format))
-        return cls(manager, writer=writer, lock=lock)
+        return cls(manager, writer=writer, lock=lock, autoclose=autoclose)
 
     @property
     def ds(self):
@@ -461,8 +459,10 @@ class NetCDF4DataStore(WritableCFDataStore):
         return target, variable.data
 
     def sync(self, compute=True):
-        super(NetCDF4DataStore, self).sync(compute=compute)
         self.ds.sync()
+        if self.autoclose:
+            self.close()
+        super(NetCDF4DataStore, self).sync(compute=compute)
 
-    def close(self):
-        self._manager.close()
+    def close(self, **kwargs):
+        self._manager.close(**kwargs)

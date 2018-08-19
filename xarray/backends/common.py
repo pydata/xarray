@@ -164,6 +164,24 @@ class CombinedLock(object):
         return "CombinedLock(%r)" % list(self.locks)
 
 
+def combine_locks(locks):
+    """Combine one or more locks into a CombinedLock."""
+    all_locks = []
+    for lock in locks:
+        if isinstance(lock, CombinedLock):
+            all_locks.extend(lock.locks)
+        elif lock is not None:
+            all_locks.append(lock)
+
+    num_locks = len(all_locks)
+    if num_locks > 1:
+        return CombinedLock(all_locks)
+    elif num_locks == 1:
+        return all_locks[0]
+    else:
+        return None
+
+
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
     def __array__(self, dtype=None):
@@ -254,7 +272,7 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self, lock=HDF5_LOCK):
+    def __init__(self, lock=None):
         self.sources = []
         self.targets = []
         self.lock = lock
@@ -278,9 +296,9 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None, lock=HDF5_LOCK):
+    def __init__(self, writer=None):
         if writer is None:
-            writer = ArrayWriter(lock=lock)
+            writer = ArrayWriter()
         self.writer = writer
         self.delayed_store = None
 

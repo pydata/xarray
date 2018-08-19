@@ -14,7 +14,7 @@ from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, ArrayWriter, CombinedLock, _get_scheduler, _get_scheduler_lock)
+    HDF5_LOCK, ArrayWriter, combine_locks, _get_scheduler, _get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -85,7 +85,7 @@ def _get_write_lock(engine, scheduler, format, path_or_file):
 
     locks.append(_get_scheduler_lock(scheduler, path_or_file))
 
-    return CombinedLock(locks)
+    return combine_locks(locks)
 
 
 
@@ -144,21 +144,6 @@ def _protect_dataset_variables_inplace(dataset, cache):
             if cache:
                 data = indexing.MemoryCachedArray(data)
             variable.data = data
-
-
-def _get_write_lock(engine, scheduler, format, path_or_file):
-    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
-
-    locks = []
-    # if (engine == 'h5netcdf' or engine == 'netcdf4' and
-    #         (format is None or format.startswith('NETCDF4'))):
-    #     locks.append(HDF5_LOCK)
-    if (engine == 'h5netcdf' or engine == 'netcdf4'):
-        locks.append(HDF5_LOCK)
-
-    locks.append(_get_scheduler_lock(scheduler, path_or_file))
-
-    return CombinedLock(locks)
 
 
 def _finalize_store(write, store):
@@ -704,16 +689,19 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
-    # have_chunks = any(v.chunks for v in dataset.variables.values())
-    # if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
-    #         engine != 'netcdf4'):
-    #     raise NotImplementedError("Writing netCDF files with the %s backend "
-    #                               "is not currently supported with dask's %s "
-    #                               "scheduler" % (engine, scheduler))
+    have_chunks = any(v.chunks for v in dataset.variables.values())
+
+    autoclose = have_chunks and scheduler in ['distributed', 'multiprocessing']
+    if autoclose and engine == 'scipy':
+        raise NotImplementedError("Writing netCDF files with the %s backend "
+                                  "is not currently supported with dask's %s "
+                                  "scheduler" % (engine, scheduler))
     lock = _get_write_lock(engine, scheduler, format, path_or_file)
 
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_open(target, mode, format, group, writer, lock=lock)
+    kwargs = dict(autoclose=True) if autoclose else {}
+    store = store_open(
+        target, mode, format, group, writer, lock=lock, **kwargs)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
@@ -730,11 +718,11 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             store.close()
 
     if not compute:
-        import dask
-        return dask.delayed(_finalize_store)(store.delayed_store, store)
+        return store.delayed_store
 
     if not sync:
         return store
+
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None, compute=True):

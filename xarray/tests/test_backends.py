@@ -1756,8 +1756,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
 
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
-        with self.roundtrip(expected) as actual:
-            assert_equal(expected, actual)
+        with pytest.warns(FutureWarning):
+            # TODO: make it possible to write invalid netCDF files from xarray
+            # without a warning
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):

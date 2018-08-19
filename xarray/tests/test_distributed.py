@@ -60,8 +60,8 @@ ENGINES_AND_FORMATS = [
 ]
 
 
-@pytest.mark.xfail(sys.platform == 'win32',
-                   reason='https://github.com/pydata/xarray/issues/1738')
+# @pytest.mark.xfail(sys.platform == 'win32',
+#                    reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
         monkeypatch, loop, tmp_netcdf_filename, engine, nc_format):
@@ -77,6 +77,13 @@ def test_dask_distributed_netcdf_roundtrip(
         with Client(s['address'], loop=loop) as c:
 
             original = create_test_data().chunk(chunks)
+
+            if engine == 'scipy':
+                with pytest.raises(NotImplementedError):
+                    original.to_netcdf(tmp_netcdf_filename,
+                                       engine=engine, format=nc_format)
+                return
+
             original.to_netcdf(tmp_netcdf_filename,
                                engine=engine, format=nc_format)
 
@@ -87,8 +94,8 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
-@pytest.mark.xfail(sys.platform == 'win32',
-                   reason='https://github.com/pydata/xarray/issues/1738')
+# @pytest.mark.xfail(sys.platform == 'win32',
+#                    reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
         loop, tmp_netcdf_filename, engine, nc_format):
