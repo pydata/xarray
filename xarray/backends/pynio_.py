@@ -44,6 +44,10 @@ class NioDataStore(AbstractDataStore):
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')
 
+    @property
+    def ds(self):
+        return self._manager.acquire()
+
     def open_store_variable(self, name, var):
         data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)

@@ -1074,9 +1074,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         store.store(variables, attrs, check_encoding,
                     unlimited_dims=unlimited_dims)
         if sync:
-            print("COMPUTE START")
             store.sync(compute=compute)
-            print("COMPUTE FINISHED")
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None, encoding=None, unlimited_dims=None,

@@ -60,8 +60,6 @@ ENGINES_AND_FORMATS = [
 ]
 
 
-# @pytest.mark.xfail(sys.platform == 'win32',
-#                    reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
         monkeypatch, loop, tmp_netcdf_filename, engine, nc_format):
@@ -94,8 +92,6 @@ def test_dask_distributed_netcdf_roundtrip(
                 assert_allclose(original, computed)
 
 
-# @pytest.mark.xfail(sys.platform == 'win32',
-#                    reason='https://github.com/pydata/xarray/issues/1738')
 @pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
 def test_dask_distributed_read_netcdf_integration_test(
         loop, tmp_netcdf_filename, engine, nc_format):

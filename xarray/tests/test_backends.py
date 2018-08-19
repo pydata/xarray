@@ -2328,8 +2328,8 @@ class DaskTest(TestCase, DatasetIOTestCases):
         original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
         datasets = [original.isel(x=slice(5)),
                     original.isel(x=slice(5, 10))]
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
+        with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp1:
+            with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp2:
                 delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
                                              engine=self.engine, compute=False)
                 assert isinstance(delayed_obj, Delayed)
