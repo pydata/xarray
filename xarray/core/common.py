@@ -10,7 +10,7 @@ import pandas as pd
 from . import duck_array_ops, dtypes, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import Frozen, SortedKeysDict
+from .utils import either_dict_or_kwargs, Frozen, SortedKeysDict
 
 
 class ImplementsArrayReduce(object):
@@ -526,24 +526,24 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'precision': precision,
                                              'include_lowest': include_lowest})
 
-    def rolling(self, min_periods=None, center=False, **windows):
+    def rolling(self, dim=None, min_periods=None, center=False, **dim_kwargs):
         """
         Rolling window object.
 
         Parameters
         ----------
+        dim: dict, optional
+            Mapping from the dimension name to create the rolling iterator
+            along (e.g. `time`) to its moving window size.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **windows : dim=window
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+        **dim_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwarg must be provided.
 
         Returns
         -------
@@ -582,9 +582,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
-
-        return self._rolling_cls(self, min_periods=min_periods,
-                                 center=center, **windows)
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        return self._rolling_cls(self, dim, min_periods=min_periods,
+                                 center=center)
 
     def resample(self, freq=None, dim=None, how=None, skipna=None,
                  closed=None, label=None, base=0, keep_attrs=False, **indexer):
@@ -650,6 +650,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
+        # TODO support non-string indexer after removing the old API.
+
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
 

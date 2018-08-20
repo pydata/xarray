@@ -44,7 +44,7 @@ class Rolling(object):
 
     _attributes = ['window', 'min_periods', 'center', 'dim']
 
-    def __init__(self, obj, min_periods=None, center=False, **windows):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object.
 
@@ -52,18 +52,18 @@ class Rolling(object):
         ----------
         obj : Dataset or DataArray
             Object to window.
+        windows : A mapping from a dimension name to window size
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **windows : dim=window
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
 
         Returns
         -------
@@ -115,7 +115,7 @@ class Rolling(object):
 
 
 class DataArrayRolling(Rolling):
-    def __init__(self, obj, min_periods=None, center=False, **windows):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for DataArray.
         You should use DataArray.rolling() method to construct this object
@@ -125,18 +125,18 @@ class DataArrayRolling(Rolling):
         ----------
         obj : DataArray
             Object to window.
+        windows : A mapping from a dimension name to window size
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **windows : dim=window
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
 
         Returns
         -------
@@ -149,8 +149,8 @@ class DataArrayRolling(Rolling):
         Dataset.rolling
         Dataset.groupby
         """
-        super(DataArrayRolling, self).__init__(obj, min_periods=min_periods,
-                                               center=center, **windows)
+        super(DataArrayRolling, self).__init__(
+            obj, windows, min_periods=min_periods, center=center)
 
         self.window_labels = self.obj[self.dim]
 
@@ -321,7 +321,7 @@ class DataArrayRolling(Rolling):
 
 
 class DatasetRolling(Rolling):
-    def __init__(self, obj, min_periods=None, center=False, **windows):
+    def __init__(self, obj, windows, min_periods=None, center=False):
         """
         Moving window object for Dataset.
         You should use Dataset.rolling() method to construct this object
@@ -331,18 +331,18 @@ class DatasetRolling(Rolling):
         ----------
         obj : Dataset
             Object to window.
+        windows : A mapping from a dimension name to window size
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **windows : dim=window
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
 
         Returns
         -------
@@ -355,8 +355,7 @@ class DatasetRolling(Rolling):
         Dataset.groupby
         DataArray.groupby
         """
-        super(DatasetRolling, self).__init__(obj,
-                                             min_periods, center, **windows)
+        super(DatasetRolling, self).__init__(obj, windows, min_periods, center)
         if self.dim not in self.obj.dims:
             raise KeyError(self.dim)
         # Keep each Rolling object as an OrderedDict
@@ -364,8 +363,8 @@ class DatasetRolling(Rolling):
         for key, da in self.obj.data_vars.items():
             # keeps rollings only for the dataset depending on slf.dim
             if self.dim in da.dims:
-                self.rollings[key] = DataArrayRolling(da, min_periods,
-                                                      center, **windows)
+                self.rollings[key] = DataArrayRolling(
+                    da, windows, min_periods, center)
 
     def reduce(self, func, **kwargs):
         """Reduce the items in this group by applying `func` along some
