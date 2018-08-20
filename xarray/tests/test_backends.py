@@ -1404,7 +1404,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 self.assertEqual((4,), actual['var1'].encoding['chunks'])
 
-
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4['var1'].encoding.update({'chunks': 5})
