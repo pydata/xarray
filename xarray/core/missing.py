@@ -181,9 +181,9 @@ def get_clean_interp_index(arr, dim, method, use_coordinate=True, **kwargs):
                 # The division can change the nearest-neighbour
                 # when compared to pandas (which does not divide).
                 # Let's keep that compatitibility
-                index = (index - index.mean())
+                index = (index - index.min())
                 if len(index) > 1:
-                    index /= np.max(np.abs(index))
+                    index /= index.std()
 
         except (TypeError, ValueError):
             # pandas raises a TypeError
@@ -417,13 +417,11 @@ def _floatize_x(x, new_x):
         # We assume that the most of the bits are used to represent the
         # offset (min(x)) and the variation (x - min(x)) can be
         # represented by float.
-        # Let's be defensive and always rescale x to be in [0, 1]
-        # Remove minimum instead of mean allows us to handle datetime
-        xfloat = (x[i] - np.min(x[i])).astype(np.float64)
-        newxfloat = (new_x[i] - np.min(x[i])).astype(np.float64)
-        xmax = np.max(xfloat)
-        x[i] = xfloat / xmax
-        new_x[i] = newxfloat / xmax
+        # Let's be defensive and always rescale (x)
+        xmin = np.min(x[i])
+        xstd = np.std(x[i].astype(np.float64))
+        x[i] = (x[i] - xmin).astype(np.float64) / xstd
+        new_x[i] = (new_x[i] - xmin).astype(np.float64) / xstd
     return x, new_x
 
 
