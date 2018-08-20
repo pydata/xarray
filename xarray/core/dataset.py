@@ -1759,8 +1759,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         align
         """
         indexers = alignment.reindex_like_indexers(self, other)
-        return self.reindex(method=method, copy=copy, tolerance=tolerance,
-                            **indexers)
+        return self.reindex(indexers=indexers, method=method, copy=copy,
+                            tolerance=tolerance)
 
     def reindex(self, indexers=None, method=None, tolerance=None, copy=True,
                 **indexers_kwargs):
@@ -1809,7 +1809,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         pandas.Index.get_indexer
         """
         indexers = utils.either_dict_or_kwargs(indexers, indexers_kwargs,
-                                                 'reindex')
+                                               'reindex')
 
         bad_dims = [d for d in indexers if d not in self.dims]
         if bad_dims:
@@ -2144,22 +2144,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables, self._coord_names)
 
-    def set_index(self, append=False, inplace=False, **indexes):
+    def set_index(self, indexes=None, append=False, inplace=False,
+                  **indexes_kwargs):
         """Set Dataset (multi-)indexes using one or more existing coordinates or
         variables.
 
         Parameters
         ----------
+        indexes : {dim: index, ...}
+            Mapping from names matching dimensions and values given
+            by (lists of) the names of existing coordinates or variables to set
+            as new (multi-)index.
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
         inplace : bool, optional
             If True, set new index(es) in-place. Otherwise, return a new
             Dataset object.
-        **indexes : {dim: index, ...}
-            Keyword arguments with names matching dimensions and values given
-            by (lists of) the names of existing coordinates or variables to set
-            as new (multi-)index.
+        **indexes_kwargs: optional
+            The keyword arguments form of ``indexes``.
+            One of indexes or indexes_kwargs must be provided.
 
         Returns
         -------
@@ -2170,6 +2174,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.reset_index
         """
+        indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         variables, coord_names = merge_indexes(indexes, self._variables,
                                                self._coord_names,
                                                append=append)
@@ -2206,18 +2211,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reorder_levels(self, inplace=False, **dim_order):
+    def reorder_levels(self, dim_order=None, inplace=False,
+                       **dim_order_kwargs):
         """Rearrange index levels using input order.
 
         Parameters
         ----------
+        dim_order : optional
+            Mapping from names matching dimensions and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
         inplace : bool, optional
             If True, modify the dataset in-place. Otherwise, return a new
             DataArray object.
-        **dim_order : optional
-            Keyword arguments with names matching dimensions and values given
-            by lists representing new level orders. Every given dimension
-            must have a multi-index.
+        **dim_order_kwargs: optional
+            The keyword arguments form of ``dim_order``.
+            One of dim_order or dim_order_kwargs must be provided.
 
         Returns
         -------
@@ -2225,6 +2234,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
+        dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs,
+                                          'reorder_levels')
         replace_variables = {}
         for dim, order in dim_order.items():
             coord = self._variables[dim]
@@ -2267,7 +2278,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def stack(self, **dimensions):
+    def stack(self, dimensions=None, **dimensions_kwargs):
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -2276,9 +2287,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+        dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
             replace.
+        **dimensions_kwargs:
+            The keyword arguments form of ``dimensions``.
+            One of dimensions or dimensions_kwargs must be provided.
 
         Returns
         -------
@@ -2289,6 +2303,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.unstack
         """
+        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs,
+                                           'stack')
         result = self
         for new_dim, dims in dimensions.items():
             result = result._stack_once(dims, new_dim)
@@ -2329,7 +2345,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if index.equals(full_idx):
             obj = self
         else:
-            obj = self.reindex(copy=False, **{dim: full_idx})
+            obj = self.reindex({dim: full_idx}, copy=False)
 
         new_dim_names = index.names
         new_dim_sizes = [lev.size for lev in index.levels]
@@ -2339,7 +2355,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             if name != dim:
                 if dim in var.dims:
                     new_dims = OrderedDict(zip(new_dim_names, new_dim_sizes))
-                    variables[name] = var.unstack(**{dim: new_dims})
+                    variables[name] = var.unstack({dim: new_dims})
                 else:
                     variables[name] = var
 
@@ -2578,7 +2594,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             raise TypeError('must specify how or thresh')
 
-        return self.isel(**{dim: mask})
+        return self.isel({dim: mask})
 
     def fillna(self, value):
         """Fill missing values in this object.
@@ -2843,17 +2859,20 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
-    def assign(self, **kwargs):
+    def assign(self, variables=None, **variables_kwargs):
         """Assign new data variables to a Dataset, returning a new object
         with all the original variables in addition to the new ones.
 
         Parameters
         ----------
-        kwargs : keyword, value pairs
-            keywords are the variables names. If the values are callable, they
-            are computed on the Dataset and assigned to new data variables. If
-            the values are not callable, (e.g. a DataArray, scalar, or array),
-            they are simply assigned.
+        variables : mapping, value pairs
+            Mapping from variables names to the new values. If the new values
+            are callable, they are computed on the Dataset and assigned to new
+            data variables. If the values are not callable, (e.g. a DataArray,
+            scalar, or array), they are simply assigned.
+        **variables_kwargs:
+            The keyword arguments form of ``variables``.
+            One of variables or variables_kwarg must be provided.
 
         Returns
         -------
@@ -2873,9 +2892,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         pandas.DataFrame.assign
         """
+        variables = either_dict_or_kwargs(variables, variables_kwargs, 'assign')
         data = self.copy()
         # do all calculations first...
-        results = data._calc_assign_results(kwargs)
+        results = data._calc_assign_results(variables)
         # ... and then assign
         data.update(results)
         return data
@@ -3310,7 +3330,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             return difference
 
-    def shift(self, **shifts):
+    def shift(self, shifts=None, **shifts_kwargs):
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -3318,10 +3338,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        **shifts : keyword arguments of the form {dim: offset}
+        shifts : Mapping with the form of {dim: offset}
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        **shifts_kwargs:
+            The keyword arguments form of ``shifts``.
+            One of shifts or shifts_kwarg must be provided.
 
         Returns
         -------
@@ -3345,6 +3368,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
             foo      (x) object nan nan 'a' 'b' 'c'
         """
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'shift')
         invalid = [k for k in shifts if k not in self.dims]
         if invalid:
             raise ValueError("dimensions %r do not exist" % invalid)
