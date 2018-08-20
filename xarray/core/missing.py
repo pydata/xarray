@@ -153,7 +153,7 @@ def _apply_over_vars_with_dim(func, self, dim=None, **kwargs):
     return ds
 
 
-def get_clean_interp_index(arr, dim, method, use_coordinate=True, **kwargs):
+def get_clean_interp_index(arr, dim, use_coordinate=True, **kwargs):
     '''get index to use for x values in interpolation.
 
     If use_coordinate is True, the coordinate that shares the name of the
@@ -176,15 +176,6 @@ def get_clean_interp_index(arr, dim, method, use_coordinate=True, **kwargs):
         # raise if index cannot be cast to a float (e.g. MultiIndex)
         try:
             index = index.values.astype(np.float64)
-            if method != 'nearest':
-                # rescale index to avoid overflow/underflow
-                # The division can change the nearest-neighbour
-                # when compared to pandas (which does not divide).
-                # Let's keep that compatitibility
-                index = (index - index.min())
-                if len(index) > 1:
-                    index /= index.std()
-
         except (TypeError, ValueError):
             # pandas raises a TypeError
             # xarray/nuppy raise a ValueError
@@ -211,8 +202,7 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
         valids = _get_valid_fill_mask(self, dim, limit)
 
     # method
-    index = get_clean_interp_index(self, dim, method=method,
-                                   use_coordinate=use_coordinate,
+    index = get_clean_interp_index(self, dim, use_coordinate=use_coordinate,
                                    **kwargs)
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)

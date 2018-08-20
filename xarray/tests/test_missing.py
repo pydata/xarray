@@ -11,8 +11,8 @@ from xarray.core.missing import (
     NumpyInterpolator, ScipyInterpolator, SplineInterpolator)
 from xarray.core.pycompat import dask_array_type
 from xarray.tests import (
-    assert_array_equal, assert_equal, assert_allclose, raises_regex,
-    requires_bottleneck, requires_dask, requires_scipy)
+    assert_array_equal, assert_equal, raises_regex, requires_bottleneck,
+    requires_dask, requires_scipy)
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ def test_interpolate_pd_compat():
             # only checks that interpolated values are the same (not nans)
             expected.values[pd.isnull(actual.values)] = np.nan
 
-            np.testing.assert_almost_equal(actual.values, expected.values)
+            np.testing.assert_allclose(actual.values, expected.values)
 
 
 @requires_scipy
@@ -244,7 +244,7 @@ def test_interpolate_limits():
     expected = xr.DataArray(np.array([1, 2, 3, 4, np.nan, 6],
                                      dtype=np.float64), dims='x')
 
-    assert_allclose(actual, expected)
+    assert_equal(actual, expected)
 
 
 @requires_scipy
@@ -284,17 +284,17 @@ def test_interpolate_use_coordinate():
     # use_coordinate == False is same as using the default index
     actual = da.interpolate_na(dim='x', use_coordinate=False)
     expected = da.interpolate_na(dim='x')
-    assert_allclose(actual, expected)
+    assert_equal(actual, expected)
 
     # possible to specify non index coordinate
     actual = da.interpolate_na(dim='x', use_coordinate='xc')
     expected = da.interpolate_na(dim='x')
-    assert_allclose(actual, expected)
+    assert_equal(actual, expected)
 
     # possible to specify index coordinate by name
     actual = da.interpolate_na(dim='x', use_coordinate='x')
     expected = da.interpolate_na(dim='x')
-    assert_allclose(actual, expected)
+    assert_equal(actual, expected)
 
 
 @requires_dask
