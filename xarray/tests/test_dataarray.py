@@ -3532,6 +3532,8 @@ def test_rolling_reduce(da, center, min_periods, window, name):
 @pytest.mark.parametrize('min_periods', (None, 1, 2, 3))
 @pytest.mark.parametrize('window', (1, 2, 3, 4))
 @pytest.mark.parametrize('name', ('sum', 'max'))
+@pytest.mark.filterwarnings('ignore:Using a non-tuple sequence')
+# root cause of the warning is bottleneck
 def test_rolling_reduce_nonnumeric(center, min_periods, window, name):
     da = DataArray([0, np.nan, 1, 2, np.nan, 3, 4, 5, np.nan, 6, 7],
                    dims='time').isnull()
