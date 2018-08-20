@@ -718,7 +718,8 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             store.close()
 
     if not compute:
-        return store.delayed_store
+        import dask
+        return dask.delayed(_finalize_store)(store.delayed_store, store)
 
     if not sync:
         return store

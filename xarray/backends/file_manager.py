@@ -26,7 +26,7 @@ class FileManager(object):
         """Acquire the file object from this manager."""
         raise NotImplementedError
 
-    def close(self):
+    def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError
 
