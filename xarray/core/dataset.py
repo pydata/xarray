@@ -2310,7 +2310,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._stack_once(dims, new_dim)
         return result
 
-    def unstack(self, dim):
+    def unstack(self, dim=None):
         """
         Unstack an existing dimension corresponding to a MultiIndex into
         multiple new dimensions.
@@ -2319,8 +2319,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        dim : str
-            Name of the existing dimension to unstack.
+        dim : str, optional
+            Name of the existing dimension to unstack. By default (if
+            ``dim is None``), unstacks first dim.
 
         Returns
         -------
@@ -2331,6 +2332,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.stack
         """
+        if dim is None:
+            dim = next(iter(self.dims.keys()))
         if dim not in self.dims:
             raise ValueError('invalid dimension: %s' % dim)
 
