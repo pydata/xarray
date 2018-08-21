@@ -2106,6 +2106,16 @@ class TestDataset(TestCase):
         actual = ds.unstack('z')
         assert_identical(actual, expected)
 
+    def test_unstack_with_no_dim_kwarg(self):
+        index = pd.MultiIndex.from_product([[0, 1], ['a', 'b']],
+                                           names=['x', 'y'])
+        ds = Dataset({'b': ('z', [0, 1, 2, 3]), 'z': index})
+        expected = Dataset({'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                            'x': [0, 1],
+                            'y': ['a', 'b']})
+        actual = ds.unstack()
+        assert_identical(actual, expected)
+
     def test_unstack_errors(self):
         ds = Dataset({'x': [1, 2, 3]})
         with raises_regex(ValueError, 'invalid dimension'):

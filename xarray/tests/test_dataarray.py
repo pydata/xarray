@@ -1663,6 +1663,11 @@ class TestDataArray(TestCase):
         actual = orig.stack(z=['x', 'y']).unstack('z').drop(['x', 'y'])
         assert_identical(orig, actual)
 
+    def test_stack_unstack_with_no_dim_kwarg(self):
+        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'], attrs={'foo': 2})
+        actual = orig.stack(z=['x', 'y']).unstack().drop(['x', 'y'])
+        assert_identical(orig, actual)
+
     def test_stack_unstack_decreasing_coordinate(self):
         # regression test for GH980
         orig = DataArray(np.random.rand(3, 4), dims=('y', 'x'),
