@@ -2321,7 +2321,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----------
         dim : str, optional
             Name of the existing dimension to unstack. By default (if
-            ``dim is None``), unstacks first dim.
+            ``dim is None``), unstacks first MultiIndex in dims.
 
         Returns
         -------
@@ -2332,13 +2332,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.stack
         """
-        if dim is None:
-            dim = next(iter(self.dims.keys()))
-        if dim not in self.dims:
-            raise ValueError('invalid dimension: %s' % dim)
+        dims = []
 
-        index = self.get_index(dim)
-        if not isinstance(index, pd.MultiIndex):
+        if dim is None:
+            dims = list(self.dims)
+            if len(dims) == 0:
+                raise ValueError('cannot unstack an object without dimensions')
+        elif dim not in self.dims:
+            raise ValueError('invalid dimension: %s' % dim)
+        else:
+            dims = [dim]
+
+        # set dim to first MultiIndex in dims or None
+        dim = None
+        for d in dims:
+            index = self.get_index(d)
+            if isinstance(index, pd.MultiIndex):
+                dim = d
+                break
+
+        if dim is None:
             raise ValueError('cannot unstack a dimension that does not have '
                              'a MultiIndex')
 

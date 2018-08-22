@@ -1664,9 +1664,18 @@ class TestDataArray(TestCase):
         assert_identical(orig, actual)
 
     def test_stack_unstack_with_no_dim_kwarg(self):
-        orig = DataArray([[0, 1], [2, 3]], dims=['x', 'y'], attrs={'foo': 2})
-        actual = orig.stack(z=['x', 'y']).unstack().drop(['x', 'y'])
-        assert_identical(orig, actual)
+        data = np.random.rand(1, 2, 3, 2)
+        orig = xr.DataArray(data, dims=['a', 'b', 'c', 'd'])
+        stacked = orig.stack(ab=['a', 'b'], cd=['c', 'd']).expand_dims('e', 2)
+
+        unstacked_ab = stacked.unstack()
+        assert unstacked_ab.dims == ('cd', 'e', 'a', 'b')
+
+        unstacked = unstacked_ab.unstack()
+        assert unstacked.dims == ('e', 'a', 'b', 'c', 'd')
+
+        roundtripped = unstacked.squeeze('e', drop=True).drop(['a', 'b', 'c', 'd'])
+        assert_identical(orig, roundtripped)
 
     def test_stack_unstack_decreasing_coordinate(self):
         # regression test for GH980

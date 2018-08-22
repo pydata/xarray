@@ -2117,6 +2117,9 @@ class TestDataset(TestCase):
         assert_identical(actual, expected)
 
     def test_unstack_errors(self):
+        with raises_regex(ValueError, 'object without dimensions'):
+            Dataset().unstack()
+
         ds = Dataset({'x': [1, 2, 3]})
         with raises_regex(ValueError, 'invalid dimension'):
             ds.unstack('foo')

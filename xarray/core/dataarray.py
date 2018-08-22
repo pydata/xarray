@@ -1258,12 +1258,28 @@ class DataArray(AbstractArray, DataWithCoords):
         ----------
         dim : str
             Name of the existing dimension to unstack.By default (if
-            ``dim is None``), unstacks first dim.
+            ``dim is None``), unstacks first MultiIndex in dims.
 
         Returns
         -------
         unstacked : DataArray
             Array with unstacked data.
+
+        Examples
+        --------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> roundtripped = arr.stack(z=('x', 'y')).unstack()
+        >>> arr.identical(roundtripped)
+        True
 
         See also
         --------
