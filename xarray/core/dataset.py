@@ -2339,7 +2339,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables, coord_names)
 
-    def unstack(self, *dims):
+    def unstack(self, dim=None):
         """
         Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
@@ -2348,9 +2348,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        *dims : str, optional
-            Names of the existing dimensions to unstack. By default (if
-            no dims provided), unstacks all MultiIndexes.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to unstack. By default unstacks all
+            MultiIndexes.
 
         Returns
         -------
@@ -2361,17 +2361,27 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.stack
         """
-        if dims:
-            for dim in dims:
-                if dim not in self.dims:
-                    raise ValueError('invalid dimension: %s' % dim)
-                if not isinstance(self.get_index(dim), pd.MultiIndex):
-                    raise ValueError('cannot unstack a dimension that does '
-                                     'not have a MultiIndex: %s' % dim)
-        else:
-            dims = [dim for dim in self.dims if
-                    isinstance(self.get_index(dim), pd.MultiIndex)]
+        dim_from_kwarg = dim is not None
 
+        if isinstance(dim, basestring):
+            dims = set([dim])
+        elif dim is None:
+            dims = set(self.dims)
+        else:
+            dims = set(dim)
+
+        missing_dims = [dim for dim in dims if dim not in self.dims]
+        if missing_dims:
+            raise ValueError('Dataset does not contain the dimensions: %s'
+                             % missing_dims)
+
+        non_multi_dims = [dim for dim in dims
+                          if not isinstance(self.get_index(dim), pd.MultiIndex)]
+        if non_multi_dims and dim_from_kwarg:
+            raise ValueError('cannot unstack dimensions that do not '
+                             'have a MultiIndex: %s' % non_multi_dims)
+
+        dims = dims - set(non_multi_dims)
         if len(dims) == 0:
             raise ValueError('cannot unstack an object that does not have '
                              'MultiIndex dimensions')
