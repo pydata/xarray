@@ -2310,51 +2310,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._stack_once(dims, new_dim)
         return result
 
-    def unstack(self, dim=None):
-        """
-        Unstack an existing dimension corresponding to a MultiIndex into
-        multiple new dimensions.
-
-        New dimensions will be added at the end.
-
-        Parameters
-        ----------
-        dim : str, optional
-            Name of the existing dimension to unstack. By default (if
-            ``dim is None``), unstacks first MultiIndex in dims.
-
-        Returns
-        -------
-        unstacked : Dataset
-            Dataset with unstacked data.
-
-        See also
-        --------
-        Dataset.stack
-        """
-        dims = []
-
-        if dim is None:
-            dims = list(self.dims)
-            if len(dims) == 0:
-                raise ValueError('cannot unstack an object without dimensions')
-        elif dim not in self.dims:
-            raise ValueError('invalid dimension: %s' % dim)
-        else:
-            dims = [dim]
-
-        # set dim to first MultiIndex in dims or None
-        dim = None
-        for d in dims:
-            index = self.get_index(d)
-            if isinstance(index, pd.MultiIndex):
-                dim = d
-                break
-
-        if dim is None:
-            raise ValueError('cannot unstack a dimension that does not have '
-                             'a MultiIndex')
-
+    def _unstack_once(self, dim):
+        index = self.get_index(dim)
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -2381,6 +2338,48 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
 
         return self._replace_vars_and_dims(variables, coord_names)
+
+    def unstack(self, *dims):
+        """
+        Unstack existing dimensions corresponding to MultiIndexes into
+        multiple new dimensions.
+
+        New dimensions will be added at the end.
+
+        Parameters
+        ----------
+        *dims : str, optional
+            Names of the existing dimensions to unstack. By default (if
+            no dims provided), unstacks all MultiIndexes.
+
+        Returns
+        -------
+        unstacked : Dataset
+            Dataset with unstacked data.
+
+        See also
+        --------
+        Dataset.stack
+        """
+        if dims:
+            for dim in dims:
+                if dim not in self.dims:
+                    raise ValueError('invalid dimension: %s' % dim)
+                if not isinstance(self.get_index(dim), pd.MultiIndex):
+                    raise ValueError('cannot unstack a dimension that does '
+                                     'not have a MultiIndex: %s' % dim)
+        else:
+            dims = [dim for dim in self.dims if
+                    isinstance(self.get_index(dim), pd.MultiIndex)]
+
+        if len(dims) == 0:
+            raise ValueError('cannot unstack an object that does not have '
+                             'MultiIndex dimensions')
+
+        result = self
+        for dim in dims:
+            result = result._unstack_once(dim)
+        return result
 
     def update(self, other, inplace=True):
         """Update this dataset's variables with those from another dataset.

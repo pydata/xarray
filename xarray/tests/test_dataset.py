@@ -2117,7 +2117,7 @@ class TestDataset(TestCase):
         assert_identical(actual, expected)
 
     def test_unstack_errors(self):
-        with raises_regex(ValueError, 'object without dimensions'):
+        with raises_regex(ValueError, 'does not have MultiIndex dimensions'):
             Dataset().unstack()
 
         ds = Dataset({'x': [1, 2, 3]})

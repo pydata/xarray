@@ -1247,18 +1247,18 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().stack(dimensions, **dimensions_kwargs)
         return self._from_temp_dataset(ds)
 
-    def unstack(self, dim=None):
+    def unstack(self, *dims):
         """
-        Unstack an existing dimension corresponding to a MultiIndex into
+        Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
 
         New dimensions will be added at the end.
 
         Parameters
         ----------
-        dim : str
-            Name of the existing dimension to unstack.By default (if
-            ``dim is None``), unstacks first MultiIndex in dims.
+        *dims : str, optional
+            Names of the existing dimensions to unstack. By default (if
+            no dims provided), unstacks all MultiIndexes.
 
         Returns
         -------
@@ -1285,7 +1285,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.stack
         """
-        ds = self._to_temp_dataset().unstack(dim)
+        ds = self._to_temp_dataset().unstack(*dims)
         return self._from_temp_dataset(ds)
 
     def transpose(self, *dims):

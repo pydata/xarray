@@ -1664,18 +1664,13 @@ class TestDataArray(TestCase):
         assert_identical(orig, actual)
 
     def test_stack_unstack_with_no_dim_kwarg(self):
-        data = np.random.rand(1, 2, 3, 2)
-        dims = ['a', 'b', 'c', 'd']
+        data = np.random.rand(1, 2, 3, 2, 1)
+        dims = ['a', 'b', 'c', 'd', 'e']
         orig = xr.DataArray(data, dims=dims)
-        stacked = orig.stack(ab=['a', 'b'], cd=['c', 'd']).expand_dims('e', 2)
+        stacked = orig.stack(ab=['a', 'b'], cd=['c', 'd'])
 
-        unstacked_ab = stacked.unstack()
-        assert unstacked_ab.dims == ('cd', 'e', 'a', 'b')
-
-        unstacked = unstacked_ab.unstack()
-        assert unstacked.dims == ('e', 'a', 'b', 'c', 'd')
-
-        roundtripped = unstacked.squeeze('e', drop=True).drop(dims)
+        unstacked = stacked.unstack()
+        roundtripped = unstacked.drop(['a', 'b', 'c', 'd']).transpose(*dims)
         assert_identical(orig, roundtripped)
 
     def test_stack_unstack_decreasing_coordinate(self):
