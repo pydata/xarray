@@ -14,7 +14,7 @@ from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
 from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
-from xarray.core.common import full_like
+from xarray.core.common import full_like, label_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
@@ -3170,6 +3170,22 @@ class TestDataArray(TestCase):
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, actual)
+
+    def test_label_like(self):
+        # For more thorough tests, see test_variable.py
+        orig = DataArray(np.random.random(size=(2, 2)),
+                         dims=('x', 'y'),
+                         attrs={'attr1': 'value1'},
+                         coords={'x': [4, 3]},
+                         name='helloworld')
+        new_data = np.arange(4).reshape(2,2)
+        new_var = label_like(new_data, orig)
+        for i in ['dims', 'attrs', 'name']:
+            assert getattr(new_var, i) == getattr(orig, i)
+        for coord in new_var.coords:
+            assert coord in orig.coords
+        with raises_regex(AssertionError, 'Arrays are not equal'):
+            assert_array_equal(new_var, orig)
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)

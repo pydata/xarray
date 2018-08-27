@@ -8,7 +8,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 from .core.alignment import align, broadcast, broadcast_arrays
-from .core.common import full_like, zeros_like, ones_like
+from .core.common import full_like, zeros_like, ones_like, label_like
 from .core.combine import concat, auto_combine
 from .core.computation import apply_ufunc, where, dot
 from .core.extensions import (register_dataarray_accessor,

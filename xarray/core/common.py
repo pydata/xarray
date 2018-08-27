@@ -938,6 +938,39 @@ def ones_like(other, dtype=None):
     return full_like(other, 1, dtype)
 
 
+def label_like(data, other):
+    """Return a new object labeled in the same way as the given object.
+
+    Parameters
+    ----------
+    data : array_like
+        Data to fill the new object. Must have same shape as other.
+    other : DataArray, or Variable
+        The reference object from which to get labels
+
+    Returns
+    -------
+    out : same as other
+        New object with the same shape, and properties as other.
+        Coords will be copied from other.
+    """
+    from .dataarray import DataArray
+    from .variable import Variable
+
+    if not (isinstance(other, DataArray) or isinstance(other, Variable)):
+        raise TypeError("Expected DataArray, or Variable")
+    if not hasattr(data, "shape"):
+        raise TypeError("Data must have a .shape")
+    if other.shape != data.shape:
+        raise ValueError("Data shape should match shape of object")
+
+    if isinstance(other, Variable):
+        return Variable(dims=other.dims, data=data, attrs=other.attrs)
+    return DataArray(
+        data, dims=other.dims, coords=other.coords, attrs=other.attrs,
+        name=other.name)
+
+
 def is_np_datetime_like(dtype):
     """Check if a dtype is a subclass of the numpy datetime types
     """

@@ -14,7 +14,7 @@ import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
-from xarray.core.common import full_like, ones_like, zeros_like
+from xarray.core.common import full_like, ones_like, zeros_like, label_like
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
     LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
@@ -1892,6 +1892,25 @@ class TestAsCompatibleData(TestCase):
                          full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int),
                          full_like(orig, 1, dtype=int))
+
+    def test_label_like(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        new_data = np.array([[2.5, 5.0], [7.1, 43]])
+        new_var = label_like(new_data, orig)
+        assert new_var.dims == orig.dims
+        assert new_var.attrs == orig.attrs
+        with raises_regex(AssertionError, 'Arrays are not equal'):
+            assert_array_equal(new_var, orig)
+
+    def test_label_like_errors(self):
+        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
+                        attrs={'foo': 'bar'})
+        new_data = [2.5, 5.0]
+        with raises_regex(TypeError, 'Data must have a .shape'):
+            label_like(new_data, orig)
+        with raises_regex(ValueError, 'shape should match shape of object'):
+            label_like(np.array(new_data), orig)
 
     def test_unsupported_type(self):
         # Non indexable type
