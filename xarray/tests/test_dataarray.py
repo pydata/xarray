@@ -3178,7 +3178,7 @@ class TestDataArray(TestCase):
                          attrs={'attr1': 'value1'},
                          coords={'x': [4, 3]},
                          name='helloworld')
-        new_data = np.arange(4).reshape(2,2)
+        new_data = np.arange(4).reshape(2, 2)
         new_var = label_like(new_data, orig)
         for i in ['dims', 'attrs', 'name']:
             assert getattr(new_var, i) == getattr(orig, i)
