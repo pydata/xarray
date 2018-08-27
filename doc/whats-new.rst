@@ -68,6 +68,9 @@ Enhancements
   (:issue:`1875`)
   By `Andrew Huang <https://github.com/ahuang11>`_.
 
+- You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -84,7 +87,7 @@ Bug fixes
 - Tests can be run in parallel with pytest-xdist
   By `Tony Tung <https://github.com/ttung>`_.
 
-- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now raises a ValueError when there is a conflict between dimension names and
