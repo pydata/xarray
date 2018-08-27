@@ -2361,33 +2361,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.stack
         """
-        dim_from_kwarg = dim is not None
-
         if isinstance(dim, basestring):
-            dims = set([dim])
+            dims = [dim]
         elif dim is None:
-            dims = set(self.dims)
+            dims = self.dims
         else:
-            dims = set(dim)
+            dims = dim
 
-        missing_dims = [dim for dim in dims if dim not in self.dims]
+        missing_dims = [d for d in dims if d not in self.dims]
         if missing_dims:
             raise ValueError('Dataset does not contain the dimensions: %s'
                              % missing_dims)
 
-        non_multi_dims = [dim for dim in dims
-                          if not isinstance(self.get_index(dim), pd.MultiIndex)]
-        if non_multi_dims and dim_from_kwarg:
-            raise ValueError('cannot unstack dimensions that do not '
-                             'have a MultiIndex: %s' % non_multi_dims)
-
-        dims = dims - set(non_multi_dims)
-        if len(dims) == 0:
-            raise ValueError('cannot unstack an object that does not have '
-                             'MultiIndex dimensions')
+        multi_dims = [d for d in dims if isinstance(self.get_index(d),
+                                                    pd.MultiIndex)]
 
         result = self
-        for dim in dims:
+        for dim in multi_dims:
             result = result._unstack_once(dim)
         return result
 

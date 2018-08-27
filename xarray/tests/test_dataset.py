@@ -2108,14 +2108,9 @@ class TestDataset(TestCase):
             assert_identical(actual, expected)
 
     def test_unstack_errors(self):
-        with raises_regex(ValueError, 'does not have MultiIndex dimensions'):
-            Dataset().unstack()
-
         ds = Dataset({'x': [1, 2, 3]})
         with raises_regex(ValueError, 'does not contain the dimensions'):
             ds.unstack('foo')
-        with raises_regex(ValueError, 'do not have a MultiIndex'):
-            ds.unstack('x')
 
     def test_stack_unstack_fast(self):
         ds = Dataset({'a': ('x', [0, 1]),
