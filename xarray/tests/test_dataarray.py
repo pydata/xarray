@@ -1672,8 +1672,8 @@ class TestDataArray(TestCase):
         for dim in (None, ['ab', 'cd'], ['ab', 'cd', 'e']):
             unstacked = stacked.unstack(dim=dim)
             roundtripped = (unstacked
-                .drop(['a', 'b', 'c', 'd'])
-                .transpose(*dims))
+                            .drop(['a', 'b', 'c', 'd'])
+                            .transpose(*dims))
             assert_identical(orig, roundtripped)
 
     def test_stack_unstack_decreasing_coordinate(self):
