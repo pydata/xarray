@@ -1669,12 +1669,13 @@ class TestDataArray(TestCase):
         orig = xr.DataArray(np.random.rand(1, 2, 3, 2, 1), dims=dims)
         stacked = orig.stack(ab=['a', 'b'], cd=['c', 'd'])
 
-        for dim in (None, ['ab', 'cd'], ['ab', 'cd', 'e']):
-            unstacked = stacked.unstack(dim=dim)
-            roundtripped = (unstacked
-                            .drop(['a', 'b', 'c', 'd'])
-                            .transpose(*dims))
-            assert_identical(orig, roundtripped)
+        unstacked = stacked.unstack(['ab', 'cd'])
+        roundtripped = unstacked.drop(['a', 'b', 'c', 'd']).transpose(*dims)
+        assert_identical(orig, roundtripped)
+
+        unstacked = stacked.unstack()
+        roundtripped = unstacked.drop(['a', 'b', 'c', 'd']).transpose(*dims)
+        assert_identical(orig, roundtripped)
 
     def test_stack_unstack_decreasing_coordinate(self):
         # regression test for GH980

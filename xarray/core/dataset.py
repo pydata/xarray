@@ -2375,6 +2375,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         multi_dims = [d for d in dims if isinstance(self.get_index(d),
                                                     pd.MultiIndex)]
+        non_multi_dims = set(dims) - set(multi_dims)
+        if dim and non_multi_dims:
+            raise ValueError('cannot unstack dimensions that do not '
+                             'have a MultiIndex: %s' % non_multi_dims)
 
         result = self.copy(deep=False)
         for dim in multi_dims:
