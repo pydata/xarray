@@ -2376,7 +2376,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         multi_dims = [d for d in dims if isinstance(self.get_index(d),
                                                     pd.MultiIndex)]
 
-        result = self
+        result = self.copy(deep=False)
         for dim in multi_dims:
             result = result._unstack_once(dim)
         return result
