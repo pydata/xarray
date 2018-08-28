@@ -1897,20 +1897,17 @@ class TestAsCompatibleData(TestCase):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         new_data = np.array([[2.5, 5.0], [7.1, 43]])
-        new_var = label_like(new_data, orig)
-        assert new_var.dims == orig.dims
-        assert new_var.attrs == orig.attrs
-        with raises_regex(AssertionError, 'Arrays are not equal'):
-            assert_array_equal(new_var, orig)
+        actual = label_like(new_data, orig)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
 
     def test_label_like_errors(self):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         new_data = [2.5, 5.0]
-        with raises_regex(TypeError, 'Data must have a .shape'):
-            label_like(new_data, orig)
         with raises_regex(ValueError, 'shape should match shape of object'):
-            label_like(np.array(new_data), orig)
+            label_like(new_data, orig)
 
     def test_unsupported_type(self):
         # Non indexable type

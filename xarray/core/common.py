@@ -951,16 +951,17 @@ def label_like(data, other):
     Returns
     -------
     out : same as other
-        New object with the same shape, and properties as other.
+        New object with the same shape and properties as other.
         Coords will be copied from other.
     """
     from .dataarray import DataArray
-    from .variable import Variable
+    from .variable import Variable, as_compatible_data
 
     if not (isinstance(other, DataArray) or isinstance(other, Variable)):
         raise TypeError("Expected DataArray, or Variable")
-    if not hasattr(data, "shape"):
-        raise TypeError("Data must have a .shape")
+
+    data = as_compatible_data(data)
+
     if other.shape != data.shape:
         raise ValueError("Data shape should match shape of object")
 

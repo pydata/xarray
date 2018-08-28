@@ -3179,13 +3179,10 @@ class TestDataArray(TestCase):
                          coords={'x': [4, 3]},
                          name='helloworld')
         new_data = np.arange(4).reshape(2, 2)
-        new_var = label_like(new_data, orig)
-        for i in ['dims', 'attrs', 'name']:
-            assert getattr(new_var, i) == getattr(orig, i)
-        for coord in new_var.coords:
-            assert coord in orig.coords
-        with raises_regex(AssertionError, 'Arrays are not equal'):
-            assert_array_equal(new_var, orig)
+        actual = label_like(new_data, orig)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)
