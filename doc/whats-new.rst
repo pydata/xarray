@@ -103,7 +103,7 @@ Bug fixes
   When more than one ``key=value`` is passed into ``Dataset.filter_by_attrs()`` it will now return a Dataset with variables which pass
   all the filters.
   (:issue:`2315`)
-  By `Andrew Barna <https://github.com/docotak`_.
+  By `Andrew Barna <https://github.com/docotak>`_.
 
 .. _whats-new.0.10.8:
 
