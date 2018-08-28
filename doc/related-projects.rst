@@ -35,7 +35,6 @@ Geosciences
 - `xgcm <https://xgcm.readthedocs.io/>`_: Extends the xarray data model to understand finite volume grid cells (common in General Circulation Models) and provides interpolation and difference operations for such grids.
 - `xmitgcm <http://xgcm.readthedocs.io/>`_: a python package for reading `MITgcm <http://mitgcm.org/>`_ binary MDS files into xarray data structures.
 - `xshape <https://xshape.readthedocs.io/>`_: Tools for working with shapefiles, topographies, and polygons in xarray.
-- `xskillscore <https://github.com/raybellwaves/xskillscore>`_: Metrics for verifying forecasts.
 
 Machine Learning
 ~~~~~~~~~~~~~~~~
@@ -52,6 +51,7 @@ Extend xarray capabilities
 - `xrft <https://github.com/rabernat/xrft>`_: Fourier transforms for xarray data.
 - `xr-scipy <https://xr-scipy.readthedocs.io>`_: A lightweight scipy wrapper for xarray.
 - `X-regression <https://github.com/kuchaale/X-regression>`_: Multiple linear regression from Statsmodels library coupled with Xarray library.
+- `xskillscore <https://github.com/raybellwaves/xskillscore>`_: Metrics for verifying forecasts.
 - `xyzpy <http://xyzpy.readthedocs.io>`_: Easily generate high dimensional data, including parallelization.
 
 Visualization
