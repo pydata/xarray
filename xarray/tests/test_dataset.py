@@ -3969,6 +3969,26 @@ class TestDataset(TestCase):
         for var in new_ds.data_vars:
             assert new_ds[var].height == '10 m'
 
+        # Test return empty Dataset due to conflicting filters
+        new_ds = ds.filter_by_attrs(
+            standard_name='convective_precipitation_flux',
+            height='0 m')
+        assert not bool(new_ds.data_vars)
+
+        # Test return one DataArray with two filter conditions
+        new_ds = ds.filter_by_attrs(
+            standard_name='air_potential_temperature',
+            height='0 m')
+        for var in new_ds.data_vars:
+            assert new_ds[var].standard_name == 'air_potential_temperature'
+            assert new_ds[var].height == '0 m'
+            assert new_ds[var].height != '10 m'
+
+        # Test return empty Dataset due to conflicting callables
+        new_ds = ds.filter_by_attrs(standard_name=lambda v: False,
+                                    height=lambda v: True)
+        assert not bool(new_ds.data_vars)
+
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
         missing_2 = xr.Dataset({'x': [0, 1]})
