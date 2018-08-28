@@ -3656,10 +3656,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
 
-        Can pass in ``key=value`` or ``key=callable``.  Variables are returned
-        that contain all of the matches or callable returns True.  If using a
-        callable note that it should accept a single parameter only,
-        the attribute value.
+        Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
+        containing only the variables for which all the filter tests pass.
+        These tests are either ``key=value`` for which the attribute ``key`` 
+        has the exact value ``value`` or the callable passed into
+        ``key=callable`` returns True. The callable will be passed a single
+        value, either the value of the attribute ``key`` or ``None`` if the
+        DataArray does not have an attribute with the name ``key``.
 
         Parameters
         ----------
@@ -3730,11 +3733,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         selection = []
         for var_name, variable in self.data_vars.items():
+            has_value_flag = False
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value)) or
                         attr_value == pattern):
-                    selection.append(var_name)
+                    has_value_flag = True
+                else:
+                    has_value_flag = False
+                    break
+            if has_value_flag is True:
+                selection.append(var_name)
         return self[selection]
 
 
