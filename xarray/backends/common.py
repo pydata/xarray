@@ -274,7 +274,9 @@ class ArrayWriter(object):
     def sync(self, compute=True):
         if self.sources:
             import dask.array as da
-            delayed_store = da.store(self.sources, self.targets,
+            import dask
+            targets = [dask.delayed(t) for t in self.targets]
+            delayed_store = da.store(self.sources, targets,
                                      lock=self.lock, compute=compute,
                                      flush=True)
             self.sources = []
