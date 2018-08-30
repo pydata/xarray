@@ -40,7 +40,10 @@ Breaking changes
   necessary with
   ``xarray.set_options(file_cache_maxsize=...)``.
 
-  TODO: Add some note about performance benefits.
+  This change significantly simplies the work required to write a new backend
+  class, and also should improves performance for reading and writing
+  netCDF files when using dask.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~

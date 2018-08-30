@@ -615,3 +615,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager
