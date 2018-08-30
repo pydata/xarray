@@ -691,7 +691,7 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     - You cannot specify a ``tz`` (time zone) argument for a date range that
       results in a ``CFTimeIndex``.
     - Start or end dates specified as partial-datetime strings must use the
-      `ISO8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
+      `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
     - The ``CFTimeIndex``-enabled version of the function supports many, but
       not all frequencies supported by the ``DatetimeIndex`` version.  For
       example it does not currently support any of the business-related,
@@ -723,7 +723,7 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
 
     If a 'standard' calendar is specified, but the dates are outside the
     ``pandas.Timestamp``-valid range, a ``CFTimeIndex`` composed of
-    ``cftime.DatetimeGregorian`` objects will be returned.
+    ``cftime.DatetimeProlepticGregorian`` objects will be returned.
 
     >>> xr.cftime_range(start='0001', periods=6, freq='2MS', calendar='standard')
     CFTimeIndex([0001-01-01 00:00:00, 0001-03-01 00:00:00, 0001-05-01 00:00:00,
