@@ -1651,7 +1651,7 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
 
     def test_equals_all_dtypes(self):
         import dask
-        if '0.18.2' <= LooseVersion(dask.__version__) < '0.18.3':
+        if '0.18.2' <= LooseVersion(dask.__version__) < '0.19.1':
             pytest.xfail('https://github.com/pydata/xarray/issues/2318')
         super(TestVariableWithDask, self).test_equals_all_dtypes()
 
