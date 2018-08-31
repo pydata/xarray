@@ -15,12 +15,11 @@ from ..core import indexing
 from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 
-# Import default lock
 try:
     from dask.utils import SerializableLock
-    HDF5_LOCK = SerializableLock()
 except ImportError:
-    HDF5_LOCK = threading.Lock()
+    # no need to worry about serializing the lock
+    SerializableLock = threading.Lock
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
@@ -164,6 +163,26 @@ class CombinedLock(object):
         return "CombinedLock(%r)" % list(self.locks)
 
 
+class DummyLock(object):
+    """DummyLock provides the lock API without any actual locking."""
+
+    def acquire(self, *args):
+        pass
+
+    def release(self, *args):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args):
+        pass
+
+    @property
+    def locked(self):
+        return False 
+
+
 def combine_locks(locks):
     """Combine one or more locks into a CombinedLock."""
     all_locks = []
@@ -179,7 +198,14 @@ def combine_locks(locks):
     elif num_locks == 1:
         return all_locks[0]
     else:
-        return None
+        return DummyLock()
+
+
+# Neither HDF5 nor the netCDF-C library are thread-safe.
+HDF5_LOCK = SerializableLock()
+NETCDFC_LOCK = SerializableLock()
+# TODO: determine if we need a separate lock for PyNIO or not
+PYNIO_LOCK = SerializableLock()
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
@@ -287,6 +313,9 @@ class ArrayWriter(object):
     def sync(self, compute=True):
         if self.sources:
             import dask.array as da
+            # TODO: consider wrapping targets with dask.delayed, if this makes
+            # for any discernable difference in perforance, e.g.,
+            # targets = [dask.delayed(t) for t in self.targets]
             delayed_store = da.store(self.sources, self.targets,
                                      lock=self.lock, compute=compute,
                                      flush=True)
@@ -296,11 +325,6 @@ class ArrayWriter(object):
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None):
-        if writer is None:
-            writer = ArrayWriter()
-        self.writer = writer
-        self.delayed_store = None
 
     def encode(self, variables, attributes):
         """
@@ -342,8 +366,8 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def sync(self, compute=True):
-        self.delayed_store = self.writer.sync(compute=compute)
+    # def sync(self, compute=True):
+    #     self.delayed_store = self.writer.sync(compute=compute)
 
     def store_dataset(self, dataset):
         """
@@ -355,7 +379,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         self.store(dataset, dataset.attrs)
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
-              unlimited_dims=None):
+              writer=None, unlimited_dims=None):
         """
         Top level method for putting data on this store, this method:
           - encodes variables/attributes
@@ -371,16 +395,19 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
         """
+        if writer is None:
+            writer = ArrayWriter()
 
         variables, attributes = self.encode(variables, attributes)
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(variables, check_encoding_set,
+        self.set_variables(variables, check_encoding_set, writer,
                            unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
@@ -396,7 +423,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set,
+    def set_variables(self, variables, check_encoding_set, writer,
                       unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
@@ -409,6 +436,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
@@ -420,7 +448,7 @@ class AbstractWritableDataStore(AbstractDataStore):
             target, source = self.prepare_variable(
                 name, v, check, unlimited_dims=unlimited_dims)
 
-            self.writer.add(source, target)
+            writer.add(source, target)
 
     def set_dimensions(self, variables, unlimited_dims=None):
         """

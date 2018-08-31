@@ -14,7 +14,8 @@ from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, ArrayWriter, combine_locks, _get_scheduler, _get_scheduler_lock)
+    HDF5_LOCK, NETCDFC_LOCK, ArrayWriter, combine_locks, _get_scheduler,
+    _get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -55,23 +56,31 @@ def _normalize_path(path):
 
 def _default_read_lock(filename, engine):
     if filename.endswith('.gz'):
-        lock = None
+        locks = []
     else:
         if engine is None:
             engine = _get_default_engine(filename, allow_remote=True)
 
         if engine == 'netcdf4':
             if is_remote_uri(filename):
-                lock = None
+                locks = [NETCDFC_LOCK]
             else:
-                # TODO: identify netcdf3 files and don't use the global lock
-                # for them
-                lock = HDF5_LOCK
-        elif engine in {'h5netcdf', 'pynio'}:
-            lock = HDF5_LOCK
+                # TODO: identify netcdf3 files and don't use the global HDF5
+                # lock for them
+                locks = [NETCDFC_LOCK, HDF5_LOCK]
+        elif engine == 'h5netcdf':
+            locks = [HDF5_LOCK]
+        elif engine == 'pynio':
+            # pynio can invoke netCDF libraries internally
+            locks = [HDF5_LOCK, NETCDFC_LOCK, PYNIO_LOCK]
+        elif engine == 'psuedonetcdf':
+            # psuedonetcdf can invoke netCDF libraries internally
+            locks = [HDF5_LOCK, NETCDFC_LOCK]
         else:
-            lock = None
-    return lock
+            # no locking needed by default, e.g., for scipy or pynio
+            locks = []
+
+    return combine_locks(locks)
 
 
 def _get_write_lock(engine, scheduler, format, path_or_file):
@@ -82,6 +91,9 @@ def _get_write_lock(engine, scheduler, format, path_or_file):
     if (engine == 'h5netcdf' or engine == 'netcdf4' and
             (format is None or format.startswith('NETCDF4'))):
         locks.append(HDF5_LOCK)
+
+    if engine == 'netcdf4':
+        locks.append(NETCDFC_LOCK)
 
     locks.append(_get_scheduler_lock(scheduler, path_or_file))
 
@@ -149,7 +161,6 @@ def _protect_dataset_variables_inplace(dataset, cache):
 def _finalize_store(write, store):
     """ Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
-    store.sync()
     store.close()
 
 
@@ -331,10 +342,11 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store = backends.H5NetCDFStore(
                 filename_or_obj, group=group, lock=lock, **backend_kwargs)
         elif engine == 'pynio':
-            store = backends.NioDataStore(filename_or_obj, **backend_kwargs)
+            store = backends.NioDataStore(
+                filename_or_obj, lock=lock, **backend_kwargs)
         elif engine == 'pseudonetcdf':
             store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, **backend_kwargs)
+                filename_or_obj, lock=lock, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
@@ -645,19 +657,21 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None,
-              compute=True):
+              engine=None, encoding=None, unlimited_dims=None, compute=True,
+              multifile=False):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
     See `Dataset.to_netcdf` for full API docs.
 
-    The ``writer`` argument is only for the private use of save_mfdataset.
+    The ``multifile`` argument is only for the private use of save_mfdataset.
     """
     if isinstance(path_or_file, path_type):
         path_or_file = str(path_or_file)
+
     if encoding is None:
         encoding = {}
+
     if path_or_file is None:
         if engine is None:
             engine = 'scipy'
@@ -665,12 +679,19 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
+        if not compute:
+            raise NotImplementedError(
+                'to_netcdf() with compute=False is not yet implemented when '
+                'returning bytes')
     elif isinstance(path_or_file, basestring):
         if engine is None:
             engine = _get_default_engine(path_or_file)
         path_or_file = _normalize_path(path_or_file)
     else:  # file-like object
         engine = 'scipy'
+
+    if path_or_file is None and not compute:
+        raise ValueError
 
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
@@ -683,9 +704,6 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
 
     if format is not None:
         format = format.upper()
-
-    # if a writer is provided, store asynchronously
-    sync = writer is None
 
     # handle scheduler specific logic
     scheduler = _get_scheduler()
@@ -701,28 +719,65 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     target = path_or_file if path_or_file is not None else BytesIO()
     kwargs = dict(autoclose=True) if autoclose else {}
     store = store_open(
-        target, mode, format, group, writer, lock=lock, **kwargs)
+        target, mode, format, group, lock=lock, **kwargs)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     if isinstance(unlimited_dims, basestring):
         unlimited_dims = [unlimited_dims]
 
+    writer = ArrayWriter()
+
+    # TODO: figure out how to refactor this logic (here and in save_mfdataset)
+    # to avoid this mess of conditionals
     try:
-        dataset.dump_to_store(store, sync=sync, encoding=encoding,
-                              unlimited_dims=unlimited_dims, compute=compute)
+        # TODO: allow this work (setting up the file for writing array data)
+        # to be parallelized with dask
+        dump_to_store(dataset, store, writer, encoding=encoding,
+                      unlimited_dims=unlimited_dims)
+        if autoclose:
+            store.close()
+
+        if multifile:
+            return writer, store
+
+        writes = writer.sync(compute=compute)
+
         if path_or_file is None:
+            store.sync()
             return target.getvalue()
     finally:
-        if sync and isinstance(path_or_file, basestring):
+        if not multifile and compute:
             store.close()
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed_store, store)
+        return dask.delayed(_finalize_store)(writes, store)
 
-    if not sync:
-        return store
+
+def dump_to_store(dataset, store, writer=None, encoder=None,
+                  encoding=None, unlimited_dims=None):
+    """Store dataset contents to a backends.*DataStore object."""
+    if writer is None:
+        writer = ArrayWriter()
+
+    if encoding is None:
+        encoding = {}
+
+    variables, attrs = conventions.encode_dataset_coordinates(dataset)
+
+    check_encoding = set()
+    for k, enc in encoding.items():
+        # no need to shallow copy the variable again; that already happened
+        # in encode_dataset_coordinates
+        variables[k].encoding = enc
+        check_encoding.add(k)
+
+    if encoder:
+        variables, attrs = encoder(variables, attrs)
+
+    store.store(variables, attrs, check_encoding, writer,
+                unlimited_dims=unlimited_dims)
 
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
@@ -806,22 +861,22 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
 
-    writer = ArrayWriter() if compute else None
-    stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
-                        compute=compute)
-              for ds, path, group in zip(datasets, paths, groups)]
+    writers, stores = zip(*[
+        to_netcdf(ds, path, mode, format, group, engine, compute=compute,
+                  multifile=True)
+        for ds, path, group in zip(datasets, paths, groups)])
+
+    try:
+        writes = [w.sync(compute=compute) for w in writers]
+    finally:
+        if compute:
+            for store in stores:
+                store.close()
 
     if not compute:
         import dask
-        return dask.delayed(stores)
-
-    try:
-        delayed = writer.sync(compute=compute)
-        for store in stores:
-            store.sync()
-    finally:
-        for store in stores:
-            store.close()
+        return dask.delayed([dask.delayed(_finalize_store)(w, s)
+                             for w, s in zip(writes, stores)])
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
@@ -842,13 +897,14 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     store = backends.ZarrStore.open_group(store=store, mode=mode,
                                           synchronizer=synchronizer,
-                                          group=group, writer=None)
+                                          group=group)
 
-    # I think zarr stores should always be sync'd immediately
+    writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+    dump_to_store(dataset, store, writer, encoding=encoding)
+    writes = writer.sync(compute=compute)
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed_store, store)
+        return dask.delayed(_finalize_store)(writes, store)
     return store

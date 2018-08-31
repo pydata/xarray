@@ -1054,27 +1054,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 del obj._variables[name]
         return obj
 
-    def dump_to_store(self, store, encoder=None, sync=True, encoding=None,
-                      unlimited_dims=None, compute=True):
+    def dump_to_store(self, store, **kwargs):
         """Store dataset contents to a backends.*DataStore object."""
-        if encoding is None:
-            encoding = {}
-        variables, attrs = conventions.encode_dataset_coordinates(self)
-
-        check_encoding = set()
-        for k, enc in encoding.items():
-            # no need to shallow copy the variable again; that already happened
-            # in encode_dataset_coordinates
-            variables[k].encoding = enc
-            check_encoding.add(k)
-
-        if encoder:
-            variables, attrs = encoder(variables, attrs)
-
-        store.store(variables, attrs, check_encoding,
-                    unlimited_dims=unlimited_dims)
-        if sync:
-            store.sync(compute=compute)
+        from ..backends.api import dump_to_store
+        # TODO: rename and/or cleanup this method to make it more consistent
+        # with to_netcdf()
+        return dump_to_store(self, store, **kwargs)
 
     def to_netcdf(self, path=None, mode='w', format=None, group=None,
                   engine=None, encoding=None, unlimited_dims=None,

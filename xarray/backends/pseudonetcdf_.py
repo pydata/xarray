@@ -9,7 +9,7 @@ from ..core.pycompat import OrderedDict
 from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
-from .common import AbstractDataStore, BackendArray
+from .common import AbstractDataStore, BackendArray, DummyLock
 from .file_manager import CachingFileManager
 
 
@@ -31,14 +31,15 @@ class PncArrayWrapper(BackendArray):
             self._getitem)
 
     def _getitem(self, key):
-        return self.get_array()[key]
+        with self.datastore.lock:
+            return self.get_array()[key]
 
 
 class PseudoNetCDFDataStore(AbstractDataStore):
     """Store for accessing datasets via PseudoNetCDF
     """
     @classmethod
-    def open(cls, filename, **format_kwds):
+    def open(cls, filename, lock=None, **format_kwds):
         from PseudoNetCDF import pncopen
 
         keywords = dict(kwargs=format_kwds)
@@ -50,8 +51,9 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         manager = CachingFileManager(pncopen, filename, **keywords)
         return cls(manager)
 
-    def __init__(self, manager):
+    def __init__(self, manager, lock=None):
         self._manager = manager
+        self.lock = DummyLock() if lock is None else lock
 
     @property
     def ds(self):

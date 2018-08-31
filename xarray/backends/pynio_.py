@@ -5,7 +5,7 @@ import numpy as np
 from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
-from .common import AbstractDataStore, BackendArray
+from .common import PYNIO_LOCK, AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 
 
@@ -26,19 +26,20 @@ class NioArrayWrapper(BackendArray):
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
-        array = self.get_array()
-        if key == () and self.ndim == 0:
-            return array.get_value()
-
-        return array[key]
+        with self.datastore.lock:
+            array = self.get_array()
+            if key == () and self.ndim == 0:
+                return array.get_value()
+            return array[key]
 
 
 class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r'):
+    def __init__(self, filename, mode='r', lock=PYNIO_LOCK):
         import Nio
+        self.lock = lock
         self._manager = CachingFileManager(Nio.open_file, filename, mode=mode)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.

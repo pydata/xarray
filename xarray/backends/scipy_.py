@@ -11,7 +11,7 @@ from ..core.indexing import NumpyIndexingAdapter
 from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
-from .file_manager import CachingFileManager
+from .file_manager import CachingFileManager, DummyFileManager
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
@@ -111,7 +111,7 @@ class ScipyDataStore(WritableCFDataStore):
     """
 
     def __init__(self, filename_or_obj, mode='r', format=None, group=None,
-                 writer=None, mmap=None, lock=None):
+                 mmap=None, lock=None):
         import scipy
         import scipy.io
 
@@ -135,10 +135,16 @@ class ScipyDataStore(WritableCFDataStore):
             raise ValueError('invalid format for scipy.io.netcdf backend: %r'
                              % format)
 
-        self._manager = CachingFileManager(
-            _open_scipy_netcdf, filename_or_obj, mode=mode,
-            kwargs=dict(mmap=mmap, version=version))
-        super(ScipyDataStore, self).__init__(writer)
+        if isinstance(filename_or_obj, basestring):
+            manager = CachingFileManager(
+                _open_scipy_netcdf, filename_or_obj, mode=mode,
+                kwargs=dict(mmap=mmap, version=version))
+        else:
+            scipy_dataset = _open_scipy_netcdf(
+                filename_or_obj, mode=mode, mmap=mmap, version=version)
+            manager = DummyFileManager(scipy_dataset)
+
+        self._manager = manager
 
     @property
     def ds(self):
@@ -206,12 +212,10 @@ class ScipyDataStore(WritableCFDataStore):
 
         return target, data
 
-    def sync(self, compute=True):
-        super(ScipyDataStore, self).sync(compute=compute)
+    def sync(self):
+        # super(ScipyDataStore, self).sync(compute=compute)
         self.ds.sync()
 
     def close(self):
+        # self.sync()
         self._manager.close()
-
-    def __exit__(self, type, value, tb):
-        self.close()

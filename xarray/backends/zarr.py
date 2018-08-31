@@ -217,8 +217,7 @@ class ZarrStore(AbstractWritableDataStore):
     """
 
     @classmethod
-    def open_group(cls, store, mode='r', synchronizer=None, group=None,
-                   writer=None):
+    def open_group(cls, store, mode='r', synchronizer=None, group=None):
         import zarr
         min_zarr = '2.2'
 
@@ -230,23 +229,23 @@ class ZarrStore(AbstractWritableDataStore):
                                       "#installation" % min_zarr)
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
-        return cls(zarr_group, writer=writer)
+        return cls(zarr_group)
 
-    def __init__(self, zarr_group, writer=None):
+    def __init__(self, zarr_group):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
 
-        if writer is None:
-            # by default, we should not need a lock for writing zarr because
-            # we do not (yet) allow overlapping chunks during write
-            zarr_writer = ArrayWriter(lock=False)
-        else:
-            zarr_writer = writer
+        # if writer is None:
+        #     # by default, we should not need a lock for writing zarr because
+        #     # we do not (yet) allow overlapping chunks during write
+        #     zarr_writer = ArrayWriter(lock=False)
+        # else:
+        #     zarr_writer = writer
 
-        # do we need to define attributes for all of the opener keyword args?
-        super(ZarrStore, self).__init__(zarr_writer)
+        # # do we need to define attributes for all of the opener keyword args?
+        # super(ZarrStore, self).__init__(zarr_writer)
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -334,8 +333,11 @@ class ZarrStore(AbstractWritableDataStore):
         AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
 
-    def sync(self, compute=True):
-        self.delayed_store = self.writer.sync(compute=compute)
+    def sync(self):
+        pass
+
+    # def sync(self, compute=True):
+    #     self.delayed_store = self.writer.sync(compute=compute)
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

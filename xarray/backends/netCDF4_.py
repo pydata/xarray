@@ -298,7 +298,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
 
-    def __init__(self, manager, writer=None, lock=HDF5_LOCK, autoclose=False):
+    def __init__(self, manager, lock=HDF5_LOCK, autoclose=False):
         import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
@@ -311,11 +311,10 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.is_remote = is_remote_uri(self._filename)
         self.lock = lock
         self.autoclose = autoclose
-        super(NetCDF4DataStore, self).__init__(writer)
 
     @classmethod
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
-             writer=None, clobber=True, diskless=False, persist=False,
+             clobber=True, diskless=False, persist=False,
              lock=HDF5_LOCK, autoclose=False):
         import netCDF4
         if (len(filename) == 88 and
@@ -334,7 +333,7 @@ class NetCDF4DataStore(WritableCFDataStore):
             _open_netcdf4_group, filename, lock, mode=mode,
             kwargs=dict(group=group, clobber=clobber, diskless=diskless,
                         persist=persist, format=format))
-        return cls(manager, writer=writer, lock=lock, autoclose=autoclose)
+        return cls(manager, lock=lock, autoclose=autoclose)
 
     @property
     def ds(self):
@@ -458,11 +457,8 @@ class NetCDF4DataStore(WritableCFDataStore):
 
         return target, variable.data
 
-    def sync(self, compute=True):
+    def sync(self):
         self.ds.sync()
-        if self.autoclose:
-            self.close()
-        super(NetCDF4DataStore, self).sync(compute=compute)
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)
