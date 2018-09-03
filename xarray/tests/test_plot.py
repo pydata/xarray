@@ -1284,6 +1284,17 @@ class TestImshow(Common2dMixin, PlotTestCase):
         da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
         da.plot.imshow()
 
+    def test_imshow_origin_kwarg(self):
+        da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+        da.plot.imshow(origin='upper')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[1] < 0
+
+        plt.clf()
+        da.plot.imshow(origin='lower')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[0] < 0
+
 
 class TestFacetGrid(PlotTestCase):
     def setUp(self):
