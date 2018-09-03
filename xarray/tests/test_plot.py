@@ -689,7 +689,7 @@ class TestDiscreteColorMap(TestCase):
 
     def test_colormap_pass_norm(self):
         norm = mpl.colors.LogNorm(0.1, 1e1)
-        primitive = self.darray.plot(norm=norm)
+        primitive = self.darray.plot(norm=norm, vmin=2, vmax=5)
         assert primitive.norm == norm
         assert primitive.norm.vmin == 0.1
         assert primitive.norm.vmax == 1e1
