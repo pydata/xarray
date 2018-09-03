@@ -3,7 +3,9 @@ from __future__ import absolute_import, division, print_function
 OPTIONS = {
     'display_width': 80,
     'arithmetic_join': 'inner',
-    'enable_cftimeindex': False
+    'enable_cftimeindex': False,
+    'cmap': 'viridis',
+    'cmap_divergent': 'RdBu_r',
 }
 
 
@@ -19,6 +21,11 @@ class set_options(object):
     - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
       for time indexes with non-standard calendars or dates outside the
       Timestamp-valid range. Default: ``False``.
+    - ``cmap``: matplotlib colormap to use for nondivergent data plots.
+      Default: ``viridis``.
+    - ``cmap_divergent``: matplotlib colormap to use for divergent data plots.
+       Default: ``RdBu_r``.
+
 
     You can use ``set_options`` either as a context manager:
 
