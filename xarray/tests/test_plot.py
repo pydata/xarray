@@ -476,10 +476,10 @@ class TestDetermineCmapParams(TestCase):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
-    # def test_cmap_divergent_option(self):
-    #     with xr.set_options(cmap_divergent='magma'):
-    #         cmap_params = _determine_cmap_params(self.data, center=0.5)
-    #         assert cmap_params['cmap'] == 'magma'
+    def test_cmap_divergent_option(self):
+        with xr.set_options(cmap_divergent='magma'):
+            cmap_params = _determine_cmap_params(self.data, center=0.5)
+            assert cmap_params['cmap'] == 'magma'
 
     def test_nan_inf_are_ignored(self):
         cmap_params1 = _determine_cmap_params(self.data)
