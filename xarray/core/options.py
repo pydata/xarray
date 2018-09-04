@@ -21,8 +21,8 @@ class set_options(object):
     - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
       for time indexes with non-standard calendars or dates outside the
       Timestamp-valid range. Default: ``False``.
-    - ``cmap_sequential``: matplotlib colormap to use for nondivergent data plots.
-      Default: ``viridis``.
+    - ``cmap_sequential``: matplotlib colormap to use for nondivergent data
+      plots. Default: ``viridis``.
     - ``cmap_divergent``: matplotlib colormap to use for divergent data plots.
        Default: ``RdBu_r``.
 
