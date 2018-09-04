@@ -479,7 +479,7 @@ class TestDetermineCmapParams(TestCase):
     def test_cmap_sequential_explicit_option(self):
         with xr.set_options(cmap_sequential=mpl.cm.magma):
             cmap_params = _determine_cmap_params(self.data)
-            assert cmap_params['cmap'] == 'magma'
+            assert cmap_params['cmap'] == mpl.cm.magma
 
     def test_cmap_divergent_option(self):
         with xr.set_options(cmap_divergent='magma'):
