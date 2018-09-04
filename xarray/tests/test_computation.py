@@ -14,6 +14,7 @@ from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
+from xarray.testing import assert_equal
 
 from . import raises_regex, requires_dask, has_dask
 
@@ -976,3 +977,44 @@ def test_where():
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims='x')
     assert_identical(expected, actual)
+
+
+@pytest.mark.parametrize('dask', [True, False])
+@pytest.mark.parametrize('edge_order', [1, 2])
+def test_gradient(dask, edge_order):
+    rs = np.random.RandomState(42)
+    da = xr.DataArray(rs.randn(4, 6), dims=['x', 'y'],
+                      coords={'x': [0.4, 0.6, 0.7, 0.75], 'z': 3,
+                              'x2d': (('x', 'y'), rs.randn(4, 6))})
+    if dask and has_dask:
+        da = da.chunk({'x': 2})
+
+    ds = xr.Dataset({'var': da})
+
+    # along x
+    actual = xr.gradient(da, 'x', edge_order)
+    expected_x = xr.DataArray(
+        np.gradient(da, da['x'], axis=0, edge_order=edge_order),
+        dims=da.dims, coords=da.coords)
+    assert_equal(expected_x, actual)
+    assert_equal(actual, ds.gradient('x', edge_order=edge_order)['var'])
+    assert_equal(ds['var'].gradient('x', edge_order=edge_order),
+                    ds.gradient('x', edge_order=edge_order)['var'])
+
+    # along y
+    actual = xr.gradient(da, 'y', edge_order)
+    expected_y = xr.DataArray(
+        np.gradient(da, da['y'], axis=1, edge_order=edge_order),
+        dims=da.dims, coords=da.coords)
+    assert_equal(expected_y, actual)
+    assert_equal(actual, ds.gradient('y', edge_order=edge_order)['var'])
+    assert_equal(ds['var'].gradient('y', edge_order=edge_order),
+                 ds.gradient('y', edge_order=edge_order)['var'])
+
+    # along x and y
+    actual = xr.gradient(da, ('x', 'y'), edge_order)
+    assert_equal(expected_x, actual[0])
+    assert_equal(expected_y, actual[1])
+
+    with pytest.raises(ValueError):
+        xr.gradient(da, ('x2d'))

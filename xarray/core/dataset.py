@@ -3665,11 +3665,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         numpy.gradient: corresponding numpy function
         xr.gradient: more numpy-like function for xarray object.
         """
-        if coord not in self.variables:
+        if coord not in self.variables and coord not in self.dims:
             raise ValueError('Coordinate {} does not exist.'.format(coord))
 
-        coord_var = self.variables[coord]
-        if coord_var.ndims:
+        coord_var = self[coord].variable
+        if coord_var.ndim != 1:
             raise ValueError('Coordinate {} must be 1 dimensional but {} is {}'
                              ' dimensional'.format(coord, coord_var.ndims))
 
@@ -3677,9 +3677,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for k, v in self.variables.items():
             if k in self.data_vars and dim in v.dims:
-                variables[k] = computation._gradient_once(v, coord_var)
+                variables[k] = computation._gradient_once(
+                    v, coord_var, edge_order)
             else:
-                variable[k] = v
+                variables[k] = v
         return self._replace_vars_and_dims(variables)
 
     @property
