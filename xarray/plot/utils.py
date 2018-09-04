@@ -209,7 +209,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
         if divergent:
             cmap = OPTIONS['cmap_divergent']
         else:
-            cmap = OPTIONS['cmap']
+            cmap = OPTIONS['cmap_sequential']
 
     # Handle discrete levels
     if levels is not None:

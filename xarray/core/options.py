@@ -4,7 +4,7 @@ OPTIONS = {
     'display_width': 80,
     'arithmetic_join': 'inner',
     'enable_cftimeindex': False,
-    'cmap': 'viridis',
+    'cmap_sequential': 'viridis',
     'cmap_divergent': 'RdBu_r',
 }
 
@@ -21,7 +21,7 @@ class set_options(object):
     - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
       for time indexes with non-standard calendars or dates outside the
       Timestamp-valid range. Default: ``False``.
-    - ``cmap``: matplotlib colormap to use for nondivergent data plots.
+    - ``cmap_sequential``: matplotlib colormap to use for nondivergent data plots.
       Default: ``viridis``.
     - ``cmap_divergent``: matplotlib colormap to use for divergent data plots.
        Default: ``RdBu_r``.
