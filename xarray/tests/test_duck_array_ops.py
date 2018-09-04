@@ -258,7 +258,7 @@ def assert_dask_array(da, dask):
 # TODO test cumsum, cumprod
 @pytest.mark.parametrize('skipna', [False, True])
 @pytest.mark.parametrize('aggdim', [None, 'x'])
-def _test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
+def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
 
     if aggdim == 'y' and dim_num < 2:
         pytest.skip('dim not in this test')

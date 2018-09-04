@@ -25,6 +25,7 @@ Top-level functions
    zeros_like
    ones_like
    dot
+   gradient
 
 Dataset
 =======
@@ -150,6 +151,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.gradient
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -317,6 +319,7 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.gradient
 
 **Aggregation**:
 :py:attr:`~DataArray.all`

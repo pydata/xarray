@@ -3652,7 +3652,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Parameters
         ----------
         coords: str
-            The coordinate along which the gradient is to be computed.
+            The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
 

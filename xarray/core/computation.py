@@ -1160,17 +1160,59 @@ def gradient(dataarray, coords, edge_order=1):
     dataarray: xr.DataArray
         Target array
     coords: str or sequence of strs
-        The coordinates along which the gradient is to be computed.
+        The coordinate to be used to compute the gradient.
     edge_order: 1 or 2. Default 1
         N-th order accurate differences at the boundaries.
 
     Returns
     -------
-    gradient: DataArray or sequence of DataArrays
+    gradient: DataArray or a sequence of DataArrays
 
     See also
     --------
     numpy.gradient: corresponding numpy function
+
+    Examples
+    --------
+
+    >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+    ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+    >>> da
+    <xarray.DataArray (x: 4, y: 3)>
+    array([[ 0,  1,  2],
+           [ 3,  4,  5],
+           [ 6,  7,  8],
+           [ 9, 10, 11]])
+    Coordinates:
+      * x        (x) float64 0.0 0.1 1.1 1.2
+    Dimensions without coordinates: y
+    >>>
+    >>> xr.gradient(da, 'x')
+    <xarray.DataArray (x: 4, y: 3)>
+    array([[30.      , 30.      , 30.      ],
+           [27.545455, 27.545455, 27.545455],
+           [27.545455, 27.545455, 27.545455],
+           [30.      , 30.      , 30.      ]])
+    Coordinates:
+      * x        (x) float64 0.0 0.1 1.1 1.2
+    Dimensions without coordinates: y
+    >>>
+    >>> xr.gradient(da, ('x', 'y'))
+    (<xarray.DataArray (x: 4, y: 3)>
+    array([[30.      , 30.      , 30.      ],
+           [27.545455, 27.545455, 27.545455],
+           [27.545455, 27.545455, 27.545455],
+           [30.      , 30.      , 30.      ]])
+    Coordinates:
+      * x        (x) float64 0.0 0.1 1.1 1.2
+    Dimensions without coordinates: y, <xarray.DataArray (x: 4, y: 3)>
+    array([[1., 1., 1.],
+           [1., 1., 1.],
+           [1., 1., 1.],
+           [1., 1., 1.]])
+    Coordinates:
+      * x        (x) float64 0.0 0.1 1.1 1.2
+    Dimensions without coordinates: y)
     """
     from .dataarray import DataArray
 

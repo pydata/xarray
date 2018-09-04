@@ -36,6 +36,11 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:func:`~xarray.gradient`, :py:meth:`~xarray.DataArray.gradient`, and
+  :py:meth:`~xarray.Dataset.gradient` are newly added.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
   :py:meth:`~xarray.Dataset.prod`.
@@ -84,7 +89,7 @@ Bug fixes
 - Tests can be run in parallel with pytest-xdist
   By `Tony Tung <https://github.com/ttung>`_.
 
-- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now raises a ValueError when there is a conflict between dimension names and

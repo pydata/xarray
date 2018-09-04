@@ -140,13 +140,13 @@ def gradient(a, coord, axis, edge_order):
             c1 = c[1: edge_order + 2]
             g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
             grad[(slice(None), ) * axis + (1, )] = g1[
-                (slice(None), ) * axis + (1, )]
-        if block_loc == n_chunk:
+                 (slice(None), ) * axis + (0, )]
+        if block_loc == n_chunk - 1:
             idx = (slice(None), ) * axis + (slice(-edge_order - 2, -1), )
             c1 = c[-edge_order - 2: -1]
             g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
             grad[(slice(None), ) * axis + (-2, )] = g1[
-                (slice(None), ) * axis + (-2, )]
+                 (slice(None), ) * axis + (-1, )]
         return grad
 
     return trim_internal(ag.map_blocks(func, dtype=a.dtype), depth)
