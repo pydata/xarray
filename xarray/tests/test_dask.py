@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pickle
 from textwrap import dedent
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,8 @@ dd = pytest.importorskip('dask.dataframe')
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
 
-        with (dask.config.set(get=dask.get) if hasattr(dask, 'config')
+        with (dask.config.set(get=dask.get)
+              if dask.__version__ >= LooseVersion('0.18.0')
               else dask.set_options(get=dask.get)):
             test(actual, expected)
 
@@ -827,7 +829,8 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with (dask.config.set(get=get) if hasattr(dask, 'config')
+        with (dask.config.set(get=get)
+              if dask.__version__ >= LooseVersion('0.18.0')
               else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
