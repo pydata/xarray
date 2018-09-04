@@ -116,18 +116,12 @@ def gradient(a, coord, axis, edge_order):
             raise ValueError('Chunk size must be larger than edge_order + 1. '
                              'Given {}. Rechunk to proceed.'.format(c))
 
-    depth = {d: 1 if d == axis else 0 for d in range(a.ndim)}
-    # temporary pad zero at the boundary
-    boundary = "none"
-    ag = overlap(a, depth=depth, boundary=boundary)
-
-    n_chunk = len(a.chunks[axis])
     # adjust the coordinate position with overlap
     array_loc_stop = np.cumsum(np.array(a.chunks[axis])) + 1
     array_loc_start = array_loc_stop - np.array(a.chunks[axis]) - 2
     array_loc_stop[-1] -= 1
     array_loc_start[0] = 0
-    
+
     def func(x, block_id):
         block_loc = block_id[axis]
         c = coord[array_loc_start[block_loc]: array_loc_stop[block_loc]]
@@ -135,7 +129,6 @@ def gradient(a, coord, axis, edge_order):
         return grad
 
     return a.map_overlap(
-            func,
-            dtype=a.dtype,
-            depth={j: 1 if j == axis else 0 for j in range(a.ndim)},
-            boundary="none")
+        func, dtype=a.dtype,
+        depth={j: 1 if j == axis else 0 for j in range(a.ndim)},
+        boundary="none")
