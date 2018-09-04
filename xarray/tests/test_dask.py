@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pickle
 from textwrap import dedent
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -24,8 +25,12 @@ dd = pytest.importorskip('dask.dataframe')
 
 class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
-        with dask.set_options(get=dask.get):
+
+        with (dask.config.set(get=dask.get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=dask.get)):
             test(actual, expected)
+
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
@@ -196,11 +201,13 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert 'dask' in str(err)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -421,6 +428,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
@@ -821,7 +829,9 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with dask.set_options(get=get):
+        with (dask.config.set(get=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()

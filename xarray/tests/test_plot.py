@@ -267,6 +267,7 @@ class TestPlot(PlotTestCase):
         assert ax.has_data()
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -328,6 +329,7 @@ class TestPlot(PlotTestCase):
             self.darray.plot(aspect=1)
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -775,10 +777,13 @@ class Common2dMixin:
         clim2 = self.plotfunc(x2).get_clim()
         assert clim1 == clim2
 
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.filterwarnings('ignore:invalid value encountered')
     def test_can_plot_all_nans(self):
         # regression test for issue #1780
         self.plotfunc(DataArray(np.full((2, 2), np.nan)))
 
+    @pytest.mark.filterwarnings('ignore: Attempting to set')
     def test_can_plot_axis_size_one(self):
         if self.plotfunc.__name__ not in ('contour', 'contourf'):
             self.plotfunc(DataArray(np.ones((1, 1))))
@@ -970,6 +975,7 @@ class Common2dMixin:
         del func_sig['darray']
         assert func_sig == method_sig
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -1001,6 +1007,7 @@ class Common2dMixin:
             else:
                 assert '' == ax.get_xlabel()
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -1279,6 +1286,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
+    @pytest.mark.filterwarnings('ignore:Several dimensions of this array')
     def test_regression_rgb_imshow_dim_size_one(self):
         # Regression: https://github.com/pydata/xarray/issues/1966
         da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
@@ -1511,6 +1519,7 @@ class TestFacetGrid(PlotTestCase):
             sharey=False)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetGrid4d(PlotTestCase):
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
@@ -1538,6 +1547,7 @@ class TestFacetGrid4d(PlotTestCase):
             assert substring_in_axes(label, ax)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 6, 3, 4),

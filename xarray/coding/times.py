@@ -183,8 +183,11 @@ def decode_cf_datetime(num_dates, units, calendar=None,
         # fixes: https://github.com/pydata/pandas/issues/14068
         # these lines check if the the lowest or the highest value in dates
         # cause an OutOfBoundsDatetime (Overflow) error
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'invalid value encountered',
+                                    RuntimeWarning)
+            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
         # Cast input dates to integers of nanoseconds because `pd.to_datetime`
         # works much faster when dealing with integers
