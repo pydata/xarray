@@ -1217,8 +1217,8 @@ def gradient(dataarray, coords, edge_order=1):
     from .dataarray import DataArray
 
     if not isinstance(dataarray, DataArray):
-        raise TypeError('Only xr.DataArray is supported.'
-                        'Given {}.'.format([type(arr) for arr in arrays]))
+        raise TypeError(
+            'Only DataArray is supported. Given {}.'.format(type(dataarray)))
 
     return_sequence = True
     if not isinstance(coords, (tuple, list)):

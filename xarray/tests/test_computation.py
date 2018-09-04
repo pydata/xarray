@@ -999,7 +999,7 @@ def test_gradient(dask, edge_order):
     assert_equal(expected_x, actual)
     assert_equal(actual, ds.gradient('x', edge_order=edge_order)['var'])
     assert_equal(ds['var'].gradient('x', edge_order=edge_order),
-                    ds.gradient('x', edge_order=edge_order)['var'])
+                 ds.gradient('x', edge_order=edge_order)['var'])
 
     # along y
     actual = xr.gradient(da, 'y', edge_order)

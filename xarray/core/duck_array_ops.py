@@ -19,7 +19,7 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat, dask_array_ops
+    from . import dask_array_compat
 except ImportError:
     dask_array = None
     dask_array_compat = None
