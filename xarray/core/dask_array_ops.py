@@ -118,35 +118,24 @@ def gradient(a, coord, axis, edge_order):
 
     depth = {d: 1 if d == axis else 0 for d in range(a.ndim)}
     # temporary pad zero at the boundary
-    boundary = {d: 0 for d in range(a.ndim)}
+    boundary = "none"
     ag = overlap(a, depth=depth, boundary=boundary)
 
     n_chunk = len(a.chunks[axis])
-    array_loc_stop = np.cumsum(np.array(a.chunks[axis])) + 2
+    # adjust the coordinate position with overlap
+    array_loc_stop = np.cumsum(np.array(a.chunks[axis])) + 1
     array_loc_start = array_loc_stop - np.array(a.chunks[axis]) - 2
-    # extrapolate the edge point temporary
-    coord_pad = np.concatenate([2 * coord[: 1] - coord[1: 2], coord,
-                                2 * coord[-1:] - coord[-2: -1]])
-
+    array_loc_stop[-1] -= 1
+    array_loc_start[0] = 0
+    
     def func(x, block_id):
-        x = np.asarray(x)
         block_loc = block_id[axis]
-        c = coord_pad[array_loc_start[block_loc]: array_loc_stop[block_loc]]
+        c = coord[array_loc_start[block_loc]: array_loc_stop[block_loc]]
         grad = np.gradient(x, c, axis=axis, edge_order=edge_order)
-
-        # overwrite the boundary value
-        if block_loc == 0:
-            idx = (slice(None), ) * axis + (slice(1, edge_order + 2), )
-            c1 = c[1: edge_order + 2]
-            g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
-            grad[(slice(None), ) * axis + (1, )] = g1[
-                (slice(None), ) * axis + (0, )]
-        if block_loc == n_chunk - 1:
-            idx = (slice(None), ) * axis + (slice(-edge_order - 2, -1), )
-            c1 = c[-edge_order - 2: -1]
-            g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
-            grad[(slice(None), ) * axis + (-2, )] = g1[
-                (slice(None), ) * axis + (-1, )]
         return grad
 
-    return trim_internal(ag.map_blocks(func, dtype=a.dtype), depth)
+    return a.map_overlap(
+            func,
+            dtype=a.dtype,
+            depth={j: 1 if j == axis else 0 for j in range(a.ndim)},
+            boundary="none")
