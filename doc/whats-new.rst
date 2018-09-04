@@ -71,11 +71,17 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``xarray.plot()`` now properly accepts a ``norm`` argument and does not override
+  the norm's ``vmin`` and ``vmax``.
+  (:issue:`2381`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
   attribute being set.
   (:issue:`2201`)
   By `Thomas Voigt <https://github.com/tv3141>`_.
+
 - Fixed a bug in ``zarr`` backend which prevented use with datasets with
   invalid chunk size encoding after reading from an existing store
   (:issue:`2278`).

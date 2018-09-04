@@ -643,10 +643,10 @@ class TestDiscreteColorMap(TestCase):
 
     @pytest.mark.slow
     def test_discrete_colormap_list_of_levels(self):
-        for extend, levels in [('max', [-1, 2, 4, 8, 10]), ('both',
-                                                            [2, 5, 10, 11]),
-                               ('neither', [0, 5, 10, 15]), ('min',
-                                                             [2, 5, 10, 15])]:
+        for extend, levels in [('max', [-1, 2, 4, 8, 10]),
+                               ('both', [2, 5, 10, 11]),
+                               ('neither', [0, 5, 10, 15]),
+                               ('min', [2, 5, 10, 15])]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
                 assert_array_equal(levels, primitive.norm.boundaries)
@@ -660,10 +660,10 @@ class TestDiscreteColorMap(TestCase):
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None,
-                                            None), ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8), ('min', 10, 4,
-                                                               15)]:
+        for extend, levels, vmin, vmax in [('neither', 7, None, None),
+                                           ('neither', 7, None, 20),
+                                           ('both', 7, 4, 8),
+                                           ('min', 10, 4, 15)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
                     levels=levels, vmin=vmin, vmax=vmax)
@@ -688,6 +688,13 @@ class TestDiscreteColorMap(TestCase):
         primitive = self.darray.plot(levels=levels, vmin=-3, vmax=20)
         assert primitive.norm.vmax == max(levels)
         assert primitive.norm.vmin == min(levels)
+
+    def test_colormap_pass_norm(self):
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+        primitive = self.darray.plot(norm=norm, vmin=2, vmax=5)
+        assert primitive.norm == norm
+        assert primitive.norm.vmin == 0.1
+        assert primitive.norm.vmax == 1e1
 
 
 class Common2dMixin:
