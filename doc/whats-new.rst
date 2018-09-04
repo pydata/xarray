@@ -37,8 +37,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 - Default colormap for sequential and divergent data can now be set via
-  Added the ability to change default automatic alignment (arithmetic_join="inner")
-  for binary operations via :py:func:`~xarray.set_options()`
+  :py:func:`~xarray.set_options()`
   (:issue:`2394`)
   By `Julius Busecke <https://github.com/jbusecke>`_.
 
