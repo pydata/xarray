@@ -471,8 +471,13 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
 
-    def test_cmap_option(self):
+    def test_cmap_sequential_option(self):
         with xr.set_options(cmap_sequential='magma'):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == 'magma'
+
+    def test_cmap_sequential_explicit_option(self):
+        with xr.set_options(cmap_sequential=mpl.cm.magma):
             cmap_params = _determine_cmap_params(self.data)
             assert cmap_params['cmap'] == 'magma'
 
