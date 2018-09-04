@@ -27,7 +27,7 @@ class DaskTestCase(TestCase):
     def assertLazyAnd(self, expected, actual, test):
 
         with (dask.config.set(get=dask.get)
-              if dask.__version__ >= LooseVersion('0.18.0')
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=dask.get)):
             test(actual, expected)
 
@@ -830,7 +830,7 @@ def test_basic_compute():
                 dask.local.get_sync,
                 None]:
         with (dask.config.set(get=get)
-              if dask.__version__ >= LooseVersion('0.18.0')
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
