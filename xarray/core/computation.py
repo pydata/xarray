@@ -1137,3 +1137,65 @@ def where(cond, x, y):
                        join='exact',
                        dataset_join='exact',
                        dask='allowed')
+
+
+def _gradient_once(variable, coord, edge_order):
+    """ Compute the gradient along 1 dimension for Variable.    """
+    from .variable import Variable
+
+    result_array = duck_array_ops.gradient(
+        variable.data, coord.data, edge_order=edge_order,
+        axis=variable.get_axis_num(variable.dims[0]))
+    return Variable(variable.dims, result_array)
+
+
+def gradient(dataarray, coords, edge_order=1):
+    """ Compute the gradient of the dataarray with the second order accurate
+    central differences.
+
+    Parameters
+    ----------
+    dataarray: xr.DataArray
+        Target array
+    coords: str or sequence of strs
+        The coordinates along which the gradient is to be computed.
+    edge_order: 1 or 2. Default 1
+        N-th order accurate differences at the boundaries.
+
+    Returns
+    -------
+    gradient: DataArray or sequence of DataArrays
+
+    See also
+    --------
+    numpy.gradient: corresponding numpy function
+    """
+    from .dataarray import DataArray
+
+    if not isinstance(dataarray, DataArray):
+        raise TypeError('Only xr.DataArray is supported.'
+                        'Given {}.'.format([type(arr) for arr in arrays]))
+
+    return_sequence = True
+    if not isinstance(coords, (tuple, list)):
+        coords = (coords, )
+        return_sequence = False
+
+    result = []
+    for coord in coords:
+        if coord not in dataarray.coords:
+            raise ValueError('Coordiante {} does not exist.'.format(coord))
+
+        coord_var = dataarray[coord].variable
+        if coord_var != 1:
+            raise ValueError(
+                'Only 1d-coordinate is supported. {} is {} '
+                'dimensional.'.format(coord, dataarray[coord].ndim))
+
+        result.append(DataArray(
+            _gradient_once(dataarray.variable, coord_var, edge_order),
+            dims=dataarray.dims, coords=dataarray.coords))
+
+    if return_sequence:
+        return tuple(result)
+    return result[0]

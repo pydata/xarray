@@ -2267,6 +2267,29 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
+    def gradient(self, coord, edge_order=1):
+        """ Compute the gradient with the second order accurate central
+        differences.
+
+        Parameters
+        ----------
+        coords: str
+            The coordinate along which the gradient is to be computed.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+
+        Returns
+        -------
+        gradient: DataArray
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+        xr.gradient: more numpy-like function for xarray object.
+        """
+        ds = self._to_temp_dataset().gradient(coord, edge_order)
+        return self._from_temp_dataset(ds)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

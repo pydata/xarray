@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
-    rolling, utils)
+    alignment, computation, duck_array_ops, formatting, groupby, indexing, ops,
+    resample, rolling, utils)
 from .. import conventions
 from .alignment import align
 from .common import (
@@ -3645,6 +3645,43 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
+    def gradient(self, coord, edge_order=1):
+        """ Compute the gradient with the second order accurate central
+        differences.
+
+        Parameters
+        ----------
+        coords: str
+            The coordinate along which the gradient is to be computed.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+
+        Returns
+        -------
+        gradient: Dataset
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+        xr.gradient: more numpy-like function for xarray object.
+        """
+        if coord not in self.variables:
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
+
+        coord_var = self.variables[coord]
+        if coord_var.ndims:
+            raise ValueError('Coordinate {} must be 1 dimensional but {} is {}'
+                             ' dimensional'.format(coord, coord_var.ndims))
+
+        dim = coord_var.dims[0]
+        variables = OrderedDict()
+        for k, v in self.variables.items():
+            if k in self.data_vars and dim in v.dims:
+                variables[k] = computation._gradient_once(v, coord_var)
+            else:
+                variable[k] = v
+        return self._replace_vars_and_dims(variables)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
@@ -3658,7 +3695,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
         containing only the variables for which all the filter tests pass.
-        These tests are either ``key=value`` for which the attribute ``key`` 
+        These tests are either ``key=value`` for which the attribute ``key``
         has the exact value ``value`` or the callable passed into
         ``key=callable`` returns True. The callable will be passed a single
         value, either the value of the attribute ``key`` or ``None`` if the

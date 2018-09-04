@@ -92,6 +92,7 @@ array_any = _dask_or_eager_func('any')
 tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
 einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
                              requires_dask='0.17.3')
+gradient = _dask_or_eager_func('gradient')
 
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,
