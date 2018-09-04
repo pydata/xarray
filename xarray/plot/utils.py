@@ -213,8 +213,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # Handle discrete levels
     if levels is not None:
         if is_scalar(levels):
-            if user_minmax or levels == 1:
+            if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
+            elif levels == 1:
+                levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
                 ticker = mpl.ticker.MaxNLocator(levels - 1)

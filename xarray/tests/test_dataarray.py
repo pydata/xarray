@@ -672,6 +672,7 @@ class TestDataArray(TestCase):
         assert_identical(da.isel(x=np.array([0], dtype="int64")),
                          da.isel(x=np.array([0])))
 
+    @pytest.mark.filterwarnings('ignore::DeprecationWarning')
     def test_isel_fancy(self):
         shape = (10, 7, 6)
         np_array = np.random.random(shape)
@@ -845,6 +846,7 @@ class TestDataArray(TestCase):
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_isel_points(self):
         shape = (10, 5, 6)
         np_array = np.random.random(shape)
@@ -1237,6 +1239,7 @@ class TestDataArray(TestCase):
                 ValueError, 'different size for unlabeled'):
             foo.reindex_like(bar)
 
+    @pytest.mark.filterwarnings('ignore:Indexer has dimensions')
     def test_reindex_regressions(self):
         # regression test for #279
         expected = DataArray(np.random.randn(5), coords=[("time", range(5))])
@@ -1286,7 +1289,7 @@ class TestDataArray(TestCase):
 
     def test_expand_dims_error(self):
         array = DataArray(np.random.randn(3, 4), dims=['x', 'dim_0'],
-                          coords={'x': np.linspace(0.0, 1.0, 3.0)},
+                          coords={'x': np.linspace(0.0, 1.0, 3)},
                           attrs={'key': 'entry'})
 
         with raises_regex(ValueError, 'dim should be str or'):
