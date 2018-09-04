@@ -74,7 +74,9 @@ Documentation
 * :doc:`whats-new`
 * :doc:`api`
 * :doc:`internals`
+* :doc:`roadmap`
 * :doc:`contributing`
+* :doc:`related-projects`
 
 .. toctree::
    :maxdepth: 1
@@ -84,7 +86,9 @@ Documentation
    whats-new
    api
    internals
+   roadmap
    contributing
+   related-projects
 
 See also
 --------

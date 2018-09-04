@@ -5,6 +5,7 @@ from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
 import warnings
+import sys
 
 import numpy as np
 import pandas as pd
@@ -93,15 +94,15 @@ class TestDataset(TestCase):
         <xarray.Dataset>
         Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
         Coordinates:
-          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
+          * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
           * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
           * dim3     (dim3) %s 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
             numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
         Dimensions without coordinates: dim1
         Data variables:
-            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 -1.506 -0.5786 1.651 ...
-            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 1.04 -0.4034 -0.126 ...
-            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 1.545 -0.2397 0.1433 ...
+            var1     (dim1, dim2) float64 -1.086 0.9973 0.283 ... 0.1995 0.4684 -0.8312
+            var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 0.1302 1.267 0.3328
+            var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
         Attributes:
             foo:      bar""") % data['dim3'].dtype  # noqa: E501
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
@@ -182,15 +183,16 @@ class TestDataset(TestCase):
         data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
         repr(data)  # should not raise
 
+        byteorder = '<' if sys.byteorder == 'little' else '>'
         expected = dedent(u"""\
         <xarray.Dataset>
         Dimensions:  (foø: 1)
         Coordinates:
-          * foø      (foø) <U3 %r
+          * foø      (foø) %cU3 %r
         Data variables:
             *empty*
         Attributes:
-            å:        ∑""" % u'ba®')
+            å:        ∑""" % (byteorder, u'ba®'))
         actual = unicode_type(data)
         assert expected == actual
 
@@ -845,7 +847,7 @@ class TestDataset(TestCase):
                     inds = np.nonzero(np.array(data[v].dims) == d)[0]
                     for ind in inds:
                         slice_list[ind] = s
-            expected = data[v].values[slice_list]
+            expected = data[v].values[tuple(slice_list)]
             actual = ret[v].values
             np.testing.assert_array_equal(expected, actual)
 
@@ -2111,7 +2113,7 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'does not have a MultiIndex'):
             ds.unstack('x')
 
-    def test_stack_unstack(self):
+    def test_stack_unstack_fast(self):
         ds = Dataset({'a': ('x', [0, 1]),
                       'b': (('x', 'y'), [[0, 1], [2, 3]]),
                       'x': [0, 1],
@@ -2120,6 +2122,19 @@ class TestDataset(TestCase):
         assert actual.broadcast_equals(ds)
 
         actual = ds[['b']].stack(z=['x', 'y']).unstack('z')
+        assert actual.identical(ds[['b']])
+
+    def test_stack_unstack_slow(self):
+        ds = Dataset({'a': ('x', [0, 1]),
+                      'b': (('x', 'y'), [[0, 1], [2, 3]]),
+                      'x': [0, 1],
+                      'y': ['a', 'b']})
+        stacked = ds.stack(z=['x', 'y'])
+        actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
+        assert actual.broadcast_equals(ds)
+
+        stacked = ds[['b']].stack(z=['x', 'y'])
+        actual = stacked.isel(z=slice(None, None, -1)).unstack('z')
         assert actual.identical(ds[['b']])
 
     def test_update(self):
@@ -2454,6 +2469,18 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'conflicting MultiIndex'):
             data.assign(level_1=range(4))
             data.assign_coords(level_1=range(4))
+        # raise an Error when any level name is used as dimension GH:2299
+        with pytest.raises(ValueError):
+            data['y'] = ('level_1', [0, 1])
+
+    def test_merge_multiindex_level(self):
+        data = create_test_multiindex()
+        other = Dataset({'z': ('level_1', [0, 1])})  # conflict dimension
+        with pytest.raises(ValueError):
+            data.merge(other)
+        other = Dataset({'level_1': ('x', [0, 1])})  # conflict variable name
+        with pytest.raises(ValueError):
+            data.merge(other)
 
     def test_setitem_original_non_unique_index(self):
         # regression test for GH943
@@ -2712,6 +2739,20 @@ class TestDataset(TestCase):
         for method in [np.mean, ]:
             result = actual.reduce(method)
             assert_equal(expected, result)
+
+    def test_resample_min_count(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        # inject nan
+        ds['foo'] = xr.where(ds['foo'] > 2.0, np.nan, ds['foo'])
+
+        actual = ds.resample(time='1D').sum(min_count=1)
+        expected = xr.concat([
+            ds.isel(time=slice(i * 4, (i + 1) * 4)).sum('time', min_count=1)
+            for i in range(3)], dim=actual['time'])
+        assert_equal(expected, actual)
 
     def test_resample_by_mean_with_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
@@ -3351,7 +3392,6 @@ class TestDataset(TestCase):
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
             actual = data.min(dim=reduct).dims
-            print(reduct, actual, expected)
             self.assertItemsEqual(actual, expected)
 
         assert_equal(data.mean(dim=[]), data)
@@ -3406,7 +3446,6 @@ class TestDataset(TestCase):
                 ('time', ['dim1', 'dim2', 'dim3'])
             ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
-                print(reduct, actual, expected)
                 self.assertItemsEqual(actual, expected)
 
     def test_reduce_non_numeric(self):
@@ -3835,18 +3874,42 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'dimensions'):
             ds.shift(foo=123)
 
-    def test_roll(self):
+    def test_roll_coords(self):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
-        actual = ds.roll(x=1)
+        actual = ds.roll(x=1, roll_coords=True)
 
         ex_coords = {'bar': ('x', list('cab')), 'x': [2, -4, 3]}
         expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'dimensions'):
-            ds.roll(foo=123)
+            ds.roll(foo=123, roll_coords=True)
+
+    def test_roll_no_coords(self):
+        coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
+        attrs = {'meta': 'data'}
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
+        actual = ds.roll(x=1, roll_coords=False)
+
+        expected = Dataset({'foo': ('x', [3, 1, 2])}, coords, attrs)
+        assert_identical(expected, actual)
+
+        with raises_regex(ValueError, 'dimensions'):
+            ds.roll(abc=321, roll_coords=False)
+
+    def test_roll_coords_none(self):
+        coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
+        attrs = {'meta': 'data'}
+        ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
+
+        with pytest.warns(FutureWarning):
+            actual = ds.roll(x=1, roll_coords=None)
+
+        ex_coords = {'bar': ('x', list('cab')), 'x': [2, -4, 3]}
+        expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
+        assert_identical(expected, actual)
 
     def test_real_and_imag(self):
         attrs = {'foo': 'bar'}
@@ -3905,6 +3968,26 @@ class TestDataset(TestCase):
         assert len(new_ds.data_vars) == 1
         for var in new_ds.data_vars:
             assert new_ds[var].height == '10 m'
+
+        # Test return empty Dataset due to conflicting filters
+        new_ds = ds.filter_by_attrs(
+            standard_name='convective_precipitation_flux',
+            height='0 m')
+        assert not bool(new_ds.data_vars)
+
+        # Test return one DataArray with two filter conditions
+        new_ds = ds.filter_by_attrs(
+            standard_name='air_potential_temperature',
+            height='0 m')
+        for var in new_ds.data_vars:
+            assert new_ds[var].standard_name == 'air_potential_temperature'
+            assert new_ds[var].height == '0 m'
+            assert new_ds[var].height != '10 m'
+
+        # Test return empty Dataset due to conflicting callables
+        new_ds = ds.filter_by_attrs(standard_name=lambda v: False,
+                                    height=lambda v: True)
+        assert not bool(new_ds.data_vars)
 
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
@@ -4216,6 +4299,11 @@ def test_dataset_constructor_aligns_to_explicit_coords(
     result = xr.Dataset({'a': a}, coords=coords)
 
     assert_equal(expected, result)
+
+
+def test_error_message_on_set_supplied():
+    with pytest.raises(TypeError, message='has invalid type set'):
+        xr.Dataset(dict(date=[1, 2, 3], sec={4}))
 
 
 @pytest.mark.parametrize('unaligned_coords', (

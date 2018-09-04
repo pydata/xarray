@@ -25,13 +25,103 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.8:
+.. _whats-new.0.10.9:
 
-v0.10.8 (unreleased)
+v0.10.9 (unreleased)
 --------------------
 
 Documentation
 ~~~~~~~~~~~~~
+
+Enhancements
+~~~~~~~~~~~~
+
+- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
+  :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
+  :py:meth:`~xarray.Dataset.prod`.
+  (:issue:`2230`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
+- DataArray coordinates and Dataset coordinates and data variables are
+  now displayed as `a b ... y z` rather than `a b c d ...`.
+  (:issue:`1186`)
+  By `Seth P <https://github.com/seth-p>`_.
+
+- When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
+  (:issue:`2284`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+- A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
+  (:issue:`2331`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+
+- Applying ``unstack`` to a large DataArray or Dataset is now much faster if the MultiIndex has not been modified after stacking the indices.
+  (:issue:`1560`)
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+
+- You can now control whether or not to offset the coordinates when using
+  the ``roll`` method and the current behavior, coordinates rolled by default,
+  raises a deprecation warning unless explicitly setting the keyword argument.
+  (:issue:`1875`)
+  By `Andrew Huang <https://github.com/ahuang11>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
+  falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
+  attribute being set.
+  (:issue:`2201`)
+  By `Thomas Voigt <https://github.com/tv3141>`_.
+- Fixed a bug in ``zarr`` backend which prevented use with datasets with
+  invalid chunk size encoding after reading from an existing store
+  (:issue:`2278`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+- Tests can be run in parallel with pytest-xdist
+  By `Tony Tung <https://github.com/ttung>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Now raises a ValueError when there is a conflict between dimension names and
+  level names of MultiIndex. (:issue:`2299`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
+``input_core_dims`` is inconsistent with the number of arguments.
+  (:issue:`2341`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fixed ``Dataset.filter_by_attrs()`` behavior not matching ``netCDF4.Dataset.get_variables_by_attributes()``.
+  When more than one ``key=value`` is passed into ``Dataset.filter_by_attrs()`` it will now return a Dataset with variables which pass
+  all the filters.
+  (:issue:`2315`)
+  By `Andrew Barna <https://github.com/docotak>`_.
+
+.. _whats-new.0.10.8:
+
+v0.10.8 (18 July 2018)
+----------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray no longer supports python 3.4. Additionally, the minimum supported
+  versions of the following dependencies has been updated and/or clarified:
+
+  - Pandas: 0.18 -> 0.19
+  - NumPy: 1.11 -> 1.12
+  - Dask: 0.9 -> 0.16
+  - Matplotlib: unspecified -> 1.5
+
+  (:issue:`2204`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -69,19 +159,6 @@ Bug fixes
 - Fixed warning raised in :py:meth:`~Dataset.to_netcdf` due to deprecation of
   `effective_get` in dask (:issue:`2238`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-- Xarray no longer supports python 3.4. Additionally, the minimum supported
-  versions of the following dependencies has been updated and/or clarified:
-
-  - Pandas: 0.18 -> 0.19
-  - NumPy: 1.11 -> 1.12
-  - Dask: 0.9 -> 0.16
-  - Matplotlib: unspecified -> 1.5
-
-  (:issue:`2204`). By `Joe Hamman <https://github.com/jhamman>`_.
 
 .. _whats-new.0.10.7:
 
