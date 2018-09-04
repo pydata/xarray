@@ -98,7 +98,7 @@ def gradient(x, coord, axis, edge_order):
     if isinstance(x, dask_array_type):
         return dask_array_ops.gradient(
             x, coord, axis=axis, edge_order=edge_order)
-    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
+    return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
 masked_invalid = _dask_or_eager_func(
