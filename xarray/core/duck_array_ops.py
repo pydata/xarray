@@ -19,7 +19,7 @@ from .pycompat import dask_array_type
 
 try:
     import dask.array as dask_array
-    from . import dask_array_compat
+    from . import dask_array_compat, dask_array_ops
 except ImportError:
     dask_array = None
     dask_array_compat = None
@@ -92,7 +92,14 @@ array_any = _dask_or_eager_func('any')
 tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
 einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
                              requires_dask='0.17.3')
-gradient = _dask_or_eager_func('gradient')
+
+
+def gradient(x, coord, axis, edge_order):
+    if isinstance(x, dask_array.Array):
+        return dask_array_ops.gradient(
+            x, coord, axis=axis, edge_order=edge_order)
+    return np.gradient(x, coord, axis=axis, edge_order=edge_order)
+
 
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,

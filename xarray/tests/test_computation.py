@@ -983,11 +983,11 @@ def test_where():
 @pytest.mark.parametrize('edge_order', [1, 2])
 def test_gradient(dask, edge_order):
     rs = np.random.RandomState(42)
-    da = xr.DataArray(rs.randn(4, 6), dims=['x', 'y'],
-                      coords={'x': [0.4, 0.6, 0.7, 0.75], 'z': 3,
-                              'x2d': (('x', 'y'), rs.randn(4, 6))})
+    da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
+                      coords={'x': [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8],
+                              'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
     if dask and has_dask:
-        da = da.chunk({'x': 2})
+        da = da.chunk({'x': 4})
 
     ds = xr.Dataset({'var': da})
 

@@ -104,3 +104,49 @@ def rolling_window(a, axis, window, center, fill_value):
     index = (slice(None),) * axis + (slice(drop_size,
                                            drop_size + orig_shape[axis]), )
     return out[index]
+
+
+def gradient(a, coord, axis, edge_order):
+    """ Apply gradient along one dimension """
+    if axis < 0:
+        axis = a.ndim + axis
+
+    for c in a.chunks[axis]:
+        if c < edge_order + 1:
+            raise ValueError('Chunk size must be larger than edge_order + 1. '
+                             'Given {}. Rechunk to proceed.'.format(c))
+
+    depth = {d: 1 if d == axis else 0 for d in range(a.ndim)}
+    # temporary pad zero at the boundary
+    boundary={d: 0 for d in range(a.ndim)}
+    ag = overlap(a, depth=depth, boundary=boundary)
+
+    n_chunk = len(a.chunks[axis])
+    array_loc_stop = np.cumsum(np.array(a.chunks[axis])) + 2
+    array_loc_start = array_loc_stop - np.array(a.chunks[axis]) - 2
+    # extrapolate the edge point temporary
+    coord_pad = np.concatenate([2 * coord[: 1] - coord[1: 2], coord,
+                                2 * coord[-1:] - coord[-2: -1]])
+
+    def func(x, block_id):
+        x = np.asarray(x)
+        block_loc = block_id[axis]
+        c = coord_pad[array_loc_start[block_loc]: array_loc_stop[block_loc]]
+        grad = np.gradient(x, c, axis=axis, edge_order=edge_order)
+
+        # overwrite the boundary value
+        if block_loc == 0:
+            idx = (slice(None), ) * axis + (slice(1, edge_order + 2), )
+            c1 = c[1: edge_order + 2]
+            g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
+            grad[(slice(None), ) * axis + (1, )] = g1[
+                (slice(None), ) * axis + (1, )]
+        if block_loc == n_chunk:
+            idx = (slice(None), ) * axis + (slice(-edge_order - 2, -1), )
+            c1 = c[-edge_order - 2: -1]
+            g1 = np.gradient(x[idx], c1, axis=axis, edge_order=edge_order)
+            grad[(slice(None), ) * axis + (-2, )] = g1[
+                (slice(None), ) * axis + (-2, )]
+        return grad
+
+    return trim_internal(ag.map_blocks(func, dtype=a.dtype), depth)
