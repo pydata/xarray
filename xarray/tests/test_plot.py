@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 import xarray.plot as xplt
@@ -471,6 +472,21 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_cmap_sequential_option(self):
+        with xr.set_options(cmap_sequential='magma'):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == 'magma'
+
+    def test_cmap_sequential_explicit_option(self):
+        with xr.set_options(cmap_sequential=mpl.cm.magma):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == mpl.cm.magma
+
+    def test_cmap_divergent_option(self):
+        with xr.set_options(cmap_divergent='magma'):
+            cmap_params = _determine_cmap_params(self.data, center=0.5)
+            assert cmap_params['cmap'] == 'magma'
 
     def test_nan_inf_are_ignored(self):
         cmap_params1 = _determine_cmap_params(self.data)
