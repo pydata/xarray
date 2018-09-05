@@ -2915,7 +2915,7 @@ class TestDataArray(TestCase):
         ma = da.to_masked_array()
         assert len(ma.mask) == N
 
-    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
+#    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_classic(self):
         """Classic with 1D axes"""
         pytest.importorskip('cdms2')
@@ -2928,7 +2928,7 @@ class TestDataArray(TestCase):
         expected_coords = [IndexVariable('distance', [-2, 2]),
                            IndexVariable('time', [0, 1, 2])]
         actual = original.to_cdms2()
-        assert_array_equal(actual, original)
+        assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
         for axis, coord in zip(actual.getAxisList(), expected_coords):
@@ -2950,7 +2950,6 @@ class TestDataArray(TestCase):
             assert_array_equal(original.coords[coord_name],
                                back.coords[coord_name])
 
-    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_sgrid(self):
         """Curvilinear (structured) grid
 
@@ -2968,8 +2967,10 @@ class TestDataArray(TestCase):
                              name='sst')
         actual = original.to_cdms2()
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
-        assert_array_equal(original.coords['lon'], actual.getLongitude())
-        assert_array_equal(original.coords['lat'], actual.getLatitude())
+        assert_array_equal(original.coords['lon'],
+                           actual.getLongitude().asma())
+        assert_array_equal(original.coords['lat'],
+                           actual.getLatitude().asma())
 
         back = from_cdms2(actual)
         self.assertItemsEqual(original.dims, back.dims)
@@ -2977,7 +2978,6 @@ class TestDataArray(TestCase):
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
-    @pytest.mark.xfail  # GH:2332 TODO fix this in upstream?
     def test_to_and_from_cdms2_ugrid(self):
         """Unstructured grid"""
         pytest.importorskip('cdms2')
@@ -2989,8 +2989,10 @@ class TestDataArray(TestCase):
                              coords={'lon': lon, 'lat': lat, 'cell': cell})
         actual = original.to_cdms2()
         self.assertItemsEqual(actual.getAxisIds(), original.dims)
-        assert_array_equal(original.coords['lon'], actual.getLongitude())
-        assert_array_equal(original.coords['lat'], actual.getLatitude())
+        assert_array_equal(original.coords['lon'],
+                           actual.getLongitude().getValue())
+        assert_array_equal(original.coords['lat'],
+                           actual.getLatitude().getValue())
 
         back = from_cdms2(actual)
         self.assertItemsEqual(original.dims, back.dims)
