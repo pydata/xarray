@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 from collections import Iterable
 from functools import partial
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -207,13 +209,16 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
-    arr = apply_ufunc(interpolator, index, self,
-                      input_core_dims=[[dim], [dim]],
-                      output_core_dims=[[dim]],
-                      output_dtypes=[self.dtype],
-                      dask='parallelized',
-                      vectorize=True,
-                      keep_attrs=True).transpose(*self.dims)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'overflow', RuntimeWarning)
+        warnings.filterwarnings('ignore', 'invalid value', RuntimeWarning)
+        arr = apply_ufunc(interpolator, index, self,
+                          input_core_dims=[[dim], [dim]],
+                          output_core_dims=[[dim]],
+                          output_dtypes=[self.dtype],
+                          dask='parallelized',
+                          vectorize=True,
+                          keep_attrs=True).transpose(*self.dims)
 
     if limit is not None:
         arr = arr.where(valids)
