@@ -1247,22 +1247,44 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().stack(dimensions, **dimensions_kwargs)
         return self._from_temp_dataset(ds)
 
-    def unstack(self, dim):
+    def unstack(self, dim=None):
         """
-        Unstack an existing dimension corresponding to a MultiIndex into
+        Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
 
         New dimensions will be added at the end.
 
         Parameters
         ----------
-        dim : str
-            Name of the existing dimension to unstack.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to unstack. By default unstacks all
+            MultiIndexes.
 
         Returns
         -------
         unstacked : DataArray
             Array with unstacked data.
+
+        Examples
+        --------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> stacked = arr.stack(z=('x', 'y'))
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   names=[u'x', u'y'])
+        >>> roundtripped = stacked.unstack()
+        >>> arr.identical(roundtripped)
+        True
 
         See also
         --------
