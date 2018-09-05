@@ -14,6 +14,7 @@ from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
+from xarray.core import npcompat
 from xarray.testing import assert_equal
 
 from . import raises_regex, requires_dask, has_dask
@@ -994,7 +995,7 @@ def test_gradient(dask, edge_order):
     # along x
     actual = xr.gradient(da, 'x', edge_order)
     expected_x = xr.DataArray(
-        np.gradient(da, da['x'], axis=0, edge_order=edge_order),
+        npcompat.gradient(da, da['x'], axis=0, edge_order=edge_order),
         dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
     assert_equal(actual, ds.gradient('x', edge_order=edge_order)['var'])
@@ -1004,7 +1005,7 @@ def test_gradient(dask, edge_order):
     # along y
     actual = xr.gradient(da, 'y', edge_order)
     expected_y = xr.DataArray(
-        np.gradient(da, da['y'], axis=1, edge_order=edge_order),
+        npcompat.gradient(da, da['y'], axis=1, edge_order=edge_order),
         dims=da.dims, coords=da.coords)
     assert_equal(expected_y, actual)
     assert_equal(actual, ds.gradient('y', edge_order=edge_order)['var'])

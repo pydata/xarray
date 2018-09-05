@@ -3,7 +3,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import nputils
+from . import nputils, npcompat
 from . import dtypes
 
 try:
@@ -125,7 +125,7 @@ def gradient(a, coord, axis, edge_order):
     def func(x, block_id):
         block_loc = block_id[axis]
         c = coord[array_loc_start[block_loc]: array_loc_stop[block_loc]]
-        grad = np.gradient(x, c, axis=axis, edge_order=edge_order)
+        grad = npcompat.gradient(x, c, axis=axis, edge_order=edge_order)
         return grad
 
     return a.map_overlap(
