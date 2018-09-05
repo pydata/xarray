@@ -73,6 +73,9 @@ Enhancements
   (:issue:`1875`)
   By `Andrew Huang <https://github.com/ahuang11>`_.
 
+- You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 Bug fixes
 ~~~~~~~~~
 

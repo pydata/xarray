@@ -2107,14 +2107,15 @@ class TestDataset(TestCase):
         expected = Dataset({'b': (('x', 'y'), [[0, 1], [2, 3]]),
                             'x': [0, 1],
                             'y': ['a', 'b']})
-        actual = ds.unstack('z')
-        assert_identical(actual, expected)
+        for dim in ['z', ['z'], None]:
+            actual = ds.unstack(dim)
+            assert_identical(actual, expected)
 
     def test_unstack_errors(self):
         ds = Dataset({'x': [1, 2, 3]})
-        with raises_regex(ValueError, 'invalid dimension'):
+        with raises_regex(ValueError, 'does not contain the dimensions'):
             ds.unstack('foo')
-        with raises_regex(ValueError, 'does not have a MultiIndex'):
+        with raises_regex(ValueError, 'do not have a MultiIndex'):
             ds.unstack('x')
 
     def test_stack_unstack_fast(self):
