@@ -4,12 +4,16 @@ DISPLAY_WIDTH = 'display_width'
 ARITHMETIC_JOIN = 'arithmetic_join'
 ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
 FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
+CMAP_SEQUENTIAL = 'cmap_sequential'
+CMAP_DIVERGENT = 'cmap_divergent'
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
     ARITHMETIC_JOIN: 'inner',
     ENABLE_CFTIMEINDEX: False,
     FILE_CACHE_MAXSIZE: 512,
+    CMAP_SEQUENTIAL: 'viridis',
+    CMAP_DIVERGENT: 'RdBu_r',
 }
 
 _JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
@@ -53,8 +57,14 @@ class set_options(object):
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
       Default: 512.
+    - ``cmap_sequential``: colormap to use for nondivergent data plots.
+      Default: ``viridis``. If string, must be matplotlib built-in colormap.
+      Can also be a Colormap object (e.g. mpl.cm.magma)
+    - ``cmap_divergent``: colormap to use for divergent data plots.
+      Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
+      Can also be a Colormap object (e.g. mpl.cm.magma)
 
-    You can use ``set_options`` either as a context manager:
+f    You can use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({'x': np.arange(1000)})
     >>> with xr.set_options(display_width=40):

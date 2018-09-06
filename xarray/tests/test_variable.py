@@ -1,7 +1,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-from collections import namedtuple
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
@@ -938,21 +937,6 @@ class TestVariable(TestCase, VariableSubclassTestCases):
         assert not isinstance(ds['x'], Variable)
         assert isinstance(as_variable(ds['x']), Variable)
 
-        FakeVariable = namedtuple('FakeVariable', 'values dims')
-        fake_xarray = FakeVariable(expected.values, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable', 'data dims')
-        fake_xarray = FakeVariable(expected.data, expected.dims)
-        assert_identical(expected, as_variable(fake_xarray))
-
-        FakeVariable = namedtuple('FakeVariable',
-                                  'data values dims attrs encoding')
-        fake_xarray = FakeVariable(expected_extra.data, expected_extra.values,
-                                   expected_extra.dims, expected_extra.attrs,
-                                   expected_extra.encoding)
-        assert_identical(expected_extra, as_variable(fake_xarray))
-
         xarray_tuple = (expected_extra.dims, expected_extra.values,
                         expected_extra.attrs, expected_extra.encoding)
         assert_identical(expected_extra, as_variable(xarray_tuple))
@@ -1667,7 +1651,7 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
 
     def test_equals_all_dtypes(self):
         import dask
-        if '0.18.2' <= LooseVersion(dask.__version__) < '0.18.3':
+        if '0.18.2' <= LooseVersion(dask.__version__) < '0.19.1':
             pytest.xfail('https://github.com/pydata/xarray/issues/2318')
         super(TestVariableWithDask, self).test_equals_all_dtypes()
 

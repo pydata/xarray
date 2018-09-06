@@ -779,9 +779,9 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.isel
 
         """
-        indexers = either_dict_or_kwargs(indexers, indexers_kwargs, 'sel')
         ds = self._to_temp_dataset().sel(
-            indexers=indexers, drop=drop, method=method, tolerance=tolerance)
+            indexers=indexers, drop=drop, method=method, tolerance=tolerance,
+            **indexers_kwargs)
         return self._from_temp_dataset(ds)
 
     def isel_points(self, dim='points', **indexers):
@@ -1092,22 +1092,26 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
-    def set_index(self, append=False, inplace=False, **indexes):
+    def set_index(self, indexes=None, append=False, inplace=False,
+                  **indexes_kwargs):
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
 
         Parameters
         ----------
+        indexes : {dim: index, ...}
+            Mapping from names matching dimensions and values given
+            by (lists of) the names of existing coordinates or variables to set
+            as new (multi-)index.
         append : bool, optional
             If True, append the supplied index(es) to the existing index(es).
             Otherwise replace the existing index(es) (default).
         inplace : bool, optional
             If True, set new index(es) in-place. Otherwise, return a new
             DataArray object.
-        **indexes : {dim: index, ...}
-            Keyword arguments with names matching dimensions and values given
-            by (lists of) the names of existing coordinates or variables to set
-            as new (multi-)index.
+        **indexes_kwargs: optional
+            The keyword arguments form of ``indexes``.
+            One of indexes or indexes_kwargs must be provided.
 
         Returns
         -------
@@ -1118,6 +1122,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
+        indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
         if inplace:
             self._coords = coords
@@ -1156,18 +1161,22 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def reorder_levels(self, inplace=False, **dim_order):
+    def reorder_levels(self, dim_order=None, inplace=False,
+                       **dim_order_kwargs):
         """Rearrange index levels using input order.
 
         Parameters
         ----------
+        dim_order : optional
+            Mapping from names matching dimensions and values given
+            by lists representing new level orders. Every given dimension
+            must have a multi-index.
         inplace : bool, optional
             If True, modify the dataarray in-place. Otherwise, return a new
             DataArray object.
-        **dim_order : optional
-            Keyword arguments with names matching dimensions and values given
-            by lists representing new level orders. Every given dimension
-            must have a multi-index.
+        **dim_order_kwargs: optional
+            The keyword arguments form of ``dim_order``.
+            One of dim_order or dim_order_kwargs must be provided.
 
         Returns
         -------
@@ -1175,6 +1184,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
+        dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs,
+                                          'reorder_levels')
         replace_coords = {}
         for dim, order in dim_order.items():
             coord = self._coords[dim]
@@ -1190,7 +1201,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def stack(self, **dimensions):
+    def stack(self, dimensions=None, **dimensions_kwargs):
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -1199,9 +1210,12 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+        dimensions : Mapping of the form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
             replace.
+        **dimensions_kwargs:
+            The keyword arguments form of ``dimensions``.
+            One of dimensions or dimensions_kwargs must be provided.
 
         Returns
         -------
@@ -1230,25 +1244,47 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.unstack
         """
-        ds = self._to_temp_dataset().stack(**dimensions)
+        ds = self._to_temp_dataset().stack(dimensions, **dimensions_kwargs)
         return self._from_temp_dataset(ds)
 
-    def unstack(self, dim):
+    def unstack(self, dim=None):
         """
-        Unstack an existing dimension corresponding to a MultiIndex into
+        Unstack existing dimensions corresponding to MultiIndexes into
         multiple new dimensions.
 
         New dimensions will be added at the end.
 
         Parameters
         ----------
-        dim : str
-            Name of the existing dimension to unstack.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to unstack. By default unstacks all
+            MultiIndexes.
 
         Returns
         -------
         unstacked : DataArray
             Array with unstacked data.
+
+        Examples
+        --------
+
+        >>> arr = DataArray(np.arange(6).reshape(2, 3),
+        ...                 coords=[('x', ['a', 'b']), ('y', [0, 1, 2])])
+        >>> arr
+        <xarray.DataArray (x: 2, y: 3)>
+        array([[0, 1, 2],
+               [3, 4, 5]])
+        Coordinates:
+          * x        (x) |S1 'a' 'b'
+          * y        (y) int64 0 1 2
+        >>> stacked = arr.stack(z=('x', 'y'))
+        >>> stacked.indexes['z']
+        MultiIndex(levels=[[u'a', u'b'], [0, 1, 2]],
+                   labels=[[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]],
+                   names=[u'x', u'y'])
+        >>> roundtripped = stacked.unstack()
+        >>> arr.identical(roundtripped)
+        True
 
         See also
         --------
@@ -1856,7 +1892,7 @@ class DataArray(AbstractArray, DataWithCoords):
         def func(self, other):
             if isinstance(other, (Dataset, groupby.GroupBy)):
                 return NotImplemented
-            if hasattr(other, 'indexes'):
+            if isinstance(other, DataArray):
                 align_type = (OPTIONS['arithmetic_join']
                               if join is None else join)
                 self, other = align(self, other, join=align_type, copy=False)
@@ -1978,7 +2014,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
 
-    def shift(self, **shifts):
+    def shift(self, shifts=None, **shifts_kwargs):
         """Shift this array by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. Values shifted from
@@ -1987,10 +2023,13 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        **shifts : keyword arguments of the form {dim: offset}
+        shifts : Mapping with the form of {dim: offset}
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        **shifts_kwargs:
+            The keyword arguments form of ``shifts``.
+            One of shifts or shifts_kwarg must be provided.
 
         Returns
         -------
@@ -2012,8 +2051,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 0 1 2
         """
-        variable = self.variable.shift(**shifts)
-        return self._replace(variable)
+        ds = self._to_temp_dataset().shift(shifts=shifts, **shifts_kwargs)
+        return self._from_temp_dataset(ds)
 
     def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this array by an offset along one or more dimensions.

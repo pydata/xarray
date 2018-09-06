@@ -174,11 +174,14 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
 
     This function is not public API.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     if indexes is None:
         indexes = {}
 
     def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+        return isinstance(obj, (DataArray, Dataset))
 
     positions = []
     keys = []

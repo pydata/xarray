@@ -1240,6 +1240,7 @@ class TestDataset(TestCase):
         selected = data.isel(x=0, drop=False)
         assert_identical(expected, selected)
 
+    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_isel_points(self):
         data = create_test_data()
 
@@ -1317,6 +1318,8 @@ class TestDataset(TestCase):
                          dim2=stations['dim2s'],
                          dim=np.array([4, 5, 6]))
 
+    @pytest.mark.filterwarnings("ignore:Dataset.sel_points")
+    @pytest.mark.filterwarnings("ignore:Dataset.isel_points")
     def test_sel_points(self):
         data = create_test_data()
 
@@ -1347,6 +1350,7 @@ class TestDataset(TestCase):
         with pytest.raises(KeyError):
             data.sel_points(x=[2.5], y=[2.0], method='pad', tolerance=1e-3)
 
+    @pytest.mark.filterwarnings('ignore::DeprecationWarning')
     def test_sel_fancy(self):
         data = create_test_data()
 
@@ -2103,14 +2107,15 @@ class TestDataset(TestCase):
         expected = Dataset({'b': (('x', 'y'), [[0, 1], [2, 3]]),
                             'x': [0, 1],
                             'y': ['a', 'b']})
-        actual = ds.unstack('z')
-        assert_identical(actual, expected)
+        for dim in ['z', ['z'], None]:
+            actual = ds.unstack(dim)
+            assert_identical(actual, expected)
 
     def test_unstack_errors(self):
         ds = Dataset({'x': [1, 2, 3]})
-        with raises_regex(ValueError, 'invalid dimension'):
+        with raises_regex(ValueError, 'does not contain the dimensions'):
             ds.unstack('foo')
-        with raises_regex(ValueError, 'does not have a MultiIndex'):
+        with raises_regex(ValueError, 'do not have a MultiIndex'):
             ds.unstack('x')
 
     def test_stack_unstack_fast(self):
@@ -3968,6 +3973,26 @@ class TestDataset(TestCase):
         assert len(new_ds.data_vars) == 1
         for var in new_ds.data_vars:
             assert new_ds[var].height == '10 m'
+
+        # Test return empty Dataset due to conflicting filters
+        new_ds = ds.filter_by_attrs(
+            standard_name='convective_precipitation_flux',
+            height='0 m')
+        assert not bool(new_ds.data_vars)
+
+        # Test return one DataArray with two filter conditions
+        new_ds = ds.filter_by_attrs(
+            standard_name='air_potential_temperature',
+            height='0 m')
+        for var in new_ds.data_vars:
+            assert new_ds[var].standard_name == 'air_potential_temperature'
+            assert new_ds[var].height == '0 m'
+            assert new_ds[var].height != '10 m'
+
+        # Test return empty Dataset due to conflicting callables
+        new_ds = ds.filter_by_attrs(standard_name=lambda v: False,
+                                    height=lambda v: True)
+        assert not bool(new_ds.data_vars)
 
     def test_binary_op_join_setting(self):
         # arithmetic_join applies to data array coordinates
