@@ -624,7 +624,7 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
                     aspect=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=True, yincrease=True,
+                    col_wrap=None, xincrease=None, yincrease=None,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, infer_intervals=None, colors=None,
@@ -794,7 +794,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, figsize=None, size=None,
                    aspect=None, ax=None, row=None, col=None, col_wrap=None,
-                   xincrease=True, yincrease=True, add_colorbar=None,
+                   xincrease=None, yincrease=None, add_colorbar=None,
                    add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None,
                    levels=None, infer_intervals=None, subplot_kws=None,
@@ -862,10 +862,8 @@ def imshow(x, y, z, ax, **kwargs):
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
-    defaults = {'extent': [left, right, bottom, top],
-                'origin': 'upper',
-                'interpolation': 'nearest',
-                }
+    defaults = {'origin': 'upper',
+                'interpolation': 'nearest'}
 
     if not hasattr(ax, 'projection'):
         # not for cartopy geoaxes
@@ -873,6 +871,11 @@ def imshow(x, y, z, ax, **kwargs):
 
     # Allow user to override these defaults
     defaults.update(kwargs)
+
+    if defaults['origin'] == 'upper':
+        defaults['extent'] = [left, right, bottom, top]
+    else:
+        defaults['extent'] = [left, right, top, bottom]
 
     if z.ndim == 3:
         # matplotlib imshow uses black for missing data, but Xarray makes
