@@ -105,13 +105,11 @@ def as_variable(obj, name=None):
 
     if name is not None and name in obj.dims:
         # convert the Variable into an Index
-        if obj.ndim != 1:
-            raise MissingDimensionsError(
-                '%r has more than 1-dimension and the same name as one of its '
-                'dimensions %r. xarray disallows such variables because they '
-                'conflict with the coordinates used to label '
-                'dimensions.' % (name, obj.dims))
-        obj = obj.to_index_variable()
+        if obj.ndim == 1:
+            obj = obj.to_index_variable()
+        else:
+            pass
+            # TODO: do something else with multidimensional variables
 
     return obj
 
