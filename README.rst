@@ -15,6 +15,8 @@ xarray: N-D labeled arrays and datasets
   :target: https://zenodo.org/badge/latestdoi/13221727
 .. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
   :target: http://pandas.pydata.org/speed/xarray/
+.. image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
+  :target: http://numfocus.org
 
 **xarray** (formerly **xray**) is an open source project and Python package that aims to bring the
 labeled data power of pandas_ to the physical sciences, by providing
@@ -102,6 +104,18 @@ Get in touch
 .. _StackOverFlow: http://stackoverflow.com/questions/tagged/python-xarray
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
 .. _on GitHub: http://github.com/pydata/xarray
+
+NumFOCUS
+--------
+
+.. image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
+   :scale: 50 %
+
+Xarray is a fiscally sponsored project of NumFOCUS, a nonprofit dedicated
+to supporting the open source scientific computing community. If you like
+Xarray and want to support our mission, please consider making a
+[donation](https://www.flipcause.com/secure/cause_pdetails/MjE3OQ==)
+to support our efforts.
 
 History
 -------
