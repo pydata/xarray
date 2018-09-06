@@ -3,7 +3,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import nputils, npcompat
+from . import nputils
 from . import dtypes
 
 try:

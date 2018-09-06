@@ -44,6 +44,7 @@ else:  # pragma: no cover
     import math
     from numbers import Integral, Real
 
+    AxisError = np.AxisError
 
     def validate_axis(axis, ndim):
         """ Validate an input to axis= keywords """
@@ -52,12 +53,11 @@ else:  # pragma: no cover
         if not isinstance(axis, Integral):
             raise TypeError("Axis value must be an integer, got %s" % axis)
         if axis < -ndim or axis >= ndim:
-            raise AxisError("Axis %d is out of bounds for array of dimension %d"
-                            % (axis, ndim))
+            raise AxisError("Axis %d is out of bounds for array of dimension "
+                            "%d" % (axis, ndim))
         if axis < 0:
             axis += ndim
         return axis
-
 
     def _gradient_kernel(x, block_id, coord, axis, array_locs, grad_kwargs):
         """
@@ -77,7 +77,6 @@ else:  # pragma: no cover
             coord = coord[array_locs[0][block_loc]: array_locs[1][block_loc]]
         grad = np.gradient(x, coord, axis=axis, **grad_kwargs)
         return grad
-
 
     def gradient(f, *varargs, **kwargs):
         f = da.asarray(f)
