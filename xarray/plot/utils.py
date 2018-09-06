@@ -7,6 +7,7 @@ import textwrap
 
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
+from ..core.options import OPTIONS
 
 ROBUST_PERCENTILE = 2.0
 
@@ -206,9 +207,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # Choose default colormaps if not provided
     if cmap is None:
         if divergent:
-            cmap = "RdBu_r"
+            cmap = OPTIONS['cmap_divergent']
         else:
-            cmap = "viridis"
+            cmap = OPTIONS['cmap_sequential']
 
     # Handle discrete levels
     if levels is not None:

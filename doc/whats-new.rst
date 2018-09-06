@@ -40,6 +40,10 @@ Enhancements
   and :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Default colormap for sequential and divergent data can now be set via
+  :py:func:`~xarray.set_options()`
+  (:issue:`2394`)
+  By `Julius Busecke <https://github.com/jbusecke>`_.
 
 - min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
@@ -72,6 +76,9 @@ Enhancements
   raises a deprecation warning unless explicitly setting the keyword argument.
   (:issue:`1875`)
   By `Andrew Huang <https://github.com/ahuang11>`_.
+
+- You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
