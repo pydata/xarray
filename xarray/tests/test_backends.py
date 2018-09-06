@@ -2597,7 +2597,6 @@ class PseudoNetCDFFormatTest(TestCase):
 
         camxfile = open_example_dataset('example.uamiv',
                                         engine='pseudonetcdf',
-                                        autoclose=True,
                                         backend_kwargs={'format': 'uamiv'})
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
@@ -2625,7 +2624,6 @@ class PseudoNetCDFFormatTest(TestCase):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            autoclose=True,
             concat_dim='TSTEP',
             backend_kwargs={'format': 'uamiv'})
 
@@ -2653,7 +2651,6 @@ class PseudoNetCDFFormatTest(TestCase):
 
         expected = open_example_dataset('example.uamiv',
                                         engine='pseudonetcdf',
-                                        autoclose=False,
                                         backend_kwargs=fmtkw)
         with self.roundtrip(expected,
                             save_kwargs=fmtkw,
