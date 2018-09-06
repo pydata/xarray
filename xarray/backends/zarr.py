@@ -237,16 +237,6 @@ class ZarrStore(AbstractWritableDataStore):
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
 
-        # if writer is None:
-        #     # by default, we should not need a lock for writing zarr because
-        #     # we do not (yet) allow overlapping chunks during write
-        #     zarr_writer = ArrayWriter(lock=False)
-        # else:
-        #     zarr_writer = writer
-
-        # # do we need to define attributes for all of the opener keyword args?
-        # super(ZarrStore, self).__init__(zarr_writer)
-
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
         dimensions, attributes = _get_zarr_dims_and_attrs(zarr_array,
@@ -335,9 +325,6 @@ class ZarrStore(AbstractWritableDataStore):
 
     def sync(self):
         pass
-
-    # def sync(self, compute=True):
-    #     self.delayed_store = self.writer.sync(compute=compute)
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

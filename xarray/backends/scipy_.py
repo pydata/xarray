@@ -213,9 +213,7 @@ class ScipyDataStore(WritableCFDataStore):
         return target, data
 
     def sync(self):
-        # super(ScipyDataStore, self).sync(compute=compute)
         self.ds.sync()
 
     def close(self):
-        # self.sync()
         self._manager.close()

@@ -180,7 +180,7 @@ class DummyLock(object):
 
     @property
     def locked(self):
-        return False 
+        return False
 
 
 def combine_locks(locks):
@@ -365,9 +365,6 @@ class AbstractWritableDataStore(AbstractDataStore):
 
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
-
-    # def sync(self, compute=True):
-    #     self.delayed_store = self.writer.sync(compute=compute)
 
     def store_dataset(self, dataset):
         """
