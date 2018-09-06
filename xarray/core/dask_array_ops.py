@@ -104,31 +104,3 @@ def rolling_window(a, axis, window, center, fill_value):
     index = (slice(None),) * axis + (slice(drop_size,
                                            drop_size + orig_shape[axis]), )
     return out[index]
-
-
-def gradient(a, coord, axis, edge_order):
-    """ Apply gradient along one dimension """
-    if axis < 0:
-        axis = a.ndim + axis
-
-    for c in a.chunks[axis]:
-        if c < edge_order + 1:
-            raise ValueError('Chunk size must be larger than edge_order + 1. '
-                             'Given {}. Rechunk to proceed.'.format(c))
-
-    # adjust the coordinate position with overlap
-    array_loc_stop = np.cumsum(np.array(a.chunks[axis])) + 1
-    array_loc_start = array_loc_stop - np.array(a.chunks[axis]) - 2
-    array_loc_stop[-1] -= 1
-    array_loc_start[0] = 0
-
-    def func(x, block_id):
-        block_loc = block_id[axis]
-        c = coord[array_loc_start[block_loc]: array_loc_stop[block_loc]]
-        grad = npcompat.gradient(x, c, axis=axis, edge_order=edge_order)
-        return grad
-
-    return a.map_overlap(
-        func, dtype=a.dtype,
-        depth={j: 1 if j == axis else 0 for j in range(a.ndim)},
-        boundary="none")
