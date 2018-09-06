@@ -36,8 +36,8 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:func:`~xarray.gradient`, :py:meth:`~xarray.DataArray.gradient`, and
-  :py:meth:`~xarray.Dataset.gradient` are newly added.
+- :py:func:`~xarray.differentiate`, :py:meth:`~xarray.DataArray.differentiate`,
+  and :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 

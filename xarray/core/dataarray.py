@@ -2267,25 +2267,25 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def gradient(self, coord, edge_order=1):
-        """ Compute the gradient with the second order accurate central
+    def differentiate(self, coord, edge_order=1):
+        """ Differentiate the array with the second order accurate central
         differences.
 
         Parameters
         ----------
-        coords: str
+        coord: str
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
 
         Returns
         -------
-        gradient: DataArray
+        differentiated: DataArray
 
         See also
         --------
         numpy.gradient: corresponding numpy function
-        xr.gradient: more numpy-like function for xarray object.
+        xr.differentiate: more numpy-like function for xarray object.
 
         Examples
         --------
@@ -2302,7 +2302,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.gradient('x')
+        >>> da.differentiate('x')
         <xarray.DataArray (x: 4, y: 3)>
         array([[30.      , 30.      , 30.      ],
                [27.545455, 27.545455, 27.545455],
@@ -2312,7 +2312,7 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         """
-        ds = self._to_temp_dataset().gradient(coord, edge_order)
+        ds = self._to_temp_dataset().differentiate(coord, edge_order)
         return self._from_temp_dataset(ds)
 
 

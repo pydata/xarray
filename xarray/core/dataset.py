@@ -3645,25 +3645,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
-    def gradient(self, coord, edge_order=1):
-        """ Compute the gradient with the second order accurate central
+    def differentiate(self, coord, edge_order=1):
+        """ Differentiate with the second order accurate central
         differences.
 
         Parameters
         ----------
-        coords: str
+        coord: str
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
 
         Returns
         -------
-        gradient: Dataset
+        differentiated: Dataset
 
         See also
         --------
         numpy.gradient: corresponding numpy function
-        xr.gradient: more numpy-like function for xarray object.
+        xr.differentiated: more numpy-like function for xarray object.
         """
         if coord not in self.variables and coord not in self.dims:
             raise ValueError('Coordinate {} does not exist.'.format(coord))
@@ -3677,7 +3677,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for k, v in self.variables.items():
             if k in self.data_vars and dim in v.dims:
-                variables[k] = computation._gradient_once(
+                variables[k] = computation._differentiate_variable(
                     v, coord_var, edge_order)
             else:
                 variables[k] = v

@@ -1139,7 +1139,7 @@ def where(cond, x, y):
                        dask='allowed')
 
 
-def _gradient_once(variable, coord, edge_order):
+def _differentiate_variable(variable, coord, edge_order):
     """ Compute the gradient along 1 dimension for Variable.
     variable, coord: Variable
     """
@@ -1151,7 +1151,7 @@ def _gradient_once(variable, coord, edge_order):
     return Variable(variable.dims, result_array)
 
 
-def gradient(dataarray, coords, edge_order=1):
+def differentiate(dataarray, coord, edge_order=1):
     """ Compute the gradient of the dataarray with the second order accurate
     central differences.
 
@@ -1159,14 +1159,14 @@ def gradient(dataarray, coords, edge_order=1):
     ----------
     dataarray: xr.DataArray
         Target array
-    coords: str or sequence of strs
-        The coordinate to be used to compute the gradient.
+    coord: str
+        The coordinate to be used to differentiate the array.
     edge_order: 1 or 2. Default 1
         N-th order accurate differences at the boundaries.
 
     Returns
     -------
-    gradient: DataArray or a sequence of DataArrays
+    differentiate: DataArray or a sequence of DataArrays
 
     See also
     --------
@@ -1187,7 +1187,7 @@ def gradient(dataarray, coords, edge_order=1):
       * x        (x) float64 0.0 0.1 1.1 1.2
     Dimensions without coordinates: y
     >>>
-    >>> xr.gradient(da, 'x')
+    >>> xr.differentiate(da, 'x')
     <xarray.DataArray (x: 4, y: 3)>
     array([[30.      , 30.      , 30.      ],
            [27.545455, 27.545455, 27.545455],
@@ -1196,23 +1196,6 @@ def gradient(dataarray, coords, edge_order=1):
     Coordinates:
       * x        (x) float64 0.0 0.1 1.1 1.2
     Dimensions without coordinates: y
-    >>>
-    >>> xr.gradient(da, ('x', 'y'))
-    (<xarray.DataArray (x: 4, y: 3)>
-    array([[30.      , 30.      , 30.      ],
-           [27.545455, 27.545455, 27.545455],
-           [27.545455, 27.545455, 27.545455],
-           [30.      , 30.      , 30.      ]])
-    Coordinates:
-      * x        (x) float64 0.0 0.1 1.1 1.2
-    Dimensions without coordinates: y, <xarray.DataArray (x: 4, y: 3)>
-    array([[1., 1., 1.],
-           [1., 1., 1.],
-           [1., 1., 1.],
-           [1., 1., 1.]])
-    Coordinates:
-      * x        (x) float64 0.0 0.1 1.1 1.2
-    Dimensions without coordinates: y)
     """
     from .dataarray import DataArray
 
@@ -1220,26 +1203,15 @@ def gradient(dataarray, coords, edge_order=1):
         raise TypeError(
             'Only DataArray is supported. Given {}.'.format(type(dataarray)))
 
-    return_sequence = True
-    if not isinstance(coords, (tuple, list)):
-        coords = (coords, )
-        return_sequence = False
+    if coord not in dataarray.coords and coord not in dataarray.dims:
+        raise ValueError('Coordiante {} does not exist.'.format(coord))
 
-    result = []
-    for coord in coords:
-        if coord not in dataarray.coords and coord not in dataarray.dims:
-            raise ValueError('Coordiante {} does not exist.'.format(coord))
+    coord_var = dataarray[coord].variable
+    if coord_var.ndim != 1:
+        raise ValueError(
+            'Only 1d-coordinate is supported. {} is {} '
+            'dimensional.'.format(coord, dataarray[coord].ndim))
 
-        coord_var = dataarray[coord].variable
-        if coord_var.ndim != 1:
-            raise ValueError(
-                'Only 1d-coordinate is supported. {} is {} '
-                'dimensional.'.format(coord, dataarray[coord].ndim))
-
-        result.append(DataArray(
-            _gradient_once(dataarray.variable, coord_var, edge_order),
-            coords=dataarray.coords))
-
-    if return_sequence:
-        return tuple(result)
-    return result[0]
+    return DataArray(
+        _differentiate_variable(dataarray.variable, coord_var, edge_order),
+        coords=dataarray.coords)

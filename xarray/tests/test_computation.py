@@ -993,29 +993,24 @@ def test_gradient(dask, edge_order):
     ds = xr.Dataset({'var': da})
 
     # along x
-    actual = xr.gradient(da, 'x', edge_order)
+    actual = xr.differentiate(da, 'x', edge_order)
     expected_x = xr.DataArray(
         npcompat.gradient(da, da['x'], axis=0, edge_order=edge_order),
         dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
-    assert_equal(actual, ds.gradient('x', edge_order=edge_order)['var'])
-    assert_equal(ds['var'].gradient('x', edge_order=edge_order),
-                 ds.gradient('x', edge_order=edge_order)['var'])
+    assert_equal(actual, ds.differentiate('x', edge_order=edge_order)['var'])
+    assert_equal(ds['var'].differentiate('x', edge_order=edge_order),
+                 ds.differentiate('x', edge_order=edge_order)['var'])
 
     # along y
-    actual = xr.gradient(da, 'y', edge_order)
+    actual = xr.differentiate(da, 'y', edge_order)
     expected_y = xr.DataArray(
         npcompat.gradient(da, da['y'], axis=1, edge_order=edge_order),
         dims=da.dims, coords=da.coords)
     assert_equal(expected_y, actual)
-    assert_equal(actual, ds.gradient('y', edge_order=edge_order)['var'])
-    assert_equal(ds['var'].gradient('y', edge_order=edge_order),
-                 ds.gradient('y', edge_order=edge_order)['var'])
-
-    # along x and y
-    actual = xr.gradient(da, ('x', 'y'), edge_order)
-    assert_equal(expected_x, actual[0])
-    assert_equal(expected_y, actual[1])
+    assert_equal(actual, ds.differentiate('y', edge_order=edge_order)['var'])
+    assert_equal(ds['var'].differentiate('y', edge_order=edge_order),
+                 ds.differentiate('y', edge_order=edge_order)['var'])
 
     with pytest.raises(ValueError):
-        xr.gradient(da, ('x2d'))
+        xr.differentiate(da, ('x2d'))
