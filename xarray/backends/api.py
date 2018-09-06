@@ -14,8 +14,8 @@ from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, NETCDFC_LOCK, ArrayWriter, combine_locks, _get_scheduler,
-    _get_scheduler_lock)
+    HDF5_LOCK, NETCDFC_LOCK, PYNIO_LOCK, ArrayWriter, combine_locks,
+    _get_scheduler, _get_scheduler_lock)
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -55,6 +55,7 @@ def _normalize_path(path):
 
 
 def _default_read_lock(filename, engine):
+    # TODO: move this logic to the data store classes
     if filename.endswith('.gz'):
         locks = []
     else:
@@ -85,6 +86,7 @@ def _default_read_lock(filename, engine):
 
 def _get_write_lock(engine, scheduler, format, path_or_file):
     """ Get the lock(s) that apply to a particular scheduler/engine/format"""
+    # TODO: move this logic to the data store classes
 
     locks = []
 
