@@ -15,6 +15,7 @@ from dask.distributed import Client, Lock
 from distributed.utils_test import cluster, gen_cluster
 from distributed.utils_test import loop  # flake8: noqa
 from distributed.client import futures_of
+import numpy as np
 
 import xarray as xr
 from xarray.tests.test_backends import (ON_WINDOWS, create_tmp_file,
@@ -62,12 +63,10 @@ ENGINES_AND_FORMATS = [
 
 @pytest.mark.parametrize('engine,nc_format', ENGINES_AND_FORMATS)
 def test_dask_distributed_netcdf_roundtrip(
-        monkeypatch, loop, tmp_netcdf_filename, engine, nc_format):
+        loop, tmp_netcdf_filename, engine, nc_format):
 
     if engine not in ENGINES:
         pytest.skip('engine not available')
-
-    monkeypatch.setenv('HDF5_USE_FILE_LOCKING', 'FALSE')
 
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 6}
 
