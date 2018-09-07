@@ -39,12 +39,13 @@ Breaking changes
   limit of 128 open files should suffice in most cases, but can be adjusted if
   necessary with
   ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
-  to ``open_dataset`` has been deprecated, because it is no longer necessary.
+  to ``open_dataset`` and related functions has been deprecated and is now a
+  no-op.
 
-  This change significantly simplies the work required to write a new backend
-  class, and should significantly improve performance when reading and writing
-  netCDF files with dask, especially when reading/writing many files or using
-  dask-distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+  This change, along with an internal refactor of xarray's storage backends,
+  should significantly improve performance when reading and writing
+  netCDF files with Dask, especially when working with many files or using
+  Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~
