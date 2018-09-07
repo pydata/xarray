@@ -11,7 +11,7 @@ OPTIONS = {
     DISPLAY_WIDTH: 80,
     ARITHMETIC_JOIN: 'inner',
     ENABLE_CFTIMEINDEX: False,
-    FILE_CACHE_MAXSIZE: 512,
+    FILE_CACHE_MAXSIZE: 128,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
 }
@@ -56,7 +56,7 @@ class set_options(object):
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
-      Default: 512.
+      Default: 128.
     - ``cmap_sequential``: colormap to use for nondivergent data plots.
       Default: ``viridis``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)

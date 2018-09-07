@@ -36,14 +36,15 @@ Breaking changes
 - Xarray's storage backends now automatically open and close files when
   necessary, rather than requiring opening a file with ``autoclose=True``. A
   global least-recently-used cache is used to store open files; the default
-  limit of 512 open files should suffice in most cases, but can be adjusted if
+  limit of 128 open files should suffice in most cases, but can be adjusted if
   necessary with
-  ``xarray.set_options(file_cache_maxsize=...)``.
+  ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
+  to ``open_dataset`` has been deprecated, because it is no longer necessary.
 
   This change significantly simplies the work required to write a new backend
-  class, and also should improves performance for reading and writing
-  netCDF files when using dask.
-  By `Stephan Hoyer <https://github.com/shoyer>`_
+  class, and should significantly improve performance when reading and writing
+  netCDF files with dask, especially when reading/writing many files or using
+  dask-distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~
