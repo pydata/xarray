@@ -123,14 +123,16 @@ History
 xarray is an evolution of an internal tool developed at `The Climate
 Corporation`__. It was originally written by Climate Corp researchers Stephan
 Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
-May 2014. The project was renamed from "xray" in January 2016.
+May 2014. The project was renamed from "xray" in January 2016. Xarray became a
+fiscally sponsored project of NumFOCUS_ in August 2018.
 
 __ http://climate.com/
+.. _NumFOCUS: https://numfocus.org
 
 License
 -------
 
-Copyright 2014-2017, xarray Developers
+Copyright 2014-2018, xarray Developers
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
