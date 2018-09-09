@@ -226,6 +226,7 @@ def _infer_line_data(darray, x, y, hue, transpose=False):
 
             if huename in darray.dims:
                 yplt = darray.transpose(xname, huename)
+                hueplt = darray[huename]
             else:
                 yplt = align(darray, xplt)[0]
                 hueplt = align(darray[huename], xplt)[0]
@@ -235,6 +236,7 @@ def _infer_line_data(darray, x, y, hue, transpose=False):
             yplt = darray[yname]
             if huename in darray.dims:
                 xplt = darray.transpose(yname, huename)
+                hueplt = darray[huename]
             else:
                 xplt = align(darray, yplt)[0]
                 hueplt = align(darray[huename], yplt)[0]
