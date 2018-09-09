@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from xarray.core.common import contains_cftime_datetimes
+from xarray.core.alignment import align
 from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
@@ -185,15 +186,15 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     return plotfunc(darray, **kwargs)
 
 
-def _infer_line_data(darray, x, y, hue):
+def _infer_line_data(darray, x, y, hue, transpose=False):
     error_msg = ('must be either None or one of ({0:s})'
                  .format(', '.join([repr(dd) for dd in darray.dims])))
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims:
+    if x is not None and x not in darray.dims and x not in darray.coords:
         raise ValueError('x ' + error_msg)
 
-    if y is not None and y not in darray.dims:
+    if y is not None and y not in darray.dims and y not in darray.coords:
         raise ValueError('y ' + error_msg)
 
     if x is not None and y is not None:
@@ -207,11 +208,11 @@ def _infer_line_data(darray, x, y, hue):
         huelabel = ''
 
         if (x is None and y is None) or x == dim:
-            xplt = darray.coords[dim]
+            xplt = darray[dim]
             yplt = darray
 
         else:
-            yplt = darray.coords[dim]
+            yplt = darray[dim]
             xplt = darray
 
     else:
@@ -221,21 +222,30 @@ def _infer_line_data(darray, x, y, hue):
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            yname = darray.name
-            xplt = darray.coords[xname]
-            yplt = darray.transpose(xname, huename)
+            xplt = darray[xname]
+
+            if huename in darray.dims:
+                yplt = darray.transpose(xname, huename)
+            else:
+                yplt = align(darray, xplt)[0]
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            xname = darray.name
-            xplt = darray.transpose(yname, huename)
-            yplt = darray.coords[yname]
+            yplt = darray[yname]
+            if huename in darray.dims:
+                xplt = darray.transpose(yname, huename)
+            else:
+                xplt = align(darray, yplt)[0]
 
-        hueplt = darray.coords[huename]
+        hueplt = darray[huename]
         huelabel = label_from_attrs(darray[huename])
 
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
+
+    if transpose:
+        xplt = xplt.transpose()
+        yplt = yplt.transpose()
 
     return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
@@ -317,6 +327,7 @@ def line(darray, *args, **kwargs):
     yticks = kwargs.pop('yticks', None)
     xlim = kwargs.pop('xlim', None)
     ylim = kwargs.pop('ylim', None)
+    transpose = kwargs.pop('transpose', None)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
     if args is ():
@@ -324,7 +335,7 @@ def line(darray, *args, **kwargs):
 
     ax = get_axis(figsize, size, aspect, ax)
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
-        _infer_line_data(darray, x, y, hue)
+        _infer_line_data(darray, x, y, hue, transpose)
 
     _ensure_plottable(xplt)
 
