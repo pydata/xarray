@@ -228,6 +228,7 @@ def _infer_line_data(darray, x, y, hue, transpose=False):
                 yplt = darray.transpose(xname, huename)
             else:
                 yplt = align(darray, xplt)[0]
+                hueplt = align(darray[huename], xplt)[0]
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
@@ -236,8 +237,8 @@ def _infer_line_data(darray, x, y, hue, transpose=False):
                 xplt = darray.transpose(yname, huename)
             else:
                 xplt = align(darray, yplt)[0]
+                hueplt = align(darray[huename], yplt)[0]
 
-        hueplt = darray[huename]
         huelabel = label_from_attrs(darray[huename])
 
     xlabel = label_from_attrs(xplt)
@@ -246,6 +247,8 @@ def _infer_line_data(darray, x, y, hue, transpose=False):
     if transpose:
         xplt = xplt.transpose()
         yplt = yplt.transpose()
+        if hueplt is not None:
+            hueplt = hueplt.transpose()
 
     return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
