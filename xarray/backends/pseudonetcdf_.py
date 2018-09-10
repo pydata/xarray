@@ -36,8 +36,9 @@ class PncArrayWrapper(BackendArray):
             self._getitem)
 
     def _getitem(self, key):
+        array = self.get_array()
         with self.datastore.lock:
-            return self.get_array()[key]
+            return array[key]
 
 
 class PseudoNetCDFDataStore(AbstractDataStore):

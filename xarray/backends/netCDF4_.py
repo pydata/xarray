@@ -70,9 +70,10 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
+        original_array = self.get_array()
+
         try:
             with self.datastore.lock:
-                original_array = self.get_array()
                 array = getitem(original_array, key)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative

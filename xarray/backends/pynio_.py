@@ -34,8 +34,8 @@ class NioArrayWrapper(BackendArray):
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
+        array = self.get_array()
         with self.datastore.lock:
-            array = self.get_array()
             if key == () and self.ndim == 0:
                 return array.get_value()
             return array[key]
