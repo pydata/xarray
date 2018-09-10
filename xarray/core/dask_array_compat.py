@@ -35,7 +35,7 @@ except ImportError:  # pragma: no cover
         return result
 
 
-if LooseVersion(dask_version) > LooseVersion('1.20'):
+if LooseVersion(dask_version) > LooseVersion('1.19.2'):
     gradient = da.gradient
 
 else:  # pragma: no cover
@@ -74,7 +74,7 @@ else:  # pragma: no cover
         """
         block_loc = block_id[axis]
         if array_locs is not None:
-            coord = coord[array_locs[0][block_loc]: array_locs[1][block_loc]]
+            coord = coord[array_locs[0][block_loc]:array_locs[1][block_loc]]
         grad = np.gradient(x, coord, axis=axis, **grad_kwargs)
         return grad
 
@@ -118,18 +118,23 @@ else:  # pragma: no cover
         results = []
         for i, ax in enumerate(axis):
             for c in f.chunks[ax]:
-                if c < kwargs["edge_order"] + 1:
+                if np.min(c) < kwargs["edge_order"] + 1:
                     raise ValueError(
                         'Chunk size must be larger than edge_order + 1. '
-                        'Given {}. Rechunk to proceed.'.format(c))
+                        'Minimum chunk for aixs {} is {}. Rechunk to '
+                        'proceed.'.format(np.min(c), ax))
 
             if np.isscalar(varargs[i]):
                 array_locs = None
             else:
+                if isinstance(varargs[i], da.Array):
+                    raise NotImplementedError(
+                        'dask array coordinated is not supported.')
                 # coordinate position for each block taking overlap into
                 # account
-                array_loc_stop = np.cumsum(np.array(f.chunks[ax])) + 1
-                array_loc_start = array_loc_stop - np.array(f.chunks[ax]) - 2
+                chunk = np.array(f.chunks[ax])
+                array_loc_stop = np.cumsum(chunk) + 1
+                array_loc_start = array_loc_stop - chunk - 2
                 array_loc_stop[-1] -= 1
                 array_loc_start[0] = 0
                 array_locs = (array_loc_start, array_loc_stop)
