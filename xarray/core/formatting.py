@@ -273,7 +273,9 @@ def summarize_datavar(name, var, col_width):
 
 def summarize_coord(name, var, col_width):
     from .variable import IndexVariable
-    is_index = name in var.dims and isinstance(var, IndexVariable)
+    # is there a cleaner way to check if something is an index variable?
+    variable = getattr(var, 'variable', var)
+    is_index = name in var.dims and isinstance(variable, IndexVariable)
     show_values = var._in_memory
     marker = u'*' if is_index else u' '
     if is_index:
