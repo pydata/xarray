@@ -1,12 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
-import multiprocessing
-import threading
 import time
 import traceback
 import warnings
-import weakref
 from collections import Mapping, OrderedDict
 
 import numpy as np
@@ -21,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
-
 
 
 def _encode_variable_name(name):

@@ -96,7 +96,7 @@ def _get_scheduler(get=None, collection=None):
             return 'threaded'
 
 
-def get_resource_lock(key):
+def get_write_lock(key):
     """Get a scheduler appropriate lock for writing to the given resource.
 
     Parameters

@@ -10,7 +10,7 @@ from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
 from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
-from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_resource_lock
+from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_write_lock
 from .netCDF4_ import (
     BaseNetCDF4Array, GroupWrapper, _encode_nc4_variable,
     _extract_nc4_variable_encoding, _get_datatype, _nc4_require_group)
@@ -83,7 +83,7 @@ class H5NetCDFStore(WritableCFDataStore):
             if mode == 'r':
                 lock = HDF5_LOCK
             else:
-                lock = combine_locks([HDF5_LOCK, get_resource_lock(filename)])
+                lock = combine_locks([HDF5_LOCK, get_write_lock(filename)])
 
         self.format = format
         self._filename = filename

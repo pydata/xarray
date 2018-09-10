@@ -16,7 +16,7 @@ from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     BackendArray, WritableCFDataStore, find_root, robust_getitem)
 from .locks import (NETCDFC_LOCK, HDF5_LOCK,
-                    combine_locks, ensure_lock, get_resource_lock)
+                    combine_locks, ensure_lock, get_write_lock)
 from .file_manager import CachingFileManager, DummyFileManager
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
@@ -346,7 +346,7 @@ class NetCDF4DataStore(WritableCFDataStore):
                     base_lock = NETCDF4_PYTHON_LOCK
                 else:
                     base_lock = NETCDFC_LOCK
-                lock = combine_locks([base_lock, get_resource_lock(filename)])
+                lock = combine_locks([base_lock, get_write_lock(filename)])
 
         manager = CachingFileManager(
             _open_netcdf4_group, filename, lock, mode=mode,
