@@ -6,6 +6,7 @@ import threading
 import time
 import traceback
 import warnings
+import weakref
 from collections import Mapping, OrderedDict
 
 import numpy as np
@@ -15,73 +16,12 @@ from ..core import indexing
 from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 
-try:
-    from dask.utils import SerializableLock
-except ImportError:
-    # no need to worry about serializing the lock
-    SerializableLock = threading.Lock
-
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
 
-
-def _get_scheduler(get=None, collection=None):
-    """ Determine the dask scheduler that is being used.
-
-    None is returned if not dask scheduler is active.
-
-    See also
-    --------
-    dask.base.get_scheduler
-    """
-    try:
-        # dask 0.18.1 and later
-        from dask.base import get_scheduler
-        actual_get = get_scheduler(get, collection)
-    except ImportError:
-        try:
-            from dask.utils import effective_get
-            actual_get = effective_get(get, collection)
-        except ImportError:
-            return None
-
-    try:
-        from dask.distributed import Client
-        if isinstance(actual_get.__self__, Client):
-            return 'distributed'
-    except (ImportError, AttributeError):
-        try:
-            import dask.multiprocessing
-            if actual_get == dask.multiprocessing.get:
-                return 'multiprocessing'
-            else:
-                return 'threaded'
-        except ImportError:
-            return 'threaded'
-
-
-def _get_scheduler_lock(scheduler, path_or_file=None):
-    """ Get the appropriate lock for a certain situation based onthe dask
-       scheduler used.
-
-    See Also
-    --------
-    dask.utils.get_scheduler_lock
-    """
-
-    if scheduler == 'distributed':
-        from dask.distributed import Lock
-        return Lock(path_or_file)
-    elif scheduler == 'multiprocessing':
-        return multiprocessing.Lock()
-    elif scheduler == 'threaded':
-        from dask.utils import SerializableLock
-        return SerializableLock()
-    else:
-        return threading.Lock()
 
 
 def _encode_variable_name(name):
@@ -128,84 +68,6 @@ def robust_getitem(array, key, catch=Exception, max_retries=6,
                    (next_delay, max_retries - n, traceback.format_exc()))
             logger.debug(msg)
             time.sleep(1e-3 * next_delay)
-
-
-class CombinedLock(object):
-    """A combination of multiple locks.
-
-    Like a locked door, a CombinedLock is locked if any of its constituent
-    locks are locked.
-    """
-
-    def __init__(self, locks):
-        self.locks = tuple(set(locks))  # remove duplicates
-
-    def acquire(self, *args):
-        return all(lock.acquire(*args) for lock in self.locks)
-
-    def release(self, *args):
-        for lock in self.locks:
-            lock.release(*args)
-
-    def __enter__(self):
-        for lock in self.locks:
-            lock.__enter__()
-
-    def __exit__(self, *args):
-        for lock in self.locks:
-            lock.__exit__(*args)
-
-    @property
-    def locked(self):
-        return any(lock.locked for lock in self.locks)
-
-    def __repr__(self):
-        return "CombinedLock(%r)" % list(self.locks)
-
-
-class DummyLock(object):
-    """DummyLock provides the lock API without any actual locking."""
-
-    def acquire(self, *args):
-        pass
-
-    def release(self, *args):
-        pass
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, *args):
-        pass
-
-    @property
-    def locked(self):
-        return False
-
-
-def combine_locks(locks):
-    """Combine one or more locks into a CombinedLock."""
-    all_locks = []
-    for lock in locks:
-        if isinstance(lock, CombinedLock):
-            all_locks.extend(lock.locks)
-        elif lock is not None:
-            all_locks.append(lock)
-
-    num_locks = len(all_locks)
-    if num_locks > 1:
-        return CombinedLock(all_locks)
-    elif num_locks == 1:
-        return all_locks[0]
-    else:
-        return DummyLock()
-
-
-# Neither HDF5 nor the netCDF-C library are thread-safe.
-HDF5_LOCK = SerializableLock()
-NETCDFC_LOCK = SerializableLock()
-# TODO: determine if we need a separate lock for PyNIO or not
-PYNIO_LOCK = SerializableLock()
 
 
 class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):

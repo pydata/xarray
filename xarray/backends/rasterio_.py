@@ -10,13 +10,11 @@ from ..core import indexing
 from ..core.utils import is_scalar
 from .common import BackendArray
 from .file_manager import CachingFileManager
+from .locks import SerializableLock
 
-try:
-    from dask.utils import SerializableLock as Lock
-except ImportError:
-    from threading import Lock
 
-RASTERIO_LOCK = Lock()
+# TODO: should this be GDAL_LOCK instead?
+RASTERIO_LOCK = SerializableLock()
 
 _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'valid on rasterio files. Try to load your data with ds.load()'
@@ -294,7 +292,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
-    if cache and (chunks is None):
+    if cache and chunks is None:
         data = indexing.MemoryCachedArray(data)
 
     result = DataArray(data=data, dims=('band', 'y', 'x'),

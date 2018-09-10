@@ -18,10 +18,10 @@ from distributed.client import futures_of
 import numpy as np
 
 import xarray as xr
+from xarray.backends.locks import HDF5_LOCK, CombinedLock
 from xarray.tests.test_backends import (ON_WINDOWS, create_tmp_file,
                                         create_tmp_geotiff)
 from xarray.tests.test_dataset import create_test_data
-from xarray.backends.common import HDF5_LOCK, CombinedLock
 
 from . import (
     assert_allclose, has_h5netcdf, has_netCDF4, requires_rasterio, has_scipy,

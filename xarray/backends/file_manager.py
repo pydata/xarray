@@ -105,7 +105,7 @@ class CachingFileManager(FileManager):
         self._args = args
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
-        self._default_lock = lock is None
+        self._default_lock = lock is None or lock is False
         self._lock = threading.Lock() if self._default_lock else lock
         self._cache = cache
         self._key = self._make_key()

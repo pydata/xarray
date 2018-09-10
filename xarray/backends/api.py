@@ -13,9 +13,9 @@ from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri
-from .common import (
-    HDF5_LOCK, NETCDFC_LOCK, PYNIO_LOCK, ArrayWriter, combine_locks,
-    _get_scheduler, _get_scheduler_lock)
+from .common import ArrayWriter
+from .locks import _get_scheduler
+
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -52,55 +52,6 @@ def _normalize_path(path):
         return path
     else:
         return os.path.abspath(os.path.expanduser(path))
-
-
-def _default_read_lock(filename, engine):
-    # TODO: move this logic to the data store classes
-    if filename.endswith('.gz'):
-        locks = []
-    else:
-        if engine is None:
-            engine = _get_default_engine(filename, allow_remote=True)
-
-        if engine == 'netcdf4':
-            if is_remote_uri(filename):
-                locks = [NETCDFC_LOCK]
-            else:
-                # TODO: identify netcdf3 files and don't use the global HDF5
-                # lock for them
-                locks = [NETCDFC_LOCK, HDF5_LOCK]
-        elif engine == 'h5netcdf':
-            locks = [HDF5_LOCK]
-        elif engine == 'pynio':
-            # pynio can invoke netCDF libraries internally
-            locks = [HDF5_LOCK, NETCDFC_LOCK, PYNIO_LOCK]
-        elif engine == 'psuedonetcdf':
-            # psuedonetcdf can invoke netCDF libraries internally
-            locks = [HDF5_LOCK, NETCDFC_LOCK]
-        else:
-            # no locking needed by default, e.g., for scipy or pynio
-            locks = []
-
-    return combine_locks(locks)
-
-
-def _get_write_lock(engine, scheduler, format, path_or_file):
-    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
-    # TODO: move this logic to the data store classes
-
-    locks = []
-
-    if (engine == 'h5netcdf' or engine == 'netcdf4' and
-            (format is None or format.startswith('NETCDF4'))):
-        locks.append(HDF5_LOCK)
-
-    if engine == 'netcdf4':
-        locks.append(NETCDFC_LOCK)
-
-    locks.append(_get_scheduler_lock(scheduler, path_or_file))
-
-    return combine_locks(locks)
-
 
 
 def _validate_dataset_names(dataset):
@@ -219,12 +170,11 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
         chunk for all arrays.
-    lock : False, True or threading.Lock, optional
-        If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a global lock is
-        used when reading data from netCDF files with the netcdf4 and h5netcdf
-        engines to avoid issues with concurrent access when using dask's
-        multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -326,9 +276,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             else:
                 engine = 'scipy'
 
-        if lock is None:
-            lock = _default_read_lock(filename_or_obj, engine)
-
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
@@ -416,12 +363,11 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays.
-    lock : False, True or threading.Lock, optional
-        If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a global lock is
-        used when reading data from netCDF files with the netcdf4 and h5netcdf
-        engines to avoid issues with concurrent access when using dask's
-        multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -544,11 +490,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
-    lock : False, True or threading.Lock, optional
-        This argument is passed on to :py:func:`dask.array.from_array`. By
-        default, a per-variable lock is used when reading data from netCDF
-        files with the netcdf4 and h5netcdf engines to avoid issues with
-        concurrent access when using dask's multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
           * 'minimal': Only data variables in which the dimension already
@@ -606,9 +552,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if not paths:
         raise IOError('no files to open')
-
-    if lock is None:
-        lock = _default_read_lock(paths[0], engine)
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
@@ -716,12 +659,10 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
         raise NotImplementedError("Writing netCDF files with the %s backend "
                                   "is not currently supported with dask's %s "
                                   "scheduler" % (engine, scheduler))
-    lock = _get_write_lock(engine, scheduler, format, path_or_file)
 
     target = path_or_file if path_or_file is not None else BytesIO()
     kwargs = dict(autoclose=True) if autoclose else {}
-    store = store_open(
-        target, mode, format, group, lock=lock, **kwargs)
+    store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)

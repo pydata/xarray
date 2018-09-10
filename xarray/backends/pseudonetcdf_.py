@@ -9,8 +9,13 @@ from ..core.pycompat import OrderedDict
 from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
 
-from .common import AbstractDataStore, BackendArray, DummyLock
+from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
+from .locks import NETCDFC_LOCK, HDF5_LOCK, combine_locks, ensure_lock
+
+
+# psuedonetcdf can invoke netCDF libraries internally
+PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
 
 
 class PncArrayWrapper(BackendArray):
@@ -48,12 +53,15 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         if mode is not None:
             keywords['mode'] = mode
 
-        manager = CachingFileManager(pncopen, filename, **keywords)
-        return cls(manager)
+        if lock is None:
+            lock = PNETCDF_LOCK
+
+        manager = CachingFileManager(pncopen, filename, lock=lock, **keywords)
+        return cls(manager, lock)
 
     def __init__(self, manager, lock=None):
         self._manager = manager
-        self.lock = DummyLock() if lock is None else lock
+        self.lock = ensure_lock(lock)
 
     @property
     def ds(self):

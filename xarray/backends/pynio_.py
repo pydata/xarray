@@ -5,8 +5,16 @@ import numpy as np
 from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
-from .common import PYNIO_LOCK, AbstractDataStore, BackendArray
+from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
+from .locks import (
+    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, SerializableLock)
+
+
+# PyNIO can invoke netCDF libraries internally
+# Add a dedicated lock just in case NCL as well isn't thread-safe.
+NCL_LOCK = SerializableLock()
+PYNIO_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK, NCL_LOCK])
 
 
 class NioArrayWrapper(BackendArray):
@@ -37,10 +45,13 @@ class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r', lock=PYNIO_LOCK):
+    def __init__(self, filename, mode='r', lock=None):
         import Nio
-        self.lock = lock
-        self._manager = CachingFileManager(Nio.open_file, filename, mode=mode)
+        if lock is None:
+            lock = PYNIO_LOCK
+        self.lock = ensure_lock(lock)
+        self._manager = CachingFileManager(
+            Nio.open_file, filename, lock=lock, mode=mode)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')

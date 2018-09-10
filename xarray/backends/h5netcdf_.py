@@ -8,8 +8,9 @@ from .. import Variable
 from ..core import indexing
 from ..core.pycompat import OrderedDict, bytes_type, iteritems, unicode_type
 from ..core.utils import FrozenOrderedDict, close_on_error
-from .common import HDF5_LOCK, WritableCFDataStore
+from .common import WritableCFDataStore
 from .file_manager import CachingFileManager
+from .locks import HDF5_LOCK, combine_locks, ensure_lock, get_resource_lock
 from .netCDF4_ import (
     BaseNetCDF4Array, GroupWrapper, _encode_nc4_variable,
     _extract_nc4_variable_encoding, _get_datatype, _nc4_require_group)
@@ -71,17 +72,23 @@ class H5NetCDFStore(WritableCFDataStore):
     """
 
     def __init__(self, filename, mode='r', format=None, group=None,
-                 lock=HDF5_LOCK, autoclose=False):
+                 lock=None, autoclose=False):
         if format not in [None, 'NETCDF4']:
             raise ValueError('invalid format for h5netcdf backend')
         self._manager = CachingFileManager(
             _open_h5netcdf_group, filename, mode=mode,
             kwargs=dict(group=group))
 
+        if lock is None:
+            if mode == 'r':
+                lock = HDF5_LOCK
+            else:
+                lock = combine_locks([HDF5_LOCK, get_resource_lock(filename)])
+
         self.format = format
         self._filename = filename
         self._mode = mode
-        self.lock = lock
+        self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
     @property

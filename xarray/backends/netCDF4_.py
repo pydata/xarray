@@ -14,7 +14,9 @@ from ..core.pycompat import (
     PY3, OrderedDict, basestring, iteritems, suppress)
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
-    HDF5_LOCK, BackendArray, WritableCFDataStore, find_root, robust_getitem)
+    BackendArray, WritableCFDataStore, find_root, robust_getitem)
+from .locks import (NETCDFC_LOCK, HDF5_LOCK,
+                    combine_locks, ensure_lock, get_resource_lock)
 from .file_manager import CachingFileManager, DummyFileManager
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
@@ -24,6 +26,9 @@ _endian_lookup = {'=': 'native',
                   '>': 'big',
                   '<': 'little',
                   '|': 'native'}
+
+
+NETCDF4_PYTHON_LOCK = combine_locks([NETCDFC_LOCK, HDF5_LOCK])
 
 
 class BaseNetCDF4Array(BackendArray):
@@ -298,7 +303,7 @@ class NetCDF4DataStore(WritableCFDataStore):
     This store supports NetCDF3, NetCDF4 and OpenDAP datasets.
     """
 
-    def __init__(self, manager, lock=HDF5_LOCK, autoclose=False):
+    def __init__(self, manager, lock=NETCDF4_PYTHON_LOCK, autoclose=False):
         import netCDF4
 
         if isinstance(manager, netCDF4.Dataset):
@@ -309,13 +314,13 @@ class NetCDF4DataStore(WritableCFDataStore):
         self.format = self.ds.data_model
         self._filename = self.ds.filepath()
         self.is_remote = is_remote_uri(self._filename)
-        self.lock = lock
+        self.lock = ensure_lock(lock)
         self.autoclose = autoclose
 
     @classmethod
     def open(cls, filename, mode='r', format='NETCDF4', group=None,
              clobber=True, diskless=False, persist=False,
-             lock=HDF5_LOCK, autoclose=False):
+             lock=None, lock_maker=None, autoclose=False):
         import netCDF4
         if (len(filename) == 88 and
                 LooseVersion(netCDF4.__version__) < "1.3.1"):
@@ -329,6 +334,20 @@ class NetCDF4DataStore(WritableCFDataStore):
                 'https://github.com/pydata/xarray/issues/1745')
         if format is None:
             format = 'NETCDF4'
+
+        if lock is None:
+            if mode == 'r':
+                if is_remote_uri(filename):
+                    lock = NETCDFC_LOCK
+                else:
+                    lock = NETCDF4_PYTHON_LOCK
+            else:
+                if format is None or format.startswith('NETCDF4'):
+                    base_lock = NETCDF4_PYTHON_LOCK
+                else:
+                    base_lock = NETCDFC_LOCK
+                lock = combine_locks([base_lock, get_resource_lock(filename)])
+
         manager = CachingFileManager(
             _open_netcdf4_group, filename, lock, mode=mode,
             kwargs=dict(group=group, clobber=clobber, diskless=diskless,
