@@ -83,6 +83,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``xarray.plot.imshow()`` correctly uses the ``origin`` argument.
+  (:issue:`2379`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 - Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
   attribute being set.
