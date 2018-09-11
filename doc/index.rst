@@ -120,12 +120,17 @@ Get in touch
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
 .. _on GitHub: http://github.com/pydata/xarray
 
-License
--------
+NumFOCUS
+--------
 
-xarray is available under the open source `Apache License`__.
+.. image:: _static/numfocus_logo.png
+   :scale: 50 %
 
-__ http://www.apache.org/licenses/LICENSE-2.0.html
+Xarray is a fiscally sponsored project of NumFOCUS, a nonprofit dedicated
+to supporting the open source scientific computing community. If you like
+Xarray and want to support our mission, please consider making a
+[donation](https://www.flipcause.com/secure/cause_pdetails/MjE3OQ==)
+to support our efforts.
 
 History
 -------
@@ -133,6 +138,15 @@ History
 xarray is an evolution of an internal tool developed at `The Climate
 Corporation`__. It was originally written by Climate Corp researchers Stephan
 Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
-May 2014. The project was renamed from "xray" in January 2016.
+May 2014. The project was renamed from "xray" in January 2016. Xarray became a
+fiscally sponsored project of NumFOCUS_ in August 2018.
 
 __ http://climate.com/
+.. _NumFOCUS: https://numfocus.org
+
+License
+-------
+
+xarray is available under the open source `Apache License`__.
+
+__ http://www.apache.org/licenses/LICENSE-2.0.html
