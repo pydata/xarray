@@ -938,7 +938,7 @@ def ones_like(other, dtype=None):
     return full_like(other, 1, dtype)
 
 
-def label_like(data, other):
+def structured_like(data, other):
     """Return a new object labeled in the same way as the given object.
 
     Parameters

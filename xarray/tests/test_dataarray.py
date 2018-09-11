@@ -14,7 +14,7 @@ from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
 from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
-from xarray.core.common import full_like, label_like
+from xarray.core.common import full_like, structured_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
@@ -3171,7 +3171,7 @@ class TestDataArray(TestCase):
         assert expect.dtype == bool
         assert_identical(expect, actual)
 
-    def test_label_like(self):
+    def test_structured_like(self):
         # For more thorough tests, see test_variable.py
         orig = DataArray(np.random.random(size=(2, 2)),
                          dims=('x', 'y'),
@@ -3179,7 +3179,7 @@ class TestDataArray(TestCase):
                          coords={'x': [4, 3]},
                          name='helloworld')
         new_data = np.arange(4).reshape(2, 2)
-        actual = label_like(new_data, orig)
+        actual = structured_like(new_data, orig)
         expected = orig.copy()
         expected.data = new_data
         assert_identical(expected, actual)

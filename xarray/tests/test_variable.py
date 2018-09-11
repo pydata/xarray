@@ -14,7 +14,8 @@ import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
-from xarray.core.common import full_like, ones_like, zeros_like, label_like
+from xarray.core.common import (
+    full_like, ones_like, zeros_like, structured_like)
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
     LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
@@ -1893,21 +1894,21 @@ class TestAsCompatibleData(TestCase):
         assert_identical(ones_like(orig, dtype=int),
                          full_like(orig, 1, dtype=int))
 
-    def test_label_like(self):
+    def test_structured_like(self):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         new_data = np.array([[2.5, 5.0], [7.1, 43]])
-        actual = label_like(new_data, orig)
+        actual = structured_like(new_data, orig)
         expected = orig.copy()
         expected.data = new_data
         assert_identical(expected, actual)
 
-    def test_label_like_errors(self):
+    def test_structured_like_errors(self):
         orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
                         attrs={'foo': 'bar'})
         new_data = [2.5, 5.0]
         with raises_regex(ValueError, 'shape should match shape of object'):
-            label_like(new_data, orig)
+            structured_like(new_data, orig)
 
     def test_unsupported_type(self):
         # Non indexable type
