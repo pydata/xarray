@@ -591,3 +591,24 @@ class HiddenKeyDict(MutableMapping):
     def __len__(self):
         num_hidden = sum([k in self._hidden_keys for k in self._data])
         return len(self._data) - num_hidden
+
+
+def to_numeric(array, offset=False, time_unit=None, dtype=float):
+    """
+    Make datetime array float
+
+    offset: True to subtract minimum values to reduce round off error
+    time_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        'us', 'ns', 'ps', 'fs', 'as'}
+    dtype: target dtype
+    """
+    if array.dtype.kind not in ['m', 'M']:
+        return array.astype(dtype)
+    if offset:
+        array = array - np.min(array)
+    else:
+        array = array - np.zeros(array.shape, dtype=array.dtype)
+        
+    if time_unit:
+        return (array / np.timedelta64(1, time_unit)).astype(dtype)
+    return array.astype(dtype)

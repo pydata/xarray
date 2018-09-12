@@ -2292,7 +2292,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def differentiate(self, coord, edge_order=1):
+    def differentiate(self, coord, edge_order=1, time_unit=None):
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -2336,7 +2336,8 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         """
-        ds = self._to_temp_dataset().differentiate(coord, edge_order)
+        ds = self._to_temp_dataset().differentiate(
+            coord, edge_order, time_unit)
         return self._from_temp_dataset(ds)
 
 

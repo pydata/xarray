@@ -4498,8 +4498,10 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 @pytest.mark.parametrize('edge_order', [1, 2])
 def test_gradient(dask, edge_order):
     rs = np.random.RandomState(42)
+    coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
+
     da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
-                      coords={'x': [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8],
+                      coords={'x': coord,
                               'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
     if dask and has_dask:
         da = da.chunk({'x': 4})
@@ -4514,6 +4516,8 @@ def test_gradient(dask, edge_order):
     assert_equal(expected_x, actual)
     assert_equal(ds['var'].differentiate('x', edge_order=edge_order),
                  ds.differentiate('x', edge_order=edge_order)['var'])
+    # coordinate should not change
+    assert_equal(da['x'], actual['x'])
 
     # along y
     actual = da.differentiate('y', edge_order)
@@ -4527,3 +4531,37 @@ def test_gradient(dask, edge_order):
 
     with pytest.raises(ValueError):
         da.differentiate('x2d')
+
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_gradient_datetime(dask):
+    rs = np.random.RandomState(42)
+    coord = np.array(
+        ['2004-07-13', '2006-01-13', '2010-08-13', '2010-09-13',
+         '2010-10-11', '2010-12-13', '2011-02-13', '2012-08-13'],
+        dtype='datetime64')
+
+    da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
+                      coords={'x': coord,
+                              'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
+    if dask and has_dask:
+        da = da.chunk({'x': 4})
+
+    # along x
+    actual = da.differentiate('x', edge_order=1, time_unit='D')
+    expected_x = xr.DataArray(
+        npcompat.gradient(
+            da, utils.to_numeric(
+                da['x'], offset=True, time_unit='D'), axis=0, edge_order=1),
+            dims=da.dims, coords=da.coords)
+    assert_equal(expected_x, actual)
+
+    # for datetime variable
+    actual = da['x'].differentiate('x', edge_order=1, time_unit='D')
+    assert np.allclose(actual, 1.0)
+
+    # with different date unit
+    da = xr.DataArray(coord.astype('datetime64[ms]'), dims=['x'],
+                      coords={'x': coord})
+    actual = da.differentiate('x', edge_order=1)
+    assert np.allclose(actual, 1.0)

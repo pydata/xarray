@@ -31,7 +31,7 @@ from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array)
+    ensure_us_time_resolution, hashable, maybe_wrap_array, to_numeric)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -3666,7 +3666,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
-    def differentiate(self, coord, edge_order=1):
+    def differentiate(self, coord, edge_order=1, time_unit=None):
         """ Differentiate with the second order accurate central
         differences.
 
@@ -3676,6 +3676,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
+        time_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+            'us', 'ns', 'ps', 'fs', 'as'}
+            Unit to compute gradient. Only valid for datetime coordinate.
 
         Returns
         -------
@@ -3696,11 +3699,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              ' dimensional'.format(coord, coord_var.ndim))
 
         dim = coord_var.dims[0]
+        coord_data = coord_var.data
+        if coord_data.dtype.kind in ['m', 'M']:
+            if time_unit is None:
+                time_unit = np.datetime_data(coord_data.dtype)[0]
+            coord_data = to_numeric(coord_data, offset=True,
+                                    time_unit=time_unit)
+
         variables = OrderedDict()
         for k, v in self.variables.items():
-            if k in self.data_vars and dim in v.dims:
+            if (k in self.data_vars and dim in v.dims and
+                    k not in self.coords):
+                if v.dtype.kind in ['m', 'M']:
+                    v = to_numeric(v, offset=True, time_unit=time_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_var.data, edge_order=edge_order,
+                    v.data, coord_data, edge_order=edge_order,
                     axis=v.get_axis_num(dim))
                 variables[k] = Variable(v.dims, grad)
             else:
