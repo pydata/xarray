@@ -3684,22 +3684,25 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         See also
         --------
         numpy.gradient: corresponding numpy function
-        xr.differentiated: more numpy-like function for xarray object.
         """
+        from .variable import Variable
+
         if coord not in self.variables and coord not in self.dims:
             raise ValueError('Coordinate {} does not exist.'.format(coord))
 
         coord_var = self[coord].variable
         if coord_var.ndim != 1:
-            raise ValueError('Coordinate {} must be 1 dimensional but {} is {}'
-                             ' dimensional'.format(coord, coord_var.ndims))
+            raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                             ' dimensional'.format(coord, coord_var.ndim))
 
         dim = coord_var.dims[0]
         variables = OrderedDict()
         for k, v in self.variables.items():
             if k in self.data_vars and dim in v.dims:
-                variables[k] = computation._differentiate_variable(
-                    v, coord_var, edge_order)
+                grad = duck_array_ops.gradient(
+                    v.data, coord_var.data, edge_order=edge_order,
+                    axis=v.get_axis_num(dim))
+                variables[k] = Variable(v.dims, grad)
             else:
                 variables[k] = v
         return self._replace_vars_and_dims(variables)

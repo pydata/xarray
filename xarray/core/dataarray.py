@@ -2310,7 +2310,6 @@ class DataArray(AbstractArray, DataWithCoords):
         See also
         --------
         numpy.gradient: corresponding numpy function
-        xr.differentiate: more numpy-like function for xarray object.
 
         Examples
         --------

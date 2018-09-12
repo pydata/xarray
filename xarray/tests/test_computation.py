@@ -14,8 +14,6 @@ from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
-from xarray.core import npcompat
-from xarray.testing import assert_equal
 
 from . import raises_regex, requires_dask, has_dask
 
@@ -978,39 +976,3 @@ def test_where():
     actual = xr.where(cond, 1, 0)
     expected = xr.DataArray([1, 0], dims='x')
     assert_identical(expected, actual)
-
-
-@pytest.mark.parametrize('dask', [True, False])
-@pytest.mark.parametrize('edge_order', [1, 2])
-def test_gradient(dask, edge_order):
-    rs = np.random.RandomState(42)
-    da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
-                      coords={'x': [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8],
-                              'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
-    if dask and has_dask:
-        da = da.chunk({'x': 4})
-
-    ds = xr.Dataset({'var': da})
-
-    # along x
-    actual = xr.differentiate(da, 'x', edge_order)
-    expected_x = xr.DataArray(
-        npcompat.gradient(da, da['x'], axis=0, edge_order=edge_order),
-        dims=da.dims, coords=da.coords)
-    assert_equal(expected_x, actual)
-    assert_equal(actual, ds.differentiate('x', edge_order=edge_order)['var'])
-    assert_equal(ds['var'].differentiate('x', edge_order=edge_order),
-                 ds.differentiate('x', edge_order=edge_order)['var'])
-
-    # along y
-    actual = xr.differentiate(da, 'y', edge_order)
-    expected_y = xr.DataArray(
-        npcompat.gradient(da, da['y'], axis=1, edge_order=edge_order),
-        dims=da.dims, coords=da.coords)
-    assert_equal(expected_y, actual)
-    assert_equal(actual, ds.differentiate('y', edge_order=edge_order)['var'])
-    assert_equal(ds['var'].differentiate('y', edge_order=edge_order),
-                 ds.differentiate('y', edge_order=edge_order)['var'])
-
-    with pytest.raises(ValueError):
-        xr.differentiate(da, ('x2d'))

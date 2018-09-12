@@ -15,7 +15,7 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
     broadcast, open_dataset, set_options)
-from xarray.core import indexing, utils
+from xarray.core import indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
@@ -4492,3 +4492,38 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     with pytest.warns(None) as record:
         Dataset(data_vars={'x': ('y', [1, 2, np.NaN])}) > 0
     assert len(record) == 0
+
+
+@pytest.mark.parametrize('dask', [True, False])
+@pytest.mark.parametrize('edge_order', [1, 2])
+def test_gradient(dask, edge_order):
+    rs = np.random.RandomState(42)
+    da = xr.DataArray(rs.randn(8, 6), dims=['x', 'y'],
+                      coords={'x': [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8],
+                              'z': 3, 'x2d': (('x', 'y'), rs.randn(8, 6))})
+    if dask and has_dask:
+        da = da.chunk({'x': 4})
+
+    ds = xr.Dataset({'var': da})
+
+    # along x
+    actual = da.differentiate('x', edge_order)
+    expected_x = xr.DataArray(
+        npcompat.gradient(da, da['x'], axis=0, edge_order=edge_order),
+        dims=da.dims, coords=da.coords)
+    assert_equal(expected_x, actual)
+    assert_equal(ds['var'].differentiate('x', edge_order=edge_order),
+                 ds.differentiate('x', edge_order=edge_order)['var'])
+
+    # along y
+    actual = da.differentiate('y', edge_order)
+    expected_y = xr.DataArray(
+        npcompat.gradient(da, da['y'], axis=1, edge_order=edge_order),
+        dims=da.dims, coords=da.coords)
+    assert_equal(expected_y, actual)
+    assert_equal(actual, ds.differentiate('y', edge_order=edge_order)['var'])
+    assert_equal(ds['var'].differentiate('y', edge_order=edge_order),
+                 ds.differentiate('y', edge_order=edge_order)['var'])
+
+    with pytest.raises(ValueError):
+        da.differentiate('x2d')
