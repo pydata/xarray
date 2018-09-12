@@ -3702,16 +3702,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_data = coord_var.data
         if coord_data.dtype.kind in ['m', 'M']:
             if time_unit is None:
-                time_unit = np.datetime_data(coord_data.dtype)[0]
-            coord_data = to_numeric(coord_data, offset=True,
-                                    time_unit=time_unit)
+                time_unit, _ = np.datetime_data(coord_data.dtype)
+            coord_data = to_numeric(coord_data, time_unit=time_unit)
 
         variables = OrderedDict()
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
-                if v.dtype.kind in ['m', 'M']:
-                    v = to_numeric(v, offset=True, time_unit=time_unit)
+                if v.dtype.kind in 'mM':
+                    v = to_numeric(v, time_unit=time_unit)
                 grad = duck_array_ops.gradient(
                     v.data, coord_data, edge_order=edge_order,
                     axis=v.get_axis_num(dim))
