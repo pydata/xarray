@@ -33,8 +33,15 @@ v0.10.9 (unreleased)
 Documentation
 ~~~~~~~~~~~~~
 
+- `Dataset.apply` now properly documents the way `func` is called.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
+
 Enhancements
 ~~~~~~~~~~~~
+
+- `DatasetGroupBy.apply` and `DataArrayGroupBy.apply` can now pass positional
+  arguments  passed to the applied function.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
 
 - Default colormap for sequential and divergent data can now be set via
   :py:func:`~xarray.set_options()`
