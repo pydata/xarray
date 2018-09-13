@@ -967,7 +967,7 @@ def structured_like(data, template):
     from .dataarray import DataArray
     from .variable import Variable, as_compatible_data
 
-    if not (isinstance(template, DataArray) or isinstance(template, Variable)):
+    if not isinstance(template, (DataArray, Variable)):
         raise TypeError("Expected DataArray, or Variable")
 
     data = as_compatible_data(data)
