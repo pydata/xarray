@@ -538,7 +538,8 @@ def test_cf_datetime_nan(num_dates, units, expected_list):
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'All-NaN')
         actual = coding.times.decode_cf_datetime(num_dates, units)
-    expected = np.array(expected_list, dtype='datetime64[ns]')
+    # use pandas because numpy will deprecate timezone-aware conversions
+    expected = pd.to_datetime(expected_list)
     assert_array_equal(expected, actual)
 
 

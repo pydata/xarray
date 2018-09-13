@@ -479,9 +479,11 @@ class _PlotMethods(object):
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
+    # TODO: remove when min numpy version is bumped to 1.13
     # There's a cyclic dependency via DataArray, so we can't import from
     # xarray.ufuncs in global scope.
     from xarray.ufuncs import maximum, minimum
+
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
         if vmax is None:
@@ -507,7 +509,10 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
-    return minimum(maximum(darray, 0), 1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'xarray.ufuncs',
+                                PendingDeprecationWarning)
+        return minimum(maximum(darray, 0), 1)
 
 
 def _plot2d(plotfunc):
@@ -619,7 +624,7 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
                     aspect=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=True, yincrease=True,
+                    col_wrap=None, xincrease=None, yincrease=None,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, infer_intervals=None, colors=None,
@@ -789,7 +794,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, figsize=None, size=None,
                    aspect=None, ax=None, row=None, col=None, col_wrap=None,
-                   xincrease=True, yincrease=True, add_colorbar=None,
+                   xincrease=None, yincrease=None, add_colorbar=None,
                    add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None,
                    levels=None, infer_intervals=None, subplot_kws=None,
@@ -857,10 +862,8 @@ def imshow(x, y, z, ax, **kwargs):
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
-    defaults = {'extent': [left, right, bottom, top],
-                'origin': 'upper',
-                'interpolation': 'nearest',
-                }
+    defaults = {'origin': 'upper',
+                'interpolation': 'nearest'}
 
     if not hasattr(ax, 'projection'):
         # not for cartopy geoaxes
@@ -868,6 +871,11 @@ def imshow(x, y, z, ax, **kwargs):
 
     # Allow user to override these defaults
     defaults.update(kwargs)
+
+    if defaults['origin'] == 'upper':
+        defaults['extent'] = [left, right, bottom, top]
+    else:
+        defaults['extent'] = [left, right, top, bottom]
 
     if z.ndim == 3:
         # matplotlib imshow uses black for missing data, but Xarray makes

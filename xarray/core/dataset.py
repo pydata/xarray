@@ -2318,35 +2318,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._stack_once(dims, new_dim)
         return result
 
-    def unstack(self, dim):
-        """
-        Unstack an existing dimension corresponding to a MultiIndex into
-        multiple new dimensions.
-
-        New dimensions will be added at the end.
-
-        Parameters
-        ----------
-        dim : str
-            Name of the existing dimension to unstack.
-
-        Returns
-        -------
-        unstacked : Dataset
-            Dataset with unstacked data.
-
-        See also
-        --------
-        Dataset.stack
-        """
-        if dim not in self.dims:
-            raise ValueError('invalid dimension: %s' % dim)
-
+    def _unstack_once(self, dim):
         index = self.get_index(dim)
-        if not isinstance(index, pd.MultiIndex):
-            raise ValueError('cannot unstack a dimension that does not have '
-                             'a MultiIndex')
-
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -2373,6 +2346,51 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names = set(self._coord_names) - set([dim]) | set(new_dim_names)
 
         return self._replace_vars_and_dims(variables, coord_names)
+
+    def unstack(self, dim=None):
+        """
+        Unstack existing dimensions corresponding to MultiIndexes into
+        multiple new dimensions.
+
+        New dimensions will be added at the end.
+
+        Parameters
+        ----------
+        dim : str or sequence of str, optional
+            Dimension(s) over which to unstack. By default unstacks all
+            MultiIndexes.
+
+        Returns
+        -------
+        unstacked : Dataset
+            Dataset with unstacked data.
+
+        See also
+        --------
+        Dataset.stack
+        """
+
+        if dim is None:
+            dims = [d for d in self.dims if isinstance(self.get_index(d),
+                                                       pd.MultiIndex)]
+        else:
+            dims = [dim] if isinstance(dim, basestring) else dim
+
+            missing_dims = [d for d in dims if d not in self.dims]
+            if missing_dims:
+                raise ValueError('Dataset does not contain the dimensions: %s'
+                                 % missing_dims)
+
+            non_multi_dims = [d for d in dims if not
+                              isinstance(self.get_index(d), pd.MultiIndex)]
+            if non_multi_dims:
+                raise ValueError('cannot unstack dimensions that do not '
+                                 'have a MultiIndex: %s' % non_multi_dims)
+
+        result = self.copy(deep=False)
+        for dim in dims:
+            result = result._unstack_once(dim)
+        return result
 
     def update(self, other, inplace=True):
         """Update this dataset's variables with those from another dataset.
@@ -3664,10 +3682,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.
 
-        Can pass in ``key=value`` or ``key=callable``.  Variables are returned
-        that contain all of the matches or callable returns True.  If using a
-        callable note that it should accept a single parameter only,
-        the attribute value.
+        Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
+        containing only the variables for which all the filter tests pass.
+        These tests are either ``key=value`` for which the attribute ``key`` 
+        has the exact value ``value`` or the callable passed into
+        ``key=callable`` returns True. The callable will be passed a single
+        value, either the value of the attribute ``key`` or ``None`` if the
+        DataArray does not have an attribute with the name ``key``.
 
         Parameters
         ----------
@@ -3738,11 +3759,17 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         selection = []
         for var_name, variable in self.data_vars.items():
+            has_value_flag = False
             for attr_name, pattern in kwargs.items():
                 attr_value = variable.attrs.get(attr_name)
                 if ((callable(pattern) and pattern(attr_value)) or
                         attr_value == pattern):
-                    selection.append(var_name)
+                    has_value_flag = True
+                else:
+                    has_value_flag = False
+                    break
+            if has_value_flag is True:
+                selection.append(var_name)
         return self[selection]
 
 

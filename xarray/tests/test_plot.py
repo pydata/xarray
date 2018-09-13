@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 import xarray.plot as xplt
@@ -267,6 +268,7 @@ class TestPlot(PlotTestCase):
         assert ax.has_data()
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -328,6 +330,7 @@ class TestPlot(PlotTestCase):
             self.darray.plot(aspect=1)
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -469,6 +472,21 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_cmap_sequential_option(self):
+        with xr.set_options(cmap_sequential='magma'):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == 'magma'
+
+    def test_cmap_sequential_explicit_option(self):
+        with xr.set_options(cmap_sequential=mpl.cm.magma):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == mpl.cm.magma
+
+    def test_cmap_divergent_option(self):
+        with xr.set_options(cmap_divergent='magma'):
+            cmap_params = _determine_cmap_params(self.data, center=0.5)
+            assert cmap_params['cmap'] == 'magma'
 
     def test_nan_inf_are_ignored(self):
         cmap_params1 = _determine_cmap_params(self.data)
@@ -775,10 +793,13 @@ class Common2dMixin:
         clim2 = self.plotfunc(x2).get_clim()
         assert clim1 == clim2
 
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.filterwarnings('ignore:invalid value encountered')
     def test_can_plot_all_nans(self):
         # regression test for issue #1780
         self.plotfunc(DataArray(np.full((2, 2), np.nan)))
 
+    @pytest.mark.filterwarnings('ignore: Attempting to set')
     def test_can_plot_axis_size_one(self):
         if self.plotfunc.__name__ not in ('contour', 'contourf'):
             self.plotfunc(DataArray(np.ones((1, 1))))
@@ -970,6 +991,7 @@ class Common2dMixin:
         del func_sig['darray']
         assert func_sig == method_sig
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -1001,6 +1023,7 @@ class Common2dMixin:
             else:
                 assert '' == ax.get_xlabel()
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -1279,10 +1302,22 @@ class TestImshow(Common2dMixin, PlotTestCase):
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
+    @pytest.mark.filterwarnings('ignore:Several dimensions of this array')
     def test_regression_rgb_imshow_dim_size_one(self):
         # Regression: https://github.com/pydata/xarray/issues/1966
         da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
         da.plot.imshow()
+
+    def test_imshow_origin_kwarg(self):
+        da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+        da.plot.imshow(origin='upper')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[1] < 0
+
+        plt.clf()
+        da.plot.imshow(origin='lower')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[0] < 0
 
 
 class TestFacetGrid(PlotTestCase):
@@ -1511,6 +1546,7 @@ class TestFacetGrid(PlotTestCase):
             sharey=False)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetGrid4d(PlotTestCase):
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
@@ -1538,6 +1574,7 @@ class TestFacetGrid4d(PlotTestCase):
             assert substring_in_axes(label, ax)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 6, 3, 4),

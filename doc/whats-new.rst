@@ -36,6 +36,11 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
+- Default colormap for sequential and divergent data can now be set via
+  :py:func:`~xarray.set_options()`
+  (:issue:`2394`)
+  By `Julius Busecke <https://github.com/jbusecke>`_.
+
 - min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
   :py:meth:`~xarray.Dataset.prod`.
@@ -71,8 +76,15 @@ Enhancements
   (:issue:`1875`)
   By `Andrew Huang <https://github.com/ahuang11>`_.
 
+- You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
+  By `Julia Signell <https://github.com/jsignell>`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- ``xarray.plot.imshow()`` correctly uses the ``origin`` argument.
+  (:issue:`2379`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 - Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
@@ -87,7 +99,7 @@ Bug fixes
 - Tests can be run in parallel with pytest-xdist
   By `Tony Tung <https://github.com/ttung>`_.
 
-- Follow up the renamings in dask; from dask.ghost to dask.overlap 
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now raises a ValueError when there is a conflict between dimension names and
@@ -101,6 +113,12 @@ Bug fixes
 ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fixed ``Dataset.filter_by_attrs()`` behavior not matching ``netCDF4.Dataset.get_variables_by_attributes()``.
+  When more than one ``key=value`` is passed into ``Dataset.filter_by_attrs()`` it will now return a Dataset with variables which pass
+  all the filters.
+  (:issue:`2315`)
+  By `Andrew Barna <https://github.com/docotak>`_.
 
 .. _whats-new.0.10.8:
 
