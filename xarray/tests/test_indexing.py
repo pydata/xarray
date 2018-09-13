@@ -622,3 +622,7 @@ def test_create_mask_error():
 def test_posify_mask_subindexer(indices, expected):
     actual = indexing._posify_mask_subindexer(indices)
     np.testing.assert_array_equal(expected, actual)
+
+def test_indexing_1d_object_array():
+    er = DataArray(np.array((np.arange(3), np.arange(6))))
+    er[0]
