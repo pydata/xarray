@@ -39,8 +39,9 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- `DatasetGroupBy.apply` and `DataArrayGroupBy.apply` can now pass positional
-  arguments to the applied function.
+- The `apply` methods for `DatasetGroupBy`, `DataArrayGroupBy`,
+  `DatasetResample` and `DataArrayResample` can now pass positional arguments to
+  the applied function.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 
 - Default colormap for sequential and divergent data can now be set via
