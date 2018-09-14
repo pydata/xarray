@@ -86,6 +86,10 @@ class BaseCFTimeOffset(object):
     _freq = None
 
     def __init__(self, n=1):
+        if not isinstance(n, int):
+            raise TypeError(
+                "The provided multiple 'n' must be an integer. "
+                "Instead a value of type {!r} was provided.".format(type(n)))
         self.n = n
 
     def rule_code(self):
@@ -109,7 +113,7 @@ class BaseCFTimeOffset(object):
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
-            raise NotImplementedError
+            raise NotImplemented
 
     def __mul__(self, other):
         return type(self)(n=other * self.n)
@@ -262,6 +266,10 @@ class YearOffset(BaseCFTimeOffset):
             self.month = self._default_month
         else:
             self.month = month
+        if not isinstance(self.month, int) or not (1 <= self.month <= 12):
+            raise TypeError("'self.month' must be an integer value between 1 "
+                            "and 12.  Instead, it was set to a value of "
+                            "{!r}".format(self.month))
 
     def __apply__(self, other):
         if self._day_option == 'start':
@@ -282,7 +290,7 @@ class YearOffset(BaseCFTimeOffset):
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
-            raise NotImplementedError
+            raise NotImplemented
 
     def __mul__(self, other):
         return type(self)(n=other * self.n, month=self.month)

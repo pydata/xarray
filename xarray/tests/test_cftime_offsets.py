@@ -29,6 +29,59 @@ def calendar(request):
 
 
 @pytest.mark.parametrize(
+    ('offset', 'expected_n'),
+    [(BaseCFTimeOffset(), 1),
+     (YearBegin(), 1),
+     (YearEnd(), 1),
+     (BaseCFTimeOffset(n=2), 2),
+     (YearBegin(n=2), 2),
+     (YearEnd(n=2), 2)],
+    ids=_id_func
+)
+def test_cftime_offset_constructor_valid_n(offset, expected_n):
+    assert offset.n == expected_n
+
+
+@pytest.mark.parametrize(
+    ('offset', 'invalid_n'),
+    [(BaseCFTimeOffset, 1.5),
+     (YearBegin, 1.5),
+     (YearEnd, 1.5)],
+    ids=_id_func
+)
+def test_cftime_offset_constructor_invalid_n(offset, invalid_n):
+    with pytest.raises(TypeError):
+        offset(n=invalid_n)
+
+
+@pytest.mark.parametrize(
+    ('offset', 'expected_month'),
+    [(YearBegin(), 1),
+     (YearEnd(), 12),
+     (YearBegin(month=5), 5),
+     (YearEnd(month=5), 5)],
+    ids=_id_func
+)
+def test_year_offset_constructor_valid_month(offset, expected_month):
+    assert offset.month == expected_month
+
+
+@pytest.mark.parametrize(
+    ('offset', 'invalid_month'),
+    [(YearBegin, 0),
+     (YearEnd, 0),
+     (YearBegin, 13),
+     (YearEnd, 13),
+     (YearBegin, 1.5),
+     (YearEnd, 1.5)],
+    ids=_id_func
+)
+def test_year_offset_constructor_invalid_month(offset, invalid_month):
+    with pytest.raises(TypeError):
+        offset(month=invalid_month)
+
+
+@pytest.mark.parametrize(
     ('offset', 'expected'),
     [(BaseCFTimeOffset(), None),
      (MonthBegin(), 'MS'),
@@ -294,7 +347,7 @@ def test_minus_offset(a, b):
     ids=_id_func
 )
 def test_minus_offset_error(a, b):
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         b - a
 
 
