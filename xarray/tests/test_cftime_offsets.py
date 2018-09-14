@@ -67,17 +67,18 @@ def test_year_offset_constructor_valid_month(offset, expected_month):
 
 
 @pytest.mark.parametrize(
-    ('offset', 'invalid_month'),
-    [(YearBegin, 0),
-     (YearEnd, 0),
-     (YearBegin, 13),
-     (YearEnd, 13),
-     (YearBegin, 1.5),
-     (YearEnd, 1.5)],
+    ('offset', 'invalid_month', 'exception'),
+    [(YearBegin, 0, ValueError),
+     (YearEnd, 0, ValueError),
+     (YearBegin, 13, ValueError,),
+     (YearEnd, 13, ValueError),
+     (YearBegin, 1.5, TypeError),
+     (YearEnd, 1.5, TypeError)],
     ids=_id_func
 )
-def test_year_offset_constructor_invalid_month(offset, invalid_month):
-    with pytest.raises(TypeError):
+def test_year_offset_constructor_invalid_month(
+        offset, invalid_month, exception):
+    with pytest.raises(exception):
         offset(month=invalid_month)
 
 
@@ -187,10 +188,15 @@ def test_to_cftime_datetime(calendar, argument, expected_date_args):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('argument', ['2000', 1])
-def test_to_cftime_datetime_error(argument):
+def test_to_cftime_datetime_error_no_calendar():
     with pytest.raises(ValueError):
-        to_cftime_datetime(argument)
+        to_cftime_datetime('2000')
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_to_cftime_datetime_error_type_error():
+    with pytest.raises(TypeError):
+        to_cftime_datetime(1)
 
 
 _EQ_TESTS_A = [

@@ -266,10 +266,14 @@ class YearOffset(BaseCFTimeOffset):
             self.month = self._default_month
         else:
             self.month = month
-        if not isinstance(self.month, int) or not (1 <= self.month <= 12):
+        if not isinstance(self.month, int):
             raise TypeError("'self.month' must be an integer value between 1 "
                             "and 12.  Instead, it was set to a value of "
                             "{!r}".format(self.month))
+        elif not (1 <= self.month <= 12):
+            raise ValueError("'self.month' must be an integer value between 1 "
+                             "and 12.  Instead, it was set to a value of "
+                             "{!r}".format(self.month))
 
     def __apply__(self, other):
         if self._day_option == 'start':
@@ -460,9 +464,9 @@ def to_cftime_datetime(date_str_or_date, calendar=None):
     elif isinstance(date_str_or_date, cftime.datetime):
         return date_str_or_date
     else:
-        raise ValueError('date_str_or_date must be a string or a '
-                         'subclass of cftime.datetime; got {}.'.format(
-                             date_str_or_date))
+        raise TypeError("date_str_or_date must be a string or a "
+                        'subclass of cftime.datetime. Instead got '
+                        '{!r}.'.format(date_str_or_date))
 
 
 def normalize_date(date):
