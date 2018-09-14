@@ -14,8 +14,7 @@ import pytz
 
 from xarray import Coordinate, Dataset, IndexVariable, Variable
 from xarray.core import indexing
-from xarray.core.common import (
-    full_like, ones_like, zeros_like, structured_like)
+from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
     LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
@@ -505,6 +504,20 @@ class VariableSubclassTestCases(object):
             assert isinstance(w._data, PandasIndexAdapter)
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
+
+    def test_copy_with_data(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = np.array([[2.5, 5.0], [7.1, 43]])
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
+    def test_copy_with_data_errors(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = [2.5, 5.0]
+        with raises_regex(ValueError, 'shape should match shape of object'):
+            orig.copy(data=new_data)
 
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
@@ -1893,22 +1906,6 @@ class TestAsCompatibleData(TestCase):
                          full_like(orig, 1))
         assert_identical(ones_like(orig, dtype=int),
                          full_like(orig, 1, dtype=int))
-
-    def test_structured_like(self):
-        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
-                        attrs={'foo': 'bar'})
-        new_data = np.array([[2.5, 5.0], [7.1, 43]])
-        actual = structured_like(new_data, orig)
-        expected = orig.copy()
-        expected.data = new_data
-        assert_identical(expected, actual)
-
-    def test_structured_like_errors(self):
-        orig = Variable(dims=('x', 'y'), data=[[1.5, 2.0], [3.1, 4.3]],
-                        attrs={'foo': 'bar'})
-        new_data = [2.5, 5.0]
-        with raises_regex(ValueError, 'shape should match shape of object'):
-            structured_like(new_data, orig)
 
     def test_unsupported_type(self):
         # Non indexable type

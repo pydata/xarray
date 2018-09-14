@@ -76,8 +76,8 @@ Enhancements
 - You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
   By `Julia Signell <https://github.com/jsignell>`_.
 
-- Added ``structured_like`` to create a new Variable or DataArray with the same metadata as an existing
-  object but using new values.
+- Added the ability to pass a data kwarg to ``copy`` to create a new object with the
+  same metadata as the original object but using new values.
   By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes

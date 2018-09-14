@@ -14,7 +14,7 @@ from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
 from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
-from xarray.core.common import full_like, structured_like
+from xarray.core.common import full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
@@ -3138,6 +3138,18 @@ class TestDataArray(TestCase):
         expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
         assert_identical(expected, actual)
 
+    def test_copy_with_data(self):
+        orig = DataArray(np.random.random(size=(2, 2)),
+                         dims=('x', 'y'),
+                         attrs={'attr1': 'value1'},
+                         coords={'x': [4, 3]},
+                         name='helloworld')
+        new_data = np.arange(4).reshape(2, 2)
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
     def test_real_and_imag(self):
         array = DataArray(1 + 2j)
         assert_identical(array.real, DataArray(1))
@@ -3170,19 +3182,6 @@ class TestDataArray(TestCase):
         expect.values = [[True, True], [True, True]]
         assert expect.dtype == bool
         assert_identical(expect, actual)
-
-    def test_structured_like(self):
-        # For more thorough tests, see test_variable.py
-        orig = DataArray(np.random.random(size=(2, 2)),
-                         dims=('x', 'y'),
-                         attrs={'attr1': 'value1'},
-                         coords={'x': [4, 3]},
-                         name='helloworld')
-        new_data = np.arange(4).reshape(2, 2)
-        actual = structured_like(new_data, orig)
-        expected = orig.copy()
-        expected.data = new_data
-        assert_identical(expected, actual)
 
     def test_dot(self):
         x = np.linspace(-3, 3, 6)

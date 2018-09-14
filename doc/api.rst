@@ -24,7 +24,6 @@ Top-level functions
    full_like
    zeros_like
    ones_like
-   structured_like
    dot
 
 Dataset

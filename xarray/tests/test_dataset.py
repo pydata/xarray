@@ -16,7 +16,7 @@ from xarray import (
     DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
     broadcast, open_dataset, set_options)
 from xarray.core import indexing, utils
-from xarray.core.common import full_like, structured_like
+from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
 
@@ -1891,6 +1891,22 @@ class TestDataset(TestCase):
             for k, v0 in data.variables.items():
                 v1 = copied.variables[k]
                 assert v0 is not v1
+
+    def test_copy_with_data(self):
+        orig = create_test_data()
+        new_var1 = np.arange(orig['var1'].size).reshape(orig['var1'].shape)
+        actual = orig.copy(data={'var1': new_var1})
+        expected = orig.copy()[['var1']]
+        expected['var1'].data = new_var1
+        assert_identical(expected, actual)
+
+    def test_copy_with_data_errors(self):
+        orig = create_test_data()
+        new_var1 = np.arange(orig['var1'].size).reshape(orig['var1'].shape)
+        with raises_regex(ValueError, 'Data must be dict-like'):
+            orig.copy(data=new_var1)
+        with raises_regex(ValueError, 'contained in the original dataset'):
+            orig.copy(data={'not_in_original': new_var1})
 
     def test_rename(self):
         data = create_test_data()
@@ -4049,11 +4065,6 @@ class TestDataset(TestCase):
         assert expect['d1'].dtype == bool
         assert expect['d2'].dtype == bool
         assert_identical(expect, actual)
-
-    def test_structured_like(self):
-        # this is not allowed
-        with raises_regex(TypeError, 'Expected DataArray, or Variable'):
-            structured_like(None, Dataset())
 
     def test_combine_first(self):
         dsx0 = DataArray([0, 0], [('x', ['a', 'b'])]).to_dataset(name='dsx0')
