@@ -165,7 +165,7 @@ def test_to_offset_annual(month_label, month_int, multiple, offset_str):
     assert result == expected
 
 
-@pytest.mark.parametrize('freq', ['Z', '7min2', 'AM', 'M-', 'AS-'])
+@pytest.mark.parametrize('freq', ['Z', '7min2', 'AM', 'M-', 'AS-', '1H1min'])
 def test_invalid_to_offset_str(freq):
     with pytest.raises(ValueError):
         to_offset(freq)
@@ -748,3 +748,54 @@ def test_cftime_range_name():
 def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
     with pytest.raises(ValueError):
         cftime_range(start, end, periods, freq, closed=closed)
+
+
+_CALENDAR_SPECIFIC_MONTH_END_TESTS = [
+    ('2M', 'noleap',
+     [(2, 28), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ('2M', 'all_leap',
+     [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ('2M', '360_day',
+     [(2, 30), (4, 30), (6, 30), (8, 30), (10, 30), (12, 30)]),
+    ('2M', 'standard',
+     [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ('2M', 'gregorian',
+     [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)]),
+    ('2M', 'julian',
+     [(2, 29), (4, 30), (6, 30), (8, 31), (10, 31), (12, 31)])
+]
+
+
+@pytest.mark.parametrize(
+    ('freq', 'calendar', 'expected_month_day'),
+    _CALENDAR_SPECIFIC_MONTH_END_TESTS, ids=_id_func
+)
+def test_calendar_specific_month_end(freq, calendar, expected_month_day):
+    year = 2000  # Use a leap-year to highlight calendar differences
+    result = cftime_range(
+        start='2000-02', end='2001', freq=freq, calendar=calendar).values
+    date_type = get_date_type(calendar)
+    expected = [date_type(year, *args) for args in expected_month_day]
+    np.testing.assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ('calendar', 'start', 'end', 'expected_number_of_days'),
+    [('noleap', '2000', '2001', 365),
+     ('all_leap', '2000', '2001', 366),
+     ('360_day', '2000', '2001', 360),
+     ('standard', '2000', '2001', 366),
+     ('gregorian', '2000', '2001', 366),
+     ('julian', '2000', '2001', 366),
+     ('noleap', '2001', '2002', 365),
+     ('all_leap', '2001', '2002', 366),
+     ('360_day', '2001', '2002', 360),
+     ('standard', '2001', '2002', 365),
+     ('gregorian', '2001', '2002', 365),
+     ('julian', '2001', '2002', 365)]
+)
+def test_calendar_leap_year_length(
+        calendar, start, end, expected_number_of_days):
+    result = cftime_range(start, end, freq='D', closed='left',
+                          calendar=calendar)
+    assert len(result) == expected_number_of_days
