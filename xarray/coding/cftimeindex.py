@@ -274,28 +274,3 @@ class CFTimeIndex(pd.Index):
     def contains(self, key):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
-
-    def __unicode__(self):
-        """Return a string representation for this object.
-
-        Adds a calendar attribute to denote the calendar type of the index.
-        Adapted from pandas.core.indexes.base.__unicode__
-        """
-        klass = self.__class__.__name__
-        data = self._format_data()
-        attrs = self._format_attrs()
-        space = self._format_space()
-
-        if self.date_type is None:
-            attrs.append(('calendar', None))
-        else:
-            attrs.append(('calendar', repr(infer_calendar_name(self._data))))
-
-        prepr = (pd.compat.u(",%s") %
-                 space).join(pd.compat.u("%s=%s") % (k, v) for k, v in attrs)
-
-        # no data provided, just attributes
-        if data is None:
-            data = ''
-
-        return pd.compat.u("%s(%s%s)") % (klass, data, prepr)

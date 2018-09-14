@@ -618,23 +618,3 @@ def test_concat_cftimeindex(date_type, enable_cftimeindex):
 def test_empty_cftimeindex():
     index = CFTimeIndex([])
     assert index.date_type is None
-
-
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_cftimeindex_repr(date_type):
-    index = CFTimeIndex([date_type(1, 1, 1)])
-    result = repr(index)
-    expected = ("CFTimeIndex([0001-01-01 00:00:00], "
-                "dtype='object', calendar={})")
-    expected = expected.format(repr(infer_calendar_name(index._data)))
-    assert result == expected
-
-
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-def test_cftimeindex_repr_empty():
-    index = CFTimeIndex([])
-    result = repr(index)
-    expected = ("CFTimeIndex([], "
-                "dtype='object', calendar={})")
-    expected = expected.format(None)
-    assert result == expected
