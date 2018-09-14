@@ -1894,10 +1894,13 @@ class TestDataset(TestCase):
 
     def test_copy_with_data(self):
         orig = create_test_data()
-        new_var1 = np.arange(orig['var1'].size).reshape(orig['var1'].shape)
-        actual = orig.copy(data={'var1': new_var1})
-        expected = orig.copy()[['var1']]
-        expected['var1'].data = new_var1
+        new_data = {k: np.random.randn(*v.shape)
+                    for k, v in iteritems(orig.data_vars)}
+        actual = orig.copy(data=new_data)
+
+        expected = orig.copy()
+        for k, v in new_data.items():
+            expected[k].data = v
         assert_identical(expected, actual)
 
     def test_copy_with_data_errors(self):
@@ -1905,8 +1908,10 @@ class TestDataset(TestCase):
         new_var1 = np.arange(orig['var1'].size).reshape(orig['var1'].shape)
         with raises_regex(ValueError, 'Data must be dict-like'):
             orig.copy(data=new_var1)
-        with raises_regex(ValueError, 'contained in the original dataset'):
+        with raises_regex(ValueError, 'only contain variables in original'):
             orig.copy(data={'not_in_original': new_var1})
+        with raises_regex(ValueError, 'contain all variables in original'):
+            orig.copy(data={'var1': new_var1})
 
     def test_rename(self):
         data = create_test_data()

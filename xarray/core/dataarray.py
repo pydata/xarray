@@ -685,16 +685,17 @@ class DataArray(AbstractArray, DataWithCoords):
         array's dataset is also a variable in this array's dataset.
 
         Use `data` to create a new object with the same structure as
-        original but entirely new data. When `data` is used, `deep` is ignored.
+        original but entirely new data.
 
         Parameters
         ----------
         deep : bool, optional
-            Whether the data array is loaded into memory and copied onto
-            the new object. Default is True.
+            Whether the data array and its coordinates are loaded into memory
+            and copied onto the new object. Default is True.
         data : array_like, optional
             Data to use in the new object. Must have same shape as original.
-            If `data` is set, deep is ignored.
+            When `data` is used, `deep` is ignored for all data variables,
+            and only used for coords.
 
         Returns
         -------

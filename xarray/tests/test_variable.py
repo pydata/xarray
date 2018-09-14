@@ -516,7 +516,7 @@ class VariableSubclassTestCases(object):
     def test_copy_with_data_errors(self):
         orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
         new_data = [2.5, 5.0]
-        with raises_regex(ValueError, 'shape should match shape of object'):
+        with raises_regex(ValueError, 'must match shape of object'):
             orig.copy(data=new_data)
 
     def test_real_and_imag(self):

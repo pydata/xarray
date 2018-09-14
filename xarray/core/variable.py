@@ -728,7 +728,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         the new object. Dimensions, attributes and encodings are always copied.
 
         Use `data` to create a new object with the same structure as
-        original but entirely new data. When `data` is used, `deep` is ignored.
+        original but entirely new data.
 
         Parameters
         ----------
@@ -737,7 +737,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             the new object. Default is True.
         data : array_like, optional
             Data to use in the new object. Must have same shape as original.
-            If `data` is set, deep is ignored.
+            When `data` is used, `deep` is ignored.
 
         Returns
         -------
@@ -794,7 +794,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             data = as_compatible_data(data)
             if self.shape != data.shape:
-                raise ValueError("Data shape should match shape of object")
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
 
         # note:
         # dims is already an immutable tuple
@@ -1765,12 +1766,12 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
-        `deep` is ignored since data is stored in the form of pandas.Index,
-        which is already immutable. Dimensions, attributes and encodings are
-        always copied.
+        `deep` and `data` are ignored since data is stored in the form of
+        pandas.Index, which is already immutable. Dimensions, attributes
+        and encodings are always copied.
         """
         return type(self)(self.dims, self._data, self._attrs,
                           self._encoding, fastpath=True)
