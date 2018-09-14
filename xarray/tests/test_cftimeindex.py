@@ -10,8 +10,6 @@ from datetime import timedelta
 from xarray.coding.cftimeindex import (
     parse_iso8601, CFTimeIndex, assert_all_valid_date_type,
     _parsed_string_to_bounds, _parse_iso8601_with_reso)
-from xarray.coding.cftime_offsets import get_date_type, YearBegin
-from xarray.coding.times import infer_calendar_name
 from xarray.tests import assert_array_equal, assert_identical
 
 from . import has_cftime, has_cftime_or_netCDF4

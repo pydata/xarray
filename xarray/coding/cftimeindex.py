@@ -7,7 +7,6 @@ import pandas as pd
 
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
-from .times import infer_calendar_name
 
 
 def named(name, pattern):
