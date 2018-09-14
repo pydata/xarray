@@ -11,7 +11,8 @@ from xarray.coding.cftime_offsets import (
     to_offset, get_date_type, _MONTH_ABBREVIATIONS, _cftime_range,
     to_cftime_datetime, cftime_range)
 from xarray import CFTimeIndex
-from . import has_cftime
+
+cftime = pytest.importorskip('cftime')
 
 
 _CFTIME_CALENDARS = ['365_day', '360_day', 'julian', 'all_leap',
@@ -171,7 +172,6 @@ def test_invalid_to_offset_str(freq):
         to_offset(freq)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('argument', 'expected_date_args'),
     [('2000-01-01', (2000, 1, 1)),
@@ -187,13 +187,11 @@ def test_to_cftime_datetime(calendar, argument, expected_date_args):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_to_cftime_datetime_error_no_calendar():
     with pytest.raises(ValueError):
         to_cftime_datetime('2000')
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_to_cftime_datetime_error_type_error():
     with pytest.raises(TypeError):
         to_cftime_datetime(1)
@@ -279,7 +277,6 @@ _ADD_TESTS = [
 ]
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('offset', 'expected_date_args'),
     _ADD_TESTS,
@@ -293,7 +290,6 @@ def test_add_sub_monthly(offset, expected_date_args, calendar):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('offset', 'expected_date_args'),
     _ADD_TESTS,
@@ -307,7 +303,6 @@ def test_radd_sub_monthly(offset, expected_date_args, calendar):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('offset', 'expected_date_args'),
     [(Day(n=2), (1, 1, 1)),
@@ -324,7 +319,6 @@ def test_rsub_sub_monthly(offset, expected_date_args, calendar):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize('offset', _EQ_TESTS_A, ids=_id_func)
 def test_sub_error(offset, calendar):
     date_type = get_date_type(calendar)
@@ -333,7 +327,6 @@ def test_sub_error(offset, calendar):
         offset - initial
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('a', 'b'),
     zip(_EQ_TESTS_A, _EQ_TESTS_B),
@@ -345,7 +338,6 @@ def test_minus_offset(a, b):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('a', 'b'),
     list(zip(np.roll(_EQ_TESTS_A, 1), _EQ_TESTS_B)) +
@@ -357,14 +349,12 @@ def test_minus_offset_error(a, b):
         b - a
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_days_in_month_non_december(calendar):
     date_type = get_date_type(calendar)
     reference = date_type(1, 4, 1)
     assert _days_in_month(reference) == 30
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_days_in_month_december(calendar):
     if calendar == '360_day':
         expected = 30
@@ -375,7 +365,6 @@ def test_days_in_month_december(calendar):
     assert _days_in_month(reference) == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_date_args', 'offset', 'expected_date_args'),
     [((1, 1, 1), MonthBegin(), (1, 2, 1)),
@@ -402,7 +391,6 @@ def test_add_month_begin(
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_date_args', 'offset', 'expected_year_month',
      'expected_sub_day'),
@@ -433,7 +421,6 @@ def test_add_month_end(
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_year_month', 'initial_sub_day', 'offset', 'expected_year_month',
      'expected_sub_day'),
@@ -468,7 +455,6 @@ def test_add_month_end_onOffset(
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_date_args', 'offset', 'expected_date_args'),
     [((1, 1, 1), YearBegin(), (2, 1, 1)),
@@ -490,7 +476,6 @@ def test_add_year_begin(calendar, initial_date_args, offset,
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_date_args', 'offset', 'expected_year_month',
      'expected_sub_day'),
@@ -520,7 +505,6 @@ def test_add_year_end(
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('initial_year_month', 'initial_sub_day', 'offset', 'expected_year_month',
      'expected_sub_day'),
@@ -555,7 +539,6 @@ def test_add_year_end_onOffset(
 
 
 # Note for all sub-monthly offsets, pandas always returns True for onOffset
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('date_args', 'offset', 'expected'),
     [((1, 1, 1), MonthBegin(), True),
@@ -580,7 +563,6 @@ def test_onOffset(calendar, date_args, offset, expected):
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('year_month_args', 'sub_day_args', 'offset'),
     [((1, 1), (), MonthEnd()),
@@ -600,7 +582,6 @@ def test_onOffset_month_or_year_end(
     assert result
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('offset', 'initial_date_args', 'partial_expected_date_args'),
     [(YearBegin(), (1, 3, 1), (2, 1)),
@@ -641,7 +622,6 @@ def test_rollforward(calendar, offset, initial_date_args,
     assert result == expected
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('offset', 'initial_date_args', 'partial_expected_date_args'),
     [(YearBegin(), (1, 3, 1), (1, 1)),
@@ -713,7 +693,6 @@ _CFTIME_RANGE_TESTS = [
 ]
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('start', 'end', 'periods', 'freq', 'closed', 'normalize',
      'expected_date_args'),
@@ -742,7 +721,6 @@ def test_private_cftime_range(
         assert np.max(np.abs(deltas)) < 0.001
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('start', 'end', 'periods', 'freq', 'closed'),
     [(None, None, 5, 'A', None),
@@ -758,7 +736,6 @@ def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
         _cftime_range(start, end, periods, freq, closed=closed)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(
     ('start', 'end', 'periods', 'freq', 'name'),
     [('0001', None, 5, 'A', 'foo'),
@@ -775,7 +752,6 @@ def test_cftime_range(start, end, periods, freq, name, calendar):
     assert result.name == name
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_cftime_range_invalid_tz_input(calendar):
     with pytest.raises(ValueError):
         cftime_range('0001', '0002', None, 'M', tz='Asia/Hong_Kong',
