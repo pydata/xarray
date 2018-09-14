@@ -794,7 +794,7 @@ def test_calendar_specific_month_end(freq, calendar, expected_month_day):
      ('gregorian', '2001', '2002', 365),
      ('julian', '2001', '2002', 365)]
 )
-def test_calendar_leap_year_length(
+def test_calendar_year_length(
         calendar, start, end, expected_number_of_days):
     result = cftime_range(start, end, freq='D', closed='left',
                           calendar=calendar)
