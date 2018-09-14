@@ -745,14 +745,5 @@ def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
 def test_cftime_range(start, end, periods, freq, name, calendar):
     result = cftime_range(start, end, periods,
                           freq, name=name, calendar=calendar)
-    if start == '2000' and calendar == 'standard':
-        assert isinstance(result, pd.DatetimeIndex)
-    else:
-        assert isinstance(result, CFTimeIndex)
+    assert isinstance(result, CFTimeIndex)
     assert result.name == name
-
-
-def test_cftime_range_invalid_tz_input(calendar):
-    with pytest.raises(ValueError):
-        cftime_range('0001', '0002', None, 'M', tz='Asia/Hong_Kong',
-                     calendar=calendar)

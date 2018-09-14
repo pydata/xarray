@@ -630,23 +630,18 @@ def _cftime_range(start=None, end=None, periods=None, freq=None,
 def cftime_range(start=None, end=None, periods=None, freq='D',
                  tz=None, normalize=False, name=None, closed=None,
                  calendar='standard'):
-    """Return a fixed frequency DatetimeIndex or CFTimeIndex.
+    """Return a fixed frequency CFTimeIndex.
 
     Parameters
     ----------
-    start : str or datetime-like, optional
+    start : str or cftime.datetime, optional
         Left bound for generating dates.
-    end : str or datetime-like, optional
+    end : str or cftime.datetime, optional
         Right bound for generating dates.
     periods : integer, optional
         Number of periods to generate.
-    freq : str, default 'D', DateOffset, BaseCFTimeOffset, or None
+    freq : str, default 'D', BaseCFTimeOffset, or None
        Frequency strings can have multiples, e.g. '5H'.
-    tz : str or tzinfo, optional
-        Time zone name for returning localized DatetimeIndex, for example
-        'Asia/Hong_Kong'.  By default, the resulting DatetimeIndex is
-        timezone-naive.  This option is only supported for 'standard'
-        calendar dates that result in a DatetimeIndex.
     normalize : bool, default False
         Normalize start/end dates to midnight before generating date range.
     name : str, default None
@@ -659,10 +654,26 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
 
     Returns
     -------
-    DatetimeIndex or CFTimeIndex
+    CFTimeIndex
 
     Notes
     -----
+
+    This function is an analog of ``pandas.date_range`` for use in generating
+    sequences of ``cftime.datetime`` objects.  It supports most of the
+    features of ``pandas.date_range`` (e.g. specifying how the index is
+    ``closed`` on either side, or whether or not to ``normalize`` the start and
+    end bounds); however, there are some notable exceptions:
+
+    - You cannot specify a ``tz`` (time zone) argument.
+    - Start or end dates specified as partial-datetime strings must use the
+      `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
+    - It supports many, but not all, frequencies supported by
+      ``pandas.date_range``.  For example it does not currently support any of
+      the business-related, semi-monthly, or sub-second frequencies.
+    - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
+      these can easily be written in terms of the finest common resolution,
+      e.g. '61min'.
 
     Valid simple frequency strings for use with ``cftime``-calendars include
     any multiples of the following.
@@ -719,70 +730,32 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
 
     Finally, the following calendar aliases are supported.
 
-    +----------------------+-------------------------------------------------------------------------+
-    | Alias                | Date type                                                               |
-    +======================+=========================================================================+
-    | standard             | ``np.datetime64`` (falls back to ``cftime.DatetimeProlepticGregorian``) |
-    +----------------------+-------------------------------------------------------------------------+
-    | gregorian            | ``cftime.DatetimeGregorian``                                            |
-    +----------------------+-------------------------------------------------------------------------+
-    | proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian``                                   |
-    +----------------------+-------------------------------------------------------------------------+
-    | noleap, 365_day      | ``cftime.DatetimeNoLeap``                                               |
-    +----------------------+-------------------------------------------------------------------------+
-    | all_leap, 366_day    | ``cftime.DatetimeAllLeap``                                              |
-    +----------------------+-------------------------------------------------------------------------+
-    | 360_day              | ``cftime.Datetime360Day``                                               |
-    +----------------------+-------------------------------------------------------------------------+
-    | julian               | ``cftime.DatetimeJulian``                                               |
-    +----------------------+-------------------------------------------------------------------------+
-
-    The ``CFTimeIndex``-enabled portion of this function supports most of the
-    features of ``pandas.date_range`` (e.g. specifying how the index is
-    ``closed`` on either side, or whether or not to ``normalize`` the start and
-    end bounds).  Notable exceptions, however, are:
-
-    - You cannot specify a ``tz`` (time zone) argument for a date range that
-      results in a ``CFTimeIndex``.
-    - Start or end dates specified as partial-datetime strings must use the
-      `ISO-8601 format <https://en.wikipedia.org/wiki/ISO_8601>`_.
-    - The ``CFTimeIndex``-enabled version of the function supports many, but
-      not all frequencies supported by the ``DatetimeIndex`` version.  For
-      example it does not currently support any of the business-related,
-      semi-monthly, or sub-second frequencies.
-    - Compound sub-monthly frequencies are not supported, e.g. '1H1min', as
-      these can easily be written in terms of the finest common resolution,
-      e.g. '61min'.
+    +--------------------------------+---------------------------------------+
+    | Alias                          | Date type                             |
+    +================================+=======================================+
+    | standard, proleptic_gregorian  | ``cftime.DatetimeProlepticGregorian`` |
+    +--------------------------------+---------------------------------------+
+    | gregorian                      | ``cftime.DatetimeGregorian``          |
+    +--------------------------------+---------------------------------------+
+    | noleap, 365_day                | ``cftime.DatetimeNoLeap``             |
+    +--------------------------------+---------------------------------------+
+    | all_leap, 366_day              | ``cftime.DatetimeAllLeap``            |
+    +--------------------------------+---------------------------------------+
+    | 360_day                        | ``cftime.Datetime360Day``             |
+    +--------------------------------+---------------------------------------+
+    | julian                         | ``cftime.DatetimeJulian``             |
+    +--------------------------------+---------------------------------------+
 
     Examples
     --------
 
-    For dates from standard calendars within the ``pandas.Timestamp``-valid
-    range, this function operates as a thin wrapper around
-    ``pandas.date_range``.
-
-    >>> xr.cftime_range(start='2000', periods=6, freq='2MS')
-    DatetimeIndex(['2000-01-01', '2000-03-01', '2000-05-01', '2000-07-01',
-                   '2000-09-01', '2000-11-01'],
-                  dtype='datetime64[ns]', freq='2MS')
-
-    For dates from non-standard calendars, this function returns a
-    ``CFTimeIndex``, populated with ``cftime.datetime`` objects associated with
-    the specified calendar type, e.g.
+    This function returns a ``CFTimeIndex``, populated with ``cftime.datetime``
+    objects associated with the specified calendar type, e.g.
 
     >>> xr.cftime_range(start='2000', periods=6, freq='2MS', calendar='noleap')
     CFTimeIndex([2000-01-01 00:00:00, 2000-03-01 00:00:00, 2000-05-01 00:00:00,
                  2000-07-01 00:00:00, 2000-09-01 00:00:00, 2000-11-01 00:00:00],
                 dtype='object', calendar='noleap')
-
-    If a 'standard' calendar is specified, but the dates are outside the
-    ``pandas.Timestamp``-valid range, a ``CFTimeIndex`` composed of
-    ``cftime.DatetimeProlepticGregorian`` objects will be returned.
-
-    >>> xr.cftime_range(start='0001', periods=6, freq='2MS', calendar='standard')
-    CFTimeIndex([0001-01-01 00:00:00, 0001-03-01 00:00:00, 0001-05-01 00:00:00,
-                 0001-07-01 00:00:00, 0001-09-01 00:00:00, 0001-11-01 00:00:00],
-                dtype='object', calendar='proleptic_gregorian')
 
     As in the standard pandas function, three of the ``start``, ``end``,
     ``periods``, or ``freq`` arguments must be specified at a given time, with
@@ -795,25 +768,6 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     --------
     pandas.date_range
     """  # noqa: E501
-    if calendar == 'standard':
-        try:
-            return pd.date_range(
-                start=start, end=end, periods=periods,
-                freq=freq, tz=tz, normalize=normalize, name=name,
-                closed=closed)
-        except OutOfBoundsDatetime:
-            if tz is not None:
-                raise ValueError(
-                    "'tz' can only be specified if the resulting"
-                    "index is a DatetimeIndex.")
-            return CFTimeIndex(start=start, end=end, periods=periods,
-                               freq=freq, closed=closed, normalize=normalize,
-                               calendar=calendar, name=name)
-    else:
-        if tz is not None:
-            raise ValueError(
-                "'tz' cannot be specified for non-standard calendars."
-            )
-        return CFTimeIndex(start=start, end=end, periods=periods,
-                           freq=freq, closed=closed, normalize=normalize,
-                           calendar=calendar, name=name)
+    return CFTimeIndex(start=start, end=end, periods=periods,
+                       freq=freq, closed=closed, normalize=normalize,
+                       calendar=calendar, name=name)
