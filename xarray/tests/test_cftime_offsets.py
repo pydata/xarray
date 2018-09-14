@@ -3,13 +3,12 @@ import pytest
 from itertools import product
 
 import numpy as np
-import pandas as pd
 
 from xarray.coding.cftime_offsets import (
     BaseCFTimeOffset, YearBegin, YearEnd, MonthBegin, MonthEnd,
     Day, Hour, Minute, Second, _days_in_month,
-    to_offset, get_date_type, _MONTH_ABBREVIATIONS, _cftime_range,
-    to_cftime_datetime, cftime_range)
+    to_offset, get_date_type, _MONTH_ABBREVIATIONS, to_cftime_datetime,
+    cftime_range)
 from xarray import CFTimeIndex
 
 cftime = pytest.importorskip('cftime')
@@ -698,27 +697,42 @@ _CFTIME_RANGE_TESTS = [
      'expected_date_args'),
     _CFTIME_RANGE_TESTS, ids=_id_func
 )
-def test_private_cftime_range(
+def test_cftime_range(
         start, end, periods, freq, closed, normalize, calendar,
         expected_date_args):
     date_type = get_date_type(calendar)
+    expected_dates = [date_type(*args) for args in expected_date_args]
+
     if isinstance(start, tuple):
         start = date_type(*start)
     if isinstance(end, tuple):
         end = date_type(*end)
-    result = _cftime_range(
-        start, end, periods, freq, closed, normalize, calendar)
-    expected = [date_type(*args) for args in expected_date_args]
+
+    result = cftime_range(
+        start=start, end=end, periods=periods, freq=freq, closed=closed,
+        normalize=normalize, calendar=calendar)
+    resulting_dates = result.values
+
+    assert isinstance(result, CFTimeIndex)
+
     if freq is not None:
-        np.testing.assert_equal(result, expected)
+        np.testing.assert_equal(resulting_dates, expected_dates)
     else:
         # If we create a linear range of dates using cftime.num2date
         # we will not get exact round number dates.  This is because
         # datetime arithmetic in cftime is accurate approximately to
         # 1 millisecond (see https://unidata.github.io/cftime/api.html).
-        deltas = result - expected
+        deltas = resulting_dates - expected_dates
         deltas = np.array([delta.total_seconds() for delta in deltas])
         assert np.max(np.abs(deltas)) < 0.001
+
+
+def test_cftime_range_name():
+    result = cftime_range(start='2000', periods=4, name='foo')
+    assert result.name == 'foo'
+
+    result = cftime_range(start='2000', periods=4)
+    assert result.name is None
 
 
 @pytest.mark.parametrize(
@@ -733,17 +747,4 @@ def test_private_cftime_range(
 )
 def test_invalid_cftime_range_inputs(start, end, periods, freq, closed):
     with pytest.raises(ValueError):
-        _cftime_range(start, end, periods, freq, closed=closed)
-
-
-@pytest.mark.parametrize(
-    ('start', 'end', 'periods', 'freq', 'name'),
-    [('0001', None, 5, 'A', 'foo'),
-     ('2000', None, 5, 'A', 'foo'),
-     ('2000', '1999', None, 'A', 'foo')]
-)
-def test_cftime_range(start, end, periods, freq, name, calendar):
-    result = cftime_range(start, end, periods,
-                          freq, name=name, calendar=calendar)
-    assert isinstance(result, CFTimeIndex)
-    assert result.name == name
+        cftime_range(start, end, periods, freq, closed=closed)

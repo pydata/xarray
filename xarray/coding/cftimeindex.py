@@ -142,31 +142,14 @@ def assert_all_valid_date_type(data):
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
-    All elements of a CFTimeIndex must be cftime.datetime objects.  Note unlike
-    :py:func:`cftime_range`, if the 'standard' calendar is specified in the
-    CFTimeIndex constructor, ``cftime.DatetimeProlepticGregorian`` objects will
-    always be used, regardless of whether the dates can be represented using a
-    DatetimeIndex.
+    All elements of a CFTimeIndex must be cftime.datetime objects.
 
     Parameters
     ----------
-    start : str or datetime-like, optional
-        Left bound for generating dates.
-    end : str or datetime-like, optional
-        Right bound for generating dates.
-    periods : integer, optional
-        Number of periods to generate.
-    freq : str, default 'D', BaseCFTimeOffset, or None
-       Frequency strings can have multiples, e.g. '5H'.
-    normalize : bool, default False
-        Normalize start/end dates to midnight before generating date range.
+    data : array or CFTimeIndex
+        Sequence of cftime.datetime objects to use in index
     name : str, default None
         Name of the resulting index
-    closed : {None, 'left', 'right'}, optional
-        Make the interval closed with respect to the given frequency to the
-        'left', 'right', or both sides (None, the default).
-    calendar : str
-        Calendar type for the datetimes (default 'standard').
 
     See Also
     --------
@@ -182,17 +165,9 @@ class CFTimeIndex(pd.Index):
                                   'The microseconds of the datetime')
     date_type = property(get_date_type)
 
-    def __new__(cls, data=None, start=None, end=None, periods=None, freq='D',
-                normalize=False, name=None, closed=None, calendar='standard'):
+    def __new__(cls, data, name=None):
         if name is None and hasattr(data, 'name'):
             name = data.name
-
-        if data is None:
-            from .cftime_offsets import _cftime_range
-            data = _cftime_range(
-                start=start, end=end, periods=periods,
-                freq=freq, normalize=normalize, closed=closed,
-                calendar=calendar)
 
         result = object.__new__(cls)
         result._data = np.array(data, dtype='O')

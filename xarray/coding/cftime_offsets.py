@@ -47,17 +47,10 @@ from datetime import timedelta
 from functools import partial
 
 import numpy as np
-import pandas as pd
 
 from .cftimeindex import _parse_iso8601_with_reso, CFTimeIndex
 from .times import format_cftime_datetime
 from ..core.pycompat import basestring
-
-try:
-    from pandas.errors import OutOfBoundsDatetime
-except ImportError:
-    # pandas < 0.20
-    from pandas.tslib import OutOfBoundsDatetime
 
 
 def get_date_type(calendar):
@@ -558,75 +551,6 @@ def _count_not_none(*args):
     return sum([arg is not None for arg in args])
 
 
-def _cftime_range(start=None, end=None, periods=None, freq=None,
-                  closed=None, normalize=False, calendar='standard'):
-    """Generate a range of cftime.datetime objects from pandas.date_range-style
-    input arguments.
-
-    Adapted from pandas.core.indexes.datetimes._generate_range.
-
-    Parameters
-    ----------
-    start : str or cftime.datetime (optional)
-        Starting date for the range.
-    end : str or cftime.datetime (optional)
-        Ending date for the range.
-    periods : int (optional)
-        Number of dates in the range.
-    freq : str, BaseCFTimeOffset, or None
-        Frequency of dates in date range.
-    closed : {None, 'left', 'right'}
-        Make the interval closed with respect to the given frequency to
-        the 'left', 'right', or both sides (None).
-    normalize : bool (default False)
-        Normalize start/end dates to midnight before generating date range.
-    calendar : str (default 'standard')
-        Calendar type of the datetimes (default 'standard').
-
-    Returns
-    -------
-    list of cftime.datetime objects
-    """
-    if _count_not_none(start, end, periods, freq) != 3:
-        raise ValueError(
-            "Of the arguments 'start', 'end', 'periods', and 'freq', three "
-            "must be specified at a time.")
-
-    if start is not None:
-        start = to_cftime_datetime(start, calendar)
-        start = _maybe_normalize_date(start, normalize)
-    if end is not None:
-        end = to_cftime_datetime(end, calendar)
-        end = _maybe_normalize_date(end, normalize)
-
-    if freq is None:
-        dates = _generate_linear_range(start, end, periods)
-    else:
-        offset = to_offset(freq)
-        dates = np.array(list(_generate_range(start, end, periods, offset)))
-
-    left_closed = False
-    right_closed = False
-
-    if closed is None:
-        left_closed = True
-        right_closed = True
-    elif closed == 'left':
-        left_closed = True
-    elif closed == 'right':
-        right_closed = True
-    else:
-        raise ValueError("Closed must be either 'left', 'right' or None")
-
-    if (not left_closed and len(dates) and
-       start is not None and dates[0] == start):
-        dates = dates[1:]
-    if (not right_closed and len(dates) and
-       end is not None and dates[-1] == end):
-        dates = dates[:-1]
-    return dates
-
-
 def cftime_range(start=None, end=None, periods=None, freq='D',
                  tz=None, normalize=False, name=None, closed=None,
                  calendar='standard'):
@@ -768,6 +692,43 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
     --------
     pandas.date_range
     """  # noqa: E501
-    return CFTimeIndex(start=start, end=end, periods=periods,
-                       freq=freq, closed=closed, normalize=normalize,
-                       calendar=calendar, name=name)
+    # Adapted from pandas.core.indexes.datetimes._generate_range.
+    if _count_not_none(start, end, periods, freq) != 3:
+        raise ValueError(
+            "Of the arguments 'start', 'end', 'periods', and 'freq', three "
+            "must be specified at a time.")
+
+    if start is not None:
+        start = to_cftime_datetime(start, calendar)
+        start = _maybe_normalize_date(start, normalize)
+    if end is not None:
+        end = to_cftime_datetime(end, calendar)
+        end = _maybe_normalize_date(end, normalize)
+
+    if freq is None:
+        dates = _generate_linear_range(start, end, periods)
+    else:
+        offset = to_offset(freq)
+        dates = np.array(list(_generate_range(start, end, periods, offset)))
+
+    left_closed = False
+    right_closed = False
+
+    if closed is None:
+        left_closed = True
+        right_closed = True
+    elif closed == 'left':
+        left_closed = True
+    elif closed == 'right':
+        right_closed = True
+    else:
+        raise ValueError("Closed must be either 'left', 'right' or None")
+
+    if (not left_closed and len(dates) and
+       start is not None and dates[0] == start):
+        dates = dates[1:]
+    if (not right_closed and len(dates) and
+       end is not None and dates[-1] == end):
+        dates = dates[:-1]
+
+    return CFTimeIndex(dates, name=name)
