@@ -364,6 +364,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     "Explicit coords or attrs cannot be passed to Dataset "
                     "constructor when a Dataset is supplied as first argument")
             self._set_init_vars_and_dims(data_vars.data_vars, data_vars.coords, compat='identical')
+            self.attrs = data_vars.attrs
         else:
             if data_vars is None:
                 data_vars = {}
