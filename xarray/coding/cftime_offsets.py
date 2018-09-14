@@ -106,7 +106,7 @@ class BaseCFTimeOffset(object):
         elif type(other) == type(self):
             return type(self)(self.n - other.n)
         else:
-            raise NotImplemented
+            return NotImplemented
 
     def __mul__(self, other):
         return type(self)(n=other * self.n)
@@ -121,6 +121,9 @@ class BaseCFTimeOffset(object):
         return self.__add__(other)
 
     def __rsub__(self, other):
+        if isinstance(other, BaseCFTimeOffset) and type(self) != type(other):
+            raise TypeError('Cannot subtract cftime offsets of differing '
+                            'types')
         return -self + other
 
     def __apply__(self):
@@ -287,7 +290,7 @@ class YearOffset(BaseCFTimeOffset):
         elif type(other) == type(self) and other.month == self.month:
             return type(self)(self.n - other.n, month=self.month)
         else:
-            raise NotImplemented
+            return NotImplemented
 
     def __mul__(self, other):
         return type(self)(n=other * self.n, month=self.month)
