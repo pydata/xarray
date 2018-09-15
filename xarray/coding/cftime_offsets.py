@@ -126,7 +126,7 @@ class BaseCFTimeOffset(object):
         return -self + other
 
     def __apply__(self):
-        raise NotImplementedError
+        return NotImplemented
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
