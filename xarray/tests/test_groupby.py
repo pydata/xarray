@@ -84,4 +84,26 @@ def test_groupby_input_mutation():
     assert_identical(array, array_copy)  # should not modify inputs
 
 
+def test_da_groupby_apply_func_args():
+
+    def func(arg1, arg2, arg3=0):
+        return arg1 + arg2 + arg3
+
+    array = xr.DataArray([1, 1, 1], [('x', [1, 2, 3])])
+    expected = xr.DataArray([3, 3, 3], [('x', [1, 2, 3])])
+    actual = array.groupby('x').apply(func, args=(1,), arg3=1)
+    assert_identical(expected, actual)
+
+
+def test_ds_groupby_apply_func_args():
+
+    def func(arg1, arg2, arg3=0):
+        return arg1 + arg2 + arg3
+
+    dataset = xr.Dataset({'foo': ('x', [1, 1, 1])}, {'x': [1, 2, 3]})
+    expected = xr.Dataset({'foo': ('x', [3, 3, 3])}, {'x': [1, 2, 3]})
+    actual = dataset.groupby('x').apply(func, args=(1,), arg3=1)
+    assert_identical(expected, actual)
+
+
 # TODO: move other groupby tests from test_dataset and test_dataarray over here
