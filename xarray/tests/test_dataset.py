@@ -2846,6 +2846,19 @@ class TestDataset(TestCase):
                 old_api = ds.resample('1D', dim='time', how=method)
             assert_identical(new_api, old_api)
 
+    def test_ds_resample_apply_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', freq='D', periods=3)
+        ds = xr.Dataset({'foo': ('time', [1.,1.,1.]),
+                         'time': times})
+        expected = xr.Dataset({'foo': ('time', [3.,3.,3.]),
+                               'time': times})
+        actual = ds.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(expected, actual)
+
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
                      coords={'c': 42}, attrs={'Conventions': 'None'})
