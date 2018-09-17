@@ -2292,7 +2292,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)
 
-    def differentiate(self, coord, edge_order=1, time_unit=None):
+    def differentiate(self, coord, edge_order=1, datetime_unit=None):
         """ Differentiate the array with the second order accurate central
         differences.
 
@@ -2302,7 +2302,7 @@ class DataArray(AbstractArray, DataWithCoords):
             The coordinate to be used to compute the gradient.
         edge_order: 1 or 2. Default 1
             N-th order accurate differences at the boundaries.
-        time_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
             'us', 'ns', 'ps', 'fs', 'as'}
             Unit to compute gradient. Only valid for datetime coordinate.
 
@@ -2340,7 +2340,7 @@ class DataArray(AbstractArray, DataWithCoords):
         Dimensions without coordinates: y
         """
         ds = self._to_temp_dataset().differentiate(
-            coord, edge_order, time_unit)
+            coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
 
