@@ -1769,11 +1769,34 @@ class IndexVariable(Variable):
     def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
-        `deep` and `data` are ignored since data is stored in the form of
+        `deep` is ignored since data is stored in the form of
         pandas.Index, which is already immutable. Dimensions, attributes
         and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Deep is always ignored.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+
+        Returns
+        -------
+        object : Variable
+            New object with dimensions, attributes, encodings, and optionally
+            data copied from original.
         """
-        return type(self)(self.dims, self._data, self._attrs,
+        if data is None:
+            data = self._data
+        else:
+            data = as_compatible_data(data)
+            if self.shape != data.shape:
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
+        return type(self)(self.dims, data, self._attrs,
                           self._encoding, fastpath=True)
 
     def equals(self, other, equiv=None):
