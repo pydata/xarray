@@ -2852,9 +2852,9 @@ class TestDataset(TestCase):
             return arg1.mean('time') + arg2 + arg3
 
         times = pd.date_range('2000', freq='D', periods=3)
-        ds = xr.Dataset({'foo': ('time', [1.,1.,1.]),
+        ds = xr.Dataset({'foo': ('time', [1., 1., 1.]),
                          'time': times})
-        expected = xr.Dataset({'foo': ('time', [3.,3.,3.]),
+        expected = xr.Dataset({'foo': ('time', [3., 3., 3.]),
                                'time': times})
         actual = ds.resample(time='D').apply(func, args=(1.,), arg3=1.)
         assert_identical(expected, actual)
