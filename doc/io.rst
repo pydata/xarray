@@ -480,7 +480,7 @@ servers that use CAS single sign-on. For example, to connect to servers
 that require NASA's URS authentication::
 
   import xarray as xr
-  from pydata.cas.urs import setup_session
+  from pydap.cas.urs import setup_session
 
   ds_url = 'https://gpm1.gesdisc.eosdis.nasa.gov/opendap/hyrax/example.nc'
 
