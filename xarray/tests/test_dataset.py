@@ -4548,18 +4548,18 @@ def test_gradient_datetime(dask):
         da = da.chunk({'x': 4})
 
     # along x
-    actual = da.differentiate('x', edge_order=1, time_unit='D')
+    actual = da.differentiate('x', edge_order=1, datetime_unit='D')
     expected_x = xr.DataArray(
         npcompat.gradient(
-            da, utils.to_numeric(da['x'], time_unit='D'),
+            da, utils.to_numeric(da['x'], datetime_unit='D'),
             axis=0, edge_order=1), dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
 
-    actual2 = da.differentiate('x', edge_order=1, time_unit='h')
+    actual2 = da.differentiate('x', edge_order=1, datetime_unit='h')
     assert np.allclose(actual, actual2 * 24)
 
     # for datetime variable
-    actual = da['x'].differentiate('x', edge_order=1, time_unit='D')
+    actual = da['x'].differentiate('x', edge_order=1, datetime_unit='D')
     assert np.allclose(actual, 1.0)
 
     # with different date unit
