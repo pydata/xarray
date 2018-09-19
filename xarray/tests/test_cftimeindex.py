@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import pytest
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -121,22 +122,42 @@ def dec_days(date_type):
         return 31
 
 
+@pytest.fixture
+def index_with_name(date_type):
+    dates = [date_type(1, 1, 1), date_type(1, 2, 1),
+             date_type(2, 1, 1), date_type(2, 2, 1)]
+    return CFTimeIndex(dates, name='foo')
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize(
+    ('name', 'expected_name'),
+    [('bar', 'bar'),
+     (None, 'foo')])
+def test_constructor_with_name(index_with_name, name, expected_name):
+    result = CFTimeIndex(index_with_name, name=name).name
+    assert result == expected_name
+
+
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_assert_all_valid_date_type(date_type, index):
     import cftime
     if date_type is cftime.DatetimeNoLeap:
-        mixed_date_types = [date_type(1, 1, 1),
-                            cftime.DatetimeAllLeap(1, 2, 1)]
+        mixed_date_types = np.array(
+            [date_type(1, 1, 1),
+             cftime.DatetimeAllLeap(1, 2, 1)])
     else:
-        mixed_date_types = [date_type(1, 1, 1),
-                            cftime.DatetimeNoLeap(1, 2, 1)]
+        mixed_date_types = np.array(
+            [date_type(1, 1, 1),
+             cftime.DatetimeNoLeap(1, 2, 1)])
     with pytest.raises(TypeError):
         assert_all_valid_date_type(mixed_date_types)
 
     with pytest.raises(TypeError):
-        assert_all_valid_date_type([1, date_type(1, 1, 1)])
+        assert_all_valid_date_type(np.array([1, date_type(1, 1, 1)]))
 
-    assert_all_valid_date_type([date_type(1, 1, 1), date_type(1, 2, 1)])
+    assert_all_valid_date_type(
+        np.array([date_type(1, 1, 1), date_type(1, 2, 1)]))
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
@@ -589,3 +610,9 @@ def test_concat_cftimeindex(date_type, enable_cftimeindex):
     else:
         assert isinstance(da.indexes['time'], pd.Index)
         assert not isinstance(da.indexes['time'], CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_empty_cftimeindex():
+    index = CFTimeIndex([])
+    assert index.date_type is None

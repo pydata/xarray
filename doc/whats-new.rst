@@ -54,6 +54,9 @@ Enhancements
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
+- A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
+  generating dates from standard or non-standard calendars.  By `Spencer Clark 
+  <https://github.com/spencerkclark>`_. 
 
 - When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
   (:issue:`2284`)

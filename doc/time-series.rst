@@ -258,7 +258,16 @@ coordinate with a no-leap calendar within a context manager setting the
    calendar, its times will be decoded into ``cftime.datetime`` objects,
    regardless of whether or not they can be represented using
    ``np.datetime64[ns]`` objects.
-                         
+
+xarray also includes a :py:func:`cftime_range` function, which enables creating a
+``CFTimeIndex`` with regularly-spaced dates.  For instance, we can create the
+same dates and DataArray we created above using:
+
+.. ipython:: python
+
+   dates = xr.cftime_range(start='0001', periods=24, freq='MS', calendar='noleap')
+   da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
+   
 For data indexed by a ``CFTimeIndex`` xarray currently supports:
 
 - `Partial datetime string indexing`_ using strictly `ISO 8601-format`_ partial
