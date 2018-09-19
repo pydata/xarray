@@ -110,13 +110,14 @@ NumFOCUS
 
 .. image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
    :scale: 25 %
+   :target: https://numfocus.org/
 
-Xarray is a fiscally sponsored project of NumFOCUS, a nonprofit dedicated
+Xarray is a fiscally sponsored project of NumFOCUS_, a nonprofit dedicated
 to supporting the open source scientific computing community. If you like
 Xarray and want to support our mission, please consider making a donation_
 to support our efforts.
 
-.. _donation: https://www.flipcause.com/secure/cause_pdetails/MjE3OQ==
+.. _donation: https://www.flipcause.com/secure/cause_pdetails/NDE2NTU=
 
 History
 -------
