@@ -258,6 +258,8 @@ def line(darray, *args, **kwargs):
     aspect : scalar, optional
         Aspect ratio of plot, so that ``aspect * size`` gives the width in
         inches. Only used if a ``size`` is provided.
+    axis_aspect: optional
+        Aspect ratio of axis. This is passed to `matplotlib.Axis.set_aspect()`
     size : scalar, optional
         If provided, create a new figure for the plot with the given size.
         Height (in inches) of each plot. See also: ``aspect``.
@@ -318,6 +320,7 @@ def line(darray, *args, **kwargs):
     xlim = kwargs.pop('xlim', None)
     ylim = kwargs.pop('ylim', None)
     add_legend = kwargs.pop('add_legend', True)
+    axis_aspect = kwargs.pop('axis_aspect', 'auto')
     _labels = kwargs.pop('_labels', True)
     if args is ():
         args = kwargs.pop('args', ())
@@ -354,7 +357,7 @@ def line(darray, *args, **kwargs):
             xlabels.set_ha('right')
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
-                 xticks, yticks, xlim, ylim)
+                 xticks, yticks, xlim, ylim, axis_aspect)
 
     return primitive
 
@@ -397,6 +400,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     yticks = kwargs.pop('yticks', None)
     xlim = kwargs.pop('xlim', None)
     ylim = kwargs.pop('ylim', None)
+    axis_aspect = kwargs.pop('axis_aspect', 'auto')
 
     no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
@@ -407,7 +411,7 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     ax.set_xlabel(label_from_attrs(darray))
 
     _update_axes(ax, xincrease, yincrease, xscale, yscale,
-                 xticks, yticks, xlim, ylim)
+                 xticks, yticks, xlim, ylim, axis_aspect)
 
     return primitive
 
@@ -415,7 +419,8 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
 def _update_axes(ax, xincrease, yincrease,
                  xscale=None, yscale=None,
                  xticks=None, yticks=None,
-                 xlim=None, ylim=None):
+                 xlim=None, ylim=None,
+                 axis_aspect='auto'):
     """
     Update axes with provided parameters
     """
@@ -452,6 +457,8 @@ def _update_axes(ax, xincrease, yincrease,
         ax.set_xlim(xlim)
     if ylim is not None:
         ax.set_ylim(ylim)
+
+    ax.set_aspect(axis_aspect)
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -562,6 +569,8 @@ def _plot2d(plotfunc):
         Adds colorbar to axis
     add_labels : Boolean, optional
         Use xarray metadata to label axes
+    axis_aspect: optional
+        Aspect ratio of axis. This is passed to `matplotlib.Axis.set_aspect()`
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -630,7 +639,7 @@ def _plot2d(plotfunc):
                     levels=None, infer_intervals=None, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
                     xscale=None, yscale=None, xticks=None, yticks=None,
-                    xlim=None, ylim=None, **kwargs):
+                    xlim=None, ylim=None, axis_aspect='auto', **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -781,7 +790,7 @@ def _plot2d(plotfunc):
             yincrease = None
 
         _update_axes(ax, xincrease, yincrease, xscale, yscale,
-                     xticks, yticks, xlim, ylim)
+                     xticks, yticks, xlim, ylim, axis_aspect)
 
         # Rotate dates on xlabels
         # Do this without calling autofmt_xdate so that x-axes ticks
@@ -804,7 +813,7 @@ def _plot2d(plotfunc):
                    levels=None, infer_intervals=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None,
                    xscale=None, yscale=None, xticks=None, yticks=None,
-                   xlim=None, ylim=None, **kwargs):
+                   xlim=None, ylim=None, axis_aspect='auto', **kwargs):
         """
         The method should have the same signature as the function.
 

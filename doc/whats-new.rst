@@ -66,6 +66,9 @@ Enhancements
   (:issue:`2394`)
   By `Julius Busecke <https://github.com/jbusecke>`_.
 
+- :py:meth:`plot()` now accepts the kwarg ``axis_aspect`` to set the Axes aspect ratio.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2406`)
+
 - min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
   :py:meth:`~xarray.Dataset.prod`.
@@ -80,6 +83,7 @@ Enhancements
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
+
 - A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
   generating dates from standard or non-standard calendars.  By `Spencer Clark
   <https://github.com/spencerkclark>`_.

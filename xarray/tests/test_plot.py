@@ -1804,3 +1804,9 @@ class TestAxesKwargs(object):
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
         assert np.all(plt.gca().get_yticks() == expected)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_axis_aspect_kwarg(self, da):
+        plt.clf()
+        da.plot(axis_aspect='equal')
+        assert plt.gca().get_aspect() == 'equal'
