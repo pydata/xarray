@@ -3138,6 +3138,18 @@ class TestDataArray(TestCase):
         expected = DataArray([3, 1, 2], coords=[('x', [2, 0, 1])])
         assert_identical(expected, actual)
 
+    def test_copy_with_data(self):
+        orig = DataArray(np.random.random(size=(2, 2)),
+                         dims=('x', 'y'),
+                         attrs={'attr1': 'value1'},
+                         coords={'x': [4, 3]},
+                         name='helloworld')
+        new_data = np.arange(4).reshape(2, 2)
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
     def test_real_and_imag(self):
         array = DataArray(1 + 2j)
         assert_identical(array.real, DataArray(1))

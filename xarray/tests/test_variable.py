@@ -505,6 +505,34 @@ class VariableSubclassTestCases(object):
             assert isinstance(w.to_index(), pd.MultiIndex)
             assert_array_equal(v._data.array, w._data.array)
 
+    def test_copy_with_data(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = np.array([[2.5, 5.0], [7.1, 43]])
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
+    def test_copy_with_data_errors(self):
+        orig = Variable(('x', 'y'), [[1.5, 2.0], [3.1, 4.3]], {'foo': 'bar'})
+        new_data = [2.5, 5.0]
+        with raises_regex(ValueError, 'must match shape of object'):
+            orig.copy(data=new_data)
+
+    def test_copy_index_with_data(self):
+        orig = IndexVariable('x', np.arange(5))
+        new_data = np.arange(5, 10)
+        actual = orig.copy(data=new_data)
+        expected = orig.copy()
+        expected.data = new_data
+        assert_identical(expected, actual)
+
+    def test_copy_index_with_data_errors(self):
+        orig = IndexVariable('x', np.arange(5))
+        new_data = np.arange(5, 20)
+        with raises_regex(ValueError, 'must match shape of object'):
+            orig.copy(data=new_data)
+
     def test_real_and_imag(self):
         v = self.cls('x', np.arange(3) - 1j * np.arange(3), {'foo': 'bar'})
         expected_re = self.cls('x', np.arange(3), {'foo': 'bar'})

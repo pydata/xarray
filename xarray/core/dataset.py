@@ -709,20 +709,124 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             obj = obj.rename(dim_names)
         return obj
 
-    def copy(self, deep=False):
+    def copy(self, deep=False, data=None):
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
         Otherwise, a shallow copy of each of the component variable is made, so
         that the underlying memory region of the new dataset is the same as in
         the original dataset.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Whether each component variable is loaded into memory and copied onto
+            the new object. Default is True.
+        data : dict-like, optional
+            Data to use in the new object. Each item in `data` must have same
+            shape as corresponding data variable in original. When `data` is
+            used, `deep` is ignored for the data variables and only used for
+            coords.
+
+        Returns
+        -------
+        object : Dataset
+            New object with dimensions, attributes, coordinates, name, encoding,
+            and optionally data copied from original.
+
+        Examples
+        --------
+
+        Shallow copy versus deep copy
+
+        >>> da = xr.DataArray(np.random.randn(2, 3))
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])}, 
+                            coords={'x': ['one', 'two']})
+        >>> ds.copy()
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 -0.8079 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+        >>> ds_0 = ds.copy(deep=False)
+        >>> ds_0['foo'][0, 0] = 7
+        >>> ds_0
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+
+        Changing the data using the ``data`` argument maintains the 
+        structure of the original object, but with the new data. Original
+        object is unaffected.
+
+        >>> ds.copy(data={'foo': np.arange(6).reshape(2, 3), 'bar': ['a', 'b']})
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) int64 0 1 2 3 4 5
+            bar      (x) <U1 'a' 'b'
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+
+        See Also
+        --------
+        pandas.DataFrame.copy
         """
-        variables = OrderedDict((k, v.copy(deep=deep))
-                                for k, v in iteritems(self._variables))
+        if data is None:
+            variables = OrderedDict((k, v.copy(deep=deep))
+                                    for k, v in iteritems(self._variables))
+        elif not utils.is_dict_like(data):
+            raise ValueError('Data must be dict-like')
+        else:
+            var_keys = set(self.data_vars.keys())
+            data_keys = set(data.keys())
+            keys_not_in_vars = data_keys - var_keys
+            if keys_not_in_vars:
+                raise ValueError('Data must only contain variables in original '
+                                 'dataset. Extra variables: {}'
+                                 .format(keys_not_in_vars))
+            keys_missing_from_data = var_keys - data_keys
+            if keys_missing_from_data:
+                raise ValueError('Data must contain all variables in original '
+                                 'dataset. Data is missing {}'
+                                 .format(keys_missing_from_data))
+            variables = OrderedDict((k, v.copy(deep=deep, data=data.get(k)))
+                                    for k, v in iteritems(self._variables))
+
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy(),
-                                      encoding=self.encoding)
+                                      encoding=self.encoding)  
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -3676,7 +3780,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
         containing only the variables for which all the filter tests pass.
-        These tests are either ``key=value`` for which the attribute ``key`` 
+        These tests are either ``key=value`` for which the attribute ``key``
         has the exact value ``value`` or the callable passed into
         ``key=callable`` returns True. The callable will be passed a single
         value, either the value of the attribute ``key`` or ``None`` if the
