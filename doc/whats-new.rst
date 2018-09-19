@@ -36,8 +36,8 @@ Documentation
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:func:`~xarray.differentiate`, :py:meth:`~xarray.DataArray.differentiate`,
-  and :py:meth:`~xarray.Dataset.differentiate` are newly added.
+- :py:meth:`~xarray.DataArray.differentiate` and
+  :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Default colormap for sequential and divergent data can now be set via

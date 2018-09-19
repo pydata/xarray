@@ -3709,8 +3709,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
-                if v.dtype.kind in 'mM':
-                    v = to_numeric(v, datetime_unit=datetime_unit)
+                v = to_numeric(v, datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
                     v.data, coord_data, edge_order=edge_order,
                     axis=v.get_axis_num(dim))
