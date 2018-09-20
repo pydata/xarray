@@ -3670,6 +3670,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Differentiate with the second order accurate central
         differences.
 
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
         Parameters
         ----------
         coord: str

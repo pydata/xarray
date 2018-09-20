@@ -219,6 +219,9 @@ This method can be used also for multidimensional arrays,
                      coords=[0.1, 0.11, 0.2, 0.3])
     a.differentiate('x')
 
+.. note::
+    This method is limited to simple cartesian geometry. Differentiation along
+    multidimensional coordinate is not supported.
 
 .. _compute.broadcasting:
 
