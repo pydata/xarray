@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import textwrap
 import warnings
 
 import numpy as np
-import textwrap
 
+from ..core.options import OPTIONS
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 from ..core.options import OPTIONS
