@@ -624,7 +624,7 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
                     aspect=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=None, yincrease=None,
+                    col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, infer_intervals=None, colors=None,
@@ -776,6 +776,10 @@ def _plot2d(plotfunc):
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
 
+        # origin kwarg overrides yincrease
+        if 'origin' in kwargs:
+            yincrease = None
+
         _update_axes(ax, xincrease, yincrease, xscale, yscale,
                      xticks, yticks, xlim, ylim)
 
@@ -794,7 +798,7 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, figsize=None, size=None,
                    aspect=None, ax=None, row=None, col=None, col_wrap=None,
-                   xincrease=None, yincrease=None, add_colorbar=None,
+                   xincrease=True, yincrease=True, add_colorbar=None,
                    add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None,
                    levels=None, infer_intervals=None, subplot_kws=None,
