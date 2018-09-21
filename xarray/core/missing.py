@@ -11,7 +11,7 @@ import pandas as pd
 from . import rolling
 from .computation import apply_ufunc
 from .pycompat import iteritems
-from .utils import is_scalar, OrderedSet
+from .utils import is_scalar, OrderedSet, to_numeric
 from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
 
@@ -414,8 +414,8 @@ def _floatize_x(x, new_x):
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
             xmin = np.min(x[i])
-            x[i] = (x[i] - xmin).astype(np.float64)
-            new_x[i] = (new_x[i] - xmin).astype(np.float64)
+            x[i] = to_numeric(x[i], offset=xmin, dtype=np.float64)
+            new_x[i] = to_numeric(new_x[i], offset=xmin, dtype=np.float64)
     return x, new_x
 
 

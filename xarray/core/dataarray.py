@@ -2073,6 +2073,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
         * x        (x) int64 3 4
 
+        See Also
+        --------
+        DataArray.differentiate
         """
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
@@ -2350,6 +2353,61 @@ class DataArray(AbstractArray, DataWithCoords):
         Dimensions without coordinates: x
         """
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
+        return self._from_temp_dataset(ds)
+
+    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+        """ Differentiate the array with the second order accurate central
+        differences.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+            'us', 'ns', 'ps', 'fs', 'as'}
+            Unit to compute gradient. Only valid for datetime coordinate.
+
+        Returns
+        -------
+        differentiated: DataArray
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.differentiate('x')
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[30.      , 30.      , 30.      ],
+               [27.545455, 27.545455, 27.545455],
+               [27.545455, 27.545455, 27.545455],
+               [30.      , 30.      , 30.      ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().differentiate(
+            coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
 

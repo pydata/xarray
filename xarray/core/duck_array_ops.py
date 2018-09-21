@@ -93,6 +93,14 @@ tensordot = _dask_or_eager_func('tensordot', array_args=slice(2))
 einsum = _dask_or_eager_func('einsum', array_args=slice(1, None),
                              requires_dask='0.17.3')
 
+
+def gradient(x, coord, axis, edge_order):
+    if isinstance(x, dask_array_type):
+        return dask_array_compat.gradient(
+            x, coord, axis=axis, edge_order=edge_order)
+    return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
+
+
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,
     dask_module=getattr(dask_array, 'ma', None))

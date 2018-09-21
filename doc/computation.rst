@@ -200,6 +200,29 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+Computation using Coordinates
+=============================
+
+Xarray objects have some handy methods for the computation with their
+coordinates. :py:meth:`~xarray.DataArray.differentiate` computes derivatives by
+central finite differences using their coordinates,
+
+.. ipython:: python
+    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[0.1, 0.11, 0.2, 0.3])
+    a
+    a.differentiate('x')
+
+This method can be used also for multidimensional arrays,
+
+.. ipython:: python
+    a = xr.DataArray(np.arange(8).reshape(4, 2), dims=['x', 'y'],
+                     coords=[0.1, 0.11, 0.2, 0.3])
+    a.differentiate('x')
+
+.. note::
+    This method is limited to simple cartesian geometry. Differentiation along
+    multidimensional coordinate is not supported.
+
 .. _compute.broadcasting:
 
 Broadcasting by dimension name

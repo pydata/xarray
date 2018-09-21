@@ -150,6 +150,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -317,6 +318,7 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
