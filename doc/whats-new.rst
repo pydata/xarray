@@ -33,6 +33,10 @@ v0.11.0 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`plot()` now accepts the kwargs ``labels, clabel_kwargs`` to add
+  labels to contours.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 Bug fixes
 ~~~~~~~~~
 
@@ -58,12 +62,13 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Default colormap for sequential and divergent data can now be set via
   :py:func:`~xarray.set_options()`
   (:issue:`2394`)
   By `Julius Busecke <https://github.com/jbusecke>`_.
 
-- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
+- ``min_count`` option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
   :py:meth:`~xarray.Dataset.prod`.
   (:issue:`2230`)

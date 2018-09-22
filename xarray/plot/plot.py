@@ -608,6 +608,10 @@ def _plot2d(plotfunc):
         Axes in which to draw the colorbar.
     cbar_kwargs : dict, optional
         Dictionary of keyword arguments to pass to the colorbar.
+    labels : bool, optional
+        Only applies to contour or contourf. Add labels to contours?
+    clabel_kwargs : dict, optional
+        Keyword arguments passed on to contour or contourf.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
@@ -907,11 +911,13 @@ def contour(x, y, z, ax, **kwargs):
     Wraps :func:`matplotlib:matplotlib.pyplot.contour`
     """
     labels = kwargs.pop('labels', False)
+    clabel_kwargs = kwargs.pop('clabel_kwargs', None)
+    clabel_kwargs = {} if clabel_kwargs is None else dict(clabel_kwargs)
 
     primitive = ax.contour(x, y, z, **kwargs)
 
     if labels:
-        ax.clabel(primitive, primitive.levels)
+        ax.clabel(primitive, primitive.levels, **clabel_kwargs)
 
     return primitive
 
