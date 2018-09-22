@@ -33,6 +33,9 @@ v0.11.0 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
+- Added support for Python 3.7. (:issue:`2271`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Bug fixes
 ~~~~~~~~~
 
@@ -78,8 +81,8 @@ Enhancements
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
 - A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
-  generating dates from standard or non-standard calendars.  By `Spencer Clark 
-  <https://github.com/spencerkclark>`_. 
+  generating dates from standard or non-standard calendars.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 - When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
   (:issue:`2284`)
@@ -177,7 +180,6 @@ Enhancements
   to :py:meth:`~xarray.DataArray.to_cdms2` and
   :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
   By `Stephane Raynaud <https://github.com/stefraynaud>`_.
-
 
 Bug fixes
 ~~~~~~~~~

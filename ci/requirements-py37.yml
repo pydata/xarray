@@ -1,0 +1,13 @@
+name: test_env
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - pip:
+    - pytest
+    - flake8
+    - mock
+    - numpy
+    - pandas
+    - coveralls
+    - pytest-cov
