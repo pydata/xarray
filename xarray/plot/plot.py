@@ -270,6 +270,10 @@ def line(darray, *args, **kwargs):
         Coordinates for x, y axis. Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
+    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
+        Specifies scaling for the x- and y-axes respectively
+    xticks, yticks : Specify tick locations for x- and y-axes
+    xlim, ylim : Specify x- and y-axes limits
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
@@ -305,8 +309,14 @@ def line(darray, *args, **kwargs):
     hue = kwargs.pop('hue', None)
     x = kwargs.pop('x', None)
     y = kwargs.pop('y', None)
-    xincrease = kwargs.pop('xincrease', True)
-    yincrease = kwargs.pop('yincrease', True)
+    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
+    yincrease = kwargs.pop('yincrease', None)
+    xscale = kwargs.pop('xscale', None)  # default needs to be None
+    yscale = kwargs.pop('yscale', None)
+    xticks = kwargs.pop('xticks', None)
+    yticks = kwargs.pop('yticks', None)
+    xlim = kwargs.pop('xlim', None)
+    ylim = kwargs.pop('ylim', None)
     add_legend = kwargs.pop('add_legend', True)
     _labels = kwargs.pop('_labels', True)
     if args is ():
@@ -343,7 +353,8 @@ def line(darray, *args, **kwargs):
             xlabels.set_rotation(30)
             xlabels.set_ha('right')
 
-    _update_axes_limits(ax, xincrease, yincrease)
+    _update_axes(ax, xincrease, yincrease, xscale, yscale,
+                 xticks, yticks, xlim, ylim)
 
     return primitive
 
@@ -378,37 +389,69 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     """
     ax = get_axis(figsize, size, aspect, ax)
 
+    xincrease = kwargs.pop('xincrease', None)  # default needs to be None
+    yincrease = kwargs.pop('yincrease', None)
+    xscale = kwargs.pop('xscale', None)  # default needs to be None
+    yscale = kwargs.pop('yscale', None)
+    xticks = kwargs.pop('xticks', None)
+    yticks = kwargs.pop('yticks', None)
+    xlim = kwargs.pop('xlim', None)
+    ylim = kwargs.pop('ylim', None)
+
     no_nan = np.ravel(darray.values)
     no_nan = no_nan[pd.notnull(no_nan)]
 
     primitive = ax.hist(no_nan, **kwargs)
 
-    ax.set_ylabel('Count')
-
     ax.set_title('Histogram')
     ax.set_xlabel(label_from_attrs(darray))
+
+    _update_axes(ax, xincrease, yincrease, xscale, yscale,
+                 xticks, yticks, xlim, ylim)
 
     return primitive
 
 
-def _update_axes_limits(ax, xincrease, yincrease):
+def _update_axes(ax, xincrease, yincrease,
+                 xscale=None, yscale=None,
+                 xticks=None, yticks=None,
+                 xlim=None, ylim=None):
     """
-    Update axes in place to increase or decrease
-    For use in _plot2d
+    Update axes with provided parameters
     """
     if xincrease is None:
         pass
-    elif xincrease:
-        ax.set_xlim(sorted(ax.get_xlim()))
-    elif not xincrease:
-        ax.set_xlim(sorted(ax.get_xlim(), reverse=True))
+    elif xincrease and ax.xaxis_inverted():
+        ax.invert_xaxis()
+    elif not xincrease and not ax.xaxis_inverted():
+        ax.invert_xaxis()
 
     if yincrease is None:
         pass
-    elif yincrease:
-        ax.set_ylim(sorted(ax.get_ylim()))
-    elif not yincrease:
-        ax.set_ylim(sorted(ax.get_ylim(), reverse=True))
+    elif yincrease and ax.yaxis_inverted():
+        ax.invert_yaxis()
+    elif not yincrease and not ax.yaxis_inverted():
+        ax.invert_yaxis()
+
+    # The default xscale, yscale needs to be None.
+    # If we set a scale it resets the axes formatters,
+    # This means that set_xscale('linear') on a datetime axis
+    # will remove the date labels. So only set the scale when explicitly
+    # asked to. https://github.com/matplotlib/matplotlib/issues/8740
+    if xscale is not None:
+        ax.set_xscale(xscale)
+    if yscale is not None:
+        ax.set_yscale(yscale)
+
+    if xticks is not None:
+        ax.set_xticks(xticks)
+    if yticks is not None:
+        ax.set_yticks(yticks)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
 
 
 # MUST run before any 2d plotting functions are defined since
@@ -436,9 +479,11 @@ class _PlotMethods(object):
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
+    # TODO: remove when min numpy version is bumped to 1.13
     # There's a cyclic dependency via DataArray, so we can't import from
     # xarray.ufuncs in global scope.
     from xarray.ufuncs import maximum, minimum
+
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
         if vmax is None:
@@ -464,7 +509,10 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
-    return minimum(maximum(darray, 0), 1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'xarray.ufuncs',
+                                PendingDeprecationWarning)
+        return minimum(maximum(darray, 0), 1)
 
 
 def _plot2d(plotfunc):
@@ -500,6 +548,10 @@ def _plot2d(plotfunc):
         If passed, make column faceted plots on this dimension name
     col_wrap : integer, optional
         Use together with ``col`` to wrap faceted plots
+    xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
+        Specifies scaling for the x- and y-axes respectively
+    xticks, yticks : Specify tick locations for x- and y-axes
+    xlim, ylim : Specify x- and y-axes limits
     xincrease : None, True, or False, optional
         Should the values on the x axes be increasing from left to right?
         if None, use the default for the matplotlib function.
@@ -577,7 +629,8 @@ def _plot2d(plotfunc):
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, infer_intervals=None, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
-                    **kwargs):
+                    xscale=None, yscale=None, xticks=None, yticks=None,
+                    xlim=None, ylim=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -717,17 +770,27 @@ def _plot2d(plotfunc):
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray), rotation=90)
+                cbar.set_label(label_from_attrs(darray))
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
 
-        _update_axes_limits(ax, xincrease, yincrease)
+        # origin kwarg overrides yincrease
+        if 'origin' in kwargs:
+            yincrease = None
+
+        _update_axes(ax, xincrease, yincrease, xscale, yscale,
+                     xticks, yticks, xlim, ylim)
 
         # Rotate dates on xlabels
+        # Do this without calling autofmt_xdate so that x-axes ticks
+        # on other subplots (if any) are not deleted.
+        # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
         if np.issubdtype(xval.dtype, np.datetime64):
-            ax.get_figure().autofmt_xdate()
+            for xlabels in ax.get_xticklabels():
+                xlabels.set_rotation(30)
+                xlabels.set_ha('right')
 
         return primitive
 
@@ -739,7 +802,9 @@ def _plot2d(plotfunc):
                    add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None,
                    levels=None, infer_intervals=None, subplot_kws=None,
-                   cbar_ax=None, cbar_kwargs=None, **kwargs):
+                   cbar_ax=None, cbar_kwargs=None,
+                   xscale=None, yscale=None, xticks=None, yticks=None,
+                   xlim=None, ylim=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -801,10 +866,8 @@ def imshow(x, y, z, ax, **kwargs):
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
-    defaults = {'extent': [left, right, bottom, top],
-                'origin': 'upper',
-                'interpolation': 'nearest',
-                }
+    defaults = {'origin': 'upper',
+                'interpolation': 'nearest'}
 
     if not hasattr(ax, 'projection'):
         # not for cartopy geoaxes
@@ -812,6 +875,11 @@ def imshow(x, y, z, ax, **kwargs):
 
     # Allow user to override these defaults
     defaults.update(kwargs)
+
+    if defaults['origin'] == 'upper':
+        defaults['extent'] = [left, right, bottom, top]
+    else:
+        defaults['extent'] = [left, right, top, bottom]
 
     if z.ndim == 3:
         # matplotlib imshow uses black for missing data, but Xarray makes

@@ -5,6 +5,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 
 import xarray.plot as xplt
@@ -267,6 +268,7 @@ class TestPlot(PlotTestCase):
         assert ax.has_data()
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -328,6 +330,7 @@ class TestPlot(PlotTestCase):
             self.darray.plot(aspect=1)
 
     @pytest.mark.slow
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -426,10 +429,6 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
         assert 'testpoints [testunits]' == plt.gca().get_xlabel()
 
-    def test_ylabel_is_count(self):
-        self.darray.plot.hist()
-        assert 'Count' == plt.gca().get_ylabel()
-
     def test_title_is_histogram(self):
         self.darray.plot.hist()
         assert 'Histogram' == plt.gca().get_title()
@@ -473,6 +472,21 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['extend'] == 'neither'
         assert cmap_params['levels'] is None
         assert cmap_params['norm'] is None
+
+    def test_cmap_sequential_option(self):
+        with xr.set_options(cmap_sequential='magma'):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == 'magma'
+
+    def test_cmap_sequential_explicit_option(self):
+        with xr.set_options(cmap_sequential=mpl.cm.magma):
+            cmap_params = _determine_cmap_params(self.data)
+            assert cmap_params['cmap'] == mpl.cm.magma
+
+    def test_cmap_divergent_option(self):
+        with xr.set_options(cmap_divergent='magma'):
+            cmap_params = _determine_cmap_params(self.data, center=0.5)
+            assert cmap_params['cmap'] == 'magma'
 
     def test_nan_inf_are_ignored(self):
         cmap_params1 = _determine_cmap_params(self.data)
@@ -748,6 +762,24 @@ class Common2dMixin:
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.plotmethod)
 
+    def test_xyincrease_defaults(self):
+
+        # With default settings the axis must be ordered regardless
+        # of the coords order.
+        self.plotfunc(DataArray(easy_array((3, 2)), coords=[[1, 2, 3],
+                                                            [1, 2]]))
+        bounds = plt.gca().get_ylim()
+        assert bounds[0] < bounds[1]
+        bounds = plt.gca().get_xlim()
+        assert bounds[0] < bounds[1]
+        # Inverted coords
+        self.plotfunc(DataArray(easy_array((3, 2)), coords=[[3, 2, 1],
+                                                            [2, 1]]))
+        bounds = plt.gca().get_ylim()
+        assert bounds[0] < bounds[1]
+        bounds = plt.gca().get_xlim()
+        assert bounds[0] < bounds[1]
+
     def test_xyincrease_false_changes_axes(self):
         self.plotmethod(xincrease=False, yincrease=False)
         xlim = plt.gca().get_xlim()
@@ -779,10 +811,13 @@ class Common2dMixin:
         clim2 = self.plotfunc(x2).get_clim()
         assert clim1 == clim2
 
+    @pytest.mark.filterwarnings('ignore::UserWarning')
+    @pytest.mark.filterwarnings('ignore:invalid value encountered')
     def test_can_plot_all_nans(self):
         # regression test for issue #1780
         self.plotfunc(DataArray(np.full((2, 2), np.nan)))
 
+    @pytest.mark.filterwarnings('ignore: Attempting to set')
     def test_can_plot_axis_size_one(self):
         if self.plotfunc.__name__ not in ('contour', 'contourf'):
             self.plotfunc(DataArray(np.ones((1, 1))))
@@ -974,6 +1009,7 @@ class Common2dMixin:
         del func_sig['darray']
         assert func_sig == method_sig
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid(self):
         a = easy_array((10, 15, 4))
         d = DataArray(a, dims=['y', 'x', 'z'])
@@ -1005,6 +1041,7 @@ class Common2dMixin:
             else:
                 assert '' == ax.get_xlabel()
 
+    @pytest.mark.filterwarnings('ignore:tight_layout cannot')
     def test_convenient_facetgrid_4d(self):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
@@ -1013,6 +1050,19 @@ class Common2dMixin:
         assert_array_equal(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             assert ax.has_data()
+
+    @pytest.mark.filterwarnings('ignore:This figure includes')
+    def test_facetgrid_map_only_appends_mappables(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows')
+
+        expected = g._mappables
+
+        g.map(lambda: plt.plot(1, 1))
+        actual = g._mappables
+
+        assert expected == actual
 
     def test_facetgrid_cmap(self):
         # Regression test for GH592
@@ -1283,10 +1333,22 @@ class TestImshow(Common2dMixin, PlotTestCase):
         assert out.dtype == np.uint8
         assert (out[..., :3] == da.values).all()  # Compare without added alpha
 
+    @pytest.mark.filterwarnings('ignore:Several dimensions of this array')
     def test_regression_rgb_imshow_dim_size_one(self):
         # Regression: https://github.com/pydata/xarray/issues/1966
         da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
         da.plot.imshow()
+
+    def test_origin_overrides_xyincrease(self):
+        da = DataArray(easy_array((3, 2)), coords=[[-2, 0, 2], [-1, 1]])
+        da.plot.imshow(origin='upper')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[1] < 0
+
+        plt.clf()
+        da.plot.imshow(origin='lower')
+        assert plt.xlim()[0] < 0
+        assert plt.ylim()[0] < 0
 
 
 class TestFacetGrid(PlotTestCase):
@@ -1515,6 +1577,7 @@ class TestFacetGrid(PlotTestCase):
             sharey=False)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetGrid4d(PlotTestCase):
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
@@ -1542,6 +1605,7 @@ class TestFacetGrid4d(PlotTestCase):
             assert substring_in_axes(label, ax)
 
 
+@pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 6, 3, 4),
@@ -1675,3 +1739,68 @@ def test_plot_cftime_data_error():
     data = DataArray(data, coords=[np.arange(5)], dims=['x'])
     with raises_regex(NotImplementedError, 'cftime.datetime'):
         data.plot()
+
+
+test_da_list = [DataArray(easy_array((10, ))),
+                DataArray(easy_array((10, 3))),
+                DataArray(easy_array((10, 3, 2)))]
+
+
+@requires_matplotlib
+class TestAxesKwargs(object):
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('xincrease', [True, False])
+    def test_xincrease_kwarg(self, da, xincrease):
+        plt.clf()
+        da.plot(xincrease=xincrease)
+        assert plt.gca().xaxis_inverted() == (not xincrease)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('yincrease', [True, False])
+    def test_yincrease_kwarg(self, da, yincrease):
+        plt.clf()
+        da.plot(yincrease=yincrease)
+        assert plt.gca().yaxis_inverted() == (not yincrease)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    @pytest.mark.parametrize('xscale', ['linear', 'log', 'logit', 'symlog'])
+    def test_xscale_kwarg(self, da, xscale):
+        plt.clf()
+        da.plot(xscale=xscale)
+        assert plt.gca().get_xscale() == xscale
+
+    @pytest.mark.parametrize('da', [DataArray(easy_array((10, ))),
+                                    DataArray(easy_array((10, 3)))])
+    @pytest.mark.parametrize('yscale', ['linear', 'log', 'logit', 'symlog'])
+    def test_yscale_kwarg(self, da, yscale):
+        plt.clf()
+        da.plot(yscale=yscale)
+        assert plt.gca().get_yscale() == yscale
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_xlim_kwarg(self, da):
+        plt.clf()
+        expected = (0.0, 1000.0)
+        da.plot(xlim=[0, 1000])
+        assert plt.gca().get_xlim() == expected
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_ylim_kwarg(self, da):
+        plt.clf()
+        da.plot(ylim=[0, 1000])
+        expected = (0.0, 1000.0)
+        assert plt.gca().get_ylim() == expected
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_xticks_kwarg(self, da):
+        plt.clf()
+        da.plot(xticks=np.arange(5))
+        expected = np.arange(5).tolist()
+        assert np.all(plt.gca().get_xticks() == expected)
+
+    @pytest.mark.parametrize('da', test_da_list)
+    def test_yticks_kwarg(self, da):
+        plt.clf()
+        da.plot(yticks=np.arange(5))
+        expected = np.arange(5)
+        assert np.all(plt.gca().get_yticks() == expected)

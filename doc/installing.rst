@@ -31,6 +31,10 @@ For netCDF and IO
 - `PseudoNetCDF <http://github.com/barronh/pseudonetcdf/>`__: recommended
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
+- `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
+  other gridded raster datasets.
+- `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
+  Cube objects.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,6 +105,7 @@ A fixed-point performance monitoring of (a part of) our codes can be seen on
 `this page <https://tomaugspurger.github.io/asv-collection/xarray/>`__.
 
 To run these benchmark tests in a local machine, first install
+
 - `airspeed-velocity <https://asv.readthedocs.io/en/latest/>`__: a tool for benchmarking Python packages over their lifetime.
 
 and run

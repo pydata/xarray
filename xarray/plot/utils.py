@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
+import textwrap
 import warnings
 
 import numpy as np
-import pandas as pd
-import pkg_resources
-import textwrap
 
+from ..core.options import OPTIONS
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
+from ..core.options import OPTIONS
 
 ROBUST_PERCENTILE = 2.0
 
@@ -208,15 +208,17 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # Choose default colormaps if not provided
     if cmap is None:
         if divergent:
-            cmap = "RdBu_r"
+            cmap = OPTIONS['cmap_divergent']
         else:
-            cmap = "viridis"
+            cmap = OPTIONS['cmap_sequential']
 
     # Handle discrete levels
     if levels is not None:
         if is_scalar(levels):
-            if user_minmax or levels == 1:
+            if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
+            elif levels == 1:
+                levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
                 ticker = mpl.ticker.MaxNLocator(levels - 1)

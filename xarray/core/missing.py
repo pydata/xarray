@@ -3,13 +3,15 @@ from __future__ import absolute_import, division, print_function
 from collections import Iterable
 from functools import partial
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
 from . import rolling
 from .computation import apply_ufunc
 from .pycompat import iteritems
-from .utils import is_scalar, OrderedSet
+from .utils import is_scalar, OrderedSet, to_numeric
 from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
 
@@ -57,7 +59,7 @@ class NumpyInterpolator(BaseInterpolator):
 
         if self.cons_kwargs:
             raise ValueError(
-                'recieved invalid kwargs: %r' % self.cons_kwargs.keys())
+                'received invalid kwargs: %r' % self.cons_kwargs.keys())
 
         if fill_value is None:
             self._left = np.nan
@@ -207,13 +209,16 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
     interp_class, kwargs = _get_interpolator(method, **kwargs)
     interpolator = partial(func_interpolate_na, interp_class, **kwargs)
 
-    arr = apply_ufunc(interpolator, index, self,
-                      input_core_dims=[[dim], [dim]],
-                      output_core_dims=[[dim]],
-                      output_dtypes=[self.dtype],
-                      dask='parallelized',
-                      vectorize=True,
-                      keep_attrs=True).transpose(*self.dims)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'overflow', RuntimeWarning)
+        warnings.filterwarnings('ignore', 'invalid value', RuntimeWarning)
+        arr = apply_ufunc(interpolator, index, self,
+                          input_core_dims=[[dim], [dim]],
+                          output_core_dims=[[dim]],
+                          output_dtypes=[self.dtype],
+                          dask='parallelized',
+                          vectorize=True,
+                          keep_attrs=True).transpose(*self.dims)
 
     if limit is not None:
         arr = arr.where(valids)
@@ -409,8 +414,8 @@ def _floatize_x(x, new_x):
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
             xmin = np.min(x[i])
-            x[i] = (x[i] - xmin).astype(np.float64)
-            new_x[i] = (new_x[i] - xmin).astype(np.float64)
+            x[i] = to_numeric(x[i], offset=xmin, dtype=np.float64)
+            new_x[i] = to_numeric(new_x[i], offset=xmin, dtype=np.float64)
     return x, new_x
 
 

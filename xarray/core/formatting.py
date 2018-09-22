@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 
 from .options import OPTIONS
-from .pycompat import PY2, bytes_type, dask_array_type, unicode_type
+from .pycompat import (
+    PY2, bytes_type, dask_array_type, unicode_type, zip_longest,
+)
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -64,13 +66,13 @@ class ReprMixin(object):
         return ensure_valid_repr(self.__unicode__())
 
 
-def _get_indexer_at_least_n_items(shape, n_desired):
+def _get_indexer_at_least_n_items(shape, n_desired, from_end):
     assert 0 < n_desired <= np.prod(shape)
     cum_items = np.cumprod(shape[::-1])
     n_steps = np.argmax(cum_items >= n_desired)
     stop = int(np.ceil(float(n_desired) / np.r_[1, cum_items][n_steps]))
-    indexer = ((0,) * (len(shape) - 1 - n_steps) +
-               (slice(stop),) +
+    indexer = (((-1 if from_end else 0),) * (len(shape) - 1 - n_steps) +
+               ((slice(-stop, None) if from_end else slice(stop)),) +
                (slice(None),) * n_steps)
     return indexer
 
@@ -89,9 +91,26 @@ def first_n_items(array, n_desired):
         return []
 
     if n_desired < array.size:
-        indexer = _get_indexer_at_least_n_items(array.shape, n_desired)
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired,
+                                                from_end=False)
         array = array[indexer]
     return np.asarray(array).flat[:n_desired]
+
+
+def last_n_items(array, n_desired):
+    """Returns the last n_desired items of an array"""
+    # Unfortunately, we can't just do array.flat[-n_desired:] here because it
+    # might not be a numpy.ndarray. Moreover, access to elements of the array
+    # could be very expensive (e.g. if it's only available over DAP), so go out
+    # of our way to get them in a single call to __getitem__ using only slices.
+    if (n_desired == 0) or (array.size == 0):
+        return []
+
+    if n_desired < array.size:
+        indexer = _get_indexer_at_least_n_items(array.shape, n_desired,
+                                                from_end=True)
+        array = array[indexer]
+    return np.asarray(array).flat[-n_desired:]
 
 
 def last_item(array):
@@ -164,7 +183,7 @@ def format_items(x):
         day_part = (x[~pd.isnull(x)]
                     .astype('timedelta64[D]')
                     .astype('timedelta64[ns]'))
-        time_needed = x != day_part
+        time_needed = x[~pd.isnull(x)] != day_part
         day_needed = day_part != np.timedelta64(0, 'ns')
         if np.logical_not(day_needed).all():
             timedelta_format = 'time'
@@ -180,20 +199,36 @@ def format_array_flat(array, max_width):
     array that will fit within max_width characters.
     """
     # every item will take up at least two characters, but we always want to
-    # print at least one item
-    max_possibly_relevant = max(int(np.ceil(max_width / 2.0)), 1)
-    relevant_items = first_n_items(array, max_possibly_relevant)
-    pprint_items = format_items(relevant_items)
+    # print at least first and last items
+    max_possibly_relevant = min(max(array.size, 1),
+                                max(int(np.ceil(max_width / 2.)), 2))
+    relevant_front_items = format_items(
+        first_n_items(array, (max_possibly_relevant + 1) // 2))
+    relevant_back_items = format_items(
+        last_n_items(array, max_possibly_relevant // 2))
+    # interleave relevant front and back items:
+    #     [a, b, c] and [y, z] -> [a, z, b, y, c]
+    relevant_items = sum(zip_longest(relevant_front_items,
+                                     reversed(relevant_back_items)),
+                         ())[:max_possibly_relevant]
 
-    cum_len = np.cumsum([len(s) + 1 for s in pprint_items]) - 1
-    if (max_possibly_relevant < array.size or (cum_len > max_width).any()):
-        end_padding = u' ...'
-        count = max(np.argmax((cum_len + len(end_padding)) > max_width), 1)
-        pprint_items = pprint_items[:count]
+    cum_len = np.cumsum([len(s) + 1 for s in relevant_items]) - 1
+    if (array.size > 2) and ((max_possibly_relevant < array.size) or
+                             (cum_len > max_width).any()):
+        padding = u' ... '
+        count = min(array.size,
+                    max(np.argmax(cum_len + len(padding) - 1 > max_width), 2))
     else:
-        end_padding = u''
+        count = array.size
+        padding = u'' if (count <= 1) else u' '
 
-    pprint_str = u' '.join(pprint_items) + end_padding
+    num_front = (count + 1) // 2
+    num_back = count - num_front
+    # note that num_back is 0 <--> array.size is 0 or 1
+    #                         <--> relevant_back_items is []
+    pprint_str = (u' '.join(relevant_front_items[:num_front]) +
+                  padding +
+                  u' '.join(relevant_back_items[-num_back:]))
     return pprint_str
 
 
