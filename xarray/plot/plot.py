@@ -609,9 +609,9 @@ def _plot2d(plotfunc):
     cbar_kwargs : dict, optional
         Dictionary of keyword arguments to pass to the colorbar.
     labels : bool, optional
-        Only applies to contour or contourf. Add labels to contours?
+        Only applies to contour. Add contour labels?
     clabel_kwargs : dict, optional
-        Keyword arguments passed on to contour or contourf.
+        Keyword arguments passed on to ``Axes.clabel``.
     **kwargs : optional
         Additional arguments to wrapped matplotlib function
 
