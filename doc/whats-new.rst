@@ -25,6 +25,18 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
+.. _whats-new.0.11.0:
+
+v0.11.0 (unreleased)
+--------------------
+
+Enhancements
+~~~~~~~~~~~~
+
+Bug fixes
+~~~~~~~~~
+
+
 .. _whats-new.0.10.9:
 
 v0.10.9 (21 September 2019)
