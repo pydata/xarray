@@ -1167,6 +1167,12 @@ class TestContour(Common2dMixin, PlotTestCase):
         self.plotmethod(levels=[0.1])
         self.plotmethod(levels=1)
 
+    def test_clabel(self):
+        primitive = self.plotmethod(labels=True,
+                                    clabel_kwargs={'fmt': '%.1f'})
+        assert primitive.labelLevelList != []
+        assert primitive.labelFmt == '%.1f'
+
 
 class TestPcolormesh(Common2dMixin, PlotTestCase):
 
