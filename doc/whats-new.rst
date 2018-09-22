@@ -27,11 +27,17 @@ What's New
 
 .. _whats-new.0.10.9:
 
-v0.10.9 (unreleased)
---------------------
+v0.10.9 (21 September 2019)
+---------------------------
 
-Documentation
-~~~~~~~~~~~~~
+This minor release contains a number of backwards compatible enhancements.
+
+Announcements of note:
+
+- Xarray is now a NumFOCUS fiscally sponsored project! Read
+  `the anouncment <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  for more details.
+- We have a new :doc:`roadmap` that outlines our future development plans.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -51,7 +57,8 @@ Enhancements
   (:issue:`2230`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+- :py:meth:`plot()` now accepts the kwargs
+  ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
 - DataArray coordinates and Dataset coordinates and data variables are
@@ -118,7 +125,7 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
-``input_core_dims`` is inconsistent with the number of arguments.
+  ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
