@@ -18,6 +18,8 @@ matrix:
     env: CONDA_ENV=py35
   - python: 3.6
     env: CONDA_ENV=py36
+  - python: 3.6  # TODO: change this to 3.7 once https://github.com/travis-ci/travis-ci/issues/9815 is fixed
+    env: CONDA_ENV=py37
   - python: 3.6
     env:
     - CONDA_ENV=py36
