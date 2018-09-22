@@ -208,15 +208,17 @@ coordinates. :py:meth:`~xarray.DataArray.differentiate` computes derivatives by
 central finite differences using their coordinates,
 
 .. ipython:: python
-    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[0.1, 0.11, 0.2, 0.3])
+
+    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[[0.1, 0.11, 0.2, 0.3]])
     a
     a.differentiate('x')
 
 This method can be used also for multidimensional arrays,
 
 .. ipython:: python
+
     a = xr.DataArray(np.arange(8).reshape(4, 2), dims=['x', 'y'],
-                     coords=[0.1, 0.11, 0.2, 0.3])
+                     coords={'x': [0.1, 0.11, 0.2, 0.3]})
     a.differentiate('x')
 
 .. note::
