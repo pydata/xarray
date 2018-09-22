@@ -1051,6 +1051,19 @@ class Common2dMixin:
         for ax in g.axes.flat:
             assert ax.has_data()
 
+    @pytest.mark.filterwarnings('ignore:This figure includes')
+    def test_facetgrid_map_only_appends_mappables(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows')
+
+        expected = g._mappables
+
+        g.map(lambda: plt.plot(1, 1))
+        actual = g._mappables
+
+        assert expected == actual
+
     def test_facetgrid_cmap(self):
         # Regression test for GH592
         data = (np.random.random(size=(20, 25, 12)) + np.linspace(-3, 3, 12))

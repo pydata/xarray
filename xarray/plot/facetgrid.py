@@ -502,9 +502,12 @@ class FacetGrid(object):
                 data = self.data.loc[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
-                # TODO: is it possible to verify that an artist is mappable?
-                mappable = func(*innerargs, **kwargs)
-                self._mappables.append(mappable)
+                maybe_mappable = func(*innerargs, **kwargs)
+                # TODO: better way to verify that an artist is mappable?
+                # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
+                if (maybe_mappable and
+                   hasattr(maybe_mappable, 'autoscale_None')):
+                    self._mappables.append(maybe_mappable)
 
         self._finalize_grid(*args[:2])
 
