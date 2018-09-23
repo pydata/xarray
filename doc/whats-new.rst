@@ -36,9 +36,15 @@ Enhancements
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
+  CFTimeIndex by a specified frequency.  (:issue:`2244`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+  
 Bug fixes
 ~~~~~~~~~
 
+- Addition and subtraction operators used with a CFTimeIndex now preserve the
+  index's type. (:issue:`2244`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.10.9:
 
