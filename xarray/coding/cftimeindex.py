@@ -351,7 +351,7 @@ class CFTimeIndex(pd.Index):
             raise TypeError("'n' must be an int, got {}.".format(n))
         if isinstance(freq, timedelta):
             return self + n * freq
-        elif isinstance(freq, basestring):
+        elif isinstance(freq, pycompat.basestring):
             return self + n * to_offset(freq)
         else:
             raise TypeError(
