@@ -33,9 +33,10 @@ v0.11.0 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:meth:`plot()` now accepts the kwargs ``labels, clabel_kwargs`` to add
+- :py:meth:`plot.contour()` now accepts the kwargs ``labels, clabel_kwargs`` to add
   labels to contours.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
+
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
