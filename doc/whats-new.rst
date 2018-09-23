@@ -25,9 +25,9 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.9:
+.. _whats-new.0.11.0:
 
-v0.10.9 (unreleased)
+v0.11.0 (unreleased)
 --------------------
 
 Breaking changes
@@ -40,10 +40,37 @@ Breaking changes
 
 Documentation
 ~~~~~~~~~~~~~
+Enhancements
+~~~~~~~~~~~~
+
+- Added support for Python 3.7. (:issue:`2271`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Bug fixes
+~~~~~~~~~
+
+
+.. _whats-new.0.10.9:
+
+v0.10.9 (21 September 2019)
+---------------------------
+
+This minor release contains a number of backwards compatible enhancements.
+
+Announcements of note:
+
+- Xarray is now a NumFOCUS fiscally sponsored project! Read
+  `the anouncment <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  for more details.
+- We have a new :doc:`roadmap` that outlines our future development plans.
 
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.differentiate` and
+  :py:meth:`~xarray.Dataset.differentiate` are newly added.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Default colormap for sequential and divergent data can now be set via
   :py:func:`~xarray.set_options()`
   (:issue:`2394`)
@@ -55,7 +82,8 @@ Enhancements
   (:issue:`2230`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
-- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+- :py:meth:`plot()` now accepts the kwargs
+  ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
 - DataArray coordinates and Dataset coordinates and data variables are
@@ -63,8 +91,8 @@ Enhancements
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
 - A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
-  generating dates from standard or non-standard calendars.  By `Spencer Clark 
-  <https://github.com/spencerkclark>`_. 
+  generating dates from standard or non-standard calendars.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 - When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
   (:issue:`2284`)
@@ -122,7 +150,7 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
-``input_core_dims`` is inconsistent with the number of arguments.
+  ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
@@ -162,7 +190,6 @@ Enhancements
   to :py:meth:`~xarray.DataArray.to_cdms2` and
   :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
   By `Stephane Raynaud <https://github.com/stefraynaud>`_.
-
 
 Bug fixes
 ~~~~~~~~~

@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
-    rolling, utils)
+    alignment, computation, duck_array_ops, formatting, groupby, indexing, ops,
+    resample, rolling, utils)
 from .. import conventions
 from .alignment import align
 from .common import (
@@ -32,7 +32,7 @@ from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array)
+    ensure_us_time_resolution, hashable, maybe_wrap_array, to_numeric)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -3420,6 +3420,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
         foo      (x) int64 1 -1
 
+        See Also
+        --------
+        Dataset.differentiate
         """
         if n == 0:
             return self
@@ -3769,6 +3772,62 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         coord_names = set(self.coords)
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
+
+    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+        """ Differentiate with the second order accurate central
+        differences.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+            'us', 'ns', 'ps', 'fs', 'as'}
+            Unit to compute gradient. Only valid for datetime coordinate.
+
+        Returns
+        -------
+        differentiated: Dataset
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+        """
+        from .variable import Variable
+
+        if coord not in self.variables and coord not in self.dims:
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
+
+        coord_var = self[coord].variable
+        if coord_var.ndim != 1:
+            raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                             ' dimensional'.format(coord, coord_var.ndim))
+
+        dim = coord_var.dims[0]
+        coord_data = coord_var.data
+        if coord_data.dtype.kind in 'mM':
+            if datetime_unit is None:
+                datetime_unit, _ = np.datetime_data(coord_data.dtype)
+            coord_data = to_numeric(coord_data, datetime_unit=datetime_unit)
+
+        variables = OrderedDict()
+        for k, v in self.variables.items():
+            if (k in self.data_vars and dim in v.dims and
+                    k not in self.coords):
+                v = to_numeric(v, datetime_unit=datetime_unit)
+                grad = duck_array_ops.gradient(
+                    v.data, coord_data, edge_order=edge_order,
+                    axis=v.get_axis_num(dim))
+                variables[k] = Variable(v.dims, grad)
+            else:
+                variables[k] = v
+        return self._replace_vars_and_dims(variables)
 
     @property
     def real(self):
