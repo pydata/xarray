@@ -64,22 +64,15 @@ def as_variable(obj, name=None):
         The newly created variable.
 
     """
+    from .dataarray import DataArray
+
     # TODO: consider extending this method to automatically handle Iris and
-    # pandas objects.
-    if hasattr(obj, 'variable'):
+    if isinstance(obj, DataArray):
         # extract the primary Variable from DataArrays
         obj = obj.variable
 
     if isinstance(obj, Variable):
         obj = obj.copy(deep=False)
-    elif hasattr(obj, 'dims') and (hasattr(obj, 'data') or
-                                   hasattr(obj, 'values')):
-        obj_data = getattr(obj, 'data', None)
-        if obj_data is None:
-            obj_data = getattr(obj, 'values')
-        obj = Variable(obj.dims, obj_data,
-                       getattr(obj, 'attrs', None),
-                       getattr(obj, 'encoding', None))
     elif isinstance(obj, tuple):
         try:
             obj = Variable(*obj)
@@ -728,24 +721,81 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         except ValueError:
             raise ValueError('encoding must be castable to a dictionary')
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Whether the data array is loaded into memory and copied onto
+            the new object. Default is True.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+            When `data` is used, `deep` is ignored.
+
+        Returns
+        -------
+        object : Variable
+            New object with dimensions, attributes, encodings, and optionally
+            data copied from original.
+
+        Examples
+        --------
+
+        Shallow copy versus deep copy
+
+        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var.copy()
+        <xarray.Variable (x: 3)>
+        array([1, 2, 3])
+        >>> var_0 = var.copy(deep=False)
+        >>> var_0[0] = 7
+        >>> var_0
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+
+        Changing the data using the ``data`` argument maintains the
+        structure of the original object, but with the new data. Original
+        object is unaffected.
+
+        >>> var.copy(data=[0.1, 0.2, 0.3])
+        <xarray.Variable (x: 3)>
+        array([ 0.1,  0.2,  0.3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+
+        See Also
+        --------
+        pandas.DataFrame.copy
         """
-        data = self._data
+        if data is None:
+            data = self._data
 
-        if isinstance(data, indexing.MemoryCachedArray):
-            # don't share caching between copies
-            data = indexing.MemoryCachedArray(data.array)
+            if isinstance(data, indexing.MemoryCachedArray):
+                # don't share caching between copies
+                data = indexing.MemoryCachedArray(data.array)
 
-        if deep:
-            if isinstance(data, dask_array_type):
-                data = data.copy()
-            elif not isinstance(data, PandasIndexAdapter):
-                # pandas.Index is immutable
-                data = np.array(data)
+            if deep:
+                if isinstance(data, dask_array_type):
+                    data = data.copy()
+                elif not isinstance(data, PandasIndexAdapter):
+                    # pandas.Index is immutable
+                    data = np.array(data)
+        else:
+            data = as_compatible_data(data)
+            if self.shape != data.shape:
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
 
         # note:
         # dims is already an immutable tuple
@@ -877,7 +927,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         numpy.squeeze
         """
         dims = common.get_squeeze_dims(self, dim)
-        return self.isel(**{d: 0 for d in dims})
+        return self.isel({d: 0 for d in dims})
 
     def _shift_one_dim(self, dim, count):
         axis = self.get_axis_num(dim)
@@ -919,36 +969,46 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
-    def shift(self, **shifts):
+    def shift(self, shifts=None, **shifts_kwargs):
         """
         Return a new Variable with shifted data.
 
         Parameters
         ----------
-        **shifts : keyword arguments of the form {dim: offset}
+        shifts : mapping of the form {dim: offset}
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        **shifts_kwargs:
+            The keyword arguments form of ``shifts``.
+            One of shifts or shifts_kwarg must be provided.
 
         Returns
         -------
         shifted : Variable
             Variable with the same dimensions and attributes but shifted data.
         """
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'shift')
         result = self
         for dim, count in shifts.items():
             result = result._shift_one_dim(dim, count)
         return result
 
-    def pad_with_fill_value(self, fill_value=dtypes.NA, **pad_widths):
+    def pad_with_fill_value(self, pad_widths=None, fill_value=dtypes.NA,
+                            **pad_widths_kwargs):
         """
         Return a new Variable with paddings.
 
         Parameters
         ----------
-        **pad_width: keyword arguments of the form {dim: (before, after)}
+        pad_width: Mapping of the form {dim: (before, after)}
             Number of values padded to the edges of each dimension.
+        **pad_widths_kwargs:
+            Keyword argument for pad_widths
         """
+        pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs,
+                                           'pad')
+
         if fill_value is dtypes.NA:  # np.nan is passed
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
@@ -1009,22 +1069,27 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
-    def roll(self, **shifts):
+    def roll(self, shifts=None, **shifts_kwargs):
         """
         Return a new Variable with rolld data.
 
         Parameters
         ----------
-        **shifts : keyword arguments of the form {dim: offset}
+        shifts : mapping of the form {dim: offset}
             Integer offset to roll along each of the given dimensions.
             Positive offsets roll to the right; negative offsets roll to the
             left.
+        **shifts_kwargs:
+            The keyword arguments form of ``shifts``.
+            One of shifts or shifts_kwarg must be provided.
 
         Returns
         -------
         shifted : Variable
             Variable with the same dimensions and attributes but rolled data.
         """
+        shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'roll')
+
         result = self
         for dim, count in shifts.items():
             result = result._roll_one_dim(dim, count)
@@ -1142,7 +1207,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return Variable(new_dims, new_data, self._attrs, self._encoding,
                         fastpath=True)
 
-    def stack(self, **dimensions):
+    def stack(self, dimensions=None, **dimensions_kwargs):
         """
         Stack any number of existing dimensions into a single new dimension.
 
@@ -1151,9 +1216,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         Parameters
         ----------
-        **dimensions : keyword arguments of the form new_name=(dim1, dim2, ...)
+        dimensions : Mapping of form new_name=(dim1, dim2, ...)
             Names of new dimensions, and the existing dimensions that they
             replace.
+        **dimensions_kwargs:
+            The keyword arguments form of ``dimensions``.
+            One of dimensions or dimensions_kwargs must be provided.
 
         Returns
         -------
@@ -1164,6 +1232,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         --------
         Variable.unstack
         """
+        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs,
+                                           'stack')
         result = self
         for new_dim, dims in dimensions.items():
             result = result._stack_once(dims, new_dim)
@@ -1195,7 +1265,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return Variable(new_dims, new_data, self._attrs, self._encoding,
                         fastpath=True)
 
-    def unstack(self, **dimensions):
+    def unstack(self, dimensions=None, **dimensions_kwargs):
         """
         Unstack an existing dimension into multiple new dimensions.
 
@@ -1204,9 +1274,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         Parameters
         ----------
-        **dimensions : keyword arguments of the form old_dim={dim1: size1, ...}
+        dimensions : mapping of the form old_dim={dim1: size1, ...}
             Names of existing dimensions, and the new dimensions and sizes
             that they map to.
+        **dimensions_kwargs:
+            The keyword arguments form of ``dimensions``.
+            One of dimensions or dimensions_kwargs must be provided.
 
         Returns
         -------
@@ -1217,6 +1290,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         --------
         Variable.stack
         """
+        dimensions = either_dict_or_kwargs(dimensions, dimensions_kwargs,
+                                           'unstack')
         result = self
         for old_dim, dims in dimensions.items():
             result = result._unstack_once(dims, old_dim)
@@ -1693,14 +1768,37 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
-        `deep` is ignored since data is stored in the form of pandas.Index,
-        which is already immutable. Dimensions, attributes and encodings are
-        always copied.
+        `deep` is ignored since data is stored in the form of
+        pandas.Index, which is already immutable. Dimensions, attributes
+        and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Deep is always ignored.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+
+        Returns
+        -------
+        object : Variable
+            New object with dimensions, attributes, encodings, and optionally
+            data copied from original.
         """
-        return type(self)(self.dims, self._data, self._attrs,
+        if data is None:
+            data = self._data
+        else:
+            data = as_compatible_data(data)
+            if self.shape != data.shape:
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
+        return type(self)(self.dims, data, self._attrs,
                           self._encoding, fastpath=True)
 
     def equals(self, other, equiv=None):

@@ -1404,13 +1404,6 @@ class BaseZarrTest(CFEncodedDataTest):
             with self.roundtrip(ds_chunk4) as actual:
                 self.assertEqual((4,), actual['var1'].encoding['chunks'])
 
-        # specify incompatible encoding
-        ds_chunk4['var1'].encoding.update({'chunks': (5, 5)})
-        with pytest.raises(ValueError) as e_info:
-            with self.roundtrip(ds_chunk4) as actual:
-                pass
-        assert e_info.match('chunks')
-
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
         ds_chunk4['var1'].encoding.update({'chunks': 5})
@@ -1521,6 +1514,21 @@ class BaseZarrTest(CFEncodedDataTest):
 
             with self.open(store) as actual:
                 assert_identical(original, actual)
+
+    def test_encoding_chunksizes(self):
+        # regression test for GH2278
+        # see also test_encoding_chunksizes_unlimited
+        nx, ny, nt = 4, 4, 5
+        original = xr.Dataset({}, coords={'x': np.arange(nx),
+                                          'y': np.arange(ny),
+                                          't': np.arange(nt)})
+        original['v'] = xr.Variable(('x', 'y', 't'), np.zeros((nx, ny, nt)))
+        original = original.chunk({'t': 1, 'x': 2, 'y': 2})
+
+        with self.roundtrip(original) as ds1:
+            assert_equal(ds1, original)
+            with self.roundtrip(ds1.isel(t=0)) as ds2:
+                assert_equal(ds2, original.isel(t=0))
 
 
 @requires_zarr
@@ -1781,6 +1789,7 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         with create_tmp_file() as tmp_file:
             yield backends.H5NetCDFStore(tmp_file, 'w')
 
+    @pytest.mark.filterwarnings('ignore:complex dtypes are supported by h5py')
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
         with self.roundtrip(expected) as actual:
@@ -2519,6 +2528,7 @@ class PyNioTestAutocloseTrue(PyNioTest):
 
 
 @requires_pseudonetcdf
+@pytest.mark.filterwarnings('ignore:IOAPI_ISPH is assumed to be 6370000')
 class PseudoNetCDFFormatTest(TestCase):
     autoclose = True
 
@@ -2650,14 +2660,11 @@ class PseudoNetCDFFormatTest(TestCase):
         """
         Open a CAMx file and test data variables
         """
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
-            camxfile = open_example_dataset('example.uamiv',
-                                            engine='pseudonetcdf',
-                                            autoclose=True,
-                                            backend_kwargs={'format': 'uamiv'})
+
+        camxfile = open_example_dataset('example.uamiv',
+                                        engine='pseudonetcdf',
+                                        autoclose=True,
+                                        backend_kwargs={'format': 'uamiv'})
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
                                dict(units='ppm', long_name='O3'.ljust(16),
@@ -2679,17 +2686,14 @@ class PseudoNetCDFFormatTest(TestCase):
         """
         Open a CAMx file and test data variables
         """
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
-            camxfile = open_example_mfdataset(
-                ['example.uamiv',
-                 'example.uamiv'],
-                engine='pseudonetcdf',
-                autoclose=True,
-                concat_dim='TSTEP',
-                backend_kwargs={'format': 'uamiv'})
+
+        camxfile = open_example_mfdataset(
+            ['example.uamiv',
+             'example.uamiv'],
+            engine='pseudonetcdf',
+            autoclose=True,
+            concat_dim='TSTEP',
+            backend_kwargs={'format': 'uamiv'})
 
         data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         data = np.concatenate([data1] * 2, axis=0)
@@ -2712,18 +2716,17 @@ class PseudoNetCDFFormatTest(TestCase):
 
     def test_uamiv_format_write(self):
         fmtkw = {'format': 'uamiv'}
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning,
-                                    message=('IOAPI_ISPH is assumed to be ' +
-                                             '6370000.; consistent with WRF'))
-            expected = open_example_dataset('example.uamiv',
-                                            engine='pseudonetcdf',
-                                            autoclose=False,
-                                            backend_kwargs=fmtkw)
+
+        expected = open_example_dataset('example.uamiv',
+                                        engine='pseudonetcdf',
+                                        autoclose=False,
+                                        backend_kwargs=fmtkw)
         with self.roundtrip(expected,
                             save_kwargs=fmtkw,
                             open_kwargs={'backend_kwargs': fmtkw}) as actual:
             assert_identical(expected, actual)
+
+        expected.close()
 
     def save(self, dataset, path, **save_kwargs):
         import PseudoNetCDF as pnc
