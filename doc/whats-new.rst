@@ -36,6 +36,9 @@ Enhancements
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- :py:meth:`plot()` now accepts the kwarg ``axis_aspect`` to set the Axes aspect ratio.
+  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2406`)
+
 Bug fixes
 ~~~~~~~~~
 
@@ -65,9 +68,6 @@ Enhancements
   :py:func:`~xarray.set_options()`
   (:issue:`2394`)
   By `Julius Busecke <https://github.com/jbusecke>`_.
-
-- :py:meth:`plot()` now accepts the kwarg ``axis_aspect`` to set the Axes aspect ratio.
-  By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2406`)
 
 - min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
   :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
