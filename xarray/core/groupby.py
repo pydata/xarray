@@ -575,11 +575,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             if self._obj.ndim > 1:
                 warnings.warn(
                     "Default reduction dimension will be changed to the "
-                    "grouped dimension after xarray 0.11. To silence this "
+                    "grouped dimension after xarray 0.12. To silence this "
                     "warning, pass dim=xarray.ALL_DIMS explicitly.",
                     FutureWarning, stacklevel=2)
-        elif dim is None:
-            dim = self._group_dim
 
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
@@ -687,7 +685,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             # the deprecation process. Do not forget to remove _reduce_method
             warnings.warn(
                 "Default reduction dimension will be changed to the "
-                "grouped dimension after xarray 0.11. To silence this "
+                "grouped dimension after xarray 0.12. To silence this "
                 "warning, pass dim=xarray.ALL_DIMS explicitly.",
                 FutureWarning, stacklevel=2)
         elif dim is None:

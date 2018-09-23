@@ -13,7 +13,7 @@ from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import either_dict_or_kwargs, Frozen, SortedKeysDict, ReprObject
 
 
-# Use as a sentinel value to indicate a all dimensions, which
+# Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
 
 

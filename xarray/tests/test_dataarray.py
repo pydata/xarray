@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pickle
 from copy import deepcopy
+from distutils.version import LooseVersion
 from textwrap import dedent
 import warnings
 
@@ -2025,6 +2026,8 @@ class TestDataArray(TestCase):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
+    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+                        reason="not to forget the behavior change")
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
         grouped = array.groupby('abc')
@@ -2035,7 +2038,8 @@ class TestDataArray(TestCase):
                        self.x[:, 10:].sum(axis=-1),
                        self.x[:, 9:10].sum(axis=-1)]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
-        assert_allclose(expected_sum_all, grouped.sum(dim=None))
+
+        assert_allclose(expected_sum_all, grouped.sum())
 
     def test_groupby_count(self):
         array = DataArray(
