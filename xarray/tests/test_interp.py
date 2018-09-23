@@ -5,9 +5,12 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_equal, requires_scipy
+from xarray.tests import (assert_allclose, assert_equal, requires_cftime,
+                          requires_scipy)
 from . import has_dask, has_scipy
 from .test_dataset import create_test_data
+
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 
 try:
     import scipy
@@ -490,3 +493,65 @@ def test_datetime_single_string():
     expected = xr.DataArray(0.5)
 
     assert_allclose(actual.drop('time'), expected)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = xr.cftime_range('2000-01-01T12:00:00', periods=3, freq='D')
+    actual = da.interp(time=times_new)
+    expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new], dims=['time'])
+
+    assert_allclose(actual, expected)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_type_error():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = xr.cftime_range('2000-01-01T12:00:00', periods=3, freq='D',
+                                calendar='noleap')
+    with pytest.raises(TypeError):
+        da.interp(time=times_new)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_list_of_strings():
+    from cftime import DatetimeProlepticGregorian
+
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = ['2000-01-01T12:00', '2000-01-02T12:00', '2000-01-03T12:00']
+    actual = da.interp(time=times_new)
+
+    times_new_array = _parse_array_of_cftime_strings(
+        np.array(times_new), DatetimeProlepticGregorian)
+    expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new_array],
+                            dims=['time'])
+
+    assert_allclose(actual, expected)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_single_string():
+    from cftime import DatetimeProlepticGregorian
+
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = '2000-01-01T12:00'
+    actual = da.interp(time=times_new)
+
+    times_new_array = _parse_array_of_cftime_strings(
+        np.array(times_new), DatetimeProlepticGregorian)
+    expected = xr.DataArray(0.5, coords={'time': times_new_array})
+
+    assert_allclose(actual, expected)

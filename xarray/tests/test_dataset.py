@@ -22,8 +22,9 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, has_dask, raises_regex,
-    requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
+    assert_array_equal, assert_equal, assert_identical, has_cftime,
+    has_dask, raises_regex, requires_bottleneck, requires_dask, requires_scipy,
+    source_ndarray)
 
 try:
     import cPickle as pickle
@@ -4517,7 +4518,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 @pytest.mark.parametrize('dask', [True, False])
 @pytest.mark.parametrize('edge_order', [1, 2])
-def test_gradient(dask, edge_order):
+def test_differentiate(dask, edge_order):
     rs = np.random.RandomState(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -4555,7 +4556,7 @@ def test_gradient(dask, edge_order):
 
 
 @pytest.mark.parametrize('dask', [True, False])
-def test_gradient_datetime(dask):
+def test_differentiate_datetime(dask):
     rs = np.random.RandomState(42)
     coord = np.array(
         ['2004-07-13', '2006-01-13', '2010-08-13', '2010-09-13',
@@ -4588,3 +4589,32 @@ def test_gradient_datetime(dask):
                       coords={'x': coord})
     actual = da.differentiate('x', edge_order=1)
     assert np.allclose(actual, 1.0)
+
+
+@pytest.mark.skipif(not has_cftime, reason='Test requires cftime.')
+@pytest.mark.parametrize('dask', [True, False])
+def test_differentiate_cftime(dask):
+    rs = np.random.RandomState(42)
+    coord = xr.cftime_range('2000', periods=8, freq='2M')
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        coords={'time': coord, 'z': 3, 't2d': (('time', 'y'), rs.randn(8, 6))},
+        dims=['time', 'y'])
+
+    if dask and has_dask:
+        da = da.chunk({'time': 4})
+
+    actual = da.differentiate('time', edge_order=1, datetime_unit='D')
+    expected_data = npcompat.gradient(
+        da, utils.to_numeric(da['time'], datetime_unit='D'),
+        axis=0, edge_order=1)
+    expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
+    assert_equal(expected, actual)
+
+    actual2 = da.differentiate('time', edge_order=1, datetime_unit='h')
+    assert_allclose(actual, actual2 * 24)
+
+    # Test the differentiation of datetimes themselves
+    actual = da['time'].differentiate('time', edge_order=1, datetime_unit='D')
+    assert_allclose(actual, xr.ones_like(da['time']).astype(float))

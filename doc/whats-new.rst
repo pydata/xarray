@@ -36,6 +36,13 @@ Enhancements
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Added support for using ``cftime.datetime`` coordinates with
+  :py:meth:`~xarray.DataArray.differentiate`,
+  :py:meth:`~xarray.Dataset.differentiate`,
+  :py:meth:`~xarray.DataArray.interp`, and
+  :py:meth:`~xarray.Dataset.interp`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_
+  
 Bug fixes
 ~~~~~~~~~
 

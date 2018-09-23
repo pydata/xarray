@@ -5,16 +5,18 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
 from xarray.core.utils import either_dict_or_kwargs
+from xarray.testing import assert_identical
 
 from . import (
     TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
-    requires_dask)
+    requires_dask, requires_cftime)
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -263,3 +265,42 @@ def test_either_dict_or_kwargs():
 
     with pytest.raises(ValueError, match=r'foo'):
         result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
+
+
+def test_to_numeric_datetime64():
+    times = pd.date_range('2000', periods=5, freq='7D')
+    da = xr.DataArray(times, coords=[times], dims=['time'])
+    result = utils.to_numeric(da, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    offset = da.isel(time=1)
+    result = utils.to_numeric(da, offset=offset, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    dtype = np.float32
+    result = utils.to_numeric(da, datetime_unit='h', dtype=dtype)
+    expected = 24 * xr.DataArray(
+        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
+    assert_identical(result, expected)
+
+
+@requires_cftime
+def test_to_numeric_cftime():
+    times = xr.cftime_range('2000', periods=5, freq='7D')
+    da = xr.DataArray(times, coords=[times], dims=['time'])
+    result = utils.to_numeric(da, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    offset = da.isel(time=1)
+    result = utils.to_numeric(da, offset=offset, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    dtype = np.float32
+    result = utils.to_numeric(da, datetime_unit='h', dtype=dtype)
+    expected = 24 * xr.DataArray(
+        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
+    assert_identical(result, expected)
