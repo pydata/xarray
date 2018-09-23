@@ -223,7 +223,6 @@ def _infer_line_data(darray, x, y, hue):
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
             xplt = darray[xname]
-            hueplt = darray[huename]
             if xplt.ndim > 1:
                 if huename in darray.dims:
                     otherdim = darray.dims[
@@ -240,7 +239,6 @@ def _infer_line_data(darray, x, y, hue):
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
             yplt = darray[yname]
-            hueplt = darray[huename]
             if yplt.ndim > 1:
                 if huename in darray.dims:
                     otherdim = darray.dims[
@@ -254,6 +252,8 @@ def _infer_line_data(darray, x, y, hue):
                 xplt = darray.transpose(yname, huename)
 
         huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
 
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
