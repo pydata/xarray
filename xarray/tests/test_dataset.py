@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import sys
+import warnings
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-import warnings
-import sys
 
 import numpy as np
 import pandas as pd
@@ -52,6 +52,7 @@ def create_test_data(seed=None):
     obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
                                               dtype='int64'))
     obj.encoding = {'foo': 'bar'}
+    obj.attrs = dict(attr1='baz')
     assert all(obj.data.flags.writeable for obj in obj.variables.values())
     return obj
 
@@ -88,7 +89,6 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
 class TestDataset(TestCase):
     def test_repr(self):
         data = create_test_data(seed=123)
-        data.attrs['foo'] = 'bar'
         # need to insert str dtype at runtime to handle both Python 2 & 3
         expected = dedent("""\
         <xarray.Dataset>
@@ -104,7 +104,7 @@ class TestDataset(TestCase):
             var2     (dim1, dim2) float64 1.162 -1.097 -2.123 ... 0.1302 1.267 0.3328
             var3     (dim3, dim1) float64 0.5565 -0.2121 0.4563 ... -0.2452 -0.3616
         Attributes:
-            foo:      bar""") % data['dim3'].dtype  # noqa: E501
+            attr1:    baz""") % data['dim3'].dtype  # noqa: E501
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
         print(actual)
         assert expected == actual
@@ -225,6 +225,7 @@ class TestDataset(TestCase):
         \tint64 numbers(dim3) ;
 
         // global attributes:
+        \t:attr1 = baz ;
         \t:unicode_attr = ba® ;
         \t:string_attr = bar ;
         }''')
@@ -1839,7 +1840,7 @@ class TestDataset(TestCase):
         assert_identical(data, data.drop([]))
 
         expected = Dataset(dict((k, data[k]) for k in data.variables
-                                if k != 'time'))
+                                if k != 'time'), attrs=data.attrs)
         actual = data.drop('time')
         assert_identical(expected, actual)
         actual = data.drop(['time'])
@@ -4325,6 +4326,18 @@ def test_dataset_constructor_aligns_to_explicit_coords(
     result = xr.Dataset({'a': a}, coords=coords)
 
     assert_equal(expected, result)
+
+
+def test_constructor_with_dataset(data_set):
+    result = xr.Dataset(data_set)
+    assert_identical(result, data_set)
+
+
+def test_constructor_raises_with_dataset_and_others(data_set):
+    with pytest.raises(ValueError):
+        xr.Dataset(data_set, coords=data_set.attrs)
+    with pytest.raises(ValueError):
+        xr.Dataset(data_set, coords=data_set.coords)
 
 
 def test_error_message_on_set_supplied():

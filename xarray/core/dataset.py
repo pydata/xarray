@@ -357,12 +357,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         self._dims = {}
         self._attrs = None
         self._file_obj = None
-        if data_vars is None:
-            data_vars = {}
-        if coords is None:
-            coords = {}
-        if data_vars is not None or coords is not None:
-            self._set_init_vars_and_dims(data_vars, coords, compat)
+        if isinstance(data_vars, Dataset):
+            # first argument is a Dataset
+            if coords is not None or attrs is not None:
+                raise ValueError(
+                    "Explicit coords or attrs cannot be passed to Dataset "
+                    "constructor when a Dataset is supplied as first argument")
+            self._set_init_vars_and_dims(data_vars.data_vars, data_vars.coords, compat='identical')
+            self.attrs = data_vars.attrs
+        else:
+            if data_vars is None:
+                data_vars = {}
+            if coords is None:
+                coords = {}
+            if data_vars is not None or coords is not None:
+                self._set_init_vars_and_dims(data_vars, coords, compat)
         if attrs is not None:
             self.attrs = attrs
         self._encoding = None

@@ -88,6 +88,9 @@ Enhancements
   (:issue:`2284`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
+- Supplying a :py:class:`Dataset` to its constructor as a single argument returns a shallow copy. Passing any other arguments will raise an error.
+  (:issue:`2330`)
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
 - A clear error message is now displayed if a ``set`` or ``dict`` is passed in place of an array
   (:issue:`2331`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
