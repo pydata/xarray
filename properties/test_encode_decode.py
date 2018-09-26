@@ -13,7 +13,8 @@ import hypothesis.extra.numpy as npst
 import xarray as xr
 
 # Run for a while - arrays are a bigger search space than usual
-settings.deadline = None
+settings.register_profile("ci", deadline=None)
+settings.load_profile("ci")
 
 
 an_array = npst.arrays(
