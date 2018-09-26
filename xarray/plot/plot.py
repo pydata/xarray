@@ -174,8 +174,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
             kwargs['hue'] = hue
         elif ndims == 2:
             if hue:
-                raise ValueError('hue is not compatible with 2d data')
-            plotfunc = pcolormesh
+                plotfunc = line
+                kwargs['hue'] = hue
+            else:
+                plotfunc = pcolormesh
     else:
         if row or col or hue:
             raise ValueError(error_msg)
