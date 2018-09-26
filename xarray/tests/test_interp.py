@@ -555,3 +555,21 @@ def test_cftime_single_string():
     expected = xr.DataArray(0.5, coords={'time': times_new_array})
 
     assert_allclose(actual, expected)
+
+
+@requires_scipy
+def test_datetime_to_non_datetime_error():
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+    with pytest.raises(TypeError):
+        da.interp(time=0.5)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_to_non_cftime_error():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    with pytest.raises(TypeError):
+        da.interp(time=0.5)

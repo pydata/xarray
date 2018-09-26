@@ -1984,11 +1984,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             except KeyError:
                 return as_variable((k, range(obj.dims[k])))
 
+        def _validate_interp_indexer(x, new_x):
+            # In the case of datetimes, the restrictions placed on indexers
+            # used with interp are stronger than those which are placed on
+            # isel, so we need an additional check after _validate_indexers.
+            if (_contains_datetime_like_objects(x) and
+               not _contains_datetime_like_objects(new_x)):
+               raise TypeError('When interpolating over a datetime-like '
+                               'coordinate, the coordinates to '
+                               'interpolate to must be either datetime '
+                               'strings or datetimes. '
+                               'Instead got\n{}'.format(new_x))
+            else:
+                return (x, new_x)
+            
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
             if name not in indexers:
                 if var.dtype.kind in 'uifc':
-                    var_indexers = {k: (maybe_variable(obj, k), v) for k, v
+                    var_indexers = {k: _validate_interp_indexer(
+                        maybe_variable(obj, k), v) for k, v
                                     in indexers.items() if k in var.dims}
                     variables[name] = missing.interp(
                         var, var_indexers, method, **kwargs)
