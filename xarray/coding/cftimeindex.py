@@ -318,7 +318,7 @@ class CFTimeIndex(pd.Index):
     def shift(self, n, freq):
         """Shift the CFTimeIndex a multiple of the given frequency.
 
-        See the documentation for :py:func:`~xarray.cftime_range()` for a
+        See the documentation for :py:func:`~xarray.cftime_range` for a
         complete listing of valid frequency strings.
 
         Parameters
@@ -338,7 +338,6 @@ class CFTimeIndex(pd.Index):
 
         Examples
         --------
-
         >>> index = xr.cftime_range('2000', periods=1, freq='M')
         >>> index
         CFTimeIndex([2000-01-31 00:00:00], dtype='object')
