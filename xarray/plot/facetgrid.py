@@ -188,6 +188,7 @@ class FacetGrid(object):
         self._y_var = None
         self._cmap_extend = None
         self._mappables = []
+        self._finalized = False
 
     @property
     def _left_axes(self):
@@ -308,13 +309,16 @@ class FacetGrid(object):
 
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
-        self.set_axis_labels(*axlabels)
-        self.set_titles()
-        self.fig.tight_layout()
+        if not self._finalized:
+            self.set_axis_labels(*axlabels)
+            self.set_titles()
+            self.fig.tight_layout()
 
-        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
-            if namedict is None:
-                ax.set_visible(False)
+            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+                if namedict is None:
+                    ax.set_visible(False)
+
+            self._finalized = True
 
     def add_legend(self, **kwargs):
         figlegend = self.fig.legend(
