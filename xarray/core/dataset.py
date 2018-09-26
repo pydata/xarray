@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
-    rolling, utils)
+    alignment, computation, duck_array_ops, formatting, groupby, indexing, ops,
+    resample, rolling, utils)
 from .. import conventions
 from .alignment import align
 from .common import (
@@ -31,7 +31,7 @@ from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array)
+    ensure_us_time_resolution, hashable, maybe_wrap_array, to_numeric)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -709,20 +709,124 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             obj = obj.rename(dim_names)
         return obj
 
-    def copy(self, deep=False):
+    def copy(self, deep=False, data=None):
         """Returns a copy of this dataset.
 
         If `deep=True`, a deep copy is made of each of the component variables.
         Otherwise, a shallow copy of each of the component variable is made, so
         that the underlying memory region of the new dataset is the same as in
         the original dataset.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Whether each component variable is loaded into memory and copied onto
+            the new object. Default is True.
+        data : dict-like, optional
+            Data to use in the new object. Each item in `data` must have same
+            shape as corresponding data variable in original. When `data` is
+            used, `deep` is ignored for the data variables and only used for
+            coords.
+
+        Returns
+        -------
+        object : Dataset
+            New object with dimensions, attributes, coordinates, name, encoding,
+            and optionally data copied from original.
+
+        Examples
+        --------
+
+        Shallow copy versus deep copy
+
+        >>> da = xr.DataArray(np.random.randn(2, 3))
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])}, 
+                            coords={'x': ['one', 'two']})
+        >>> ds.copy()
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 -0.8079 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+        >>> ds_0 = ds.copy(deep=False)
+        >>> ds_0['foo'][0, 0] = 7
+        >>> ds_0
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+
+        Changing the data using the ``data`` argument maintains the 
+        structure of the original object, but with the new data. Original
+        object is unaffected.
+
+        >>> ds.copy(data={'foo': np.arange(6).reshape(2, 3), 'bar': ['a', 'b']})
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) int64 0 1 2 3 4 5
+            bar      (x) <U1 'a' 'b'
+        >>> ds
+        <xarray.Dataset>
+        Dimensions:  (dim_0: 2, dim_1: 3, x: 2)
+        Coordinates:
+        * x        (x) <U3 'one' 'two'
+        Dimensions without coordinates: dim_0, dim_1
+        Data variables:
+            foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
+            bar      (x) int64 -1 2
+
+        See Also
+        --------
+        pandas.DataFrame.copy
         """
-        variables = OrderedDict((k, v.copy(deep=deep))
-                                for k, v in iteritems(self._variables))
+        if data is None:
+            variables = OrderedDict((k, v.copy(deep=deep))
+                                    for k, v in iteritems(self._variables))
+        elif not utils.is_dict_like(data):
+            raise ValueError('Data must be dict-like')
+        else:
+            var_keys = set(self.data_vars.keys())
+            data_keys = set(data.keys())
+            keys_not_in_vars = data_keys - var_keys
+            if keys_not_in_vars:
+                raise ValueError('Data must only contain variables in original '
+                                 'dataset. Extra variables: {}'
+                                 .format(keys_not_in_vars))
+            keys_missing_from_data = var_keys - data_keys
+            if keys_missing_from_data:
+                raise ValueError('Data must contain all variables in original '
+                                 'dataset. Data is missing {}'
+                                 .format(keys_missing_from_data))
+            variables = OrderedDict((k, v.copy(deep=deep, data=data.get(k)))
+                                    for k, v in iteritems(self._variables))
+
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy(),
-                                      encoding=self.encoding)
+                                      encoding=self.encoding)  
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -3298,6 +3402,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Data variables:
         foo      (x) int64 1 -1
 
+        See Also
+        --------
+        Dataset.differentiate
         """
         if n == 0:
             return self
@@ -3648,6 +3755,62 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
+    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+        """ Differentiate with the second order accurate central
+        differences.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+            'us', 'ns', 'ps', 'fs', 'as'}
+            Unit to compute gradient. Only valid for datetime coordinate.
+
+        Returns
+        -------
+        differentiated: Dataset
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+        """
+        from .variable import Variable
+
+        if coord not in self.variables and coord not in self.dims:
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
+
+        coord_var = self[coord].variable
+        if coord_var.ndim != 1:
+            raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                             ' dimensional'.format(coord, coord_var.ndim))
+
+        dim = coord_var.dims[0]
+        coord_data = coord_var.data
+        if coord_data.dtype.kind in 'mM':
+            if datetime_unit is None:
+                datetime_unit, _ = np.datetime_data(coord_data.dtype)
+            coord_data = to_numeric(coord_data, datetime_unit=datetime_unit)
+
+        variables = OrderedDict()
+        for k, v in self.variables.items():
+            if (k in self.data_vars and dim in v.dims and
+                    k not in self.coords):
+                v = to_numeric(v, datetime_unit=datetime_unit)
+                grad = duck_array_ops.gradient(
+                    v.data, coord_data, edge_order=edge_order,
+                    axis=v.get_axis_num(dim))
+                variables[k] = Variable(v.dims, grad)
+            else:
+                variables[k] = v
+        return self._replace_vars_and_dims(variables)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
@@ -3661,7 +3824,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Can pass in ``key=value`` or ``key=callable``.  A Dataset is returned
         containing only the variables for which all the filter tests pass.
-        These tests are either ``key=value`` for which the attribute ``key`` 
+        These tests are either ``key=value`` for which the attribute ``key``
         has the exact value ``value`` or the callable passed into
         ``key=callable`` returns True. The callable will be passed a single
         value, either the value of the attribute ``key`` or ``None`` if the

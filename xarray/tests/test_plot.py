@@ -762,6 +762,24 @@ class Common2dMixin:
     def test_can_pass_in_axis(self):
         self.pass_in_axis(self.plotmethod)
 
+    def test_xyincrease_defaults(self):
+
+        # With default settings the axis must be ordered regardless
+        # of the coords order.
+        self.plotfunc(DataArray(easy_array((3, 2)), coords=[[1, 2, 3],
+                                                            [1, 2]]))
+        bounds = plt.gca().get_ylim()
+        assert bounds[0] < bounds[1]
+        bounds = plt.gca().get_xlim()
+        assert bounds[0] < bounds[1]
+        # Inverted coords
+        self.plotfunc(DataArray(easy_array((3, 2)), coords=[[3, 2, 1],
+                                                            [2, 1]]))
+        bounds = plt.gca().get_ylim()
+        assert bounds[0] < bounds[1]
+        bounds = plt.gca().get_xlim()
+        assert bounds[0] < bounds[1]
+
     def test_xyincrease_false_changes_axes(self):
         self.plotmethod(xincrease=False, yincrease=False)
         xlim = plt.gca().get_xlim()
@@ -1032,6 +1050,19 @@ class Common2dMixin:
         assert_array_equal(g.axes.shape, [3, 2])
         for ax in g.axes.flat:
             assert ax.has_data()
+
+    @pytest.mark.filterwarnings('ignore:This figure includes')
+    def test_facetgrid_map_only_appends_mappables(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows')
+
+        expected = g._mappables
+
+        g.map(lambda: plt.plot(1, 1))
+        actual = g._mappables
+
+        assert expected == actual
 
     def test_facetgrid_cmap(self):
         # Regression test for GH592
@@ -1308,8 +1339,8 @@ class TestImshow(Common2dMixin, PlotTestCase):
         da = DataArray(easy_array((1, 3, 3), start=0.0, stop=1.0))
         da.plot.imshow()
 
-    def test_imshow_origin_kwarg(self):
-        da = DataArray(easy_array((5, 5, 3), start=-0.6, stop=1.4))
+    def test_origin_overrides_xyincrease(self):
+        da = DataArray(easy_array((3, 2)), coords=[[-2, 0, 2], [-1, 1]])
         da.plot.imshow(origin='upper')
         assert plt.xlim()[0] < 0
         assert plt.ylim()[1] < 0
@@ -1492,7 +1523,9 @@ class TestFacetGrid(PlotTestCase):
 
     @pytest.mark.slow
     def test_map(self):
+        assert self.g._finalized is False
         self.g.map(plt.contourf, 'x', 'y', Ellipsis)
+        assert self.g._finalized is True
         self.g.map(lambda: None)
 
     @pytest.mark.slow

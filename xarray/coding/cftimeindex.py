@@ -1,3 +1,44 @@
+"""DatetimeIndex analog for cftime.datetime objects"""
+# The pandas.Index subclass defined here was copied and adapted for
+# use with cftime.datetime objects based on the source code defining
+# pandas.DatetimeIndex.
+
+# For reference, here is a copy of the pandas copyright notice:
+
+# (c) 2011-2012, Lambda Foundry, Inc. and PyData Development Team
+# All rights reserved.
+
+# Copyright (c) 2008-2011 AQR Capital Management, LLC
+# All rights reserved.
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+
+#     * Redistributions of source code must retain the above copyright
+#        notice, this list of conditions and the following disclaimer.
+
+#     * Redistributions in binary form must reproduce the above
+#        copyright notice, this list of conditions and the following
+#        disclaimer in the documentation and/or other materials provided
+#        with the distribution.
+
+#     * Neither the name of the copyright holder nor the names of any
+#        contributors may be used to endorse or promote products derived
+#        from this software without specific prior written permission.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 from __future__ import absolute_import
 import re
 from datetime import timedelta
@@ -116,28 +157,43 @@ def _field_accessor(name, docstring=None):
 
 
 def get_date_type(self):
-    return type(self._data[0])
+    if self.data:
+        return type(self._data[0])
+    else:
+        return None
 
 
 def assert_all_valid_date_type(data):
     import cftime
 
-    sample = data[0]
-    date_type = type(sample)
-    if not isinstance(sample, cftime.datetime):
-        raise TypeError(
-            'CFTimeIndex requires cftime.datetime '
-            'objects. Got object of {}.'.format(date_type))
-    if not all(isinstance(value, date_type) for value in data):
-        raise TypeError(
-            'CFTimeIndex requires using datetime '
-            'objects of all the same type.  Got\n{}.'.format(data))
+    if data.size:
+        sample = data[0]
+        date_type = type(sample)
+        if not isinstance(sample, cftime.datetime):
+            raise TypeError(
+                'CFTimeIndex requires cftime.datetime '
+                'objects. Got object of {}.'.format(date_type))
+        if not all(isinstance(value, date_type) for value in data):
+            raise TypeError(
+                'CFTimeIndex requires using datetime '
+                'objects of all the same type.  Got\n{}.'.format(data))
 
 
 class CFTimeIndex(pd.Index):
     """Custom Index for working with CF calendars and dates
 
     All elements of a CFTimeIndex must be cftime.datetime objects.
+
+    Parameters
+    ----------
+    data : array or CFTimeIndex
+        Sequence of cftime.datetime objects to use in index
+    name : str, default None
+        Name of the resulting index
+
+    See Also
+    --------
+    cftime_range
     """
     year = _field_accessor('year', 'The year of the datetime')
     month = _field_accessor('month', 'The month of the datetime')
@@ -149,10 +205,14 @@ class CFTimeIndex(pd.Index):
                                   'The microseconds of the datetime')
     date_type = property(get_date_type)
 
-    def __new__(cls, data):
+    def __new__(cls, data, name=None):
+        if name is None and hasattr(data, 'name'):
+            name = data.name
+
         result = object.__new__(cls)
-        assert_all_valid_date_type(data)
-        result._data = np.array(data)
+        result._data = np.array(data, dtype='O')
+        assert_all_valid_date_type(result._data)
+        result.name = name
         return result
 
     def _partial_date_slice(self, resolution, parsed):

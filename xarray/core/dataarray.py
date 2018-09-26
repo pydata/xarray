@@ -677,14 +677,77 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().persist(**kwargs)
         return self._from_temp_dataset(ds)
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this array.
 
-        If `deep=True`, a deep copy is made of all variables in the underlying
-        dataset. Otherwise, a shallow copy is made, so each variable in the new
+        If `deep=True`, a deep copy is made of the data array.
+        Otherwise, a shallow copy is made, so each variable in the new
         array's dataset is also a variable in this array's dataset.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Whether the data array and its coordinates are loaded into memory
+            and copied onto the new object. Default is True.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+            When `data` is used, `deep` is ignored for all data variables,
+            and only used for coords.
+
+        Returns
+        -------
+        object : DataArray
+            New object with dimensions, attributes, coordinates, name,
+            encoding, and optionally data copied from original.
+
+        Examples
+        --------
+
+        Shallow versus deep copy
+
+        >>> array = xr.DataArray([1, 2, 3], dims='x',
+        ...                      coords={'x': ['a', 'b', 'c']})
+        >>> array.copy()
+        <xarray.DataArray (x: 3)>
+        array([1, 2, 3])
+        Coordinates:
+        * x        (x) <U1 'a' 'b' 'c'
+        >>> array_0 = array.copy(deep=False)
+        >>> array_0[0] = 7
+        >>> array_0
+        <xarray.DataArray (x: 3)>
+        array([7, 2, 3])
+        Coordinates:
+        * x        (x) <U1 'a' 'b' 'c'
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([7, 2, 3])
+        Coordinates:
+        * x        (x) <U1 'a' 'b' 'c'
+
+        Changing the data using the ``data`` argument maintains the
+        structure of the original object, but with the new data. Original
+        object is unaffected.
+
+        >>> array.copy(data=[0.1, 0.2, 0.3])
+        <xarray.DataArray (x: 3)>
+        array([ 0.1,  0.2,  0.3])
+        Coordinates:
+        * x        (x) <U1 'a' 'b' 'c'
+        >>> array
+        <xarray.DataArray (x: 3)>
+        array([1, 2, 3])
+        Coordinates:
+        * x        (x) <U1 'a' 'b' 'c'
+
+        See also
+        --------
+        pandas.DataFrame.copy
         """
-        variable = self.variable.copy(deep=deep)
+        variable = self.variable.copy(deep=deep, data=data)
         coords = OrderedDict((k, v.copy(deep=deep))
                              for k, v in self._coords.items())
         return self._replace(variable, coords)
@@ -2010,6 +2073,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
         * x        (x) int64 3 4
 
+        See Also
+        --------
+        DataArray.differentiate
         """
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
@@ -2287,6 +2353,61 @@ class DataArray(AbstractArray, DataWithCoords):
         Dimensions without coordinates: x
         """
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
+        return self._from_temp_dataset(ds)
+
+    def differentiate(self, coord, edge_order=1, datetime_unit=None):
+        """ Differentiate the array with the second order accurate central
+        differences.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        edge_order: 1 or 2. Default 1
+            N-th order accurate differences at the boundaries.
+        datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+            'us', 'ns', 'ps', 'fs', 'as'}
+            Unit to compute gradient. Only valid for datetime coordinate.
+
+        Returns
+        -------
+        differentiated: DataArray
+
+        See also
+        --------
+        numpy.gradient: corresponding numpy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.differentiate('x')
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[30.      , 30.      , 30.      ],
+               [27.545455, 27.545455, 27.545455],
+               [27.545455, 27.545455, 27.545455],
+               [30.      , 30.      , 30.      ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().differentiate(
+            coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
 
