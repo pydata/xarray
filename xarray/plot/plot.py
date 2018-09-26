@@ -225,13 +225,13 @@ def _infer_line_data(darray, x, y, hue):
             xplt = darray[xname]
             if xplt.ndim > 1:
                 if huename in darray.dims:
-                    otherdim = darray.dims[
-                        np.mod(darray.dims.index(huename) + 1, 2)]
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
                     yplt = darray.transpose(otherdim, huename)
                     xplt = xplt.transpose(otherdim, huename)
                 else:
-                    raise ValueError('If x or y are 2D, hue must be a dimension' +
-                                     'i.e. one of' + repr(darray.dims))
+                    raise ValueError('If x or y are 2D, hue must be a dimension '
+                                     + 'i.e. one of ' + repr(darray.dims))
 
             else:
                 yplt = darray.transpose(xname, huename)
@@ -246,7 +246,7 @@ def _infer_line_data(darray, x, y, hue):
                     xplt = darray.transpose(otherdim, huename)
                 else:
                     raise ValueError('For 2D inputs, hue must a dimension' +
-                                     'i.e. one of' + repr(darray.dims))
+                                     'i.e. one of ' + repr(darray.dims))
 
             else:
                 xplt = darray.transpose(yname, huename)
@@ -287,7 +287,7 @@ def line(darray, *args, **kwargs):
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
         Dimension or coordinate for which you want multiple lines plotted.
-        If plotting against a 2D co-ordinate, ``hue`` must be a dimension.
+        If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
         Dimensions or coordinates for x, y axis.
         Only one of these may be specified.

@@ -703,7 +703,7 @@ You can however decide to infer the cell boundaries and use the
 
 .. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
 
-One can also make line plots with multidimensional co-ordinates. In this case, ``hue`` must be a dimension name, not a co-ordinate name.
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
 
 .. ipython:: python
 
