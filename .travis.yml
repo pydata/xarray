@@ -1,5 +1,5 @@
 # Based on http://conda.pydata.org/docs/travis.html
-language: generic
+language: minimal
 sudo: false # use container based build
 notifications:
   email: false
@@ -10,67 +10,45 @@ branches:
 matrix:
   fast_finish: true
   include:
-  - name: py27-min
-    env: CONDA_ENV=py27-min
-  - name: py27-cdat+iris+pynio
-    env: CONDA_ENV=py27-cdat+iris+pynio
-  - name: py35
-    env: CONDA_ENV=py35
-  - name: py36
-    env: CONDA_ENV=py36
-  - name: py37
-    env: CONDA_ENV=py37
-  - name: py36
-    env:
+  - env: CONDA_ENV=py27-min
+  - env: CONDA_ENV=py27-cdat+iris+pynio
+  - env: CONDA_ENV=py35
+  - env: CONDA_ENV=py36
+  - env: CONDA_ENV=py37
+  - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - name: py36-netcdf4-dev
-    env: CONDA_ENV=py36-netcdf4-dev
+  - env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - name: py36-dask-dev
-    env: CONDA_ENV=py36-dask-dev
-  - name: py36-pandas-dev
-    env: CONDA_ENV=py36-pandas-dev
-  - name: py36-bottleneck-dev
-    env: CONDA_ENV=py36-bottleneck-dev
-  - name: py36-condaforge-rc
-    env: CONDA_ENV=py36-condaforge-rc
-  - name: py36-pynio-dev
-    env: CONDA_ENV=py36-pynio-dev
-  - name: py36-rasterio-0.36
-    env: CONDA_ENV=py36-rasterio-0.36
-  - name: py36-zarr-dev
-    env: CONDA_ENV=py36-zarr-dev
-  - name: docs
-    env: CONDA_ENV=docs
-  - name: py36-hypothesis
-    env: CONDA_ENV=py36-hypothesis
+  - env: CONDA_ENV=py36-dask-dev
+  - env: CONDA_ENV=py36-pandas-dev
+  - env: CONDA_ENV=py36-bottleneck-dev
+  - env: CONDA_ENV=py36-condaforge-rc
+  - env: CONDA_ENV=py36-pynio-dev
+  - env: CONDA_ENV=py36-rasterio-0.36
+  - env: CONDA_ENV=py36-zarr-dev
+  - env: CONDA_ENV=docs
+  - env: CONDA_ENV=py36-hypothesis
+
   allow_failures:
-  - name: py36
-    env:
+  - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - name: py36-netcdf4-dev
-    env: CONDA_ENV=py36-netcdf4-dev
+  - env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - name: py36-pandas-dev
-    env: CONDA_ENV=py36-pandas-dev
-  - name: py36-bottleneck-dev
-    env: CONDA_ENV=py36-bottleneck-dev
-  - name: py36-condaforge-rc
-    env: CONDA_ENV=py36-condaforge-rc
-  - name: py36-pynio-dev
-    env: CONDA_ENV=py36-pynio-dev
-  - name: py36-zarr-dev
-    env: CONDA_ENV=py36-zarr-dev
+  - env: CONDA_ENV=py36-pandas-dev
+  - env: CONDA_ENV=py36-bottleneck-dev
+  - env: CONDA_ENV=py36-condaforge-rc
+  - env: CONDA_ENV=py36-pynio-dev
+  - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
   - wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
@@ -93,6 +71,8 @@ install:
   - python xarray/util/print_versions.py
 
 script:
+  - which python
+  - python --version
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
