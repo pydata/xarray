@@ -5,9 +5,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 import pytest
 
+import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
 from xarray.coding.times import _import_cftime
@@ -17,9 +17,8 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_cftime)
+    TestCase, assert_array_equal, assert_equal, raises_regex, requires_cftime,
+    requires_matplotlib, requires_matplotlib2, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -1765,6 +1764,7 @@ def test_plot_cftime_data_error():
 test_da_list = [DataArray(easy_array((10, ))),
                 DataArray(easy_array((10, 3))),
                 DataArray(easy_array((10, 3, 2)))]
+
 
 @requires_matplotlib
 class TestAxesKwargs(object):
