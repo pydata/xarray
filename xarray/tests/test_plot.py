@@ -1747,7 +1747,6 @@ test_da_list = [DataArray(easy_array((10, ))),
                 DataArray(easy_array((10, 3))),
                 DataArray(easy_array((10, 3, 2)))]
 
-
 @requires_matplotlib
 class TestAxesKwargs(object):
     @pytest.mark.parametrize('da', test_da_list)
@@ -1806,3 +1805,23 @@ class TestAxesKwargs(object):
         da.plot(yticks=np.arange(5))
         expected = np.arange(5)
         assert np.all(plt.gca().get_yticks() == expected)
+
+
+def test_multidim_coords_line_plot():
+    lon, lat = np.meshgrid(np.linspace(-20, 20, 5),
+                           np.linspace(0, 30, 4))
+    lon += lat / 10
+    lat += lon / 10
+    da = xr.DataArray(np.arange(20).reshape(4, 5), dims=['y', 'x'],
+                      coords={'lat': (('y', 'x'), lat),
+                              'lon': (('y', 'x'), lon)})
+
+    hdl = da.plot.line(x='lon', hue='x')
+    assert len(hdl) == 5
+
+    plt.clf()
+    hdl = da.plot.line(x='lon', hue='y')
+    assert len(hdl) == 4
+
+    with pytest.raises(ValueError, message='If x or y are 2D '):
+        da.plot.line(x='lon', hue='lat')
