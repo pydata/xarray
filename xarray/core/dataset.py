@@ -31,7 +31,7 @@ from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array, to_numeric)
+    ensure_us_time_resolution, hashable, maybe_wrap_array, datetime_to_numeric)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
@@ -3831,14 +3831,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 datetime_unit, _ = np.datetime_data(coord_var.dtype)
             elif datetime_unit is None:
                 datetime_unit = 's'  # Default to seconds for cftime objects
-            coord_var = to_numeric(coord_var, datetime_unit=datetime_unit)
+            coord_var = datetime_to_numeric(coord_var, datetime_unit=datetime_unit)
 
         variables = OrderedDict()
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
                 if _contains_datetime_like_objects(v):
-                    v = to_numeric(v, datetime_unit=datetime_unit)
+                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
                     v.data, coord_var, edge_order=edge_order,
                     axis=v.get_axis_num(dim))

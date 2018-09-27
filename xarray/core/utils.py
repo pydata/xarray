@@ -593,7 +593,7 @@ class HiddenKeyDict(MutableMapping):
         return len(self._data) - num_hidden
 
 
-def to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     """Convert an array containing datetime-like data to an array of floats.
 
     Parameters
