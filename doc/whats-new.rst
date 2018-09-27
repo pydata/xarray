@@ -39,6 +39,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
+  (:issue:`2445`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 
 .. _whats-new.0.10.9:
 

@@ -3900,6 +3900,16 @@ class TestDataset(TestCase):
         with raises_regex(ValueError, 'dimensions'):
             ds.shift(foo=123)
 
+    def test_shift_multidim(self):
+        # regression test for 2445
+        arr = xr.DataArray(
+            [[1, 2, 3],[4, 5, 6]], coords={'x': range(3), 'y': range(2)},
+            dims=('y','x'))
+        actual = arr.roll(x=1, roll_coords=True)
+        expected = xr.DataArray([[3, 1, 2],[6, 4, 5]],
+                                coords=[('y', [0, 1]), ('x', [2, 0, 1])])
+        assert_identical(expected, actual)
+
     def test_roll_coords(self):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
