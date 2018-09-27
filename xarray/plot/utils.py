@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import textwrap
 import warnings
 
-import matplotlib as mpl
 import numpy as np
 
 from ..core.options import OPTIONS
@@ -72,6 +71,7 @@ def _build_discrete_cmap(cmap, levels, extend, filled):
     """
     Build a discrete colormap and normalization of the data.
     """
+    import matplotlib as mpl
 
     if not filled:
         # non-filled contour plots
