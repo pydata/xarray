@@ -408,13 +408,6 @@ operations keep around coordinates:
     list(ds[['x']])
     list(ds.drop('temperature'))
 
-If a dimension name is given as an argument to ``drop``, it also drops all
-variables that use that dimension:
-
-.. ipython:: python
-
-    list(ds.drop('time'))
-
 As an alternate to dictionary-like modifications, you can use
 :py:meth:`~xarray.Dataset.assign` and :py:meth:`~xarray.Dataset.assign_coords`.
 These methods return a new dataset with additional (or replaced) or values:
