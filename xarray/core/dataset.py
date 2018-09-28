@@ -3595,7 +3595,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for k, v in iteritems(self.variables):
             if k not in unrolled_vars:
-                variables[k] = v.roll(**shifts)
+                variables[k] = v.roll(**{k: s for k, s in shifts.items()
+                                         if k in v.dims})
             else:
                 variables[k] = v
 

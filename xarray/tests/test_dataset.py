@@ -3945,6 +3945,16 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
         assert_identical(expected, actual)
 
+    def test_roll_multidim(self):
+        # regression test for 2445
+        arr = xr.DataArray(
+            [[1, 2, 3],[4, 5, 6]], coords={'x': range(3), 'y': range(2)},
+            dims=('y','x'))
+        actual = arr.roll(x=1, roll_coords=True)
+        expected = xr.DataArray([[3, 1, 2],[6, 4, 5]],
+                                coords=[('y', [0, 1]), ('x', [2, 0, 1])])
+        assert_identical(expected, actual)
+
     def test_real_and_imag(self):
         attrs = {'foo': 'bar'}
         ds = Dataset({'x': ((), 1 + 2j, attrs)}, attrs=attrs)
