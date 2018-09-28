@@ -39,6 +39,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
+  (:issue:`2240`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.10.9:
 
