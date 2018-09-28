@@ -14,7 +14,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
-    broadcast, open_dataset, set_options)
+    broadcast, open_dataset, set_options, ALL_DIMS)
 from xarray.core import indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
@@ -2648,19 +2648,27 @@ class TestDataset(TestCase):
 
         expected = data.mean('y')
         expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
-        actual = data.groupby('x').mean()
+        actual = data.groupby('x').mean(ALL_DIMS)
         assert_allclose(expected, actual)
 
         actual = data.groupby('x').mean('y')
         assert_allclose(expected, actual)
 
         letters = data['letters']
-        expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
+        expected = Dataset({'xy': data['xy'].groupby(letters).mean(ALL_DIMS),
                             'xonly': (data['xonly'].mean().variable
                                       .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
-        actual = data.groupby('letters').mean()
+        actual = data.groupby('letters').mean(ALL_DIMS)
         assert_allclose(expected, actual)
+
+    def test_groupby_warn(self):
+        data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
+                        'xonly': ('x', np.random.randn(3)),
+                        'yonly': ('y', np.random.randn(4)),
+                        'letters': ('y', ['a', 'a', 'b', 'b'])})
+        with pytest.warns(FutureWarning):
+            data.groupby('x').mean()
 
     def test_groupby_math(self):
         def reorder_dims(x):
@@ -2716,7 +2724,7 @@ class TestDataset(TestCase):
         ds = Dataset({'x': ('t', [1, 2, 3])},
                      {'t': pd.date_range('20100101', periods=3)})
         grouped = ds.groupby('t.day')
-        actual = grouped - grouped.mean()
+        actual = grouped - grouped.mean(ALL_DIMS)
         expected = Dataset({'x': ('t', [0, 0, 0])},
                            ds[['t', 't.day']])
         assert_identical(actual, expected)
@@ -2725,18 +2733,17 @@ class TestDataset(TestCase):
         # nan should be excluded from groupby
         ds = Dataset({'foo': ('x', [1, 2, 3, 4])},
                      {'bar': ('x', [1, 1, 2, np.nan])})
-        actual = ds.groupby('bar').mean()
+        actual = ds.groupby('bar').mean(ALL_DIMS)
         expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
         assert_identical(actual, expected)
 
     def test_groupby_order(self):
         # groupby should preserve variables order
-
         ds = Dataset()
         for vn in ['a', 'b', 'c']:
             ds[vn] = DataArray(np.arange(10), dims=['t'])
         data_vars_ref = list(ds.data_vars.keys())
-        ds = ds.groupby('t').mean()
+        ds = ds.groupby('t').mean(ALL_DIMS)
         data_vars = list(ds.data_vars.keys())
         assert data_vars == data_vars_ref
         # coords are now at the end of the list, so the test below fails
