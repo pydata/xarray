@@ -184,9 +184,9 @@ def nanvar(a, axis=None, dtype=None, out=None, ddof=0):
         a, axis=axis, dtype=dtype, ddof=ddof)
 
 
-def nanstd(a, axis=None, dtype=None, out=None):
+def nanstd(a, axis=None, dtype=None, out=None, ddof=0):
     return _dask_or_eager_func('nanstd', eager_module=nputils)(
-        a, axis=axis, dtype=dtype)
+        a, axis=axis, dtype=dtype, ddof=ddof)
 
 
 def nanprod(a, axis=None, dtype=None, out=None, min_count=None):
