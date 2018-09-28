@@ -314,3 +314,32 @@ class CFTimeIndex(pd.Index):
     def contains(self, key):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
+
+
+def _parse_iso8601_without_reso(date_type, datetime_str):
+    date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
+    return date
+
+
+def _parse_array_of_cftime_strings(strings, date_type):
+    """Create a numpy array from an array of strings.
+
+    For use in generating dates from strings for use with interp.  Assumes the
+    array is either 0-dimensional or 1-dimensional.
+
+    Parameters
+    ----------
+    strings : array of strings
+        Strings to convert to dates
+    date_type : cftime.datetime type
+        Calendar type to use for dates
+
+    Returns
+    -------
+    np.array
+    """
+    if strings.ndim == 0:
+        return np.array(_parse_iso8601_without_reso(date_type, strings.item()))
+    else:
+        return np.array([_parse_iso8601_without_reso(date_type, s)
+                         for s in strings])
