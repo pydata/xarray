@@ -56,6 +56,10 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
+  (:issue:`2445`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
   (:issue:`2240`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
