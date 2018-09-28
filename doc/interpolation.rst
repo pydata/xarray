@@ -63,6 +63,9 @@ by specifing the time periods required.
 
     da_dt64.interp(time=pd.date_range('1/1/2000', '1/3/2000', periods=3))
 
+Interpolation of data indexed by a :py:class:`~xarray.CFTimeIndex` is also
+allowed.  See :ref:`CFTimeIndex` for examples.
+    
 .. note::
 
   Currently, our interpolation only works for regular grids.
