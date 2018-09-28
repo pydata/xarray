@@ -18,7 +18,8 @@ from . import (
 from .. import conventions
 from .alignment import align
 from .common import (
-    DataWithCoords, ImplementsDatasetReduce, _contains_datetime_like_objects)
+    ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
+    _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -743,7 +744,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Shallow copy versus deep copy
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])}, 
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])},
                             coords={'x': ['one', 'two']})
         >>> ds.copy()
         <xarray.Dataset>
@@ -775,7 +776,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
 
-        Changing the data using the ``data`` argument maintains the 
+        Changing the data using the ``data`` argument maintains the
         structure of the original object, but with the new data. Original
         object is unaffected.
 
@@ -826,7 +827,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy(),
-                                      encoding=self.encoding)  
+                                      encoding=self.encoding)
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -2893,6 +2894,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if dim is ALL_DIMS:
+            dim = None
         if isinstance(dim, basestring):
             dims = set([dim])
         elif dim is None:

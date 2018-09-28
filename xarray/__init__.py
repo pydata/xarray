@@ -34,3 +34,5 @@ from .util.print_versions import show_versions
 from . import tutorial
 from . import ufuncs
 from . import testing
+
+from .core.common import ALL_DIMS
