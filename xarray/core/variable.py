@@ -1333,6 +1333,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim is common.ALL_DIMS:
+            dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 

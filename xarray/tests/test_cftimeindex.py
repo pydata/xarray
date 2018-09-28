@@ -9,10 +9,11 @@ import xarray as xr
 from datetime import timedelta
 from xarray.coding.cftimeindex import (
     parse_iso8601, CFTimeIndex, assert_all_valid_date_type,
-    _parsed_string_to_bounds, _parse_iso8601_with_reso)
+    _parsed_string_to_bounds, _parse_iso8601_with_reso,
+    _parse_array_of_cftime_strings)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime, has_cftime_or_netCDF4
+from . import has_cftime, has_cftime_or_netCDF4, requires_cftime
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -616,3 +617,21 @@ def test_concat_cftimeindex(date_type, enable_cftimeindex):
 def test_empty_cftimeindex():
     index = CFTimeIndex([])
     assert index.date_type is None
+
+
+@requires_cftime
+def test_parse_array_of_cftime_strings():
+    from cftime import DatetimeNoLeap
+
+    strings = np.array(['2000-01-01', '2000-01-02'])
+    expected = np.array([DatetimeNoLeap(2000, 1, 1),
+                         DatetimeNoLeap(2000, 1, 2)])
+
+    result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
+    np.testing.assert_array_equal(result, expected)
+
+    # Test scalar array case
+    strings = np.array('2000-01-01')
+    expected = np.array(DatetimeNoLeap(2000, 1, 1))
+    result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
+    np.testing.assert_array_equal(result, expected)

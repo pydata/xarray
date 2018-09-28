@@ -30,12 +30,29 @@ What's New
 v0.11.0 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+  without dimension argument will change in the next release.
+  Now we warn a FutureWarning.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+Documentation
+~~~~~~~~~~~~~
 Enhancements
 ~~~~~~~~~~~~
 
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Added support for using ``cftime.datetime`` coordinates with
+  :py:meth:`~xarray.DataArray.differentiate`,
+  :py:meth:`~xarray.Dataset.differentiate`,
+  :py:meth:`~xarray.DataArray.interp`, and
+  :py:meth:`~xarray.Dataset.interp`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_
+  
 Bug fixes
 ~~~~~~~~~
 
@@ -43,6 +60,9 @@ Bug fixes
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
+  (:issue:`2240`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.10.9:
 
