@@ -309,7 +309,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         assert_allclose(actual, expected, rtol=rtol)
 
         # make sure the compatiblility with pandas' results.
-        if func == 'var':
+        if func in ['var', 'std']:
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=0)
             assert_allclose(actual, expected, rtol=rtol)
