@@ -737,6 +737,11 @@ def _plot2d(plotfunc):
             # pcolormesh
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
+            # if colors == a single color, matplotlib draws dashed negative
+            # contours. we lose this feature if we pass cmap and not colors
+            if isinstance(colors, basestring):
+                cmap_params['cmap'] = None
+                kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals

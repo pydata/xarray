@@ -63,6 +63,10 @@ Bug fixes
 - ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
   (:issue:`2240`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Restore matplotlib's default of plotting dashed negative contours when
+  a single color is passed to ``DataArray.contour()`` e.g. ``colors='k'``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
 
 .. _whats-new.0.10.9:
 
