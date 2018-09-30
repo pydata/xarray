@@ -12,8 +12,8 @@ from numpy.testing import assert_array_equal
 import xarray as xr
 from xarray.core.computation import (
     _UFuncSignature, apply_ufunc, broadcast_compat_data, collect_dict_values,
-    join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
-    unified_dim_sizes)
+    join_dict_keys, LazyElementwiseFunctionArray, ordered_set_intersection,
+    ordered_set_union, result_name, unified_dim_sizes)
 
 from . import raises_regex, requires_dask, has_dask
 
@@ -560,6 +560,35 @@ def test_dataset_join():
                            'b': ('x', [np.nan, np.nan, np.nan]),
                            'x': [0, 1, 2]})
     assert_identical(actual, expected)
+
+
+def test_lazy():
+    array = np.array([1, 2, 3], dtype=np.int64)
+    variable = xr.Variable('x', array)
+    data_array = xr.DataArray(variable, [('x', -array)])
+    dataset = xr.Dataset({'y': variable}, {'x': -array})
+
+    def lazy_times2(a):
+        return apply_ufunc(
+            lambda x: 2 * x, a, lazy=True, output_dtypes=[np.int64])
+
+    result = lazy_times2(variable)
+    assert isinstance(result._data, LazyElementwiseFunctionArray)
+    assert_identical(2 * variable, result)
+
+    assert_identical(2 * data_array, lazy_times2(data_array))
+    assert_identical(2 * dataset, lazy_times2(dataset))
+
+    def error_for_greater_than_one(a):
+        if np.any(a > 1):
+            raise AssertionError
+        return a
+
+    result = apply_ufunc(error_for_greater_than_one, variable, lazy=True,
+                         output_dtypes=[variable.dtype])
+    assert_identical(result[:1], variable[:1])
+    with pytest.raises(AssertionError):
+        result[1].data
 
 
 @requires_dask
