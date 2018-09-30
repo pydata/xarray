@@ -157,7 +157,7 @@ def _field_accessor(name, docstring=None):
 
 
 def get_date_type(self):
-    if self.data:
+    if self._data.size:
         return type(self._data[0])
     else:
         return None
