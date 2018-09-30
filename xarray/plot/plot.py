@@ -243,8 +243,7 @@ def _infer_line_data(darray, x, y, hue):
             yplt = darray[yname]
             if yplt.ndim > 1:
                 if huename in darray.dims:
-                    otherdim = darray.dims[
-                        np.mod(darray.dims.index(huename) + 1, 2)]
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     xplt = darray.transpose(otherdim, huename)
                 else:
                     raise ValueError('For 2D inputs, hue must a dimension' +

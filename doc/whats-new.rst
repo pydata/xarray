@@ -33,7 +33,7 @@ v0.11.0 (unreleased)
 Enhancements
 ~~~~~~~~~~~~
 
-- ``plot.line()`` can now accept multidimensional co-ordinate variables as input.
+- ``plot.line()`` can now accept multidimensional coordinate variables as input.
   `hue` must be a dimension in this case. (:issue:`2407`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
 
