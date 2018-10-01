@@ -52,7 +52,12 @@ Enhancements
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
   By `Spencer Clark <https://github.com/spencerkclark>`_
-  
+
+- Added :py:meth:`DataSet.to_iris` and
+  :py:meth:`DataSet.from_iris` for
+  converting data sets to and from Iris_ CubeLists with the same data and coordinates.
+  By `Jacob Tomlinson <https://github.com/jacobtomlinson>`_.
+
 Bug fixes
 ~~~~~~~~~
 
