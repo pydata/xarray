@@ -11,7 +11,7 @@ from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
-from .core.dataset import DataSet
+from .core.dataset import Dataset
 from .core.dtypes import get_fill_value
 from .core.pycompat import OrderedDict, range
 
@@ -277,13 +277,13 @@ def datarray_from_iris(cube):
 
 
 def dataset_to_iris(dataset):
-    """ Convert a DataSet into an Iris CubeList.
+    """ Convert a Dataset into an Iris CubeList.
     """
     from iris.cube import CubeList
     return CubeList([dataset[variable].to_iris() for variable in list(dataset.data_vars)])
 
 
 def dataset_from_iris(cubelist):
-    """ Convert an Iris CubeList into a DataSet.
+    """ Convert an Iris CubeList into a Dataset.
     """
     return Dataset({cube.var_name: DataArray.from_iris(cube) for cube in cubelist})
