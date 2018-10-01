@@ -1293,6 +1293,19 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding, compute=compute)
 
+    def to_iris(self):
+        """Convert this dataset into an iris.cube.CubeList.
+        """
+        from ..convert import dataset_to_iris
+        return dataset_to_iris(self)
+
+    @classmethod
+    def from_iris(cls, cubelist):
+        """Convert an iris.cube.CubeList into a dataset.
+        """
+        from ..convert import dataset_from_iris
+        return dataset_from_iris(cubelist)
+
     def __unicode__(self):
         return formatting.dataset_repr(self)
 
@@ -1415,7 +1428,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
-        + string indexers are cast to the appropriate date type if the 
+        + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
         from .dataarray import DataArray
@@ -1998,7 +2011,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                'Instead got\n{}'.format(new_x))
             else:
                 return (x, new_x)
-            
+
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
             if name not in indexers:

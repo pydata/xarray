@@ -23,8 +23,8 @@ from xarray.core.pycompat import (
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime,
-    has_dask, raises_regex, requires_bottleneck, requires_dask, requires_scipy,
-    source_ndarray)
+    has_dask, raises_regex, requires_bottleneck, requires_iris, requires_dask,
+    requires_scipy, source_ndarray)
 
 try:
     import cPickle as pickle
@@ -4635,3 +4635,36 @@ def test_differentiate_cftime(dask):
     # Test the differentiation of datetimes themselves
     actual = da['time'].differentiate('time', edge_order=1, datetime_unit='D')
     assert_allclose(actual, xr.ones_like(da['time']).astype(float))
+
+
+class TestIrisConversion(object):
+    @requires_iris
+    def test_to_and_from_iris(self):
+        import iris
+        import cf_units  # iris requirement
+
+        # to iris
+        coord_dict = OrderedDict()
+        coord_dict['distance'] = ('distance', [-2, 2], {'units': 'meters'})
+        coord_dict['time'] = ('time', pd.date_range('2000-01-01', periods=3))
+        coord_dict['height'] = 10
+        coord_dict['distance2'] = ('distance', [0, 1], {'foo': 'bar'})
+        coord_dict['time2'] = (('distance', 'time'), [[0, 1, 2], [2, 3, 4]])
+
+        array = DataArray(np.arange(6, dtype='float').reshape(2, 3),
+                          coord_dict, name='Temperature',
+                          attrs={'baz': 123, 'units': 'Kelvin',
+                                 'standard_name': 'fire_temperature',
+                                 'long_name': 'Fire Temperature'},
+                          dims=('distance', 'time'))
+
+        original = Dataset({'Temperature': array})
+        actual = original.to_iris()
+
+        assert_array_equal(actual.extract(iris.Constraint(name='Temperature')).data,
+                           original['Temperature'].data)
+
+        assert len(list(original.data_vars)) == len(actual)
+
+        roundtripped = DataSet.from_iris(actual)
+        assert_identical(original, roundtripped)

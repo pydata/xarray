@@ -465,6 +465,8 @@ Dataset methods
    Dataset.to_dataframe
    Dataset.to_dask_dataframe
    Dataset.to_dict
+   DataSet.to_iris
+   DataSet.from_iris
    Dataset.from_dataframe
    Dataset.from_dict
    Dataset.close

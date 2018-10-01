@@ -11,6 +11,7 @@ from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
+from .core.dataset import Dataset
 from .core.dtypes import get_fill_value
 from .core.pycompat import OrderedDict, range
 
@@ -139,7 +140,7 @@ def _get_iris_args(attrs):
 
 
 # TODO: Add converting bounds from xarray to Iris and back
-def to_iris(dataarray):
+def datarray_to_iris(dataarray):
     """ Convert a DataArray into a Iris Cube
     """
     # Iris not a hard dependency
@@ -221,7 +222,7 @@ def _name(iris_obj, default='unknown'):
             iris_obj.long_name or default)
 
 
-def from_iris(cube):
+def datarray_from_iris(cube):
     """ Convert a Iris cube into an DataArray
     """
     import iris.exceptions
@@ -273,3 +274,16 @@ def from_iris(cube):
                           attrs=array_attrs, dims=dims)
     decoded_ds = decode_cf(dataarray._to_temp_dataset())
     return dataarray._from_temp_dataset(decoded_ds)
+
+
+def dataset_to_iris(dataset):
+    """ Convert a DataSet into an Iris CubeList.
+    """
+    from iris.cube import CubeList
+    return CubeList([dataset[variable].to_iris() for variable in list(dataset.data_vars)])
+
+
+def dataset_from_iris(cubelist):
+    """ Convert an Iris CubeList into a DataSet.
+    """
+    return Dataset({cube.var_name: DataArray.from_iris(cube) for cube in cubelist})

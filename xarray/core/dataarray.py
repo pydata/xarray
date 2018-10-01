@@ -1855,15 +1855,15 @@ class DataArray(AbstractArray, DataWithCoords):
     def to_iris(self):
         """Convert this array into a iris.cube.Cube
         """
-        from ..convert import to_iris
-        return to_iris(self)
+        from ..convert import datarray_to_iris
+        return datarray_to_iris(self)
 
     @classmethod
     def from_iris(cls, cube):
         """Convert a iris.cube.Cube into an xarray.DataArray
         """
-        from ..convert import from_iris
-        return from_iris(cube)
+        from ..convert import datarray_from_iris
+        return datarray_from_iris(cube)
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
