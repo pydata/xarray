@@ -11,7 +11,7 @@ from .coding.times import CFDatetimeCoder, CFTimedeltaCoder
 from .conventions import decode_cf
 from .core import duck_array_ops
 from .core.dataarray import DataArray
-from .core.dataset import Dataset
+from .core.dataset import DataSet
 from .core.dtypes import get_fill_value
 from .core.pycompat import OrderedDict, range
 
