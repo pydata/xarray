@@ -44,7 +44,13 @@ else:  # pragma: no cover
     import math
     from numbers import Integral, Real
 
-    AxisError = np.AxisError
+    try:
+        AxisError = np.AxisError
+    except AttributeError:
+        try:
+            np.array([0]).sum(axis=5)
+        except Exception as e:
+            AxisError = type(e)
 
     def validate_axis(axis, ndim):
         """ Validate an input to axis= keywords """
