@@ -69,9 +69,13 @@ Bug fixes
   (:issue:`2240`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
+- Fix a bug that caused some indexing operations on arrays opened with
+  ``open_rasterio`` to error (:issue:`2454`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
 .. _whats-new.0.10.9:
 
-v0.10.9 (21 September 2019)
+v0.10.9 (21 September 2018)
 ---------------------------
 
 This minor release contains a number of backwards compatible enhancements.
@@ -79,7 +83,7 @@ This minor release contains a number of backwards compatible enhancements.
 Announcements of note:
 
 - Xarray is now a NumFOCUS fiscally sponsored project! Read
-  `the anouncment <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  `the anouncement <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
