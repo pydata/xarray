@@ -1140,9 +1140,9 @@ class TestContour(Common2dMixin, PlotTestCase):
         def _color_as_tuple(c):
             return tuple(c[:3])
 
+        # with single color, we don't want rgb array
         artist = self.plotmethod(colors='k')
-        assert _color_as_tuple(artist.cmap.colors[0]) == \
-            (0.0, 0.0, 0.0)
+        assert artist.cmap.colors[0] == 'k'
 
         artist = self.plotmethod(colors=['k', 'b'])
         assert _color_as_tuple(artist.cmap.colors[1]) == \
