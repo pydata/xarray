@@ -656,6 +656,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
 
@@ -679,12 +680,20 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(dim, basestring):
             dim_name = dim
-            dim = self[dim]
+            dim_array = self[dim]
         else:
             raise TypeError("Dimension name should be a string; "
                             "was passed %r" % dim)
-        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
+        group = DataArray(dim_array, [(dim_array.dims, dim_array)],
+                          name=RESAMPLE_DIM)
+
+        if isinstance(self.indexes[dim], CFTimeIndex):
+            # TODO: handle closed, label and base arguments, and the case where
+            # frequency is specified without an integer count.
+            grouper = self.indexes[dim].shift(n=int(freq[0]), freq=freq[1:])
+        else:
+            grouper = pd.Grouper(
+                freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
