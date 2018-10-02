@@ -4661,7 +4661,7 @@ class TestIrisConversion(object):
         original = Dataset({'Temperature': array})
         actual = original.to_iris()
 
-        assert_array_equal(actual.extract(iris.Constraint(name='Temperature')).data,
+        assert_array_equal(actual.extract(iris.Constraint(name='Temperature'))[0].data,
                            original['Temperature'].data)
 
         assert len(list(original.data_vars)) == len(actual)
