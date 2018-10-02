@@ -619,6 +619,72 @@ def test_empty_cftimeindex():
     assert index.date_type is None
 
 
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_add(index):
+    date_type = index.date_type
+    expected_dates = [date_type(1, 1, 2), date_type(1, 2, 2),
+                      date_type(2, 1, 2), date_type(2, 2, 2)]
+    expected = CFTimeIndex(expected_dates)
+    result = index + timedelta(days=1)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_radd(index):
+    date_type = index.date_type
+    expected_dates = [date_type(1, 1, 2), date_type(1, 2, 2),
+                      date_type(2, 1, 2), date_type(2, 2, 2)]
+    expected = CFTimeIndex(expected_dates)
+    result = timedelta(days=1) + index
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_sub(index):
+    date_type = index.date_type
+    expected_dates = [date_type(1, 1, 2), date_type(1, 2, 2),
+                      date_type(2, 1, 2), date_type(2, 2, 2)]
+    expected = CFTimeIndex(expected_dates)
+    result = index + timedelta(days=2)
+    result = result - timedelta(days=1)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_rsub(index):
+    with pytest.raises(TypeError):
+        timedelta(days=1) - index
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('freq', ['D', timedelta(days=1)])
+def test_cftimeindex_shift(index, freq):
+    date_type = index.date_type
+    expected_dates = [date_type(1, 1, 3), date_type(1, 2, 3),
+                      date_type(2, 1, 3), date_type(2, 2, 3)]
+    expected = CFTimeIndex(expected_dates)
+    result = index.shift(2, freq)
+    assert result.equals(expected)
+    assert isinstance(result, CFTimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_shift_invalid_n():
+    index = xr.cftime_range('2000', periods=3)
+    with pytest.raises(TypeError):
+        index.shift('a', 'D')
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_shift_invalid_freq():
+    index = xr.cftime_range('2000', periods=3)
+    with pytest.raises(TypeError):
+        index.shift(1, 1)
+
+
 @requires_cftime
 def test_parse_array_of_cftime_strings():
     from cftime import DatetimeNoLeap

@@ -315,6 +315,57 @@ class CFTimeIndex(pd.Index):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
 
+    def shift(self, n, freq):
+        """Shift the CFTimeIndex a multiple of the given frequency.
+
+        See the documentation for :py:func:`~xarray.cftime_range` for a
+        complete listing of valid frequency strings.
+
+        Parameters
+        ----------
+        n : int
+            Periods to shift by
+        freq : str or datetime.timedelta
+            A frequency string or datetime.timedelta object to shift by
+
+        Returns
+        -------
+        CFTimeIndex
+
+        See also
+        --------
+        pandas.DatetimeIndex.shift
+
+        Examples
+        --------
+        >>> index = xr.cftime_range('2000', periods=1, freq='M')
+        >>> index
+        CFTimeIndex([2000-01-31 00:00:00], dtype='object')
+        >>> index.shift(1, 'M')
+        CFTimeIndex([2000-02-29 00:00:00], dtype='object')
+        """
+        from .cftime_offsets import to_offset
+
+        if not isinstance(n, int):
+            raise TypeError("'n' must be an int, got {}.".format(n))
+        if isinstance(freq, timedelta):
+            return self + n * freq
+        elif isinstance(freq, pycompat.basestring):
+            return self + n * to_offset(freq)
+        else:
+            raise TypeError(
+                "'freq' must be of type "
+                "str or datetime.timedelta, got {}.".format(freq))
+
+    def __add__(self, other):
+        return CFTimeIndex(np.array(self) + other)
+
+    def __radd__(self, other):
+        return CFTimeIndex(other + np.array(self))
+
+    def __sub__(self, other):
+        return CFTimeIndex(np.array(self) - other)
+
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
     date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
