@@ -14,7 +14,7 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
-    broadcast, open_dataset, set_options)
+    broadcast, open_dataset, set_options, ALL_DIMS)
 from xarray.core import indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
@@ -22,8 +22,9 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, has_dask, raises_regex,
-    requires_bottleneck, requires_dask, requires_scipy, source_ndarray)
+    assert_array_equal, assert_equal, assert_identical, has_cftime,
+    has_dask, raises_regex, requires_bottleneck, requires_dask, requires_scipy,
+    source_ndarray)
 
 try:
     import cPickle as pickle
@@ -2648,19 +2649,27 @@ class TestDataset(TestCase):
 
         expected = data.mean('y')
         expected['yonly'] = expected['yonly'].variable.set_dims({'x': 3})
-        actual = data.groupby('x').mean()
+        actual = data.groupby('x').mean(ALL_DIMS)
         assert_allclose(expected, actual)
 
         actual = data.groupby('x').mean('y')
         assert_allclose(expected, actual)
 
         letters = data['letters']
-        expected = Dataset({'xy': data['xy'].groupby(letters).mean(),
+        expected = Dataset({'xy': data['xy'].groupby(letters).mean(ALL_DIMS),
                             'xonly': (data['xonly'].mean().variable
                                       .set_dims({'letters': 2})),
                             'yonly': data['yonly'].groupby(letters).mean()})
-        actual = data.groupby('letters').mean()
+        actual = data.groupby('letters').mean(ALL_DIMS)
         assert_allclose(expected, actual)
+
+    def test_groupby_warn(self):
+        data = Dataset({'xy': (['x', 'y'], np.random.randn(3, 4)),
+                        'xonly': ('x', np.random.randn(3)),
+                        'yonly': ('y', np.random.randn(4)),
+                        'letters': ('y', ['a', 'a', 'b', 'b'])})
+        with pytest.warns(FutureWarning):
+            data.groupby('x').mean()
 
     def test_groupby_math(self):
         def reorder_dims(x):
@@ -2716,7 +2725,7 @@ class TestDataset(TestCase):
         ds = Dataset({'x': ('t', [1, 2, 3])},
                      {'t': pd.date_range('20100101', periods=3)})
         grouped = ds.groupby('t.day')
-        actual = grouped - grouped.mean()
+        actual = grouped - grouped.mean(ALL_DIMS)
         expected = Dataset({'x': ('t', [0, 0, 0])},
                            ds[['t', 't.day']])
         assert_identical(actual, expected)
@@ -2725,18 +2734,17 @@ class TestDataset(TestCase):
         # nan should be excluded from groupby
         ds = Dataset({'foo': ('x', [1, 2, 3, 4])},
                      {'bar': ('x', [1, 1, 2, np.nan])})
-        actual = ds.groupby('bar').mean()
+        actual = ds.groupby('bar').mean(ALL_DIMS)
         expected = Dataset({'foo': ('bar', [1.5, 3]), 'bar': [1, 2]})
         assert_identical(actual, expected)
 
     def test_groupby_order(self):
         # groupby should preserve variables order
-
         ds = Dataset()
         for vn in ['a', 'b', 'c']:
             ds[vn] = DataArray(np.arange(10), dims=['t'])
         data_vars_ref = list(ds.data_vars.keys())
-        ds = ds.groupby('t').mean()
+        ds = ds.groupby('t').mean(ALL_DIMS)
         data_vars = list(ds.data_vars.keys())
         assert data_vars == data_vars_ref
         # coords are now at the end of the list, so the test below fails
@@ -3937,6 +3945,16 @@ class TestDataset(TestCase):
         expected = Dataset({'foo': ('x', [3, 1, 2])}, ex_coords, attrs)
         assert_identical(expected, actual)
 
+    def test_roll_multidim(self):
+        # regression test for 2445
+        arr = xr.DataArray(
+            [[1, 2, 3],[4, 5, 6]], coords={'x': range(3), 'y': range(2)},
+            dims=('y','x'))
+        actual = arr.roll(x=1, roll_coords=True)
+        expected = xr.DataArray([[3, 1, 2],[6, 4, 5]],
+                                coords=[('y', [0, 1]), ('x', [2, 0, 1])])
+        assert_identical(expected, actual)
+
     def test_real_and_imag(self):
         attrs = {'foo': 'bar'}
         ds = Dataset({'x': ((), 1 + 2j, attrs)}, attrs=attrs)
@@ -4517,7 +4535,7 @@ def test_raise_no_warning_for_nan_in_binary_ops():
 
 @pytest.mark.parametrize('dask', [True, False])
 @pytest.mark.parametrize('edge_order', [1, 2])
-def test_gradient(dask, edge_order):
+def test_differentiate(dask, edge_order):
     rs = np.random.RandomState(42)
     coord = [0.2, 0.35, 0.4, 0.6, 0.7, 0.75, 0.76, 0.8]
 
@@ -4555,7 +4573,7 @@ def test_gradient(dask, edge_order):
 
 
 @pytest.mark.parametrize('dask', [True, False])
-def test_gradient_datetime(dask):
+def test_differentiate_datetime(dask):
     rs = np.random.RandomState(42)
     coord = np.array(
         ['2004-07-13', '2006-01-13', '2010-08-13', '2010-09-13',
@@ -4572,7 +4590,7 @@ def test_gradient_datetime(dask):
     actual = da.differentiate('x', edge_order=1, datetime_unit='D')
     expected_x = xr.DataArray(
         npcompat.gradient(
-            da, utils.to_numeric(da['x'], datetime_unit='D'),
+            da, utils.datetime_to_numeric(da['x'], datetime_unit='D'),
             axis=0, edge_order=1), dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
 
@@ -4588,3 +4606,32 @@ def test_gradient_datetime(dask):
                       coords={'x': coord})
     actual = da.differentiate('x', edge_order=1)
     assert np.allclose(actual, 1.0)
+
+
+@pytest.mark.skipif(not has_cftime, reason='Test requires cftime.')
+@pytest.mark.parametrize('dask', [True, False])
+def test_differentiate_cftime(dask):
+    rs = np.random.RandomState(42)
+    coord = xr.cftime_range('2000', periods=8, freq='2M')
+
+    da = xr.DataArray(
+        rs.randn(8, 6),
+        coords={'time': coord, 'z': 3, 't2d': (('time', 'y'), rs.randn(8, 6))},
+        dims=['time', 'y'])
+
+    if dask and has_dask:
+        da = da.chunk({'time': 4})
+
+    actual = da.differentiate('time', edge_order=1, datetime_unit='D')
+    expected_data = npcompat.gradient(
+        da, utils.datetime_to_numeric(da['time'], datetime_unit='D'),
+        axis=0, edge_order=1)
+    expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
+    assert_equal(expected, actual)
+
+    actual2 = da.differentiate('time', edge_order=1, datetime_unit='h')
+    assert_allclose(actual, actual2 * 24)
+
+    # Test the differentiation of datetimes themselves
+    actual = da['time'].differentiate('time', edge_order=1, datetime_unit='D')
+    assert_allclose(actual, xr.ones_like(da['time']).astype(float))
