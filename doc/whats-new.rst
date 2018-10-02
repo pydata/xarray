@@ -46,6 +46,9 @@ Enhancements
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+- Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
+  CFTimeIndex by a specified frequency.  (:issue:`2244`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Added support for using ``cftime.datetime`` coordinates with
   :py:meth:`~xarray.DataArray.differentiate`,
   :py:meth:`~xarray.Dataset.differentiate`,
@@ -56,6 +59,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Addition and subtraction operators used with a CFTimeIndex now preserve the
+  index's type. (:issue:`2244`). By `Spencer Clark <https://github.com/spencerkclark>`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
