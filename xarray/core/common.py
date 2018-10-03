@@ -656,6 +656,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftime_offsets import cftime_range
         from ..coding.cftimeindex import CFTimeIndex
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
@@ -690,7 +691,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(self.indexes[dim], CFTimeIndex):
             # TODO: handle closed, label and base arguments, and the case where
             # frequency is specified without an integer count.
-            grouper = self.indexes[dim].shift(n=int(freq[0]), freq=freq[1:])
+            times = self.indexes[dim]
+            resampled_times = cftime_range(
+                start=times[0], end=times[-1], freq=freq)
+            grouper = (pd.Series(resampled_times, index=resampled_times)
+                       .reindex(times, method='pad'))
         else:
             grouper = pd.Grouper(
                 freq=freq, closed=closed, label=label, base=base)
