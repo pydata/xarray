@@ -391,4 +391,3 @@ def _parse_array_of_cftime_strings(strings, date_type):
     """
     return np.array([_parse_iso8601_without_reso(date_type, s)
                      for s in strings.ravel()]).reshape(strings.shape)
-
