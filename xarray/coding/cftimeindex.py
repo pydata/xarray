@@ -389,8 +389,5 @@ def _parse_array_of_cftime_strings(strings, date_type):
     -------
     np.array
     """
-    if strings.ndim == 0:
-        return np.array(_parse_iso8601_without_reso(date_type, strings.item()))
-    else:
-        return np.array([_parse_iso8601_without_reso(date_type, s)
-                         for s in strings])
+    return np.array([_parse_iso8601_without_reso(date_type, s)
+                     for s in strings.ravel()]).reshape(strings.shape)
