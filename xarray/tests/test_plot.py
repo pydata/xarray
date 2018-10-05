@@ -357,7 +357,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_no_label_name_on_x_axis(self):
         self.darray.plot(y='period')
-        self.assertEqual('', plt.gca().get_xlabel())
+        assert '' == plt.gca().get_xlabel()
 
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()

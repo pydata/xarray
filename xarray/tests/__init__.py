@@ -141,10 +141,6 @@ class TestCase(unittest.TestCase):
         __tracebackhide__ = True  # noqa: F841
         assert not v1.equals(v2)
 
-    def assertEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert a1 == a2 or (a1 != a1 and a2 != a2)
-
     def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
         __tracebackhide__ = True  # noqa: F841
         assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
