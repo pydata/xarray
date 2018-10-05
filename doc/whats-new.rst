@@ -27,7 +27,7 @@ What's New
 
 .. _whats-new.0.10.9:
 
-v0.10.9 (21 September 2019)
+v0.10.9 (21 September 2018)
 ---------------------------
 
 This minor release contains a number of backwards compatible enhancements.
