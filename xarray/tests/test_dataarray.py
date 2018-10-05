@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import pickle
+import warnings
 from copy import deepcopy
 from distutils.version import LooseVersion
 from textwrap import dedent
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -13,9 +13,9 @@ import pytest
 import xarray as xr
 from xarray import (
     DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
-from xarray.convert import from_cdms2
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
-from xarray.core.common import full_like, ALL_DIMS
+from xarray.convert import from_cdms2
+from xarray.core.common import ALL_DIMS, full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
     ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
@@ -24,8 +24,9 @@ from xarray.tests import (
     source_ndarray, unittest)
 
 
-class TestDataArray(TestCase):
-    def setUp(self):
+class TestDataArray(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.attrs = {'attr1': 'value1', 'attr2': 2929}
         self.x = np.random.random((10, 20))
         self.v = Variable(['x', 'y'], self.x)
@@ -1002,7 +1003,7 @@ class TestDataArray(TestCase):
                     assert da.dims[0] == renamed_dim
                     da = da.rename({renamed_dim: 'x'})
                 assert_identical(da.variable, expected_da.variable)
-                self.assertVariableNotEqual(da['x'], expected_da['x'])
+                assert not da['x'].equals(expected_da['x'])
 
         test_sel(('a', 1, -1), 0)
         test_sel(('b', 2, -2), -1)
@@ -2034,9 +2035,9 @@ class TestDataArray(TestCase):
 
         expected_sum_all = Dataset(
             {'foo': Variable(['x', 'abc'],
-             np.array([self.x[:, :9].sum(axis=-1),
-                       self.x[:, 10:].sum(axis=-1),
-                       self.x[:, 9:10].sum(axis=-1)]).T),
+                             np.array([self.x[:, :9].sum(axis=-1),
+                                       self.x[:, 10:].sum(axis=-1),
+                                       self.x[:, 9:10].sum(axis=-1)]).T),
              'abc': Variable(['abc'], np.array(['a', 'b', 'c']))})['foo']
 
         assert_allclose(expected_sum_all, grouped.sum())
@@ -2968,7 +2969,7 @@ class TestDataArray(TestCase):
         actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
-        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert actual.getAxisIds() == original.dims
         for axis, coord in zip(actual.getAxisList(), expected_coords):
             assert axis.id == coord.name
             assert_array_equal(axis, coord.values)
@@ -2982,8 +2983,8 @@ class TestDataArray(TestCase):
         assert_identical(original, roundtripped)
 
         back = from_cdms2(actual)
-        self.assertItemsEqual(original.dims, back.dims)
-        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        assert original.dims == back.dims
+        assert original.coords.keys() == back.coords.keys()
         for coord_name in original.coords.keys():
             assert_array_equal(original.coords[coord_name],
                                back.coords[coord_name])
@@ -3004,15 +3005,15 @@ class TestDataArray(TestCase):
                              coords=OrderedDict(x=x, y=y, lon=lon, lat=lat),
                              name='sst')
         actual = original.to_cdms2()
-        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert (actual.getAxisIds() == original.dims)
         assert_array_equal(original.coords['lon'],
                            actual.getLongitude().asma())
         assert_array_equal(original.coords['lat'],
                            actual.getLatitude().asma())
 
         back = from_cdms2(actual)
-        self.assertItemsEqual(original.dims, back.dims)
-        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        assert (original.dims == back.dims)
+        assert (original.coords.keys() == back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
@@ -3026,15 +3027,15 @@ class TestDataArray(TestCase):
         original = DataArray(np.arange(5), dims=['cell'],
                              coords={'lon': lon, 'lat': lat, 'cell': cell})
         actual = original.to_cdms2()
-        self.assertItemsEqual(actual.getAxisIds(), original.dims)
+        assert (actual.getAxisIds() == original.dims)
         assert_array_equal(original.coords['lon'],
                            actual.getLongitude().getValue())
         assert_array_equal(original.coords['lat'],
                            actual.getLatitude().getValue())
 
         back = from_cdms2(actual)
-        self.assertItemsEqual(original.dims, back.dims)
-        self.assertItemsEqual(original.coords.keys(), back.coords.keys())
+        assert (original.dims == back.dims)
+        assert (original.coords.keys() == back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
@@ -3127,17 +3128,17 @@ class TestDataArray(TestCase):
         actual = lon.diff('lon')
         assert_equal(expected, actual)
 
-    def test_shift(self):
+    @pytest.mark.parametrize('offset', [-5, -2, -1, 0, 1, 2, 5])
+    def test_shift(self, offset):
         arr = DataArray([1, 2, 3], dims='x')
         actual = arr.shift(x=1)
         expected = DataArray([np.nan, 1, 2], dims='x')
         assert_identical(expected, actual)
 
         arr = DataArray([1, 2, 3], [('x', ['a', 'b', 'c'])])
-        for offset in [-5, -2, -1, 0, 1, 2, 5]:
-            expected = DataArray(arr.to_pandas().shift(offset))
-            actual = arr.shift(x=offset)
-            assert_identical(expected, actual)
+        expected = DataArray(arr.to_pandas().shift(offset))
+        actual = arr.shift(x=offset)
+        assert_identical(expected, actual)
 
     def test_roll_coords(self):
         arr = DataArray([1, 2, 3], coords={'x': range(3)}, dims='x')

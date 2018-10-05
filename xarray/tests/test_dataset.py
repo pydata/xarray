@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import sys
+import warnings
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-import warnings
-import sys
 
 import numpy as np
 import pandas as pd
@@ -13,8 +13,8 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
-    broadcast, open_dataset, set_options, ALL_DIMS)
+    ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
+    backends, broadcast, open_dataset, set_options)
 from xarray.core import indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
@@ -22,8 +22,8 @@ from xarray.core.pycompat import (
 
 from . import (
     InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, has_cftime,
-    has_dask, raises_regex, requires_bottleneck, requires_dask, requires_scipy,
+    assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
+    raises_regex, requires_bottleneck, requires_dask, requires_scipy,
     source_ndarray)
 
 try:
@@ -3948,10 +3948,10 @@ class TestDataset(TestCase):
     def test_roll_multidim(self):
         # regression test for 2445
         arr = xr.DataArray(
-            [[1, 2, 3],[4, 5, 6]], coords={'x': range(3), 'y': range(2)},
-            dims=('y','x'))
+            [[1, 2, 3], [4, 5, 6]], coords={'x': range(3), 'y': range(2)},
+            dims=('y', 'x'))
         actual = arr.roll(x=1, roll_coords=True)
-        expected = xr.DataArray([[3, 1, 2],[6, 4, 5]],
+        expected = xr.DataArray([[3, 1, 2], [6, 4, 5]],
                                 coords=[('y', [0, 1]), ('x', [2, 0, 1])])
         assert_identical(expected, actual)
 
