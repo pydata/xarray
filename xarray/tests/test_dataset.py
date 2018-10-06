@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+import sys
+import warnings
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
-import warnings
-import sys
 
 import numpy as np
 import pandas as pd
@@ -13,17 +13,17 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, MergeError, Variable, align, backends,
-    broadcast, open_dataset, set_options, ALL_DIMS)
+    ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
+    backends, broadcast, open_dataset, set_options)
 from xarray.core import indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
 
 from . import (
-    InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
-    assert_array_equal, assert_equal, assert_identical, has_cftime,
-    has_dask, raises_regex, requires_bottleneck, requires_dask, requires_scipy,
+    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
+    assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
+    raises_regex, requires_bottleneck, requires_dask, requires_scipy,
     source_ndarray)
 
 try:
@@ -86,7 +86,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                     k, v in iteritems(self._variables))
 
 
-class TestDataset(TestCase):
+class TestDataset(object):
     def test_repr(self):
         data = create_test_data(seed=123)
         data.attrs['foo'] = 'bar'
@@ -399,7 +399,7 @@ class TestDataset(TestCase):
 
         ds = Dataset({}, {'a': ('x', [1])})
         assert not ds.data_vars
-        self.assertItemsEqual(ds.coords.keys(), ['a'])
+        assert list(ds.coords.keys()) == ['a']
 
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                             names=('level_1', 'level_2'))
@@ -421,9 +421,9 @@ class TestDataset(TestCase):
         assert type(ds.dims.mapping.mapping) is dict  # noqa
 
         with pytest.warns(FutureWarning):
-            self.assertItemsEqual(ds, list(ds.variables))
+            assert list(ds) == list(ds.variables)
         with pytest.warns(FutureWarning):
-            self.assertItemsEqual(ds.keys(), list(ds.variables))
+            assert list(ds.keys()) == list(ds.variables)
         assert 'aasldfjalskdfj' not in ds.variables
         assert 'dim1' in repr(ds.variables)
         with pytest.warns(FutureWarning):
@@ -431,18 +431,18 @@ class TestDataset(TestCase):
         with pytest.warns(FutureWarning):
             assert bool(ds)
 
-        self.assertItemsEqual(ds.data_vars, ['var1', 'var2', 'var3'])
-        self.assertItemsEqual(ds.data_vars.keys(), ['var1', 'var2', 'var3'])
+        assert list(ds.data_vars) == ['var1', 'var2', 'var3']
+        assert list(ds.data_vars.keys()) == ['var1', 'var2', 'var3']
         assert 'var1' in ds.data_vars
         assert 'dim1' not in ds.data_vars
         assert 'numbers' not in ds.data_vars
         assert len(ds.data_vars) == 3
 
-        self.assertItemsEqual(ds.indexes, ['dim2', 'dim3', 'time'])
+        assert set(ds.indexes) == {'dim2', 'dim3', 'time'}
         assert len(ds.indexes) == 3
         assert 'dim2' in repr(ds.indexes)
 
-        self.assertItemsEqual(ds.coords, ['time', 'dim2', 'dim3', 'numbers'])
+        assert list(ds.coords) == ['time', 'dim2', 'dim3', 'numbers']
         assert 'dim2' in ds.coords
         assert 'numbers' in ds.coords
         assert 'var1' not in ds.coords
@@ -535,7 +535,7 @@ class TestDataset(TestCase):
 
         assert 4 == len(data.coords)
 
-        self.assertItemsEqual(['x', 'y', 'a', 'b'], list(data.coords))
+        assert ['x', 'y', 'a', 'b'] == list(data.coords)
 
         assert_identical(data.coords['x'].variable, data['x'].variable)
         assert_identical(data.coords['y'].variable, data['y'].variable)
@@ -831,7 +831,7 @@ class TestDataset(TestCase):
         ret = data.isel(**slicers)
 
         # Verify that only the specified dimension was altered
-        self.assertItemsEqual(data.dims, ret.dims)
+        assert list(data.dims) == list(ret.dims)
         for d in data.dims:
             if d in slicers:
                 assert ret.dims[d] == \
@@ -857,21 +857,21 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         assert {'time': 20, 'dim2': 9, 'dim3': 10} == ret.dims
-        self.assertItemsEqual(data.data_vars, ret.data_vars)
-        self.assertItemsEqual(data.coords, ret.coords)
-        self.assertItemsEqual(data.indexes, ret.indexes)
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(ret.indexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         assert {'time': 2, 'dim2': 5, 'dim3': 10} == ret.dims
-        self.assertItemsEqual(data.data_vars, ret.data_vars)
-        self.assertItemsEqual(data.coords, ret.coords)
-        self.assertItemsEqual(data.indexes, ret.indexes)
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(ret.indexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
-        self.assertItemsEqual({'dim2': 5, 'dim3': 10}, ret.dims)
-        self.assertItemsEqual(data.data_vars, ret.data_vars)
-        self.assertItemsEqual(data.coords, ret.coords)
-        self.assertItemsEqual(data.indexes, list(ret.indexes) + ['time'])
+        assert {'dim2': 5, 'dim3': 10} == ret.dims
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(list(ret.indexes) + ['time'])
 
     def test_isel_fancy(self):
         # isel with fancy indexing.
@@ -1482,7 +1482,7 @@ class TestDataset(TestCase):
                     ds = ds.rename({renamed_dim: 'x'})
                 assert_identical(ds['var'].variable,
                                  expected_ds['var'].variable)
-                self.assertVariableNotEqual(ds['x'], expected_ds['x'])
+                assert not ds['x'].equals(expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
         test_sel(('b', 2, -2), -1)
@@ -2546,12 +2546,11 @@ class TestDataset(TestCase):
     def test_delitem(self):
         data = create_test_data()
         all_items = set(data.variables)
-        self.assertItemsEqual(data.variables, all_items)
+        assert set(data.variables) == all_items
         del data['var1']
-        self.assertItemsEqual(data.variables, all_items - set(['var1']))
+        assert set(data.variables) == all_items - set(['var1'])
         del data['numbers']
-        self.assertItemsEqual(data.variables,
-                              all_items - set(['var1', 'numbers']))
+        assert set(data.variables) == all_items - set(['var1', 'numbers'])
         assert 'numbers' not in data.coords
 
     def test_squeeze(self):
@@ -3425,8 +3424,8 @@ class TestDataset(TestCase):
                                  (['dim2', 'time'], ['dim1', 'dim3']),
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
-            actual = data.min(dim=reduct).dims
-            self.assertItemsEqual(actual, expected)
+            actual = list(data.min(dim=reduct).dims)
+            assert actual == expected
 
         assert_equal(data.mean(dim=[]), data)
 
@@ -3480,7 +3479,7 @@ class TestDataset(TestCase):
                 ('time', ['dim1', 'dim2', 'dim3'])
             ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
-                self.assertItemsEqual(actual, expected)
+                assert list(actual) == expected
 
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
@@ -3618,14 +3617,14 @@ class TestDataset(TestCase):
         ds = create_test_data(seed=1234)
         # only ds.var3 depends on dim3
         z = ds.rank('dim3')
-        self.assertItemsEqual(['var3'], list(z.data_vars))
+        assert ['var3'] == list(z.data_vars)
         # same as dataarray version
         x = z.var3
         y = ds.var3.rank('dim3')
         assert_equal(x, y)
         # coordinates stick
-        self.assertItemsEqual(list(z.coords), list(ds.coords))
-        self.assertItemsEqual(list(x.coords), list(y.coords))
+        assert list(z.coords) == list(ds.coords)
+        assert list(x.coords) == list(y.coords)
         # invalid dim
         with raises_regex(ValueError, 'does not contain'):
             x.rank('invalid_dim')
@@ -3948,10 +3947,10 @@ class TestDataset(TestCase):
     def test_roll_multidim(self):
         # regression test for 2445
         arr = xr.DataArray(
-            [[1, 2, 3],[4, 5, 6]], coords={'x': range(3), 'y': range(2)},
-            dims=('y','x'))
+            [[1, 2, 3], [4, 5, 6]], coords={'x': range(3), 'y': range(2)},
+            dims=('y', 'x'))
         actual = arr.roll(x=1, roll_coords=True)
-        expected = xr.DataArray([[3, 1, 2],[6, 4, 5]],
+        expected = xr.DataArray([[3, 1, 2], [6, 4, 5]],
                                 coords=[('y', [0, 1]), ('x', [2, 0, 1])])
         assert_identical(expected, actual)
 
