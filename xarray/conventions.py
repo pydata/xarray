@@ -6,11 +6,11 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from .coding import times, strings, variables
+from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
 from .core.pycompat import (
-    OrderedDict, basestring, bytes_type, iteritems, dask_array_type,
+    OrderedDict, basestring, bytes_type, dask_array_type, iteritems,
     unicode_type)
 from .core.variable import IndexVariable, Variable, as_variable
 

@@ -1,17 +1,14 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import functools
 
 import numpy as np
 
 from .. import Variable
-from ..core.pycompat import OrderedDict
-from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
-
-from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
+from ..core.pycompat import OrderedDict
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import AbstractDataStore, BackendArray, DataStorePickleMixin
 
 
 class PncArrayWrapper(BackendArray):

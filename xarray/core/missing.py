@@ -1,9 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from collections import Iterable
 from functools import partial
-
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,10 +10,10 @@ import pandas as pd
 from . import rolling
 from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
-from .pycompat import iteritems
-from .utils import is_scalar, OrderedSet, datetime_to_numeric
-from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
+from .pycompat import iteritems
+from .utils import OrderedSet, datetime_to_numeric, is_scalar
+from .variable import Variable, broadcast_variables
 
 
 class BaseInterpolator(object):
