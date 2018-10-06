@@ -55,6 +55,10 @@ Enhancements
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
   By `Spencer Clark <https://github.com/spencerkclark>`_
+- Added support for ``fill_value`` with
+  :py:meth:`~xarray.DataArray.shift` and :py:meth:`~xarray.Dataset.shift`
+  By `Maximilian Roos <https://github.com/max-sixty>`_
+
   
 Bug fixes
 ~~~~~~~~~
