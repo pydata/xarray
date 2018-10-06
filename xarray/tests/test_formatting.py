@@ -6,6 +6,7 @@ import pandas as pd
 
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
+from xarray.testing import assert_equal
 
 from . import TestCase, raises_regex
 
@@ -45,7 +46,7 @@ class TestFormatting(TestCase):
         for n in [3, 10, 13, 100, 200]:
             actual = formatting.first_n_items(array, n)
             expected = array.flat[:n]
-            assert expected == actual
+            assert (expected == actual).all()
 
         with raises_regex(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)
@@ -55,7 +56,7 @@ class TestFormatting(TestCase):
         for n in [3, 10, 13, 100, 200]:
             actual = formatting.last_n_items(array, n)
             expected = array.flat[-n:]
-            assert expected == actual
+            assert (expected == actual).all()
 
         with raises_regex(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)

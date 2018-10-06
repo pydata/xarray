@@ -18,7 +18,7 @@ from xarray.convert import from_cdms2
 from xarray.core.common import ALL_DIMS, full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
-    ReturnItem, TestCase, assert_allclose, assert_array_equal, assert_equal,
+    ReturnItem,  assert_allclose, assert_array_equal, assert_equal,
     assert_identical, raises_regex, requires_bottleneck, requires_cftime,
     requires_dask, requires_iris, requires_np113, requires_scipy,
     source_ndarray, unittest)

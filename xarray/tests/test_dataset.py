@@ -399,7 +399,7 @@ class TestDataset(TestCase):
 
         ds = Dataset({}, {'a': ('x', [1])})
         assert not ds.data_vars
-        assert ds.coords.keys() == ['a']
+        assert list(ds.coords.keys()) == ['a']
 
         mindex = pd.MultiIndex.from_product([['a', 'b'], [1, 2]],
                                             names=('level_1', 'level_2'))
@@ -421,9 +421,9 @@ class TestDataset(TestCase):
         assert type(ds.dims.mapping.mapping) is dict  # noqa
 
         with pytest.warns(FutureWarning):
-            assert ds == list(ds.variables)
+            assert list(ds) == list(ds.variables)
         with pytest.warns(FutureWarning):
-            assert ds.keys() == list(ds.variables)
+            assert list(ds.keys()) == list(ds.variables)
         assert 'aasldfjalskdfj' not in ds.variables
         assert 'dim1' in repr(ds.variables)
         with pytest.warns(FutureWarning):
@@ -431,18 +431,18 @@ class TestDataset(TestCase):
         with pytest.warns(FutureWarning):
             assert bool(ds)
 
-        assert ds.data_vars == ['var1', 'var2', 'var3']
-        assert ds.data_vars.keys() == ['var1', 'var2', 'var3']
+        assert list(ds.data_vars) == ['var1', 'var2', 'var3']
+        assert list(ds.data_vars.keys()) == ['var1', 'var2', 'var3']
         assert 'var1' in ds.data_vars
         assert 'dim1' not in ds.data_vars
         assert 'numbers' not in ds.data_vars
         assert len(ds.data_vars) == 3
 
-        assert ds.indexes == ['dim2', 'dim3', 'time']
+        assert set(ds.indexes) == {'dim2', 'dim3', 'time'}
         assert len(ds.indexes) == 3
         assert 'dim2' in repr(ds.indexes)
 
-        assert ds.coords == ['time', 'dim2', 'dim3', 'numbers']
+        assert list ( ds.coords ) == ['time', 'dim2', 'dim3', 'numbers']
         assert 'dim2' in ds.coords
         assert 'numbers' in ds.coords
         assert 'var1' not in ds.coords
@@ -831,7 +831,7 @@ class TestDataset(TestCase):
         ret = data.isel(**slicers)
 
         # Verify that only the specified dimension was altered
-        assert data.dims == ret.dims
+        assert list(data.dims) == list(ret.dims)
         for d in data.dims:
             if d in slicers:
                 assert ret.dims[d] == \
@@ -857,21 +857,21 @@ class TestDataset(TestCase):
 
         ret = data.isel(dim1=0)
         assert {'time': 20, 'dim2': 9, 'dim3': 10} == ret.dims
-        assert data.data_vars == ret.data_vars
-        assert data.coords == ret.coords
-        assert data.indexes == ret.indexes
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(ret.indexes)
 
         ret = data.isel(time=slice(2), dim1=0, dim2=slice(5))
         assert {'time': 2, 'dim2': 5, 'dim3': 10} == ret.dims
-        assert data.data_vars == ret.data_vars
-        assert data.coords == ret.coords
-        assert data.indexes == ret.indexes
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(ret.indexes)
 
         ret = data.isel(time=0, dim1=0, dim2=slice(5))
         assert {'dim2': 5, 'dim3': 10} == ret.dims
-        assert data.data_vars == ret.data_vars
-        assert data.coords == ret.coords
-        assert data.indexes == list(ret.indexes) + ['time']
+        assert set(data.data_vars) == set(ret.data_vars)
+        assert set(data.coords) == set(ret.coords)
+        assert set(data.indexes) == set(list(ret.indexes) + ['time'])
 
     def test_isel_fancy(self):
         # isel with fancy indexing.
@@ -2546,11 +2546,11 @@ class TestDataset(TestCase):
     def test_delitem(self):
         data = create_test_data()
         all_items = set(data.variables)
-        assert data.variables == all_items
+        assert set(data.variables) == all_items
         del data['var1']
-        assert data.variables == all_items - set(['var1'])
+        assert set(data.variables) == all_items - set(['var1'])
         del data['numbers']
-        assert data.variables == all_items - set(['var1', 'numbers'])
+        assert set(data.variables) == all_items - set(['var1', 'numbers'])
         assert 'numbers' not in data.coords
 
     def test_squeeze(self):
@@ -3424,7 +3424,7 @@ class TestDataset(TestCase):
                                  (['dim2', 'time'], ['dim1', 'dim3']),
                                  (('dim2', 'time'), ['dim1', 'dim3']),
                                  ((), ['dim1', 'dim2', 'dim3', 'time'])]:
-            actual = data.min(dim=reduct).dims
+            actual = list(data.min(dim=reduct).dims)
             assert actual == expected
 
         assert_equal(data.mean(dim=[]), data)
@@ -3479,7 +3479,7 @@ class TestDataset(TestCase):
                 ('time', ['dim1', 'dim2', 'dim3'])
             ]:
                 actual = getattr(data, cumfunc)(dim=reduct).dims
-                assert actual == expected
+                assert list(actual) == expected
 
     def test_reduce_non_numeric(self):
         data1 = create_test_data(seed=44)
