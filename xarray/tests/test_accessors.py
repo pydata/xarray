@@ -7,8 +7,8 @@ import pytest
 import xarray as xr
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex, requires_dask,
-    has_cftime, has_dask, has_cftime_or_netCDF4)
+    TestCase, assert_array_equal, assert_equal, has_cftime,
+    has_cftime_or_netCDF4, has_dask, raises_regex, requires_dask)
 
 
 class TestDatetimeAccessor(TestCase):

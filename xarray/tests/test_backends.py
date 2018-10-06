@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import contextlib
 import itertools
+import math
 import os.path
 import pickle
 import shutil
@@ -19,8 +20,8 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
     save_mfdataset)
-from xarray.backends.common import (robust_getitem,
-                                    PickleByReconstructionWrapper)
+from xarray.backends.common import (
+    PickleByReconstructionWrapper, robust_getitem)
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
@@ -31,10 +32,10 @@ from xarray.tests import mock
 from . import (
     TestCase, assert_allclose, assert_array_equal, assert_equal,
     assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
-    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
-    requires_pydap, requires_pynio, requires_rasterio, requires_scipy,
-    requires_scipy_or_netCDF4, requires_zarr, requires_pseudonetcdf,
-    requires_cftime)
+    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
+    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
+    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
+    requires_zarr)
 from .test_dataset import create_test_data
 
 try:
@@ -627,19 +628,19 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == \
-                                 actual.variables[k].dtype
+                    actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == \
-                                 actual.variables[k].dtype
+                    actual.variables[k].dtype
             assert_allclose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == \
-                                 actual.variables[k].dtype
+                    actual.variables[k].dtype
             assert_allclose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -648,13 +649,13 @@ class CFEncodedDataTest(DatasetIOTestCases):
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == \
-                                 actual.variables[k].dtype
+                    actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == \
-                                 actual.variables[k].dtype
+                    actual.variables[k].dtype
             assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_roundtrip_mask_and_scale(self):
@@ -785,8 +786,7 @@ class CFEncodedDataTest(DatasetIOTestCases):
         ds = Dataset({'x': ('y', np.arange(10.0))})
         kwargs = dict(encoding={'x': {'dtype': 'f4'}})
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            assert actual.x.encoding['_FillValue'] == \
-                             np.nan
+            assert math.isnan(actual.x.encoding['_FillValue'])
         assert ds.x.encoding == {}
 
         # Test default encoding for int:
@@ -1040,7 +1040,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
-                                     expected['time'].encoding
+                    expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -2177,12 +2177,12 @@ class DaskTest(TestCase, DatasetIOTestCases):
                                     autoclose=self.autoclose) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == \
-                                     ((5, 5),)
+                        ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
                                     autoclose=self.autoclose) as actual:
                     assert actual.foo.variable.data.chunks == \
-                                     ((3, 2, 3, 2),)
+                        ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)

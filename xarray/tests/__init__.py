@@ -13,7 +13,6 @@ from xarray.core.duck_array_ops import allclose_or_equiv
 import pytest
 
 from xarray.core import utils
-from xarray.core.pycompat import PY3
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
                             assert_allclose)
@@ -121,12 +120,6 @@ class TestCase(unittest.TestCase):
     """
     These functions are all deprecated. Instead, use functions in xr.testing
     """
-    if PY3:
-        # Python 3 assertCountEqual is roughly equivalent to Python 2
-        # assertItemsEqual
-        def assertItemsEqual(self, first, second, msg=None):
-            __tracebackhide__ = True  # noqa: F841
-            return self.assertCountEqual(first, second, msg)
 
     @contextmanager
     def assertWarns(self, message):
