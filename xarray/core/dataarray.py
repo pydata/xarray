@@ -2080,7 +2080,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
         """Shift this array by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. Values shifted from
@@ -2117,7 +2117,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 0 1 2
         """
-        ds = self._to_temp_dataset().shift(shifts=shifts, **shifts_kwargs)
+        ds = self._to_temp_dataset().shift(
+            shifts=shifts, fill_value=fill_value, **shifts_kwargs)
         return self._from_temp_dataset(ds)
 
     def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):

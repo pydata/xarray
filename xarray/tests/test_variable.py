@@ -1165,24 +1165,25 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable((), u'tmax')
         assert_identical(actual, expected)
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [np.nan, 2, 2.0])
+    def test_shift(self, fill_value):
         v = Variable('x', [1, 2, 3, 4, 5])
 
         assert_identical(v, v.shift(x=0))
         assert v is not v.shift(x=0)
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4])
-        assert_identical(expected, v.shift(x=1))
+        expected = Variable('x', [fill_value, 1, 2, 3, 4])
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
 
         expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
         assert_identical(expected, v.shift(x=2))
 
-        expected = Variable('x', [2, 3, 4, 5, np.nan])
-        assert_identical(expected, v.shift(x=-1))
+        expected = Variable('x', [2, 3, 4, 5, fill_value])
+        assert_identical(expected, v.shift(x=-1, fill_value=fill_value))
 
-        expected = Variable('x', [np.nan] * 5)
-        assert_identical(expected, v.shift(x=5))
-        assert_identical(expected, v.shift(x=6))
+        expected = Variable('x', [fill_value] * 5)
+        assert_identical(expected, v.shift(x=5, fill_value=fill_value))
+        assert_identical(expected, v.shift(x=6, fill_value=fill_value))
 
         with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
@@ -1190,8 +1191,8 @@ class TestVariable(VariableSubclassobjects):
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
         assert_identical(v, v.shift(x=0))
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
-        assert_identical(expected, v.shift(x=1))
+        expected = Variable('x', [fill_value, 1, 2, 3, 4], {'foo': 'bar'})
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
 
     def test_shift2d(self):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])

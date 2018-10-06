@@ -3481,7 +3481,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             return difference
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -3529,7 +3529,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             if name in self.data_vars:
                 var_shifts = dict((k, v) for k, v in shifts.items()
                                   if k in var.dims)
-                variables[name] = var.shift(**var_shifts)
+                variables[name] = var.shift(
+                    fill_value=fill_value, **var_shifts)
             else:
                 variables[name] = var
 

@@ -3129,12 +3129,14 @@ class TestDataArray(object):
         actual = lon.diff('lon')
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize('offset', [-5, -2, -1, 0, 1, 2, 5])
-    def test_shift(self, offset):
+    @pytest.mark.parametrize('offset', [-5, 0, 1, 2])
+    @pytest.mark.parametrize('fill_value, dtype', [(2, int), (np.nan, float)])
+    def test_shift(self, offset, fill_value, dtype):
         arr = DataArray([1, 2, 3], dims='x')
-        actual = arr.shift(x=1)
-        expected = DataArray([np.nan, 1, 2], dims='x')
+        actual = arr.shift(x=1, fill_value=fill_value)
+        expected = DataArray([fill_value, 1, 2], dims='x')
         assert_identical(expected, actual)
+        assert actual.dtype == dtype
 
         arr = DataArray([1, 2, 3], [('x', ['a', 'b', 'c'])])
         expected = DataArray(arr.to_pandas().shift(offset))

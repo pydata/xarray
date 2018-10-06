@@ -3896,12 +3896,13 @@ class TestDataset(object):
         with raises_regex(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [np.nan, 2, 2.0])
+    def test_shift(self, fill_value):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
-        actual = ds.shift(x=1)
-        expected = Dataset({'foo': ('x', [np.nan, 1, 2])}, coords, attrs)
+        actual = ds.shift(x=1, fill_value=fill_value)
+        expected = Dataset({'foo': ('x', [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'dimensions'):

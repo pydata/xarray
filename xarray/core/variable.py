@@ -929,7 +929,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims = common.get_squeeze_dims(self, dim)
         return self.isel({d: 0 for d in dims})
 
-    def _shift_one_dim(self, dim, count):
+    def _shift_one_dim(self, dim, count, fill_value=None):
         axis = self.get_axis_num(dim)
 
         if count > 0:
@@ -940,7 +940,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             keep = slice(None)
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
-        dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
+        if fill_value is None or fill_value is np.nan:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = self.dtype
 
         shape = list(self.shape)
         shape[axis] = min(abs(count), shape[axis])
@@ -952,12 +956,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             full = np.full
 
-        nans = full(shape, fill_value, dtype=dtype)
+        filler = full(shape, fill_value, dtype=dtype)
 
         if count > 0:
-            arrays = [nans, trimmed_data]
+            arrays = [filler, trimmed_data]
         else:
-            arrays = [trimmed_data, nans]
+            arrays = [trimmed_data, filler]
 
         data = duck_array_ops.concatenate(arrays, axis)
 
@@ -969,7 +973,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
         """
         Return a new Variable with shifted data.
 
@@ -991,7 +995,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'shift')
         result = self
         for dim, count in shifts.items():
-            result = result._shift_one_dim(dim, count)
+            result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
     def pad_with_fill_value(self, pad_widths=None, fill_value=dtypes.NA,
