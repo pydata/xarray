@@ -5,8 +5,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
-import xarray as xr
 
+import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
 from xarray.core.options import set_options
@@ -16,7 +16,7 @@ from xarray.testing import assert_identical
 
 from . import (
     TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
-    requires_dask, requires_cftime)
+    requires_cftime, requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
@@ -176,7 +176,7 @@ class TestDictionaries(TestCase):
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
-        self.assertItemsEqual(y, ['a', 'b', 'c'])
+        assert y == ['a', 'b', 'c']
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
 
@@ -191,7 +191,7 @@ class TestDictionaries(TestCase):
         m['x'] = 100
         assert m['x'] == 100
         assert m.maps[0]['x'] == 100
-        self.assertItemsEqual(['x', 'y', 'z'], m)
+        assert ['x', 'y', 'z'] == m
 
 
 def test_repr_object():
