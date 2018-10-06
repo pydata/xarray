@@ -24,7 +24,7 @@ class TestIndexers(object):
     def test_expanded_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        I = ReturnItem()  # noqa
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
                   I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:

@@ -442,7 +442,7 @@ class TestDataArray(object):
         assert_identical(self.ds['x'], x)
         assert_identical(self.ds['y'], y)
 
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        I = ReturnItem()  # noqa
         for i in [I[:], I[...], I[x.values], I[x.variable], I[x], I[x, y],
                   I[x.values > -1], I[x.variable > -1], I[x > -1],
                   I[x > -1, y > -1]]:
