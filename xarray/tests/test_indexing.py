@@ -10,13 +10,12 @@ from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
 from xarray.core.pycompat import native_int_types
 
-from . import (
-    IndexerMaker, ReturnItem, TestCase, assert_array_equal, raises_regex)
+from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
 B = IndexerMaker(indexing.BasicIndexer)
 
 
-class TestIndexers(TestCase):
+class TestIndexers(object):
     def set_to_zero(self, x, i):
         x = x.copy()
         x[i] = 0
@@ -133,7 +132,7 @@ class TestIndexers(TestCase):
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
-class TestLazyArray(TestCase):
+class TestLazyArray(object):
     def test_slice_slice(self):
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
         for size in [100, 99]:
@@ -248,7 +247,7 @@ class TestLazyArray(TestCase):
         check_indexing(v_eager, v_lazy, indexers)
 
 
-class TestCopyOnWriteArray(TestCase):
+class TestCopyOnWriteArray(object):
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
@@ -272,7 +271,7 @@ class TestCopyOnWriteArray(TestCase):
         assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
-class TestMemoryCachedArray(TestCase):
+class TestMemoryCachedArray(object):
     def test_wrapper(self):
         original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
@@ -385,8 +384,9 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-class Test_vectorized_indexer(TestCase):
-    def setUp(self):
+class Test_vectorized_indexer(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
         self.indexers = [np.array([[0, 3, 2], ]),
                          np.array([[0, 3, 3], [4, 6, 7]]),

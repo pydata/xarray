@@ -15,12 +15,12 @@ from xarray.core.utils import either_dict_or_kwargs
 from xarray.testing import assert_identical
 
 from . import (
-    TestCase, assert_array_equal, has_cftime, has_cftime_or_netCDF4,
-    requires_cftime, requires_dask)
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
+    requires_dask)
 from .test_coding_times import _all_cftime_date_types
 
 
-class TestAlias(TestCase):
+class TestAlias(object):
     def test(self):
         def new_method():
             pass
@@ -98,7 +98,7 @@ def test_multiindex_from_product_levels_non_unique():
     np.testing.assert_array_equal(result.levels[1], [1, 2])
 
 
-class TestArrayEquiv(TestCase):
+class TestArrayEquiv(object):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
@@ -108,8 +108,9 @@ class TestArrayEquiv(TestCase):
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
-class TestDictionaries(TestCase):
-    def setUp(self):
+class TestDictionaries(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
         self.z = {'a': 'Z'}
@@ -199,7 +200,7 @@ def test_repr_object():
     assert repr(obj) == 'foo'
 
 
-class Test_is_uniform_and_sorted(TestCase):
+class Test_is_uniform_and_sorted(object):
 
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))
@@ -220,7 +221,7 @@ class Test_is_uniform_and_sorted(TestCase):
         assert utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1)
 
 
-class Test_hashable(TestCase):
+class Test_hashable(object):
 
     def test_hashable(self):
         for v in [False, 1, (2, ), (3, 4), 'four']:

@@ -8,20 +8,20 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import (Dataset, Variable, SerializationWarning, coding,
-                    conventions, open_dataset)
+from xarray import (
+    Dataset, SerializationWarning, Variable, coding, conventions, open_dataset)
 from xarray.backends.common import WritableCFDataStore
 from xarray.backends.memory import InMemoryDataStore
 from xarray.conventions import decode_cf
 from xarray.testing import assert_identical
 
 from . import (
-    TestCase, assert_array_equal, raises_regex, requires_netCDF4,
-    requires_cftime_or_netCDF4, unittest, requires_dask)
+    assert_array_equal, raises_regex, requires_cftime_or_netCDF4,
+    requires_dask, requires_netCDF4, unittest)
 from .test_backends import CFEncodedDataTest
 
 
-class TestBoolTypeArray(TestCase):
+class TestBoolTypeArray(object):
     def test_booltype_array(self):
         x = np.array([1, 0, 1, 1, 0], dtype='i1')
         bx = conventions.BoolTypeArray(x)
@@ -30,7 +30,7 @@ class TestBoolTypeArray(TestCase):
                                         dtype=np.bool))
 
 
-class TestNativeEndiannessArray(TestCase):
+class TestNativeEndiannessArray(object):
     def test(self):
         x = np.arange(5, dtype='>i8')
         expected = np.arange(5, dtype='int64')
@@ -69,7 +69,7 @@ def test_decode_cf_with_conflicting_fill_missing_value():
 
 
 @requires_cftime_or_netCDF4
-class TestEncodeCFVariable(TestCase):
+class TestEncodeCFVariable(object):
     def test_incompatible_attributes(self):
         invalid_vars = [
             Variable(['t'], pd.date_range('2000-01-01', periods=3),
@@ -134,7 +134,7 @@ class TestEncodeCFVariable(TestCase):
 
 
 @requires_cftime_or_netCDF4
-class TestDecodeCF(TestCase):
+class TestDecodeCF(object):
     def test_dataset(self):
         original = Dataset({
             't': ('t', [0, 1, 2], {'units': 'days since 2000-01-01'}),
@@ -255,7 +255,7 @@ class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
 
 
 @requires_netCDF4
-class TestCFEncodedDataStore(CFEncodedDataTest, TestCase):
+class TestCFEncodedDataStore(CFEncodedDataTest, object):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()

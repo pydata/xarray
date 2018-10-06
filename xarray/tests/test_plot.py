@@ -5,9 +5,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 import pytest
 
+import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
 from xarray.coding.times import _import_cftime
@@ -17,9 +17,8 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_cftime)
+    assert_array_equal, assert_equal, raises_regex, requires_cftime,
+    requires_matplotlib, requires_matplotlib2, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -27,6 +26,12 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
+
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 
 @pytest.mark.flaky
@@ -65,7 +70,7 @@ def easy_array(shape, start=0, stop=1):
 
 
 @requires_matplotlib
-class PlotTestCase(TestCase):
+class PlotTestCase(unittest.TestCase):
     def tearDown(self):
         # Remove all matplotlib figures
         plt.close('all')
@@ -452,7 +457,7 @@ class TestPlotHistogram(PlotTestCase):
 
 
 @requires_matplotlib
-class TestDetermineCmapParams(TestCase):
+class TestDetermineCmapParams(unittest.TestCase):
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
 
@@ -625,7 +630,7 @@ class TestDetermineCmapParams(TestCase):
 
 
 @requires_matplotlib
-class TestDiscreteColorMap(TestCase):
+class TestDiscreteColorMap(unittest.TestCase):
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
         y = np.arange(start=9, stop=-7, step=-3)

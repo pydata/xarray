@@ -6,12 +6,11 @@ import pandas as pd
 
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
-from xarray.testing import assert_equal
 
-from . import TestCase, raises_regex
+from . import raises_regex
 
 
-class TestFormatting(TestCase):
+class TestFormatting(object):
 
     def test_get_indexer_at_least_n_items(self):
         cases = [

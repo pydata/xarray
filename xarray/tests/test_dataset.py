@@ -21,7 +21,7 @@ from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
 
 from . import (
-    InaccessibleArray, TestCase, UnexpectedDataAccess, assert_allclose,
+    InaccessibleArray, UnexpectedDataAccess, assert_allclose,
     assert_array_equal, assert_equal, assert_identical, has_cftime, has_dask,
     raises_regex, requires_bottleneck, requires_dask, requires_scipy,
     source_ndarray)
@@ -86,7 +86,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                     k, v in iteritems(self._variables))
 
 
-class TestDataset(TestCase):
+class TestDataset(object):
     def test_repr(self):
         data = create_test_data(seed=123)
         data.attrs['foo'] = 'bar'
@@ -442,7 +442,7 @@ class TestDataset(TestCase):
         assert len(ds.indexes) == 3
         assert 'dim2' in repr(ds.indexes)
 
-        assert list ( ds.coords ) == ['time', 'dim2', 'dim3', 'numbers']
+        assert list(ds.coords) == ['time', 'dim2', 'dim3', 'numbers']
         assert 'dim2' in ds.coords
         assert 'numbers' in ds.coords
         assert 'var1' not in ds.coords
@@ -1482,7 +1482,7 @@ class TestDataset(TestCase):
                     ds = ds.rename({renamed_dim: 'x'})
                 assert_identical(ds['var'].variable,
                                  expected_ds['var'].variable)
-                self.assertVariableNotEqual(ds['x'], expected_ds['x'])
+                assert not ds['x'].equals(expected_ds['x'])
 
         test_sel(('a', 1, -1), 0)
         test_sel(('b', 2, -2), -1)

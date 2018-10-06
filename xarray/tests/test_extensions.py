@@ -4,7 +4,7 @@ import pytest
 
 import xarray as xr
 
-from . import TestCase, raises_regex
+from . import raises_regex
 
 try:
     import cPickle as pickle
@@ -21,7 +21,7 @@ class ExampleAccessor(object):
         self.obj = xarray_obj
 
 
-class TestAccessor(TestCase):
+class TestAccessor(object):
     def test_register(self):
 
         @xr.register_dataset_accessor('demo')

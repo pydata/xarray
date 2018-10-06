@@ -30,12 +30,11 @@ from xarray.core.pycompat import (
 from xarray.tests import mock
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, has_dask, has_netCDF4, has_scipy, network, raises_regex,
-    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
-    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
-    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
-    requires_zarr)
+    assert_allclose, assert_array_equal, assert_equal, assert_identical,
+    has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
+    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
+    requires_pseudonetcdf, requires_pydap, requires_pynio, requires_rasterio,
+    requires_scipy, requires_scipy_or_netCDF4, requires_zarr)
 from .test_dataset import create_test_data
 
 try:
@@ -107,7 +106,7 @@ def create_boolean_data():
     return Dataset({'x': ('t', [True, False, False, True], attributes)})
 
 
-class TestCommon(TestCase):
+class TestCommon(object):
     def test_robust_getitem(self):
 
         class UnreliableArrayFailure(Exception):
@@ -1094,11 +1093,11 @@ class BaseNetCDF4Test(CFEncodedDataTest):
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert_equal(actual, ds)
             assert actual.x.encoding['dtype'] == 'f4'
-            assert actual.x.encoding['zlib'] == True
+            assert actual.x.encoding['zlib']
             assert actual.x.encoding['complevel'] == 9
-            assert actual.x.encoding['fletcher32'] == True
+            assert actual.x.encoding['fletcher32']
             assert actual.x.encoding['chunksizes'] == (5,)
-            assert actual.x.encoding['shuffle'] == True
+            assert actual.x.encoding['shuffle']
 
         assert ds.x.encoding == {}
 
@@ -1181,7 +1180,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 
 @requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test, TestCase):
+class NetCDF4DataTest(BaseNetCDF4Test, object):
     autoclose = False
 
     @contextlib.contextmanager
@@ -1335,7 +1334,7 @@ class BaseZarrTest(CFEncodedDataTest):
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
                 # there should be no chunks
-                assert v.chunks == None
+                assert v.chunks is None
 
         with self.roundtrip(
                 original, open_kwargs={'auto_chunk': True}) as actual:
@@ -1530,14 +1529,14 @@ class BaseZarrTest(CFEncodedDataTest):
 
 
 @requires_zarr
-class ZarrDictStoreTest(BaseZarrTest, TestCase):
+class ZarrDictStoreTest(BaseZarrTest, object):
     @contextlib.contextmanager
     def create_zarr_target(self):
         yield {}
 
 
 @requires_zarr
-class ZarrDirectoryStoreTest(BaseZarrTest, TestCase):
+class ZarrDirectoryStoreTest(BaseZarrTest, object):
     @contextlib.contextmanager
     def create_zarr_target(self):
         with create_tmp_file(suffix='.zarr') as tmp:
@@ -1560,7 +1559,7 @@ class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(ScipyWriteTest, TestCase):
+class ScipyInMemoryDataTest(ScipyWriteTest, object):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1586,7 +1585,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(ScipyWriteTest, TestCase):
+class ScipyFileObjectTest(ScipyWriteTest, object):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1614,7 +1613,7 @@ class ScipyFileObjectTest(ScipyWriteTest, TestCase):
 
 
 @requires_scipy
-class ScipyFilePathTest(ScipyWriteTest, TestCase):
+class ScipyFilePathTest(ScipyWriteTest, object):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1655,7 +1654,7 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, object):
     engine = 'netcdf4'
     file_format = 'NETCDF3_CLASSIC'
 
@@ -1680,7 +1679,7 @@ class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
 
 @requires_netCDF4
 class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
-                                       TestCase):
+                                       object):
     engine = 'netcdf4'
     file_format = 'NETCDF4_CLASSIC'
 
@@ -1698,7 +1697,7 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
 
 
 @requires_scipy_or_netCDF4
-class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, TestCase):
+class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, object):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
     file_format = 'netcdf3_64bit'
@@ -1779,7 +1778,7 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
 
 @requires_h5netcdf
 @requires_netCDF4
-class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
+class H5NetCDFDataTest(BaseNetCDF4Test, object):
     engine = 'h5netcdf'
 
     @contextlib.contextmanager
@@ -1896,14 +1895,14 @@ class H5NetCDFDataTest(BaseNetCDF4Test, TestCase):
         kwargs = {'encoding': {'x': {
             'compression': 'gzip', 'compression_opts': 9}}}
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
-            assert actual.x.encoding['zlib'] == True
+            assert actual.x.encoding['zlib']
             assert actual.x.encoding['complevel'] == 9
 
         kwargs = {'encoding': {'x': {
             'compression': 'lzf', 'compression_opts': None}}}
         with self.roundtrip(ds, save_kwargs=kwargs) as actual:
             assert actual.x.encoding['compression'] == 'lzf'
-            assert actual.x.encoding['compression_opts'] == None
+            assert actual.x.encoding['compression_opts'] is None
 
 
 # tests pending h5netcdf fix
@@ -1983,7 +1982,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
 
 
 @requires_scipy_or_netCDF4
-class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
+class OpenMFDatasetWithDataVarsAndCoordsKwTest(object):
     coord_name = 'lon'
     var_name = 'v1'
 
@@ -2091,7 +2090,7 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(TestCase):
 @requires_dask
 @requires_scipy
 @requires_netCDF4
-class DaskTest(TestCase, DatasetIOTestCases):
+class DaskTest(DatasetIOTestCases):
     @contextlib.contextmanager
     def create_store(self):
         yield Dataset()
@@ -2393,7 +2392,7 @@ class DaskTestAutocloseTrue(DaskTest):
 
 @requires_scipy_or_netCDF4
 @requires_pydap
-class PydapTest(TestCase):
+class PydapTest(object):
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
         ds = DatasetType('bears', **original.attrs)
@@ -2495,7 +2494,7 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class PyNioTest(ScipyWriteTest, TestCase):
+class PyNioTest(ScipyWriteTest, object):
     def test_write_store(self):
         # pynio is read-only for now
         pass
@@ -2527,7 +2526,7 @@ class PyNioTestAutocloseTrue(PyNioTest):
 
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings('ignore:IOAPI_ISPH is assumed to be 6370000')
-class PseudoNetCDFFormatTest(TestCase):
+class PseudoNetCDFFormatTest(object):
     autoclose = True
 
     def open(self, path, **kwargs):
@@ -2790,7 +2789,7 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
 
 
 @requires_rasterio
-class TestRasterio(TestCase):
+class TestRasterio(object):
 
     @requires_scipy_or_netCDF4
     def test_serialization(self):
@@ -3119,7 +3118,7 @@ class TestRasterio(TestCase):
             assert isinstance(actual.data, da.Array)
 
 
-class TestEncodingInvalid(TestCase):
+class TestEncodingInvalid(object):
 
     def test_extract_nc4_variable_encoding(self):
         var = xr.Variable(('x',), [1, 2, 3], {}, {'foo': 'bar'})
@@ -3148,7 +3147,7 @@ class MiscObject:
 
 
 @requires_netCDF4
-class TestValidateAttrs(TestCase):
+class TestValidateAttrs(object):
     def test_validating_attrs(self):
         def new_dataset():
             return Dataset({'data': ('y', np.arange(10.0))},
@@ -3248,7 +3247,7 @@ class TestValidateAttrs(TestCase):
 
 
 @requires_scipy_or_netCDF4
-class TestDataArrayToNetCDF(TestCase):
+class TestDataArrayToNetCDF(object):
 
     def test_dataarray_to_netcdf_no_name(self):
         original_da = DataArray(np.arange(12).reshape((3, 4)))
