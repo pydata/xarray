@@ -479,20 +479,20 @@ class VariableSubclassobjects(object):
         assert_identical(expected, actual)
         assert actual.dtype == object
 
-    def test_copy(self):
+    @pytest.mark.parametrize('deep', [True, False])
+    def test_copy(self, deep):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
-        for deep in [True, False]:
-            w = v.copy(deep=deep)
-            assert type(v) is type(w)
-            assert_identical(v, w)
-            assert v.dtype == w.dtype
-            if self.cls is Variable:
-                if deep:
-                    assert source_ndarray(v.values) is not \
-                        source_ndarray(w.values)
-                else:
-                    assert source_ndarray(v.values) is \
-                        source_ndarray(w.values)
+        w = v.copy(deep=deep)
+        assert type(v) is type(w)
+        assert_identical(v, w)
+        assert v.dtype == w.dtype
+        if self.cls is Variable:
+            if deep:
+                assert (source_ndarray(v.values) is not
+                        source_ndarray(w.values))
+            else:
+                assert (source_ndarray(v.values) is
+                        source_ndarray(w.values))
         assert_identical(v, copy(v))
 
     def test_copy_index(self):

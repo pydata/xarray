@@ -626,20 +626,20 @@ class CFEncodedDataTest(DatasetIOTestCases):
         encoded = create_encoded_unsigned_masked_scaled_data()
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
-                assert decoded.variables[k].dtype == \
-                    actual.variables[k].dtype
+                assert (decoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
-                assert encoded.variables[k].dtype == \
-                    actual.variables[k].dtype
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
-                assert encoded.variables[k].dtype == \
-                    actual.variables[k].dtype
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
         # make sure roundtrip encoding didn't change the
         # original dataset.
@@ -1180,7 +1180,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 
 @requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test, object):
+class NetCDF4DataTest(BaseNetCDF4Test):
     autoclose = False
 
     @contextlib.contextmanager
@@ -1529,14 +1529,14 @@ class BaseZarrTest(CFEncodedDataTest):
 
 
 @requires_zarr
-class ZarrDictStoreTest(BaseZarrTest, object):
+class ZarrDictStoreTest(BaseZarrTest):
     @contextlib.contextmanager
     def create_zarr_target(self):
         yield {}
 
 
 @requires_zarr
-class ZarrDirectoryStoreTest(BaseZarrTest, object):
+class ZarrDirectoryStoreTest(BaseZarrTest):
     @contextlib.contextmanager
     def create_zarr_target(self):
         with create_tmp_file(suffix='.zarr') as tmp:
@@ -1559,7 +1559,7 @@ class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(ScipyWriteTest, object):
+class ScipyInMemoryDataTest(ScipyWriteTest):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1585,7 +1585,7 @@ class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(ScipyWriteTest, object):
+class ScipyFileObjectTest(ScipyWriteTest):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1613,7 +1613,7 @@ class ScipyFileObjectTest(ScipyWriteTest, object):
 
 
 @requires_scipy
-class ScipyFilePathTest(ScipyWriteTest, object):
+class ScipyFilePathTest(ScipyWriteTest):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1654,7 +1654,7 @@ class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only, object):
+class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only):
     engine = 'netcdf4'
     file_format = 'NETCDF3_CLASSIC'
 
@@ -1697,7 +1697,7 @@ class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
 
 
 @requires_scipy_or_netCDF4
-class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only, object):
+class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
     file_format = 'netcdf3_64bit'
@@ -1778,7 +1778,7 @@ class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
 
 @requires_h5netcdf
 @requires_netCDF4
-class H5NetCDFDataTest(BaseNetCDF4Test, object):
+class H5NetCDFDataTest(BaseNetCDF4Test):
     engine = 'h5netcdf'
 
     @contextlib.contextmanager
@@ -2493,7 +2493,7 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class PyNioTest(ScipyWriteTest, object):
+class PyNioTest(ScipyWriteTest):
     def test_write_store(self):
         # pynio is read-only for now
         pass
@@ -2833,7 +2833,8 @@ class TestRasterio(object):
                 assert len(rioda.attrs['transform']) == 6
 
             # See if a warning is raised if we force it
-            with pytest.warns(Warning, match="transformation isn't rectilinear"):
+            with pytest.warns(Warning,
+                              match="transformation isn't rectilinear"):
                 with xr.open_rasterio(tmp_file,
                                       parse_coordinates=True) as rioda:
                     assert 'x' not in rioda.coords

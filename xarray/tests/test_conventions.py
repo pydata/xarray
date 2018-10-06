@@ -255,7 +255,7 @@ class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
 
 
 @requires_netCDF4
-class TestCFEncodedDataStore(CFEncodedDataTest, object):
+class TestCFEncodedDataStore(CFEncodedDataTest):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()
