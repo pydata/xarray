@@ -1,11 +1,11 @@
 
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -25,11 +25,11 @@ from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_dask, source_ndarray)
+    assert_allclose, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask, source_ndarray)
 
 
-class VariableSubclassTestCases(object):
+class VariableSubclassobjects(object):
     def test_properties(self):
         data = 0.5 * np.arange(10)
         v = self.cls(['time'], data, {'foo': 'bar'})
@@ -479,20 +479,20 @@ class VariableSubclassTestCases(object):
         assert_identical(expected, actual)
         assert actual.dtype == object
 
-    def test_copy(self):
+    @pytest.mark.parametrize('deep', [True, False])
+    def test_copy(self, deep):
         v = self.cls('x', 0.5 * np.arange(10), {'foo': 'bar'})
-        for deep in [True, False]:
-            w = v.copy(deep=deep)
-            assert type(v) is type(w)
-            assert_identical(v, w)
-            assert v.dtype == w.dtype
-            if self.cls is Variable:
-                if deep:
-                    assert source_ndarray(v.values) is not \
-                        source_ndarray(w.values)
-                else:
-                    assert source_ndarray(v.values) is \
-                        source_ndarray(w.values)
+        w = v.copy(deep=deep)
+        assert type(v) is type(w)
+        assert_identical(v, w)
+        assert v.dtype == w.dtype
+        if self.cls is Variable:
+            if deep:
+                assert (source_ndarray(v.values) is not
+                        source_ndarray(w.values))
+            else:
+                assert (source_ndarray(v.values) is
+                        source_ndarray(w.values))
         assert_identical(v, copy(v))
 
     def test_copy_index(self):
@@ -814,10 +814,11 @@ class VariableSubclassTestCases(object):
                     v_loaded[0] = 1.0
 
 
-class TestVariable(TestCase, VariableSubclassTestCases):
+class TestVariable(VariableSubclassobjects):
     cls = staticmethod(Variable)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 
     def test_data_and_values(self):
@@ -1651,7 +1652,7 @@ class TestVariable(TestCase, VariableSubclassTestCases):
 
 
 @requires_dask
-class TestVariableWithDask(TestCase, VariableSubclassTestCases):
+class TestVariableWithDask(VariableSubclassobjects):
     cls = staticmethod(lambda *args: Variable(*args).chunk())
 
     @pytest.mark.xfail
@@ -1691,7 +1692,7 @@ class TestVariableWithDask(TestCase, VariableSubclassTestCases):
                          self.cls(('x', 'y'), [[0, -1], [-1, 2]]))
 
 
-class TestIndexVariable(TestCase, VariableSubclassTestCases):
+class TestIndexVariable(VariableSubclassobjects):
     cls = staticmethod(IndexVariable)
 
     def test_init(self):
@@ -1804,7 +1805,7 @@ class TestIndexVariable(TestCase, VariableSubclassTestCases):
         super(TestIndexVariable, self).test_rolling_window()
 
 
-class TestAsCompatibleData(TestCase):
+class TestAsCompatibleData(object):
     def test_unchanged_types(self):
         types = (np.asarray, PandasIndexAdapter, LazilyOuterIndexedArray)
         for t in types:
@@ -1945,9 +1946,10 @@ def test_raise_no_warning_for_nan_in_binary_ops():
     assert len(record) == 0
 
 
-class TestBackendIndexing(TestCase):
+class TestBackendIndexing(object):
     """    Make sure all the array wrappers can be indexed. """
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.d = np.random.random((10, 3)).astype(np.float64)
 

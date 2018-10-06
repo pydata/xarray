@@ -10,12 +10,12 @@ from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 
 from . import (
-    InaccessibleArray, TestCase, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
-class TestConcatDataset(TestCase):
+class TestConcatDataset(object):
     def test_concat(self):
         # TODO: simplify and split this test case
 
@@ -235,7 +235,7 @@ class TestConcatDataset(TestCase):
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
 
-class TestConcatDataArray(TestCase):
+class TestConcatDataArray(object):
     def test_concat(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
                       'bar': (['x', 'y'], np.random.random((2, 3)))},
@@ -295,7 +295,7 @@ class TestConcatDataArray(TestCase):
         assert combined.dims == ('z', 'x', 'y')
 
 
-class TestAutoCombine(TestCase):
+class TestAutoCombine(object):
 
     @requires_dask  # only for toolz
     def test_auto_combine(self):

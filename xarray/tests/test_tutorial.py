@@ -2,15 +2,17 @@ from __future__ import absolute_import, division, print_function
 
 import os
 
+import pytest
+
 from xarray import DataArray, tutorial
 from xarray.core.pycompat import suppress
 
-from . import TestCase, assert_identical, network
+from . import assert_identical, network
 
 
 @network
-class TestLoadDataset(TestCase):
-
+class TestLoadDataset(object):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.testfile = 'tiny'
         self.testfilepath = os.path.expanduser(os.sep.join(
