@@ -2433,7 +2433,7 @@ class PydapTest(object):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa: E741
+            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),

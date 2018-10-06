@@ -195,7 +195,7 @@ class TestMergeMethod(object):
         with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat='identical')
 
-        with raises_regex(ValueError, 'compat=\S+ invalid'):
+        with raises_regex(ValueError, 'compat=.* invalid'):
             ds1.merge(ds2, compat='foobar')
 
     def test_merge_auto_align(self):
