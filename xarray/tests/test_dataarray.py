@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import pickle
 import warnings
 from copy import deepcopy
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -3015,7 +3014,7 @@ class TestDataArray(object):
 
         back = from_cdms2(actual)
         assert original.dims == back.dims
-        assert original.coords.keys() == back.coords.keys()
+        assert set(original.coords.keys()) == set(back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
@@ -3036,8 +3035,8 @@ class TestDataArray(object):
                            actual.getLatitude().getValue())
 
         back = from_cdms2(actual)
-        assert (original.dims == back.dims)
-        assert (original.coords.keys() == back.coords.keys())
+        assert set(original.dims) == set(back.dims)
+        assert set(original.coords.keys()) == set(back.coords.keys())
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
