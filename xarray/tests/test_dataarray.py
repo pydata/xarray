@@ -2969,7 +2969,7 @@ class TestDataArray(object):
         actual = original.to_cdms2()
         assert_array_equal(actual.asma(), original)
         assert actual.id == original.name
-        assert actual.getAxisIds() == original.dims
+        assert tuple(actual.getAxisIds()) == original.dims
         for axis, coord in zip(actual.getAxisList(), expected_coords):
             assert axis.id == coord.name
             assert_array_equal(axis, coord.values)
@@ -3005,15 +3005,15 @@ class TestDataArray(object):
                              coords=OrderedDict(x=x, y=y, lon=lon, lat=lat),
                              name='sst')
         actual = original.to_cdms2()
-        assert (actual.getAxisIds() == original.dims)
+        assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords['lon'],
                            actual.getLongitude().asma())
         assert_array_equal(original.coords['lat'],
                            actual.getLatitude().asma())
 
         back = from_cdms2(actual)
-        assert (original.dims == back.dims)
-        assert (original.coords.keys() == back.coords.keys())
+        assert original.dims == back.dims
+        assert original.coords.keys() == back.coords.keys()
         assert_array_equal(original.coords['lat'], back.coords['lat'])
         assert_array_equal(original.coords['lon'], back.coords['lon'])
 
@@ -3027,7 +3027,7 @@ class TestDataArray(object):
         original = DataArray(np.arange(5), dims=['cell'],
                              coords={'lon': lon, 'lat': lat, 'cell': cell})
         actual = original.to_cdms2()
-        assert (actual.getAxisIds() == original.dims)
+        assert tuple(actual.getAxisIds()) == original.dims
         assert_array_equal(original.coords['lon'],
                            actual.getLongitude().getValue())
         assert_array_equal(original.coords['lat'],
