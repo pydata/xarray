@@ -2027,8 +2027,10 @@ class TestDataArray(object):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
-    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
-                        reason="not to forget the behavior change")
+    # Currently disabled due to https://github.com/pydata/xarray/issues/2468
+    # @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+    #                     reason="not to forget the behavior change")
+    @pytest.mark.skip
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
         grouped = array.groupby('abc')
