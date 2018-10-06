@@ -192,7 +192,7 @@ class TestDictionaries(object):
         m['x'] = 100
         assert m['x'] == 100
         assert m.maps[0]['x'] == 100
-        assert list(m) == ['x', 'y', 'z']
+        assert set(m) == {'x', 'y', 'z'}
 
 
 def test_repr_object():
