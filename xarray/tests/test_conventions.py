@@ -17,7 +17,7 @@ from xarray.testing import assert_identical
 
 from . import (
     assert_array_equal, raises_regex, requires_cftime_or_netCDF4,
-    requires_dask, requires_netCDF4, unittest)
+    requires_dask, requires_netCDF4)
 from .test_backends import CFEncodedDataTest
 
 
@@ -267,9 +267,10 @@ class TestCFEncodedDataStore(CFEncodedDataTest, object):
         data.dump_to_store(store, **save_kwargs)
         yield open_dataset(store, **open_kwargs)
 
+    @pytest.mark.skip('cannot roundtrip coordinates yet for '
+                      'CFEncodedInMemoryStore')
     def test_roundtrip_coordinates(self):
-        raise unittest.SkipTest('cannot roundtrip coordinates yet for '
-                                'CFEncodedInMemoryStore')
+        pass
 
     def test_invalid_dataarray_names_raise(self):
         # only relevant for on-disk file formats
