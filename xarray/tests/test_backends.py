@@ -2833,7 +2833,7 @@ class TestRasterio(object):
                 assert len(rioda.attrs['transform']) == 6
 
             # See if a warning is raised if we force it
-            with pytest.warns("transformation isn't rectilinear"):
+            with pytest.warns(Warning, match="transformation isn't rectilinear"):
                 with xr.open_rasterio(tmp_file,
                                       parse_coordinates=True) as rioda:
                     assert 'x' not in rioda.coords
