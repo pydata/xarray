@@ -3493,6 +3493,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        fill_value: scalar, optional
+            Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwarg must be provided.
