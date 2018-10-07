@@ -19,8 +19,6 @@ import warnings as _warnings
 
 import numpy as _np
 
-
-
 from .core.dataarray import DataArray as _DataArray
 from .core.dataset import Dataset as _Dataset
 from .core.duck_array_ops import _dask_or_eager_func
