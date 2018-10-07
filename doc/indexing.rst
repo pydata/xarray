@@ -463,7 +463,7 @@ Like ``numpy.ndarray``, value assignment sometimes works differently from what o
     da[ind] -= 1
     da
 
-Where the 0th element will be subtracted by 1 only once.
+Where the 0th element will be subtracted 1 only once.
 This is because ``v[0] = v[0] - 1`` is called three times, rather than
 ``v[0] = v[0] - 1 - 1 - 1``.
 See `Assigning values to indexed arrays`__ for the details.
@@ -602,14 +602,6 @@ Both ``reindex_like`` and ``align`` work interchangeably between
     other = xr.DataArray(['a', 'b', 'c'], dims='other')
     # this is a no-op, because there are no shared dimension names
     ds.reindex_like(other)
-
-.. _indexing.joining_on_distinct_dimensions:
-
-
-
-Align and reindex
------------------
-
 
 .. _indexing.missing_coordinates:
 
