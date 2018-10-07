@@ -2119,9 +2119,8 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 0 1 2
         """
-        ds = self._to_temp_dataset().shift(
-            shifts=shifts, fill_value=fill_value, **shifts_kwargs)
-        return self._from_temp_dataset(ds)
+        return self._replace(variable=self.variable.shift(
+            shifts=shifts, fill_value=fill_value, **shifts_kwargs))
 
     def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this array by an offset along one or more dimensions.
