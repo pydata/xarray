@@ -40,18 +40,15 @@ Breaking changes
 
 Documentation
 ~~~~~~~~~~~~~
+
 Enhancements
 ~~~~~~~~~~~~
 
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
-- ``xarray.plot()`` now properly accepts a ``norm`` argument and does not override
-  the norm's ``vmin`` and ``vmax``.
-  (:issue:`2381`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
-  CFTimeIndex by a specified frequency.  (:issue:`2244`).  By `Spencer Clark
-  <https://github.com/spencerkclark>`_.
+  CFTimeIndex by a specified frequency. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Added support for using ``cftime.datetime`` coordinates with
   :py:meth:`~xarray.DataArray.differentiate`,
   :py:meth:`~xarray.Dataset.differentiate`,
@@ -63,11 +60,14 @@ Bug fixes
 ~~~~~~~~~
 
 - Addition and subtraction operators used with a CFTimeIndex now preserve the
-  index's type. (:issue:`2244`). By `Spencer Clark <https://github.com/spencerkclark>`_.
+  index's type. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-
+- ``xarray.plot()`` now properly accepts a ``norm`` argument and does not override
+  the norm's ``vmin`` and ``vmax``. (:issue:`2381`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
   (:issue:`2240`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
