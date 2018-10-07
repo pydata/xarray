@@ -8,7 +8,6 @@ import numpy as np
 from ..core.options import OPTIONS
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
-from ..core.options import OPTIONS
 
 ROBUST_PERCENTILE = 2.0
 
