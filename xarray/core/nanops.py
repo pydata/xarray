@@ -2,11 +2,10 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from . import dtypes
+from . import dtypes, nputils
+from .duck_array_ops import (
+    _dask_or_eager_func, count, fillna, isnull, where_method)
 from .pycompat import dask_array_type
-from . duck_array_ops import (count, isnull, fillna, where_method,
-                              _dask_or_eager_func)
-from . import nputils
 
 try:
     import dask.array as dask_array

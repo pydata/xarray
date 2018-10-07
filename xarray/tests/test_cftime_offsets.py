@@ -1,15 +1,13 @@
-import pytest
-
 from itertools import product
 
 import numpy as np
+import pytest
 
-from xarray.coding.cftime_offsets import (
-    BaseCFTimeOffset, YearBegin, YearEnd, MonthBegin, MonthEnd,
-    Day, Hour, Minute, Second, _days_in_month,
-    to_offset, get_date_type, _MONTH_ABBREVIATIONS, to_cftime_datetime,
-    cftime_range)
 from xarray import CFTimeIndex
+from xarray.coding.cftime_offsets import (
+    _MONTH_ABBREVIATIONS, BaseCFTimeOffset, Day, Hour, Minute, MonthBegin,
+    MonthEnd, Second, YearBegin, YearEnd, _days_in_month, cftime_range,
+    get_date_type, to_cftime_datetime, to_offset)
 
 cftime = pytest.importorskip('cftime')
 

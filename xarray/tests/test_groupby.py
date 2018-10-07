@@ -5,8 +5,9 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from . import assert_identical
 from xarray.core.groupby import _consolidate_slices
+
+from . import assert_identical
 
 
 def test_consolidate_slices():

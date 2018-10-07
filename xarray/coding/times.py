@@ -9,8 +9,8 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import contains_cftime_datetimes
 from ..core import indexing
+from ..core.common import contains_cftime_datetimes
 from ..core.formatting import first_n_items, format_timestamp, last_item
 from ..core.options import OPTIONS
 from ..core.pycompat import PY3

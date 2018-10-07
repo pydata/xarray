@@ -9,8 +9,8 @@ from ..core import indexing
 from ..core.pycompat import bytes_type, dask_array_type, unicode_type
 from ..core.variable import Variable
 from .variables import (
-    VariableCoder, lazy_elemwise_func, pop_to,
-    safe_setitem, unpack_for_decoding, unpack_for_encoding)
+    VariableCoder, lazy_elemwise_func, pop_to, safe_setitem,
+    unpack_for_decoding, unpack_for_encoding)
 
 
 def create_vlen_dtype(element_type):

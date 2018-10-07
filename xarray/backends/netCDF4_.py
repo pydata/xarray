@@ -10,8 +10,7 @@ import numpy as np
 from .. import Variable, coding
 from ..coding.variables import pop_to
 from ..core import indexing
-from ..core.pycompat import (
-    PY3, OrderedDict, basestring, iteritems, suppress)
+from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     HDF5_LOCK, BackendArray, DataStorePickleMixin, WritableCFDataStore,

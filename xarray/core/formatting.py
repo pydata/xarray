@@ -15,8 +15,7 @@ import pandas as pd
 
 from .options import OPTIONS
 from .pycompat import (
-    PY2, bytes_type, dask_array_type, unicode_type, zip_longest,
-)
+    PY2, bytes_type, dask_array_type, unicode_type, zip_longest)
 
 try:
     from pandas.errors import OutOfBoundsDatetime

@@ -6,9 +6,9 @@ These ones pass, just as you'd hope!
 """
 from __future__ import absolute_import, division, print_function
 
-from hypothesis import given, settings
-import hypothesis.strategies as st
 import hypothesis.extra.numpy as npst
+import hypothesis.strategies as st
+from hypothesis import given, settings
 
 import xarray as xr
 

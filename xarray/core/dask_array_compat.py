@@ -2,9 +2,9 @@ from __future__ import absolute_import, division, print_function
 
 from distutils.version import LooseVersion
 
+import dask.array as da
 import numpy as np
 from dask import __version__ as dask_version
-import dask.array as da
 
 try:
     from dask.array import isin

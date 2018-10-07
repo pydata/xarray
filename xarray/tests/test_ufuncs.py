@@ -8,9 +8,9 @@ import pytest
 import xarray as xr
 import xarray.ufuncs as xu
 
-from . import (
-    assert_array_equal, assert_identical as assert_identical_, mock,
-    raises_regex, requires_np113)
+from . import assert_array_equal
+from . import assert_identical as assert_identical_
+from . import mock, raises_regex, requires_np113
 
 
 def assert_identical(a, b):

@@ -1,7 +1,7 @@
 import os
+import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
-import warnings
 
 import numpy as np
 
