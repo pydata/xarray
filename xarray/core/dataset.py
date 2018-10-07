@@ -18,7 +18,8 @@ from . import (
 from .. import conventions
 from .alignment import align
 from .common import (
-    DataWithCoords, ImplementsDatasetReduce, _contains_datetime_like_objects)
+    ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
+    _contains_datetime_like_objects)
 from .coordinates import (
     DatasetCoordinates, Indexes, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
@@ -31,8 +32,10 @@ from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
     Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array, to_numeric)
+    ensure_us_time_resolution, hashable, maybe_wrap_array, datetime_to_numeric)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
+
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
@@ -743,7 +746,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Shallow copy versus deep copy
 
         >>> da = xr.DataArray(np.random.randn(2, 3))
-        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])}, 
+        >>> ds = xr.Dataset({'foo': da, 'bar': ('x', [-1, 2])},
                             coords={'x': ['one', 'two']})
         >>> ds.copy()
         <xarray.Dataset>
@@ -775,7 +778,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             foo      (dim_0, dim_1) float64 7.0 0.3897 -1.862 -0.6091 -1.051 -0.3003
             bar      (x) int64 -1 2
 
-        Changing the data using the ``data`` argument maintains the 
+        Changing the data using the ``data`` argument maintains the
         structure of the original object, but with the new data. Original
         object is unaffected.
 
@@ -826,7 +829,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         # skip __init__ to avoid costly validation
         return self._construct_direct(variables, self._coord_names.copy(),
                                       self._dims.copy(), self._attrs_copy(),
-                                      encoding=self.encoding)  
+                                      encoding=self.encoding)
 
     def _subset_with_all_valid_coords(self, variables, coord_names, attrs):
         needed_dims = set()
@@ -1412,8 +1415,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
-        * string indexers are cast to datetime64
-          if associated index is DatetimeIndex
+        + string indexers are cast to the appropriate date type if the 
+          associated index is a DatetimeIndex or CFTimeIndex
         """
         from .dataarray import DataArray
 
@@ -1435,10 +1438,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             else:
                 v = np.asarray(v)
 
-                if ((v.dtype.kind == 'U' or v.dtype.kind == 'S')
-                    and isinstance(self.coords[k].to_index(),
-                                 pd.DatetimeIndex)):
-                    v = v.astype('datetime64[ns]')
+                if v.dtype.kind == 'U' or v.dtype.kind == 'S':
+                    index = self.indexes[k]
+                    if isinstance(index, pd.DatetimeIndex):
+                        v = v.astype('datetime64[ns]')
+                    elif isinstance(index, xr.CFTimeIndex):
+                        v = _parse_array_of_cftime_strings(v, index.date_type)
 
                 if v.ndim == 0:
                     v = as_variable(v)
@@ -1980,11 +1985,26 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             except KeyError:
                 return as_variable((k, range(obj.dims[k])))
 
+        def _validate_interp_indexer(x, new_x):
+            # In the case of datetimes, the restrictions placed on indexers
+            # used with interp are stronger than those which are placed on
+            # isel, so we need an additional check after _validate_indexers.
+            if (_contains_datetime_like_objects(x) and
+               not _contains_datetime_like_objects(new_x)):
+               raise TypeError('When interpolating over a datetime-like '
+                               'coordinate, the coordinates to '
+                               'interpolate to must be either datetime '
+                               'strings or datetimes. '
+                               'Instead got\n{}'.format(new_x))
+            else:
+                return (x, new_x)
+            
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
             if name not in indexers:
                 if var.dtype.kind in 'uifc':
-                    var_indexers = {k: (maybe_variable(obj, k), v) for k, v
+                    var_indexers = {k: _validate_interp_indexer(
+                        maybe_variable(obj, k), v) for k, v
                                     in indexers.items() if k in var.dims}
                     variables[name] = missing.interp(
                         var, var_indexers, method, **kwargs)
@@ -2893,6 +2913,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Dataset with this object's DataArrays replaced with new DataArrays
             of summarized data and the indicated dimension(s) removed.
         """
+        if dim is ALL_DIMS:
+            dim = None
         if isinstance(dim, basestring):
             dims = set([dim])
         elif dim is None:
@@ -3573,7 +3595,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for k, v in iteritems(self.variables):
             if k not in unrolled_vars:
-                variables[k] = v.roll(**shifts)
+                variables[k] = v.roll(**{k: s for k, s in shifts.items()
+                                         if k in v.dims})
             else:
                 variables[k] = v
 
@@ -3807,19 +3830,21 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              ' dimensional'.format(coord, coord_var.ndim))
 
         dim = coord_var.dims[0]
-        coord_data = coord_var.data
-        if coord_data.dtype.kind in 'mM':
-            if datetime_unit is None:
-                datetime_unit, _ = np.datetime_data(coord_data.dtype)
-            coord_data = to_numeric(coord_data, datetime_unit=datetime_unit)
+        if _contains_datetime_like_objects(coord_var):
+            if coord_var.dtype.kind in 'mM' and datetime_unit is None:
+                datetime_unit, _ = np.datetime_data(coord_var.dtype)
+            elif datetime_unit is None:
+                datetime_unit = 's'  # Default to seconds for cftime objects
+            coord_var = datetime_to_numeric(coord_var, datetime_unit=datetime_unit)
 
         variables = OrderedDict()
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
-                v = to_numeric(v, datetime_unit=datetime_unit)
+                if _contains_datetime_like_objects(v):
+                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
-                    v.data, coord_data, edge_order=edge_order,
+                    v.data, coord_var, edge_order=edge_order,
                     axis=v.get_axis_num(dim))
                 variables[k] = Variable(v.dims, grad)
             else:

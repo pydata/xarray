@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 import pickle
-from textwrap import dedent
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -15,15 +15,15 @@ from xarray.core.pycompat import OrderedDict, suppress
 from xarray.tests import mock
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_frame_equal, assert_identical, raises_regex)
+    assert_allclose, assert_array_equal, assert_equal, assert_frame_equal,
+    assert_identical, raises_regex)
 
 dask = pytest.importorskip('dask')
 da = pytest.importorskip('dask.array')
 dd = pytest.importorskip('dask.dataframe')
 
 
-class DaskTestCase(TestCase):
+class DaskTestCase(object):
     def assertLazyAnd(self, expected, actual, test):
 
         with (dask.config.set(get=dask.get)
@@ -57,6 +57,7 @@ class TestVariable(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_allclose)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -249,6 +250,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_equal)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -385,8 +387,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.groupby('x').mean()
-        actual = v.groupby('x').mean()
+        expected = u.groupby('x').mean(xr.ALL_DIMS)
+        actual = v.groupby('x').mean(xr.ALL_DIMS)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -581,7 +583,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-class TestToDaskDataFrame(TestCase):
+class TestToDaskDataFrame(object):
 
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames

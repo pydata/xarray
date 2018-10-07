@@ -6,11 +6,11 @@ import pytest
 import xarray as xr
 from xarray.core import merge
 
-from . import TestCase, raises_regex
+from . import raises_regex
 from .test_dataset import create_test_data
 
 
-class TestMergeInternals(TestCase):
+class TestMergeInternals(object):
     def test_broadcast_dimension_size(self):
         actual = merge.broadcast_dimension_size(
             [xr.Variable('x', [1]), xr.Variable('y', [2, 1])])
@@ -25,7 +25,7 @@ class TestMergeInternals(TestCase):
                 [xr.Variable(('x', 'y'), [[1, 2]]), xr.Variable('y', [2])])
 
 
-class TestMergeFunction(TestCase):
+class TestMergeFunction(object):
     def test_merge_arrays(self):
         data = create_test_data()
         actual = xr.merge([data.var1, data.var2])
@@ -130,7 +130,7 @@ class TestMergeFunction(TestCase):
         assert expected.identical(actual)
 
 
-class TestMergeMethod(TestCase):
+class TestMergeMethod(object):
 
     def test_merge(self):
         data = create_test_data()
@@ -195,7 +195,7 @@ class TestMergeMethod(TestCase):
         with pytest.raises(xr.MergeError):
             ds1.merge(ds2, compat='identical')
 
-        with raises_regex(ValueError, 'compat=\S+ invalid'):
+        with raises_regex(ValueError, 'compat=.* invalid'):
             ds1.merge(ds2, compat='foobar')
 
     def test_merge_auto_align(self):
