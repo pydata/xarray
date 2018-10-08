@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
+
 from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import nputils
-from . import dtypes
+from . import dtypes, nputils
 
 try:
     import dask

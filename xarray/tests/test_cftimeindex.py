@@ -1,16 +1,15 @@
 from __future__ import absolute_import
 
-import pytest
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
-import xarray as xr
+import pytest
 
-from datetime import timedelta
+import xarray as xr
 from xarray.coding.cftimeindex import (
-    parse_iso8601, CFTimeIndex, assert_all_valid_date_type,
-    _parsed_string_to_bounds, _parse_iso8601_with_reso,
-    _parse_array_of_cftime_strings)
+    CFTimeIndex, _parse_array_of_cftime_strings, _parse_iso8601_with_reso,
+    _parsed_string_to_bounds, assert_all_valid_date_type, parse_iso8601)
 from xarray.tests import assert_array_equal, assert_identical
 
 from . import has_cftime, has_cftime_or_netCDF4, requires_cftime

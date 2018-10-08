@@ -628,6 +628,26 @@ class TestDetermineCmapParams(object):
         assert cmap_params['vmax'] == 0.6
         assert cmap_params['cmap'] == "viridis"
 
+    def test_norm_sets_vmin_vmax(self):
+        vmin = self.data.min()
+        vmax = self.data.max()
+
+        for norm, extend in zip([mpl.colors.LogNorm(),
+                                 mpl.colors.LogNorm(vmin + 1, vmax - 1),
+                                 mpl.colors.LogNorm(None, vmax - 1),
+                                 mpl.colors.LogNorm(vmin + 1, None)],
+                                ['neither', 'both', 'max', 'min']):
+
+            test_min = vmin if norm.vmin is None else norm.vmin
+            test_max = vmax if norm.vmax is None else norm.vmax
+
+            cmap_params = _determine_cmap_params(self.data, norm=norm)
+
+            assert cmap_params['vmin'] == test_min
+            assert cmap_params['vmax'] == test_max
+            assert cmap_params['extend'] == extend
+            assert cmap_params['norm'] == norm
+
 
 @requires_matplotlib
 class TestDiscreteColorMap(object):
@@ -665,10 +685,10 @@ class TestDiscreteColorMap(object):
 
     @pytest.mark.slow
     def test_discrete_colormap_list_of_levels(self):
-        for extend, levels in [('max', [-1, 2, 4, 8, 10]), ('both',
-                                                            [2, 5, 10, 11]),
-                               ('neither', [0, 5, 10, 15]), ('min',
-                                                             [2, 5, 10, 15])]:
+        for extend, levels in [('max', [-1, 2, 4, 8, 10]),
+                               ('both', [2, 5, 10, 11]),
+                               ('neither', [0, 5, 10, 15]),
+                               ('min', [2, 5, 10, 15])]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
                 assert_array_equal(levels, primitive.norm.boundaries)
@@ -682,10 +702,10 @@ class TestDiscreteColorMap(object):
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None,
-                                            None), ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8), ('min', 10, 4,
-                                                               15)]:
+        for extend, levels, vmin, vmax in [('neither', 7, None, None),
+                                           ('neither', 7, None, 20),
+                                           ('both', 7, 4, 8),
+                                           ('min', 10, 4, 15)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
                     levels=levels, vmin=vmin, vmax=vmax)
@@ -710,6 +730,11 @@ class TestDiscreteColorMap(object):
         primitive = self.darray.plot(levels=levels, vmin=-3, vmax=20)
         assert primitive.norm.vmax == max(levels)
         assert primitive.norm.vmin == min(levels)
+
+    def test_discrete_colormap_provided_boundary_norm(self):
+        norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
+        primitive = self.darray.plot.contourf(norm=norm)
+        np.testing.assert_allclose(primitive.levels, norm.boundaries)
 
 
 class Common2dMixin(object):
@@ -1084,6 +1109,15 @@ class Common2dMixin(object):
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
+
+    def test_colormap_error_norm_and_vmin_vmax(self):
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.raises(ValueError):
+            self.darray.plot(norm=norm, vmin=2)
+
+        with pytest.raises(ValueError):
+            self.darray.plot(norm=norm, vmax=2)
 
 
 @pytest.mark.slow

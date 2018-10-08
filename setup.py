@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import sys
 
-from setuptools import find_packages, setup
-
 import versioneer
-
+from setuptools import find_packages, setup
 
 DISTNAME = 'xarray'
 LICENSE = 'Apache'

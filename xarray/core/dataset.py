@@ -16,6 +16,7 @@ from . import (
     alignment, computation, duck_array_ops, formatting, groupby, indexing, ops,
     resample, rolling, utils)
 from .. import conventions
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
@@ -31,11 +32,10 @@ from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
-    Frozen, SortedKeysDict, either_dict_or_kwargs, decode_numpy_dict_values,
-    ensure_us_time_resolution, hashable, maybe_wrap_array, datetime_to_numeric)
+    Frozen, SortedKeysDict, datetime_to_numeric, decode_numpy_dict_values,
+    either_dict_or_kwargs, ensure_us_time_resolution, hashable,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-
-from ..coding.cftimeindex import _parse_array_of_cftime_strings
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',

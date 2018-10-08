@@ -2,19 +2,19 @@
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
 from __future__ import absolute_import, division, print_function
-from distutils.version import LooseVersion
+
 import functools
 import itertools
 import operator
 from collections import Counter
+from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import duck_array_ops
-from . import utils
+from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, dask_array_type, basestring
+from .pycompat import OrderedDict, basestring, dask_array_type
 from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()

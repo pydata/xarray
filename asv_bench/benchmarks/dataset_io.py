@@ -5,7 +5,7 @@ import pandas as pd
 
 import xarray as xr
 
-from . import randn, randint, requires_dask
+from . import randint, randn, requires_dask
 
 try:
     import dask
