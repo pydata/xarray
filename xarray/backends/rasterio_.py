@@ -95,7 +95,7 @@ class RasterioArrayWrapper(BackendArray):
 
         if isinstance(key[1], np.ndarray) and isinstance(key[2], np.ndarray):
             # do outer-style indexing
-            np_inds[1:] = np.ix_(*np_inds[1:])
+            np_inds[-2:] = np.ix_(*np_inds[-2:])
 
         return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
 
