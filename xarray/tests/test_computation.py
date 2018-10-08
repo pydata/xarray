@@ -15,7 +15,7 @@ from xarray.core.computation import (
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
 
-from . import raises_regex, requires_dask, has_dask
+from . import has_dask, raises_regex, requires_dask
 
 
 def assert_identical(a, b):

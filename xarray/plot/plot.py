@@ -562,6 +562,9 @@ def _plot2d(plotfunc):
         Adds colorbar to axis
     add_labels : Boolean, optional
         Use xarray metadata to label axes
+    norm : ``matplotlib.colors.Normalize`` instance, optional
+        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
+        must be None.
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -630,7 +633,7 @@ def _plot2d(plotfunc):
                     levels=None, infer_intervals=None, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
                     xscale=None, yscale=None, xticks=None, yticks=None,
-                    xlim=None, ylim=None, **kwargs):
+                    xlim=None, ylim=None, norm=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -727,6 +730,7 @@ def _plot2d(plotfunc):
                        'extend': extend,
                        'levels': levels,
                        'filled': plotfunc.__name__ != 'contour',
+                       'norm': norm,
                        }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
@@ -737,12 +741,14 @@ def _plot2d(plotfunc):
             # pcolormesh
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
+            # if colors == a single color, matplotlib draws dashed negative
+            # contours. we lose this feature if we pass cmap and not colors
+            if isinstance(colors, basestring):
+                cmap_params['cmap'] = None
+                kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
-
-        # This allows the user to pass in a custom norm coming via kwargs
-        kwargs.setdefault('norm', cmap_params['norm'])
 
         if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
             # forbid usage of mpl strings
@@ -753,6 +759,7 @@ def _plot2d(plotfunc):
         primitive = plotfunc(xval, yval, zval, ax=ax, cmap=cmap_params['cmap'],
                              vmin=cmap_params['vmin'],
                              vmax=cmap_params['vmax'],
+                             norm=cmap_params['norm'],
                              **kwargs)
 
         # Label the plot with metadata
@@ -804,7 +811,7 @@ def _plot2d(plotfunc):
                    levels=None, infer_intervals=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None,
                    xscale=None, yscale=None, xticks=None, yticks=None,
-                   xlim=None, ylim=None, **kwargs):
+                   xlim=None, ylim=None, norm=None, **kwargs):
         """
         The method should have the same signature as the function.
 

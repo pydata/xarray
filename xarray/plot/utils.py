@@ -8,7 +8,6 @@ import numpy as np
 from ..core.options import OPTIONS
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
-from ..core.options import OPTIONS
 
 ROBUST_PERCENTILE = 2.0
 
@@ -173,6 +172,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # vlim might be computed below
     vlim = None
 
+    # save state; needed later
+    vmin_was_none = vmin is None
+    vmax_was_none = vmax is None
+
     if vmin is None:
         if robust:
             vmin = np.percentile(calc_data, ROBUST_PERCENTILE)
@@ -205,6 +208,28 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     vmin += center
     vmax += center
 
+    # now check norm and harmonize with vmin, vmax
+    if norm is not None:
+        if norm.vmin is None:
+            norm.vmin = vmin
+        else:
+            if not vmin_was_none and vmin != norm.vmin:
+                raise ValueError('Cannot supply vmin and a norm'
+                                 + ' with a different vmin.')
+            vmin = norm.vmin
+
+        if norm.vmax is None:
+            norm.vmax = vmax
+        else:
+            if not vmax_was_none and vmax != norm.vmax:
+                raise ValueError('Cannot supply vmax and a norm'
+                                 + ' with a different vmax.')
+            vmax = norm.vmax
+
+    # if BoundaryNorm, then set levels
+    if isinstance(norm, mpl.colors.BoundaryNorm):
+        levels = norm.boundaries
+
     # Choose default colormaps if not provided
     if cmap is None:
         if divergent:
@@ -213,7 +238,7 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
             cmap = OPTIONS['cmap_sequential']
 
     # Handle discrete levels
-    if levels is not None:
+    if levels is not None and norm is None:
         if is_scalar(levels):
             if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
@@ -228,8 +253,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None:
-        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
+    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+        cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        norm = newnorm if norm is None else norm
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
                 levels=levels, norm=norm)
