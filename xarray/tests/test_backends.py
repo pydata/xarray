@@ -2925,6 +2925,10 @@ class TestRasterio(object):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
+                ind = {'band': 0, 'x': np.array([0, 0]), 'y': np.array([1, 1, 1])}
+                assert_allclose(expected.isel(**ind), actual.isel(**ind))
+                assert not actual.variable._in_memory
+
                 # minus-stepped slice
                 ind = {'band': np.array([2, 1, 0]),
                        'x': slice(-1, None, -1), 'y': 0}
