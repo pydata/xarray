@@ -52,20 +52,7 @@ FLAVOURS = {
             'encode_geography': False,
         },
     },
-    'ecmwf': {
-        'variable_map': {},
-    },
-    'cds': {
-        'variable_map': {
-            'number': 'realization',
-            'time': 'forecast_reference_time',
-            'valid_time': 'time',
-            'step': 'leadtime',
-            'air_pressure': 'plev',
-            'latitude': 'lat',
-            'longitude': 'lon',
-        },
-    },
+    'ecmwf': {},
 }
 
 
@@ -73,13 +60,12 @@ class CfGribDataStore(common.AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
     """
-    def __init__(self, ds, variable_map={}, lock=None):
+    def __init__(self, ds, lock=False):
         self.ds = ds
-        self.variable_map = variable_map.copy()
         self.lock = lock
 
     @classmethod
-    def from_path(cls, path, lock=None, flavour_name='ecmwf', errors='ignore', **kwargs):
+    def from_path(cls, path, lock=False, flavour_name='ecmwf', errors='ignore', **kwargs):
         import cfgrib
         flavour = FLAVOURS[flavour_name].copy()
         config = flavour.pop('dataset', {}).copy()
@@ -93,13 +79,8 @@ class CfGribDataStore(common.AbstractDataStore):
         else:
             data = core.indexing.LazilyOuterIndexedArray(WrapGrib(var.data))
 
-        dimensions = tuple(self.variable_map.get(dim, dim) for dim in var.dimensions)
+        dimensions = var.dimensions
         attrs = var.attributes
-
-        # the coordinates attributes need a special treatment
-        if 'coordinates' in attrs:
-            coordinates = [self.variable_map.get(d, d) for d in attrs['coordinates'].split()]
-            attrs['coordinates'] = ' '.join(coordinates)
 
         encoding = self.ds.encoding.copy()
         encoding['original_shape'] = var.data.shape
@@ -107,17 +88,14 @@ class CfGribDataStore(common.AbstractDataStore):
         return core.variable.Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
-        variables = []
-        for k, v in self.ds.variables.items():
-            variables.append((self.variable_map.get(k, k), self.open_store_variable(k, v)))
-        return core.utils.FrozenOrderedDict(variables)
+        return core.utils.FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                            for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return core.utils.FrozenOrderedDict(self.ds.attributes)
 
     def get_dimensions(self):
-        return core.utils.FrozenOrderedDict((self.variable_map.get(d, d), s)
-                                            for d, s in self.ds.dimensions.items())
+        return core.utils.FrozenOrderedDict(self.ds.dimensions.items())
 
     def get_encoding(self):
         encoding = {}
