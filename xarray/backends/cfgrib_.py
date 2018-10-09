@@ -26,6 +26,11 @@ from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
+from .locks import ensure_lock, SerializableLock
+
+# FIXME: Add a dedicated lock just in case, even if ecCodes is supposed to be thread-safe in most
+# circumstances. See: https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
+ECCODES_LOCK = SerializableLock()
 
 
 class CfGribArrayWrapper(BackendArray):
@@ -51,11 +56,14 @@ class CfGribDataStore(AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
     """
-    def __init__(self, filename, lock=False, **backend_kwargs):
+    def __init__(self, filename, lock=None, **backend_kwargs):
         import cfgrib
-        self.lock = lock
+        if lock is None:
+            lock = ECCODES_LOCK
+        self.lock = ensure_lock(lock)
+        backend_kwargs['filter_by_keys'] = tuple(backend_kwargs.get('filter_by_keys', {}).items())
         self._manager = CachingFileManager(
-            cfgrib.open_file, filename, lock=lock, mode='r', **backend_kwargs)
+            cfgrib.open_file, filename, lock=lock, mode='r', kwargs=backend_kwargs)
 
     @property
     def ds(self):
