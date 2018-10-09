@@ -44,18 +44,6 @@ class WrapGrib(common.BackendArray):
         return array
 
 
-FLAVOURS = {
-    'eccodes': {
-        'dataset': {
-            'encode_time': False,
-            'encode_vertical': False,
-            'encode_geography': False,
-        },
-    },
-    'ecmwf': {},
-}
-
-
 class CfGribDataStore(common.AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
@@ -65,13 +53,9 @@ class CfGribDataStore(common.AbstractDataStore):
         self.lock = lock
 
     @classmethod
-    def from_path(cls, path, lock=False, flavour_name='ecmwf', errors='ignore', **kwargs):
+    def from_path(cls, path, lock=False, **backend_kwargs):
         import cfgrib
-        flavour = FLAVOURS[flavour_name].copy()
-        config = flavour.pop('dataset', {}).copy()
-        config.update(kwargs)
-        ds = cfgrib.open_file(path, errors=errors, **config)
-        return cls(ds=ds, lock=lock, **flavour)
+        return cls(ds=cfgrib.open_file(path, **backend_kwargs), lock=lock)
 
     def open_store_variable(self, name, var):
         if isinstance(var.data, np.ndarray):
