@@ -635,9 +635,6 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     else:  # file-like object
         engine = 'scipy'
 
-    if path_or_file is None and not compute:
-        raise ValueError
-
     # validate Dataset keys, DataArray names, and attr keys/values
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
