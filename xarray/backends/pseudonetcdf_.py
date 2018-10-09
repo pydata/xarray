@@ -4,6 +4,7 @@ import numpy as np
 
 from .. import Variable
 from ..core import indexing
+from ..core.pycompat import Frozen, OrderedDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
@@ -71,9 +72,8 @@ class PseudoNetCDFDataStore(AbstractDataStore):
         return Variable(var.dimensions, data, attrs)
 
     def get_variables(self):
-        return 
-      ((k, self.open_store_variable(k, v))
-                                 for k, v in self.ds.variables.items())
+        return ((k, self.open_store_variable(k, v))
+                for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return Frozen(dict([(k, getattr(self.ds, k))
