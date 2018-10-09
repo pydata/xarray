@@ -21,11 +21,13 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from . import common
-from .. import core
+from .. import Variable
+from ..core import indexing
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import AbstractDataStore, BackendArray
 
 
-class WrapGrib(common.BackendArray):
+class CfGribArrayWrapper(BackendArray):
     def __init__(self, backend_array):
         self.backend_array = backend_array
 
@@ -33,18 +35,18 @@ class WrapGrib(common.BackendArray):
         return getattr(self.backend_array, item)
 
     def __getitem__(self, item):
-        key, np_inds = core.indexing.decompose_indexer(
-            item, self.shape, core.indexing.IndexingSupport.OUTER_1VECTOR)
+        key, np_inds = indexing.decompose_indexer(
+            item, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
 
         array = self.backend_array[key.tuple]
 
         if len(np_inds.tuple) > 0:
-            array = core.indexing.NumpyIndexingAdapter(array)[np_inds]
+            array = indexing.NumpyIndexingAdapter(array)[np_inds]
 
         return array
 
 
-class CfGribDataStore(common.AbstractDataStore):
+class CfGribDataStore(AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
     """
@@ -61,7 +63,7 @@ class CfGribDataStore(common.AbstractDataStore):
         if isinstance(var.data, np.ndarray):
             data = var.data
         else:
-            data = core.indexing.LazilyOuterIndexedArray(WrapGrib(var.data))
+            data = indexing.LazilyOuterIndexedArray(CfGribArrayWrapper(var.data))
 
         dimensions = var.dimensions
         attrs = var.attributes
@@ -69,17 +71,17 @@ class CfGribDataStore(common.AbstractDataStore):
         encoding = self.ds.encoding.copy()
         encoding['original_shape'] = var.data.shape
 
-        return core.variable.Variable(dimensions, data, attrs, encoding)
+        return Variable(dimensions, data, attrs, encoding)
 
     def get_variables(self):
-        return core.utils.FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                            for k, v in self.ds.variables.items())
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        return core.utils.FrozenOrderedDict(self.ds.attributes)
+        return Frozen(self.ds.attributes)
 
     def get_dimensions(self):
-        return core.utils.FrozenOrderedDict(self.ds.dimensions.items())
+        return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
