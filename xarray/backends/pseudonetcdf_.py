@@ -4,7 +4,8 @@ import numpy as np
 
 from .. import Variable
 from ..core import indexing
-from ..core.pycompat import Frozen, OrderedDict
+from ..core.pycompat import OrderedDict
+from ..core.utils import Frozen
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
