@@ -297,7 +297,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             store = backends.PseudoNetCDFDataStore.open(
                 filename_or_obj, lock=lock, **backend_kwargs)
         elif engine == 'cfgrib':
-            store = backends.CfGribDataStore.from_path(
+            store = backends.CfGribDataStore(
                 filename_or_obj, lock=lock, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'

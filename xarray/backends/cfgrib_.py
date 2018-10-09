@@ -25,6 +25,7 @@ from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
+from .file_manager import CachingFileManager
 
 
 class CfGribArrayWrapper(BackendArray):
@@ -50,14 +51,15 @@ class CfGribDataStore(AbstractDataStore):
     """
     Implements the ``xr.AbstractDataStore`` read-only API for a GRIB file.
     """
-    def __init__(self, ds, lock=False):
-        self.ds = ds
-        self.lock = lock
-
-    @classmethod
-    def from_path(cls, path, lock=False, **backend_kwargs):
+    def __init__(self, filename, lock=False, **backend_kwargs):
         import cfgrib
-        return cls(ds=cfgrib.open_file(path, **backend_kwargs), lock=lock)
+        self.lock = lock
+        self._manager = CachingFileManager(
+            cfgrib.open_file, filename, lock=lock, mode='r', **backend_kwargs)
+
+    @property
+    def ds(self):
+        return self._manager.acquire()
 
     def open_store_variable(self, name, var):
         if isinstance(var.data, np.ndarray):
@@ -65,13 +67,10 @@ class CfGribDataStore(AbstractDataStore):
         else:
             data = indexing.LazilyOuterIndexedArray(CfGribArrayWrapper(var.data))
 
-        dimensions = var.dimensions
-        attrs = var.attributes
-
         encoding = self.ds.encoding.copy()
         encoding['original_shape'] = var.data.shape
 
-        return Variable(dimensions, data, attrs, encoding)
+        return Variable(var.dimensions, data, var.attributes, encoding)
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(k, v))
@@ -87,3 +86,6 @@ class CfGribDataStore(AbstractDataStore):
         encoding = {}
         encoding['unlimited_dims'] = {k for k, v in self.ds.dimensions.items() if v is None}
         return encoding
+
+    def close(self):
+        self._manager.close()
