@@ -8,7 +8,6 @@ import pickle
 import shutil
 import sys
 import tempfile
-import unittest
 import warnings
 from io import BytesIO
 
@@ -20,13 +19,13 @@ import xarray as xr
 from xarray import (
     DataArray, Dataset, backends, open_dataarray, open_dataset, open_mfdataset,
     save_mfdataset)
-from xarray.backends.common import (
-    PickleByReconstructionWrapper, robust_getitem)
+from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
 from xarray.core.pycompat import (
-    PY2, ExitStack, basestring, dask_array_type, iteritems)
+    ExitStack, basestring, dask_array_type, iteritems)
+from xarray.core.options import set_options
 from xarray.tests import mock
 
 from . import (
@@ -138,7 +137,6 @@ class NetCDF3Only(object):
 
 
 class DatasetIOTestCases(object):
-    autoclose = False
     engine = None
     file_format = None
 
@@ -172,8 +170,7 @@ class DatasetIOTestCases(object):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, engine=self.engine, autoclose=self.autoclose,
-                          **kwargs) as ds:
+        with open_dataset(path, engine=self.engine, **kwargs) as ds:
             yield ds
 
     def test_zero_dimensional_variable(self):
@@ -1159,10 +1156,10 @@ class BaseNetCDF4Test(CFEncodedDataTest):
                 v[...] = 42
 
             nc = nc4.Dataset(tmp_file, mode='r')
-            with backends.NetCDF4DataStore(nc, autoclose=False) as store:
-                with open_dataset(store) as ds:
-                    expected = Dataset({'x': ((), 42)})
-                    assert_identical(expected, ds)
+            store = backends.NetCDF4DataStore(nc)
+            with open_dataset(store) as ds:
+                expected = Dataset({'x': ((), 42)})
+                assert_identical(expected, ds)
 
     def test_read_variable_len_strings(self):
         with create_tmp_file() as tmp_file:
@@ -1181,7 +1178,6 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 @requires_netCDF4
 class NetCDF4DataTest(BaseNetCDF4Test):
-    autoclose = False
 
     @contextlib.contextmanager
     def create_store(self):
@@ -1247,9 +1243,13 @@ class NetCDF4DataTest(BaseNetCDF4Test):
                                    totest.attrs['bar'])
                 assert one_string == totest.attrs['baz']
 
-
-class NetCDF4DataStoreAutocloseTrue(NetCDF4DataTest):
-    autoclose = True
+    def test_autoclose_future_warning(self):
+        data = create_test_data()
+        with create_tmp_file() as tmp_file:
+            self.save(data, tmp_file)
+            with pytest.warns(FutureWarning):
+                with self.open(tmp_file, autoclose=True) as actual:
+                    assert_identical(data, actual)
 
 
 @requires_netCDF4
@@ -1288,10 +1288,6 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
         with self.roundtrip(ds) as actual:
             assert actual['x'].encoding['chunksizes'] == (50, 100)
             assert actual['y'].encoding['chunksizes'] == (100, 50)
-
-
-class NetCDF4ViaDaskDataTestAutocloseTrue(NetCDF4ViaDaskDataTest):
-    autoclose = True
 
 
 @requires_zarr
@@ -1571,17 +1567,12 @@ class ScipyInMemoryDataTest(ScipyWriteTest):
         # regression test for GH1321
         Dataset({'foo': 42}).to_netcdf(engine='scipy')
 
-    @pytest.mark.skipif(PY2, reason='cannot pickle BytesIO on Python 2')
-    def test_bytesio_pickle(self):
+    def test_bytes_pickle(self):
         data = Dataset({'foo': ('x', [1, 2, 3])})
-        fobj = BytesIO(data.to_netcdf())
-        with open_dataset(fobj, autoclose=self.autoclose) as ds:
+        fobj = data.to_netcdf()
+        with self.open(fobj) as ds:
             unpickled = pickle.loads(pickle.dumps(ds))
             assert_identical(unpickled, data)
-
-
-class ScipyInMemoryDataTestAutocloseTrue(ScipyInMemoryDataTest):
-    autoclose = True
 
 
 @requires_scipy
@@ -1649,10 +1640,6 @@ class ScipyFilePathTest(ScipyWriteTest):
                 open_dataset(tmp_file, engine='scipy')
 
 
-class ScipyFilePathTestAutocloseTrue(ScipyFilePathTest):
-    autoclose = True
-
-
 @requires_netCDF4
 class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only):
     engine = 'netcdf4'
@@ -1673,10 +1660,6 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only):
                 pass
 
 
-class NetCDF3ViaNetCDF4DataTestAutocloseTrue(NetCDF3ViaNetCDF4DataTest):
-    autoclose = True
-
-
 @requires_netCDF4
 class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
                                        object):
@@ -1689,11 +1672,6 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
             with backends.NetCDF4DataStore.open(
                     tmp_file, mode='w', format='NETCDF4_CLASSIC') as store:
                 yield store
-
-
-class NetCDF4ClassicViaNetCDF4DataTestAutocloseTrue(
-        NetCDF4ClassicViaNetCDF4DataTest):
-    autoclose = True
 
 
 @requires_scipy_or_netCDF4
@@ -1772,10 +1750,6 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only):
             assert_equal(ds, actual)
 
 
-class GenericNetCDFDataTestAutocloseTrue(GenericNetCDFDataTest):
-    autoclose = True
-
-
 @requires_h5netcdf
 @requires_netCDF4
 class H5NetCDFDataTest(BaseNetCDF4Test):
@@ -1789,8 +1763,11 @@ class H5NetCDFDataTest(BaseNetCDF4Test):
     @pytest.mark.filterwarnings('ignore:complex dtypes are supported by h5py')
     def test_complex(self):
         expected = Dataset({'x': ('y', np.ones(5) + 1j * np.ones(5))})
-        with self.roundtrip(expected) as actual:
-            assert_equal(expected, actual)
+        with pytest.warns(FutureWarning):
+            # TODO: make it possible to write invalid netCDF files from xarray
+            # without a warning
+            with self.roundtrip(expected) as actual:
+                assert_equal(expected, actual)
 
     @pytest.mark.xfail(reason='https://github.com/pydata/xarray/issues/535')
     def test_cross_engine_read_write_netcdf4(self):
@@ -1905,25 +1882,24 @@ class H5NetCDFDataTest(BaseNetCDF4Test):
             assert actual.x.encoding['compression_opts'] is None
 
 
-# tests pending h5netcdf fix
-@unittest.skip
-class H5NetCDFDataTestAutocloseTrue(H5NetCDFDataTest):
-    autoclose = True
-
-
 @pytest.fixture(params=['scipy', 'netcdf4', 'h5netcdf', 'pynio'])
 def readengine(request):
     return request.param
 
 
-@pytest.fixture(params=[1, 100])
+@pytest.fixture(params=[1, 20])
 def nfiles(request):
     return request.param
 
 
-@pytest.fixture(params=[True, False])
-def autoclose(request):
-    return request.param
+@pytest.fixture(params=[5, None])
+def file_cache_maxsize(request):
+    maxsize = request.param
+    if maxsize is not None:
+        with set_options(file_cache_maxsize=maxsize):
+            yield maxsize
+    else:
+        yield maxsize
 
 
 @pytest.fixture(params=[True, False])
@@ -1946,17 +1922,14 @@ def skip_if_not_engine(engine):
         pytest.importorskip(engine)
 
 
-def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
-                                  chunks):
+def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
+                                  file_cache_maxsize):
 
     # skip certain combinations
     skip_if_not_engine(readengine)
 
     if not has_dask and parallel:
         pytest.skip('parallel requires dask')
-
-    if readengine == 'h5netcdf' and autoclose:
-        pytest.skip('h5netcdf does not support autoclose yet')
 
     if ON_WINDOWS:
         pytest.skip('Skipping on Windows')
@@ -1973,7 +1946,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, autoclose, parallel,
 
         # check that calculation on opened datasets works properly
         actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
-                                autoclose=autoclose, chunks=chunks)
+                                chunks=chunks)
 
         # check that using open_mfdataset returns dask arrays for variables
         assert isinstance(actual['foo'].data, dask_array_type)
@@ -2172,22 +2145,20 @@ class DaskTest(DatasetIOTestCases):
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == \
                         ((5, 5),)
                     assert_identical(original, actual)
-                with open_mfdataset([tmp1, tmp2], chunks={'x': 3},
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
                     assert actual.foo.variable.data.chunks == \
                         ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
-            open_mfdataset('foo-bar-baz-*.nc', autoclose=self.autoclose)
+            open_mfdataset('foo-bar-baz-*.nc')
 
         with raises_regex(ValueError, 'wild-card'):
-            open_mfdataset('http://some/remote/uri', autoclose=self.autoclose)
+            open_mfdataset('http://some/remote/uri')
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
@@ -2198,8 +2169,7 @@ class DaskTest(DatasetIOTestCases):
                 tmp2 = Path(tmp2)
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(original, actual)
 
     def test_attrs_mfdataset(self):
@@ -2230,8 +2200,7 @@ class DaskTest(DatasetIOTestCases):
                 return ds.assign_coords(z=0)
 
             expected = preprocess(original)
-            with open_mfdataset(tmp, preprocess=preprocess,
-                                autoclose=self.autoclose) as actual:
+            with open_mfdataset(tmp, preprocess=preprocess) as actual:
                 assert_identical(expected, actual)
 
     def test_save_mfdataset_roundtrip(self):
@@ -2241,8 +2210,7 @@ class DaskTest(DatasetIOTestCases):
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
                 save_mfdataset(datasets, [tmp1, tmp2])
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(actual, original)
 
     def test_save_mfdataset_invalid(self):
@@ -2268,15 +2236,14 @@ class DaskTest(DatasetIOTestCases):
                 tmp1 = Path(tmp1)
                 tmp2 = Path(tmp2)
                 save_mfdataset(datasets, [tmp1, tmp2])
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(actual, original)
 
     def test_open_and_do_math(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
+            with open_mfdataset(tmp) as ds:
                 actual = 1.0 * ds
                 assert_allclose(original, actual, decode_bytes=False)
 
@@ -2286,8 +2253,7 @@ class DaskTest(DatasetIOTestCases):
                 data = Dataset({'x': 0})
                 data.to_netcdf(tmp1)
                 Dataset({'x': np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], concat_dim=None,
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim=None) as actual:
                     assert_identical(data, actual)
 
     def test_open_dataset(self):
@@ -2314,8 +2280,7 @@ class DaskTest(DatasetIOTestCases):
                            {'baz': [100]})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset([tmp], concat_dim=dim,
-                                autoclose=self.autoclose) as actual:
+            with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
     def test_dask_roundtrip(self):
@@ -2334,10 +2299,10 @@ class DaskTest(DatasetIOTestCases):
         with create_tmp_file() as tmp:
             data = create_test_data()
             data.to_netcdf(tmp)
-            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
+            with open_mfdataset(tmp) as ds:
                 original_names = dict((k, v.data.name)
                                       for k, v in ds.data_vars.items())
-            with open_mfdataset(tmp, autoclose=self.autoclose) as ds:
+            with open_mfdataset(tmp) as ds:
                 repeat_names = dict((k, v.data.name)
                                     for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
@@ -2355,39 +2320,20 @@ class DaskTest(DatasetIOTestCases):
         assert computed._in_memory
         assert_allclose(actual, computed, decode_bytes=False)
 
-    def test_to_netcdf_compute_false_roundtrip(self):
-        from dask.delayed import Delayed
-
-        original = create_test_data().chunk()
-
-        with create_tmp_file() as tmp_file:
-            # dataset, path, **kwargs):
-            delayed_obj = self.save(original, tmp_file, compute=False)
-            assert isinstance(delayed_obj, Delayed)
-            delayed_obj.compute()
-
-            with self.open(tmp_file) as actual:
-                assert_identical(original, actual)
-
     def test_save_mfdataset_compute_false_roundtrip(self):
         from dask.delayed import Delayed
 
         original = Dataset({'foo': ('x', np.random.randn(10))}).chunk()
         datasets = [original.isel(x=slice(5)),
                     original.isel(x=slice(5, 10))]
-        with create_tmp_file() as tmp1:
-            with create_tmp_file() as tmp2:
+        with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp1:
+            with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp2:
                 delayed_obj = save_mfdataset(datasets, [tmp1, tmp2],
                                              engine=self.engine, compute=False)
                 assert isinstance(delayed_obj, Delayed)
                 delayed_obj.compute()
-                with open_mfdataset([tmp1, tmp2],
-                                    autoclose=self.autoclose) as actual:
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(actual, original)
-
-
-class DaskTestAutocloseTrue(DaskTest):
-    autoclose = True
 
 
 @requires_scipy_or_netCDF4
@@ -2500,8 +2446,7 @@ class PyNioTest(ScipyWriteTest):
 
     @contextlib.contextmanager
     def open(self, path, **kwargs):
-        with open_dataset(path, engine='pynio', autoclose=self.autoclose,
-                          **kwargs) as ds:
+        with open_dataset(path, engine='pynio', **kwargs) as ds:
             yield ds
 
     def save(self, dataset, path, **kwargs):
@@ -2519,19 +2464,12 @@ class PyNioTest(ScipyWriteTest):
             assert_identical(actual, expected)
 
 
-class PyNioTestAutocloseTrue(PyNioTest):
-    autoclose = True
-
-
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings('ignore:IOAPI_ISPH is assumed to be 6370000')
 class PseudoNetCDFFormatTest(object):
-    autoclose = True
 
     def open(self, path, **kwargs):
-        return open_dataset(path, engine='pseudonetcdf',
-                            autoclose=self.autoclose,
-                            **kwargs)
+        return open_dataset(path, engine='pseudonetcdf', **kwargs)
 
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -2548,7 +2486,6 @@ class PseudoNetCDFFormatTest(object):
         """
         ictfile = open_example_dataset('example.ict',
                                        engine='pseudonetcdf',
-                                       autoclose=False,
                                        backend_kwargs={'format': 'ffi1001'})
         stdattr = {
             'fill_value': -9999.0,
@@ -2646,7 +2583,6 @@ class PseudoNetCDFFormatTest(object):
         fmtkw = {'format': 'ffi1001'}
         expected = open_example_dataset('example.ict',
                                         engine='pseudonetcdf',
-                                        autoclose=False,
                                         backend_kwargs=fmtkw)
         with self.roundtrip(expected, save_kwargs=fmtkw,
                             open_kwargs={'backend_kwargs': fmtkw}) as actual:
@@ -2659,7 +2595,6 @@ class PseudoNetCDFFormatTest(object):
 
         camxfile = open_example_dataset('example.uamiv',
                                         engine='pseudonetcdf',
-                                        autoclose=True,
                                         backend_kwargs={'format': 'uamiv'})
         data = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
         expected = xr.Variable(('TSTEP', 'LAY', 'ROW', 'COL'), data,
@@ -2687,7 +2622,6 @@ class PseudoNetCDFFormatTest(object):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            autoclose=True,
             concat_dim='TSTEP',
             backend_kwargs={'format': 'uamiv'})
 
@@ -2701,11 +2635,11 @@ class PseudoNetCDFFormatTest(object):
 
         data1 = np.array(['2002-06-03'], 'datetime64[ns]')
         data = np.concatenate([data1] * 2, axis=0)
-        expected = xr.Variable(('TSTEP',), data,
-                               dict(bounds='time_bounds',
-                                    long_name=('synthesized time coordinate ' +
-                                               'from SDATE, STIME, STEP ' +
-                                               'global attributes')))
+        attrs = dict(bounds='time_bounds',
+                     long_name=('synthesized time coordinate ' +
+                                'from SDATE, STIME, STEP ' +
+                                'global attributes'))
+        expected = xr.Variable(('TSTEP',), data, attrs)
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
         camxfile.close()
@@ -2715,7 +2649,6 @@ class PseudoNetCDFFormatTest(object):
 
         expected = open_example_dataset('example.uamiv',
                                         engine='pseudonetcdf',
-                                        autoclose=False,
                                         backend_kwargs=fmtkw)
         with self.roundtrip(expected,
                             save_kwargs=fmtkw,
@@ -3310,32 +3243,6 @@ class TestDataArrayToNetCDF(object):
 
             with open_dataarray(tmp) as loaded_da:
                 assert_identical(original_da, loaded_da)
-
-
-def test_pickle_reconstructor():
-
-    lines = ['foo bar spam eggs']
-
-    with create_tmp_file(allow_cleanup_failure=ON_WINDOWS) as tmp:
-        with open(tmp, 'w') as f:
-            f.writelines(lines)
-
-        obj = PickleByReconstructionWrapper(open, tmp)
-
-        assert obj.value.readlines() == lines
-
-        p_obj = pickle.dumps(obj)
-        obj.value.close()  # for windows
-        obj2 = pickle.loads(p_obj)
-
-        assert obj2.value.readlines() == lines
-
-        # roundtrip again to make sure we can fully restore the state
-        p_obj2 = pickle.dumps(obj2)
-        obj2.value.close()  # for windows
-        obj3 = pickle.loads(p_obj2)
-
-        assert obj3.value.readlines() == lines
 
 
 @requires_scipy_or_netCDF4

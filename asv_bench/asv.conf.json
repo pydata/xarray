@@ -64,6 +64,7 @@
         "scipy": [""],
         "bottleneck": ["", null],
         "dask": [""],
+        "distributed": [""],
     },
 
 
