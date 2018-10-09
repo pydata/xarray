@@ -17,10 +17,10 @@ from xarray.convert import from_cdms2
 from xarray.core.common import ALL_DIMS, full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
-    ReturnItem, assert_allclose, assert_array_equal, assert_equal,
-    assert_identical, raises_regex, requires_bottleneck, requires_cftime,
-    requires_dask, requires_iris, requires_np113, requires_scipy,
-    source_ndarray)
+    LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
+    assert_equal, assert_identical, raises_regex, requires_bottleneck,
+    requires_cftime, requires_dask, requires_iris, requires_np113,
+    requires_scipy, source_ndarray)
 
 
 class TestDataArray(object):
@@ -2026,10 +2026,8 @@ class TestDataArray(object):
         with pytest.warns(FutureWarning):
             grouped.sum()
 
-    # Currently disabled due to https://github.com/pydata/xarray/issues/2468
-    # @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
-    #                     reason="not to forget the behavior change")
-    @pytest.mark.skip
+    @pytest.mark.skipif(LooseVersion(xr.__version__) < LooseVersion('0.12'),
+                        reason="not to forget the behavior change")
     def test_groupby_sum_default(self):
         array = self.make_groupby_example_array()
         grouped = array.groupby('abc')

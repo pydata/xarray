@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import warnings
 from contextlib import contextmanager
-from distutils.version import LooseVersion
+from distutils import version
 import re
 import importlib
 
@@ -51,6 +51,13 @@ def _importorskip(modname, minversion=None):
         has = False
     func = pytest.mark.skipif(not has, reason='requires {}'.format(modname))
     return has, func
+
+
+class LooseVersion(version.LooseVersion):
+    def __init__(self, vstring=None):
+        if '+' in vstring:
+            vstring = vstring[:vstring.find('+')]
+        super(LooseVersion, self).__init__(vstring)
 
 
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
