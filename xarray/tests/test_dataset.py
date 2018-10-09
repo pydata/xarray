@@ -64,8 +64,8 @@ def create_test_multiindex():
 
 
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
-    def __init__(self, writer=None):
-        super(InaccessibleVariableDataStore, self).__init__(writer)
+    def __init__(self):
+        super(InaccessibleVariableDataStore, self).__init__()
         self._indexvars = set()
 
     def store(self, variables, *args, **kwargs):
