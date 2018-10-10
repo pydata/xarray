@@ -34,17 +34,16 @@ ECCODES_LOCK = SerializableLock()
 
 
 class CfGribArrayWrapper(BackendArray):
-    def __init__(self, backend_array):
-        self.backend_array = backend_array
-
-    def __getattr__(self, item):
-        return getattr(self.backend_array, item)
+    def __init__(self, array):
+        self.shape = array.shape
+        self.dtype = array.dtype
+        self.backend_array = array
 
     def __getitem__(self, item):
         key, np_inds = indexing.decompose_indexer(
             item, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
 
-        array = self.backend_array[key.tuple]
+        array = self.array[key.tuple]
 
         if len(np_inds.tuple) > 0:
             array = indexing.NumpyIndexingAdapter(array)[np_inds]
