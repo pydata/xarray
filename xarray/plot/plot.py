@@ -232,8 +232,8 @@ def _infer_line_data(darray, x, y, hue):
                     yplt = darray.transpose(otherdim, huename)
                     xplt = xplt.transpose(otherdim, huename)
                 else:
-                    raise ValueError('If x or y are 2D, hue must be a dimension '
-                                     + 'i.e. one of ' + repr(darray.dims))
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
 
             else:
                 yplt = darray.transpose(xname, huename)
@@ -246,8 +246,8 @@ def _infer_line_data(darray, x, y, hue):
                     otherindex = 1 if darray.dims.index(huename) == 0 else 0
                     xplt = darray.transpose(otherdim, huename)
                 else:
-                    raise ValueError('For 2D inputs, hue must a dimension' +
-                                     'i.e. one of ' + repr(darray.dims))
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
 
             else:
                 xplt = darray.transpose(yname, huename)
