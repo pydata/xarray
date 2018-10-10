@@ -7,12 +7,13 @@ import pytest
 import xarray as xr
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex, requires_dask,
-    has_cftime, has_dask, has_cftime_or_netCDF4)
+    assert_array_equal, assert_equal, has_cftime, has_cftime_or_netCDF4,
+    has_dask, raises_regex, requires_dask)
 
 
-class TestDatetimeAccessor(TestCase):
-    def setUp(self):
+class TestDatetimeAccessor(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         nt = 100
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
