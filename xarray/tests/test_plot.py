@@ -347,7 +347,7 @@ class TestPlot(PlotTestCase):
 
     def test_coord_with_interval(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins('dim_0', bins).mean().plot()
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot()
 
 
 class TestPlot1D(PlotTestCase):
@@ -424,6 +424,7 @@ class TestPlot1D(PlotTestCase):
 
 
 class TestPlotStep(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
@@ -432,7 +433,7 @@ class TestPlotStep(PlotTestCase):
 
     def test_coord_with_interval_step(self):
         bins = [-1, 0, 1, 2]
-        self.darray.groupby_bins('dim_0', bins).mean().plot.step()
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot.step()
         assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
 
 
@@ -472,8 +473,8 @@ class TestPlotHistogram(PlotTestCase):
         self.darray.plot.hist()
 
     def test_hist_coord_with_interval(self):
-        self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean().plot.hist(
-            range=(-1, 2))
+        (self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean(xr.ALL_DIMS)
+         .plot.hist(range=(-1, 2)))
 
 
 @requires_matplotlib
