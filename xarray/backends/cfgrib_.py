@@ -42,7 +42,7 @@ class CfGribArrayWrapper(BackendArray):
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
-            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
 
     def _getitem(self, key):
         with self.datastore.lock:
