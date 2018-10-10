@@ -34,21 +34,19 @@ ECCODES_LOCK = SerializableLock()
 
 
 class CfGribArrayWrapper(BackendArray):
-    def __init__(self, array):
+    def __init__(self, datastore, array):
+        self.datastore = datastore
         self.shape = array.shape
         self.dtype = array.dtype
-        self.backend_array = array
+        self.array = array
 
-    def __getitem__(self, item):
-        key, np_inds = indexing.decompose_indexer(
-            item, self.shape, indexing.IndexingSupport.OUTER_1VECTOR)
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
-        array = self.array[key.tuple]
-
-        if len(np_inds.tuple) > 0:
-            array = indexing.NumpyIndexingAdapter(array)[np_inds]
-
-        return array
+    def _getitem(self, key):
+        with self.datastore.lock:
+            return self.array[key]
 
 
 class CfGribDataStore(AbstractDataStore):
@@ -72,7 +70,7 @@ class CfGribDataStore(AbstractDataStore):
         if isinstance(var.data, np.ndarray):
             data = var.data
         else:
-            data = indexing.LazilyOuterIndexedArray(CfGribArrayWrapper(var.data))
+            data = indexing.LazilyOuterIndexedArray(CfGribArrayWrapper(self, var.data))
 
         encoding = self.ds.encoding.copy()
         encoding['original_shape'] = var.data.shape
