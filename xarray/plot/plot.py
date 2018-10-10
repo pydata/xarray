@@ -8,7 +8,6 @@ Or use the methods on a DataArray:
 from __future__ import absolute_import, division, print_function
 
 import functools
-import itertools
 import warnings
 from datetime import datetime
 
@@ -20,7 +19,9 @@ from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
+    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels,
+    _interval_to_double_bound_points, _interval_to_mid_points,
+    _resolve_intervals_2dplot, _valid_other_type, get_axis,
     import_matplotlib_pyplot, label_from_attrs)
 
 
@@ -34,13 +35,6 @@ def _valid_numpy_subdtype(x, numpy_types):
         assert not np.issubdtype(np.generic, t)
 
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
-
-
-def _valid_other_type(x, types):
-    """
-    Do all elements of x have a type from types?
-    """
-    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
 
 
 def _ensure_plottable(*args):
@@ -57,61 +51,6 @@ def _ensure_plottable(*args):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64 or '
                             'datetime.datetime or pd.Interval.')
-
-
-def _interval_to_mid_points(array):
-    """
-    Helper function which returns an array
-    with the Intervals' mid points.
-    """
-
-    return np.array([x.mid for x in array])
-
-
-def _interval_to_bound_points(array):
-    """
-    Helper function which returns an array
-    with the Intervals' boundaries.
-    """
-
-    array_boundaries = np.array([x.left for x in array])
-    array_boundaries = np.concatenate(
-        (array_boundaries, np.array([array[-1].right])))
-
-    return array_boundaries
-
-
-def _interval_to_double_bound_points(xarray, yarray):
-    """
-    Helper function to deal with a xarray consisting of pd.Intervals. Each
-    interval is replaced with both boundaries. I.e. the length of xarray
-    doubles. yarray is modified so it matches the new shape of xarray.
-    """
-
-    xarray1 = np.array([x.left for x in xarray])
-    xarray2 = np.array([x.right for x in xarray])
-
-    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
-    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
-
-    return xarray, yarray
-
-
-def _resolve_intervals_2dplot(val, func_name):
-    """
-    Helper function to replace the values of a coordinate array containing
-    pd.Interval with their mid-points or - for pcolormesh - boundaries which
-    increases length by 1.
-    """
-    label_extra = ''
-    if _valid_other_type(val, [pd.Interval]):
-        if func_name == 'pcolormesh':
-            val = _interval_to_bound_points(val)
-        else:
-            val = _interval_to_mid_points(val)
-            label_extra = '_center'
-
-    return val, label_extra
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
