@@ -25,24 +25,117 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.10.9:
+.. _whats-new.0.11.0:
 
-v0.10.9 (unreleased)
+v0.11.0 (unreleased)
 --------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's storage backends now automatically open and close files when
+  necessary, rather than requiring opening a file with ``autoclose=True``. A
+  global least-recently-used cache is used to store open files; the default
+  limit of 128 open files should suffice in most cases, but can be adjusted if
+  necessary with
+  ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
+  to ``open_dataset`` and related functions has been deprecated and is now a
+  no-op.
+
+  This change, along with an internal refactor of xarray's storage backends,
+  should significantly improve performance when reading and writing
+  netCDF files with Dask, especially when working with many files or using
+  Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
 
 Documentation
 ~~~~~~~~~~~~~
+- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+  without dimension argument will change in the next release.
+  Now we warn a FutureWarning.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 Enhancements
 ~~~~~~~~~~~~
 
-- :py:meth:`plot()` now accepts the kwargs ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
+- Added support for Python 3.7. (:issue:`2271`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+- Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
+  CFTimeIndex by a specified frequency. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Added support for using ``cftime.datetime`` coordinates with
+  :py:meth:`~xarray.DataArray.differentiate`,
+  :py:meth:`~xarray.Dataset.differentiate`,
+  :py:meth:`~xarray.DataArray.interp`, and
+  :py:meth:`~xarray.Dataset.interp`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_
+  
+Bug fixes
+~~~~~~~~~
+
+- Addition and subtraction operators used with a CFTimeIndex now preserve the
+  index's type. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
+  (:issue:`2445`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``xarray.plot()`` now properly accepts a ``norm`` argument and does not override
+  the norm's ``vmin`` and ``vmax``. (:issue:`2381`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
+  (:issue:`2240`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Restore matplotlib's default of plotting dashed negative contours when
+  a single color is passed to ``DataArray.contour()`` e.g. ``colors='k'``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+- Fix a bug that caused some indexing operations on arrays opened with
+  ``open_rasterio`` to error (:issue:`2454`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+.. _whats-new.0.10.9:
+
+v0.10.9 (21 September 2018)
+---------------------------
+
+This minor release contains a number of backwards compatible enhancements.
+
+Announcements of note:
+
+- Xarray is now a NumFOCUS fiscally sponsored project! Read
+  `the anouncement <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  for more details.
+- We have a new :doc:`roadmap` that outlines our future development plans.
+
+Enhancements
+~~~~~~~~~~~~
+
+- :py:meth:`~xarray.DataArray.differentiate` and
+  :py:meth:`~xarray.Dataset.differentiate` are newly added.
+  (:issue:`1332`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Default colormap for sequential and divergent data can now be set via
+  :py:func:`~xarray.set_options()`
+  (:issue:`2394`)
+  By `Julius Busecke <https://github.com/jbusecke>`_.
+
+- min_count option is newly supported in :py:meth:`~xarray.DataArray.sum`,
+  :py:meth:`~xarray.DataArray.prod` and :py:meth:`~xarray.Dataset.sum`, and
+  :py:meth:`~xarray.Dataset.prod`.
+  (:issue:`2230`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- :py:meth:`plot()` now accepts the kwargs
+  ``xscale, yscale, xlim, ylim, xticks, yticks`` just like Pandas. Also ``xincrease=False, yincrease=False`` now use matplotlib's axis inverting methods instead of setting limits.
   By `Deepak Cherian <https://github.com/dcherian>`_. (:issue:`2224`)
 
 - DataArray coordinates and Dataset coordinates and data variables are
   now displayed as `a b ... y z` rather than `a b c d ...`.
   (:issue:`1186`)
   By `Seth P <https://github.com/seth-p>`_.
+- A new CFTimeIndex-enabled :py:func:`cftime_range` function for use in
+  generating dates from standard or non-standard calendars.  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 - When interpolating over a ``datetime64`` axis, you can now provide a datetime string instead of a ``datetime64`` object. E.g. ``da.interp(time='1991-02-01')``
   (:issue:`2284`)
@@ -52,9 +145,29 @@ Enhancements
   (:issue:`2331`)
   By `Maximilian Roos <https://github.com/max-sixty>`_.
 
+- Applying ``unstack`` to a large DataArray or Dataset is now much faster if the MultiIndex has not been modified after stacking the indices.
+  (:issue:`1560`)
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+
+- You can now control whether or not to offset the coordinates when using
+  the ``roll`` method and the current behavior, coordinates rolled by default,
+  raises a deprecation warning unless explicitly setting the keyword argument.
+  (:issue:`1875`)
+  By `Andrew Huang <https://github.com/ahuang11>`_.
+
+- You can now call ``unstack`` without arguments to unstack every MultiIndex in a DataArray or Dataset.
+  By `Julia Signell <https://github.com/jsignell>`_.
+
+- Added the ability to pass a data kwarg to ``copy`` to create a new object with the
+  same metadata as the original object but using new values.
+  By `Julia Signell <https://github.com/jsignell>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- ``xarray.plot.imshow()`` correctly uses the ``origin`` argument.
+  (:issue:`2379`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 - Fixed ``DataArray.to_iris()`` failure while creating ``DimCoord`` by
   falling back to creating ``AuxCoord``. Fixed dependency on ``var_name``
@@ -69,6 +182,9 @@ Bug fixes
 - Tests can be run in parallel with pytest-xdist
   By `Tony Tung <https://github.com/ttung>`_.
 
+- Follow up the renamings in dask; from dask.ghost to dask.overlap
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Now raises a ValueError when there is a conflict between dimension names and
   level names of MultiIndex. (:issue:`2299`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -77,9 +193,15 @@ Bug fixes
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 - Now :py:func:`xr.apply_ufunc` raises a ValueError when the size of
-``input_core_dims`` is inconsistent with the number of arguments.
+  ``input_core_dims`` is inconsistent with the number of arguments.
   (:issue:`2341`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
+- Fixed ``Dataset.filter_by_attrs()`` behavior not matching ``netCDF4.Dataset.get_variables_by_attributes()``.
+  When more than one ``key=value`` is passed into ``Dataset.filter_by_attrs()`` it will now return a Dataset with variables which pass
+  all the filters.
+  (:issue:`2315`)
+  By `Andrew Barna <https://github.com/docotak>`_.
 
 .. _whats-new.0.10.8:
 
@@ -111,7 +233,6 @@ Enhancements
   to :py:meth:`~xarray.DataArray.to_cdms2` and
   :py:meth:`~xarray.DataArray.from_cdms2` (:issue:`2262`).
   By `Stephane Raynaud <https://github.com/stefraynaud>`_.
-
 
 Bug fixes
 ~~~~~~~~~

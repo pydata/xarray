@@ -1,17 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
+import os
+
 import numpy as np
 import pandas as pd
 
 import xarray as xr
 
-from . import randn, randint, requires_dask
+from . import randint, randn, requires_dask
 
 try:
     import dask
     import dask.multiprocessing
 except ImportError:
     pass
+
+
+os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 
 
 class IOSingleNetCDF(object):
@@ -405,3 +410,39 @@ class IOReadMultipleNetCDF3Dask(IOReadMultipleNetCDF4Dask):
         with dask.set_options(get=dask.multiprocessing.get):
             xr.open_mfdataset(self.filenames_list, engine='scipy',
                               chunks=self.time_chunks)
+
+
+def create_delayed_write():
+    import dask.array as da
+    vals = da.random.random(300, chunks=(1,))
+    ds = xr.Dataset({'vals': (['a'], vals)})
+    return ds.to_netcdf('file.nc', engine='netcdf4', compute=False)
+
+
+class IOWriteNetCDFDask(object):
+    timeout = 60
+    repeat = 1
+    number = 5
+
+    def setup(self):
+        requires_dask()
+        self.write = create_delayed_write()
+
+    def time_write(self):
+        self.write.compute()
+
+
+class IOWriteNetCDFDaskDistributed(object):
+    def setup(self):
+        try:
+            import distributed
+        except ImportError:
+            raise NotImplementedError
+        self.client = distributed.Client()
+        self.write = create_delayed_write()
+
+    def cleanup(self):
+        self.client.shutdown()
+
+    def time_write(self):
+        self.write.compute()

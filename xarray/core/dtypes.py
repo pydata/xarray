@@ -80,6 +80,11 @@ def maybe_promote(dtype):
     # N.B. these casting rules should match pandas
     if np.issubdtype(dtype, np.floating):
         fill_value = np.nan
+    elif np.issubdtype(dtype, np.timedelta64):
+        # See https://github.com/numpy/numpy/issues/10685
+        # np.timedelta64 is a subclass of np.integer
+        # Check np.timedelta64 before np.integer
+        fill_value = np.timedelta64('NaT')
     elif np.issubdtype(dtype, np.integer):
         if dtype.itemsize <= 2:
             dtype = np.float32
@@ -90,12 +95,13 @@ def maybe_promote(dtype):
         fill_value = np.nan + np.nan * 1j
     elif np.issubdtype(dtype, np.datetime64):
         fill_value = np.datetime64('NaT')
-    elif np.issubdtype(dtype, np.timedelta64):
-        fill_value = np.timedelta64('NaT')
     else:
         dtype = object
         fill_value = np.nan
     return np.dtype(dtype), fill_value
+
+
+NAT_TYPES = (np.datetime64('NaT'), np.timedelta64('NaT'))
 
 
 def get_fill_value(dtype):

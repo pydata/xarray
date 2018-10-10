@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import pickle
+from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -14,18 +15,22 @@ from xarray.core.pycompat import OrderedDict, suppress
 from xarray.tests import mock
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_frame_equal, assert_identical, raises_regex)
+    assert_allclose, assert_array_equal, assert_equal, assert_frame_equal,
+    assert_identical, raises_regex)
 
 dask = pytest.importorskip('dask')
 da = pytest.importorskip('dask.array')
 dd = pytest.importorskip('dask.dataframe')
 
 
-class DaskTestCase(TestCase):
+class DaskTestCase(object):
     def assertLazyAnd(self, expected, actual, test):
-        with dask.set_options(get=dask.get):
+
+        with (dask.config.set(get=dask.get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=dask.get)):
             test(actual, expected)
+
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
@@ -52,6 +57,7 @@ class TestVariable(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_allclose)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -196,11 +202,13 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert 'dask' in str(err)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
@@ -242,6 +250,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_equal)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -378,8 +387,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.groupby('x').mean()
-        actual = v.groupby('x').mean()
+        expected = u.groupby('x').mean(xr.ALL_DIMS)
+        actual = v.groupby('x').mean(xr.ALL_DIMS)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -421,6 +430,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
@@ -573,7 +583,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-class TestToDaskDataFrame(TestCase):
+class TestToDaskDataFrame(object):
 
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
@@ -821,7 +831,9 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with dask.set_options(get=get):
+        with (dask.config.set(get=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()

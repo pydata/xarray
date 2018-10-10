@@ -5,6 +5,7 @@ import itertools
 import warnings
 
 import numpy as np
+
 from ..core.formatting import format_item
 from ..core.pycompat import getargspec
 from .utils import (
@@ -188,6 +189,7 @@ class FacetGrid(object):
         self._y_var = None
         self._cmap_extend = None
         self._mappables = []
+        self._finalized = False
 
     @property
     def _left_axes(self):
@@ -308,13 +310,16 @@ class FacetGrid(object):
 
     def _finalize_grid(self, *axlabels):
         """Finalize the annotations and layout."""
-        self.set_axis_labels(*axlabels)
-        self.set_titles()
-        self.fig.tight_layout()
+        if not self._finalized:
+            self.set_axis_labels(*axlabels)
+            self.set_titles()
+            self.fig.tight_layout()
 
-        for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
-            if namedict is None:
-                ax.set_visible(False)
+            for ax, namedict in zip(self.axes.flat, self.name_dicts.flat):
+                if namedict is None:
+                    ax.set_visible(False)
+
+            self._finalized = True
 
     def add_legend(self, **kwargs):
         figlegend = self.fig.legend(
@@ -502,9 +507,12 @@ class FacetGrid(object):
                 data = self.data.loc[namedict]
                 plt.sca(ax)
                 innerargs = [data[a].values for a in args]
-                # TODO: is it possible to verify that an artist is mappable?
-                mappable = func(*innerargs, **kwargs)
-                self._mappables.append(mappable)
+                maybe_mappable = func(*innerargs, **kwargs)
+                # TODO: better way to verify that an artist is mappable?
+                # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
+                if (maybe_mappable and
+                   hasattr(maybe_mappable, 'autoscale_None')):
+                    self._mappables.append(maybe_mappable)
 
         self._finalize_grid(*args[:2])
 

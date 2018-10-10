@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import sys
 
-from setuptools import find_packages, setup
-
 import versioneer
-
+from setuptools import find_packages, setup
 
 DISTNAME = 'xarray'
 LICENSE = 'Apache'
@@ -69,5 +67,6 @@ setup(name=DISTNAME,
       install_requires=INSTALL_REQUIRES,
       tests_require=TESTS_REQUIRE,
       url=URL,
+      python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
       packages=find_packages(),
       package_data={'xarray': ['tests/data/*']})

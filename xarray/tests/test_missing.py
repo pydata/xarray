@@ -93,14 +93,14 @@ def test_interpolate_pd_compat():
 
 
 @requires_scipy
-def test_scipy_methods_function():
-    for method in ['barycentric', 'krog', 'pchip', 'spline', 'akima']:
-        kwargs = {}
-        # Note: Pandas does some wacky things with these methods and the full
-        # integration tests wont work.
-        da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-        actual = da.interpolate_na(method=method, dim='time', **kwargs)
-        assert (da.count('time') <= actual.count('time')).all()
+@pytest.mark.parametrize('method', ['barycentric', 'krog',
+                                    'pchip', 'spline', 'akima'])
+def test_scipy_methods_function(method):
+    # Note: Pandas does some wacky things with these methods and the full
+    # integration tests wont work.
+    da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
+    actual = da.interpolate_na(method=method, dim='time')
+    assert (da.count('time') <= actual.count('time')).all()
 
 
 @requires_scipy

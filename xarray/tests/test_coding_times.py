@@ -1,20 +1,20 @@
 from __future__ import absolute_import, division, print_function
 
-from itertools import product
 import warnings
+from itertools import product
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import Variable, coding, set_options, DataArray, decode_cf
+from xarray import DataArray, Variable, coding, decode_cf, set_options
 from xarray.coding.times import _import_cftime
 from xarray.coding.variables import SerializationWarning
 from xarray.core.common import contains_cftime_datetimes
 
-from . import (assert_array_equal, has_cftime_or_netCDF4,
-               requires_cftime_or_netCDF4, has_cftime, has_dask)
-
+from . import (
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
+    requires_cftime_or_netCDF4)
 
 _NON_STANDARD_CALENDARS_SET = {'noleap', '365_day', '360_day',
                                'julian', 'all_leap', '366_day'}
@@ -538,7 +538,8 @@ def test_cf_datetime_nan(num_dates, units, expected_list):
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', 'All-NaN')
         actual = coding.times.decode_cf_datetime(num_dates, units)
-    expected = np.array(expected_list, dtype='datetime64[ns]')
+    # use pandas because numpy will deprecate timezone-aware conversions
+    expected = pd.to_datetime(expected_list)
     assert_array_equal(expected, actual)
 
 

@@ -1,5 +1,5 @@
 # Based on http://conda.pydata.org/docs/travis.html
-language: python
+language: minimal
 sudo: false # use container based build
 notifications:
   email: false
@@ -10,72 +10,48 @@ branches:
 matrix:
   fast_finish: true
   include:
-  - python: 2.7
-    env: CONDA_ENV=py27-min
-  - python: 2.7
-    env: CONDA_ENV=py27-cdat+iris+pynio
-  - python: 3.5
-    env: CONDA_ENV=py35
-  - python: 3.6
-    env: CONDA_ENV=py36
-  - python: 3.6
-    env:
+  - env: CONDA_ENV=py27-min
+  - env: CONDA_ENV=py27-cdat+iris+pynio
+  - env: CONDA_ENV=py35
+  - env: CONDA_ENV=py36
+  - env: CONDA_ENV=py37
+  - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev
+  - env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-dask-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-bottleneck-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc
-  - python: 3.6
-    env: CONDA_ENV=py36-pynio-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-rasterio-0.36
-  - python: 3.6
-    env: CONDA_ENV=py36-zarr-dev
-  - python: 3.5
-    env: CONDA_ENV=docs
-  - python: 3.6
-    env: CONDA_ENV=py36-hypothesis
+  - env: CONDA_ENV=py36-dask-dev
+  - env: CONDA_ENV=py36-pandas-dev
+  - env: CONDA_ENV=py36-bottleneck-dev
+  - env: CONDA_ENV=py36-condaforge-rc
+  - env: CONDA_ENV=py36-pynio-dev
+  - env: CONDA_ENV=py36-rasterio-0.36
+  - env: CONDA_ENV=py36-zarr-dev
+  - env: CONDA_ENV=docs
+  - env: CONDA_ENV=py36-hypothesis
+
   allow_failures:
-  - python: 3.6
-    env:
+  - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - python: 3.6
-    env: CONDA_ENV=py36-netcdf4-dev
+  - env: CONDA_ENV=py36-netcdf4-dev
     addons:
       apt_packages:
         - libhdf5-serial-dev
         - netcdf-bin
         - libnetcdf-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-pandas-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-bottleneck-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-condaforge-rc
-  - python: 3.6
-    env: CONDA_ENV=py36-pynio-dev
-  - python: 3.6
-    env: CONDA_ENV=py36-zarr-dev
+  - env: CONDA_ENV=py36-pandas-dev
+  - env: CONDA_ENV=py36-bottleneck-dev
+  - env: CONDA_ENV=py36-condaforge-rc
+  - env: CONDA_ENV=py36-pynio-dev
+  - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda-3.16.0-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
-    fi
+  - wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
@@ -95,9 +71,9 @@ install:
   - python xarray/util/print_versions.py
 
 script:
-  # TODO: restore this check once the upstream pandas issue is fixed:
-  # https://github.com/pandas-dev/pandas/issues/21071
-  # - python -OO -c "import xarray"
+  - which python
+  - python --version
+  - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
       sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;

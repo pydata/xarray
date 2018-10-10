@@ -600,9 +600,11 @@ class _PlotMethods(object):
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
+    # TODO: remove when min numpy version is bumped to 1.13
     # There's a cyclic dependency via DataArray, so we can't import from
     # xarray.ufuncs in global scope.
     from xarray.ufuncs import maximum, minimum
+
     # Calculate vmin and vmax automatically for `robust=True`
     if robust:
         if vmax is None:
@@ -628,7 +630,10 @@ def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     # After scaling, downcast to 32-bit float.  This substantially reduces
     # memory usage after we hand `darray` off to matplotlib.
     darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
-    return minimum(maximum(darray, 0), 1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', 'xarray.ufuncs',
+                                PendingDeprecationWarning)
+        return minimum(maximum(darray, 0), 1)
 
 
 def _plot2d(plotfunc):
@@ -678,6 +683,9 @@ def _plot2d(plotfunc):
         Adds colorbar to axis
     add_labels : Boolean, optional
         Use xarray metadata to label axes
+    norm : ``matplotlib.colors.Normalize`` instance, optional
+        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
+        must be None.
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -746,7 +754,7 @@ def _plot2d(plotfunc):
                     levels=None, infer_intervals=None, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
                     xscale=None, yscale=None, xticks=None, yticks=None,
-                    xlim=None, ylim=None, **kwargs):
+                    xlim=None, ylim=None, norm=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -847,6 +855,7 @@ def _plot2d(plotfunc):
                        'extend': extend,
                        'levels': levels,
                        'filled': plotfunc.__name__ != 'contour',
+                       'norm': norm,
                        }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
@@ -857,12 +866,14 @@ def _plot2d(plotfunc):
             # pcolormesh
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
+            # if colors == a single color, matplotlib draws dashed negative
+            # contours. we lose this feature if we pass cmap and not colors
+            if isinstance(colors, basestring):
+                cmap_params['cmap'] = None
+                kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
-
-        # This allows the user to pass in a custom norm coming via kwargs
-        kwargs.setdefault('norm', cmap_params['norm'])
 
         if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
             # forbid usage of mpl strings
@@ -873,6 +884,7 @@ def _plot2d(plotfunc):
         primitive = plotfunc(xplt, yplt, zval, ax=ax, cmap=cmap_params['cmap'],
                              vmin=cmap_params['vmin'],
                              vmax=cmap_params['vmax'],
+                             norm=cmap_params['norm'],
                              **kwargs)
 
         # Label the plot with metadata
@@ -890,11 +902,15 @@ def _plot2d(plotfunc):
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray), rotation=90)
+                cbar.set_label(label_from_attrs(darray))
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
+
+        # origin kwarg overrides yincrease
+        if 'origin' in kwargs:
+            yincrease = None
 
         _update_axes(ax, xincrease, yincrease, xscale, yscale,
                      xticks, yticks, xlim, ylim)
@@ -920,7 +936,7 @@ def _plot2d(plotfunc):
                    levels=None, infer_intervals=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None,
                    xscale=None, yscale=None, xticks=None, yticks=None,
-                   xlim=None, ylim=None, **kwargs):
+                   xlim=None, ylim=None, norm=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -982,10 +998,8 @@ def imshow(x, y, z, ax, **kwargs):
     left, right = x[0] - xstep, x[-1] + xstep
     bottom, top = y[-1] + ystep, y[0] - ystep
 
-    defaults = {'extent': [left, right, bottom, top],
-                'origin': 'upper',
-                'interpolation': 'nearest',
-                }
+    defaults = {'origin': 'upper',
+                'interpolation': 'nearest'}
 
     if not hasattr(ax, 'projection'):
         # not for cartopy geoaxes
@@ -993,6 +1007,11 @@ def imshow(x, y, z, ax, **kwargs):
 
     # Allow user to override these defaults
     defaults.update(kwargs)
+
+    if defaults['origin'] == 'upper':
+        defaults['extent'] = [left, right, bottom, top]
+    else:
+        defaults['extent'] = [left, right, top, bottom]
 
     if z.ndim == 3:
         # matplotlib imshow uses black for missing data, but Xarray makes
