@@ -324,9 +324,6 @@ Enhancements
   first argument.
   By `Maximilian Roos <https://github.com/maxim-lian>`_.
 
-- DataArrays created with groupby_bins supported by plotting routines. 
-  By `Maximilian Maahn <https://github.com/maahn>`_.
-  
 - :py:meth:`~DataArray.cumsum` and :py:meth:`~DataArray.cumprod` now support
   aggregation over multiple dimensions at the same time. This is the default
   behavior when dimensions are not specified (previously this raised an error).
