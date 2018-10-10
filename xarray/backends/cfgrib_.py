@@ -58,7 +58,11 @@ class CfGribDataStore(AbstractDataStore):
         if lock is None:
             lock = ECCODES_LOCK
         self.lock = ensure_lock(lock)
-        backend_kwargs['filter_by_keys'] = tuple(backend_kwargs.get('filter_by_keys', {}).items())
+
+        # NOTE: filter_by_keys is a dict, but CachingFileManager only accepts hashable types
+        if 'filter_by_keys' in backend_kwargs:
+            backend_kwargs['filter_by_keys'] = tuple(backend_kwargs['filter_by_keys'].items())
+
         self._manager = CachingFileManager(
             cfgrib.open_file, filename, lock=lock, mode='r', kwargs=backend_kwargs)
 
