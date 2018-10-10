@@ -53,11 +53,11 @@ def _importorskip(modname, minversion=None):
     return has, func
 
 
-class LooseVersion(version.LooseVersion):
-    def __init__(self, vstring=None):
-        if '+' in vstring:
-            vstring = vstring[:vstring.find('+')]
-        super(LooseVersion, self).__init__(vstring)
+def LooseVersion(vstring):
+    # Our development version is something like '0.10.9+aac7bfc'
+    # This function just ignored the git commit id.
+    vstring = vstring.split('+')[0]
+    return version.LooseVersion(vstring)
 
 
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
