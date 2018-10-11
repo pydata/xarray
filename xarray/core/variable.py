@@ -929,7 +929,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims = common.get_squeeze_dims(self, dim)
         return self.isel({d: 0 for d in dims})
 
-    def _shift_one_dim(self, dim, count, fill_value=None):
+    def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
 
         if count > 0:
@@ -941,7 +941,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
 
-        if fill_value is None or fill_value is np.nan:
+        if fill_value is dtypes.NA and True:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
@@ -973,7 +973,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
-    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """
         Return a new Variable with shifted data.
 
