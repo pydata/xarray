@@ -14,6 +14,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from xarray.core.alignment import align
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
@@ -173,8 +174,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
             kwargs['hue'] = hue
         elif ndims == 2:
             if hue:
-                raise ValueError('hue is not compatible with 2d data')
-            plotfunc = pcolormesh
+                plotfunc = line
+                kwargs['hue'] = hue
+            else:
+                plotfunc = pcolormesh
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -190,10 +193,10 @@ def _infer_line_data(darray, x, y, hue):
                  .format(', '.join([repr(dd) for dd in darray.dims])))
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims:
+    if x is not None and x not in darray.dims and x not in darray.coords:
         raise ValueError('x ' + error_msg)
 
-    if y is not None and y not in darray.dims:
+    if y is not None and y not in darray.dims and y not in darray.coords:
         raise ValueError('y ' + error_msg)
 
     if x is not None and y is not None:
@@ -207,11 +210,11 @@ def _infer_line_data(darray, x, y, hue):
         huelabel = ''
 
         if (x is None and y is None) or x == dim:
-            xplt = darray.coords[dim]
+            xplt = darray[dim]
             yplt = darray
 
         else:
-            yplt = darray.coords[dim]
+            yplt = darray[dim]
             xplt = darray
 
     else:
@@ -221,18 +224,37 @@ def _infer_line_data(darray, x, y, hue):
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            yname = darray.name
-            xplt = darray.coords[xname]
-            yplt = darray.transpose(xname, huename)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                yplt = darray.transpose(xname, huename)
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            xname = darray.name
-            xplt = darray.transpose(yname, huename)
-            yplt = darray.coords[yname]
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
 
-        hueplt = darray.coords[huename]
+            else:
+                xplt = darray.transpose(yname, huename)
+
         huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
 
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
@@ -265,9 +287,11 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
-        Coordinate for which you want multiple lines plotted.
+        Dimension or coordinate for which you want multiple lines plotted.
+        If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Coordinates for x, y axis. Only one of these may be specified.
+        Dimensions or coordinates for x, y axis.
+        Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
     xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
