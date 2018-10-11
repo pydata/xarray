@@ -181,6 +181,25 @@ class TestPlot(PlotTestCase):
         assert (plt.gca().get_legend().get_title().get_text()
                 == 'dim_1')
 
+    def test_2d_coords_line_plot(self):
+        lon, lat = np.meshgrid(np.linspace(-20, 20, 5),
+                               np.linspace(0, 30, 4))
+        lon += lat / 10
+        lat += lon / 10
+        da = xr.DataArray(np.arange(20).reshape(4, 5), dims=['y', 'x'],
+                          coords={'lat': (('y', 'x'), lat),
+                                  'lon': (('y', 'x'), lon)})
+
+        hdl = da.plot.line(x='lon', hue='x')
+        assert len(hdl) == 5
+
+        plt.clf()
+        hdl = da.plot.line(x='lon', hue='y')
+        assert len(hdl) == 4
+
+        with pytest.raises(ValueError, message='If x or y are 2D '):
+            da.plot.line(x='lon', hue='lat')
+
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
         a.plot()
