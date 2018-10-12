@@ -18,6 +18,7 @@ from .indexing import (
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
+from .options import _set_keep_attrs
 
 try:
     import dask.array as da
@@ -1303,8 +1304,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=_set_keep_attrs(False), allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters

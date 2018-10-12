@@ -16,7 +16,7 @@ from .coordinates import (
     assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .options import OPTIONS
+from .options import OPTIONS, _set_keep_attrs
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
     decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution)
@@ -1559,7 +1559,8 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return ops.fillna(self, other, join="outer")
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=_set_keep_attrs(False), **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2270,7 +2271,8 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
-    def quantile(self, q, dim=None, interpolation='linear', keep_attrs=False):
+    def quantile(self, q, dim=None, interpolation='linear',
+                 keep_attrs=_set_keep_attrs(False)):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -2316,7 +2318,7 @@ class DataArray(AbstractArray, DataWithCoords):
             q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
-    def rank(self, dim, pct=False, keep_attrs=False):
+    def rank(self, dim, pct=False, keep_attrs=_set_keep_attrs(False)):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
