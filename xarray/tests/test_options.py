@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import pytest
 
 import xarray
-from xarray.core.options import OPTIONS
+from xarray.core.options import OPTIONS, _set_keep_attrs
 from xarray.backends.file_manager import FILE_CACHE
 
 
@@ -42,6 +42,18 @@ def test_file_cache_maxsize():
     with xarray.set_options(file_cache_maxsize=123):
         assert FILE_CACHE.maxsize == 123
     assert FILE_CACHE.maxsize == original_size
+
+
+def test_keep_attrs():
+    with pytest.raises(ValueError):
+        xarray.set_options(keep_attrs='invalid_str')
+    with xarray.set_options(keep_attrs=True):
+        assert OPTIONS['keep_attrs']
+    with xarray.set_options(keep_attrs=False):
+        assert not OPTIONS['keep_attrs']
+    with xarray.set_options(keep_attrs='default'):
+        assert _set_keep_attrs(func_default=True)
+        assert _set_keep_attrs(func_default=False) is False
 
 
 def test_nested_options():

@@ -6,6 +6,8 @@ ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
 FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
+KEEP_ATTRS = 'keep_attrs'
+
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
@@ -14,6 +16,7 @@ OPTIONS = {
     FILE_CACHE_MAXSIZE: 128,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
+    KEEP_ATTRS: 'default'
 }
 
 _JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
@@ -28,6 +31,7 @@ _VALIDATORS = {
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
+    KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
 }
 
 
@@ -39,6 +43,17 @@ def _set_file_cache_maxsize(value):
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
 }
+
+
+def _set_keep_attrs(func_default):
+    global_choice = OPTIONS['keep_attrs']
+
+    if global_choice is 'default':
+        return func_default
+    elif global_choice in [True, False]:
+        return global_choice
+    else:
+        raise ValueError('The global option keep_attrs is set to an invalid value.')
 
 
 class set_options(object):
