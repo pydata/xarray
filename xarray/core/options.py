@@ -78,6 +78,11 @@ class set_options(object):
     - ``cmap_divergent``: colormap to use for divergent data plots.
       Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
+    - ``keep_attrs``: rule for whether to keep attributes on xarray
+      Datasets/dataarrays after operations. Either ``True`` to always keep
+      attrs, ``False`` to always discard them, or ``'default'`` to use original
+      logic that attrs should only be kept in unambiguous circumstances.
+      Default: ``'default'``.
 
 f    You can use ``set_options`` either as a context manager:
 
