@@ -3,8 +3,9 @@ from __future__ import absolute_import, division, print_function
 import pytest
 
 import xarray
-from xarray.core.options import OPTIONS, _set_keep_attrs
+from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.backends.file_manager import FILE_CACHE
+from xarray.tests.test_dataset import create_test_data
 
 
 def test_invalid_option_raises():
@@ -52,8 +53,35 @@ def test_keep_attrs():
     with xarray.set_options(keep_attrs=False):
         assert not OPTIONS['keep_attrs']
     with xarray.set_options(keep_attrs='default'):
-        assert _set_keep_attrs(func_default=True)
-        assert _set_keep_attrs(func_default=False) is False
+        assert _get_keep_attrs(default=True)
+        assert not _get_keep_attrs(default=False)
+
+
+def create_test_data_attrs(seed=0):
+    ds = create_test_data(seed)
+    ds.attrs = {'attr1': 5, 'attr2': 'history',
+                'attr3': {'nested': 'more_info'}}
+    return ds
+
+
+def test_attr_retention():
+    ds = create_test_data_attrs()
+    original_attrs = ds.attrs
+
+    # Test default behaviour
+    result = ds.mean()
+    assert result.attrs == {}
+    with xarray.set_options(keep_attrs='default'):
+        result = ds.mean()
+        assert result.attrs == {}
+
+    with xarray.set_options(keep_attrs=True):
+        result = ds.mean()
+        assert result.attrs == original_attrs
+
+    with xarray.set_options(keep_attrs=False):
+        result = ds.mean()
+        assert result.attrs == {}
 
 
 def test_nested_options():

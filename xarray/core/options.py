@@ -45,11 +45,11 @@ _SETTERS = {
 }
 
 
-def _set_keep_attrs(func_default):
+def _get_keep_attrs(default):
     global_choice = OPTIONS['keep_attrs']
 
     if global_choice is 'default':
-        return func_default
+        return default
     elif global_choice in [True, False]:
         return global_choice
     else:
