@@ -71,7 +71,7 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate`,
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
   
 Bug fixes
 ~~~~~~~~~
@@ -96,6 +96,13 @@ Bug fixes
 - Fix a bug that caused some indexing operations on arrays opened with
   ``open_rasterio`` to error (:issue:`2454`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Subtracting one CFTimeIndex from another now returns a
+  ``pandas.TimedeltaIndex``, analogous to the behavior for DatetimeIndexes
+  (:issue:`2484`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Adding a TimedeltaIndex to, or subtracting a TimedeltaIndex from a
+  CFTimeIndex is now allowed (:issue:`2484`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_. 
 
 .. _whats-new.0.10.9:
 

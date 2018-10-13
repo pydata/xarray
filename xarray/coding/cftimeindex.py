@@ -359,13 +359,22 @@ class CFTimeIndex(pd.Index):
                 "str or datetime.timedelta, got {}.".format(freq))
 
     def __add__(self, other):
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
         return CFTimeIndex(np.array(self) + other)
 
     def __radd__(self, other):
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
         return CFTimeIndex(other + np.array(self))
 
     def __sub__(self, other):
-        return CFTimeIndex(np.array(self) - other)
+        if isinstance(other, CFTimeIndex):
+            return pd.TimedeltaIndex(np.array(self) - np.array(other))
+        elif isinstance(other, pd.TimedeltaIndex):
+            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
+        else:
+            return CFTimeIndex(np.array(self) - other)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
