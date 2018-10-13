@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
 from .pycompat import OrderedDict, dask_array_type
-from .options import _set_keep_attrs
 
 RESAMPLE_DIM = '__resample_dim__'
 
@@ -274,7 +273,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return combined.rename({self._resample_dim: self._dim})
 
-    def reduce(self, func, dim=None, keep_attrs=_set_keep_attrs(False), **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 

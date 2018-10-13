@@ -14,7 +14,6 @@ import numpy as np
 from . import dtypes, duck_array_ops
 from .nputils import array_eq, array_ne
 from .pycompat import PY3
-from .options import _set_keep_attrs
 
 try:
     import bottleneck as bn
@@ -154,7 +153,7 @@ def fillna(data, other, join="left", dataset_join="left"):
                        dask="allowed",
                        dataset_join=dataset_join,
                        dataset_fill_value=np.nan,
-                       keep_attrs=_set_keep_attrs(True))
+                       keep_attrs=True)
 
 
 def where_method(self, cond, other=dtypes.NA):
@@ -180,7 +179,7 @@ def where_method(self, cond, other=dtypes.NA):
                        join=join,
                        dataset_join=join,
                        dask='allowed',
-                       keep_attrs=_set_keep_attrs(True))
+                       keep_attrs=True)
 
 
 def _call_possibly_missing_method(arg, name, args, kwargs):
