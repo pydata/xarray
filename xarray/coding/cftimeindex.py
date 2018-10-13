@@ -376,6 +376,10 @@ class CFTimeIndex(pd.Index):
         else:
             return CFTimeIndex(np.array(self) - other)
 
+    def _add_delta(self, deltas):
+        # To support TimedeltaIndex + CFTimeIndex with older pandas versions
+        return self + deltas
+
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
     date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
