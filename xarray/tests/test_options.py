@@ -6,6 +6,7 @@ import xarray
 from xarray.core.options import OPTIONS, _get_keep_attrs
 from xarray.backends.file_manager import FILE_CACHE
 from xarray.tests.test_dataset import create_test_data
+from xarray import concat, merge
 
 
 def test_invalid_option_raises():
@@ -57,33 +58,6 @@ def test_keep_attrs():
         assert not _get_keep_attrs(default=False)
 
 
-def create_test_data_attrs(seed=0):
-    ds = create_test_data(seed)
-    ds.attrs = {'attr1': 5, 'attr2': 'history',
-                'attr3': {'nested': 'more_info'}}
-    return ds
-
-
-def test_attr_retention():
-    ds = create_test_data_attrs()
-    original_attrs = ds.attrs
-
-    # Test default behaviour
-    result = ds.mean()
-    assert result.attrs == {}
-    with xarray.set_options(keep_attrs='default'):
-        result = ds.mean()
-        assert result.attrs == {}
-
-    with xarray.set_options(keep_attrs=True):
-        result = ds.mean()
-        assert result.attrs == original_attrs
-
-    with xarray.set_options(keep_attrs=False):
-        result = ds.mean()
-        assert result.attrs == {}
-
-
 def test_nested_options():
     original = OPTIONS['display_width']
     with xarray.set_options(display_width=1):
@@ -92,3 +66,105 @@ def test_nested_options():
             assert OPTIONS['display_width'] == 2
         assert OPTIONS['display_width'] == 1
     assert OPTIONS['display_width'] == original
+
+
+def create_test_dataset_attrs(seed=0):
+    ds = create_test_data(seed)
+    ds.attrs = {'attr1': 5, 'attr2': 'history',
+                'attr3': {'nested': 'more_info'}}
+    return ds
+
+
+def create_test_dataarray_attrs(seed=0, var='var1'):
+    da = create_test_data(seed)[var]
+    da.attrs = {'attr1': 5, 'attr2': 'history',
+                'attr3': {'nested': 'more_info'}}
+    return da
+
+
+class TestAttrRetention:
+    def test_dataset_attr_retention(self):
+        # Use .mean() for all tests: a typical reduction operation
+        ds = create_test_dataset_attrs()
+        original_attrs = ds.attrs
+
+        # Test default behaviour
+        result = ds.mean()
+        assert result.attrs == {}
+        with xarray.set_options(keep_attrs='default'):
+            result = ds.mean()
+            assert result.attrs == {}
+
+        with xarray.set_options(keep_attrs=True):
+            result = ds.mean()
+            assert result.attrs == original_attrs
+
+        with xarray.set_options(keep_attrs=False):
+            result = ds.mean()
+            assert result.attrs == {}
+
+    def test_dataarray_attr_retention(self):
+        # Use .mean() for all tests: a typical reduction operation
+        da = create_test_dataarray_attrs()
+        original_attrs = da.attrs
+
+        # Test default behaviour
+        result = da.mean()
+        assert result.attrs == {}
+        with xarray.set_options(keep_attrs='default'):
+            result = da.mean()
+            assert result.attrs == {}
+
+        with xarray.set_options(keep_attrs=True):
+            result = da.mean()
+            assert result.attrs == original_attrs
+
+        with xarray.set_options(keep_attrs=False):
+            result = da.mean()
+            assert result.attrs == {}
+
+    def test_groupby_attr_retention(self):
+        da = xarray.DataArray([1, 2, 3], [('x', [1, 1, 2])])
+        da.attrs = {'attr1': 5, 'attr2': 'history',
+                    'attr3': {'nested': 'more_info'}}
+        original_attrs = da.attrs
+
+        # Test default behaviour
+        result = da.groupby('x').sum(keep_attrs=True)
+        assert result.attrs == original_attrs
+        with xarray.set_options(keep_attrs='default'):
+            result = da.groupby('x').sum(keep_attrs=True)
+            assert result.attrs == original_attrs
+
+        with xarray.set_options(keep_attrs=True):
+            result1 = da.groupby('x')
+            result = result1.sum()
+            assert result.attrs == original_attrs
+
+        with xarray.set_options(keep_attrs=False):
+            result = da.groupby('x').sum()
+            assert result.attrs == {}
+
+    def test_concat_attr_retention(self):
+        ds1 = create_test_dataset_attrs()
+        ds2 = create_test_dataset_attrs()
+        ds2.attrs = {'wrong': 'attributes'}
+        original_attrs = ds1.attrs
+
+        # Test default behaviour of keeping the attrs of the first
+        # dataset in the supplied list
+        # global keep_attrs option current doesn't affect concat
+        result = concat([ds1, ds2], dim='dim1')
+        assert result.attrs == original_attrs
+
+    @pytest.mark.xfail
+    def test_merge_attr_retention(self):
+        da1 = create_test_dataarray_attrs(var='var1')
+        da2 = create_test_dataarray_attrs(var='var2')
+        da2.attrs = {'wrong': 'attributes'}
+        original_attrs = da1.attrs
+
+        # merge currently discards attrs, and the global keep_attrs
+        # option doesn't affect this
+        result = merge([da1, da2])
+        assert result.attrs == original_attrs
