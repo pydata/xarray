@@ -1389,8 +1389,10 @@ class ZarrBase(CFEncodedBase):
         ds_chunk_irreg = ds.chunk({'x': (5, 5, 2)})
         with self.roundtrip(ds_chunk_irreg) as actual:
             assert (5,) == actual['var1'].encoding['chunks']
-        with self.roundtrip(actual) as actual_2:
-            assert actual['var1'].encoding == actual_2['var1'].encoding
+        # re-save Zarr arrays
+        with self.roundtrip(ds_chunk_irreg) as original:
+            with self.roundtrip(original) as actual:
+                assert_identical(original, actual)
         
 
         # - encoding specified  -
