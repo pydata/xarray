@@ -2472,7 +2472,7 @@ class TestCfGrib(object):
             assert list(ds.data_vars) == ['z', 't']
             assert ds['z'].min() == 12660.
 
-    def test_open_filter_by_keys(self):
+    def test_read_filter_by_keys(self):
         kwargs = {'filter_by_keys': {'shortName': 't'}}
         with open_example_dataset('example.grib', engine='cfgrib', backend_kwargs=kwargs) as ds:
             assert ds.dims == {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3, 'longitude': 4}
