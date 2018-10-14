@@ -1,5 +1,5 @@
 #
-# Copyright 2017-2018 European Centre for Medium-Range Weather Forecasts (ECMWF).
+# Copyright 2017-2018 European Centre for Medium-Range Weather Forecasts.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@ from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
 from .locks import ensure_lock, SerializableLock
 
-# FIXME: Add a dedicated lock just in case, even if ecCodes is supposed to be thread-safe in most
-# circumstances. See: https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
+# FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
+# in most circumstances. See:
+#   https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
 ECCODES_LOCK = SerializableLock()
 
 
@@ -58,9 +59,11 @@ class CfGribDataStore(AbstractDataStore):
             lock = ECCODES_LOCK
         self.lock = ensure_lock(lock)
 
-        # NOTE: filter_by_keys is a dict, but CachingFileManager only accepts hashable types
+        # NOTE: filter_by_keys is a dict, but CachingFileManager only accepts
+        #   hashable types.
         if 'filter_by_keys' in backend_kwargs:
-            backend_kwargs['filter_by_keys'] = tuple(backend_kwargs['filter_by_keys'].items())
+            filter_by_keys_items = backend_kwargs['filter_by_keys'].items()
+            backend_kwargs['filter_by_keys'] = tuple(filter_by_keys_items)
 
         self.ds = cfgrib.open_file(filename, mode='r', **backend_kwargs)
 
@@ -68,7 +71,8 @@ class CfGribDataStore(AbstractDataStore):
         if isinstance(var.data, np.ndarray):
             data = var.data
         else:
-            data = indexing.LazilyOuterIndexedArray(CfGribArrayWrapper(self, var.data))
+            wrapped_array = CfGribArrayWrapper(self, var.data)
+            data = indexing.LazilyOuterIndexedArray(wrapped_array)
 
         encoding = self.ds.encoding.copy()
         encoding['original_shape'] = var.data.shape
@@ -86,6 +90,8 @@ class CfGribDataStore(AbstractDataStore):
         return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
-        encoding = {}
-        encoding['unlimited_dims'] = {k for k, v in self.ds.dimensions.items() if v is None}
+        dims = self.get_dimensions()
+        encoding = {
+            'unlimited_dims': {k for k, v in dims.items() if v is None},
+        }
         return encoding

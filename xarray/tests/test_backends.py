@@ -2467,15 +2467,20 @@ class TestPyNio(ScipyWriteBase):
 class TestCfGrib(object):
 
     def test_read(self):
+        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+                    'longitude': 4}
         with open_example_dataset('example.grib', engine='cfgrib') as ds:
-            assert ds.dims == {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3, 'longitude': 4}
+            assert ds.dims == expected
             assert list(ds.data_vars) == ['z', 't']
             assert ds['z'].min() == 12660.
 
     def test_read_filter_by_keys(self):
         kwargs = {'filter_by_keys': {'shortName': 't'}}
-        with open_example_dataset('example.grib', engine='cfgrib', backend_kwargs=kwargs) as ds:
-            assert ds.dims == {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3, 'longitude': 4}
+        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+                    'longitude': 4}
+        with open_example_dataset('example.grib', engine='cfgrib',
+                                  backend_kwargs=kwargs) as ds:
+            assert ds.dims == expected
             assert list(ds.data_vars) == ['t']
             assert ds['t'].min() == 231.
 
