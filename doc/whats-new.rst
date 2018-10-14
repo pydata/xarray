@@ -72,6 +72,11 @@ Enhancements
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
   By `Spencer Clark <https://github.com/spencerkclark>`_
+- There is now a global option to either always keep or always discard
+  dataset and dataarray attrs upon operations. The option is set with
+  ``xarray.set_options(keep_attrs=True)``, and the default is to use the old
+  behaviour.
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
   
 Bug fixes
 ~~~~~~~~~
