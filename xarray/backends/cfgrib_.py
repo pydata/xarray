@@ -25,7 +25,6 @@ from .. import Variable
 from ..core import indexing
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
-from .file_manager import CachingFileManager
 from .locks import ensure_lock, SerializableLock
 
 # FIXME: Add a dedicated lock just in case, even if ecCodes is supposed to be thread-safe in most
@@ -63,12 +62,7 @@ class CfGribDataStore(AbstractDataStore):
         if 'filter_by_keys' in backend_kwargs:
             backend_kwargs['filter_by_keys'] = tuple(backend_kwargs['filter_by_keys'].items())
 
-        self._manager = CachingFileManager(
-            cfgrib.open_file, filename, lock=lock, mode='r', kwargs=backend_kwargs)
-
-    @property
-    def ds(self):
-        return self._manager.acquire()
+        self.ds = cfgrib.open_file(filename, mode='r', **backend_kwargs)
 
     def open_store_variable(self, name, var):
         if isinstance(var.data, np.ndarray):
@@ -95,6 +89,3 @@ class CfGribDataStore(AbstractDataStore):
         encoding = {}
         encoding['unlimited_dims'] = {k for k, v in self.ds.dimensions.items() if v is None}
         return encoding
-
-    def close(self):
-        self._manager.close()
