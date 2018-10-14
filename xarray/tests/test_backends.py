@@ -1393,7 +1393,6 @@ class ZarrBase(CFEncodedBase):
         with self.roundtrip(ds_chunk_irreg) as original:
             with self.roundtrip(original) as actual:
                 assert_identical(original, actual)
-        
 
         # - encoding specified  -
         # specify compatible encodings
@@ -1401,8 +1400,6 @@ class ZarrBase(CFEncodedBase):
             ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
             with self.roundtrip(ds_chunk4) as actual:
                 assert (4,) == actual['var1'].encoding['chunks']
-        
-        
 
         # TODO: remove this failure once syncronized overlapping writes are
         # supported by xarray
@@ -1410,8 +1407,6 @@ class ZarrBase(CFEncodedBase):
         with pytest.raises(NotImplementedError):
             with self.roundtrip(ds_chunk4) as actual:
                 pass
-    
-        
 
     def test_hidden_zarr_keys(self):
         expected = create_test_data()
