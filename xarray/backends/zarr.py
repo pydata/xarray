@@ -79,7 +79,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     if var_chunks and enc_chunks is None:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
-                "Zarr requires uniform chunk sizes excpet for final chunk."
+                "Zarr requires uniform chunk sizes except for final chunk."
                 " Variable %r has incompatible chunks. Consider "
                 "rechunking using `chunk()`." % (var_chunks,))
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
@@ -126,7 +126,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
-            for dchunk in dchunks:
+            for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     raise NotImplementedError(
                         "Specified zarr chunks %r would overlap multiple dask "
@@ -134,6 +134,11 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                         " Consider rechunking the data using "
                         "`chunk()` or specifying different chunks in encoding."
                         % (enc_chunks_tuple, var_chunks))
+            if dchunks[-1] > zchunk:
+                raise ValueError(
+                    "Final chunk of Zarr array must be smaller than first. "
+                    "Variable %r has incompatible chunks. Consider rechunking "
+                    "using `chunk()`." % var_chunks)
         return enc_chunks_tuple
 
     raise AssertionError(
