@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import print_function
 import warnings
 from contextlib import contextmanager
-from distutils.version import LooseVersion
+from distutils import version
 import re
 import importlib
 
@@ -51,6 +51,13 @@ def _importorskip(modname, minversion=None):
         has = False
     func = pytest.mark.skipif(not has, reason='requires {}'.format(modname))
     return has, func
+
+
+def LooseVersion(vstring):
+    # Our development version is something like '0.10.9+aac7bfc'
+    # This function just ignored the git commit id.
+    vstring = vstring.split('+')[0]
+    return version.LooseVersion(vstring)
 
 
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')

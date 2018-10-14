@@ -18,7 +18,7 @@ from xarray.testing import assert_identical
 from . import (
     assert_array_equal, raises_regex, requires_cftime_or_netCDF4,
     requires_dask, requires_netCDF4)
-from .test_backends import CFEncodedDataTest
+from .test_backends import CFEncodedBase
 
 
 class TestBoolTypeArray(object):
@@ -255,7 +255,7 @@ class CFEncodedInMemoryStore(WritableCFDataStore, InMemoryDataStore):
 
 
 @requires_netCDF4
-class TestCFEncodedDataStore(CFEncodedDataTest):
+class TestCFEncodedDataStore(CFEncodedBase):
     @contextlib.contextmanager
     def create_store(self):
         yield CFEncodedInMemoryStore()

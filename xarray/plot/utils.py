@@ -326,11 +326,11 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError('DataArray must be 2d')
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims:
+        if y not in darray.dims and y not in darray.coords:
             raise ValueError('y must be a dimension name if x is not supplied')
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims:
+        if x not in darray.dims and x not in darray.coords:
             raise ValueError('x must be a dimension name if y is not supplied')
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):

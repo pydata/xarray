@@ -136,7 +136,7 @@ class NetCDF3Only(object):
     pass
 
 
-class DatasetIOTestCases(object):
+class DatasetIOBase(object):
     engine = None
     file_format = None
 
@@ -593,7 +593,7 @@ class DatasetIOTestCases(object):
             assert not on_disk['var1']._in_memory
 
 
-class CFEncodedDataTest(DatasetIOTestCases):
+class CFEncodedBase(DatasetIOBase):
 
     def test_roundtrip_bytes_with_fill_value(self):
         values = np.array([b'ab', b'cdef', np.nan], dtype=object)
@@ -895,7 +895,7 @@ def create_tmp_files(nfiles, suffix='.nc', allow_cleanup_failure=False):
         yield files
 
 
-class BaseNetCDF4Test(CFEncodedDataTest):
+class NetCDF4Base(CFEncodedBase):
     """Tests for both netCDF4-python and h5netcdf."""
 
     engine = 'netcdf4'
@@ -1177,7 +1177,7 @@ class BaseNetCDF4Test(CFEncodedDataTest):
 
 
 @requires_netCDF4
-class NetCDF4DataTest(BaseNetCDF4Test):
+class TestNetCDF4Data(NetCDF4Base):
 
     @contextlib.contextmanager
     def create_store(self):
@@ -1254,11 +1254,11 @@ class NetCDF4DataTest(BaseNetCDF4Test):
 
 @requires_netCDF4
 @requires_dask
-class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
+class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
                   allow_cleanup_failure=False):
-        with NetCDF4DataTest.roundtrip(
+        with TestNetCDF4Data.roundtrip(
                 self, data, save_kwargs, open_kwargs,
                 allow_cleanup_failure) as ds:
             yield ds.chunk()
@@ -1291,7 +1291,7 @@ class NetCDF4ViaDaskDataTest(NetCDF4DataTest):
 
 
 @requires_zarr
-class BaseZarrTest(CFEncodedDataTest):
+class ZarrBase(CFEncodedBase):
 
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
@@ -1481,19 +1481,19 @@ class BaseZarrTest(CFEncodedDataTest):
     # makes sense for Zarr backend
     @pytest.mark.xfail(reason="Zarr caching not implemented")
     def test_dataset_caching(self):
-        super(CFEncodedDataTest, self).test_dataset_caching()
+        super(CFEncodedBase, self).test_dataset_caching()
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_write(self):
-        super(CFEncodedDataTest, self).test_append_write()
+        super(CFEncodedBase, self).test_append_write()
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_overwrite_values(self):
-        super(CFEncodedDataTest, self).test_append_overwrite_values()
+        super(CFEncodedBase, self).test_append_overwrite_values()
 
     @pytest.mark.xfail(reason="Zarr stores can not be appended to")
     def test_append_with_invalid_dim_raises(self):
-        super(CFEncodedDataTest, self).test_append_with_invalid_dim_raises()
+        super(CFEncodedBase, self).test_append_with_invalid_dim_raises()
 
     def test_to_zarr_compute_false_roundtrip(self):
         from dask.delayed import Delayed
@@ -1525,37 +1525,37 @@ class BaseZarrTest(CFEncodedDataTest):
 
 
 @requires_zarr
-class ZarrDictStoreTest(BaseZarrTest):
+class TestZarrDictStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         yield {}
 
 
 @requires_zarr
-class ZarrDirectoryStoreTest(BaseZarrTest):
+class TestZarrDirectoryStore(ZarrBase):
     @contextlib.contextmanager
     def create_zarr_target(self):
         with create_tmp_file(suffix='.zarr') as tmp:
             yield tmp
 
 
-class ScipyWriteTest(CFEncodedDataTest, NetCDF3Only):
+class ScipyWriteBase(CFEncodedBase, NetCDF3Only):
 
     def test_append_write(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteTest, self).test_append_write()
+        super(ScipyWriteBase, self).test_append_write()
 
     def test_append_overwrite_values(self):
         import scipy
         if scipy.__version__ == '1.0.1':
             pytest.xfail('https://github.com/scipy/scipy/issues/8625')
-        super(ScipyWriteTest, self).test_append_overwrite_values()
+        super(ScipyWriteBase, self).test_append_overwrite_values()
 
 
 @requires_scipy
-class ScipyInMemoryDataTest(ScipyWriteTest):
+class TestScipyInMemoryData(ScipyWriteBase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1576,7 +1576,7 @@ class ScipyInMemoryDataTest(ScipyWriteTest):
 
 
 @requires_scipy
-class ScipyFileObjectTest(ScipyWriteTest):
+class TestScipyFileObject(ScipyWriteBase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1604,7 +1604,7 @@ class ScipyFileObjectTest(ScipyWriteTest):
 
 
 @requires_scipy
-class ScipyFilePathTest(ScipyWriteTest):
+class TestScipyFilePath(ScipyWriteBase):
     engine = 'scipy'
 
     @contextlib.contextmanager
@@ -1641,7 +1641,7 @@ class ScipyFilePathTest(ScipyWriteTest):
 
 
 @requires_netCDF4
-class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only):
+class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine = 'netcdf4'
     file_format = 'NETCDF3_CLASSIC'
 
@@ -1661,8 +1661,7 @@ class NetCDF3ViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only):
 
 
 @requires_netCDF4
-class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
-                                       object):
+class TestNetCDF4ClassicViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
     engine = 'netcdf4'
     file_format = 'NETCDF4_CLASSIC'
 
@@ -1675,7 +1674,7 @@ class NetCDF4ClassicViaNetCDF4DataTest(CFEncodedDataTest, NetCDF3Only,
 
 
 @requires_scipy_or_netCDF4
-class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only):
+class TestGenericNetCDFData(CFEncodedBase, NetCDF3Only):
     # verify that we can read and write netCDF3 files as long as we have scipy
     # or netCDF4-python installed
     file_format = 'netcdf3_64bit'
@@ -1752,7 +1751,7 @@ class GenericNetCDFDataTest(CFEncodedDataTest, NetCDF3Only):
 
 @requires_h5netcdf
 @requires_netCDF4
-class H5NetCDFDataTest(BaseNetCDF4Test):
+class TestH5NetCDFData(NetCDF4Base):
     engine = 'h5netcdf'
 
     @contextlib.contextmanager
@@ -1955,7 +1954,7 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
 
 
 @requires_scipy_or_netCDF4
-class OpenMFDatasetWithDataVarsAndCoordsKwTest(object):
+class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
     coord_name = 'lon'
     var_name = 'v1'
 
@@ -2063,7 +2062,7 @@ class OpenMFDatasetWithDataVarsAndCoordsKwTest(object):
 @requires_dask
 @requires_scipy
 @requires_netCDF4
-class DaskTest(DatasetIOTestCases):
+class TestDask(DatasetIOBase):
     @contextlib.contextmanager
     def create_store(self):
         yield Dataset()
@@ -2073,7 +2072,7 @@ class DaskTest(DatasetIOTestCases):
                   allow_cleanup_failure=False):
         yield data.chunk()
 
-    # Override methods in DatasetIOTestCases - not applicable to dask
+    # Override methods in DatasetIOBase - not applicable to dask
     def test_roundtrip_string_encoded_characters(self):
         pass
 
@@ -2081,7 +2080,7 @@ class DaskTest(DatasetIOTestCases):
         pass
 
     def test_roundtrip_numpy_datetime_data(self):
-        # Override method in DatasetIOTestCases - remove not applicable
+        # Override method in DatasetIOBase - remove not applicable
         # save_kwds
         times = pd.to_datetime(['2000-01-01', '2000-01-02', 'NaT'])
         expected = Dataset({'t': ('t', times), 't0': times[0]})
@@ -2089,7 +2088,7 @@ class DaskTest(DatasetIOTestCases):
             assert_identical(expected, actual)
 
     def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
-        # Override method in DatasetIOTestCases - remove not applicable
+        # Override method in DatasetIOBase - remove not applicable
         # save_kwds
         from .test_coding_times import _all_cftime_date_types
 
@@ -2109,7 +2108,7 @@ class DaskTest(DatasetIOTestCases):
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
     def test_roundtrip_cftime_datetime_data_disable_cftimeindex(self):
-        # Override method in DatasetIOTestCases - remove not applicable
+        # Override method in DatasetIOBase - remove not applicable
         # save_kwds
         from .test_coding_times import _all_cftime_date_types
 
@@ -2129,7 +2128,7 @@ class DaskTest(DatasetIOTestCases):
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
 
     def test_write_store(self):
-        # Override method in DatasetIOTestCases - not applicable to dask
+        # Override method in DatasetIOBase - not applicable to dask
         pass
 
     def test_dataset_caching(self):
@@ -2312,7 +2311,7 @@ class DaskTest(DatasetIOTestCases):
 
     def test_dataarray_compute(self):
         # Test DataArray.compute() on dask backend.
-        # The test for Dataset.compute() is already in DatasetIOTestCases;
+        # The test for Dataset.compute() is already in DatasetIOBase;
         # however dask is the only tested backend which supports DataArrays
         actual = DataArray([1, 2]).chunk()
         computed = actual.compute()
@@ -2338,7 +2337,7 @@ class DaskTest(DatasetIOTestCases):
 
 @requires_scipy_or_netCDF4
 @requires_pydap
-class PydapTest(object):
+class TestPydap(object):
     def convert_to_pydap_dataset(self, original):
         from pydap.model import GridType, BaseType, DatasetType
         ds = DatasetType('bears', **original.attrs)
@@ -2418,7 +2417,7 @@ class PydapTest(object):
 @network
 @requires_scipy_or_netCDF4
 @requires_pydap
-class PydapOnlineTest(PydapTest):
+class TestPydapOnline(TestPydap):
     @contextlib.contextmanager
     def create_datasets(self, **kwargs):
         url = 'http://test.opendap.org/opendap/hyrax/data/nc/bears.nc'
@@ -2439,7 +2438,7 @@ class PydapOnlineTest(PydapTest):
 
 @requires_scipy
 @requires_pynio
-class PyNioTest(ScipyWriteTest):
+class TestPyNio(ScipyWriteBase):
     def test_write_store(self):
         # pynio is read-only for now
         pass
@@ -2466,7 +2465,7 @@ class PyNioTest(ScipyWriteTest):
 
 @requires_pseudonetcdf
 @pytest.mark.filterwarnings('ignore:IOAPI_ISPH is assumed to be 6370000')
-class PseudoNetCDFFormatTest(object):
+class TestPseudoNetCDFFormat(object):
 
     def open(self, path, **kwargs):
         return open_dataset(path, engine='pseudonetcdf', **kwargs)

@@ -702,3 +702,12 @@ You can however decide to infer the cell boundaries and use the
     outside the xarray framework.
 
 .. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. ipython:: python
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    @savefig plotting_example_2d_hue_xy.png
+    da.plot.line(x='lon', hue='x', ax=ax[1]);
