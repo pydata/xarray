@@ -21,8 +21,10 @@ dependencies:
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
+  - eccodes
   - pip:
     - coveralls
     - pytest-cov
     - pydap
     - lxml
+    - cfgrib
