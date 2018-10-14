@@ -79,7 +79,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     if var_chunks and enc_chunks is None:
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
-                "Zarr requires uniform chunk sizes excpet for final chunk."
+                "Zarr requires uniform chunk sizes except for final chunk."
                 " Variable %r has incompatible chunks. Consider "
                 "rechunking using `chunk()`." % (var_chunks,))
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
