@@ -146,12 +146,14 @@ def test_dask_distributed_rasterio_integration_test(loop):
 def test_dask_distributed_cfgrib_integration_test(loop):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as c:
-            ds = open_example_dataset('example.grib', engine='cfgrib', chunks={'time': 1})
-            da_grib = ds['t']
-            assert isinstance(da_grib.data, da.Array)
-            actual = da_grib.compute()
-            assert actual.dims == ('number', 'time', 'air_pressure', 'latitude', 'longitude')
-            assert actual.coords['time'].size == 3
+            with open_example_dataset('example.grib',
+                                      engine='cfgrib',
+                                      chunks={'time': 1}) as ds:
+                with open_example_dataset('example.grib',
+                                          engine='cfgrib') as expected:
+                    assert isinstance(ds['t'].data, da.Array)
+                    actual = ds.compute()
+                    assert_allclose(actual, expected)
 
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',
