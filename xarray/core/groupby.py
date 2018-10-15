@@ -701,6 +701,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         elif dim is None:
             dim = self._group_dim
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
@@ -712,13 +715,13 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         if include_skipna:
             def wrapped_func(self, dim=DEFAULT_DIMS,
                              skipna=None, **kwargs):
-                return self.reduce(func, dim, keep_attrs=False,
+                return self.reduce(func, dim,
                                    skipna=skipna, numeric_only=numeric_only,
                                    allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=DEFAULT_DIMS,
                              **kwargs):
-                return self.reduce(func, dim, keep_attrs=False,
+                return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         return wrapped_func
