@@ -20,7 +20,8 @@ import numpy as np
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
 from xarray.tests.test_backends import (ON_WINDOWS, create_tmp_file,
-                                        create_tmp_geotiff, open_example_dataset)
+                                        create_tmp_geotiff,
+                                        open_example_dataset)
 from xarray.tests.test_dataset import create_test_data
 
 from . import (
