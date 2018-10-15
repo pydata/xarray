@@ -377,7 +377,8 @@ class CFTimeIndex(pd.Index):
             return CFTimeIndex(np.array(self) - other)
 
     def _add_delta(self, deltas):
-        # To support TimedeltaIndex + CFTimeIndex with older pandas versions
+        # To support TimedeltaIndex + CFTimeIndex with older versions of
+        # pandas.  No longer used as of pandas 0.23.
         return self + deltas
 
 
