@@ -9,8 +9,8 @@ from .common import AbstractDataStore, BackendArray
 from .locks import ensure_lock, SerializableLock
 
 # FIXME: Add a dedicated lock, even if ecCodes is supposed to be thread-safe
-# in most circumstances. See:
-#   https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
+#   in most circumstances. See:
+#       https://confluence.ecmwf.int/display/ECC/Frequently+Asked+Questions
 ECCODES_LOCK = SerializableLock()
 
 
