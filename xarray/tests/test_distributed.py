@@ -20,12 +20,13 @@ import numpy as np
 import xarray as xr
 from xarray.backends.locks import HDF5_LOCK, CombinedLock
 from xarray.tests.test_backends import (ON_WINDOWS, create_tmp_file,
-                                        create_tmp_geotiff)
+                                        create_tmp_geotiff,
+                                        open_example_dataset)
 from xarray.tests.test_dataset import create_test_data
 
 from . import (
     assert_allclose, has_h5netcdf, has_netCDF4, requires_rasterio, has_scipy,
-    requires_zarr, raises_regex)
+    requires_zarr, requires_cfgrib, raises_regex)
 
 # this is to stop isort throwing errors. May have been easier to just use
 # `isort:skip` in retrospect
@@ -140,6 +141,20 @@ def test_dask_distributed_rasterio_integration_test(loop):
                 assert isinstance(da_tiff.data, da.Array)
                 actual = da_tiff.compute()
                 assert_allclose(actual, expected)
+
+
+@requires_cfgrib
+def test_dask_distributed_cfgrib_integration_test(loop):
+    with cluster() as (s, [a, b]):
+        with Client(s['address'], loop=loop) as c:
+            with open_example_dataset('example.grib',
+                                      engine='cfgrib',
+                                      chunks={'time': 1}) as ds:
+                with open_example_dataset('example.grib',
+                                          engine='cfgrib') as expected:
+                    assert isinstance(ds['t'].data, da.Array)
+                    actual = ds.compute()
+                    assert_allclose(actual, expected)
 
 
 @pytest.mark.skipif(distributed.__version__ <= '1.19.3',

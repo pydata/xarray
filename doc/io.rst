@@ -635,6 +635,28 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+.. _io.cfgrib:
+
+GRIB format via cfgrib
+----------------------
+
+xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
+C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
+to :py:func:`~xarray.open_dataset`:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
+
+We recommend installing ecCodes via conda::
+
+    conda install -c conda-forge eccodes
+    pip install cfgrib
+
+.. _cfgrib: https://github.com/ecmwf/cfgrib
+.. _ecCodes: https://confluence.ecmwf.int/display/ECC/ecCodes+Home
+
 .. _io.pynio:
 
 Formats supported by PyNIO
