@@ -645,6 +645,7 @@ C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`~xarray.open_dataset`:
 
 .. ipython:: python
+    :verbatim:
 
     ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
 
