@@ -71,7 +71,7 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate`,
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Added a new backend for the GRIB file format based on ECMWF *cfgrib*
   python driver and *ecCodes* C-library. (:issue:`2475`)
   By `Alessandro Amici <https://github.com/alexamici>`_,
