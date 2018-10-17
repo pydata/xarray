@@ -727,7 +727,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----------
         deep : bool, optional
             Whether each component variable is loaded into memory and copied onto
-            the new object. Default is True.
+            the new object. Default is False.
         data : dict-like, optional
             Data to use in the new object. Each item in `data` must have same
             shape as corresponding data variable in original. When `data` is
