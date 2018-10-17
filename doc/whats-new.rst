@@ -77,8 +77,6 @@ Enhancements
   By `Alessandro Amici <https://github.com/alexamici>`_,
   sponsored by `ECMWF <https://github.com/ecmwf>`_.
 
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
-  
 Bug fixes
 ~~~~~~~~~
 
