@@ -644,10 +644,10 @@ xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
 C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
 to :py:func:`~xarray.open_dataset`:
 
-.. ipython:: python
+.. ipython::
     :verbatim:
 
-    ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
+    In [1]: ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
 
 We recommend installing ecCodes via conda::
 
