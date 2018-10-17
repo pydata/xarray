@@ -34,7 +34,9 @@ For netCDF and IO
 - `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
   other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
-  Cube objects.
+  Cube objects
+- `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
+  *ECMWF ecCodes* library.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~

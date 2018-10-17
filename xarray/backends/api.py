@@ -162,7 +162,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'pseudonetcdf'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib',
+        'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -296,6 +297,9 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif engine == 'pseudonetcdf':
             store = backends.PseudoNetCDFDataStore.open(
                 filename_or_obj, lock=lock, **backend_kwargs)
+        elif engine == 'cfgrib':
+            store = backends.CfGribDataStore(
+                filename_or_obj, lock=lock, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
@@ -356,7 +360,8 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -486,7 +491,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.

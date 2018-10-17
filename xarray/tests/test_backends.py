@@ -33,7 +33,7 @@ from . import (
     has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
     requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
     requires_pseudonetcdf, requires_pydap, requires_pynio, requires_rasterio,
-    requires_scipy, requires_scipy_or_netCDF4, requires_zarr)
+    requires_scipy, requires_scipy_or_netCDF4, requires_zarr, requires_cfgrib)
 from .test_dataset import create_test_data
 
 try:
@@ -2461,6 +2461,28 @@ class TestPyNio(ScipyWriteBase):
             actual = on_disk.rename({'foo': 'bar', 'x': 'y'})
             del on_disk  # trigger garbage collection
             assert_identical(actual, expected)
+
+
+@requires_cfgrib
+class TestCfGrib(object):
+
+    def test_read(self):
+        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+                    'longitude': 4}
+        with open_example_dataset('example.grib', engine='cfgrib') as ds:
+            assert ds.dims == expected
+            assert list(ds.data_vars) == ['z', 't']
+            assert ds['z'].min() == 12660.
+
+    def test_read_filter_by_keys(self):
+        kwargs = {'filter_by_keys': {'shortName': 't'}}
+        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+                    'longitude': 4}
+        with open_example_dataset('example.grib', engine='cfgrib',
+                                  backend_kwargs=kwargs) as ds:
+            assert ds.dims == expected
+            assert list(ds.data_vars) == ['t']
+            assert ds['t'].min() == 231.
 
 
 @requires_pseudonetcdf

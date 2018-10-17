@@ -72,7 +72,11 @@ Enhancements
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-  
+- Added a new backend for the GRIB file format based on ECMWF *cfgrib*
+  python driver and *ecCodes* C-library. (:issue:`2475`)
+  By `Alessandro Amici <https://github.com/alexamici>`_,
+  sponsored by `ECMWF <https://github.com/ecmwf>`_.
+
 Bug fixes
 ~~~~~~~~~
 
