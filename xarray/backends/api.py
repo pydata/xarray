@@ -12,7 +12,7 @@ from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri
+from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
 from .locks import _get_scheduler
 
@@ -33,6 +33,17 @@ def _get_default_engine(path, allow_remote=False):
             except ImportError:
                 raise ValueError('netCDF4 or pydap is required for accessing '
                                  'remote datasets via OPeNDAP')
+    elif is_grib_path(path):
+        try:
+            import Nio
+            engine = 'pynio'
+        except ImportError:
+            try:
+                import cfgrib
+                engine = 'cfgrib'
+            except ImportError:
+                raise ValueError('PyNIO or cfgrib is required for accessing '
+                                 'GRIB files')
     else:
         try:
             import netCDF4  # flake8: noqa
