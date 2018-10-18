@@ -35,11 +35,11 @@ def _get_default_engine(path, allow_remote=False):
                                  'remote datasets via OPeNDAP')
     elif is_grib_path(path):
         try:
-            import Nio
+            import Nio  # flake8: noqa
             engine = 'pynio'
-        except ImportError:
+        except ImportError:  # pragma: no cover
             try:
-                import cfgrib
+                import cfgrib  # flake8: noqa
                 engine = 'cfgrib'
             except ImportError:
                 raise ValueError('PyNIO or cfgrib is required for accessing '
