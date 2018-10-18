@@ -22,11 +22,11 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
 def _get_default_engine(path, allow_remote=False):
-    if allow_remote and is_remote_uri(path):  # pragma: no cover
+    if allow_remote and is_remote_uri(path):
         try:
             import netCDF4
             engine = 'netcdf4'
-        except ImportError:
+        except ImportError:  # pragma: no cover
             try:
                 import pydap  # flake8: noqa
                 engine = 'pydap'
@@ -44,6 +44,12 @@ def _get_default_engine(path, allow_remote=False):
             except ImportError:
                 raise ValueError('PyNIO or cfgrib is required for accessing '
                                  'GRIB files')
+    elif path.endswith('.gz'):
+        try:
+            import scipy  # flake8: noqa
+            engine = 'scipy'
+        except ImportError:  # pragma: no cover
+            raise ValueError('scipy is required for accessing .gz files')
     else:
         try:
             import netCDF4  # flake8: noqa
@@ -280,13 +286,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             pass
         elif isinstance(filename_or_obj, basestring):
             filename_or_obj = _normalize_path(filename_or_obj)
-
-        if filename_or_obj.endswith('.gz'):
-            if engine is not None and engine != 'scipy':
-                raise ValueError('can only read gzipped netCDF files with '
-                                 "default engine or engine='scipy'")
-            else:
-                engine = 'scipy'
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
