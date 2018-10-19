@@ -21,6 +21,20 @@ DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
+def _get_default_engine_remote_uri():
+    try:
+        import netCDF4
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
+        try:
+            import pydap  # flake8: noqa
+            engine = 'pydap'
+        except ImportError:
+            raise ValueError('netCDF4 or pydap is required for accessing '
+                             'remote datasets via OPeNDAP')
+    return engine
+
+
 def _get_default_engine_grib():
     msgs = []
     try:
@@ -40,37 +54,38 @@ def _get_default_engine_grib():
                          'GRIB files')
 
 
+def _get_default_engine_gz():
+    try:
+        import scipy  # flake8: noqa
+        engine = 'scipy'
+    except ImportError:  # pragma: no cover
+        raise ValueError('scipy is required for accessing .gz files')
+    return engine
+
+
+def _get_default_engine_netcdf():
+    try:
+        import netCDF4  # flake8: noqa
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
+        try:
+            import scipy.io.netcdf  # flake8: noqa
+            engine = 'scipy'
+        except ImportError:
+            raise ValueError('cannot read or write netCDF files without '
+                             'netCDF4-python or scipy installed')
+    return engine
+
+
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):
-        try:
-            import netCDF4
-            engine = 'netcdf4'
-        except ImportError:  # pragma: no cover
-            try:
-                import pydap  # flake8: noqa
-                engine = 'pydap'
-            except ImportError:
-                raise ValueError('netCDF4 or pydap is required for accessing '
-                                 'remote datasets via OPeNDAP')
+        engine = _get_default_engine_remote_uri()
     elif is_grib_path(path):
-        _get_default_engine_grib()
+        engine = _get_default_engine_grib()
     elif path.endswith('.gz'):
-        try:
-            import scipy  # flake8: noqa
-            engine = 'scipy'
-        except ImportError:  # pragma: no cover
-            raise ValueError('scipy is required for accessing .gz files')
+        engine = _get_default_engine_gz()
     else:
-        try:
-            import netCDF4  # flake8: noqa
-            engine = 'netcdf4'
-        except ImportError:  # pragma: no cover
-            try:
-                import scipy.io.netcdf  # flake8: noqa
-                engine = 'scipy'
-            except ImportError:
-                raise ValueError('cannot read or write netCDF files without '
-                                 'netCDF4-python or scipy installed')
+        engine = _get_default_engine_netcdf()
     return engine
 
 
