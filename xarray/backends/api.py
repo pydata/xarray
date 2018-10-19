@@ -21,6 +21,25 @@ DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
+def _get_default_engine_grib():
+    msgs = []
+    try:
+        import Nio  # flake8: noqa
+        msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
+    except ImportError:  # pragma: no cover
+        pass
+    try:
+        import cfgrib  # flake8: noqa
+        msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
+    except ImportError:  # pragma: no cover
+        pass
+    if msgs:
+        raise ValueError(' or\n'.join(msgs))
+    else:
+        raise ValueError('PyNIO or cfgrib is required for accessing '
+                         'GRIB files')
+
+
 def _get_default_engine(path, allow_remote=False):
     if allow_remote and is_remote_uri(path):
         try:
@@ -34,17 +53,7 @@ def _get_default_engine(path, allow_remote=False):
                 raise ValueError('netCDF4 or pydap is required for accessing '
                                  'remote datasets via OPeNDAP')
     elif is_grib_path(path):
-        try:
-            import Nio  # flake8: noqa
-            engine = 'pynio'
-        except ImportError:  # pragma: no cover
-            try:
-                import cfgrib  # flake8: noqa
-                raise RuntimeError("pass engine='cfgrib' to access "
-                                   "GRIB files with cfgrib")
-            except ImportError:
-                raise ValueError('PyNIO or cfgrib is required for accessing '
-                                 'GRIB files')
+        _get_default_engine_grib()
     elif path.endswith('.gz'):
         try:
             import scipy  # flake8: noqa
