@@ -40,7 +40,8 @@ def _get_default_engine(path, allow_remote=False):
         except ImportError:  # pragma: no cover
             try:
                 import cfgrib  # flake8: noqa
-                engine = 'cfgrib'
+                raise RuntimeError("pass engine='cfgrib' to access GRIB files"
+                                   "with cfgrib")
             except ImportError:
                 raise ValueError('PyNIO or cfgrib is required for accessing '
                                  'GRIB files')
