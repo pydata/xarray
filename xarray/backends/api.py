@@ -12,7 +12,7 @@ from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri
+from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
 from .locks import _get_scheduler
 
@@ -21,29 +21,71 @@ DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
-def _get_default_engine(path, allow_remote=False):
-    if allow_remote and is_remote_uri(path):  # pragma: no cover
+def _get_default_engine_remote_uri():
+    try:
+        import netCDF4
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
         try:
-            import netCDF4
-            engine = 'netcdf4'
+            import pydap  # flake8: noqa
+            engine = 'pydap'
         except ImportError:
-            try:
-                import pydap  # flake8: noqa
-                engine = 'pydap'
-            except ImportError:
-                raise ValueError('netCDF4 or pydap is required for accessing '
-                                 'remote datasets via OPeNDAP')
+            raise ValueError('netCDF4 or pydap is required for accessing '
+                             'remote datasets via OPeNDAP')
+    return engine
+
+
+def _get_default_engine_grib():
+    msgs = []
+    try:
+        import Nio  # flake8: noqa
+        msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
+    except ImportError:  # pragma: no cover
+        pass
+    try:
+        import cfgrib  # flake8: noqa
+        msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
+    except ImportError:  # pragma: no cover
+        pass
+    if msgs:
+        raise ValueError(' or\n'.join(msgs))
     else:
+        raise ValueError('PyNIO or cfgrib is required for accessing '
+                         'GRIB files')
+
+
+def _get_default_engine_gz():
+    try:
+        import scipy  # flake8: noqa
+        engine = 'scipy'
+    except ImportError:  # pragma: no cover
+        raise ValueError('scipy is required for accessing .gz files')
+    return engine
+
+
+def _get_default_engine_netcdf():
+    try:
+        import netCDF4  # flake8: noqa
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
         try:
-            import netCDF4  # flake8: noqa
-            engine = 'netcdf4'
-        except ImportError:  # pragma: no cover
-            try:
-                import scipy.io.netcdf  # flake8: noqa
-                engine = 'scipy'
-            except ImportError:
-                raise ValueError('cannot read or write netCDF files without '
-                                 'netCDF4-python or scipy installed')
+            import scipy.io.netcdf  # flake8: noqa
+            engine = 'scipy'
+        except ImportError:
+            raise ValueError('cannot read or write netCDF files without '
+                             'netCDF4-python or scipy installed')
+    return engine
+
+
+def _get_default_engine(path, allow_remote=False):
+    if allow_remote and is_remote_uri(path):
+        engine = _get_default_engine_remote_uri()
+    elif is_grib_path(path):
+        engine = _get_default_engine_grib()
+    elif path.endswith('.gz'):
+        engine = _get_default_engine_gz()
+    else:
+        engine = _get_default_engine_netcdf()
     return engine
 
 
@@ -269,13 +311,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
             pass
         elif isinstance(filename_or_obj, basestring):
             filename_or_obj = _normalize_path(filename_or_obj)
-
-        if filename_or_obj.endswith('.gz'):
-            if engine is not None and engine != 'scipy':
-                raise ValueError('can only read gzipped netCDF files with '
-                                 "default engine or engine='scipy'")
-            else:
-                engine = 'scipy'
 
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
