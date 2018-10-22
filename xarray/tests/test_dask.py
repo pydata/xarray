@@ -26,7 +26,7 @@ dd = pytest.importorskip('dask.dataframe')
 class DaskTestCase(object):
     def assertLazyAnd(self, expected, actual, test):
 
-        with (dask.config.set(get=dask.get)
+        with (dask.config.set(scheduler='single-threaded')
               if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=dask.get)):
             test(actual, expected)
@@ -456,7 +456,11 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        ds.load(get=counting_get)
+        if dask.__version__ < '0.19.4':
+            ds.load(get=counting_get)
+        else:
+            ds.load(scheduler=counting_get)
+
         assert count[0] == 1
 
     def test_stack(self):
@@ -831,7 +835,9 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with (dask.config.set(get=get)
+        with (dask.config.set(scheduler=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.19.4')
+              else dask.config.set(scheduler=get)
               if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=get)):
             ds.compute()
