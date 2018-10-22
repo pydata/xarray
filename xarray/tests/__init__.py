@@ -77,6 +77,7 @@ has_pathlib, requires_pathlib = _importorskip('pathlib')
 has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
 has_iris, requires_iris = _importorskip('iris')
+has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

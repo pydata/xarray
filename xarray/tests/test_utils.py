@@ -200,6 +200,22 @@ def test_repr_object():
     assert repr(obj) == 'foo'
 
 
+def test_is_remote_uri():
+    assert utils.is_remote_uri('http://example.com')
+    assert utils.is_remote_uri('https://example.com')
+    assert not utils.is_remote_uri(' http://example.com')
+    assert not utils.is_remote_uri('example.nc')
+
+
+def test_is_grib_path():
+    assert not utils.is_grib_path('example.nc')
+    assert not utils.is_grib_path('example.grib ')
+    assert utils.is_grib_path('example.grib')
+    assert utils.is_grib_path('example.grib2')
+    assert utils.is_grib_path('example.grb')
+    assert utils.is_grib_path('example.grb2')
+
+
 class Test_is_uniform_and_sorted(object):
 
     def test_sorted_uniform(self):
