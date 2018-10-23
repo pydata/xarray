@@ -106,7 +106,9 @@ Bug fixes
   (:issue:`2484`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Adding a TimedeltaIndex to, or subtracting a TimedeltaIndex from a
   CFTimeIndex is now allowed (:issue:`2484`).
-  By `Spencer Clark <https://github.com/spencerkclark>`_. 
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid use of Dask's deprecated ``get=`` parameter in tests
+  by `Matthew Rocklin <https://github.com/mrocklin/>`_.
 
 .. _whats-new.0.10.9:
 
