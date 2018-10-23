@@ -1112,6 +1112,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Returns
         -------
         Dataset
+
+        See also
+        --------
+        Dataset.swap_dims
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -2282,6 +2286,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         See Also
         --------
         Dataset.reset_index
+        Dataset.swap_dims
         """
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         variables, coord_names = merge_indexes(indexes, self._variables,

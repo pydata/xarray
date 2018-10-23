@@ -423,6 +423,7 @@ class GroupBy(SupportsArithmetic):
         See also
         --------
         Dataset.assign_coords
+        Dataset.swap_dims
         """
         return self.apply(lambda ds: ds.assign_coords(**kwargs))
 
