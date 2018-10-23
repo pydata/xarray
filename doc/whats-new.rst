@@ -63,6 +63,9 @@ Enhancements
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added support for plotting data with `pandas.Interval` coordinates, such as those
+  created by :py:meth:`~xarray.DataArray.groupby_bins`
+  By `Maximilian Maahn <https://github.com/maahn>`_.
 - Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
   CFTimeIndex by a specified frequency. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
