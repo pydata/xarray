@@ -40,14 +40,14 @@ def _valid_numpy_subdtype(x, numpy_types):
 def _ensure_plottable(*args):
     """
     Raise exception if there is anything in args that can't be plotted on an
-    axis.
+    axis by matplotlib.
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
-    other_types = [datetime, pd.Interval]
+    other_types = [datetime]
 
     for x in args:
-        if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
-                _valid_other_type(np.array(x), other_types)):
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
+                or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64 or '
                             'datetime.datetime or pd.Interval.')
@@ -321,19 +321,17 @@ def line(darray, *args, **kwargs):
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
         _infer_line_data(darray, x, y, hue)
 
-    _ensure_plottable(xplt)
-
     # Remove pd.Intervals if contained in xplt.values.
     if _valid_other_type(xplt.values, [pd.Interval]):
-        # Is it a step plot?
+        # Is it a step plot? (see matplotlib.Axes.step)
         if kwargs.get('linestyle', '').startswith('steps-'):
             xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
                                                                   yplt.values)
-            # just to be sure that matplotlib is not confused
-            kwargs['linestyle'] = kwargs['linestyle'].replace(
-                'steps-pre', '').replace(
-                'steps-post', '').replace(
-                'steps-mid', '')
+            # Remove steps-* to be sure that matplotlib is not confused
+            kwargs['linestyle'] = (kwargs['linestyle']
+                                   .replace('steps-pre', '')
+                                   .replace('steps-post', '')
+                                   .replace('steps-mid', ''))
             if kwargs['linestyle'] == '':
                 kwargs.pop('linestyle')
         else:
@@ -343,6 +341,8 @@ def line(darray, *args, **kwargs):
     else:
         xplt_val = xplt.values
         yplt_val = yplt.values
+
+    _ensure_plottable(xplt_val, yplt_val)
 
     primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
@@ -776,11 +776,11 @@ def _plot2d(plotfunc):
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
 
-        _ensure_plottable(xval, yval)
-
         # Replace pd.Intervals if contained in xval or yval.
         xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
         yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
+
+        _ensure_plottable(xplt, yplt)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
