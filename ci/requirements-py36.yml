@@ -27,4 +27,4 @@ dependencies:
     - pytest-cov
     - pydap
     - lxml
-    - cfgrib
+    - cfgrib>=0.9.2

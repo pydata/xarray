@@ -2467,7 +2467,7 @@ class TestPyNio(ScipyWriteBase):
 class TestCfGrib(object):
 
     def test_read(self):
-        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+        expected = {'number': 2, 'time': 3, 'isobaricInhPa': 2, 'latitude': 3,
                     'longitude': 4}
         with open_example_dataset('example.grib', engine='cfgrib') as ds:
             assert ds.dims == expected
@@ -2476,7 +2476,7 @@ class TestCfGrib(object):
 
     def test_read_filter_by_keys(self):
         kwargs = {'filter_by_keys': {'shortName': 't'}}
-        expected = {'number': 2, 'time': 3, 'air_pressure': 2, 'latitude': 3,
+        expected = {'number': 2, 'time': 3, 'isobaricInhPa': 2, 'latitude': 3,
                     'longitude': 4}
         with open_example_dataset('example.grib', engine='cfgrib',
                                   backend_kwargs=kwargs) as ds:
