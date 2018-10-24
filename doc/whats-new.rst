@@ -36,13 +36,12 @@ Enhancements
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
-- ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
-  (:issue:`1504`, :issue:`1717`)
-  By `Deepak Cherian <https://github.com/dcherian>`_.
-
 Bug fixes
 ~~~~~~~~~
 
+- ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
+  (:issue:`1504`, :issue:`1717`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 .. _whats-new.0.10.9:
 
