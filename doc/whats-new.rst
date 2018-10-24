@@ -63,6 +63,9 @@ Enhancements
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added support for plotting data with `pandas.Interval` coordinates, such as those
+  created by :py:meth:`~xarray.DataArray.groupby_bins`
+  By `Maximilian Maahn <https://github.com/maahn>`_.
 - Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
   CFTimeIndex by a specified frequency. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -112,7 +115,9 @@ Bug fixes
   (:issue:`2484`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Adding a TimedeltaIndex to, or subtracting a TimedeltaIndex from a
   CFTimeIndex is now allowed (:issue:`2484`).
-  By `Spencer Clark <https://github.com/spencerkclark>`_. 
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid use of Dask's deprecated ``get=`` parameter in tests
+  by `Matthew Rocklin <https://github.com/mrocklin/>`_.
 
 .. _whats-new.0.10.9:
 

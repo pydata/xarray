@@ -93,7 +93,7 @@ if has_dask:
     if LooseVersion(dask.__version__) < '0.18':
         dask.set_options(get=dask.get)
     else:
-        dask.config.set(scheduler='sync')
+        dask.config.set(scheduler='single-threaded')
 try:
     import_seaborn()
     has_seaborn = True
