@@ -4,6 +4,7 @@ import os.path
 from glob import glob
 from io import BytesIO
 from numbers import Number
+import warnings
 
 import numpy as np
 
@@ -11,37 +12,80 @@ from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import auto_combine
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri
-from .common import (
-    HDF5_LOCK, ArrayWriter, CombinedLock, _get_scheduler, _get_scheduler_lock)
+from ..core.utils import close_on_error, is_remote_uri, is_grib_path
+from .common import ArrayWriter
+from .locks import _get_scheduler
+
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 
-def _get_default_engine(path, allow_remote=False):
-    if allow_remote and is_remote_uri(path):  # pragma: no cover
+def _get_default_engine_remote_uri():
+    try:
+        import netCDF4
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
         try:
-            import netCDF4
-            engine = 'netcdf4'
+            import pydap  # flake8: noqa
+            engine = 'pydap'
         except ImportError:
-            try:
-                import pydap  # flake8: noqa
-                engine = 'pydap'
-            except ImportError:
-                raise ValueError('netCDF4 or pydap is required for accessing '
-                                 'remote datasets via OPeNDAP')
+            raise ValueError('netCDF4 or pydap is required for accessing '
+                             'remote datasets via OPeNDAP')
+    return engine
+
+
+def _get_default_engine_grib():
+    msgs = []
+    try:
+        import Nio  # flake8: noqa
+        msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
+    except ImportError:  # pragma: no cover
+        pass
+    try:
+        import cfgrib  # flake8: noqa
+        msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
+    except ImportError:  # pragma: no cover
+        pass
+    if msgs:
+        raise ValueError(' or\n'.join(msgs))
     else:
+        raise ValueError('PyNIO or cfgrib is required for accessing '
+                         'GRIB files')
+
+
+def _get_default_engine_gz():
+    try:
+        import scipy  # flake8: noqa
+        engine = 'scipy'
+    except ImportError:  # pragma: no cover
+        raise ValueError('scipy is required for accessing .gz files')
+    return engine
+
+
+def _get_default_engine_netcdf():
+    try:
+        import netCDF4  # flake8: noqa
+        engine = 'netcdf4'
+    except ImportError:  # pragma: no cover
         try:
-            import netCDF4  # flake8: noqa
-            engine = 'netcdf4'
-        except ImportError:  # pragma: no cover
-            try:
-                import scipy.io.netcdf  # flake8: noqa
-                engine = 'scipy'
-            except ImportError:
-                raise ValueError('cannot read or write netCDF files without '
-                                 'netCDF4-python or scipy installed')
+            import scipy.io.netcdf  # flake8: noqa
+            engine = 'scipy'
+        except ImportError:
+            raise ValueError('cannot read or write netCDF files without '
+                             'netCDF4-python or scipy installed')
+    return engine
+
+
+def _get_default_engine(path, allow_remote=False):
+    if allow_remote and is_remote_uri(path):
+        engine = _get_default_engine_remote_uri()
+    elif is_grib_path(path):
+        engine = _get_default_engine_grib()
+    elif path.endswith('.gz'):
+        engine = _get_default_engine_gz()
+    else:
+        engine = _get_default_engine_netcdf()
     return engine
 
 
@@ -50,27 +94,6 @@ def _normalize_path(path):
         return path
     else:
         return os.path.abspath(os.path.expanduser(path))
-
-
-def _default_lock(filename, engine):
-    if filename.endswith('.gz'):
-        lock = False
-    else:
-        if engine is None:
-            engine = _get_default_engine(filename, allow_remote=True)
-
-        if engine == 'netcdf4':
-            if is_remote_uri(filename):
-                lock = False
-            else:
-                # TODO: identify netcdf3 files and don't use the global lock
-                # for them
-                lock = HDF5_LOCK
-        elif engine in {'h5netcdf', 'pynio'}:
-            lock = HDF5_LOCK
-        else:
-            lock = False
-    return lock
 
 
 def _validate_dataset_names(dataset):
@@ -130,29 +153,14 @@ def _protect_dataset_variables_inplace(dataset, cache):
             variable.data = data
 
 
-def _get_lock(engine, scheduler, format, path_or_file):
-    """ Get the lock(s) that apply to a particular scheduler/engine/format"""
-
-    locks = []
-    if format in ['NETCDF4', None] and engine in ['h5netcdf', 'netcdf4']:
-        locks.append(HDF5_LOCK)
-    locks.append(_get_scheduler_lock(scheduler, path_or_file))
-
-    # When we have more than one lock, use the CombinedLock wrapper class
-    lock = CombinedLock(locks) if len(locks) > 1 else locks[0]
-
-    return lock
-
-
 def _finalize_store(write, store):
     """ Finalize this store by explicitly syncing and closing"""
     del write  # ensure writing is done first
-    store.sync()
     store.close()
 
 
 def open_dataset(filename_or_obj, group=None, decode_cf=True,
-                 mask_and_scale=None, decode_times=True, autoclose=False,
+                 mask_and_scale=None, decode_times=True, autoclose=None,
                  concat_characters=True, decode_coords=True, engine=None,
                  chunks=None, lock=None, cache=None, drop_variables=None,
                  backend_kwargs=None):
@@ -196,7 +204,8 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'pseudonetcdf'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib',
+        'pseudonetcdf'}, optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
@@ -204,12 +213,11 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         If chunks is provided, it used to load the new dataset into dask
         arrays. ``chunks={}`` loads the dataset with dask using a single
         chunk for all arrays.
-    lock : False, True or threading.Lock, optional
-        If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a global lock is
-        used when reading data from netCDF files with the netcdf4 and h5netcdf
-        engines to avoid issues with concurrent access when using dask's
-        multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -235,6 +243,14 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
     --------
     open_mfdataset
     """
+    if autoclose is not None:
+        warnings.warn(
+            'The autoclose argument is no longer used by '
+            'xarray.open_dataset() and is now ignored; it will be removed in '
+            'xarray v0.12. If necessary, you can control the maximum number '
+            'of simultaneous open files with '
+            'xarray.set_options(file_cache_maxsize=...).',
+            FutureWarning, stacklevel=2)
 
     if mask_and_scale is None:
         mask_and_scale = not engine == 'pseudonetcdf'
@@ -272,17 +288,10 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              mask_and_scale, decode_times, concat_characters,
                              decode_coords, engine, chunks, drop_variables)
             name_prefix = 'open_dataset-%s' % token
-            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token,
-                           lock=lock)
+            ds2 = ds.chunk(chunks, name_prefix=name_prefix, token=token)
             ds2._file_obj = ds._file_obj
         else:
             ds2 = ds
-
-        # protect so that dataset store isn't necessarily closed, e.g.,
-        # streams like BytesIO  can't be reopened
-        # datastore backend is responsible for determining this capability
-        if store._autoclose:
-            store.close()
 
         return ds2
 
@@ -303,47 +312,35 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         elif isinstance(filename_or_obj, basestring):
             filename_or_obj = _normalize_path(filename_or_obj)
 
-        if filename_or_obj.endswith('.gz'):
-            if engine is not None and engine != 'scipy':
-                raise ValueError('can only read gzipped netCDF files with '
-                                 "default engine or engine='scipy'")
-            else:
-                engine = 'scipy'
-
         if engine is None:
             engine = _get_default_engine(filename_or_obj,
                                          allow_remote=True)
         if engine == 'netcdf4':
-            store = backends.NetCDF4DataStore.open(filename_or_obj,
-                                                   group=group,
-                                                   autoclose=autoclose,
-                                                   **backend_kwargs)
+            store = backends.NetCDF4DataStore.open(
+                filename_or_obj, group=group, lock=lock, **backend_kwargs)
         elif engine == 'scipy':
-            store = backends.ScipyDataStore(filename_or_obj,
-                                            autoclose=autoclose,
-                                            **backend_kwargs)
+            store = backends.ScipyDataStore(filename_or_obj, **backend_kwargs)
         elif engine == 'pydap':
-            store = backends.PydapDataStore.open(filename_or_obj,
-                                                 **backend_kwargs)
+            store = backends.PydapDataStore.open(
+                filename_or_obj, **backend_kwargs)
         elif engine == 'h5netcdf':
-            store = backends.H5NetCDFStore(filename_or_obj, group=group,
-                                           autoclose=autoclose,
-                                           **backend_kwargs)
+            store = backends.H5NetCDFStore(
+                filename_or_obj, group=group, lock=lock, **backend_kwargs)
         elif engine == 'pynio':
-            store = backends.NioDataStore(filename_or_obj,
-                                          autoclose=autoclose,
-                                           **backend_kwargs)
+            store = backends.NioDataStore(
+                filename_or_obj, lock=lock, **backend_kwargs)
         elif engine == 'pseudonetcdf':
             store = backends.PseudoNetCDFDataStore.open(
-                filename_or_obj, autoclose=autoclose, **backend_kwargs)
+                filename_or_obj, lock=lock, **backend_kwargs)
+        elif engine == 'cfgrib':
+            store = backends.CfGribDataStore(
+                filename_or_obj, lock=lock, **backend_kwargs)
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
 
-        if lock is None:
-            lock = _default_lock(filename_or_obj, engine)
         with close_on_error(store):
-            return maybe_decode_store(store, lock)
+            return maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
@@ -355,7 +352,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
-                   mask_and_scale=None, decode_times=True, autoclose=False,
+                   mask_and_scale=None, decode_times=True, autoclose=None,
                    concat_characters=True, decode_coords=True, engine=None,
                    chunks=None, lock=None, cache=None, drop_variables=None,
                    backend_kwargs=None):
@@ -390,10 +387,6 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_times : bool, optional
         If True, decode times encoded in the standard NetCDF datetime format
         into datetime objects. Otherwise, leave them encoded as numbers.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
     concat_characters : bool, optional
         If True, concatenate along the last dimension of character arrays to
         form string arrays. Dimensions will only be concatenated over (and
@@ -402,19 +395,19 @@ def open_dataarray(filename_or_obj, group=None, decode_cf=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
     chunks : int or dict, optional
         If chunks is provided, it used to load the new dataset into dask
         arrays.
-    lock : False, True or threading.Lock, optional
-        If chunks is provided, this argument is passed on to
-        :py:func:`dask.array.from_array`. By default, a global lock is
-        used when reading data from netCDF files with the netcdf4 and h5netcdf
-        engines to avoid issues with concurrent access when using dask's
-        multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     cache : bool, optional
         If True, cache data loaded from the underlying datastore in memory as
         NumPy arrays when accessed to avoid reading from the underlying data-
@@ -490,7 +483,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   autoclose=False, parallel=False, **kwargs):
+                   autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
@@ -533,19 +526,16 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
-    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio'}, optional
+    engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
+        optional
         Engine to use when reading files. If not provided, the default engine
         is chosen based on available dependencies, with a preference for
         'netcdf4'.
-    autoclose : bool, optional
-        If True, automatically close files to avoid OS Error of too many files
-        being open.  However, this option doesn't work with streams, e.g.,
-        BytesIO.
-    lock : False, True or threading.Lock, optional
-        This argument is passed on to :py:func:`dask.array.from_array`. By
-        default, a per-variable lock is used when reading data from netCDF
-        files with the netcdf4 and h5netcdf engines to avoid issues with
-        concurrent access when using dask's multithreaded backend.
+    lock : False or duck threading.Lock, optional
+        Resource lock to use when reading data from disk. Only relevant when
+        using dask or another form of parallelism. By default, appropriate
+        locks are chosen to safely read and write files with the currently
+        active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
           * 'minimal': Only data variables in which the dimension already
@@ -604,9 +594,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
-    if lock is None:
-        lock = _default_lock(paths[0], engine)
-
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
 
@@ -656,19 +643,21 @@ WRITEABLE_STORES = {'netcdf4': backends.NetCDF4DataStore.open,
 
 
 def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
-              engine=None, writer=None, encoding=None, unlimited_dims=None,
-              compute=True):
+              engine=None, encoding=None, unlimited_dims=None, compute=True,
+              multifile=False):
     """This function creates an appropriate datastore for writing a dataset to
     disk as a netCDF file
 
     See `Dataset.to_netcdf` for full API docs.
 
-    The ``writer`` argument is only for the private use of save_mfdataset.
+    The ``multifile`` argument is only for the private use of save_mfdataset.
     """
     if isinstance(path_or_file, path_type):
         path_or_file = str(path_or_file)
+
     if encoding is None:
         encoding = {}
+
     if path_or_file is None:
         if engine is None:
             engine = 'scipy'
@@ -676,6 +665,10 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
             raise ValueError('invalid engine for creating bytes with '
                              'to_netcdf: %r. Only the default engine '
                              "or engine='scipy' is supported" % engine)
+        if not compute:
+            raise NotImplementedError(
+                'to_netcdf() with compute=False is not yet implemented when '
+                'returning bytes')
     elif isinstance(path_or_file, basestring):
         if engine is None:
             engine = _get_default_engine(path_or_file)
@@ -695,45 +688,78 @@ def to_netcdf(dataset, path_or_file=None, mode='w', format=None, group=None,
     if format is not None:
         format = format.upper()
 
-    # if a writer is provided, store asynchronously
-    sync = writer is None
-
     # handle scheduler specific logic
     scheduler = _get_scheduler()
     have_chunks = any(v.chunks for v in dataset.variables.values())
-    if (have_chunks and scheduler in ['distributed', 'multiprocessing'] and
-            engine != 'netcdf4'):
+
+    autoclose = have_chunks and scheduler in ['distributed', 'multiprocessing']
+    if autoclose and engine == 'scipy':
         raise NotImplementedError("Writing netCDF files with the %s backend "
                                   "is not currently supported with dask's %s "
                                   "scheduler" % (engine, scheduler))
-    lock = _get_lock(engine, scheduler, format, path_or_file)
-    autoclose = (have_chunks and
-                 scheduler in ['distributed', 'multiprocessing'])
 
     target = path_or_file if path_or_file is not None else BytesIO()
-    store = store_open(target, mode, format, group, writer,
-                       autoclose=autoclose, lock=lock)
+    kwargs = dict(autoclose=True) if autoclose else {}
+    store = store_open(target, mode, format, group, **kwargs)
 
     if unlimited_dims is None:
         unlimited_dims = dataset.encoding.get('unlimited_dims', None)
     if isinstance(unlimited_dims, basestring):
         unlimited_dims = [unlimited_dims]
 
+    writer = ArrayWriter()
+
+    # TODO: figure out how to refactor this logic (here and in save_mfdataset)
+    # to avoid this mess of conditionals
     try:
-        dataset.dump_to_store(store, sync=sync, encoding=encoding,
-                              unlimited_dims=unlimited_dims, compute=compute)
+        # TODO: allow this work (setting up the file for writing array data)
+        # to be parallelized with dask
+        dump_to_store(dataset, store, writer, encoding=encoding,
+                      unlimited_dims=unlimited_dims)
+        if autoclose:
+            store.close()
+
+        if multifile:
+            return writer, store
+
+        writes = writer.sync(compute=compute)
+
         if path_or_file is None:
+            store.sync()
             return target.getvalue()
     finally:
-        if sync and isinstance(path_or_file, basestring):
+        if not multifile and compute:
             store.close()
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed_store, store)
+        return dask.delayed(_finalize_store)(writes, store)
 
-    if not sync:
-        return store
+
+def dump_to_store(dataset, store, writer=None, encoder=None,
+                  encoding=None, unlimited_dims=None):
+    """Store dataset contents to a backends.*DataStore object."""
+    if writer is None:
+        writer = ArrayWriter()
+
+    if encoding is None:
+        encoding = {}
+
+    variables, attrs = conventions.encode_dataset_coordinates(dataset)
+
+    check_encoding = set()
+    for k, enc in encoding.items():
+        # no need to shallow copy the variable again; that already happened
+        # in encode_dataset_coordinates
+        variables[k].encoding = enc
+        check_encoding.add(k)
+
+    if encoder:
+        variables, attrs = encoder(variables, attrs)
+
+    store.store(variables, attrs, check_encoding, writer,
+                unlimited_dims=unlimited_dims)
+
 
 def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                    engine=None, compute=True):
@@ -816,22 +842,22 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
                          'datasets, paths and groups arguments to '
                          'save_mfdataset')
 
-    writer = ArrayWriter() if compute else None
-    stores = [to_netcdf(ds, path, mode, format, group, engine, writer,
-                        compute=compute)
-              for ds, path, group in zip(datasets, paths, groups)]
+    writers, stores = zip(*[
+        to_netcdf(ds, path, mode, format, group, engine, compute=compute,
+                  multifile=True)
+        for ds, path, group in zip(datasets, paths, groups)])
+
+    try:
+        writes = [w.sync(compute=compute) for w in writers]
+    finally:
+        if compute:
+            for store in stores:
+                store.close()
 
     if not compute:
         import dask
-        return dask.delayed(stores)
-
-    try:
-        delayed = writer.sync(compute=compute)
-        for store in stores:
-            store.sync()
-    finally:
-        for store in stores:
-            store.close()
+        return dask.delayed([dask.delayed(_finalize_store)(w, s)
+                             for w, s in zip(writes, stores)])
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
@@ -852,13 +878,14 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
 
     store = backends.ZarrStore.open_group(store=store, mode=mode,
                                           synchronizer=synchronizer,
-                                          group=group, writer=None)
+                                          group=group)
 
-    # I think zarr stores should always be sync'd immediately
+    writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dataset.dump_to_store(store, sync=True, encoding=encoding, compute=compute)
+    dump_to_store(dataset, store, writer, encoding=encoding)
+    writes = writer.sync(compute=compute)
 
     if not compute:
         import dask
-        return dask.delayed(_finalize_store)(store.delayed_store, store)
+        return dask.delayed(_finalize_store)(writes, store)
     return store

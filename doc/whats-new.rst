@@ -30,11 +30,55 @@ What's New
 v0.11.0 (unreleased)
 --------------------
 
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Xarray's storage backends now automatically open and close files when
+  necessary, rather than requiring opening a file with ``autoclose=True``. A
+  global least-recently-used cache is used to store open files; the default
+  limit of 128 open files should suffice in most cases, but can be adjusted if
+  necessary with
+  ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
+  to ``open_dataset`` and related functions has been deprecated and is now a
+  no-op.
+
+  This change, along with an internal refactor of xarray's storage backends,
+  should significantly improve performance when reading and writing
+  netCDF files with Dask, especially when working with many files or using
+  Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+
+Documentation
+~~~~~~~~~~~~~
+- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+  without dimension argument will change in the next release.
+  Now we warn a FutureWarning.
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`xarray.DataArray.plot.line` can now accept multidimensional
+  coordinate variables as input. `hue` must be a dimension name in this case.
+  (:issue:`2407`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added support for plotting data with `pandas.Interval` coordinates, such as those
+  created by :py:meth:`~xarray.DataArray.groupby_bins`
+  By `Maximilian Maahn <https://github.com/maahn>`_.
+- Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
+  CFTimeIndex by a specified frequency. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Added support for using ``cftime.datetime`` coordinates with
+  :py:meth:`~xarray.DataArray.differentiate`,
+  :py:meth:`~xarray.Dataset.differentiate`,
+  :py:meth:`~xarray.DataArray.interp`, and
+  :py:meth:`~xarray.Dataset.interp`.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Added a new backend for the GRIB file format based on ECMWF *cfgrib*
+  python driver and *ecCodes* C-library. (:issue:`2475`)
+  By `Alessandro Amici <https://github.com/alexamici>`_,
+  sponsored by `ECMWF <https://github.com/ecmwf>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -42,10 +86,39 @@ Bug fixes
 - ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
   (:issue:`1504`, :issue:`1717`)
   By `Deepak Cherian <https://github.com/dcherian>`_.
+- Addition and subtraction operators used with a CFTimeIndex now preserve the
+  index's type. (:issue:`2244`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
+  (:issue:`2445`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- ``xarray.plot()`` now properly accepts a ``norm`` argument and does not override
+  the norm's ``vmin`` and ``vmax``. (:issue:`2381`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+- ``xarray.DataArray.std()`` now correctly accepts ``ddof`` keyword argument.
+  (:issue:`2240`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Restore matplotlib's default of plotting dashed negative contours when
+  a single color is passed to ``DataArray.contour()`` e.g. ``colors='k'``.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+- Fix a bug that caused some indexing operations on arrays opened with
+  ``open_rasterio`` to error (:issue:`2454`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Subtracting one CFTimeIndex from another now returns a
+  ``pandas.TimedeltaIndex``, analogous to the behavior for DatetimeIndexes
+  (:issue:`2484`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Adding a TimedeltaIndex to, or subtracting a TimedeltaIndex from a
+  CFTimeIndex is now allowed (:issue:`2484`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid use of Dask's deprecated ``get=`` parameter in tests
+  by `Matthew Rocklin <https://github.com/mrocklin/>`_.
 
 .. _whats-new.0.10.9:
 
-v0.10.9 (21 September 2019)
+v0.10.9 (21 September 2018)
 ---------------------------
 
 This minor release contains a number of backwards compatible enhancements.
@@ -53,7 +126,7 @@ This minor release contains a number of backwards compatible enhancements.
 Announcements of note:
 
 - Xarray is now a NumFOCUS fiscally sponsored project! Read
-  `the anouncment <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
+  `the anouncement <https://numfocus.org/blog/xarray-joins-numfocus-sponsored-projects>`_
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 

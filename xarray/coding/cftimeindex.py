@@ -40,6 +40,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+
 import re
 from datetime import timedelta
 
@@ -157,7 +158,7 @@ def _field_accessor(name, docstring=None):
 
 
 def get_date_type(self):
-    if self.data:
+    if self._data.size:
         return type(self._data[0])
     else:
         return None
@@ -314,3 +315,94 @@ class CFTimeIndex(pd.Index):
     def contains(self, key):
         """Needed for .loc based partial-string indexing"""
         return self.__contains__(key)
+
+    def shift(self, n, freq):
+        """Shift the CFTimeIndex a multiple of the given frequency.
+
+        See the documentation for :py:func:`~xarray.cftime_range` for a
+        complete listing of valid frequency strings.
+
+        Parameters
+        ----------
+        n : int
+            Periods to shift by
+        freq : str or datetime.timedelta
+            A frequency string or datetime.timedelta object to shift by
+
+        Returns
+        -------
+        CFTimeIndex
+
+        See also
+        --------
+        pandas.DatetimeIndex.shift
+
+        Examples
+        --------
+        >>> index = xr.cftime_range('2000', periods=1, freq='M')
+        >>> index
+        CFTimeIndex([2000-01-31 00:00:00], dtype='object')
+        >>> index.shift(1, 'M')
+        CFTimeIndex([2000-02-29 00:00:00], dtype='object')
+        """
+        from .cftime_offsets import to_offset
+
+        if not isinstance(n, int):
+            raise TypeError("'n' must be an int, got {}.".format(n))
+        if isinstance(freq, timedelta):
+            return self + n * freq
+        elif isinstance(freq, pycompat.basestring):
+            return self + n * to_offset(freq)
+        else:
+            raise TypeError(
+                "'freq' must be of type "
+                "str or datetime.timedelta, got {}.".format(freq))
+
+    def __add__(self, other):
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
+        return CFTimeIndex(np.array(self) + other)
+
+    def __radd__(self, other):
+        if isinstance(other, pd.TimedeltaIndex):
+            other = other.to_pytimedelta()
+        return CFTimeIndex(other + np.array(self))
+
+    def __sub__(self, other):
+        if isinstance(other, CFTimeIndex):
+            return pd.TimedeltaIndex(np.array(self) - np.array(other))
+        elif isinstance(other, pd.TimedeltaIndex):
+            return CFTimeIndex(np.array(self) - other.to_pytimedelta())
+        else:
+            return CFTimeIndex(np.array(self) - other)
+
+    def _add_delta(self, deltas):
+        # To support TimedeltaIndex + CFTimeIndex with older versions of
+        # pandas.  No longer used as of pandas 0.23.
+        return self + deltas
+
+
+def _parse_iso8601_without_reso(date_type, datetime_str):
+    date, _ = _parse_iso8601_with_reso(date_type, datetime_str)
+    return date
+
+
+def _parse_array_of_cftime_strings(strings, date_type):
+    """Create a numpy array from an array of strings.
+
+    For use in generating dates from strings for use with interp.  Assumes the
+    array is either 0-dimensional or 1-dimensional.
+
+    Parameters
+    ----------
+    strings : array of strings
+        Strings to convert to dates
+    date_type : cftime.datetime type
+        Calendar type to use for dates
+
+    Returns
+    -------
+    np.array
+    """
+    return np.array([_parse_iso8601_without_reso(date_type, s)
+                     for s in strings.ravel()]).reshape(strings.shape)

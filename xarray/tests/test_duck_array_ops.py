@@ -1,16 +1,16 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
-from textwrap import dedent
 from numpy import array, nan
-import warnings
 
 from xarray import DataArray, Dataset, concat
-from xarray.core import duck_array_ops, dtypes
+from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
     array_notnull_equiv, concatenate, count, first, gradient, last, mean,
     rolling_window, stack, where)
@@ -18,12 +18,12 @@ from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
 
 from . import (
-    TestCase, assert_array_equal, has_dask, has_np113, raises_regex,
-    requires_dask)
+    assert_array_equal, has_dask, has_np113, raises_regex, requires_dask)
 
 
-class TestOps(TestCase):
+class TestOps(object):
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.x = array([[[nan, nan, 2., nan],
                          [nan, 5., 6., nan],
@@ -309,7 +309,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         assert_allclose(actual, expected, rtol=rtol)
 
         # make sure the compatiblility with pandas' results.
-        if func == 'var':
+        if func in ['var', 'std']:
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=0)
             assert_allclose(actual, expected, rtol=rtol)

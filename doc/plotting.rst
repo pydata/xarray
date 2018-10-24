@@ -222,8 +222,40 @@ It is also possible to make line plots such that the data are on the x-axis and 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
+Step plots
+~~~~~~~~~~
+
+As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
+made using 1D data. 
+
+.. ipython:: python
+
+    @savefig plotting_example_step.png width=4in
+    air1d[:20].plot.step(where='mid')
+
+The argument ``where`` defines where the steps should be placed, options are
+``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
+when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
+
+.. ipython:: python
+
+    air_grp = air.mean(['time','lon']).groupby_bins('lat',[0,23.5,66.5,90])
+    air_mean = air_grp.mean()
+    air_std = air_grp.std()
+    air_mean.plot.step()
+    (air_mean + air_std).plot.step(ls=':')
+    (air_mean - air_std).plot.step(ls=':')
+    plt.ylim(-20,30)
+    @savefig plotting_example_step_groupby.png width=4in
+    plt.title('Zonal mean temperature')
+    
+In this case, the actual boundaries of the bins are used and the ``where`` argument
+is ignored.
+
+
 Other axes kwargs
 -----------------
+
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
 
@@ -703,3 +735,12 @@ You can however decide to infer the cell boundaries and use the
     outside the xarray framework.
 
 .. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. ipython:: python
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    @savefig plotting_example_2d_hue_xy.png
+    da.plot.line(x='lon', hue='x', ax=ax[1]);

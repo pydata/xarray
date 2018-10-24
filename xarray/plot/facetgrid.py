@@ -5,6 +5,7 @@ import itertools
 import warnings
 
 import numpy as np
+
 from ..core.formatting import format_item
 from ..core.pycompat import getargspec
 from .utils import (

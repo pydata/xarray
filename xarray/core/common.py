@@ -7,10 +7,13 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, dtypes, formatting, ops
+from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import either_dict_or_kwargs, Frozen, SortedKeysDict
+from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+
+# Used as a sentinel value to indicate a all dimensions
+ALL_DIMS = ReprObject('<all-dims>')
 
 
 class ImplementsArrayReduce(object):
@@ -340,6 +343,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         See also
         --------
         Dataset.assign
+        Dataset.swap_dims
         """
         data = self.copy(deep=False)
         results = self._calc_assign_results(kwargs)

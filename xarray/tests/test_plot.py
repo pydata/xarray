@@ -5,9 +5,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 import pytest
 
+import xarray as xr
 import xarray.plot as xplt
 from xarray import DataArray
 from xarray.coding.times import _import_cftime
@@ -17,9 +17,8 @@ from xarray.plot.utils import (
     import_seaborn, label_from_attrs)
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex,
-    requires_matplotlib, requires_matplotlib2, requires_seaborn,
-    requires_cftime)
+    assert_array_equal, assert_equal, raises_regex, requires_cftime,
+    requires_matplotlib, requires_matplotlib2, requires_seaborn)
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -65,8 +64,10 @@ def easy_array(shape, start=0, stop=1):
 
 
 @requires_matplotlib
-class PlotTestCase(TestCase):
-    def tearDown(self):
+class PlotTestCase(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        yield
         # Remove all matplotlib figures
         plt.close('all')
 
@@ -88,7 +89,8 @@ class PlotTestCase(TestCase):
 
 
 class TestPlot(PlotTestCase):
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup_array(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
     def test_label_from_attrs(self):
@@ -160,8 +162,8 @@ class TestPlot(PlotTestCase):
         self.darray[:, :, 0].plot.line(x='dim_0', add_legend=True)
         assert plt.gca().get_legend()
         # check whether legend title is set
-        assert plt.gca().get_legend().get_title().get_text() \
-            == 'dim_1'
+        assert (plt.gca().get_legend().get_title().get_text()
+                == 'dim_1')
 
     def test_2d_line_accepts_x_kw(self):
         self.darray[:, :, 0].plot.line(x='dim_0')
@@ -172,12 +174,31 @@ class TestPlot(PlotTestCase):
 
     def test_2d_line_accepts_hue_kw(self):
         self.darray[:, :, 0].plot.line(hue='dim_0')
-        assert plt.gca().get_legend().get_title().get_text() \
-            == 'dim_0'
+        assert (plt.gca().get_legend().get_title().get_text()
+                == 'dim_0')
         plt.cla()
         self.darray[:, :, 0].plot.line(hue='dim_1')
-        assert plt.gca().get_legend().get_title().get_text() \
-            == 'dim_1'
+        assert (plt.gca().get_legend().get_title().get_text()
+                == 'dim_1')
+
+    def test_2d_coords_line_plot(self):
+        lon, lat = np.meshgrid(np.linspace(-20, 20, 5),
+                               np.linspace(0, 30, 4))
+        lon += lat / 10
+        lat += lon / 10
+        da = xr.DataArray(np.arange(20).reshape(4, 5), dims=['y', 'x'],
+                          coords={'lat': (('y', 'x'), lat),
+                                  'lon': (('y', 'x'), lon)})
+
+        hdl = da.plot.line(x='lon', hue='x')
+        assert len(hdl) == 5
+
+        plt.clf()
+        hdl = da.plot.line(x='lon', hue='y')
+        assert len(hdl) == 4
+
+        with pytest.raises(ValueError, message='If x or y are 2D '):
+            da.plot.line(x='lon', hue='lat')
 
     def test_2d_before_squeeze(self):
         a = DataArray(easy_array((1, 5)))
@@ -343,8 +364,13 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
+    def test_coord_with_interval(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot()
+
 
 class TestPlot1D(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         d = [0, 1.1, 0, 2]
         self.darray = DataArray(
@@ -357,7 +383,7 @@ class TestPlot1D(PlotTestCase):
 
     def test_no_label_name_on_x_axis(self):
         self.darray.plot(y='period')
-        self.assertEqual('', plt.gca().get_xlabel())
+        assert '' == plt.gca().get_xlabel()
 
     def test_no_label_name_on_y_axis(self):
         self.darray.plot()
@@ -416,7 +442,22 @@ class TestPlot1D(PlotTestCase):
         assert 'd = 10' == title
 
 
+class TestPlotStep(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.darray = DataArray(easy_array((2, 3, 4)))
+
+    def test_step(self):
+        self.darray[0, 0].plot.step()
+
+    def test_coord_with_interval_step(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+
 class TestPlotHistogram(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.darray = DataArray(easy_array((2, 3, 4)))
 
@@ -450,9 +491,14 @@ class TestPlotHistogram(PlotTestCase):
         self.darray[0, 0, 0] = np.nan
         self.darray.plot.hist()
 
+    def test_hist_coord_with_interval(self):
+        (self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean(xr.ALL_DIMS)
+         .plot.hist(range=(-1, 2)))
+
 
 @requires_matplotlib
-class TestDetermineCmapParams(TestCase):
+class TestDetermineCmapParams(object):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.data = np.linspace(0, 1, num=100)
 
@@ -623,9 +669,30 @@ class TestDetermineCmapParams(TestCase):
         assert cmap_params['vmax'] == 0.6
         assert cmap_params['cmap'] == "viridis"
 
+    def test_norm_sets_vmin_vmax(self):
+        vmin = self.data.min()
+        vmax = self.data.max()
+
+        for norm, extend in zip([mpl.colors.LogNorm(),
+                                 mpl.colors.LogNorm(vmin + 1, vmax - 1),
+                                 mpl.colors.LogNorm(None, vmax - 1),
+                                 mpl.colors.LogNorm(vmin + 1, None)],
+                                ['neither', 'both', 'max', 'min']):
+
+            test_min = vmin if norm.vmin is None else norm.vmin
+            test_max = vmax if norm.vmax is None else norm.vmax
+
+            cmap_params = _determine_cmap_params(self.data, norm=norm)
+
+            assert cmap_params['vmin'] == test_min
+            assert cmap_params['vmax'] == test_max
+            assert cmap_params['extend'] == extend
+            assert cmap_params['norm'] == norm
+
 
 @requires_matplotlib
-class TestDiscreteColorMap(TestCase):
+class TestDiscreteColorMap(object):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         x = np.arange(start=0, stop=10, step=2)
         y = np.arange(start=9, stop=-7, step=-3)
@@ -659,10 +726,10 @@ class TestDiscreteColorMap(TestCase):
 
     @pytest.mark.slow
     def test_discrete_colormap_list_of_levels(self):
-        for extend, levels in [('max', [-1, 2, 4, 8, 10]), ('both',
-                                                            [2, 5, 10, 11]),
-                               ('neither', [0, 5, 10, 15]), ('min',
-                                                             [2, 5, 10, 15])]:
+        for extend, levels in [('max', [-1, 2, 4, 8, 10]),
+                               ('both', [2, 5, 10, 11]),
+                               ('neither', [0, 5, 10, 15]),
+                               ('min', [2, 5, 10, 15])]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(levels=levels)
                 assert_array_equal(levels, primitive.norm.boundaries)
@@ -676,10 +743,10 @@ class TestDiscreteColorMap(TestCase):
 
     @pytest.mark.slow
     def test_discrete_colormap_int_levels(self):
-        for extend, levels, vmin, vmax in [('neither', 7, None,
-                                            None), ('neither', 7, None, 20),
-                                           ('both', 7, 4, 8), ('min', 10, 4,
-                                                               15)]:
+        for extend, levels, vmin, vmax in [('neither', 7, None, None),
+                                           ('neither', 7, None, 20),
+                                           ('both', 7, 4, 8),
+                                           ('min', 10, 4, 15)]:
             for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
                 primitive = getattr(self.darray.plot, kind)(
                     levels=levels, vmin=vmin, vmax=vmax)
@@ -705,8 +772,13 @@ class TestDiscreteColorMap(TestCase):
         assert primitive.norm.vmax == max(levels)
         assert primitive.norm.vmin == min(levels)
 
+    def test_discrete_colormap_provided_boundary_norm(self):
+        norm = mpl.colors.BoundaryNorm([0, 5, 10, 15], 4)
+        primitive = self.darray.plot.contourf(norm=norm)
+        np.testing.assert_allclose(primitive.levels, norm.boundaries)
 
-class Common2dMixin:
+
+class Common2dMixin(object):
     """
     Common tests for 2d plotting go here.
 
@@ -714,6 +786,7 @@ class Common2dMixin:
     Should have the same name as the method.
     """
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         da = DataArray(easy_array((10, 15), start=-1),
                        dims=['y', 'x'],
@@ -1095,6 +1168,21 @@ class Common2dMixin:
         with pytest.raises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
 
+    def test_2d_coord_with_interval(self):
+        for dim in self.darray.dims:
+            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
+                getattr(gp.plot, kind)()
+
+    def test_colormap_error_norm_and_vmin_vmax(self):
+        norm = mpl.colors.LogNorm(0.1, 1e1)
+
+        with pytest.raises(ValueError):
+            self.darray.plot(norm=norm, vmin=2)
+
+        with pytest.raises(ValueError):
+            self.darray.plot(norm=norm, vmax=2)
+
 
 @pytest.mark.slow
 class TestContourf(Common2dMixin, PlotTestCase):
@@ -1157,23 +1245,23 @@ class TestContour(Common2dMixin, PlotTestCase):
         def _color_as_tuple(c):
             return tuple(c[:3])
 
+        # with single color, we don't want rgb array
         artist = self.plotmethod(colors='k')
-        assert _color_as_tuple(artist.cmap.colors[0]) == \
-            (0.0, 0.0, 0.0)
+        assert artist.cmap.colors[0] == 'k'
 
         artist = self.plotmethod(colors=['k', 'b'])
-        assert _color_as_tuple(artist.cmap.colors[1]) == \
-            (0.0, 0.0, 1.0)
+        assert (_color_as_tuple(artist.cmap.colors[1]) ==
+                (0.0, 0.0, 1.0))
 
         artist = self.darray.plot.contour(
             levels=[-0.5, 0., 0.5, 1.], colors=['k', 'r', 'w', 'b'])
-        assert _color_as_tuple(artist.cmap.colors[1]) == \
-            (1.0, 0.0, 0.0)
-        assert _color_as_tuple(artist.cmap.colors[2]) == \
-            (1.0, 1.0, 1.0)
+        assert (_color_as_tuple(artist.cmap.colors[1]) ==
+                (1.0, 0.0, 0.0))
+        assert (_color_as_tuple(artist.cmap.colors[2]) ==
+                (1.0, 1.0, 1.0))
         # the last color is now under "over"
-        assert _color_as_tuple(artist.cmap._rgba_over) == \
-            (0.0, 0.0, 1.0)
+        assert (_color_as_tuple(artist.cmap._rgba_over) ==
+                (0.0, 0.0, 1.0))
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
@@ -1369,6 +1457,7 @@ class TestImshow(Common2dMixin, PlotTestCase):
 
 
 class TestFacetGrid(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         d = easy_array((10, 15, 3))
         self.darray = DataArray(
@@ -1598,6 +1687,7 @@ class TestFacetGrid(PlotTestCase):
 
 @pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetGrid4d(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         a = easy_array((10, 15, 3, 2))
         darray = DataArray(a, dims=['y', 'x', 'col', 'row'])
@@ -1626,6 +1716,7 @@ class TestFacetGrid4d(PlotTestCase):
 
 @pytest.mark.filterwarnings('ignore:tight_layout cannot')
 class TestFacetedLinePlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.darray = DataArray(np.random.randn(10, 6, 3, 4),
                                 dims=['hue', 'x', 'col', 'row'],
@@ -1706,6 +1797,7 @@ class TestFacetedLinePlots(PlotTestCase):
 
 
 class TestDatetimePlot(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         '''
         Create a DataArray with a time-axis that contains datetime objects.
