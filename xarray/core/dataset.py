@@ -917,10 +917,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 LevelCoordinatesSource(self)]
 
     def __dir__(self):
-        # In order to suppress a deprecation warning in Ipython autocompletion
-        # .T is explicitly removed from __dir__. GH: issue 1675
         d = super(Dataset, self).__dir__()
-        d.remove('T')
         return d
 
     def __contains__(self, key):
@@ -2665,13 +2662,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             var_dims = tuple(dim for dim in dims if dim in var.dims)
             ds._variables[name] = var.transpose(*var_dims)
         return ds
-
-    @property
-    def T(self):
-        warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
-                      '`.transpose()`. It will be removed in xarray v0.11.',
-                      FutureWarning, stacklevel=2)
-        return self.transpose()
 
     def dropna(self, dim, how='any', thresh=None, subset=None):
         """Returns a new dataset with dropped labels for missing values along

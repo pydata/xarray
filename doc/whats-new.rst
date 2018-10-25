@@ -33,6 +33,9 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``.T`` has been removed as a shortcut for :py:meth:`transpose()`.
+  Call :py:meth:`Dataset.transpose()` or :py:meth:`DataArray.transpose()` instead.
+
 - Xarray's storage backends now automatically open and close files when
   necessary, rather than requiring opening a file with ``autoclose=True``. A
   global least-recently-used cache is used to store open files; the default
