@@ -527,7 +527,8 @@ Faceted plotting supports other arguments common to xarray 2d plots.
 
     @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
-                                    robust=True, cmap='viridis')
+                                    robust=True, cmap='viridis',
+				     cbar_kwargs={'label': 'this has outliers'})
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
