@@ -420,16 +420,12 @@ class TestDataset(object):
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
         assert type(ds.dims.mapping.mapping) is dict  # noqa
 
-        with pytest.warns(FutureWarning):
-            assert list(ds) == list(ds.variables)
-        with pytest.warns(FutureWarning):
-            assert list(ds.keys()) == list(ds.variables)
+        assert list(ds) == list(ds.data_vars)
+        assert list(ds.keys()) == list(ds.data_vars)
         assert 'aasldfjalskdfj' not in ds.variables
         assert 'dim1' in repr(ds.variables)
-        with pytest.warns(FutureWarning):
-            assert len(ds) == 7
-        with pytest.warns(FutureWarning):
-            assert bool(ds)
+        assert len(ds) == 3
+        assert bool(ds)
 
         assert list(ds.data_vars) == ['var1', 'var2', 'var3']
         assert list(ds.data_vars.keys()) == ['var1', 'var2', 'var3']
