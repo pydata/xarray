@@ -86,6 +86,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
+  (:issue:`1504`, :issue:`1717`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Addition and subtraction operators used with a CFTimeIndex now preserve the
   index's type. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.

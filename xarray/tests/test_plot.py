@@ -1147,6 +1147,23 @@ class Common2dMixin(object):
         # check that all colormaps are the same
         assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
 
+    def test_facetgrid_cbar_kwargs(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                          cbar_kwargs={'label': 'test_label'})
+
+        # catch contour case
+        if hasattr(g, 'cbar'):
+            assert g.cbar._label == 'test_label'
+
+    def test_facetgrid_no_cbar_ax(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        with pytest.raises(ValueError):
+            g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                              cbar_ax=1)
+
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')

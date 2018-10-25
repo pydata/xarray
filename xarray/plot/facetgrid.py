@@ -223,6 +223,11 @@ class FacetGrid(object):
 
         cmapkw = kwargs.get('cmap')
         colorskw = kwargs.get('colors')
+        cbar_kwargs = kwargs.pop('cbar_kwargs', {})
+        cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
+        if kwargs.get('cbar_ax', None) is not None:
+            raise ValueError('cbar_ax not supported by FacetGrid.')
 
         # colors is mutually exclusive with cmap
         if cmapkw and colorskw:
@@ -264,7 +269,7 @@ class FacetGrid(object):
         self._finalize_grid(x, y)
 
         if kwargs.get('add_colorbar', True):
-            self.add_colorbar()
+            self.add_colorbar(**cbar_kwargs)
 
         return self
 
