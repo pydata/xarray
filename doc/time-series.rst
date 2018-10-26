@@ -222,9 +222,9 @@ Non-standard calendars and dates outside the Timestamp-valid range
 Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing
 functionality enabled through the standard :py:class:`pandas.DatetimeIndex` for
-dates from non-standard calendars or dates using a standard calendar, but
-outside the `Timestamp-valid range`_ (approximately between years 1678 and
-2262).  
+dates from non-standard calendars commonly used in climate science or dates
+using a standard calendar, but outside the `Timestamp-valid range`_
+(approximately between years 1678 and 2262).  
 
 .. note::
 
