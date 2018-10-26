@@ -33,6 +33,12 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- The option ``enable_cftimeindex`` has now been set to ``True`` by default.
+  This means that by default any dates encoded using a non-standard calendar
+  will be decoded into objects of type :py:class:`cftime.datetime`, regardless
+  of whether or not it might be possible to coerce them into
+  ``np.datetime64[ns]`` objects.  One can explicitly set the option to
+  ``False`` to restore the old behavior.
 - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
   Call :py:meth:`Dataset.transpose` directly instead.
 - Iterating over a ``Dataset`` now includes only data variables, not coordinates.

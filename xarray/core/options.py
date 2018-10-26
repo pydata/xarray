@@ -10,7 +10,7 @@ CMAP_DIVERGENT = 'cmap_divergent'
 OPTIONS = {
     DISPLAY_WIDTH: 80,
     ARITHMETIC_JOIN: 'inner',
-    ENABLE_CFTIMEINDEX: False,
+    ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
@@ -52,7 +52,7 @@ class set_options(object):
       Default: ``'inner'``.
     - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
       for time indexes with non-standard calendars or dates outside the
-      Timestamp-valid range. Default: ``False``.
+      Timestamp-valid range. Default: ``True``.
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
