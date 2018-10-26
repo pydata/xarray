@@ -992,6 +992,11 @@ class TestVariable(VariableSubclassobjects):
                 ValueError, 'has more than 1-dimension'):
             as_variable(expected, name='x')
 
+        # test datetime conversion
+        dt = datetime(1999, 1, 1)
+        dts = np.array([dt + timedelta(days=x) for x in range(10)])
+        assert as_variable(dts, 'time').dtype.kind == 'M'
+
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
         expected = dedent("""
