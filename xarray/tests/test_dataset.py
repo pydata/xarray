@@ -3801,10 +3801,6 @@ class TestDataset(object):
         expected = ds.apply(lambda x: x.transpose())
         assert_identical(expected, actual)
 
-        with pytest.warns(FutureWarning):
-            actual = ds.T
-        assert_identical(expected, actual)
-
         actual = ds.transpose('x', 'y')
         expected = ds.apply(lambda x: x.transpose('x', 'y'))
         assert_identical(expected, actual)
