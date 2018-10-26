@@ -34,7 +34,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
-  Call :py:meth:`Dataset.transpose()` instead.
+  Call :py:meth:`Dataset.transpose` directly instead.
 - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
   Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
   includes only data variables
