@@ -323,8 +323,9 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    for example:
 
    - Resampling along the time dimension for data indexed by a
-     :py:class:`~xarray.CFTimeIndex`
-   - Built-in plotting of data with :py:class:`cftime.datetime` coordinate axes.
+     :py:class:`~xarray.CFTimeIndex` (:issue:`2191`, :issue:`2458`)
+   - Built-in plotting of data with :py:class:`cftime.datetime` coordinate axes
+     (:issue:`2164`).
    
    If at any time you would like to restore the old default behavior, which was
    to attempt to decode datetimes into ``np.datetime64[ns]`` objects whenever
