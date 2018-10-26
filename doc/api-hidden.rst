@@ -39,7 +39,6 @@
    Dataset.imag
    Dataset.round
    Dataset.real
-   Dataset.T
    Dataset.cumsum
    Dataset.cumprod
    Dataset.rank
