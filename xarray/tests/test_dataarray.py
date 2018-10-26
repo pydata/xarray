@@ -3497,7 +3497,7 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
 @pytest.mark.parametrize('window', (7, 70))
 def test_rolling_wrapped_dask_chunksizes(da_dask, name, center, min_periods,
                                          window):
-    # check if chunksize is preserved GH: 2514
+    # check if chunksizes are preserved (GH: 2514)
     t = pd.date_range(start='2018-01-01', end='2018-02-01', freq='H')
     bar = np.sin(np.arange(len(t)))
     baz = np.cos(np.arange(len(t)))

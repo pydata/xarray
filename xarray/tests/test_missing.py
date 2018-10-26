@@ -247,6 +247,19 @@ def test_interpolate_limits():
     assert_equal(actual, expected)
 
 
+@requires_dask
+def test_interpolate_limits_chunksize():
+    # GH: 2514
+    da = xr.DataArray(np.array([1, 2, np.nan, np.nan, np.nan, 6],
+                               dtype=np.float64), dims='x').chunk({'x': 6})
+
+    actual = da.interpolate_na(dim='x', limit=None)
+    assert actual.chunks == (6,)
+
+    actual = da.interpolate_na(dim='x', limit=2)
+    assert actual.chunks == (6,)
+
+
 @requires_scipy
 def test_interpolate_methods():
     for method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
