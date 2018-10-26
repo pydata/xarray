@@ -82,7 +82,14 @@ def rolling_window(a, axis, window, center, fill_value):
         chunks = list(a.chunks)
         chunks[axis] = (pad_size, )
         fill_array = da.full(shape, fill_value, dtype=a.dtype, chunks=chunks)
-        a = da.concatenate([fill_array, a], axis=axis)
+        # Add the chunk from fill_array at the end because this is where
+        # the array will be cropped. This way the size of all chunks
+        # along `axis` is preserved in the end.
+        # GH 2514
+        rechunk_chunks = list(a.chunks)
+        rechunk_chunks[axis] = rechunk_chunks[axis] + (pad_size,)
+        a = da.concatenate([fill_array, a], axis=axis).rechunk(
+            {axis: rechunk_chunks[axis]})
 
     boundary = {d: fill_value for d in range(a.ndim)}
 

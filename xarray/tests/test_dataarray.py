@@ -3491,6 +3491,29 @@ def test_rolling_wrapped_dask(da_dask, name, center, min_periods, window):
     assert_allclose(actual, expected)
 
 
+@pytest.mark.parametrize('name', ('count',))
+@pytest.mark.parametrize('center', (True, False, None))
+@pytest.mark.parametrize('min_periods', (1, None))
+@pytest.mark.parametrize('window', (7, 70))
+def test_rolling_wrapped_dask_chunksizes(da_dask, name, center, min_periods,
+                                         window):
+    # check if chunksize is preserved GH: 2514
+    t = pd.date_range(start='2018-01-01', end='2018-02-01', freq='H')
+    bar = np.sin(np.arange(len(t)))
+    baz = np.cos(np.arange(len(t)))
+
+    da_test = xr.DataArray(data=np.stack([bar, baz]),
+                           coords={'time': t,
+                                   'sensor': ['one', 'two']},
+                           dims=('sensor', 'time'))
+
+    rolling_obj = da_test.chunk({'time': 100}).rolling(time=window,
+                                                       min_periods=min_periods,
+                                                       center=center)
+    actual = getattr(rolling_obj, name)()
+    assert actual.chunks == ((2,), (100, 100, 100, 100, 100, 100, 100, 45))
+
+
 @pytest.mark.parametrize('center', (True, None))
 def test_rolling_wrapped_dask_nochunk(center):
     # GH:2113
