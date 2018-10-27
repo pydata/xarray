@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Iterable, Mapping, MutableMapping, MutableSet
@@ -502,6 +503,11 @@ def close_on_error(f):
 
 def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
+
+
+def is_grib_path(path):
+    _, ext = os.path.splitext(path)
+    return ext in ['.grib', '.grb', '.grib2', '.grb2']
 
 
 def is_uniform_spaced(arr, **kwargs):

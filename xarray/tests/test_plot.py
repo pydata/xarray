@@ -364,6 +364,10 @@ class TestPlot(PlotTestCase):
         with raises_regex(ValueError, '[Ff]acet'):
             d.plot(x='x', y='y', col='columns', ax=plt.gca())
 
+    def test_coord_with_interval(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot()
+
 
 class TestPlot1D(PlotTestCase):
     @pytest.fixture(autouse=True)
@@ -438,6 +442,20 @@ class TestPlot1D(PlotTestCase):
         assert 'd = 10' == title
 
 
+class TestPlotStep(PlotTestCase):
+    @pytest.fixture(autouse=True)
+    def setUp(self):
+        self.darray = DataArray(easy_array((2, 3, 4)))
+
+    def test_step(self):
+        self.darray[0, 0].plot.step()
+
+    def test_coord_with_interval_step(self):
+        bins = [-1, 0, 1, 2]
+        self.darray.groupby_bins('dim_0', bins).mean(xr.ALL_DIMS).plot.step()
+        assert len(plt.gca().lines[0].get_xdata()) == ((len(bins) - 1) * 2)
+
+
 class TestPlotHistogram(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -472,6 +490,10 @@ class TestPlotHistogram(PlotTestCase):
     def test_plot_nans(self):
         self.darray[0, 0, 0] = np.nan
         self.darray.plot.hist()
+
+    def test_hist_coord_with_interval(self):
+        (self.darray.groupby_bins('dim_0', [-1, 0, 1, 2]).mean(xr.ALL_DIMS)
+         .plot.hist(range=(-1, 2)))
 
 
 @requires_matplotlib
@@ -1125,9 +1147,32 @@ class Common2dMixin(object):
         # check that all colormaps are the same
         assert len(set(m.get_cmap().name for m in fg._mappables)) == 1
 
+    def test_facetgrid_cbar_kwargs(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                          cbar_kwargs={'label': 'test_label'})
+
+        # catch contour case
+        if hasattr(g, 'cbar'):
+            assert g.cbar._label == 'test_label'
+
+    def test_facetgrid_no_cbar_ax(self):
+        a = easy_array((10, 15, 2, 3))
+        d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
+        with pytest.raises(ValueError):
+            g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                              cbar_ax=1)
+
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):
             self.plotmethod(colors='k', cmap='RdBu')
+
+    def test_2d_coord_with_interval(self):
+        for dim in self.darray.dims:
+            gp = self.darray.groupby_bins(dim, range(15)).mean(dim)
+            for kind in ['imshow', 'pcolormesh', 'contourf', 'contour']:
+                getattr(gp.plot, kind)()
 
     def test_colormap_error_norm_and_vmin_vmax(self):
         norm = mpl.colors.LogNorm(0.1, 1e1)
