@@ -677,7 +677,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 "Resampling only supported along single dimensions."
             )
         dim, freq = indexer.popitem()
-        
+
         if isinstance(dim, basestring):
             dim_name = dim
             dim = self[dim]
@@ -734,7 +734,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 'in the calendar type, which could lead to subtle and silent '
                 'errors.'
             )
-        
+
         if isinstance(dim, basestring):
             dim = self[dim]
 
