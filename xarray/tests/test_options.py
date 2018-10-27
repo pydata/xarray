@@ -33,6 +33,9 @@ def test_enable_cftimeindex():
         xarray.set_options(enable_cftimeindex=None)
     with xarray.set_options(enable_cftimeindex=True):
         assert OPTIONS['enable_cftimeindex']
+    with pytest.warns(FutureWarning):
+        with xarray.set_options(enable_cftimeindex=True):
+            pass
 
 
 def test_file_cache_maxsize():

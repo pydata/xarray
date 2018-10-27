@@ -33,12 +33,14 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- The option ``enable_cftimeindex`` has now been set to ``True`` by default.
-  This means that by default any dates encoded using a non-standard calendar
-  will be decoded into objects of type :py:class:`cftime.datetime`, regardless
-  of whether or not it might be possible to coerce them into
-  ``np.datetime64[ns]`` objects.  One can explicitly set the option to
-  ``False`` to restore the old behavior.
+- For non-standard calendars commonly used in climate science, xarray will now
+  always use :py:class:`cftime.datetime` objects, rather than by default try to
+  coerce them to ``np.datetime64[ns]`` objects.  A
+  :py:class:`~xarray.CFTimeIndex` will be used for indexing in these cases.
+  New public methods for converting :py:class:`cftime.datetime` dates to
+  ``np.datetime64[ns]`` objects have been added for use-cases where standard
+  datetimes are currently required.  Setting the ``enable_cftimeindex`` option
+  is now a no-op and emits a FutureWarning.
 - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
   Call :py:meth:`Dataset.transpose` directly instead.
 - Iterating over a ``Dataset`` now includes only data variables, not coordinates.

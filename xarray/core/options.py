@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
+
 DISPLAY_WIDTH = 'display_width'
 ARITHMETIC_JOIN = 'arithmetic_join'
 ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
@@ -83,6 +85,11 @@ f    You can use ``set_options`` either as a context manager:
 
     def __init__(self, **kwargs):
         self.old = OPTIONS.copy()
+        if ENABLE_CFTIMEINDEX in kwargs:
+            warnings.warn(
+                'The enable_cftimeindex option is now a no-op '
+                'and will be removed in a future version of xarray.',
+                FutureWarning)
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(

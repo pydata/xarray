@@ -325,16 +325,16 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    - Resampling along the time dimension for data indexed by a
      :py:class:`~xarray.CFTimeIndex` (:issue:`2191`, :issue:`2458`)
    - Built-in plotting of data with :py:class:`cftime.datetime` coordinate axes
-     (:issue:`2164`).
-   
-   If at any time you would like to restore the old default behavior, which was
-   to attempt to decode datetimes into ``np.datetime64[ns]`` objects whenever
-   possible (regardless of calendar type), you can set ``enable_cftimeindex`` to
-   ``False`` within your context when opening a file (see
-   :py:func:`~xarray.set_options` for more information).  For some use-cases 
-   this behavior may still be useful (e.g. to allow the use of some forms
-   resample with non-standard calendars); however in this case one should use
-   caution to only perform operations which do not depend on differences
+     (:issue:`2164`).   
+
+   For some use-cases it may still be useful to convert from
+   :py:class:`cftime.datetime` objects to ``np.datetime64[ns]`` objects,
+   despite the difference in calendar types (e.g. to allow the use of some
+   forms resample with non-standard calendars).  The recommended way of doing
+   this is through...
+
+   However in this case one should
+   use caution to only perform operations which do not depend on differences
    between dates (e.g. differentiation, interpolation, or upsampling with
    resample), as these could introduce subtle and silent errors due to the
    difference in calendar types between the dates encoded in your data and the

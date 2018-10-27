@@ -594,18 +594,16 @@ def test_indexing_in_dataframe_iloc(df, index):
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_concat_cftimeindex(date_type, enable_cftimeindex):
-    with xr.set_options(enable_cftimeindex=enable_cftimeindex):
-        da1 = xr.DataArray(
-            [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
-            dims=['time'])
-        da2 = xr.DataArray(
-            [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
-            dims=['time'])
-        da = xr.concat([da1, da2], dim='time')
+def test_concat_cftimeindex(date_type):
+    da1 = xr.DataArray(
+        [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
+        dims=['time'])
+    da2 = xr.DataArray(
+        [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
+        dims=['time'])
+    da = xr.concat([da1, da2], dim='time')
 
-    if enable_cftimeindex and has_cftime:
+    if has_cftime:
         assert isinstance(da.indexes['time'], CFTimeIndex)
     else:
         assert isinstance(da.indexes['time'], pd.Index)
