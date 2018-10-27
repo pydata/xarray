@@ -2281,9 +2281,7 @@ class TestDataArray(object):
                                 calendar='noleap')
         array = DataArray(np.arange(12), [('time', times)])
 
-        with raises_regex(TypeError,
-                          'Only valid with DatetimeIndex, '
-                          'TimedeltaIndex or PeriodIndex'):
+        with raises_regex(TypeError, 'to_datetimeindex'):
             array.resample(time='6H').mean()
 
     def test_resample_first(self):
