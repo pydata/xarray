@@ -328,11 +328,21 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
      (:issue:`2164`).   
 
    For some use-cases it may still be useful to convert from
-   :py:class:`cftime.datetime` objects to ``np.datetime64[ns]`` objects,
+   a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
    despite the difference in calendar types (e.g. to allow the use of some
    forms resample with non-standard calendars).  The recommended way of doing
-   this is through...
+   this is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
+   method:
 
+   .. ipython:: python
+
+       modern_times = xr.cftime_range('2000', periods=24, freq='MS', calendar='noleap')
+       da = xr.DataArray(range(24), [('time', modern_times)])
+       da
+       datetimeindex = da.indexes['time'].to_datetimeindex()
+       da['time'] = datetimeindex
+       da.resample(time='Y').mean('time')
+   
    However in this case one should
    use caution to only perform operations which do not depend on differences
    between dates (e.g. differentiation, interpolation, or upsampling with
