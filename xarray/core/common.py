@@ -352,6 +352,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         See also
         --------
         Dataset.assign
+        Dataset.swap_dims
         """
         data = self.copy(deep=False)
         results = self._calc_assign_results(kwargs)

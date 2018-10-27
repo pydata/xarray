@@ -33,6 +33,11 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
+  Call :py:meth:`Dataset.transpose` directly instead.
+- Iterating over a ``Dataset`` now includes only data variables, not coordinates.
+  Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
+  includes only data variables
 - Xarray's storage backends now automatically open and close files when
   necessary, rather than requiring opening a file with ``autoclose=True``. A
   global least-recently-used cache is used to store open files; the default
@@ -63,6 +68,9 @@ Enhancements
   By `Deepak Cherian <https://github.com/dcherian>`_.
 - Added support for Python 3.7. (:issue:`2271`).
   By `Joe Hamman <https://github.com/jhamman>`_.
+- Added support for plotting data with `pandas.Interval` coordinates, such as those
+  created by :py:meth:`~xarray.DataArray.groupby_bins`
+  By `Maximilian Maahn <https://github.com/maahn>`_.
 - Added :py:meth:`~xarray.CFTimeIndex.shift` for shifting the values of a
   CFTimeIndex by a specified frequency. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -78,9 +86,18 @@ Enhancements
   behaviour.
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
   
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Added a new backend for the GRIB file format based on ECMWF *cfgrib*
+  python driver and *ecCodes* C-library. (:issue:`2475`)
+  By `Alessandro Amici <https://github.com/alexamici>`_,
+  sponsored by `ECMWF <https://github.com/ecmwf>`_.
+
 Bug fixes
 ~~~~~~~~~
 
+- ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
+  (:issue:`1504`, :issue:`1717`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Addition and subtraction operators used with a CFTimeIndex now preserve the
   index's type. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -101,6 +118,15 @@ Bug fixes
 - Fix a bug that caused some indexing operations on arrays opened with
   ``open_rasterio`` to error (:issue:`2454`).
   By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- Subtracting one CFTimeIndex from another now returns a
+  ``pandas.TimedeltaIndex``, analogous to the behavior for DatetimeIndexes
+  (:issue:`2484`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Adding a TimedeltaIndex to, or subtracting a TimedeltaIndex from a
+  CFTimeIndex is now allowed (:issue:`2484`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Avoid use of Dask's deprecated ``get=`` parameter in tests
+  by `Matthew Rocklin <https://github.com/mrocklin/>`_.
 
 .. _whats-new.0.10.9:
 

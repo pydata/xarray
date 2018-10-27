@@ -222,8 +222,40 @@ It is also possible to make line plots such that the data are on the x-axis and 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
+Step plots
+~~~~~~~~~~
+
+As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
+made using 1D data. 
+
+.. ipython:: python
+
+    @savefig plotting_example_step.png width=4in
+    air1d[:20].plot.step(where='mid')
+
+The argument ``where`` defines where the steps should be placed, options are
+``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
+when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
+
+.. ipython:: python
+
+    air_grp = air.mean(['time','lon']).groupby_bins('lat',[0,23.5,66.5,90])
+    air_mean = air_grp.mean()
+    air_std = air_grp.std()
+    air_mean.plot.step()
+    (air_mean + air_std).plot.step(ls=':')
+    (air_mean - air_std).plot.step(ls=':')
+    plt.ylim(-20,30)
+    @savefig plotting_example_step_groupby.png width=4in
+    plt.title('Zonal mean temperature')
+    
+In this case, the actual boundaries of the bins are used and the ``where`` argument
+is ignored.
+
+
 Other axes kwargs
 -----------------
+
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
 
@@ -495,7 +527,8 @@ Faceted plotting supports other arguments common to xarray 2d plots.
 
     @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
-                                    robust=True, cmap='viridis')
+                                    robust=True, cmap='viridis',
+				     cbar_kwargs={'label': 'this has outliers'})
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~

@@ -727,7 +727,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         ----------
         deep : bool, optional
             Whether each component variable is loaded into memory and copied onto
-            the new object. Default is True.
+            the new object. Default is False.
         data : dict-like, optional
             Data to use in the new object. Each item in `data` must have same
             shape as corresponding data variable in original. When `data` is
@@ -916,13 +916,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return [self.data_vars, self.coords, {d: self[d] for d in self.dims},
                 LevelCoordinatesSource(self)]
 
-    def __dir__(self):
-        # In order to suppress a deprecation warning in Ipython autocompletion
-        # .T is explicitly removed from __dir__. GH: issue 1675
-        d = super(Dataset, self).__dir__()
-        d.remove('T')
-        return d
-
     def __contains__(self, key):
         """The 'in' operator will return true or false depending on whether
         'key' is an array in the dataset or not.
@@ -930,32 +923,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return key in self._variables
 
     def __len__(self):
-        warnings.warn('calling len() on an xarray.Dataset will change in '
-                      'xarray v0.11 to only include data variables, not '
-                      'coordinates. Call len() on the Dataset.variables '
-                      'property instead, like ``len(ds.variables)``, to '
-                      'preserve existing behavior in a forwards compatible '
-                      'manner.',
-                      FutureWarning, stacklevel=2)
-        return len(self._variables)
+        return len(self.data_vars)
 
     def __bool__(self):
-        warnings.warn('casting an xarray.Dataset to a boolean will change in '
-                      'xarray v0.11 to only include data variables, not '
-                      'coordinates. Cast the Dataset.variables property '
-                      'instead to preserve existing behavior in a forwards '
-                      'compatible manner.',
-                      FutureWarning, stacklevel=2)
-        return bool(self._variables)
+        return bool(self.data_vars)
 
     def __iter__(self):
-        warnings.warn('iteration over an xarray.Dataset will change in xarray '
-                      'v0.11 to only include data variables, not coordinates. '
-                      'Iterate over the Dataset.variables property instead to '
-                      'preserve existing behavior in a forwards compatible '
-                      'manner.',
-                      FutureWarning, stacklevel=2)
-        return iter(self._variables)
+        return iter(self.data_vars)
 
     def __array__(self, dtype=None):
         raise TypeError('cannot directly convert an xarray.Dataset into a '
@@ -1112,6 +1086,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Returns
         -------
         Dataset
+
+        See also
+        --------
+        Dataset.swap_dims
         """
         # TODO: allow inserting new coordinates with this method, like
         # DataFrame.set_index?
@@ -2282,6 +2260,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         See Also
         --------
         Dataset.reset_index
+        Dataset.swap_dims
         """
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         variables, coord_names = merge_indexes(indexes, self._variables,
@@ -2660,13 +2639,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             var_dims = tuple(dim for dim in dims if dim in var.dims)
             ds._variables[name] = var.transpose(*var_dims)
         return ds
-
-    @property
-    def T(self):
-        warnings.warn('xarray.Dataset.T has been deprecated as an alias for '
-                      '`.transpose()`. It will be removed in xarray v0.11.',
-                      FutureWarning, stacklevel=2)
-        return self.transpose()
 
     def dropna(self, dim, how='any', thresh=None, subset=None):
         """Returns a new dataset with dropped labels for missing values along
