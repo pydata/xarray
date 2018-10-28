@@ -285,7 +285,7 @@ def cftime_to_nptime(times):
             # 1678 to 2262 (this is not currently the case for
             # datetime.datetime).
             dt = pd.Timestamp(t.year, t.month, t.day, t.hour, t.minute,
-                              t.second)
+                              t.second, t.microsecond)
         except ValueError as e:
             raise ValueError('Cannot convert date {} to a date in the '
                              'standard calendar.  Reason: {}.'.format(t, e))

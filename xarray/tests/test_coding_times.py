@@ -89,7 +89,11 @@ def test_cf_datetime(num_dates, units, calendar):
         actual = coding.times.decode_cf_datetime(num_dates, units,
                                                  calendar)
 
-    assert_array_equal(expected, actual)
+    abs_diff = np.atleast_1d(abs(actual - expected)).astype(np.timedelta64)
+    # once we no longer support versions of netCDF4 older than 1.1.5,
+    # we could do this check with near microsecond accuracy:
+    # https://github.com/Unidata/netcdf4-python/issues/355
+    assert (abs_diff <= np.timedelta64(1, 's')).all()
     encoded, _, _ = coding.times.encode_cf_datetime(actual, units,
                                                     calendar)
     if '1-1-1' not in units:
@@ -151,7 +155,11 @@ def test_decode_cf_datetime_non_iso_strings():
              (np.arange(100), 'hours since 2000-01-01 0:00')]
     for num_dates, units in cases:
         actual = coding.times.decode_cf_datetime(num_dates, units)
-        assert_array_equal(actual, expected)
+        abs_diff = abs(actual - expected)
+        # once we no longer support versions of netCDF4 older than 1.1.5,
+        # we could do this check with near microsecond accuracy:
+        # https://github.com/Unidata/netcdf4-python/issues/355
+        assert (abs_diff <= np.timedelta64(1, 's')).all()
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
