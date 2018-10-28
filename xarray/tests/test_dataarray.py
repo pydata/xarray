@@ -618,9 +618,9 @@ class TestDataArray(object):
         da[dict(x=ind)] = value  # should not raise
 
     def test_contains(self):
-        data_array = DataArray(1, coords={'x': 2})
-        with pytest.warns(FutureWarning):
-            assert 'x' in data_array
+        data_array = DataArray([1, 2])
+        assert 1 in data_array
+        assert 3 not in data_array
 
     def test_attr_sources_multiindex(self):
         # make sure attr-style access for multi-index levels
@@ -2533,6 +2533,7 @@ class TestDataArray(object):
         assert_allclose(actual, expected, rtol=1e-16)
 
     @requires_dask
+    @requires_scipy
     def test_upsample_interpolate_dask(self):
         import dask.array as da
 

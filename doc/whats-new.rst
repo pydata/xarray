@@ -33,11 +33,14 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
-  Call :py:meth:`Dataset.transpose` directly instead.
-- Iterating over a ``Dataset`` now includes only data variables, not coordinates.
-  Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
-  includes only data variables
+- Finished deprecation cycles:
+  - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
+    Call :py:meth:`Dataset.transpose` directly instead.
+  - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
+    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
+    includes only data variables.
+  - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
+    array data, not coordinates. 
 - Xarray's storage backends now automatically open and close files when
   necessary, rather than requiring opening a file with ``autoclose=True``. A
   global least-recently-used cache is used to store open files; the default
