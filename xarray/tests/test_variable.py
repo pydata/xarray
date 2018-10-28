@@ -970,8 +970,10 @@ class TestVariable(VariableSubclassobjects):
                         expected_extra.attrs, expected_extra.encoding)
         assert_identical(expected_extra, as_variable(xarray_tuple))
 
-        with raises_regex(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuple of form'):
             as_variable(tuple(data))
+        with raises_regex(ValueError, 'tuple of form'):  # GH1016
+            as_variable(('five', 'six', 'seven'))
         with raises_regex(
                 TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
