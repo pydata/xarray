@@ -330,9 +330,9 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    For some use-cases it may still be useful to convert from
    a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
    despite the difference in calendar types (e.g. to allow the use of some
-   forms resample with non-standard calendars).  The recommended way of doing
-   this is to use the built-in :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`
-   method:
+   forms of resample with non-standard calendars).  The recommended way of
+   doing this is to use the built-in
+   :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` method:
 
    .. ipython:: python
 
