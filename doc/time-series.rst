@@ -343,12 +343,11 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
        da['time'] = datetimeindex
        da.resample(time='Y').mean('time')
    
-   However in this case one should
-   use caution to only perform operations which do not depend on differences
-   between dates (e.g. differentiation, interpolation, or upsampling with
-   resample), as these could introduce subtle and silent errors due to the
-   difference in calendar types between the dates encoded in your data and the
-   dates stored in memory.  
+   However in this case one should use caution to only perform operations which
+   do not depend on differences between dates (e.g. differentiation,
+   interpolation, or upsampling with resample), as these could introduce subtle
+   and silent errors due to the difference in calendar types between the dates
+   encoded in your data and the dates stored in memory.  
   
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
 .. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601
