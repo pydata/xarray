@@ -75,7 +75,7 @@ class set_options(object):
     - ``cmap_sequential``: colormap to use for nondivergent data plots.
       Default: ``viridis``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``cmap_divergent  ``: colormap to use for divergent data plots.
+    - ``cmap_divergent``: colormap to use for divergent data plots.
       Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
     - ``keep_attrs``: rule for whether to keep attributes on xarray
