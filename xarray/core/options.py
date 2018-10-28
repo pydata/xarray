@@ -53,7 +53,7 @@ def _get_keep_attrs(default):
     elif global_choice in [True, False]:
         return global_choice
     else:
-        raise ValueError('The global option keep_attrs is set to an invalid value.')
+        raise ValueError("The global option keep_attrs must be one of True, False or 'default'.")
 
 
 class set_options(object):
@@ -75,7 +75,7 @@ class set_options(object):
     - ``cmap_sequential``: colormap to use for nondivergent data plots.
       Default: ``viridis``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
-    - ``cmap_divergent``: colormap to use for divergent data plots.
+    - ``cmap_divergent  ``: colormap to use for divergent data plots.
       Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
     - ``keep_attrs``: rule for whether to keep attributes on xarray
@@ -84,7 +84,7 @@ class set_options(object):
       logic that attrs should only be kept in unambiguous circumstances.
       Default: ``'default'``.
 
-f    You can use ``set_options`` either as a context manager:
+    You can use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({'x': np.arange(1000)})
     >>> with xr.set_options(display_width=40):
