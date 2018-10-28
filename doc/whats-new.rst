@@ -123,6 +123,10 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid use of Dask's deprecated ``get=`` parameter in tests
   by `Matthew Rocklin <https://github.com/mrocklin/>`_.
+- An ``OverflowError`` is now accurately raised and caught during the
+  encoding process if a reference date is used that is so distant that
+  the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.10.9:
 
