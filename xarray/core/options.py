@@ -38,8 +38,16 @@ def _set_file_cache_maxsize(value):
     FILE_CACHE.maxsize = value
 
 
+def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
+    warnings.warn(
+        'The enable_cftimeindex option is now a no-op '
+        'and will be removed in a future version of xarray.',
+        FutureWarning)
+
+
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
+    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex
 }
 
 
@@ -52,9 +60,6 @@ class set_options(object):
       Default: ``80``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
-    - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
-      for time indexes with non-standard calendars or dates outside the
-      Timestamp-valid range. Default: ``True``.
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
@@ -85,11 +90,6 @@ f    You can use ``set_options`` either as a context manager:
 
     def __init__(self, **kwargs):
         self.old = OPTIONS.copy()
-        if ENABLE_CFTIMEINDEX in kwargs:
-            warnings.warn(
-                'The enable_cftimeindex option is now a no-op '
-                'and will be removed in a future version of xarray.',
-                FutureWarning)
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(

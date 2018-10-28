@@ -361,7 +361,7 @@ def test_groupby(da):
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_resample_error(da):
-    with pytest.raises(TypeError):
+    with pytest.raises(NotImplementedError, match='to_datetimeindex'):
         da.resample(time='Y')
 
 
@@ -749,11 +749,12 @@ def test_parse_array_of_cftime_strings():
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize('calendar', _ALL_CALENDARS)
-def test_to_datetimeindex(calendar):
+@pytest.mark.parametrize('unsafe', [False, True])
+def test_to_datetimeindex(calendar, unsafe):
     index = xr.cftime_range('2000', periods=5, calendar=calendar)
     expected = pd.date_range('2000', periods=5)
 
-    if calendar in _NON_STANDARD_CALENDARS:
+    if calendar in _NON_STANDARD_CALENDARS and not unsafe:
         with pytest.warns(RuntimeWarning, match='non-standard'):
             result = index.to_datetimeindex()
     else:

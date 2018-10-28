@@ -31,11 +31,9 @@ def test_arithmetic_join():
 def test_enable_cftimeindex():
     with pytest.raises(ValueError):
         xarray.set_options(enable_cftimeindex=None)
-    with xarray.set_options(enable_cftimeindex=True):
-        assert OPTIONS['enable_cftimeindex']
-    with pytest.warns(FutureWarning):
+    with pytest.warns(FutureWarning, match='no-op'):
         with xarray.set_options(enable_cftimeindex=True):
-            pass
+            assert OPTIONS['enable_cftimeindex']
 
 
 def test_file_cache_maxsize():

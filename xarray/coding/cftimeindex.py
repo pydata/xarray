@@ -384,8 +384,14 @@ class CFTimeIndex(pd.Index):
         # pandas.  No longer used as of pandas 0.23.
         return self + deltas
 
-    def to_datetimeindex(self):
+    def to_datetimeindex(self, unsafe=False):
         """If possible, convert this index to a pandas.DatetimeIndex.
+
+        Parameters
+        ----------
+        unsafe : bool
+            Flag to turn off warning when converting from a CFTimeIndex with
+            a non-standard calendar to a DatetimeIndex (default ``False``).
 
         Returns
         -------
@@ -419,7 +425,7 @@ class CFTimeIndex(pd.Index):
         """  # noqa: E501
         nptimes = cftime_to_nptime(self)
         calendar = infer_calendar_name(self)
-        if calendar not in _STANDARD_CALENDARS:
+        if calendar not in _STANDARD_CALENDARS and not unsafe:
             warnings.warn(
                 'Converting a CFTimeIndex with dates from a non-standard '
                 'calendar, {!r}, to a pandas.DatetimeIndex, which uses dates '

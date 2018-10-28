@@ -280,6 +280,10 @@ def cftime_to_nptime(times):
     new = np.empty(times.shape, dtype='M8[ns]')
     for i, t in np.ndenumerate(times):
         try:
+            # Use pandas.Timestamp in place of datetime.datetime, because
+            # NumPy casts it safely it np.datetime64[ns] for dates outside
+            # 1678 to 2262 (this is not currently the case for
+            # datetime.datetime).
             dt = pd.Timestamp(t.year, t.month, t.day, t.hour, t.minute,
                               t.second)
         except ValueError as e:

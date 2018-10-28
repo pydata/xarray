@@ -686,7 +686,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                             "was passed %r" % dim)
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            raise TypeError(
+            raise NotImplementedError(
                 'Resample is currently not supported along a dimension '
                 'indexed by a CFTimeIndex.  For certain kinds of downsampling '
                 'it may be possible to work around this by converting your '
@@ -723,7 +723,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                       FutureWarning, stacklevel=3)
 
         if isinstance(self.indexes[dim], CFTimeIndex):
-            raise TypeError(
+            raise NotImplementedError(
                 'Resample is currently not supported along a dimension '
                 'indexed by a CFTimeIndex.  For certain kinds of downsampling '
                 'it may be possible to work around this by converting your '
