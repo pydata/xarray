@@ -95,7 +95,7 @@ def as_variable(obj, name=None):
                 'cannot set variable %r with %r-dimensional data '
                 'without explicit dimension names. Pass a tuple of '
                 '(dims, data) instead.' % (name, data.ndim))
-        obj = Variable(name, obj, fastpath=True)
+        obj = Variable(name, data, fastpath=True)
     else:
         raise TypeError('unable to convert object into a variable without an '
                         'explicit list of dimensions: %r' % obj)

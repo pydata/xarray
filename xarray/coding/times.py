@@ -358,7 +358,12 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype('timedelta64[ns]')
         ref_date = np.datetime64(pd.Timestamp(ref_date))
-        num = (dates - ref_date) / time_delta
+
+        # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
+        # an OverflowError is raised if the ref_date is too far away from
+        # dates to be encoded (GH 2272).
+        num = (pd.DatetimeIndex(dates.ravel()) - ref_date) / time_delta
+        num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError):
         num = _encode_datetime_with_cftime(dates, units, calendar)

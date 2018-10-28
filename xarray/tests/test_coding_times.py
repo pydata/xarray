@@ -8,7 +8,8 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Variable, coding, decode_cf
-from xarray.coding.times import _import_cftime, cftime_to_nptime
+from xarray.coding.times import (_import_cftime, cftime_to_nptime,
+                                 decode_cf_datetime, encode_cf_datetime)
 from xarray.core.common import contains_cftime_datetimes
 
 from . import (
@@ -690,3 +691,16 @@ def test_contains_cftime_datetimes_non_cftimes(non_cftime_data):
 @pytest.mark.parametrize('non_cftime_data', [DataArray([]), DataArray([1, 2])])
 def test_contains_cftime_datetimes_non_cftimes_dask(non_cftime_data):
     assert not contains_cftime_datetimes(non_cftime_data.chunk())
+
+
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+@pytest.mark.parametrize('shape', [(24,), (8, 3), (2, 4, 3)])
+def test_encode_cf_datetime_overflow(shape):
+    # Test for fix to GH 2272
+    dates = pd.date_range('2100', periods=24).values.reshape(shape)
+    units = 'days since 1800-01-01'
+    calendar = 'standard'
+
+    num, _, _ = encode_cf_datetime(dates, units, calendar)
+    roundtrip = decode_cf_datetime(num, units, calendar)
+    np.testing.assert_array_equal(dates, roundtrip)

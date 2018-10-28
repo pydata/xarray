@@ -105,6 +105,9 @@ Bug fixes
 - Addition and subtraction operators used with a CFTimeIndex now preserve the
   index's type. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- We now properly handle arrays of ``datetime.datetime`` and ``datetime.timedelta``
+  provided as coordinates. (:issue:`2512`)
+  By `Deepak Cherian <https://github.com/dcherian`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -131,6 +134,10 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid use of Dask's deprecated ``get=`` parameter in tests
   by `Matthew Rocklin <https://github.com/mrocklin/>`_.
+- An ``OverflowError`` is now accurately raised and caught during the
+  encoding process if a reference date is used that is so distant that
+  the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.10.9:
 
