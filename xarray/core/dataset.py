@@ -657,7 +657,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
-                               attrs=__default_attrs, inplace=None):
+                               attrs=__default_attrs, inplace=False):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes. If not provided explicitly,
@@ -677,7 +677,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         -------
         new : Dataset
         """
-        _check_inplace(inplace)
         if dims is None:
             dims = calculate_dimensions(variables)
         if inplace:
@@ -2480,7 +2479,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other, inplace=None):
+    def update(self, other, inplace=True):
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -2502,7 +2501,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        _check_inplace(inplace)
+        # _check_inplace(inplace)
         variables, coord_names, dims = dataset_update_method(self, other)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
