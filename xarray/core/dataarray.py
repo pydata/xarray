@@ -1589,9 +1589,6 @@ class DataArray(AbstractArray, DataWithCoords):
             summarized data and the indicated dimension(s) removed.
         """
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         var = self.variable.reduce(func, dim, axis, keep_attrs, **kwargs)
         return self._replace_maybe_drop_dims(var)
 
@@ -2316,9 +2313,6 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.nanpercentile, pandas.Series.quantile, Dataset.quantile
         """
 
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
-
         ds = self._to_temp_dataset().quantile(
             q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
@@ -2359,8 +2353,6 @@ class DataArray(AbstractArray, DataWithCoords):
         array([ 1.,   2.,   3.])
         Dimensions without coordinates: x
         """
-        if keep_attrs is None:
-            keep_attrs = _get_keep_attrs(default=False)
 
         ds = self._to_temp_dataset().rank(dim, pct=pct, keep_attrs=keep_attrs)
         return self._from_temp_dataset(ds)

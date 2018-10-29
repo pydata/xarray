@@ -597,15 +597,11 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         if include_skipna:
             def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
                              keep_attrs=None, **kwargs):
-                if keep_attrs is None:
-                    keep_attrs = _get_keep_attrs(default=False)
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=DEFAULT_DIMS, axis=None,
                              keep_attrs=None, **kwargs):
-                if keep_attrs is None:
-                    keep_attrs = _get_keep_attrs(default=False)
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    allow_lazy=True, **kwargs)
         return wrapped_func

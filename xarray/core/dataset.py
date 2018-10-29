@@ -2925,7 +2925,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
-            If True, the dataset's attributes (`attrs`) will be _getcopied from
+            If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one. If False, the new object will
             be returned without attributes.
         args : tuple, optional
