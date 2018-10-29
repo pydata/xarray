@@ -22,8 +22,8 @@ def _check_inplace(inplace):
     if inplace is None:
         inplace = False
     else:
-        warnings.warn('The inplace argument will be removed in'
-                      ' xarray 0.12.0.', FutureWarning)
+        warnings.warn('The inplace argument has been deprecated and will be '
+                      'removed in xarray 0.12.0.', FutureWarning)
 
 
 def alias_message(old_name, new_name):

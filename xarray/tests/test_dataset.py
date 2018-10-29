@@ -86,6 +86,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                     k, v in iteritems(self._variables))
 
 
+@pytest.mark.filterwarnings('ignore:The inplace argument')
 class TestDataset(object):
     def test_repr(self):
         data = create_test_data(seed=123)

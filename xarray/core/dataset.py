@@ -2480,7 +2480,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other, inplace=True):
+    def update(self, other, inplace=None):
         """Update this dataset's variables with those from another dataset.
 
         Parameters

@@ -23,6 +23,7 @@ from xarray.tests import (
     requires_scipy, source_ndarray)
 
 
+@pytest.mark.filterwarnings('ignore:.*inplace argument.*:FutureWarning')
 class TestDataArray(object):
     @pytest.fixture(autouse=True)
     def setup(self):
