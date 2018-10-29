@@ -18,9 +18,9 @@ from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
 
-def _check_inplace(inplace):
+def _check_inplace(inplace, default=False):
     if inplace is None:
-        inplace = False
+        inplace = default
     else:
         warnings.warn('The inplace argument has been deprecated and will be '
                       'removed in xarray 0.12.0.', FutureWarning)

@@ -2479,7 +2479,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             result = result._unstack_once(dim)
         return result
 
-    def update(self, other, inplace=True):
+    def update(self, other, inplace=None):
         """Update this dataset's variables with those from another dataset.
 
         Parameters
@@ -2501,7 +2501,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
-        # _check_inplace(inplace)
+        _check_inplace(inplace, default=True)
         variables, coord_names, dims = dataset_update_method(self, other)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
