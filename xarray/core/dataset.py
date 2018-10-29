@@ -32,9 +32,9 @@ from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
-    Frozen, SortedKeysDict, datetime_to_numeric, decode_numpy_dict_values,
-    either_dict_or_kwargs, ensure_us_time_resolution, hashable,
-    maybe_wrap_array)
+    _check_inplace, Frozen, SortedKeysDict, datetime_to_numeric,
+    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
+    hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
@@ -657,7 +657,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
-                               attrs=__default_attrs, inplace=False):
+                               attrs=__default_attrs, inplace=None):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes. If not provided explicitly,
@@ -677,6 +677,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         -------
         new : Dataset
         """
+        _check_inplace(inplace)
         if dims is None:
             dims = calculate_dimensions(variables)
         if inplace:
@@ -1072,7 +1073,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         return DataVariables(self)
 
-    def set_coords(self, names, inplace=False):
+    def set_coords(self, names, inplace=None):
         """Given names of one or more variables, set them as coordinates
 
         Parameters
@@ -1095,6 +1096,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         # DataFrame.set_index?
         # nb. check in self._variables, not self.data_vars to insure that the
         # operation is idempotent
+        _check_inplace(inplace)
         if isinstance(names, basestring):
             names = [names]
         self._assert_all_in_dataset(names)
@@ -1102,7 +1104,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         obj._coord_names.update(names)
         return obj
 
-    def reset_coords(self, names=None, drop=False, inplace=False):
+    def reset_coords(self, names=None, drop=False, inplace=None):
         """Given names of coordinates, reset them to become variables
 
         Parameters
@@ -1121,6 +1123,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         -------
         Dataset
         """
+        _check_inplace(inplace)
         if names is None:
             names = self._coord_names - set(self.dims)
         else:
@@ -2045,7 +2048,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             ds = self.reindex(object_coords)
         return ds.interp(numeric_coords, method, assume_sorted, kwargs)
 
-    def rename(self, name_dict=None, inplace=False, **names):
+    def rename(self, name_dict=None, inplace=None, **names):
         """Returns a new object with renamed variables and dimensions.
 
         Parameters
@@ -2070,6 +2073,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.swap_dims
         DataArray.rename
         """
+        _check_inplace(inplace)
         name_dict = either_dict_or_kwargs(name_dict, names, 'rename')
         for k, v in name_dict.items():
             if k not in self and k not in self.dims:
@@ -2095,7 +2099,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return self._replace_vars_and_dims(variables, coord_names, dims=dims,
                                            inplace=inplace)
 
-    def swap_dims(self, dims_dict, inplace=False):
+    def swap_dims(self, dims_dict, inplace=None):
         """Returns a new object with swapped dimensions.
 
         Parameters
@@ -2119,6 +2123,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.rename
         DataArray.swap_dims
         """
+        _check_inplace(inplace)
         for k, v in dims_dict.items():
             if k not in self.dims:
                 raise ValueError('cannot swap from dimension %r because it is '
@@ -2231,7 +2236,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._replace_vars_and_dims(variables, self._coord_names)
 
-    def set_index(self, indexes=None, append=False, inplace=False,
+    def set_index(self, indexes=None, append=False, inplace=None,
                   **indexes_kwargs):
         """Set Dataset (multi-)indexes using one or more existing coordinates or
         variables.
@@ -2262,6 +2267,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Dataset.reset_index
         Dataset.swap_dims
         """
+        _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         variables, coord_names = merge_indexes(indexes, self._variables,
                                                self._coord_names,
@@ -2269,7 +2275,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+    def reset_index(self, dims_or_levels, drop=False, inplace=None):
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -2293,13 +2299,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         --------
         Dataset.set_index
         """
+        _check_inplace(inplace)
         variables, coord_names = split_indexes(dims_or_levels, self._variables,
                                                self._coord_names,
                                                self._level_coords, drop=drop)
         return self._replace_vars_and_dims(variables, coord_names=coord_names,
                                            inplace=inplace)
 
-    def reorder_levels(self, dim_order=None, inplace=False,
+    def reorder_levels(self, dim_order=None, inplace=None,
                        **dim_order_kwargs):
         """Rearrange index levels using input order.
 
@@ -2322,6 +2329,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Another dataset, with this dataset's data but replaced
             coordinates.
         """
+        _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs,
                                           'reorder_levels')
         replace_variables = {}
@@ -2494,12 +2502,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             If any dimensions would have inconsistent sizes in the updated
             dataset.
         """
+        _check_inplace(inplace)
         variables, coord_names, dims = dataset_update_method(self, other)
 
         return self._replace_vars_and_dims(variables, coord_names, dims,
                                            inplace=inplace)
 
-    def merge(self, other, inplace=False, overwrite_vars=frozenset(),
+    def merge(self, other, inplace=None, overwrite_vars=frozenset(),
               compat='no_conflicts', join='outer'):
         """Merge the arrays of two datasets into a single dataset.
 
@@ -2550,6 +2559,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         MergeError
             If any variables conflict (see ``compat``).
         """
+        _check_inplace(inplace)
         variables, coord_names, dims = dataset_merge_method(
             self, other, overwrite_vars=overwrite_vars, compat=compat,
             join=join)
@@ -3311,8 +3321,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return func
 
     def _calculate_binary_op(self, f, other, join='inner',
-                             inplace=False):
-
+                             inplace=None):
+        _check_inplace(inplace)
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
             if inplace and set(lhs_data_vars) != set(rhs_data_vars):
                 raise ValueError('datasets must have the same data variables '

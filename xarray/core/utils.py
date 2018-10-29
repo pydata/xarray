@@ -18,6 +18,14 @@ from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
 
 
+def _check_inplace(inplace):
+    if inplace is None:
+        inplace = False
+    else:
+        warnings.warn('The inplace argument will be removed in'
+                      ' xarray 0.12.0.', FutureWarning)
+
+
 def alias_message(old_name, new_name):
     return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
 
