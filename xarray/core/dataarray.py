@@ -566,7 +566,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         Dataset, or DataArray if ``drop == True``
         """
-        _check_inplace(inplace)
+        inplace = _check_inplace(inplace)
         if inplace and not drop:
             raise ValueError('cannot reset coordinates in-place on a '
                              'DataArray without ``drop == True``')
@@ -1187,7 +1187,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
-        _check_inplace(inplace)
+        inplace = _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
         if inplace:
@@ -1220,7 +1220,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.set_index
         """
-        _check_inplace(inplace)
+        inplace = _check_inplace(inplace)
         coords, _ = split_indexes(dims_or_levels, self._coords, set(),
                                   self._level_coords, drop=drop)
         if inplace:
@@ -1251,7 +1251,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
-        _check_inplace(inplace)
+        inplace = _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs,
                                           'reorder_levels')
         replace_coords = {}

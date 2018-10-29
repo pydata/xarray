@@ -25,6 +25,8 @@ def _check_inplace(inplace, default=False):
         warnings.warn('The inplace argument has been deprecated and will be '
                       'removed in xarray 0.12.0.', FutureWarning)
 
+    return inplace
+
 
 def alias_message(old_name, new_name):
     return '%s has been deprecated. Use %s instead.' % (old_name, new_name)
