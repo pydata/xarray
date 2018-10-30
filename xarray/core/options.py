@@ -45,7 +45,6 @@ _SETTERS = {
 }
 
 
-<<<<<<< HEAD
 def _get_keep_attrs(default):
     global_choice = OPTIONS['keep_attrs']
 
@@ -55,17 +54,6 @@ def _get_keep_attrs(default):
         return global_choice
     else:
         raise ValueError("The global option keep_attrs must be one of True, False or 'default'.")
-=======
-def _set_keep_attrs(func_default):
-    global_choice = OPTIONS['keep_attrs']
-
-    if global_choice is 'default':
-        return func_default
-    elif global_choice in [True, False]:
-        return global_choice
-    else:
-        raise ValueError('The global option keep_attrs is set to an invalid value.')
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
 
 
 class set_options(object):
