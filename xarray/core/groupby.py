@@ -13,6 +13,7 @@ from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .pycompat import integer_types, range, zip
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
+from .options import _get_keep_attrs
 
 
 def unique_value_groups(ar, sort=True):
@@ -404,15 +405,17 @@ class GroupBy(SupportsArithmetic):
             # NB. this is currently only used for reductions along an existing
             # dimension
             return self._obj
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=True)
         return self.reduce(op, self._group_dim, skipna=skipna,
                            keep_attrs=keep_attrs, allow_lazy=True)
 
-    def first(self, skipna=None, keep_attrs=True):
+    def first(self, skipna=None, keep_attrs=None):
         """Return the first element of each group along the group dimension
         """
         return self._first_or_last(duck_array_ops.first, skipna, keep_attrs)
 
-    def last(self, skipna=None, keep_attrs=True):
+    def last(self, skipna=None, keep_attrs=None):
         """Return the last element of each group along the group dimension
         """
         return self._first_or_last(duck_array_ops.last, skipna, keep_attrs)
@@ -539,8 +542,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               shortcut=True, **kwargs):
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=None, shortcut=True, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -580,6 +583,9 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
                     "warning, pass dim=xarray.ALL_DIMS explicitly.",
                     FutureWarning, stacklevel=2)
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         def reduce_array(ar):
             return ar.reduce(func, dim, axis, keep_attrs=keep_attrs, **kwargs)
         return self.apply(reduce_array, shortcut=shortcut)
@@ -590,12 +596,12 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=DEFAULT_DIMS, axis=None, skipna=None,
-                             keep_attrs=False, **kwargs):
+                             keep_attrs=None, **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
             def wrapped_func(self, dim=DEFAULT_DIMS, axis=None,
-                             keep_attrs=False, **kwargs):
+                             keep_attrs=None, **kwargs):
                 return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
                                    allow_lazy=True, **kwargs)
         return wrapped_func
@@ -651,7 +657,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         combined = self._maybe_unstack(combined)
         return combined
 
-    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along some
         dimension(s).
 
@@ -692,6 +698,9 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         elif dim is None:
             dim = self._group_dim
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         def reduce_dataset(ds):
             return ds.reduce(func, dim, keep_attrs, **kwargs)
         return self.apply(reduce_dataset)
@@ -701,15 +710,15 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False,
+            def wrapped_func(self, dim=DEFAULT_DIMS,
                              skipna=None, **kwargs):
-                return self.reduce(func, dim, keep_attrs, skipna=skipna,
-                                   numeric_only=numeric_only, allow_lazy=True,
-                                   **kwargs)
+                return self.reduce(func, dim,
+                                   skipna=skipna, numeric_only=numeric_only,
+                                   allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=DEFAULT_DIMS, keep_attrs=False,
+            def wrapped_func(self, dim=DEFAULT_DIMS,
                              **kwargs):
-                return self.reduce(func, dim, keep_attrs,
+                return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         return wrapped_func

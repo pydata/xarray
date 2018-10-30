@@ -6,6 +6,8 @@ ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
 FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
+KEEP_ATTRS = 'keep_attrs'
+
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
@@ -14,6 +16,7 @@ OPTIONS = {
     FILE_CACHE_MAXSIZE: 128,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
+    KEEP_ATTRS: 'default'
 }
 
 _JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
@@ -28,6 +31,7 @@ _VALIDATORS = {
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
+    KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
 }
 
 
@@ -39,6 +43,17 @@ def _set_file_cache_maxsize(value):
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
 }
+
+
+def _get_keep_attrs(default):
+    global_choice = OPTIONS['keep_attrs']
+
+    if global_choice is 'default':
+        return default
+    elif global_choice in [True, False]:
+        return global_choice
+    else:
+        raise ValueError("The global option keep_attrs must be one of True, False or 'default'.")
 
 
 class set_options(object):
@@ -63,8 +78,13 @@ class set_options(object):
     - ``cmap_divergent``: colormap to use for divergent data plots.
       Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
+    - ``keep_attrs``: rule for whether to keep attributes on xarray
+      Datasets/dataarrays after operations. Either ``True`` to always keep
+      attrs, ``False`` to always discard them, or ``'default'`` to use original
+      logic that attrs should only be kept in unambiguous circumstances.
+      Default: ``'default'``.
 
-f    You can use ``set_options`` either as a context manager:
+    You can use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({'x': np.arange(1000)})
     >>> with xr.set_options(display_width=40):
