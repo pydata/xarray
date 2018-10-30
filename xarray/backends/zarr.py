@@ -80,13 +80,13 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
         if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
             raise ValueError(
                 "Zarr requires uniform chunk sizes except for final chunk."
-                " Variable %r has incompatible chunks. Consider "
+                " Variable dask chunks %r are incompatible. Consider "
                 "rechunking using `chunk()`." % (var_chunks,))
         if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
             raise ValueError(
-                "Final chunk of Zarr array must be smaller than first. "
-                "Variable %r has incompatible chunks. Consider rechunking "
-                "using `chunk()`." % var_chunks)
+                "Final chunk of Zarr array must be the same size or smaller "
+                "than the first. Variable Dask chunks %r are incompatible. "
+                "Consider rechunking using `chunk()`." % var_chunks)
         # return the first chunk for each dimension
         return tuple(chunk[0] for chunk in var_chunks)
 
@@ -136,9 +136,11 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                         % (enc_chunks_tuple, var_chunks))
             if dchunks[-1] > zchunk:
                 raise ValueError(
-                    "Final chunk of Zarr array must be smaller than first. "
-                    "Variable %r has incompatible chunks. Consider rechunking "
-                    "using `chunk()`." % var_chunks)
+                    "Final chunk of Zarr array must be the same size or smaller "
+                    "than the first. The specified Zarr chunk encoding is %r, "
+                    "but %r in variable Dask chunks %r is incompatible. "
+                    "Consider rechunking using `chunk()`." 
+                    % (enc_chunks_tuple, dchunks, var_chunks))
         return enc_chunks_tuple
 
     raise AssertionError(
