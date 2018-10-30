@@ -18,11 +18,7 @@ from .indexing import (
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
-<<<<<<< HEAD
 from .options import _get_keep_attrs
-=======
-from .options import _set_keep_attrs
->>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
 
 try:
     import dask.array as da
