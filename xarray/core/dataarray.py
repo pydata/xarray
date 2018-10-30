@@ -16,7 +16,11 @@ from .coordinates import (
     assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
+<<<<<<< HEAD
 from .options import OPTIONS, _get_keep_attrs
+=======
+from .options import OPTIONS, _set_keep_attrs
+>>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
     decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution)
@@ -1555,7 +1559,12 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return ops.fillna(self, other, join="outer")
 
+<<<<<<< HEAD
     def reduce(self, func, dim=None, axis=None, keep_attrs=None, **kwargs):
+=======
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=_set_keep_attrs(False), **kwargs):
+>>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -2267,7 +2276,12 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().sortby(variables, ascending=ascending)
         return self._from_temp_dataset(ds)
 
+<<<<<<< HEAD
     def quantile(self, q, dim=None, interpolation='linear', keep_attrs=None):
+=======
+    def quantile(self, q, dim=None, interpolation='linear',
+                 keep_attrs=_set_keep_attrs(False)):
+>>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements.
@@ -2313,7 +2327,11 @@ class DataArray(AbstractArray, DataWithCoords):
             q, dim=dim, keep_attrs=keep_attrs, interpolation=interpolation)
         return self._from_temp_dataset(ds)
 
+<<<<<<< HEAD
     def rank(self, dim, pct=False, keep_attrs=None):
+=======
+    def rank(self, dim, pct=False, keep_attrs=_set_keep_attrs(False)):
+>>>>>>> 842a16d55db185cae53ac19d9b06381775a1adf2
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that

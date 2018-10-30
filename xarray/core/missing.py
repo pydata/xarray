@@ -14,6 +14,7 @@ from .duck_array_ops import dask_array_type
 from .pycompat import iteritems
 from .utils import OrderedSet, datetime_to_numeric, is_scalar
 from .variable import Variable, broadcast_variables
+from .options import _set_keep_attrs
 
 
 class BaseInterpolator(object):
@@ -218,7 +219,7 @@ def interp_na(self, dim=None, use_coordinate=True, method='linear', limit=None,
                           output_dtypes=[self.dtype],
                           dask='parallelized',
                           vectorize=True,
-                          keep_attrs=True).transpose(*self.dims)
+                          keep_attrs=_set_keep_attrs(True)).transpose(*self.dims)
 
     if limit is not None:
         arr = arr.where(valids)
@@ -269,7 +270,7 @@ def ffill(arr, dim=None, limit=None):
 
     return apply_ufunc(bn.push, arr,
                        dask='parallelized',
-                       keep_attrs=True,
+                       keep_attrs=_set_keep_attrs(True),
                        output_dtypes=[arr.dtype],
                        kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
@@ -283,7 +284,7 @@ def bfill(arr, dim=None, limit=None):
 
     return apply_ufunc(_bfill, arr,
                        dask='parallelized',
-                       keep_attrs=True,
+                       keep_attrs=_set_keep_attrs(True),
                        output_dtypes=[arr.dtype],
                        kwargs=dict(n=_limit, axis=axis)).transpose(*arr.dims)
 
