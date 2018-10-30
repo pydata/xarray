@@ -273,7 +273,7 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return combined.rename({self._resample_dim: self._dim})
 
-    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
 

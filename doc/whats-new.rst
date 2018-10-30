@@ -82,7 +82,12 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate`,
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
+  By `Spencer Clark <https://github.com/spencerkclark>`_
+- There is now a global option to either always keep or always discard
+  dataset and dataarray attrs upon operations. The option is set with
+  ``xarray.set_options(keep_attrs=True)``, and the default is to use the old
+  behaviour.
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Added a new backend for the GRIB file format based on ECMWF *cfgrib*
   python driver and *ecCodes* C-library. (:issue:`2475`)
   By `Alessandro Amici <https://github.com/alexamici>`_,
