@@ -28,7 +28,7 @@ from .dtypes import is_datetime_like
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
-from .options import OPTIONS
+from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
@@ -2851,7 +2851,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         out = ops.fillna(self, other, join="outer", dataset_join="outer")
         return out
 
-    def reduce(self, func, dim=None, keep_attrs=False, numeric_only=False,
+    def reduce(self, func, dim=None, keep_attrs=None, numeric_only=False,
                allow_lazy=False, **kwargs):
         """Reduce this dataset by applying `func` along some dimension(s).
 
@@ -2893,6 +2893,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             raise ValueError('Dataset does not contain the dimensions: %s'
                              % missing_dimensions)
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
+
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
             reduce_dims = [dim for dim in var.dims if dim in dims]
@@ -2921,7 +2924,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
-    def apply(self, func, keep_attrs=False, args=(), **kwargs):
+    def apply(self, func, keep_attrs=None, args=(), **kwargs):
         """Apply a function over the data variables in this dataset.
 
         Parameters
@@ -2966,6 +2969,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict(
             (k, maybe_wrap_array(v, func(v, *args, **kwargs)))
             for k, v in iteritems(self.data_vars))
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self.attrs if keep_attrs else None
         return type(self)(variables, attrs=attrs)
 
@@ -3630,7 +3635,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return aligned_self.isel(**indices)
 
     def quantile(self, q, dim=None, interpolation='linear',
-                 numeric_only=False, keep_attrs=False):
+                 numeric_only=False, keep_attrs=None):
         """Compute the qth quantile of the data along the specified dimension.
 
         Returns the qth quantiles(s) of the array elements for each variable
@@ -3708,6 +3713,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         # construct the new dataset
         coord_names = set(k for k in self.coords if k in variables)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self.attrs if keep_attrs else None
         new = self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
         if 'quantile' in new.dims:
@@ -3716,7 +3723,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             new.coords['quantile'] = q
         return new
 
-    def rank(self, dim, pct=False, keep_attrs=False):
+    def rank(self, dim, pct=False, keep_attrs=None):
         """Ranks the data.
 
         Equal values are assigned a rank that is the average of the ranks that
@@ -3756,6 +3763,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 variables[name] = var
 
         coord_names = set(self.coords)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self.attrs if keep_attrs else None
         return self._replace_vars_and_dims(variables, coord_names, attrs=attrs)
 
@@ -3819,11 +3828,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @property
     def real(self):
-        return self._unary_op(lambda x: x.real, keep_attrs=True)(self)
+        return self._unary_op(lambda x: x.real,
+                              keep_attrs=True)(self)
 
     @property
     def imag(self):
-        return self._unary_op(lambda x: x.imag, keep_attrs=True)(self)
+        return self._unary_op(lambda x: x.imag,
+                              keep_attrs=True)(self)
 
     def filter_by_attrs(self, **kwargs):
         """Returns a ``Dataset`` with variables that match specific conditions.

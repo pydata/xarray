@@ -8,7 +8,8 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Variable, coding, decode_cf, set_options
-from xarray.coding.times import _import_cftime
+from xarray.coding.times import (_import_cftime, decode_cf_datetime,
+                                 encode_cf_datetime)
 from xarray.coding.variables import SerializationWarning
 from xarray.core.common import contains_cftime_datetimes
 
@@ -575,28 +576,24 @@ def test_infer_datetime_units(dates, expected):
     assert expected == coding.times.infer_datetime_units(dates)
 
 
+_CFTIME_DATETIME_UNITS_TESTS = [
+    ([(1900, 1, 1), (1900, 1, 1)], 'days since 1900-01-01 00:00:00.000000'),
+    ([(1900, 1, 1), (1900, 1, 2), (1900, 1, 2, 0, 0, 1)],
+     'seconds since 1900-01-01 00:00:00.000000'),
+    ([(1900, 1, 1), (1900, 1, 8), (1900, 1, 16)],
+     'days since 1900-01-01 00:00:00.000000')
+]
+
+
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-def test_infer_cftime_datetime_units():
-    date_types = _all_cftime_date_types()
-    for date_type in date_types.values():
-        for dates, expected in [
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2)],
-                 'days since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1, 12),
-                  date_type(1900, 1, 1, 13)],
-                 'seconds since 1900-01-01 12:00:00.000000'),
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2),
-                  date_type(1900, 1, 2, 0, 0, 1)],
-                 'seconds since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2, 0, 0, 0, 5)],
-                 'days since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1), date_type(1900, 1, 8),
-                  date_type(1900, 1, 16)],
-                 'days since 1900-01-01 00:00:00.000000')]:
-            assert expected == coding.times.infer_datetime_units(dates)
+@pytest.mark.parametrize(
+    'calendar', _NON_STANDARD_CALENDARS + ['gregorian', 'proleptic_gregorian'])
+@pytest.mark.parametrize(('date_args', 'expected'),
+                         _CFTIME_DATETIME_UNITS_TESTS)
+def test_infer_cftime_datetime_units(calendar, date_args, expected):
+    date_type = _all_cftime_date_types()[calendar]
+    dates = [date_type(*args) for args in date_args]
+    assert expected == coding.times.infer_datetime_units(dates)
 
 
 @pytest.mark.parametrize(
@@ -763,3 +760,16 @@ def test_contains_cftime_datetimes_non_cftimes(non_cftime_data):
 @pytest.mark.parametrize('non_cftime_data', [DataArray([]), DataArray([1, 2])])
 def test_contains_cftime_datetimes_non_cftimes_dask(non_cftime_data):
     assert not contains_cftime_datetimes(non_cftime_data.chunk())
+
+
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+@pytest.mark.parametrize('shape', [(24,), (8, 3), (2, 4, 3)])
+def test_encode_datetime_overflow(shape):
+    # Test for fix to GH 2272
+    dates = pd.date_range('2100', periods=24).values.reshape(shape)
+    units = 'days since 1800-01-01'
+    calendar = 'standard'
+
+    num, _, _ = encode_cf_datetime(dates, units, calendar)
+    roundtrip = decode_cf_datetime(num, units, calendar)
+    np.testing.assert_array_equal(dates, roundtrip)
