@@ -428,6 +428,12 @@ Bug fixes
   encoding process if a reference date is used that is so distant that
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+  
+- ``xr.open_zarr`` now accepts manually specified chunks with the ``chunks=`` 
+  parameter. ``auto_chunk=True`` is equivalent to ``chunks='auto'`` for 
+  backwards compatibility. The ``overwrite_encoded_chunks`` parameter is 
+  added to remove the original zarr chunk encoding.
+  By `Lily Wang <https://github.com/lilyminium>`_.
 
 - Chunked datasets can now roundtrip to Zarr storage continually
   with `to_zarr` and ``open_zarr`` (:issue:`2300`).
