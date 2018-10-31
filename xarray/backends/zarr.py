@@ -439,7 +439,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     if not isinstance(chunks, (int, dict)):
         if chunks != 'auto' and chunks is not None:
             raise ValueError("chunks must be an int, dict, 'auto', or None. "
-                            "Instead found %s. " % chunks)
+                             "Instead found %s. " % chunks)
 
     if not decode_cf:
         mask_and_scale = False
@@ -474,12 +474,12 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     # adapted from Dataset.Chunk()
     if isinstance(chunks, int):
         chunks = dict.fromkeys(ds.dims, chunks)
-    
+
     def selkeys(dict_, keys):
         if dict_ is None:
             return None
         return dict((d, dict_[d]) for d in keys if d in dict_)
-    
+
     def maybe_chunk(name, var, chunks):
         from dask.base import tokenize
 
@@ -487,7 +487,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
             chunks = var.encoding.get('chunks')
         else:
             chunks = selkeys(chunks, var.dims)
-        
+
         if (var.ndim > 0) and (chunks is not None):
             # does this cause any data to be read?
             token2 = tokenize(name, var._data)
