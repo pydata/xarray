@@ -1405,6 +1405,52 @@ class ZarrBase(CFEncodedBase):
                 assert v._in_memory == (k in actual.dims)
                 # chunk size should be the same as original
                 assert v.chunks == original[k].chunks
+    
+    def test_manual_chunk(self):
+        original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
+        
+        # All of these should return non-chunked arrays
+        NO_CHUNKS = (None, 0, {})
+        for no_chunk in NO_CHUNKS:
+            with self.roundtrip(
+                    original, open_kwargs={'chunks': no_chunk, 
+                                            'auto_chunk': False}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+
+        # uniform arrays
+        for i in range(2, 6):
+            rechunked = original.chunk(chunks=i)
+
+            with self.roundtrip(
+                    original, open_kwargs={'chunks': i}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as rechunked
+                    assert v.chunks == rechunked[k].chunks
+        
+        chunks = {'dim1': 2, 'dim2': 3, 'dim3': 5}
+        rechunked = original.chunk(chunks=chunks)
+
+        open_overwritten = {'chunks': chunks, 
+                            'overwrite_encoded_chunks': True}
+
+        with self.roundtrip(
+                original, open_kwargs=open_overwritten) as actual:
+            for k, v in actual.variables.items():
+                    assert v.chunks == rechunked[k].chunks
+
+            with self.roundtrip(actual, open_kwargs={'chunks': 'auto'}) as auto:
+                # encoding should have changed
+                for k, v in actual.variables.items():
+                    assert v.chunks == rechunked[k].chunks
+
+                assert_identical(actual, auto)
+                assert_identical(actual.load(), auto.load())
 
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
