@@ -148,6 +148,7 @@ def _infer_coords_and_dims(
 
     return new_coords, dims
 
+
 def _check_shape_consistency(shape, coords, dims):
     # moved from _infer_coords_and_dims
     sizes = dict(zip(dims, shape))
@@ -174,7 +175,6 @@ def _check_shape_consistency(shape, coords, dims):
                 "matching the dimension size"
             )
 
-    
 
 
 def _check_data_shape(data, coords, dims):
