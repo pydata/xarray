@@ -11,6 +11,7 @@ from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+from .options import _get_keep_attrs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -21,13 +22,13 @@ class ImplementsArrayReduce(object):
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
-                             keep_attrs=False, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                             **kwargs):
+                return self.reduce(func, dim, axis,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
+            def wrapped_func(self, dim=None, axis=None,
                              **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                return self.reduce(func, dim, axis,
                                    allow_lazy=True, **kwargs)
         return wrapped_func
 
@@ -51,14 +52,14 @@ class ImplementsDatasetReduce(object):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=None, keep_attrs=False, skipna=None,
+            def wrapped_func(self, dim=None, skipna=None,
                              **kwargs):
-                return self.reduce(func, dim, keep_attrs, skipna=skipna,
+                return self.reduce(func, dim, skipna=skipna,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-            def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
-                return self.reduce(func, dim, keep_attrs,
+            def wrapped_func(self, dim=None, **kwargs):
+                return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         return wrapped_func
@@ -591,7 +592,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                  center=center)
 
     def resample(self, freq=None, dim=None, how=None, skipna=None,
-                 closed=None, label=None, base=0, keep_attrs=False, **indexer):
+                 closed=None, label=None, base=0, keep_attrs=None, **indexer):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -659,6 +660,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
+
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
 
         if dim is not None:
             if how is None:

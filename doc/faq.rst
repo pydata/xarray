@@ -119,7 +119,8 @@ conventions`_. (An exception is serialization to and from netCDF files.)
 
 An implication of this choice is that we do not propagate ``attrs`` through
 most operations unless explicitly flagged (some methods have a ``keep_attrs``
-option). Similarly, xarray does not check for conflicts between ``attrs`` when
+option, and there is a global flag for setting this to be always True or
+False). Similarly, xarray does not check for conflicts between ``attrs`` when
 combining arrays and datasets, unless explicitly requested with the option
 ``compat='identical'``. The guiding principle is that metadata should not be
 allowed to get in the way.

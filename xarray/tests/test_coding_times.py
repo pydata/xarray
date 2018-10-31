@@ -511,28 +511,24 @@ def test_infer_datetime_units(dates, expected):
     assert expected == coding.times.infer_datetime_units(dates)
 
 
+_CFTIME_DATETIME_UNITS_TESTS = [
+    ([(1900, 1, 1), (1900, 1, 1)], 'days since 1900-01-01 00:00:00.000000'),
+    ([(1900, 1, 1), (1900, 1, 2), (1900, 1, 2, 0, 0, 1)],
+     'seconds since 1900-01-01 00:00:00.000000'),
+    ([(1900, 1, 1), (1900, 1, 8), (1900, 1, 16)],
+     'days since 1900-01-01 00:00:00.000000')
+]
+
+
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-def test_infer_cftime_datetime_units():
-    date_types = _all_cftime_date_types()
-    for date_type in date_types.values():
-        for dates, expected in [
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2)],
-                 'days since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1, 12),
-                  date_type(1900, 1, 1, 13)],
-                 'seconds since 1900-01-01 12:00:00.000000'),
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2),
-                  date_type(1900, 1, 2, 0, 0, 1)],
-                 'seconds since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1),
-                  date_type(1900, 1, 2, 0, 0, 0, 5)],
-                 'days since 1900-01-01 00:00:00.000000'),
-                ([date_type(1900, 1, 1), date_type(1900, 1, 8),
-                  date_type(1900, 1, 16)],
-                 'days since 1900-01-01 00:00:00.000000')]:
-            assert expected == coding.times.infer_datetime_units(dates)
+@pytest.mark.parametrize(
+    'calendar', _NON_STANDARD_CALENDARS + ['gregorian', 'proleptic_gregorian'])
+@pytest.mark.parametrize(('date_args', 'expected'),
+                         _CFTIME_DATETIME_UNITS_TESTS)
+def test_infer_cftime_datetime_units(calendar, date_args, expected):
+    date_type = _all_cftime_date_types()[calendar]
+    dates = [date_type(*args) for args in date_args]
+    assert expected == coding.times.infer_datetime_units(dates)
 
 
 @pytest.mark.parametrize(
