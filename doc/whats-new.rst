@@ -2476,7 +2476,7 @@ Bug fixes
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - DataArray now always checks shape consistency between coords and data 
-  during construction (:issue: 2529).
+  during construction (:issue:`2529`).
   By `Lily Wang <https://github.com/lilyminium>`_.
 
 - Chunked datasets can now roundtrip to Zarr storage continually
