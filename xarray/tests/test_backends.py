@@ -1412,9 +1412,8 @@ class ZarrBase(CFEncodedBase):
         # All of these should return non-chunked arrays
         NO_CHUNKS = (None, 0, {})
         for no_chunk in NO_CHUNKS:
-            with self.roundtrip(
-                    original, open_kwargs={'chunks': no_chunk, 
-                                            'auto_chunk': False}) as actual:
+            open_kwargs = {'chunks': no_chunk, 'auto_chunk': False}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
                     assert v._in_memory == (k in actual.dims)
@@ -1424,9 +1423,8 @@ class ZarrBase(CFEncodedBase):
         # uniform arrays
         for i in range(2, 6):
             rechunked = original.chunk(chunks=i)
-
-            with self.roundtrip(
-                    original, open_kwargs={'chunks': i}) as actual:
+            open_kwargs = {'chunks': i}
+            with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
                     assert v._in_memory == (k in actual.dims)
@@ -1435,20 +1433,17 @@ class ZarrBase(CFEncodedBase):
         
         chunks = {'dim1': 2, 'dim2': 3, 'dim3': 5}
         rechunked = original.chunk(chunks=chunks)
-
-        open_overwritten = {'chunks': chunks, 
-                            'overwrite_encoded_chunks': True}
-
-        with self.roundtrip(
-                original, open_kwargs=open_overwritten) as actual:
+        
+        open_kwargs = {'chunks': chunks, 'overwrite_encoded_chunks': True}
+        with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
             for k, v in actual.variables.items():
                     assert v.chunks == rechunked[k].chunks
-
-            with self.roundtrip(actual, open_kwargs={'chunks': 'auto'}) as auto:
+            
+            with self.roundtrip(actual) as auto:
                 # encoding should have changed
                 for k, v in actual.variables.items():
                     assert v.chunks == rechunked[k].chunks
-
+                    
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
 
