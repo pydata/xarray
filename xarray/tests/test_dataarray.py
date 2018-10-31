@@ -23,7 +23,6 @@ from xarray.tests import (
     requires_scipy, source_ndarray)
 
 
-@pytest.mark.filterwarnings('ignore:The inplace argument')
 class TestDataArray(object):
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -1156,7 +1155,7 @@ class TestDataArray(object):
         assert_identical(actual, expected)
 
         actual = data.copy()
-        actual.reset_coords(drop=True, inplace=True)
+        actual = actual.reset_coords(drop=True)
         assert_identical(actual, expected)
 
         actual = data.reset_coords('bar', drop=True)
@@ -1165,8 +1164,9 @@ class TestDataArray(object):
                              dims=['x', 'y'], name='foo')
         assert_identical(actual, expected)
 
-        with raises_regex(ValueError, 'cannot reset coord'):
-            data.reset_coords(inplace=True)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            with raises_regex(ValueError, 'cannot reset coord'):
+                data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, 'cannot be found'):
             data.reset_coords('foo', drop=True)
         with raises_regex(ValueError, 'cannot be found'):
@@ -1399,7 +1399,7 @@ class TestDataArray(object):
         expected = array.set_index(x=['level_1', 'level_2', 'level_3'])
         assert_identical(obj, expected)
 
-        array.set_index(x=['level_1', 'level_2', 'level_3'], inplace=True)
+        array = array.set_index(x=['level_1', 'level_2', 'level_3'])
         assert_identical(array, expected)
 
         array2d = DataArray(np.random.rand(2, 2),
@@ -1432,7 +1432,7 @@ class TestDataArray(object):
         assert_identical(obj, expected)
 
         array = self.mda.copy()
-        array.reset_index(['x'], drop=True, inplace=True)
+        array = array.reset_index(['x'], drop=True)
         assert_identical(array, expected)
 
         # single index
@@ -1448,9 +1448,10 @@ class TestDataArray(object):
         obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(obj, expected)
 
-        array = self.mda.copy()
-        array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
-        assert_identical(array, expected)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            array = self.mda.copy()
+            array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+            assert_identical(array, expected)
 
         array = DataArray([1, 2], dims='x')
         with pytest.raises(KeyError):
