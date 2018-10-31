@@ -136,6 +136,10 @@ Bug fixes
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 
+- Chunked datasets can now roundtrip to Zarr storage continually 
+  with `to_zarr` and ``open_zarr`` (:issue:`2300`).
+  By `Lily Wang <https://github.com/lilyminium>`_.
+
 .. _whats-new.0.10.9:
 
 v0.10.9 (21 September 2018)
