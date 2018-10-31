@@ -109,7 +109,7 @@ class set_options(object):
     """
 
     def __init__(self, **kwargs):
-        self.old = OPTIONS.copy()
+        self.old = {}
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
@@ -118,6 +118,7 @@ class set_options(object):
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 raise ValueError(
                     'option %r given an invalid value: %r' % (k, v))
+            self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
     def _apply_update(self, options_dict):
@@ -130,5 +131,4 @@ class set_options(object):
         return
 
     def __exit__(self, type, value, traceback):
-        OPTIONS.clear()
         self._apply_update(self.old)
