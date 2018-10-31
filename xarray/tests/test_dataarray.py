@@ -413,6 +413,9 @@ class TestDataArray:
         actual = DataArray(IndexVariable("foo", ["a", "b"]))
         assert_identical(expected, actual)
 
+        with raises_regex(ValueError, 'conflicting sizes for dimension'):
+            np.insert(expected, 0, 0, axis=0)
+
     def test_constructor_from_0d(self):
         expected = Dataset({None: ([], 0)})[None]
         actual = DataArray(0)

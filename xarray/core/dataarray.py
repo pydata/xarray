@@ -143,8 +143,15 @@ def _infer_coords_and_dims(
             var.dims = (dim,)
             new_coords[dim] = var.to_index_variable()
 
+    _check_shape_consistency(shape, new_coords, dims)
+    assert_unique_multiindex_level_names(new_coords)
+
+    return new_coords, dims
+
+def _check_shape_consistency(shape, coords, dims):
+    # moved from _infer_coords_and_dims
     sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
+    for k, v in coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError(
                 f"coordinate {k} has dimensions {v.dims}, but these "
@@ -167,9 +174,7 @@ def _infer_coords_and_dims(
                 "matching the dimension size"
             )
 
-    assert_unique_multiindex_level_names(new_coords)
-
-    return new_coords, dims
+    
 
 
 def _check_data_shape(data, coords, dims):
@@ -410,6 +415,9 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
             indexes = dict(
                 _extract_indexes_from_coords(coords)
             )  # needed for to_dataset
+
+        # check shape consistency
+        _check_shape_consistency(variable.shape, coords, variable.dims)
 
         # These fully describe a DataArray
         self._variable = variable
