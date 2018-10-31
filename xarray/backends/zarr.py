@@ -378,16 +378,16 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
         Group path. (a.k.a. `path` in zarr terminology.)
     chunks : int or dict or {None, 'auto'}, optional
         Chunk sizes along each dimension, e.g., ``5`` or
-        ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created 
-        based on the variable's zarr chunks. If `chunks=None` and 
-        `auto_chunk=False`, zarr array data will lazily convert to numpy 
-        arrays upon access. 
+        ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
+        based on the variable's zarr chunks. If `chunks=None` and
+        `auto_chunk=False`, zarr array data will lazily convert to numpy
+        arrays upon access.
     auto_chunk : bool, optional
         Whether to automatically create dask chunks corresponding to each
-        variable's zarr chunks. If `chunks=None`, this overrides `chunks`. 
+        variable's zarr chunks. If `chunks=None`, this overrides `chunks`.
         Equivalent to `chunks='auto'.` (Default: True)
     overwrite_encoded_chunks: bool, optional
-        Whether to drop the zarr chunks encoded for each variable when a 
+        Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
     decode_cf : bool, optional
         Whether to decode these variables, assuming they were saved according
@@ -434,12 +434,11 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     """
 
     if auto_chunk and chunks is None:
-        chunks = 'auto' # maintain backwards compatibility
+        chunks = 'auto'  # maintain backwards compatibility
 
     if not isinstance(chunks, (int, dict)):
         if chunks != 'auto' and chunks is not None:
-            raise ValueError(
-                            "chunks must be an int, dict, 'auto', or None. "
+            raise ValueError("chunks must be an int, dict, 'auto', or None. "
                             "Instead found %s. " % chunks)
 
     if not decode_cf:
@@ -471,7 +470,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     # return trivial case
     if not chunks:
         return ds
-    
+
     # adapted from Dataset.Chunk()
     if isinstance(chunks, int):
         chunks = dict.fromkeys(ds.dims, chunks)
@@ -488,7 +487,7 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
             chunks = var.encoding.get('chunks')
         else:
             chunks = selkeys(chunks, var.dims)
-            
+        
         if (var.ndim > 0) and (chunks is not None):
             # does this cause any data to be read?
             token2 = tokenize(name, var._data)
@@ -501,5 +500,5 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
             return var
 
     variables = OrderedDict([(k, maybe_chunk(k, v, chunks))
-                                for k, v in ds.variables.items()])
+                            for k, v in ds.variables.items()])
     return ds._replace_vars_and_dims(variables)
