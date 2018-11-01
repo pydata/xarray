@@ -71,10 +71,11 @@ One unfortunate limitation of using ``datetime64[ns]`` is that it limits the
 native representation of dates to those that fall between the years 1678 and
 2262. When a netCDF file contains dates outside of these bounds, dates will be
 returned as arrays of :py:class:`cftime.datetime` objects and a :py:class:`~xarray.CFTimeIndex`
-can be used for indexing.  The :py:class:`~xarray.CFTimeIndex` enables only a subset of
-the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only enabled
-when using the standalone version of ``cftime`` (not the version packaged with
-earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more information.
+will be used for indexing.  :py:class:`~xarray.CFTimeIndex` enables a subset of
+the indexing functionality of a :py:class:`pandas.DatetimeIndex` and is only
+fully compatible with the standalone version of ``cftime`` (not the version
+packaged with earlier versions ``netCDF4``).  See :ref:`CFTimeIndex` for more
+information. 
 
 Datetime indexing
 -----------------
@@ -221,18 +222,28 @@ Non-standard calendars and dates outside the Timestamp-valid range
 Through the standalone ``cftime`` library and a custom subclass of
 :py:class:`pandas.Index`, xarray supports a subset of the indexing
 functionality enabled through the standard :py:class:`pandas.DatetimeIndex` for
-dates from non-standard calendars or dates using a standard calendar, but
-outside the `Timestamp-valid range`_ (approximately between years 1678 and
-2262).  This behavior has not yet been turned on by default; to take advantage
-of this functionality, you must have the ``enable_cftimeindex`` option set to
-``True`` within your context (see :py:func:`~xarray.set_options` for more
-information).  It is expected that this will become the default behavior in
-xarray version 0.11.
+dates from non-standard calendars commonly used in climate science or dates
+using a standard calendar, but outside the `Timestamp-valid range`_
+(approximately between years 1678 and 2262).  
 
-For instance, you can create a DataArray indexed by a time
-coordinate with a no-leap calendar within a context manager setting the
-``enable_cftimeindex`` option, and the time index will be cast to a
-:py:class:`~xarray.CFTimeIndex`:
+.. note::
+
+   As of xarray version 0.11, by default, :py:class:`cftime.datetime` objects
+   will be used to represent times (either in indexes, as a
+   :py:class:`~xarray.CFTimeIndex`, or in data arrays with dtype object) if 
+   any of the following are true: 
+
+   - The dates are from a non-standard calendar
+   - Any dates are outside the Timestamp-valid range.
+
+   Otherwise pandas-compatible dates from a standard calendar will be
+   represented with the ``np.datetime64[ns]`` data type, enabling the use of a
+   :py:class:`pandas.DatetimeIndex` or arrays with dtype ``np.datetime64[ns]``
+   and their full set of associated features.
+
+For example, you can create a DataArray indexed by a time
+coordinate with dates from a no-leap calendar and a
+:py:class:`~xarray.CFTimeIndex` will automatically be used:
 
 .. ipython:: python
 
@@ -241,27 +252,11 @@ coordinate with a no-leap calendar within a context manager setting the
    
    dates = [DatetimeNoLeap(year, month, 1) for year, month in
             product(range(1, 3), range(1, 13))]
-   with xr.set_options(enable_cftimeindex=True):
-       da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'],
-                         name='foo')
+   da = xr.DataArray(np.arange(24), coords=[dates], dims=['time'], name='foo')
                          
-.. note::
-
-   With the ``enable_cftimeindex`` option activated, a :py:class:`~xarray.CFTimeIndex`
-   will be used for time indexing if any of the following are true:
-
-   - The dates are from a non-standard calendar
-   - Any dates are outside the Timestamp-valid range
-
-   Otherwise a :py:class:`pandas.DatetimeIndex` will be used.  In addition, if any
-   variable (not just an index variable) is encoded using a non-standard
-   calendar, its times will be decoded into :py:class:`cftime.datetime` objects,
-   regardless of whether or not they can be represented using
-   ``np.datetime64[ns]`` objects.
-
 xarray also includes a :py:func:`~xarray.cftime_range` function, which enables
-creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For instance, we can
-create the same dates and DataArray we created above using:
+creating a :py:class:`~xarray.CFTimeIndex` with regularly-spaced dates.  For
+instance, we can create the same dates and DataArray we created above using:
 
 .. ipython:: python
 
@@ -317,13 +312,42 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
 
 .. ipython:: python
 
-   da.to_netcdf('example.nc')
-   xr.open_dataset('example.nc')
+   da.to_netcdf('example-no-leap.nc')
+   xr.open_dataset('example-no-leap.nc')
 
 .. note::
    
-   Currently resampling along the time dimension for data indexed by a
-   :py:class:`~xarray.CFTimeIndex` is not supported.
+   While much of the time series functionality that is possible for standard
+   dates has been implemented for dates from non-standard calendars, there are
+   still some remaining important features that have yet to be implemented,
+   for example:
+
+   - Resampling along the time dimension for data indexed by a
+     :py:class:`~xarray.CFTimeIndex` (:issue:`2191`, :issue:`2458`)
+   - Built-in plotting of data with :py:class:`cftime.datetime` coordinate axes
+     (:issue:`2164`).   
+
+   For some use-cases it may still be useful to convert from
+   a :py:class:`~xarray.CFTimeIndex` to a :py:class:`pandas.DatetimeIndex`,
+   despite the difference in calendar types (e.g. to allow the use of some
+   forms of resample with non-standard calendars).  The recommended way of
+   doing this is to use the built-in
+   :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` method:
+
+   .. ipython:: python
+
+       modern_times = xr.cftime_range('2000', periods=24, freq='MS', calendar='noleap')
+       da = xr.DataArray(range(24), [('time', modern_times)])
+       da
+       datetimeindex = da.indexes['time'].to_datetimeindex()
+       da['time'] = datetimeindex
+       da.resample(time='Y').mean('time')
+   
+   However in this case one should use caution to only perform operations which
+   do not depend on differences between dates (e.g. differentiation,
+   interpolation, or upsampling with resample), as these could introduce subtle
+   and silent errors due to the difference in calendar types between the dates
+   encoded in your data and the dates stored in memory.  
   
 .. _Timestamp-valid range: https://pandas.pydata.org/pandas-docs/stable/timeseries.html#timestamp-limitations
 .. _ISO 8601-format: https://en.wikipedia.org/wiki/ISO_8601

@@ -356,7 +356,7 @@ class DatasetIOBase(object):
             assert actual.t0.encoding['units'] == 'days since 1950-01-01'
 
     @requires_cftime
-    def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
+    def test_roundtrip_cftime_datetime_data(self):
         from .test_coding_times import _all_cftime_date_types
 
         date_types = _all_cftime_date_types()
@@ -373,21 +373,20 @@ class DatasetIOBase(object):
                     warnings.filterwarnings(
                         'ignore', 'Unable to decode time axis')
 
-                with xr.set_options(enable_cftimeindex=True):
-                    with self.roundtrip(expected, save_kwargs=kwds) as actual:
-                        abs_diff = abs(actual.t.values - expected_decoded_t)
-                        assert (abs_diff <= np.timedelta64(1, 's')).all()
-                        assert (actual.t.encoding['units'] ==
-                                'days since 0001-01-01 00:00:00.000000')
-                        assert (actual.t.encoding['calendar'] ==
-                                expected_calendar)
+                with self.roundtrip(expected, save_kwargs=kwds) as actual:
+                    abs_diff = abs(actual.t.values - expected_decoded_t)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t.encoding['units'] ==
+                            'days since 0001-01-01 00:00:00.000000')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
 
-                        abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                        assert (abs_diff <= np.timedelta64(1, 's')).all()
-                        assert (actual.t0.encoding['units'] ==
-                                'days since 0001-01-01')
-                        assert (actual.t.encoding['calendar'] ==
-                                expected_calendar)
+                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                    assert (actual.t0.encoding['units'] ==
+                            'days since 0001-01-01')
+                    assert (actual.t.encoding['calendar'] ==
+                            expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -2087,7 +2086,7 @@ class TestDask(DatasetIOBase):
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
-    def test_roundtrip_cftime_datetime_data_enable_cftimeindex(self):
+    def test_roundtrip_cftime_datetime_data(self):
         # Override method in DatasetIOBase - remove not applicable
         # save_kwds
         from .test_coding_times import _all_cftime_date_types
@@ -2099,33 +2098,12 @@ class TestDask(DatasetIOBase):
             expected_decoded_t = np.array(times)
             expected_decoded_t0 = np.array([date_type(1, 1, 1)])
 
-            with xr.set_options(enable_cftimeindex=True):
-                with self.roundtrip(expected) as actual:
-                    abs_diff = abs(actual.t.values - expected_decoded_t)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+            with self.roundtrip(expected) as actual:
+                abs_diff = abs(actual.t.values - expected_decoded_t)
+                assert (abs_diff <= np.timedelta64(1, 's')).all()
 
-                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-
-    def test_roundtrip_cftime_datetime_data_disable_cftimeindex(self):
-        # Override method in DatasetIOBase - remove not applicable
-        # save_kwds
-        from .test_coding_times import _all_cftime_date_types
-
-        date_types = _all_cftime_date_types()
-        for date_type in date_types.values():
-            times = [date_type(1, 1, 1), date_type(1, 1, 2)]
-            expected = Dataset({'t': ('t', times), 't0': times[0]})
-            expected_decoded_t = np.array(times)
-            expected_decoded_t0 = np.array([date_type(1, 1, 1)])
-
-            with xr.set_options(enable_cftimeindex=False):
-                with self.roundtrip(expected) as actual:
-                    abs_diff = abs(actual.t.values - expected_decoded_t)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
-
-                    abs_diff = abs(actual.t0.values - expected_decoded_t0)
-                    assert (abs_diff <= np.timedelta64(1, 's')).all()
+                abs_diff = abs(actual.t0.values - expected_decoded_t0)
+                assert (abs_diff <= np.timedelta64(1, 's')).all()
 
     def test_write_store(self):
         # Override method in DatasetIOBase - not applicable to dask

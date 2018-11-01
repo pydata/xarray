@@ -152,3 +152,4 @@
    plot.FacetGrid.map
 
    CFTimeIndex.shift
+   CFTimeIndex.to_datetimeindex

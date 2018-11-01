@@ -46,19 +46,17 @@ def test_safe_cast_to_index():
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
+def test_safe_cast_to_index_cftimeindex():
     date_types = _all_cftime_date_types()
     for date_type in date_types.values():
         dates = [date_type(1, 1, day) for day in range(1, 20)]
 
-        if enable_cftimeindex and has_cftime:
+        if has_cftime:
             expected = CFTimeIndex(dates)
         else:
             expected = pd.Index(dates)
 
-        with set_options(enable_cftimeindex=enable_cftimeindex):
-            actual = utils.safe_cast_to_index(np.array(dates))
+        actual = utils.safe_cast_to_index(np.array(dates))
         assert_array_equal(expected, actual)
         assert expected.dtype == actual.dtype
         assert isinstance(actual, type(expected))
@@ -66,13 +64,11 @@ def test_safe_cast_to_index_cftimeindex(enable_cftimeindex):
 
 # Test that datetime.datetime objects are never used in a CFTimeIndex
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_safe_cast_to_index_datetime_datetime(enable_cftimeindex):
+def test_safe_cast_to_index_datetime_datetime():
     dates = [datetime(1, 1, day) for day in range(1, 20)]
 
     expected = pd.Index(dates)
-    with set_options(enable_cftimeindex=enable_cftimeindex):
-        actual = utils.safe_cast_to_index(np.array(dates))
+    actual = utils.safe_cast_to_index(np.array(dates))
     assert_array_equal(expected, actual)
     assert isinstance(actual, pd.Index)
 

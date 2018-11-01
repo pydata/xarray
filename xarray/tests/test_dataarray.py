@@ -2279,12 +2279,9 @@ class TestDataArray(object):
         cftime = _import_cftime()
         times = cftime.num2date(np.arange(12), units='hours since 0001-01-01',
                                 calendar='noleap')
-        with set_options(enable_cftimeindex=True):
-            array = DataArray(np.arange(12), [('time', times)])
+        array = DataArray(np.arange(12), [('time', times)])
 
-        with raises_regex(TypeError,
-                          'Only valid with DatetimeIndex, '
-                          'TimedeltaIndex or PeriodIndex'):
+        with raises_regex(NotImplementedError, 'to_datetimeindex'):
             array.resample(time='6H').mean()
 
     def test_resample_first(self):
