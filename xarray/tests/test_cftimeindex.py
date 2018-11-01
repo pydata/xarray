@@ -13,7 +13,8 @@ from xarray.coding.cftimeindex import (
 from xarray.tests import assert_array_equal, assert_identical
 
 from . import has_cftime, has_cftime_or_netCDF4, requires_cftime
-from .test_coding_times import _all_cftime_date_types
+from .test_coding_times import (_all_cftime_date_types, _ALL_CALENDARS,
+                                _NON_STANDARD_CALENDARS)
 
 
 def date_dict(year=None, month=None, day=None,
@@ -360,7 +361,7 @@ def test_groupby(da):
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_resample_error(da):
-    with pytest.raises(TypeError):
+    with pytest.raises(NotImplementedError, match='to_datetimeindex'):
         da.resample(time='Y')
 
 
@@ -594,18 +595,16 @@ def test_indexing_in_dataframe_iloc(df, index):
 
 
 @pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
-@pytest.mark.parametrize('enable_cftimeindex', [False, True])
-def test_concat_cftimeindex(date_type, enable_cftimeindex):
-    with xr.set_options(enable_cftimeindex=enable_cftimeindex):
-        da1 = xr.DataArray(
-            [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
-            dims=['time'])
-        da2 = xr.DataArray(
-            [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
-            dims=['time'])
-        da = xr.concat([da1, da2], dim='time')
+def test_concat_cftimeindex(date_type):
+    da1 = xr.DataArray(
+        [1., 2.], coords=[[date_type(1, 1, 1), date_type(1, 2, 1)]],
+        dims=['time'])
+    da2 = xr.DataArray(
+        [3., 4.], coords=[[date_type(1, 3, 1), date_type(1, 4, 1)]],
+        dims=['time'])
+    da = xr.concat([da1, da2], dim='time')
 
-    if enable_cftimeindex and has_cftime:
+    if has_cftime:
         assert isinstance(da.indexes['time'], CFTimeIndex)
     else:
         assert isinstance(da.indexes['time'], pd.Index)
@@ -746,3 +745,37 @@ def test_parse_array_of_cftime_strings():
     expected = np.array(DatetimeNoLeap(2000, 1, 1))
     result = _parse_array_of_cftime_strings(strings, DatetimeNoLeap)
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+@pytest.mark.parametrize('unsafe', [False, True])
+def test_to_datetimeindex(calendar, unsafe):
+    index = xr.cftime_range('2000', periods=5, calendar=calendar)
+    expected = pd.date_range('2000', periods=5)
+
+    if calendar in _NON_STANDARD_CALENDARS and not unsafe:
+        with pytest.warns(RuntimeWarning, match='non-standard'):
+            result = index.to_datetimeindex()
+    else:
+        result = index.to_datetimeindex()
+
+    assert result.equals(expected)
+    np.testing.assert_array_equal(result, expected)
+    assert isinstance(result, pd.DatetimeIndex)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', _ALL_CALENDARS)
+def test_to_datetimeindex_out_of_range(calendar):
+    index = xr.cftime_range('0001', periods=5, calendar=calendar)
+    with pytest.raises(ValueError, match='0001'):
+        index.to_datetimeindex()
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+@pytest.mark.parametrize('calendar', ['all_leap', '360_day'])
+def test_to_datetimeindex_feb_29(calendar):
+    index = xr.cftime_range('2001-02-28', periods=2, calendar=calendar)
+    with pytest.raises(ValueError, match='29'):
+        index.to_datetimeindex()

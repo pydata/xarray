@@ -659,6 +659,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
+        from ..coding.cftimeindex import CFTimeIndex
 
         if keep_attrs is None:
             keep_attrs = _get_keep_attrs(default=False)
@@ -687,6 +688,20 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         else:
             raise TypeError("Dimension name should be a string; "
                             "was passed %r" % dim)
+
+        if isinstance(self.indexes[dim_name], CFTimeIndex):
+            raise NotImplementedError(
+                'Resample is currently not supported along a dimension '
+                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
+                'it may be possible to work around this by converting your '
+                'time index to a DatetimeIndex using '
+                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
+                'however, because switching to a DatetimeIndex from a '
+                'CFTimeIndex with a non-standard calendar entails a change '
+                'in the calendar type, which could lead to subtle and silent '
+                'errors.'
+            )
+
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
@@ -700,6 +715,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """Implement the original version of .resample() which immediately
         executes the desired resampling operation. """
         from .dataarray import DataArray
+        from ..coding.cftimeindex import CFTimeIndex
+
         RESAMPLE_DIM = '__resample_dim__'
 
         warnings.warn("\n.resample() has been modified to defer "
@@ -709,8 +726,22 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                       dim=dim, freq=freq, how=how),
                       FutureWarning, stacklevel=3)
 
+        if isinstance(self.indexes[dim], CFTimeIndex):
+            raise NotImplementedError(
+                'Resample is currently not supported along a dimension '
+                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
+                'it may be possible to work around this by converting your '
+                'time index to a DatetimeIndex using '
+                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
+                'however, because switching to a DatetimeIndex from a '
+                'CFTimeIndex with a non-standard calendar entails a change '
+                'in the calendar type, which could lead to subtle and silent '
+                'errors.'
+            )
+
         if isinstance(dim, basestring):
             dim = self[dim]
+
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         grouper = pd.Grouper(freq=freq, how=how, closed=closed, label=label,
                              base=base)

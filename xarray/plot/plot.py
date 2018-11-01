@@ -145,8 +145,13 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     darray = darray.squeeze()
 
     if contains_cftime_datetimes(darray):
-        raise NotImplementedError('Plotting arrays of cftime.datetime objects '
-                                  'is currently not possible.')
+        raise NotImplementedError(
+            'Built-in plotting of arrays of cftime.datetime objects or arrays '
+            'indexed by cftime.datetime objects is currently not implemented '
+            'within xarray. A possible workaround is to use the '
+            'nc-time-axis package '
+            '(https://github.com/SciTools/nc-time-axis) to convert the dates '
+            'to a plottable type and plot your data directly with matplotlib.')
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)

@@ -42,6 +42,7 @@
 from __future__ import absolute_import
 
 import re
+import warnings
 from datetime import timedelta
 
 import numpy as np
@@ -49,6 +50,8 @@ import pandas as pd
 
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
+
+from .times import cftime_to_nptime, infer_calendar_name, _STANDARD_CALENDARS
 
 
 def named(name, pattern):
@@ -380,6 +383,56 @@ class CFTimeIndex(pd.Index):
         # To support TimedeltaIndex + CFTimeIndex with older versions of
         # pandas.  No longer used as of pandas 0.23.
         return self + deltas
+
+    def to_datetimeindex(self, unsafe=False):
+        """If possible, convert this index to a pandas.DatetimeIndex.
+
+        Parameters
+        ----------
+        unsafe : bool
+            Flag to turn off warning when converting from a CFTimeIndex with
+            a non-standard calendar to a DatetimeIndex (default ``False``).
+
+        Returns
+        -------
+        pandas.DatetimeIndex
+
+        Raises
+        ------
+        ValueError
+            If the CFTimeIndex contains dates that are not possible in the
+            standard calendar or outside the pandas.Timestamp-valid range.
+
+        Warns
+        -----
+        RuntimeWarning
+            If converting from a non-standard calendar to a DatetimeIndex.
+
+        Warnings
+        --------
+        Note that for non-standard calendars, this will change the calendar
+        type of the index.  In that case the result of this method should be
+        used with caution.
+
+        Examples
+        --------
+        >>> import xarray as xr
+        >>> times = xr.cftime_range('2000', periods=2, calendar='gregorian')
+        >>> times
+        CFTimeIndex([2000-01-01 00:00:00, 2000-01-02 00:00:00], dtype='object')
+        >>> times.to_datetimeindex()
+        DatetimeIndex(['2000-01-01', '2000-01-02'], dtype='datetime64[ns]', freq=None)
+        """  # noqa: E501
+        nptimes = cftime_to_nptime(self)
+        calendar = infer_calendar_name(self)
+        if calendar not in _STANDARD_CALENDARS and not unsafe:
+            warnings.warn(
+                'Converting a CFTimeIndex with dates from a non-standard '
+                'calendar, {!r}, to a pandas.DatetimeIndex, which uses dates '
+                'from the standard calendar.  This may lead to subtle errors '
+                'in operations that depend on the length of time between '
+                'dates.'.format(calendar), RuntimeWarning)
+        return pd.DatetimeIndex(nptimes)
 
 
 def _parse_iso8601_without_reso(date_type, datetime_str):
