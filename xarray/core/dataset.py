@@ -3325,8 +3325,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return func
 
     def _calculate_binary_op(self, f, other, join='inner',
-                             inplace=None):
-        inplace = _check_inplace(inplace)
+                             inplace=False):
         def apply_over_both(lhs_data_vars, rhs_data_vars, lhs_vars, rhs_vars):
             if inplace and set(lhs_data_vars) != set(rhs_data_vars):
                 raise ValueError('datasets must have the same data variables '
