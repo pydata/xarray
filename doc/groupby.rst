@@ -207,3 +207,12 @@ may be desirable:
 .. ipython:: python
 
     da.groupby_bins('lon', [0,45,50]).sum()
+
+These methods group by `lon` values. It is also possible to groupby each
+cell in a grid, regardless of value, by stacking multiple dimensions, 
+applying your function, and then unstacking the result:
+
+.. ipython:: python
+
+   stacked = da.stack(gridcell=['ny', 'nx'])
+   stacked.groupby('gridcell').sum().unstack('gridcell')
