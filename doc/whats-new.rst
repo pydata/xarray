@@ -77,6 +77,9 @@ Documentation
   without dimension argument will change in the next release.
   Now we warn a FutureWarning.
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- The ``inplace`` kwarg of a number of `DataArray` and `Dataset` methods is being
+  deprecated and will be removed in the next release.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 
 Enhancements
 ~~~~~~~~~~~~

@@ -797,7 +797,7 @@ class Common2dMixin(object):
         x, y = np.meshgrid(da.x.values, da.y.values)
         ds['x2d'] = DataArray(x, dims=['y', 'x'])
         ds['y2d'] = DataArray(y, dims=['y', 'x'])
-        ds.set_coords(['x2d', 'y2d'], inplace=True)
+        ds = ds.set_coords(['x2d', 'y2d'])
         # set darray and plot method
         self.darray = ds.testvar
 
