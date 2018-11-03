@@ -77,7 +77,7 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
             """
             raise IOError(msg)
 
-    ds = _open_dataset(localfile, **kws).load()
+    ds = _open_dataset(localfile, **kws)
 
     if not cache:
         _os.remove(localfile)
