@@ -19,7 +19,8 @@ from .formatting import format_item
 from .options import OPTIONS, _get_keep_attrs
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution)
+    _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
+    ensure_us_time_resolution)
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
     assert_unique_multiindex_level_names)
@@ -542,7 +543,7 @@ class DataArray(AbstractArray, DataWithCoords):
         """
         return DataArrayCoordinates(self)
 
-    def reset_coords(self, names=None, drop=False, inplace=False):
+    def reset_coords(self, names=None, drop=False, inplace=None):
         """Given names of coordinates, reset them to become variables.
 
         Parameters
@@ -561,6 +562,7 @@ class DataArray(AbstractArray, DataWithCoords):
         -------
         Dataset, or DataArray if ``drop == True``
         """
+        inplace = _check_inplace(inplace)
         if inplace and not drop:
             raise ValueError('cannot reset coordinates in-place on a '
                              'DataArray without ``drop == True``')
@@ -1151,7 +1153,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().expand_dims(dim, axis)
         return self._from_temp_dataset(ds)
 
-    def set_index(self, indexes=None, append=False, inplace=False,
+    def set_index(self, indexes=None, append=False, inplace=None,
                   **indexes_kwargs):
         """Set DataArray (multi-)indexes using one or more existing
         coordinates.
@@ -1181,6 +1183,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.reset_index
         """
+        inplace = _check_inplace(inplace)
         indexes = either_dict_or_kwargs(indexes, indexes_kwargs, 'set_index')
         coords, _ = merge_indexes(indexes, self._coords, set(), append=append)
         if inplace:
@@ -1188,7 +1191,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def reset_index(self, dims_or_levels, drop=False, inplace=False):
+    def reset_index(self, dims_or_levels, drop=False, inplace=None):
         """Reset the specified index(es) or multi-index level(s).
 
         Parameters
@@ -1213,6 +1216,7 @@ class DataArray(AbstractArray, DataWithCoords):
         --------
         DataArray.set_index
         """
+        inplace = _check_inplace(inplace)
         coords, _ = split_indexes(dims_or_levels, self._coords, set(),
                                   self._level_coords, drop=drop)
         if inplace:
@@ -1220,7 +1224,7 @@ class DataArray(AbstractArray, DataWithCoords):
         else:
             return self._replace(coords=coords)
 
-    def reorder_levels(self, dim_order=None, inplace=False,
+    def reorder_levels(self, dim_order=None, inplace=None,
                        **dim_order_kwargs):
         """Rearrange index levels using input order.
 
@@ -1243,6 +1247,7 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray, with this dataarray's data but replaced
             coordinates.
         """
+        inplace = _check_inplace(inplace)
         dim_order = either_dict_or_kwargs(dim_order, dim_order_kwargs,
                                           'reorder_levels')
         replace_coords = {}
