@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 
 import hashlib
 import os as _os
+import warnings
 
 from .backends.api import open_dataset as _open_dataset
 from .core.pycompat import urlretrieve as _urlretrieve
@@ -24,7 +25,7 @@ def file_md5_checksum(fname):
 
 
 # idea borrowed from Seaborn
-def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
+def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
                  github_url='https://github.com/pydata/xarray-data',
                  branch='master', **kws):
     """
@@ -47,6 +48,10 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
         The git branch to download from
     kws : dict, optional
         Passed to xarray.open_dataset
+
+    See Also
+    --------
+    xarray.open_dataset
 
     """
     longdir = _os.path.expanduser(cache_dir)
@@ -83,3 +88,20 @@ def load_dataset(name, cache=True, cache_dir=_default_cache_dir,
         _os.remove(localfile)
 
     return ds
+
+
+def load_dataset(*args, **kwargs):
+    """
+    `load_dataset` will be removed in version 0.12. The current behavior of
+    this function can be achived by using `tutorial.open_dataset(...).load()`.
+
+    See Also
+    --------
+    open_dataset
+    """
+    warnings.warn(
+        "load_dataset` will be removed in version 0.12. The current behavior "
+        "of this function can be achived by using "
+        "`tutorial.open_dataset(...).load()`."
+        FutureWarning, stacklevel=2)
+    return open_dataset(*args, **kwargs).load()

@@ -23,6 +23,6 @@ class TestLoadDataset(object):
             os.remove('{}.md5'.format(self.testfilepath))
 
     def test_download_from_github(self):
-        ds = tutorial.load_dataset(self.testfile).load()
+        ds = tutorial.open_dataset(self.testfile).load()
         tiny = DataArray(range(5), name='tiny').to_dataset()
         assert_identical(ds, tiny)
