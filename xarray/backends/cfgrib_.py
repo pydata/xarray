@@ -46,7 +46,7 @@ class CfGribDataStore(AbstractDataStore):
             filter_by_keys_items = backend_kwargs['filter_by_keys'].items()
             backend_kwargs['filter_by_keys'] = tuple(filter_by_keys_items)
 
-        self.ds = cfgrib.open_file(filename, mode='r', **backend_kwargs)
+        self.ds = cfgrib.open_file(filename, **backend_kwargs)
 
     def open_store_variable(self, name, var):
         if isinstance(var.data, np.ndarray):
