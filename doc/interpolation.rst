@@ -262,7 +262,7 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
 .. ipython:: python
 
     # Raw data
-    ds = xr.tutorial.load_dataset('air_temperature').isel(time=0)
+    ds = xr.tutorial.open_dataset('air_temperature').isel(time=0)
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
     ds.air.plot(ax=axes[0])
     axes[0].set_title('Raw data')
