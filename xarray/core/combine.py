@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+import toolz.itertoolz as itertoolz
 
 import pandas as pd
 
@@ -367,6 +368,56 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
 
 
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+
+
+def _concat_nd(combined_IDs, concat_dims):
+    """
+    Recursively concatenates an N-dimensional structure of datasets.
+
+    No checks are performed on the consistency of the datasets, concat_dims or tile_IDs,
+    because it is assumed that this has already been done.
+
+    Parameters
+    ----------
+    combined_IDs : Dict[Tuple[int, ...]], xarray.Dataset]
+        Structure containing all datasets to be concatenated with "tile_IDs" as keys, which
+        specify position within the desired final concatenated result.
+    concat_dims : sequence of str
+
+    Returns
+    -------
+
+    """
+
+    for dim in concat_dims:
+        combined_IDs = _concat_all_along_last_dim(combined_IDs, dim)
+
+    return combined_IDs.item
+
+
+def _concat_all_along_last_dim(combined_IDs, dim):
+
+    grouped = itertoolz.groupby(_rest_of_tile_id, combined_IDs.items())
+
+    new_combined_IDs = {}
+    for new_ID, group in grouped.items():
+        print(new_ID)
+        print(group)
+        to_concat = [ds for old_ID, ds in group]
+        print(to_concat)
+
+        new_combined_IDs[new_ID] = concat(to_concat, dim)
+
+    return new_combined_IDs
+
+
+def _rest_of_tile_id(single_id_ds_pair):
+
+    # probably replace with something like lambda x: x[0][1:]
+
+    tile_id, ds = single_id_ds_pair
+    tile_id_except_first_element = tile_id[1:]
+    return tile_id_except_first_element
 
 
 def auto_combine(datasets,

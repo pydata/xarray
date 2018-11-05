@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from copy import deepcopy
+from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
+from xarray.core.combine import _rest_of_tile_id, _concat_all_along_last_dim
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -396,3 +398,41 @@ class TestAutoCombine(object):
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
         assert_identical(expected, actual)
+
+
+@pytest.fixture(scope='module')
+def create_combined_ids():
+    return _create_combined_ids
+
+
+def _create_combined_ids(shape):
+    tile_ids = _create_tile_ids(shape)
+    return {tile_id: create_test_data(0) for tile_id in tile_ids}
+
+
+def _create_tile_ids(shape):
+    tile_ids = product(*(range(i) for i in shape))
+    return list(tile_ids)
+
+
+class TestConcatND(object):
+    def test_get_tile_ids(self, create_combined_ids):
+        shape = (1, 2, 3)
+        combined_ids = _create_combined_ids(shape)
+        print(combined_ids.keys())
+
+        for combined, tile_id in zip(combined_ids.items(), _create_tile_ids(shape)):
+            expected_new_tile_id = tile_id[1:]
+            assert _rest_of_tile_id(combined) == expected_new_tile_id
+
+    def test_concat_once(self, create_combined_ids):
+        shape = (2,)
+        combined_ids = _create_combined_ids(shape)
+        print(combined_ids)
+
+        result = _concat_all_along_last_dim(combined_ids, 'dim1')
+        print('-------------------')
+        print(result[()])
+        expected_ds = concat([create_test_data(0), create_test_data(0)], 'dim1')
+        print(expected_ds)
+        assert_equal(result[()], expected_ds)
