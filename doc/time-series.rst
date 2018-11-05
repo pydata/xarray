@@ -199,17 +199,6 @@ and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
 supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
 
-.. note::
-
-   The ``resample`` api was updated in version 0.10.0 to reflect similar
-   updates in pandas ``resample`` api to be more groupby-like. Older style
-   calls to ``resample`` will still be supported for a short period:
-
-   .. ipython:: python
-
-    ds.resample('6H', dim='time', how='mean')
-
-
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
 
