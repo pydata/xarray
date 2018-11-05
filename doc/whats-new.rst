@@ -57,6 +57,11 @@ Breaking changes
     includes only data variables.
   - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
     array data, not coordinates. 
+  - The old resample syntax from before xarray 0.10, e.g.,
+    ``data.resample('1D', dim='time', how='mean')``, is no longer supported will
+    raise an error in most cases. You need to use the new resample syntax
+    instead, e.g., ``data.resample(time='1D').mean()`` or
+    ``data.resample({'time': '1D'}).mean()``. 
 - Xarray's storage backends now automatically open and close files when
   necessary, rather than requiring opening a file with ``autoclose=True``. A
   global least-recently-used cache is used to store open files; the default
@@ -108,6 +113,10 @@ Enhancements
   python driver and *ecCodes* C-library. (:issue:`2475`)
   By `Alessandro Amici <https://github.com/alexamici>`_,
   sponsored by `ECMWF <https://github.com/ecmwf>`_.
+- Resample now supports a dictionary mapping from dimension to frequency as
+  its first argument, e.g., ``data.resample({'time': '1D'}).mean()``. This is
+  consistent with other xarray functions that accept either dictionaries or
+  keyword arguments. By `Stephan Hoyer <https://github.com/shoyer>`_.
 
 Bug fixes
 ~~~~~~~~~
