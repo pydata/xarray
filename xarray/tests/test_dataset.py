@@ -2858,22 +2858,21 @@ class TestDataset(object):
         actual = ds.resample(time="1H").interpolate('linear')
         assert 'tc' not in actual.coords
 
-    def test_resample_old_vs_new_api(self):
+    def test_resample_old_api(self):
 
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
-        ds.attrs['dsmeta'] = 'dsdata'
 
-        for method in ['mean', 'sum', 'count', 'first', 'last']:
-            resampler = ds.resample(time='1D')
-            # Discard attributes on the call using the new api to match
-            # convention from old api
-            new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(FutureWarning):
-                old_api = ds.resample('1D', dim='time', how=method)
-            assert_identical(new_api, old_api)
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', 'time')
+
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', dim='time', how='mean')
+
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', dim='time')
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
