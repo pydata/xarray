@@ -60,7 +60,7 @@ For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xr.tutorial.load_dataset('air_temperature')
+    airtemps = xr.tutorial.open_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
@@ -585,7 +585,7 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.load_dataset('air_temperature').air
+    air = xr.tutorial.open_dataset('air_temperature').air
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
     air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
     @savefig plotting_maps_cartopy.png width=100%

@@ -75,6 +75,11 @@ Breaking changes
   should significantly improve performance when reading and writing
   netCDF files with Dask, especially when working with many files or using
   Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+- Tutorial data is now loaded lazily. Previous behavior of
+  :py:meth:`xarray.tutorial.load_dataset` would call `Dataset.load()` prior
+  to returning. This was changed in order to facilitate using this data with
+  dask.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Documentation
 ~~~~~~~~~~~~~
