@@ -26,3 +26,8 @@ class TestLoadDataset(object):
         ds = tutorial.open_dataset(self.testfile).load()
         tiny = DataArray(range(5), name='tiny').to_dataset()
         assert_identical(ds, tiny)
+
+    def test_download_from_github_load_without_cache(self):
+        ds_nocache = tutorial.open_dataset(self.testfile, cache=False).load()
+        ds_cache = tutorial.open_dataset(self.testfile).load()
+        assert_identical(ds_cache, ds_nocache)
