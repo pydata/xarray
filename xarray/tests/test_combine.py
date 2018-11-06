@@ -9,11 +9,13 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
-from xarray.core.combine import _rest_of_tile_id, _concat_all_along_last_dim
+from xarray.core.combine import (
+    _tile_id_except_first_element, _concat_all_along_first_dim,
+    _infer_tile_ids_from_nested_list)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
-    raises_regex, requires_dask)
+    assert_combined_tile_ids_equal, raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
@@ -400,6 +402,55 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
 
+class TestTileIDsFromNestedList(object):
+    # TODO test ordering is correct by seeding datasets differently
+    def test_1d(self):
+        ds = create_test_data(0)
+        input = [ds, ds]
+
+        expected = {(0,): ds, (1,): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_2d(self):
+        ds = create_test_data(0)
+        input = [[ds, ds], [ds, ds], [ds, ds]]
+
+        expected = {(0, 0): ds, (0, 1): ds,
+                    (1, 0): ds, (1, 1): ds,
+                    (2, 0): ds, (2, 1): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_3d(self):
+        ds = create_test_data(0)
+        input = [[[ds, ds], [ds, ds], [ds, ds]],
+                 [[ds, ds], [ds, ds], [ds, ds]]]
+
+        expected = {(0, 0, 0): ds, (0, 0, 1): ds,
+                    (0, 1, 0): ds, (0, 1, 1): ds,
+                    (0, 2, 0): ds, (0, 2, 1): ds,
+                    (1, 0, 0): ds, (1, 0, 1): ds,
+                    (1, 1, 0): ds, (1, 1, 1): ds,
+                    (1, 2, 0): ds, (1, 2, 1): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_redundant_nesting_gotcha(self):
+        ds = create_test_data(0)
+        input = [[ds], [ds]]
+
+        expected = {(0,): ds, (1,): ds}
+        with pytest.raises(TypeError):
+            actual = _infer_tile_ids_from_nested_list(input, [], {})
+
+    def test_bad_element(self):
+        ds = create_test_data()
+        input = [ds, 'bad_element']
+        with pytest.raises(TypeError):
+            _infer_tile_ids_from_nested_list(input, [], {})
+
+
 @pytest.fixture(scope='module')
 def create_combined_ids():
     return _create_combined_ids
@@ -423,16 +474,21 @@ class TestConcatND(object):
 
         for combined, tile_id in zip(combined_ids.items(), _create_tile_ids(shape)):
             expected_new_tile_id = tile_id[1:]
-            assert _rest_of_tile_id(combined) == expected_new_tile_id
+            assert _tile_id_except_first_element(combined) == expected_new_tile_id
 
     def test_concat_once(self, create_combined_ids):
         shape = (2,)
         combined_ids = _create_combined_ids(shape)
         print(combined_ids)
 
-        result = _concat_all_along_last_dim(combined_ids, 'dim1')
+        result = _concat_all_along_first_dim(combined_ids, 'dim1')
         print('-------------------')
         print(result[()])
         expected_ds = concat([create_test_data(0), create_test_data(0)], 'dim1')
         print(expected_ds)
         assert_equal(result[()], expected_ds)
+
+    @pytest.mark.skip
+    def test_concat_twice(self, create_combined_ids):
+        shape = (2, 3)
+        combined_ids = _create_combined_ids(shape)

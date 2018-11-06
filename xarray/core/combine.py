@@ -367,21 +367,69 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
         return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
 
 
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
+    """
+    Given a list of lists (of lists...) of datasets, returns a dictionary
+    with the index of each dataset in the nested list structure as the key.
+
+    Recursively traverses the given structure, while keeping track of the current
+    position.
+
+    Parameters
+    ----------
+    entry : list[list[xarray.Dataset, xarray.Dataset, ...]]
+        List of lists of arbitrary depth, containing datasets in the order they
+        are to be concatenated.
+
+    Returns
+    -------
+    combined_tile_ids : dict[tuple(int, ...), xarray.Dataset]
+    """
+
+    from .dataset import Dataset
+
+    if isinstance(entry, list):
+        # Check if list is redundant
+        if len(entry) == 1:
+            raise TypeError('Redundant list nesting at '
+                            'position ' + str(current_pos))
+
+        # Dive down tree
+        current_pos.append(0)
+        for i, item in enumerate(entry):
+            current_pos[-1] = i
+            combined_tile_ids = _infer_tile_ids_from_nested_list(item, current_pos,
+                                                                 combined_tile_ids)
+        # Move back up tree
+        del current_pos[-1]
+        return combined_tile_ids
+
+    elif isinstance(entry, Dataset):
+        # Termination condition
+        combined_tile_ids[tuple(current_pos)] = entry
+        return combined_tile_ids
+
+    else:
+        raise TypeError("Element at position " + str(current_pos) +
+                        " is neither a list nor an xarray.Dataset")
+
+
+def _check_shape_tile_ids(combined_tile_ids):
+    ...
 
 
 def _concat_nd(combined_IDs, concat_dims):
     """
     Recursively concatenates an N-dimensional structure of datasets.
 
-    No checks are performed on the consistency of the datasets, concat_dims or tile_IDs,
-    because it is assumed that this has already been done.
+    No checks are performed on the consistency of the datasets, concat_dims or
+    tile_IDs, because it is assumed that this has already been done.
 
     Parameters
     ----------
     combined_IDs : Dict[Tuple[int, ...]], xarray.Dataset]
-        Structure containing all datasets to be concatenated with "tile_IDs" as keys, which
-        specify position within the desired final concatenated result.
+        Structure containing all datasets to be concatenated with "tile_IDs" as
+        keys, which specify position within the desired final concatenated result.
     concat_dims : sequence of str
 
     Returns
@@ -390,34 +438,27 @@ def _concat_nd(combined_IDs, concat_dims):
     """
 
     for dim in concat_dims:
-        combined_IDs = _concat_all_along_last_dim(combined_IDs, dim)
+        combined_IDs = _concat_all_along_first_dim(combined_IDs, dim)
 
     return combined_IDs.item
 
 
-def _concat_all_along_last_dim(combined_IDs, dim):
-
-    grouped = itertoolz.groupby(_rest_of_tile_id, combined_IDs.items())
-
+def _concat_all_along_first_dim(combined_IDs, dim):
+    grouped = itertoolz.groupby(_tile_id_except_first_element, combined_IDs.items())
     new_combined_IDs = {}
     for new_ID, group in grouped.items():
-        print(new_ID)
-        print(group)
         to_concat = [ds for old_ID, ds in group]
-        print(to_concat)
-
         new_combined_IDs[new_ID] = concat(to_concat, dim)
-
     return new_combined_IDs
 
 
-def _rest_of_tile_id(single_id_ds_pair):
-
+def _tile_id_except_first_element(single_id_ds_pair):
     # probably replace with something like lambda x: x[0][1:]
-
     tile_id, ds = single_id_ds_pair
-    tile_id_except_first_element = tile_id[1:]
-    return tile_id_except_first_element
+    return tile_id[1:]
+
+
+_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def auto_combine(datasets,
