@@ -2475,8 +2475,9 @@ Bug fixes
   encoding process if a reference date is used that is so distant that
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
-- DataArray now always checks shape consistency between coords and data 
-  during construction (:issue:`2529`).
+- Added fastpath argument to DataArray.__array_wrap__ to skip 
+  checking shape consistency between coords and data during 
+  non-xarray operations (:issue:`2529`).
   By `Lily Wang <https://github.com/lilyminium>`_.
 
 - Chunked datasets can now roundtrip to Zarr storage continually
