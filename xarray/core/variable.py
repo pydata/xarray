@@ -2308,8 +2308,8 @@ class Variable(AbstractArray, NdimSizeLenMixin, VariableArithmetic):
     def imag(self):
         return self._replace(data=self.data.imag)
 
-    def __array_wrap__(self, obj, context=None):
-        return Variable(self.dims, obj)
+    def __array_wrap__(self, obj, context=None, fastpath=False):
+        return Variable(self.dims, obj, fastpath=fastpath)
 
     def _unary_op(self, f, *args, **kwargs):
         keep_attrs = kwargs.pop("keep_attrs", None)
