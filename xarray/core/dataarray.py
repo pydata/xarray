@@ -416,9 +416,6 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
                 _extract_indexes_from_coords(coords)
             )  # needed for to_dataset
 
-        # check shape consistency
-        _check_shape_consistency(variable.shape, coords, variable.dims)
-
         # These fully describe a DataArray
         self._variable = variable
         assert isinstance(coords, dict)
@@ -2985,6 +2982,8 @@ class DataArray(AbstractArray, DataWithCoords, DataArrayArithmetic):
 
     def __array_wrap__(self, obj, context=None) -> "DataArray":
         new_var = self.variable.__array_wrap__(obj, context)
+        if not fastpath:
+            _check_shape_consistency(new_var.shape, self._coords, new_var.dims)
         return self._replace(new_var)
 
     def __matmul__(self, obj):
