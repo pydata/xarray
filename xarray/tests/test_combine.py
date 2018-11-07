@@ -10,8 +10,8 @@ import pytest
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
-    _tile_id_except_first_element, _concat_all_along_first_dim,
-    _infer_tile_ids_from_nested_list, _check_shape_tile_ids)
+    _new_tile_id, _concat_all_along_first_dim,
+    _infer_tile_ids_from_nested_list, _check_shape_tile_ids, _concat_nd)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -485,28 +485,30 @@ class TestConcatND(object):
     def test_get_tile_ids(self, create_combined_ids):
         shape = (1, 2, 3)
         combined_ids = _create_combined_ids(shape)
-        print(combined_ids.keys())
 
         for combined, tile_id in zip(combined_ids.items(), _create_tile_ids(shape)):
             expected_new_tile_id = tile_id[1:]
-            assert _tile_id_except_first_element(combined) == expected_new_tile_id
+            assert _new_tile_id(combined) == expected_new_tile_id
 
     def test_concat_once(self, create_combined_ids):
         shape = (2,)
         combined_ids = _create_combined_ids(shape)
-        print(combined_ids)
-
+        ds = create_test_data(0)
         result = _concat_all_along_first_dim(combined_ids, 'dim1')
-        print('-------------------')
-        print(result[()])
-        expected_ds = concat([create_test_data(0), create_test_data(0)], 'dim1')
-        print(expected_ds)
-        assert_equal(result[()], expected_ds)
 
-    @pytest.mark.skip
+        expected_ds = concat([ds, ds], 'dim1')
+        assert_combined_tile_ids_equal(result, {(): expected_ds})
+
     def test_concat_twice(self, create_combined_ids):
         shape = (2, 3)
         combined_ids = _create_combined_ids(shape)
+        result = _concat_nd(combined_ids, concat_dims=['dim1', 'dim2'])
+
+        ds = create_test_data(0)
+        partway = concat([ds, ds], dim='dim1')
+        expected = concat([partway, partway, partway], dim='dim2')
+
+        assert_equal(result, expected)
 
 
 class TestCheckShapeTileIDs(object):

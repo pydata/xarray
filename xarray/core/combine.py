@@ -457,19 +457,23 @@ def _concat_nd(combined_IDs, concat_dims):
     for dim in concat_dims:
         combined_IDs = _concat_all_along_first_dim(combined_IDs, dim)
 
-    return combined_IDs.item
+    combined_ds = combined_IDs[()]
+
+    return combined_ds
 
 
 def _concat_all_along_first_dim(combined_IDs, dim):
-    grouped = itertoolz.groupby(_tile_id_except_first_element, combined_IDs.items())
+    grouped = itertoolz.groupby(_new_tile_id, combined_IDs.items())
     new_combined_IDs = {}
+
+    # TODO Would there be any point in parallelizing this concatenation step?
     for new_ID, group in grouped.items():
         to_concat = [ds for old_ID, ds in group]
         new_combined_IDs[new_ID] = concat(to_concat, dim)
     return new_combined_IDs
 
 
-def _tile_id_except_first_element(single_id_ds_pair):
+def _new_tile_id(single_id_ds_pair):
     # probably replace with something like lambda x: x[0][1:]
     tile_id, ds = single_id_ds_pair
     return tile_id[1:]
