@@ -1446,27 +1446,27 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
-    
+
     def test_deprecate_auto_chunk(self):
         original = create_test_data().chunk()
         with pytest.warns(FutureWarning):
             with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                    original, open_kwargs={'auto_chunk': True}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
                     assert v._in_memory == (k in actual.dims)
                     # chunk size should be the same as original
                     assert v.chunks == original[k].chunks
-        
+
         with pytest.warns(FutureWarning):
             with self.roundtrip(
-                original, open_kwargs={'auto_chunk': False}) as actual:
+                    original, open_kwargs={'auto_chunk': False}) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
                     assert v._in_memory == (k in actual.dims)
                     # there should be no chunks
                     assert v.chunks is None
-            
+
 
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225

@@ -436,9 +436,9 @@ def open_zarr(store, group=None, synchronizer=None, chunks='auto',
     """
     if 'auto_chunk' in kwargs:
         auto_chunk = kwargs.pop('auto_chunk')
-        if auto_chunk == True:
+        if auto_chunk:
             chunks = 'auto'  # maintain backwards compatibility
-        elif auto_chunk == False:
+        else:
             chunks = None
 
         warnings.warn("auto_chunk is deprecated. Use chunks='auto' instead.",
