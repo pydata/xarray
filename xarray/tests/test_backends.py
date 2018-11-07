@@ -1391,7 +1391,7 @@ class ZarrBase(CFEncodedBase):
         original = create_test_data().chunk()
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': False}) as actual:
+                original, open_kwargs={'chunks': None}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
@@ -1399,7 +1399,7 @@ class ZarrBase(CFEncodedBase):
                 assert v.chunks is None
 
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.variables.items():
                 # only index variables should be in memory
                 assert v._in_memory == (k in actual.dims)
@@ -1412,7 +1412,7 @@ class ZarrBase(CFEncodedBase):
         # All of these should return non-chunked arrays
         NO_CHUNKS = (None, 0, {})
         for no_chunk in NO_CHUNKS:
-            open_kwargs = {'chunks': no_chunk, 'auto_chunk': False}
+            open_kwargs = {'chunks': no_chunk}
             with self.roundtrip(original, open_kwargs=open_kwargs) as actual:
                 for k, v in actual.variables.items():
                     # only index variables should be in memory
@@ -1446,13 +1446,33 @@ class ZarrBase(CFEncodedBase):
 
                 assert_identical(actual, auto)
                 assert_identical(actual.load(), auto.load())
+    
+    def test_deprecate_auto_chunk(self):
+        original = create_test_data().chunk()
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                original, open_kwargs={'auto_chunk': True}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # chunk size should be the same as original
+                    assert v.chunks == original[k].chunks
+        
+        with pytest.warns(FutureWarning):
+            with self.roundtrip(
+                original, open_kwargs={'auto_chunk': False}) as actual:
+                for k, v in actual.variables.items():
+                    # only index variables should be in memory
+                    assert v._in_memory == (k in actual.dims)
+                    # there should be no chunks
+                    assert v.chunks is None
+            
 
     def test_write_uneven_dask_chunks(self):
         # regression for GH#2225
         original = create_test_data().chunk({'dim1': 3, 'dim2': 4, 'dim3': 3})
-
         with self.roundtrip(
-                original, open_kwargs={'auto_chunk': True}) as actual:
+                original, open_kwargs={'chunks': 'auto'}) as actual:
             for k, v in actual.data_vars.items():
                 print(k)
                 assert v.chunks == actual[k].chunks

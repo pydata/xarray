@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 from collections import OrderedDict
+=======
+from __future__ import absolute_import, division, print_function
+
+import warnings
+
+>>>>>>> added deprecation warning
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -352,7 +359,7 @@ class ZarrStore(AbstractWritableDataStore):
             zarr.consolidate_metadata(self.ds.store)
 
 
-def open_zarr(store, group=None, synchronizer=None, chunks=None,
+def open_zarr(store, group=None, synchronizer=None, chunks='auto',
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
               drop_variables=None, consolidated=False, auto_chunk=True, 
@@ -379,13 +386,8 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     chunks : int or dict or {None, 'auto'}, optional
         Chunk sizes along each dimension, e.g., ``5`` or
         ``{'x': 5, 'y': 5}``. If `chunks='auto'`, dask chunks are created
-        based on the variable's zarr chunks. If `chunks=None` and
-        `auto_chunk=False`, zarr array data will lazily convert to numpy
-        arrays upon access.
-    auto_chunk : bool, optional
-        Whether to automatically create dask chunks corresponding to each
-        variable's zarr chunks. If `chunks=None`, this overrides `chunks`.
-        Equivalent to `chunks='auto'.` (Default: True)
+        based on the variable's zarr chunks. If `chunks=None`, zarr array
+        data will lazily convert to numpy arrays upon access.
     overwrite_encoded_chunks: bool, optional
         Whether to drop the zarr chunks encoded for each variable when a
         dataset is loaded with specified chunk sizes (default: False)
@@ -432,9 +434,19 @@ def open_zarr(store, group=None, synchronizer=None, chunks=None,
     ----------
     http://zarr.readthedocs.io/
     """
+    if 'auto_chunk' in kwargs:
+        auto_chunk = kwargs.pop('auto_chunk')
+        if auto_chunk == True:
+            chunks = 'auto'  # maintain backwards compatibility
+        elif auto_chunk == False:
+            chunks = None
 
-    if auto_chunk and chunks is None:
-        chunks = 'auto'  # maintain backwards compatibility
+        warnings.warn("auto_chunk is deprecated. Use chunks='auto' instead.",
+                      FutureWarning, stacklevel=2)
+
+    if kwargs:
+        raise TypeError("open_zarr() got unexpected keyword arguments " +
+                        ",".join(kwargs.keys()))
 
     if not isinstance(chunks, (int, dict)):
         if chunks != 'auto' and chunks is not None:
