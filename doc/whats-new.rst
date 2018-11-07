@@ -27,8 +27,8 @@ What's New
 
 .. _whats-new.0.11.0:
 
-v0.11.0 (unreleased)
---------------------
+v0.11.0 (7 November 2018)
+-------------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
