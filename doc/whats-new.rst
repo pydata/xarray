@@ -33,23 +33,8 @@ v0.11.0 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- For non-standard calendars commonly used in climate science, xarray will now
-  always use :py:class:`cftime.datetime` objects, rather than by default try to
-  coerce them to ``np.datetime64[ns]`` objects.  A
-  :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
-  coordinates in these cases. A new method,
-  :py:meth:`~xarray.CFTimeIndex.to_datetimeindex`, has been added 
-  to aid in converting from a  :py:class:`~xarray.CFTimeIndex` to a
-  :py:class:`pandas.DatetimeIndex` for the remaining use-cases where
-  using a :py:class:`~xarray.CFTimeIndex` is still a limitation (e.g. for
-  resample or plotting).  Setting the ``enable_cftimeindex`` option is now a
-  no-op and emits a ``FutureWarning``. 
-- ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
-  Call :py:meth:`Dataset.transpose` directly instead.
-- Iterating over a ``Dataset`` now includes only data variables, not coordinates.
-  Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
-  includes only data variables
-- Finished deprecation cycles:
+- Finished deprecations (changed behavior with this release):
+
   - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
     Call :py:meth:`Dataset.transpose` directly instead.
   - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
@@ -62,34 +47,49 @@ Breaking changes
     raise an error in most cases. You need to use the new resample syntax
     instead, e.g., ``data.resample(time='1D').mean()`` or
     ``data.resample({'time': '1D'}).mean()``. 
-- Xarray's storage backends now automatically open and close files when
-  necessary, rather than requiring opening a file with ``autoclose=True``. A
-  global least-recently-used cache is used to store open files; the default
-  limit of 128 open files should suffice in most cases, but can be adjusted if
-  necessary with
-  ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
-  to ``open_dataset`` and related functions has been deprecated and is now a
-  no-op.
 
-  This change, along with an internal refactor of xarray's storage backends,
-  should significantly improve performance when reading and writing
-  netCDF files with Dask, especially when working with many files or using
-  Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
-- Tutorial data is now loaded lazily. Previous behavior of
-  :py:meth:`xarray.tutorial.load_dataset` would call `Dataset.load()` prior
-  to returning. This was changed in order to facilitate using this data with
-  dask.
-  By `Joe Hamman <https://github.com/jhamman>`_.
 
-Documentation
-~~~~~~~~~~~~~
-- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
-  without dimension argument will change in the next release.
-  Now we warn a FutureWarning.
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
-- The ``inplace`` kwarg of a number of `DataArray` and `Dataset` methods is being
-  deprecated and will be removed in the next release.
-  By `Deepak Cherian <https://github.com/dcherian>`_.
+- New deprecations (behavior will be changed in xarray 0.12):
+
+  - Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+    without dimension argument will change in the next release.
+    Now we warn a FutureWarning.
+    By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  - The ``inplace`` kwarg of a number of `DataArray` and `Dataset` methods is being
+    deprecated and will be removed in the next release.
+    By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+- Refactored storage backends:
+
+  - Xarray's storage backends now automatically open and close files when
+    necessary, rather than requiring opening a file with ``autoclose=True``. A
+    global least-recently-used cache is used to store open files; the default
+    limit of 128 open files should suffice in most cases, but can be adjusted if
+    necessary with
+    ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
+    to ``open_dataset`` and related functions has been deprecated and is now a
+    no-op.
+
+    This change, along with an internal refactor of xarray's storage backends,
+    should significantly improve performance when reading and writing
+    netCDF files with Dask, especially when working with many files or using
+    Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+
+
+- Support for non-standard calendars used in climate science:
+
+  - Xarray will now always use :py:class:`cftime.datetime` objects, rather
+    than by default trying to coerce them into ``np.datetime64[ns]`` objects.
+    A :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
+    coordinates in these cases.
+  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added 
+    to aid in converting from a  :py:class:`~xarray.CFTimeIndex` to a
+    :py:class:`pandas.DatetimeIndex` for the remaining use-cases where
+    using a :py:class:`~xarray.CFTimeIndex` is still a limitation (e.g. for
+    resample or plotting).
+  - Setting the ``enable_cftimeindex`` option is now a no-op and emits a
+    ``FutureWarning``. 
 
 Enhancements
 ~~~~~~~~~~~~
@@ -125,6 +125,13 @@ Enhancements
   its first argument, e.g., ``data.resample({'time': '1D'}).mean()``. This is
   consistent with other xarray functions that accept either dictionaries or
   keyword arguments. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The preferred way to access tutorial data is now to load it lazily with
+  :py:meth:`xarray.tutorial.open_dataset`.
+  :py:meth:`xarray.tutorial.load_dataset` calls `Dataset.load()` prior
+  to returning (and is now deprecated). This was changed in order to facilitate
+  using tutorial datasets with dask.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
