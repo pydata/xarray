@@ -392,7 +392,7 @@ def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
         # Check if list is redundant
         if len(entry) == 1:
             raise TypeError('Redundant list nesting at '
-                            'position ' + str(current_pos))
+                            'position ' + str(tuple(current_pos)))
 
         # Dive down tree
         current_pos.append(0)
@@ -410,12 +410,29 @@ def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
         return combined_tile_ids
 
     else:
-        raise TypeError("Element at position " + str(current_pos) +
+        raise TypeError("Element at position " + str(tuple(current_pos)) +
                         " is neither a list nor an xarray.Dataset")
 
 
 def _check_shape_tile_ids(combined_tile_ids):
-    ...
+    # TODO create custom exception class instead of using asserts?
+
+    tile_ids = combined_tile_ids.keys()
+
+    # Check all tuples are the same length
+    lengths = [len(id) for id in tile_ids]
+    assert set(lengths) == {lengths[0]}
+
+    # Check each dimension has indices 0 to n represented with no gaps
+    for dim in range(lengths[0]):
+        indices = [id[dim] for id in tile_ids]
+        assert len(indices) > 1
+        assert sorted(indices) == range(max(indices))
+
+    # Check only datasets are contained
+    from .dataset import Dataset
+    for v in combined_tile_ids.values():
+        assert isinstance(v, Dataset)
 
 
 def _concat_nd(combined_IDs, concat_dims):

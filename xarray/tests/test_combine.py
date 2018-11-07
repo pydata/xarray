@@ -11,7 +11,7 @@ from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
     _tile_id_except_first_element, _concat_all_along_first_dim,
-    _infer_tile_ids_from_nested_list)
+    _infer_tile_ids_from_nested_list, _check_shape_tile_ids)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -402,6 +402,14 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
 
+# TODO get this fixture to work!!
+@pytest.fixture(scope='module')
+def ds():
+    def _create_test_data(s=0):
+        return create_test_data(seed=s)
+    return _create_test_data
+
+
 class TestTileIDsFromNestedList(object):
     # TODO test ordering is correct by seeding datasets differently
     def test_1d(self):
@@ -440,15 +448,22 @@ class TestTileIDsFromNestedList(object):
         ds = create_test_data(0)
         input = [[ds], [ds]]
 
-        expected = {(0,): ds, (1,): ds}
         with pytest.raises(TypeError):
-            actual = _infer_tile_ids_from_nested_list(input, [], {})
+            _infer_tile_ids_from_nested_list(input, [], {})
 
     def test_bad_element(self):
         ds = create_test_data()
         input = [ds, 'bad_element']
         with pytest.raises(TypeError):
             _infer_tile_ids_from_nested_list(input, [], {})
+
+    def test_ragged_input(self):
+        ds = create_test_data(0)
+        input = [ds, [ds, ds]]
+
+        expected = {(0,): ds, (1, 0): ds, (1, 1): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
 
 
 @pytest.fixture(scope='module')
@@ -492,3 +507,28 @@ class TestConcatND(object):
     def test_concat_twice(self, create_combined_ids):
         shape = (2, 3)
         combined_ids = _create_combined_ids(shape)
+
+
+class TestCheckShapeTileIDs(object):
+    def test_check_lengths(self):
+        ds = create_test_data(0)
+        combined_tile_ids = {(0,): ds, (0, 1): ds}
+        with pytest.raises(AssertionError):
+            _check_shape_tile_ids(combined_tile_ids)
+
+    def test_check_non_zero_length_along_all_dims(self):
+        ds = create_test_data(0)
+        combined_tile_ids = {(0, 0): ds, (1, 0): ds}
+        with pytest.raises(AssertionError):
+            _check_shape_tile_ids(combined_tile_ids)
+
+    def test_check_linearity(self):
+        ds = create_test_data(0)
+        combined_tile_ids = {(0,): ds, (2,): ds}
+        with pytest.raises(AssertionError):
+            _check_shape_tile_ids(combined_tile_ids)
+
+    def test_check_contains_datasets(self):
+        combined_tile_ids = {(0,): 'a', (1,): 'b'}
+        with pytest.raises(AssertionError):
+            _check_shape_tile_ids(combined_tile_ids)
