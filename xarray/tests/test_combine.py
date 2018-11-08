@@ -482,13 +482,14 @@ class TestConcatND(object):
             expected_new_tile_id = tile_id[1:]
             assert _new_tile_id(combined) == expected_new_tile_id
 
-    def test_concat_once(self, create_combined_ids):
+    @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
+    def test_concat_once(self, create_combined_ids, concat_dim):
         shape = (2,)
         combined_ids = _create_combined_ids(shape)
         ds = create_test_data
-        result = _concat_all_along_first_dim(combined_ids, 'dim1')
+        result = _concat_all_along_first_dim(combined_ids, dim=concat_dim)
 
-        expected_ds = concat([ds(0), ds(1)], 'dim1')
+        expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
 
     def test_concat_twice(self, create_combined_ids):
