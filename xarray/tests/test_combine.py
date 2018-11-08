@@ -402,45 +402,36 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
 
-# TODO get this fixture to work!!
-@pytest.fixture(scope='module')
-def ds():
-    def _create_test_data(s=0):
-        return create_test_data(seed=s)
-    return _create_test_data
-
-
 class TestTileIDsFromNestedList(object):
-    # TODO test ordering is correct by seeding datasets differently
     def test_1d(self):
-        ds = create_test_data(0)
-        input = [ds, ds]
+        ds = create_test_data
+        input = [ds(0), ds(1)]
 
-        expected = {(0,): ds, (1,): ds}
+        expected = {(0,): ds(0), (1,): ds(1)}
         actual = _infer_tile_ids_from_nested_list(input, [], {})
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_2d(self):
-        ds = create_test_data(0)
-        input = [[ds, ds], [ds, ds], [ds, ds]]
+        ds = create_test_data
+        input = [[ds(0), ds(1)], [ds(2), ds(3)], [ds(4), ds(5)]]
 
-        expected = {(0, 0): ds, (0, 1): ds,
-                    (1, 0): ds, (1, 1): ds,
-                    (2, 0): ds, (2, 1): ds}
+        expected = {(0, 0): ds(0), (0, 1): ds(1),
+                    (1, 0): ds(2), (1, 1): ds(3),
+                    (2, 0): ds(4), (2, 1): ds(5)}
         actual = _infer_tile_ids_from_nested_list(input, [], {})
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_3d(self):
-        ds = create_test_data(0)
-        input = [[[ds, ds], [ds, ds], [ds, ds]],
-                 [[ds, ds], [ds, ds], [ds, ds]]]
+        ds = create_test_data
+        input = [[[ds(0), ds(1)], [ds(2), ds(3)], [ds(4), ds(5)]],
+                 [[ds(6), ds(7)], [ds(8), ds(9)], [ds(10), ds(11)]]]
 
-        expected = {(0, 0, 0): ds, (0, 0, 1): ds,
-                    (0, 1, 0): ds, (0, 1, 1): ds,
-                    (0, 2, 0): ds, (0, 2, 1): ds,
-                    (1, 0, 0): ds, (1, 0, 1): ds,
-                    (1, 1, 0): ds, (1, 1, 1): ds,
-                    (1, 2, 0): ds, (1, 2, 1): ds}
+        expected = {(0, 0, 0): ds(0), (0, 0, 1): ds(1),
+                    (0, 1, 0): ds(2), (0, 1, 1): ds(3),
+                    (0, 2, 0): ds(4), (0, 2, 1): ds(5),
+                    (1, 0, 0): ds(6), (1, 0, 1): ds(7),
+                    (1, 1, 0): ds(8), (1, 1, 1): ds(9),
+                    (1, 2, 0): ds(10), (1, 2, 1): ds(11)}
         actual = _infer_tile_ids_from_nested_list(input, [], {})
         assert_combined_tile_ids_equal(expected, actual)
 
@@ -452,16 +443,16 @@ class TestTileIDsFromNestedList(object):
             _infer_tile_ids_from_nested_list(input, [], {})
 
     def test_bad_element(self):
-        ds = create_test_data()
+        ds = create_test_data(0)
         input = [ds, 'bad_element']
         with pytest.raises(TypeError):
             _infer_tile_ids_from_nested_list(input, [], {})
 
     def test_ragged_input(self):
-        ds = create_test_data(0)
-        input = [ds, [ds, ds]]
+        ds = create_test_data
+        input = [ds(0), [ds(1), ds(2)]]
 
-        expected = {(0,): ds, (1, 0): ds, (1, 1): ds}
+        expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
         actual = _infer_tile_ids_from_nested_list(input, [], {})
         assert_combined_tile_ids_equal(expected, actual)
 
@@ -473,7 +464,8 @@ def create_combined_ids():
 
 def _create_combined_ids(shape):
     tile_ids = _create_tile_ids(shape)
-    return {tile_id: create_test_data(0) for tile_id in tile_ids}
+    nums = range(len(tile_ids))
+    return {tile_id: create_test_data(num) for tile_id, num in zip(tile_ids, nums)}
 
 
 def _create_tile_ids(shape):
@@ -493,10 +485,10 @@ class TestConcatND(object):
     def test_concat_once(self, create_combined_ids):
         shape = (2,)
         combined_ids = _create_combined_ids(shape)
-        ds = create_test_data(0)
+        ds = create_test_data
         result = _concat_all_along_first_dim(combined_ids, 'dim1')
 
-        expected_ds = concat([ds, ds], 'dim1')
+        expected_ds = concat([ds(0), ds(1)], 'dim1')
         assert_combined_tile_ids_equal(result, {(): expected_ds})
 
     def test_concat_twice(self, create_combined_ids):
@@ -504,9 +496,11 @@ class TestConcatND(object):
         combined_ids = _create_combined_ids(shape)
         result = _concat_nd(combined_ids, concat_dims=['dim1', 'dim2'])
 
-        ds = create_test_data(0)
-        partway = concat([ds, ds], dim='dim1')
-        expected = concat([partway, partway, partway], dim='dim2')
+        ds = create_test_data
+        partway1 = concat([ds(0), ds(3)], dim='dim1')
+        partway2 = concat([ds(1), ds(4)], dim='dim1')
+        partway3 = concat([ds(2), ds(5)], dim='dim1')
+        expected = concat([partway1, partway2, partway3], dim='dim2')
 
         assert_equal(result, expected)
 
