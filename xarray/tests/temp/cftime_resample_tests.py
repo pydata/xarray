@@ -4,7 +4,6 @@ import numpy as np
 
 # Downsampling comparisons:
 # Checking how label and closed args affect outputs
-# ti = pd.date_range('2000-01-01', periods=9, freq='T', tz='UTC')
 times = xr.cftime_range('2000-01-01', periods=9, freq='T', tz='UTC')
 da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
 print(da.resample(time='3T', label='left', closed='left').mean())
@@ -32,7 +31,7 @@ print(da.resample(time='6MS').max())
 # At seconds-resolution, xr.cftime_range is 1 second off from pd.date_range
 times = xr.cftime_range('2011-01-01T13:02:03', '2012-01-01T00:00:00', freq='D')
 da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
-print(da.resample(time='12T', base=0).interpolate().indexes) # testing T vs min
+print(da.resample(time='12T', base=0).interpolate().indexes)  # testing 'T' vs 'min'
 print(da.resample(time='12min', base=0).interpolate().indexes)
 print(da.resample(time='12min', base=1).interpolate().indexes)
 print(da.resample(time='12min', base=5).mean().indexes)
