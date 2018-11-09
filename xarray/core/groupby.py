@@ -458,7 +458,6 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
-        # print('GOODBYE WORLD', self._obj.variable.size, len(self._group_indices))
         var = self._obj.variable
         for indices in self._group_indices:
             yield var[{self._group_dim: indices}]
