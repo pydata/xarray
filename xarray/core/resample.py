@@ -194,14 +194,25 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                 .format(self._obj.data.name)
             )
 
-        x = self._obj[self._dim].astype('float')
+        from ..coding.cftimeindex import CFTimeIndex
+        import cftime as cf
+        import numpy as np
+        if isinstance(self._obj[self._dim].values[0], cf.datetime):
+            t = self._obj[self._dim]
+            x = np.insert([td.total_seconds() for td in t[1:].values - t[:-1].values], 0, 0).cumsum()  #  calling total_seconds is potentially bad for performance
+        else:
+            x = self._obj[self._dim].astype('float')
         y = self._obj.data
 
         axis = self._obj.get_axis_num(self._dim)
 
         f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                      assume_sorted=True)
-        new_x = self._full_index.values.astype('float')
+        if isinstance(self._full_index, CFTimeIndex):
+            t = self._full_index
+            new_x = np.insert([td.total_seconds() for td in t[1:].values - t[:-1].values], 0, 0).cumsum()  #  calling total_seconds is potentially bad for performance
+        else:
+            new_x = self._full_index.values.astype('float')
 
         # construct new up-sampled DataArray
         dummy = self._obj.copy()

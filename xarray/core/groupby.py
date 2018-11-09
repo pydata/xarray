@@ -233,9 +233,24 @@ class GroupBy(SupportsArithmetic):
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
-            s = pd.Series(np.arange(index.size), index)
-            first_items = s.groupby(grouper).first()
-            full_index = first_items.index
+            from ..coding.cftimeindex import CFTimeIndex
+            if isinstance(grouper, CFTimeIndex):  # if we're upsampling CFTimeIndex, do this:
+                # print('HELLO WORLD', group.size)
+                s = pd.Series(np.arange(index.size), index)
+                first_items = s.reindex(grouper, method='bfill')  # bfill instead of pad
+                full_index = first_items.index
+                "THE FIX is to generate group_indices where slice(28,29) or slice(0,1) is at the start instead of the end of a group"
+                # s = pd.Series(np.arange(grouper.size), grouper)
+                # first_items = s
+                # full_index = first_items.index
+            elif isinstance(grouper, tuple):  # if we're downsampling CFTimeIndex, do this:
+                s = pd.Series(np.arange(index.size), index)
+                first_items = s.groupby(grouper[0]).first().reindex(grouper[1]) # reindex(grouper[1]) adds empty np.nan bins to emulate pandas behavior
+                full_index = first_items.index
+            else:
+                s = pd.Series(np.arange(index.size), index)
+                first_items = s.groupby(grouper).first()
+                full_index = first_items.index
             if first_items.isnull().any():
                 first_items = first_items.dropna()
             sbins = first_items.values.astype(np.int64)
@@ -448,6 +463,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         """Fast version of `_iter_grouped` that yields Variables without
         metadata
         """
+        # print('GOODBYE WORLD', self._obj.variable.size, len(self._group_indices))
         var = self._obj.variable
         for indices in self._group_indices:
             yield var[{self._group_dim: indices}]

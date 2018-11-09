@@ -657,6 +657,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftime_offsets import cftime_range
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
@@ -690,20 +691,51 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                             "was passed %r" % dim)
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            raise NotImplementedError(
-                'Resample is currently not supported along a dimension '
-                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
-                'it may be possible to work around this by converting your '
-                'time index to a DatetimeIndex using '
-                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
-                'however, because switching to a DatetimeIndex from a '
-                'CFTimeIndex with a non-standard calendar entails a change '
-                'in the calendar type, which could lead to subtle and silent '
-                'errors.'
-            )
+            # TODO: handle closed, label and base arguments, and the case where
+            # frequency is specified without an integer count.
+            # times = self.indexes[dim]
+            # resampled_times = cftime_range(
+            #     start=times[0], end=times[-1], freq=freq)
+            # grouper = (pd.Series(resampled_times, index=resampled_times)
+            #            .reindex(times, method='pad'))
+
+            # print(freq)
+            from ..coding.cftime_offsets import Day, MonthBegin, to_offset
+            offset = to_offset(freq)
+            # print(offset)
+            # print(isinstance(offset, Day))
+            # print(isinstance(offset, MonthBegin))
+            from .resample_cftime import _get_time_bins
+            binner, labels = _get_time_bins(self.indexes[dim_name], to_offset(freq), closed, label, base)
+            # print(binner)
+            # print(binner.size)
+            # print(labels)
+            # print(labels.size)
+            times = self.indexes[dim_name]
+            if times.size > labels.size:
+                if closed == 'right':
+                    fill_method = 'bfill'
+                else:
+                    fill_method = 'ffill'
+                grouper = (pd.Series(binner, index=binner)
+                           .reindex(times, method=fill_method))
+                bin_actual = np.unique(grouper.values)
+                # print(bin_actual)
+                # print(binner)
+                # print(labels)
+                label_dict = dict(zip(bin_actual, labels.values))  # np.unique returns sorted unique values
+                # if labels.size > bin_actual.size:
+                #     label_dict[labels.values[-1]] = labels.values[-1]
+                grouper = grouper.map(label_dict)
+                grouper = (grouper, labels)
+                # grouper = (pd.Series(labels, index=labels)
+                #            .reindex(times, method=None))  # this works for upsampling, but why?
+            else:
+                grouper = labels
+        else:
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
 
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
