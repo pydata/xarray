@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
+from .pycompat import OrderedDict, dask_array_type
 
 RESAMPLE_DIM = '__resample_dim__'
 
@@ -109,16 +110,7 @@ class Resample(object):
         return self._interpolate(kind=kind)
 
     def _interpolate(self, kind='linear'):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        # drop any existing non-dimension coordinates along the resampling
-        # dimension
-        dummy = self._obj.copy()
-        for k, v in self._obj.coords.items():
-            if k != self._dim and self._dim in v.dims:
-                dummy = dummy.drop(k)
-        return dummy.interp(assume_sorted=True, method=kind,
-                            kwargs={'bounds_error': False},
-                            **{self._dim: self._full_index})
+        raise NotImplementedError
 
 
 class DataArrayResample(DataArrayGroupBy, Resample):
@@ -137,7 +129,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, shortcut=False, args=(), **kwargs):
+    def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -166,8 +158,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
-        args : tuple, optional
-            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -177,7 +167,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             The result of splitting, applying and combining this array.
         """
         combined = super(DataArrayResample, self).apply(
-            func, shortcut=shortcut, args=args, **kwargs)
+            func, shortcut=shortcut, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -189,6 +179,57 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             combined = combined.rename({self._resample_dim: self._dim})
 
         return combined
+
+    def _interpolate(self, kind='linear'):
+        """Apply scipy.interpolate.interp1d along resampling dimension."""
+        from .dataarray import DataArray
+        from scipy.interpolate import interp1d
+
+        if isinstance(self._obj.data, dask_array_type):
+            raise TypeError(
+                "Up-sampling via interpolation was attempted on the the "
+                "variable '{}', but it is a dask array; dask arrays are not "
+                "yet supported in resample.interpolate(). Load into "
+                "memory with Dataset.load() before resampling."
+                .format(self._obj.data.name)
+            )
+
+        from ..coding.cftimeindex import CFTimeIndex
+        import cftime as cf
+        import numpy as np
+        if isinstance(self._obj[self._dim].values[0], cf.datetime):
+            t = self._obj[self._dim]
+            x = np.insert([td.total_seconds() for td in t[1:].values - t[:-1].values], 0, 0).cumsum()  #  calling total_seconds is potentially bad for performance
+        else:
+            x = self._obj[self._dim].astype('float')
+        y = self._obj.data
+
+        axis = self._obj.get_axis_num(self._dim)
+
+        f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
+                     assume_sorted=True)
+        if isinstance(self._full_index, CFTimeIndex):
+            t = self._full_index
+            new_x = np.insert([td.total_seconds() for td in t[1:].values - t[:-1].values], 0, 0).cumsum()  #  calling total_seconds is potentially bad for performance
+        else:
+            new_x = self._full_index.values.astype('float')
+
+        # construct new up-sampled DataArray
+        dummy = self._obj.copy()
+        dims = dummy.dims
+
+        # drop any existing non-dimension coordinates along the resampling
+        # dimension
+        coords = OrderedDict()
+        for k, v in dummy.coords.items():
+            # is the resampling dimension
+            if k == self._dim:
+                coords[self._dim] = self._full_index
+            # else, check if resampling dim is in coordinate dimensions
+            elif self._dim not in v.dims:
+                coords[k] = v
+        return DataArray(f(new_x), coords, dims, name=dummy.name,
+                         attrs=dummy.attrs)
 
 
 ops.inject_reduce_methods(DataArrayResample)
@@ -210,7 +251,7 @@ class DatasetResample(DatasetGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, args=(), **kwargs):
+    def apply(self, func, **kwargs):
         """Apply a function over each Dataset in the groups generated for
         resampling  and concatenate them together into a new Dataset.
 
@@ -229,8 +270,6 @@ class DatasetResample(DatasetGroupBy, Resample):
         ----------
         func : function
             Callable to apply to each sub-dataset.
-        args : tuple, optional
-            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
 
@@ -240,7 +279,7 @@ class DatasetResample(DatasetGroupBy, Resample):
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
-        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         return combined.rename({self._resample_dim: self._dim})
@@ -275,6 +314,50 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return super(DatasetResample, self).reduce(
             func, dim, keep_attrs, **kwargs)
+
+    def _interpolate(self, kind='linear'):
+        """Apply scipy.interpolate.interp1d along resampling dimension."""
+        from .dataset import Dataset
+        from .variable import Variable
+        from scipy.interpolate import interp1d
+
+        old_times = self._obj[self._dim].astype(float)
+        new_times = self._full_index.values.astype(float)
+
+        data_vars = OrderedDict()
+        coords = OrderedDict()
+
+        # Apply the interpolation to each DataArray in our original Dataset
+        for name, variable in self._obj.variables.items():
+            if name in self._obj.coords:
+                if name == self._dim:
+                    coords[self._dim] = self._full_index
+                elif self._dim not in variable.dims:
+                    coords[name] = variable
+            else:
+                if isinstance(variable.data, dask_array_type):
+                    raise TypeError(
+                        "Up-sampling via interpolation was attempted on the "
+                        "variable '{}', but it is a dask array; dask arrays "
+                        "are not yet supprted in resample.interpolate(). Load "
+                        "into memory with Dataset.load() before resampling."
+                        .format(name)
+                    )
+
+                axis = variable.get_axis_num(self._dim)
+
+                # We've previously checked for monotonicity along the
+                # re-sampling dimension (in __init__ via the GroupBy
+                # constructor), so we can avoid sorting the data again by
+                # passing 'assume_sorted=True'
+                f = interp1d(old_times, variable.data, kind=kind,
+                             axis=axis, bounds_error=True,
+                             assume_sorted=True)
+                interpolated = Variable(variable.dims, f(new_times))
+
+                data_vars[name] = interpolated
+
+        return Dataset(data_vars, coords)
 
 
 ops.inject_reduce_methods(DatasetResample)
