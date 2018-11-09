@@ -691,26 +691,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                             "was passed %r" % dim)
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            # TODO: handle closed, label and base arguments, and the case where
-            # frequency is specified without an integer count.
-            # times = self.indexes[dim]
-            # resampled_times = cftime_range(
-            #     start=times[0], end=times[-1], freq=freq)
-            # grouper = (pd.Series(resampled_times, index=resampled_times)
-            #            .reindex(times, method='pad'))
-
-            # print(freq)
-            from ..coding.cftime_offsets import Day, MonthBegin, to_offset
-            offset = to_offset(freq)
-            # print(offset)
-            # print(isinstance(offset, Day))
-            # print(isinstance(offset, MonthBegin))
+            from ..coding.cftime_offsets import to_offset
             from .resample_cftime import _get_time_bins
-            binner, labels = _get_time_bins(self.indexes[dim_name], to_offset(freq), closed, label, base)
-            # print(binner)
-            # print(binner.size)
-            # print(labels)
-            # print(labels.size)
+            binner, labels = _get_time_bins(self.indexes[dim_name],
+                                            to_offset(freq),
+                                            closed, label, base)
             times = self.indexes[dim_name]
             if times.size > labels.size:
                 if closed == 'right':
@@ -720,16 +705,10 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 grouper = (pd.Series(binner, index=binner)
                            .reindex(times, method=fill_method))
                 bin_actual = np.unique(grouper.values)
-                # print(bin_actual)
-                # print(binner)
-                # print(labels)
-                label_dict = dict(zip(bin_actual, labels.values))  # np.unique returns sorted unique values
-                # if labels.size > bin_actual.size:
-                #     label_dict[labels.values[-1]] = labels.values[-1]
+                label_dict = dict(zip(bin_actual, labels.values))
+                # np.unique returns -sorted- unique values
                 grouper = grouper.map(label_dict)
                 grouper = (grouper, labels)
-                # grouper = (pd.Series(labels, index=labels)
-                #            .reindex(times, method=None))  # this works for upsampling, but why?
             else:
                 grouper = labels
         else:

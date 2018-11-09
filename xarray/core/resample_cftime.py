@@ -6,25 +6,9 @@ Does not support non-integer freq
 from __future__ import absolute_import, division, print_function
 
 import datetime
-import pandas as pd
-
 from ..coding.cftimeindex import CFTimeIndex
-from ..coding.cftime_offsets import (cftime_range, to_offset, normalize_date,
+from ..coding.cftime_offsets import (cftime_range, normalize_date,
                                      Day, Hour, Minute, Second)
-
-
-def resample_cftimeindex(freq=None, dim=None, how=None, skipna=None,
-                         closed=None, label=None, base=0, keep_attrs=False, **indexer):
-
-    # times = self.indexes[dim]
-    # first = times.min()
-    # last = times.max()
-    # resampled_times = cftime_range(fresult, lresult,
-    #                                freq=freq, closed=closed)
-    # print(resampled_times)
-    # grouper = (pd.Series(resampled_times, index=resampled_times)
-    #            .reindex(times, method='pad'))
-    pass
 
 
 def _get_time_bins(index, freq, closed, label, base):
@@ -67,13 +51,6 @@ def _get_time_bins(index, freq, closed, label, base):
         binner = binner[:-1]
         trimmed = True
 
-    # ax_values = ax.asi8  # this returns the number of nanoseconds since 1970 for dates >1970
-    # binner, bin_edges = self._adjust_bin_edges(binner, ax_values)
-    #
-    # # general version, knowing nothing about relative frequencies
-    # bins = lib.generate_bins_dt64(
-    #     ax_values, bin_edges, self.closed, hasnans=ax.hasnans)
-
     if closed == 'right':
         labels = binner
         if label == 'right':
@@ -85,16 +62,6 @@ def _get_time_bins(index, freq, closed, label, base):
             labels = labels[1:]
         elif not trimmed:
             labels = labels[:-1]
-
-    # if ax.hasnans:
-    #     binner = binner.insert(0, NaT)
-    #     labels = labels.insert(0, NaT)
-    #
-    # if len(bins) < len(labels):
-    #     labels = labels[:len(bins)]
-    #
-    # return binner, bins, labels
-    resampled_times = labels
     return binner, labels
 
 
@@ -102,7 +69,8 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
     if offset._freq in ['D', 'H', 'T', 'min', 'S']:
         is_day = isinstance(offset, Day)
         if (is_day and offset.n == 1) or not is_day:
-            return _adjust_dates_anchored(first, last, offset, closed=closed, base=base)
+            return _adjust_dates_anchored(first, last, offset,
+                                          closed=closed, base=base)
     else:
         first = normalize_date(first)
         last = normalize_date(last)
