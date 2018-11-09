@@ -480,7 +480,7 @@ class _MultiFileCloser(object):
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
-def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
+def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
@@ -620,11 +620,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     # close datasets in case of a ValueError
     try:
-        if concat_dim is _CONCAT_DIM_DEFAULT:
+        if concat_dims is _CONCAT_DIM_DEFAULT:
             combined = auto_combine(datasets, compat=compat,
                                     data_vars=data_vars, coords=coords)
         else:
-            combined = auto_combine(datasets, concat_dim=concat_dim,
+            combined = auto_combine(datasets, concat_dims=concat_dims,
                                     compat=compat,
                                     data_vars=data_vars, coords=coords)
     except ValueError:

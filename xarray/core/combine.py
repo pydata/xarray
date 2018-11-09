@@ -372,23 +372,21 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def _infer_concat_order_from_nested_list(datasets, concat_dims):
 
-    # TODO check that datasets is a list containing multiple elements
-
     combined_ids = _infer_tile_ids_from_nested_list(datasets, [], {})
 
     # Currently if concat_dims is not supplied then _auto_concat attempts to deduce it on every call
-    # TODO would be faster in this case to just work out the concat_dims once here
-    tile_id, ds = combined_ids[0]
+    # TODO might be faster in this case to just work out the concat_dims once here
+    tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
-    if concat_dims is None:
+    if concat_dims is None or concat_dims == _CONCAT_DIM_DEFAULT:
         concat_dims = [_CONCAT_DIM_DEFAULT]*n_dims
     else:
         if len(concat_dims) != n_dims:
-            raise ValueError("concat_dims is of length " + str(len(concat_dims))
+            raise ValueError("concat_dims has length " + str(len(concat_dims))
                              + " but the datasets passed are nested in a " +
                              str(n_dims) + "-dimensional structure")
 
-    return concat_dims, combined_ids
+    return combined_ids, concat_dims
 
 
 def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
@@ -396,8 +394,8 @@ def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
     Given a list of lists (of lists...) of datasets, returns a dictionary
     with the index of each dataset in the nested list structure as the key.
 
-    Recursively traverses the given structure, while keeping track of the current
-    position.
+    Recursively traverses the given structure, while keeping track of the
+    current position.
 
     Parameters
     ----------
@@ -413,17 +411,13 @@ def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
     from .dataset import Dataset
 
     if isinstance(entry, list):
-        # Check if list is redundant
-        if len(entry) == 1:
-            raise TypeError('Redundant list nesting at '
-                            'position ' + str(tuple(current_pos)))
-
-        # Dive down tree
+        # Dive down tree and recursively open the next list
         current_pos.append(0)
         for i, item in enumerate(entry):
             current_pos[-1] = i
-            combined_tile_ids = _infer_tile_ids_from_nested_list(item, current_pos,
-                                                                 combined_tile_ids)
+            combined_tile_ids = _infer_tile_ids_from_nested_list\
+                (item, current_pos, combined_tile_ids)
+
         # Move back up tree
         del current_pos[-1]
         return combined_tile_ids
@@ -435,23 +429,19 @@ def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
 
     else:
         raise TypeError("Element at position " + str(tuple(current_pos)) +
-                        " is neither a list nor an xarray.Dataset")
+                        " is of type " + str(type(entry)) + ", which is "
+                        "neither a list nor an xarray.Dataset")
 
 
 def _check_shape_tile_ids(combined_tile_ids):
     # TODO create custom exception class instead of using asserts?
+    # Is this function even necessary?
 
     tile_ids = combined_tile_ids.keys()
 
     # Check all tuples are the same length
     lengths = [len(id) for id in tile_ids]
     assert set(lengths) == {lengths[0]}
-
-    # Check each dimension has indices 0 to n represented with no gaps
-    for dim in range(lengths[0]):
-        indices = [id[dim] for id in tile_ids]
-        assert len(indices) > 1
-        assert sorted(indices) == range(max(indices))
 
     # Check only datasets are contained
     from .dataset import Dataset
@@ -489,11 +479,16 @@ def _combine_nd(combined_IDs, concat_dims, data_vars='all',
     # Organise by data variables
     grouped_by_data_vars = itertoolz.groupby(_data_vars,
                                              combined_IDs.items()).values()
+
     concatenated_datasets = []
-    for tiled_datasets in grouped_by_data_vars:
-        concatenated_ids = tiled_datasets
+    for tiled_datasets_group in grouped_by_data_vars:
+
+        # Convert list of tuples back into a dictionary
+        concatenated_ids = dict(tiled_datasets_group)
 
         # Perform N-D dimensional concatenation
+        # Each iteration of this loop reduces the length of the tile_IDs tuples
+        # by one. It always removes the first
         for concat_dim in concat_dims:
             dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
 
@@ -501,13 +496,13 @@ def _combine_nd(combined_IDs, concat_dims, data_vars='all',
                                                        dim=dim,
                                                        data_vars=data_vars,
                                                        coords=coords)
-        concatenated_datasets.append(concatenated_ids.values())
-
+        concatenated_datasets = concatenated_datasets \
+                                + list(concatenated_ids.values())
     return merge(concatenated_datasets, compat=compat)
 
 
 def _new_tile_id(single_id_ds_pair):
-    # probably replace with something like lambda x: x[0][1:]
+    # TODO maybe replace with something like lambda x: x[0][1:]?
     tile_id, ds = single_id_ds_pair
     return tile_id[1:]
 
@@ -530,20 +525,12 @@ def auto_combine(datasets,
                  concat_dims=_CONCAT_DIM_DEFAULT,
                  compat='no_conflicts',
                  data_vars='all', coords='different',
-                 infer_order_from_coords=True):
+                 infer_order_from_coords=False):
     """Attempt to auto-magically combine the given datasets into one.
 
-    This method attempts to combine a list of datasets into a single entity by
-    inspecting metadata and using a combination of concat and merge.
-
-    It does not concatenate along more than one dimension or sort data under
-    any circumstances. It does align coordinates, but different variables on
-    datasets can cause it to fail under some scenarios. In complex cases, you
-    may need to clean up your data and use ``concat``/``merge`` explicitly.
-
-    ``auto_combine`` works well if you have N years of data and M data
-    variables, and each combination of a distinct time period and set of data
-    variables is saved its own dataset.
+    This method attempts to combine a list (or nested list of lists) of
+    datasets into a single entity by inspecting metadata and using a
+    combination of concat and merge.
 
     Parameters
     ----------
@@ -552,9 +539,9 @@ def auto_combine(datasets,
     concat_dims : list of str or DataArray or Index, optional
         Dimensions along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
-        the dimensions along which you want to concatenate is not a dimension
-        in the original datasets, e.g., if you want to stack a collection of
-        2D arrays along a third dimension.
+        any of the dimensions along which you want to concatenate are not a
+        dimension in the original datasets, e.g., if you want to stack a
+        collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
@@ -591,18 +578,24 @@ def auto_combine(datasets,
     concat
     Dataset.merge
     """
+
+    # TODO perform some of the checks from _calc_concat_dim_coord on concat_dims here?
+
     if concat_dims is not None:
 
-        # TODO this could be where we would optionally check alignment, as in #2039
+        # TODO this could be where we would optionally check alignment, as in #2039?
 
         # Organise datasets in concatentation order in N-D
         if infer_order_from_coords:
             # TODO Use coordinates to determine tile_ID for each dataset in N-D
             # i.e. (shoyer's (1) from discussion in #2159)
             raise NotImplementedError
+            # Once this is implemented I think it should be the default
         else:
-            # Determine tile_IDs by structure of input in N-D (i.e. ordering in list-of-lists)
-            concat_dims, combined_ids = _infer_concat_order_from_nested_list(datasets, concat_dims)
+            # Determine tile_IDs by structure of input in N-D
+            # (i.e. ordering in list-of-lists)
+            combined_ids, concat_dims = _infer_concat_order_from_nested_list\
+                (datasets, concat_dims)
 
         # Check that the combined_ids are sensible
         _check_shape_tile_ids(combined_ids)

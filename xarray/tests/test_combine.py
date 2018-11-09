@@ -10,8 +10,9 @@ import pytest
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
-    _new_tile_id, _concat_all_along_first_dim,
-    _infer_tile_ids_from_nested_list, _check_shape_tile_ids, _concat_nd)
+    _new_tile_id, _concat_along_first_dim,
+    _infer_concat_order_from_nested_list, _infer_tile_ids_from_nested_list,
+    _check_shape_tile_ids, _combine_nd)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -308,6 +309,9 @@ class TestAutoCombine(object):
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
+        actual = auto_combine(actual)
+        assert_identical(expected, actual)
+
         actual = auto_combine([actual])
         assert_identical(expected, actual)
 
@@ -354,7 +358,7 @@ class TestAutoCombine(object):
         expected = Dataset({'a': (('t', 'x'),
                                   [[np.nan, 2, 3], [1, 2, np.nan]])},
                            {'x': [0, 1, 2]})
-        actual = auto_combine(datasets, concat_dim='t')
+        actual = auto_combine(datasets, concat_dims=['t'])
         assert_identical(expected, actual)
 
     @requires_dask  # only for toolz
@@ -379,14 +383,14 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
         data = Dataset({'x': 0})
-        actual = auto_combine([data, data, data], concat_dim=None)
+        actual = auto_combine([data, data, data], concat_dims=None)
         assert_identical(data, actual)
 
         # Single object, with a concat_dim explicitly provided
         # Test the issue reported in GH #1988
         objs = [Dataset({'x': 0, 'y': 1})]
         dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dim=dim)
+        actual = auto_combine(objs, concat_dims=[dim])
         expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
                            {'baz': [100]})
         assert_identical(expected, actual)
@@ -395,7 +399,7 @@ class TestAutoCombine(object):
         # expected for non-scalar values, too.
         objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
         dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dim=dim)
+        actual = auto_combine(objs, concat_dims=[dim])
         expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
@@ -435,25 +439,55 @@ class TestTileIDsFromNestedList(object):
         actual = _infer_tile_ids_from_nested_list(input, [], {})
         assert_combined_tile_ids_equal(expected, actual)
 
-    def test_redundant_nesting_gotcha(self):
+    def test_single_dataset(self):
         ds = create_test_data(0)
-        input = [[ds], [ds]]
+        input = [ds]
 
-        with pytest.raises(TypeError):
+        expected = {(0,): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_redundant_nesting(self):
+        ds = create_test_data
+        input = [[ds(0)], [ds(1)]]
+
+        expected = {(0, 0): ds(0), (1, 0): ds(1)}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    @pytest.mark.parametrize("bad_element", ['a', 2])
+    def test_bad_element(self, bad_element):
+        ds = create_test_data(0)
+        input = [ds, bad_element]
+        with raises_regex(TypeError, 'Element at position .* is of type .*, '
+                                     'which is neither a list nor an '
+                                     'xarray.Dataset'):
             _infer_tile_ids_from_nested_list(input, [], {})
 
-    def test_bad_element(self):
+    def test_ignore_empty_list(self):
         ds = create_test_data(0)
-        input = [ds, 'bad_element']
-        with pytest.raises(TypeError):
-            _infer_tile_ids_from_nested_list(input, [], {})
+        input = [ds, []]
+        expected = {(0,): ds}
+        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
 
     def test_ragged_input(self):
+        # Auto_combine won't work on ragged input
+        # but this is just to increase test coverage
         ds = create_test_data
         input = [ds(0), [ds(1), ds(2)]]
 
         expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
         actual = _infer_tile_ids_from_nested_list(input, [], {})
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_infer_from_datasets(self):
+        ds = create_test_data
+        input = [ds(0), ds(1)]
+
+        expected = {(0,): ds(0), (1,): ds(1)}
+        actual, concat_dims = _infer_concat_order_from_nested_list\
+            (input, ['dim1'])
         assert_combined_tile_ids_equal(expected, actual)
 
 
@@ -473,10 +507,10 @@ def _create_tile_ids(shape):
     return list(tile_ids)
 
 
-class TestConcatND(object):
-    def test_get_tile_ids(self, create_combined_ids):
+class TestCombineND(object):
+    def test_get_new_tile_ids(self, create_combined_ids):
         shape = (1, 2, 3)
-        combined_ids = _create_combined_ids(shape)
+        combined_ids = create_combined_ids(shape)
 
         for combined, tile_id in zip(combined_ids.items(), _create_tile_ids(shape)):
             expected_new_tile_id = tile_id[1:]
@@ -485,17 +519,17 @@ class TestConcatND(object):
     @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
     def test_concat_once(self, create_combined_ids, concat_dim):
         shape = (2,)
-        combined_ids = _create_combined_ids(shape)
+        combined_ids = create_combined_ids(shape)
         ds = create_test_data
-        result = _concat_all_along_first_dim(combined_ids, dim=concat_dim)
+        result = _concat_along_first_dim(combined_ids, dim=concat_dim)
 
         expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
 
     def test_concat_twice(self, create_combined_ids):
         shape = (2, 3)
-        combined_ids = _create_combined_ids(shape)
-        result = _concat_nd(combined_ids, concat_dims=['dim1', 'dim2'])
+        combined_ids = create_combined_ids(shape)
+        result = _combine_nd(combined_ids, concat_dims=['dim1', 'dim2'])
 
         ds = create_test_data
         partway1 = concat([ds(0), ds(3)], dim='dim1')
@@ -513,19 +547,28 @@ class TestCheckShapeTileIDs(object):
         with pytest.raises(AssertionError):
             _check_shape_tile_ids(combined_tile_ids)
 
-    def test_check_non_zero_length_along_all_dims(self):
-        ds = create_test_data(0)
-        combined_tile_ids = {(0, 0): ds, (1, 0): ds}
-        with pytest.raises(AssertionError):
-            _check_shape_tile_ids(combined_tile_ids)
-
-    def test_check_linearity(self):
-        ds = create_test_data(0)
-        combined_tile_ids = {(0,): ds, (2,): ds}
-        with pytest.raises(AssertionError):
-            _check_shape_tile_ids(combined_tile_ids)
-
     def test_check_contains_datasets(self):
         combined_tile_ids = {(0,): 'a', (1,): 'b'}
         with pytest.raises(AssertionError):
             _check_shape_tile_ids(combined_tile_ids)
+
+
+class TestAutoCombineND(object):
+    # TODO there should be a lot more tests in here testing different cases
+
+    def test_auto_combine_2d(self):
+        ds = create_test_data
+
+        partway1 = concat([ds(0), ds(3)], dim='dim1')
+        partway2 = concat([ds(1), ds(4)], dim='dim1')
+        partway3 = concat([ds(2), ds(5)], dim='dim1')
+        expected = concat([partway1, partway2, partway3], dim='dim2')
+
+        datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
+        result = auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+
+        assert_equal(result, expected)
+
+    def test_ragged_input(self):
+        # TODO should throw an informative error if you try this
+        ...
