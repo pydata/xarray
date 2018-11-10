@@ -1250,6 +1250,20 @@ class TestNetCDF4Data(NetCDF4Base):
                 with self.open(tmp_file, autoclose=True) as actual:
                     assert_identical(data, actual)
 
+    def test_append(self):
+        # attempt to reproduce https://github.com/pydata/xarray/issues/2551
+        import netCDF4
+        thick = np.zeros((180, 200), np.float32)
+        with create_tmp_file() as tmp_file:
+            ds = xr.Dataset()
+            ds['thick'] = (('y', 'x'), thick)
+            ds.to_netcdf(tmp_file)
+            with xr.open_dataset(tmp_file) as ds:
+                dummy = ds.thick.isel(x=('z', [1, 3, 4]), y=('z', [7, 2, 1]))
+            dummy.min()
+            with netCDF4.Dataset(tmp_file, 'a') as nc:
+                nc.variables['thick'][:] = thick
+
 
 @requires_netCDF4
 @requires_dask
