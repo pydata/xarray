@@ -92,7 +92,7 @@ def show_versions(as_json=False):
         ("scipy", lambda mod: mod.__version__),
         # xarray optionals
         ("netCDF4", lambda mod: mod.__version__),
-        ("pydap", lambda mod: getattr(mod, '__version__', '<=3.2.2')),
+        ("pydap", lambda mod: mod.__version__),
         ("h5netcdf", lambda mod: mod.__version__),
         ("h5py", lambda mod: mod.__version__),
         ("Nio", lambda mod: mod.__version__),
@@ -126,10 +126,14 @@ def show_versions(as_json=False):
                 mod = sys.modules[modname]
             else:
                 mod = importlib.import_module(modname)
-            ver = ver_f(mod)
-            deps_blob.append((modname, ver))
         except Exception:
             deps_blob.append((modname, None))
+        else:
+            try:
+                ver = ver_f(mod)
+                deps_blob.append((modname, ver))
+            except Exception:
+                deps_blob.append((modname, 'installed'))
 
     if (as_json):
         try:
