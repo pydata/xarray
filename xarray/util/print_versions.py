@@ -44,7 +44,7 @@ def get_sys_info():
         (sysname, nodename, release,
          version, machine, processor) = platform.uname()
         blob.extend([
-            ("python", "%d.%d.%d.%s.%s" % sys.version_info[:]),
+            ("python", sys.version),
             ("python-bits", struct.calcsize("P") * 8),
             ("OS", "%s" % (sysname)),
             ("OS-release", "%s" % (release)),
