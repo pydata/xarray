@@ -197,9 +197,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         from ..coding.cftimeindex import CFTimeIndex
         import cftime as cf
         import numpy as np
-        # print(type(self._full_index))
-        # print(type(self._obj[self._dim]))
-        # print(type(self._obj[self._dim].values[0]))
         if isinstance(self._obj[self._dim].values[0], cf.datetime):
             t = self._obj[self._dim]
             x = np.insert([td.total_seconds() for td in
@@ -213,10 +210,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
 
         f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                      assume_sorted=True)
-        # if self._full_index is None:
-        #     # if we're equal sampling do this:
-        #     return self._obj
-        # else:
         if isinstance(self._full_index.values[0], cf.datetime):
             t = self._full_index
             new_x = np.insert([td.total_seconds() for td in
