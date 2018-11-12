@@ -130,16 +130,6 @@ print(ds.resample(time='6MS', label='right', closed='right').max())
 # Check that nc files read as dask arrays can be resampled
 #
 import os
-# testfilepath = 'C:\\Users\\ultra\\Downloads\\netcdf\\dummy_filepath.df'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\CanESM2_365day\\pr_day_CanESM2_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\CanESM2_365day\\tasmax_day_CanESM2_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\CanESM2_365day\\tasmin_day_CanESM2_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\HadGEM2-CC_360day\\pr_day_HadGEM2-CC_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\HadGEM2-CC_360day\\tasmax_day_HadGEM2-CC_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\HadGEM2-CC_360day\\tasmin_day_HadGEM2-CC_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_pr_1990.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_tasmax_1990.nc'
-# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_tasmin_1990.nc'
 testfilepath = os.path.join(os.path.expanduser('~'), 'Dropbox', 'code', 'Ouranos', 'testdata', 'NRCANdaily', 'nrcan_canada_daily_tasmax_1990.nc')
 xr.set_options(enable_cftimeindex=True)
 test_ds = xr.open_dataset(testfilepath, chunks={'time': 10})

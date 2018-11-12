@@ -696,21 +696,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                           _adjust_binner_for_upsample)
             offset = to_offset(freq)
             times = self.indexes[dim_name]
-            # if (offset._freq in ['D', 'H', 'T', 'min', 'S'] and
-            #         _offset_timedelta(offset) == times[1]-times[0]):
-            #     # if we're equal sampling CFTimeIndex, do this:
-            #     grouper = None
-            #     print('EQUAL SAMP COMMON.PY')
-            # else:
             binner, labels = _get_time_bins(self.indexes[dim_name],
                                             offset,
                                             closed, label, base)
-            print(binner[0], binner[-1], type(binner))
-            print(labels[0], labels[-1], type(labels))
-            # print(label)
             if times.size > labels.size:
                 # if we're downsampling CFTimeIndex, do this:
-                print('DOWN SAMP COMMON.PY')
                 if closed == 'right':
                     fill_method = 'bfill'
                 else:
@@ -723,7 +713,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 binner = binner.map(label_dict)
                 grouper = ('downsampling', pd.Index(labels), binner)
             else:
-                print('UP SAMP COMMON.PY')
                 # if we're upsampling CFTimeIndex, do this:
                 binner = _adjust_binner_for_upsample(binner, closed)
                 grouper = ('upsampling', pd.Index(labels), binner)

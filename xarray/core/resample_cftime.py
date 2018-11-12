@@ -51,8 +51,6 @@ def _get_time_bins(index, freq, closed, label, base):
         binner = binner[:-1]
         trimmed = True
 
-    # binner = _adjust_bin_edges(binner, index.values, freq)
-
     if closed == 'right':
         labels = binner
         if label == 'right':

@@ -238,32 +238,11 @@ class GroupBy(SupportsArithmetic):
             if isinstance(grouper, tuple):
                 if grouper[0] == 'upsampling':
                     # if we're upsampling CFTimeIndex, do this:
-                    # label = grouper[4]
-                    # if index.size == grouper[1].size and label == 'right':
-                    #     first_items = s.reindex(grouper[1], method='ffill')
-                    #     print("HELLO")
-                    # if index.size == grouper[1].size:
-                    #     s.index = grouper[1]
-                    #     first_items = s
-                    #     print("HELLO")
-                    # # elif index.size+1 == grouper[1].size:
-                    # #     s = pd.Series(index=grouper[1])
-                    # #     s.values[:index.size] = np.arange(index.size)
-                    # #     s.ffill()  # deleting this line does not change results?
-                    # #     first_items = s
-                    # else:
-                        # first_items = s.reindex(grouper[1], method='bfill')
                     labels = grouper[1]
                     binner = grouper[2]
                     first_items = s.reindex(binner, method='bfill')
                     first_items.index = labels
-                    # s = pd.Series(index=grouper[1])
-                    # s.values[:index.size] = np.arange(index.size)
-                    # s.ffill()  # deleting this line does not change results?
-                    # first_items = s
-                    print("WORLD")
                 elif grouper[0] == 'downsampling':
-                    print('DOWN SAMP GROUPBY.PY')
                     # if we're downsampling CFTimeIndex, do this:
                     labels = grouper[1]
                     binner = grouper[2]
