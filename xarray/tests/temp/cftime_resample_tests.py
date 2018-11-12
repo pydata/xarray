@@ -2,7 +2,56 @@ import xarray as xr
 import numpy as np
 
 
+# Equal sampling comparisons:
+times = xr.cftime_range('2000-01-01', periods=9, freq='T', tz='UTC')
+da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
+print(da.resample(time='T', label='left', closed='left').mean())
+print(da.resample(time='T', label='right', closed='left').mean())
+print(da.resample(time='T', label='left', closed='right').mean())
+print(da.resample(time='T', label='right', closed='right').mean())
+print(da.resample(time='60S', label='left', closed='left').mean())
+print(da.resample(time='60S', label='right', closed='left').mean())
+print(da.resample(time='60S', label='left', closed='right').mean())
+print(da.resample(time='60S', label='right', closed='right').mean())
+times = xr.cftime_range('2000', periods=30, freq='MS')
+da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
+print(da.resample(time='M', label='left', closed='left').max())
+print(da.resample(time='M', label='right', closed='left').max())
+print(da.resample(time='M', label='left', closed='right').max())
+print(da.resample(time='M', label='right', closed='right').max())
+print(da.resample(time='MS', label='left', closed='left').max())
+print(da.resample(time='MS', label='right', closed='left').max())
+print(da.resample(time='MS', label='left', closed='right').max())
+print(da.resample(time='MS', label='right', closed='right').max())
+
+
 # Downsampling comparisons:
+times = xr.cftime_range('2000-01-01', periods=9, freq='MS', tz='UTC')
+da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
+print(da.resample(time='3M', label='left', closed='left').max())
+print(da.resample(time='3M', label='right', closed='left').max())
+print(da.resample(time='3M', label='left', closed='right').max())
+print(da.resample(time='3M', label='right', closed='right').max())
+print(da.resample(time='3MS', label='left', closed='left').max())
+print(da.resample(time='3MS', label='right', closed='left').max())
+print(da.resample(time='3MS', label='left', closed='right').max())
+print(da.resample(time='3MS', label='right', closed='right').max())
+print(da.resample(time='3M', label='left', closed='left').mean())
+print(da.resample(time='3M', label='right', closed='left').mean())
+print(da.resample(time='3M', label='left', closed='right').mean())
+print(da.resample(time='3M', label='right', closed='right').mean())
+print(da.resample(time='3MS', label='left', closed='left').mean())
+print(da.resample(time='3MS', label='right', closed='left').mean())
+print(da.resample(time='3MS', label='left', closed='right').mean())
+print(da.resample(time='3MS', label='right', closed='right').mean())
+print(da.resample(time='2M', label='left', closed='left').mean())
+print(da.resample(time='2M', label='right', closed='left').mean())
+print(da.resample(time='2M', label='left', closed='right').mean())
+print(da.resample(time='2M', label='right', closed='right').mean())
+print(da.resample(time='2MS', label='left', closed='left').mean())
+print(da.resample(time='2MS', label='right', closed='left').mean())
+print(da.resample(time='2MS', label='left', closed='right').mean())
+print(da.resample(time='2MS', label='right', closed='right').mean())
 # Checking how label and closed args affect outputs
 times = xr.cftime_range('2000-01-01', periods=9, freq='T', tz='UTC')
 da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
@@ -52,13 +101,14 @@ print(da.resample(time='8H', base=0, closed='right').mean().values)
 times = xr.cftime_range('2000-01-01T00:00:00', '2000-02-01T00:00:00', freq='D')
 da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
 print(da.resample(time='12T', base=0).interpolate())
-print(da.resample(time='12T', base=24).interpolate())
+print(da.resample(time='12T', base=24, closed='left').interpolate())
+print(da.resample(time='12T', base=24, closed='right', label='left').interpolate())
 times = xr.cftime_range('2000', periods=30, freq='MS')
 da = xr.DataArray(np.arange(100, 100+times.size), [('time', times)])
 print(da.resample(time='D').interpolate())
 
 
-# Check that Dataset and DataArray do not change resampling results
+# Check that Dataset and DataArray returns the same resampling results
 times = xr.cftime_range('2000-01-01', periods=9, freq='T', tz='UTC')
 ds = xr.Dataset(data_vars={'data1': ('time', np.arange(100, 100+times.size)),
                            'data2': ('time', np.arange(500, 500+times.size))},
@@ -79,6 +129,7 @@ print(ds.resample(time='6MS', label='right', closed='right').max())
 
 # Check that nc files read as dask arrays can be resampled
 #
+import os
 # testfilepath = 'C:\\Users\\ultra\\Downloads\\netcdf\\dummy_filepath.df'
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\CanESM2_365day\\pr_day_CanESM2_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\CanESM2_365day\\tasmax_day_CanESM2_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
@@ -87,8 +138,9 @@ print(ds.resample(time='6MS', label='right', closed='right').max())
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\HadGEM2-CC_360day\\tasmax_day_HadGEM2-CC_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\HadGEM2-CC_360day\\tasmin_day_HadGEM2-CC_rcp85_r1i1p1_na10kgrid_qm-moving-50bins-detrend_2095.nc'
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_pr_1990.nc'
-testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_tasmax_1990.nc'
+# testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_tasmax_1990.nc'
 # testfilepath = 'C:\\Users\\ultra\\Dropbox\\code\\Ouranos\\testdata\\NRCANdaily\\nrcan_canada_daily_tasmin_1990.nc'
+testfilepath = os.path.join(os.path.expanduser('~'), 'Dropbox', 'code', 'Ouranos', 'testdata', 'NRCANdaily', 'nrcan_canada_daily_tasmax_1990.nc')
 xr.set_options(enable_cftimeindex=True)
 test_ds = xr.open_dataset(testfilepath, chunks={'time': 10})
 test_ds['time'] = xr.cftime_range('1999-01-01', '1999-12-31', freq='D')  # regular calendars are still read as pandas date_range even though enable_cftimeindex=True
@@ -106,4 +158,5 @@ monthly_avg = test_ds.resample(time='MS').mean()
 monthly_avg.sel(lat=49.95833206176758, lon=-79.95833587646484).to_dataframe()
 chunked_pandas_val = monthly_avg.sel(lat=49.95833206176758, lon=-79.95833587646484).to_dataframe().values
 
-assert(np.all(chunked_cftime_val == chunked_pandas_val))
+# assert(np.all(chunked_cftime_val == chunked_pandas_val))
+print(np.all(chunked_cftime_val == chunked_pandas_val))

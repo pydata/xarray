@@ -44,12 +44,14 @@ def _get_time_bins(index, freq, closed, label, base):
     if len(binner) > 1 and binner[-1] < last:
         extra_date_range = cftime_range(binner[-1], last + freq,
                                         freq=freq, name=index.name)
-        binner = labels = binner.append(extra_date_range[1:])
+        binner = labels = CFTimeIndex(binner.append(extra_date_range[1:]))
 
     trimmed = False
     if len(binner) > 2 and binner[-2] == last and closed == 'right':
         binner = binner[:-1]
         trimmed = True
+
+    # binner = _adjust_bin_edges(binner, index.values, freq)
 
     if closed == 'right':
         labels = binner
@@ -63,6 +65,15 @@ def _get_time_bins(index, freq, closed, label, base):
         elif not trimmed:
             labels = labels[:-1]
     return binner, labels
+
+
+def _adjust_bin_edges(binner, ax_values, freq):
+    # Some hacks for > daily data, see #1471, #1458, #1483
+    if freq._freq not in ['D', 'H', 'T', 'min', 'S']:
+        # intraday values on last day
+        if binner[-2] > ax_values.max():
+            binner = binner[:-1]
+    return binner
 
 
 def _get_range_edges(first, last, offset, closed='left', base=0):
@@ -132,3 +143,11 @@ def _offset_timedelta(offset):
         return datetime.timedelta(minutes=offset.n)
     elif isinstance(offset, Second):
         return datetime.timedelta(seconds=offset.n)
+
+
+def _adjust_binner_for_upsample(binner, closed):
+    if closed == 'right':
+        binner = binner[1:]
+    else:
+        binner = binner[:-1]
+    return binner
