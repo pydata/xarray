@@ -532,15 +532,11 @@ class TestCombineND(object):
 
 
 class TestCheckShapeTileIDs(object):
+    # TODO test all types of ValueErrors from _check_shape_tile_id
     def test_check_lengths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
-        with pytest.raises(AssertionError):
-            _check_shape_tile_ids(combined_tile_ids)
-
-    def test_check_contains_datasets(self):
-        combined_tile_ids = {(0,): 'a', (1,): 'b'}
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             _check_shape_tile_ids(combined_tile_ids)
 
 

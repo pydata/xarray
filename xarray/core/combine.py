@@ -374,8 +374,9 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
 
     combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
-    # Currently if concat_dims is not supplied then _auto_concat attempts to deduce it on every call
-    # TODO might be faster in this case to just work out the concat_dims once here
+    # Currently if concat_dims is not supplied then _auto_concat attempts to
+    # deduce it on every call
+    # TODO might be faster in this case to just work out concat_dims once here
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
     if concat_dims is None or concat_dims == _CONCAT_DIM_DEFAULT:
@@ -420,20 +421,39 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
-def _check_shape_tile_ids(combined_tile_ids):
-    # TODO create custom exception class instead of using asserts?
-    # Is this function even necessary?
-
+def _check_shape_tile_ids(combined_tile_ids, contains='datasets'):
     tile_ids = combined_tile_ids.keys()
 
-    # Check all tuples are the same length
-    lengths = [len(id) for id in tile_ids]
-    assert set(lengths) == {lengths[0]}
+    # TODO cover all of these with separate unit tests
 
-    # Check only datasets are contained
-    from .dataset import Dataset
-    for v in combined_tile_ids.values():
-        assert isinstance(v, Dataset)
+    # Check all tuples are the same length
+    # i.e. check that all lists are nested to the same depth
+    nesting_depths = [len(id) for id in tile_ids]
+    if not set(nesting_depths) == {nesting_depths[0]}:
+        raise ValueError("The supplied objects do not form a hypercube because"
+                         " sub-lists do not have consistent depths")
+
+    # Check objects form a hypercube
+    # i.e. check all lists along one dimension are same length, monotonically-
+    # increasing with no repetitions
+    for dim in range(nesting_depths[0]):
+        try:
+            indices_along_dim = [id[dim] for id in tile_ids]
+        except IndexError:
+            raise ValueError("The supplied objects do not form a hypercube "
+                             "because sub-lists do not have consistent "
+                             "lengths along dimension {}".format(str(dim)))
+
+        # TODO work out if this actually means something is wrong
+        if not set(indices_along_dim) == indices_along_dim:
+            raise ValueError("The supplied objects do not form a hypercube "
+                             "because there are repeated concatenation "
+                             "positions along concatenation dimension "
+                             "{}".format(str(dim)))
+
+        if not sorted(indices_along_dim) == indices_along_dim:
+            raise ValueError("The supplied objects have not been successfully "
+                             "ordered along dimension {}".format(str(dim)))
 
 
 def _data_vars(combined_id):
@@ -473,6 +493,7 @@ def _combine_nd(combined_IDs, concat_dims, data_vars='all',
         # Convert list of tuples back into a dictionary
         concatenated_ids = dict(tiled_datasets_group)
 
+        # TODO refactor this logic, possibly using method in np.blocks
         # Perform N-D dimensional concatenation
         # Each iteration of this loop reduces the length of the tile_IDs tuples
         # by one. It always removes the first
@@ -517,10 +538,12 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
     if concat_dims is not None:
         # Arrange datasets for concatenation
         if infer_order_from_coords:
-            # Use coordinates to determine tile_ID for each dataset in N-D
-            # Ignore how they were ordered previously
             raise NotImplementedError
-            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
+            # TODO Use coordinates to determine tile_ID for each dataset in N-D
+            # Ignore how they were ordered previously
+            # Shoould look like
+            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
+            # concat_dims)
         else:
             # Use information from the shape of the user input
             if not ids:
@@ -604,7 +627,7 @@ def auto_combine(datasets,
     Dataset.merge
     """
 
-    # TODO perform some of the checks from _calc_concat_dim_coord on concat_dims here?
+    # TODO do some of _calc_concat_dim_coord's checks on concat_dims here?
 
     # The IDs argument tells _auto_combine that the datasets are not yet sorted
     return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
