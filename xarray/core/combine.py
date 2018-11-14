@@ -370,7 +370,7 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
-def _infer_concat_order_from_nested_list(datasets, concat_dims):
+def _infer_concat_order_from_positions(datasets, concat_dims):
 
     combined_ids = _infer_tile_ids_from_nested_list(datasets, [], {})
 
@@ -585,24 +585,25 @@ def auto_combine(datasets,
 
         # TODO this could be where we would optionally check alignment, as in #2039?
 
-        # Organise datasets in concatentation order in N-D
+        # Arrange datasets for concatenation
         if infer_order_from_coords:
             # TODO Use coordinates to determine tile_ID for each dataset in N-D
             # i.e. (shoyer's (1) from discussion in #2159)
             raise NotImplementedError
             # Once this is implemented I think it should be the default
+            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
         else:
             # Determine tile_IDs by structure of input in N-D
             # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_nested_list\
-                (datasets, concat_dims)
+            combined_ids, concat_dims = _infer_concat_order_from_positions \
+                        (datasets, concat_dims)
 
         # Check that the combined_ids are sensible
         _check_shape_tile_ids(combined_ids)
 
         # Repeatedly concatenate then merge along each dimension
         combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                               data_vars=data_vars, coords=coords)
+                                    data_vars=data_vars, coords=coords)
     else:
         # Case of no concatenation wanted
         concatenated = datasets

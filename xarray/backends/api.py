@@ -10,7 +10,8 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import auto_combine
+from ..core.combine import (_infer_concat_order_from_positions, _combine_nd,\
+                            _check_shape_tile_ids, merge)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
@@ -483,6 +484,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
+                   infer_order_from_coords=False,
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
@@ -502,7 +504,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details [2].
-    concat_dim : None, str, DataArray or Index, optional
+    concat_dims : None, str, DataArray or Index, optional
         Dimension to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
         need to provide this argument if the dimension along which you want to
@@ -561,6 +563,12 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition the 'minimal' coordinates.
+    infer_order_from_coords : bool, optional
+        If true attempt to deduce the order in which the datasets should be
+        concatenated from their coordinates. To do this the coordinates should
+        be monotonic along the dimension to be concatenated.
+        If false instead read the order from the structure the datasets are
+        supplied in. This structure should be a nested list of lists.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
@@ -594,6 +602,11 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
+    # If infer_order_from_coords=True then this is uneccessary, but quick as
+    # it will just loop over one list
+    combined_ids_paths, concat_dims = _infer_concat_order_from_positions(paths, concat_dims)  # Use an OrderedDict?
+    ids, paths = list(combined_ids_paths.keys()), list(combined_ids_paths.values())  # Is this in order??
+
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
 
@@ -620,13 +633,28 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     # close datasets in case of a ValueError
     try:
-        if concat_dims is _CONCAT_DIM_DEFAULT:
-            combined = auto_combine(datasets, compat=compat,
-                                    data_vars=data_vars, coords=coords)
+        # TODO refactor this section to avoid duplicating any logic with auto_combine
+        if concat_dims is not None:
+            # Arrange datasets for concatenation
+            if infer_order_from_coords:
+                # Use coordinates to determine tile_ID for each dataset in N-D
+                # Ignore how they were ordered previously
+                raise NotImplementedError
+                # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
+            else:
+                # Already sorted so just use the ids already determined from the input shape
+                combined_ids = dict(zip(ids, datasets))
+
+            # Check that the combined_ids are sensible
+            _check_shape_tile_ids(combined_ids)
+
+            # Repeatedly concatenate then merge along each dimension
+            combined = _combine_nd(combined_ids, concat_dims, compat=compat,
+                                   data_vars=data_vars, coords=coords)
         else:
-            combined = auto_combine(datasets, concat_dims=concat_dims,
-                                    compat=compat,
-                                    data_vars=data_vars, coords=coords)
+            # Case of no concatenation wanted
+            concatenated = datasets
+            combined = merge(concatenated, compat=compat)
     except ValueError:
         for ds in datasets:
             ds.close()
