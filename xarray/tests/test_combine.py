@@ -11,7 +11,7 @@ from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
     _new_tile_id, _concat_along_first_dim,
-    _infer_concat_order_from_nested_list, _infer_tile_ids_from_nested_list,
+    _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
     _check_shape_tile_ids, _combine_nd)
 
 from . import (
@@ -412,7 +412,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_2d(self):
@@ -422,7 +422,7 @@ class TestTileIDsFromNestedList(object):
         expected = {(0, 0): ds(0), (0, 1): ds(1),
                     (1, 0): ds(2), (1, 1): ds(3),
                     (2, 0): ds(4), (2, 1): ds(5)}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_3d(self):
@@ -436,7 +436,7 @@ class TestTileIDsFromNestedList(object):
                     (1, 0, 0): ds(6), (1, 0, 1): ds(7),
                     (1, 1, 0): ds(8), (1, 1, 1): ds(9),
                     (1, 2, 0): ds(10), (1, 2, 1): ds(11)}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_single_dataset(self):
@@ -444,7 +444,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds]
 
         expected = {(0,): ds}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_redundant_nesting(self):
@@ -452,23 +452,14 @@ class TestTileIDsFromNestedList(object):
         input = [[ds(0)], [ds(1)]]
 
         expected = {(0, 0): ds(0), (1, 0): ds(1)}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
-
-    @pytest.mark.parametrize("bad_element", ['a', 2])
-    def test_bad_element(self, bad_element):
-        ds = create_test_data(0)
-        input = [ds, bad_element]
-        with raises_regex(TypeError, 'Element at position .* is of type .*, '
-                                     'which is neither a list nor an '
-                                     'xarray.Dataset'):
-            _infer_tile_ids_from_nested_list(input, [], {})
 
     def test_ignore_empty_list(self):
         ds = create_test_data(0)
         input = [ds, []]
         expected = {(0,): ds}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_ragged_input(self):
@@ -478,7 +469,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), [ds(1), ds(2)]]
 
         expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
-        actual = _infer_tile_ids_from_nested_list(input, [], {})
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_infer_from_datasets(self):
@@ -486,7 +477,7 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual, concat_dims = _infer_concat_order_from_nested_list\
+        actual, concat_dims = _infer_concat_order_from_positions\
             (input, ['dim1'])
         assert_combined_tile_ids_equal(expected, actual)
 

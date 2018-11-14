@@ -372,7 +372,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def _infer_concat_order_from_positions(datasets, concat_dims):
 
-    combined_ids = _infer_tile_ids_from_nested_list(datasets, [], {})
+    combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
     # Currently if concat_dims is not supplied then _auto_concat attempts to deduce it on every call
     # TODO might be faster in this case to just work out the concat_dims once here
@@ -389,48 +389,34 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     return combined_ids, concat_dims
 
 
-def _infer_tile_ids_from_nested_list(entry, current_pos, combined_tile_ids):
+def _infer_tile_ids_from_nested_list(entry, current_pos):
     """
-    Given a list of lists (of lists...) of datasets, returns a dictionary
-    with the index of each dataset in the nested list structure as the key.
+    Given a list of lists (of lists...) of objects, returns a iterator
+    which returns a tuple containing the index of each object in the nested
+    list structure as the key, and the object. This can then be called by the
+    dict constructor to create a dictionary of the objects organised byt their
+    position in the original nested list.
 
     Recursively traverses the given structure, while keeping track of the
-    current position.
+    current position. Should work for any type of object which isn't a list.
 
     Parameters
     ----------
-    entry : list[list[xarray.Dataset, xarray.Dataset, ...]]
-        List of lists of arbitrary depth, containing datasets in the order they
-        are to be concatenated.
+    entry : list[list[obj, obj, ...]]
+        List of lists of arbitrary depth, containing objects in the order
+        they are to be concatenated.
 
     Returns
     -------
-    combined_tile_ids : dict[tuple(int, ...), xarray.Dataset]
+    combined_tile_ids : dict[tuple(int, ...), obj]
     """
 
-    from .dataset import Dataset
-
     if isinstance(entry, list):
-        # Dive down tree and recursively open the next list
-        current_pos.append(0)
         for i, item in enumerate(entry):
-            current_pos[-1] = i
-            combined_tile_ids = _infer_tile_ids_from_nested_list\
-                (item, current_pos, combined_tile_ids)
-
-        # Move back up tree
-        del current_pos[-1]
-        return combined_tile_ids
-
-    elif isinstance(entry, Dataset):
-        # Termination condition
-        combined_tile_ids[tuple(current_pos)] = entry
-        return combined_tile_ids
-
+            for result in _infer_tile_ids_from_nested_list(item, current_pos + (i,)):
+                yield result
     else:
-        raise TypeError("Element at position " + str(tuple(current_pos)) +
-                        " is of type " + str(type(entry)) + ", which is "
-                        "neither a list nor an xarray.Dataset")
+        yield current_pos, entry
 
 
 def _check_shape_tile_ids(combined_tile_ids):
@@ -619,7 +605,7 @@ def auto_combine(datasets,
 
     # TODO perform some of the checks from _calc_concat_dim_coord on concat_dims here?
 
-    # The IDs argument tells _auto_combine that the datasets are not sorted
+    # The IDs argument tells _auto_combine that the datasets are not yet sorted
     return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
                          data_vars=data_vars, coords=coords,
                          infer_order_from_coords=infer_order_from_coords,
