@@ -10,8 +10,7 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import (_infer_concat_order_from_positions, _combine_nd,\
-                            _check_shape_tile_ids, merge)
+from ..core.combine import _infer_concat_order_from_positions, _auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
@@ -602,8 +601,10 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
-    # If infer_order_from_coords=True then this is uneccessary, but quick as
-    # it will just loop over one list
+    # If infer_order_from_coords=True then this is uneccessary, but that's fine
+    # as it should be quick - in this case it will just loop over one list
+    # If infer_order_from_coords=False then this creates a flat list which is
+    # easier to iterate over, while saving the originally-supplied structure
     combined_ids_paths, concat_dims = _infer_concat_order_from_positions(paths, concat_dims)  # Use an OrderedDict?
     ids, paths = list(combined_ids_paths.keys()), list(combined_ids_paths.values())  # Is this in order??
 
@@ -631,30 +632,17 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         # the underlying datasets will still be stored as dask arrays
         datasets, file_objs = dask.compute(datasets, file_objs)
 
-    # close datasets in case of a ValueError
+    # Close datasets in case of a ValueError
     try:
-        # TODO refactor this section to avoid duplicating any logic with auto_combine
-        if concat_dims is not None:
-            # Arrange datasets for concatenation
-            if infer_order_from_coords:
-                # Use coordinates to determine tile_ID for each dataset in N-D
-                # Ignore how they were ordered previously
-                raise NotImplementedError
-                # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
-            else:
-                # Already sorted so just use the ids already determined from the input shape
-                combined_ids = dict(zip(ids, datasets))
+        if infer_order_from_coords:
+            # Discard ordering because it should be redone from coordinates
+            ids = False
 
-            # Check that the combined_ids are sensible
-            _check_shape_tile_ids(combined_ids)
-
-            # Repeatedly concatenate then merge along each dimension
-            combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                                   data_vars=data_vars, coords=coords)
-        else:
-            # Case of no concatenation wanted
-            concatenated = datasets
-            combined = merge(concatenated, compat=compat)
+        combined = _auto_combine(datasets, concat_dims=concat_dims,
+                                 compat=compat,
+                                 data_vars=data_vars, coords=coords,
+                                 infer_order_from_coords=infer_order_from_coords,
+                                 ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()

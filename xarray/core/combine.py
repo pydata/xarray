@@ -512,13 +512,51 @@ def _concat_along_first_dim(combined_IDs, dim, data_vars='all',
     grouped = itertoolz.groupby(_new_tile_id, combined_IDs.items())
     new_combined_IDs = {}
 
-    # TODO Would there be any point in parallelizing this concatenation step?
     for new_ID, group in grouped.items():
         to_concat = [ds for old_ID, ds in group]
         new_combined_IDs[new_ID] = _auto_concat(to_concat, dim=dim,
                                                 data_vars=data_vars,
                                                 coords=coords)
     return new_combined_IDs
+
+
+def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
+                  infer_order_from_coords, ids):
+    """
+    This function decides if any concatenation is necessary, and if so it calls
+    the logic to decide their concatenation order before concatenating.
+    """
+
+    if concat_dims is not None:
+        # Arrange datasets for concatenation
+        if infer_order_from_coords:
+            # Use coordinates to determine tile_ID for each dataset in N-D
+            # Ignore how they were ordered previously
+            raise NotImplementedError
+            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
+        else:
+            # Use information from the shape of the user input
+            if not ids:
+                # Determine tile_IDs by structure of input in N-D
+                # (i.e. ordering in list-of-lists)
+                combined_ids, concat_dims = _infer_concat_order_from_positions\
+                                                        (datasets, concat_dims)
+            else:
+                # Already sorted so just use the ids already passed
+                combined_ids = dict(zip(ids, datasets))
+
+        # Check that the combined_ids are sensible
+        _check_shape_tile_ids(combined_ids)
+
+        # Repeatedly concatenate then merge along each dimension
+        combined = _combine_nd(combined_ids, concat_dims, compat=compat,
+                               data_vars=data_vars, coords=coords)
+    else:
+        # Case of no concatenation wanted
+        concatenated = datasets
+        combined = merge(concatenated, compat=compat)
+
+    return combined
 
 
 def auto_combine(datasets,
@@ -581,31 +619,8 @@ def auto_combine(datasets,
 
     # TODO perform some of the checks from _calc_concat_dim_coord on concat_dims here?
 
-    if concat_dims is not None:
-
-        # TODO this could be where we would optionally check alignment, as in #2039?
-
-        # Arrange datasets for concatenation
-        if infer_order_from_coords:
-            # TODO Use coordinates to determine tile_ID for each dataset in N-D
-            # i.e. (shoyer's (1) from discussion in #2159)
-            raise NotImplementedError
-            # Once this is implemented I think it should be the default
-            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets, concat_dims)
-        else:
-            # Determine tile_IDs by structure of input in N-D
-            # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_positions \
-                        (datasets, concat_dims)
-
-        # Check that the combined_ids are sensible
-        _check_shape_tile_ids(combined_ids)
-
-        # Repeatedly concatenate then merge along each dimension
-        combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                                    data_vars=data_vars, coords=coords)
-    else:
-        # Case of no concatenation wanted
-        concatenated = datasets
-        combined = merge(concatenated, compat=compat)
-    return combined
+    # The IDs argument tells _auto_combine that the datasets are not sorted
+    return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
+                         data_vars=data_vars, coords=coords,
+                         infer_order_from_coords=infer_order_from_coords,
+                         ids=False)
