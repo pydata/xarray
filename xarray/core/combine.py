@@ -413,7 +413,8 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 
     if isinstance(entry, list):
         for i, item in enumerate(entry):
-            for result in _infer_tile_ids_from_nested_list(item, current_pos + (i,)):
+            for result in _infer_tile_ids_from_nested_list(item,
+                                                           current_pos + (i,)):
                 yield result
     else:
         yield current_pos, entry
