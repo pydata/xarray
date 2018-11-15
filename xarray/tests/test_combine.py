@@ -1,22 +1,21 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from copy import deepcopy
+from __future__ import absolute_import, division, print_function
 
-import pytest
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from xarray import Dataset, DataArray, auto_combine, concat, Variable
-from xarray.core.pycompat import iteritems, OrderedDict
+from xarray import DataArray, Dataset, Variable, auto_combine, concat
+from xarray.core.pycompat import OrderedDict, iteritems
 
-from . import (TestCase, InaccessibleArray, requires_dask, raises_regex,
-               assert_equal, assert_identical, assert_array_equal)
+from . import (
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
-class TestConcatDataset(TestCase):
+class TestConcatDataset(object):
     def test_concat(self):
         # TODO: simplify and split this test case
 
@@ -236,7 +235,7 @@ class TestConcatDataset(TestCase):
         assert isinstance(actual.x.to_index(), pd.MultiIndex)
 
 
-class TestConcatDataArray(TestCase):
+class TestConcatDataArray(object):
     def test_concat(self):
         ds = Dataset({'foo': (['x', 'y'], np.random.random((2, 3))),
                       'bar': (['x', 'y'], np.random.random((2, 3)))},
@@ -296,7 +295,7 @@ class TestConcatDataArray(TestCase):
         assert combined.dims == ('z', 'x', 'y')
 
 
-class TestAutoCombine(TestCase):
+class TestAutoCombine(object):
 
     @requires_dask  # only for toolz
     def test_auto_combine(self):
@@ -378,3 +377,22 @@ class TestAutoCombine(TestCase):
         data = Dataset({'x': 0})
         actual = auto_combine([data, data, data], concat_dim=None)
         assert_identical(data, actual)
+
+        # Single object, with a concat_dim explicitly provided
+        # Test the issue reported in GH #1988
+        objs = [Dataset({'x': 0, 'y': 1})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = auto_combine(objs, concat_dim=dim)
+        expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)
+
+        # Just making sure that auto_combine is doing what is
+        # expected for non-scalar values, too.
+        objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = auto_combine(objs, concat_dim=dim)
+        expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
+                            'y': (('baz', 'z'), [[1, 2]])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)

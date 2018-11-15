@@ -1,7 +1,6 @@
 name: test_env
 channels:
   - conda-forge
-  - conda-forge/label/dev
 dependencies:
   - python=3.6
   - dask
@@ -11,14 +10,18 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - flake8
   - numpy
   - pandas
   - scipy
   - seaborn
   - toolz
-  - rasterio>=1.*
+  - rasterio
   - bottleneck
+  - zarr
   - pip:
     - coveralls
     - pytest-cov
     - pydap
+    - lxml
+    - hypothesis

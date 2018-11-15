@@ -1,18 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 
-from xarray import tutorial, DataArray
+import pytest
+
+from xarray import DataArray, tutorial
 from xarray.core.pycompat import suppress
 
-from . import TestCase, network, assert_identical
+from . import assert_identical, network
 
 
 @network
-class TestLoadDataset(TestCase):
-
+class TestLoadDataset(object):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.testfile = 'tiny'
         self.testfilepath = os.path.expanduser(os.sep.join(
@@ -23,6 +23,11 @@ class TestLoadDataset(TestCase):
             os.remove('{}.md5'.format(self.testfilepath))
 
     def test_download_from_github(self):
-        ds = tutorial.load_dataset(self.testfile)
+        ds = tutorial.open_dataset(self.testfile).load()
         tiny = DataArray(range(5), name='tiny').to_dataset()
         assert_identical(ds, tiny)
+
+    def test_download_from_github_load_without_cache(self):
+        ds_nocache = tutorial.open_dataset(self.testfile, cache=False).load()
+        ds_cache = tutorial.open_dataset(self.testfile).load()
+        assert_identical(ds_cache, ds_nocache)

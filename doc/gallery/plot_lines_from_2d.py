@@ -12,8 +12,9 @@ See :ref:`plotting.multiplelines` for more details.
 
 """
 
-import xarray as xr
 import matplotlib.pyplot as plt
+
+import xarray as xr
 
 # Load the data
 ds = xr.tutorial.load_dataset('air_temperature')

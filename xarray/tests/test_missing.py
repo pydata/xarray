@@ -1,20 +1,18 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import itertools
+
 import numpy as np
 import pandas as pd
 import pytest
-import itertools
 
 import xarray as xr
-
-from xarray.core.missing import (NumpyInterpolator, ScipyInterpolator,
-                                 SplineInterpolator)
+from xarray.core.missing import (
+    NumpyInterpolator, ScipyInterpolator, SplineInterpolator)
 from xarray.core.pycompat import dask_array_type
-
-from xarray.tests import (assert_equal, assert_array_equal, raises_regex,
-                          requires_scipy, requires_bottleneck, requires_dask,
-                          requires_np112)
+from xarray.tests import (
+    assert_array_equal, assert_equal, raises_regex, requires_bottleneck,
+    requires_dask, requires_scipy)
 
 
 @pytest.fixture
@@ -69,7 +67,6 @@ def make_interpolate_example_data(shape, frac_nan, seed=12345,
     return da, df
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_pd_compat():
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
@@ -95,19 +92,17 @@ def test_interpolate_pd_compat():
             np.testing.assert_allclose(actual.values, expected.values)
 
 
-@requires_np112
 @requires_scipy
-def test_scipy_methods_function():
-    for method in ['barycentric', 'krog', 'pchip', 'spline', 'akima']:
-        kwargs = {}
-        # Note: Pandas does some wacky things with these methods and the full
-        # integration tests wont work.
-        da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
-        actual = da.interpolate_na(method=method, dim='time', **kwargs)
-        assert (da.count('time') <= actual.count('time')).all()
+@pytest.mark.parametrize('method', ['barycentric', 'krog',
+                                    'pchip', 'spline', 'akima'])
+def test_scipy_methods_function(method):
+    # Note: Pandas does some wacky things with these methods and the full
+    # integration tests wont work.
+    da, _ = make_interpolate_example_data((25, 25), 0.4, non_uniform=True)
+    actual = da.interpolate_na(method=method, dim='time')
+    assert (da.count('time') <= actual.count('time')).all()
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_pd_compat_non_uniform_index():
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
@@ -136,7 +131,6 @@ def test_interpolate_pd_compat_non_uniform_index():
             np.testing.assert_allclose(actual.values, expected.values)
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_pd_compat_polynomial():
     shapes = [(8, 8), (1, 20), (20, 1), (100, 100)]
@@ -156,7 +150,6 @@ def test_interpolate_pd_compat_polynomial():
             np.testing.assert_allclose(actual.values, expected.values)
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_unsorted_index_raises():
     vals = np.array([1, 2, 3], dtype=np.float64)
@@ -197,7 +190,6 @@ def test_interpolate_2d_coord_raises():
         da.interpolate_na(dim='a', use_coordinate='x')
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_kwargs():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims='x')
@@ -210,7 +202,6 @@ def test_interpolate_kwargs():
     assert_equal(actual, expected)
 
 
-@requires_np112
 def test_interpolate():
 
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
@@ -224,7 +215,6 @@ def test_interpolate():
     assert_equal(actual, expected)
 
 
-@requires_np112
 def test_interpolate_nonans():
 
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
@@ -233,7 +223,6 @@ def test_interpolate_nonans():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_allnans():
     vals = np.full(6, np.nan, dtype=np.float64)
@@ -243,7 +232,6 @@ def test_interpolate_allnans():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_bottleneck
 def test_interpolate_limits():
     da = xr.DataArray(np.array([1, 2, np.nan, np.nan, np.nan, 6],
@@ -259,7 +247,6 @@ def test_interpolate_limits():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_scipy
 def test_interpolate_methods():
     for method in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
@@ -275,7 +262,6 @@ def test_interpolate_methods():
 
 
 @requires_scipy
-@requires_np112
 def test_interpolators():
     for method, interpolator in [('linear', NumpyInterpolator),
                                  ('linear', ScipyInterpolator),
@@ -289,7 +275,6 @@ def test_interpolators():
         assert pd.isnull(out).sum() == 0
 
 
-@requires_np112
 def test_interpolate_use_coordinate():
     xc = xr.Variable('x', [100, 200, 300, 400, 500, 600])
     da = xr.DataArray(np.array([1, 2, np.nan, np.nan, np.nan, 6],
@@ -312,7 +297,6 @@ def test_interpolate_use_coordinate():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_dask
 def test_interpolate_dask():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
@@ -330,7 +314,6 @@ def test_interpolate_dask():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_dask
 def test_interpolate_dask_raises_for_invalid_chunk_dim():
     da, _ = make_interpolate_example_data((40, 40), 0.5)
@@ -339,7 +322,6 @@ def test_interpolate_dask_raises_for_invalid_chunk_dim():
         da.interpolate_na('time')
 
 
-@requires_np112
 @requires_bottleneck
 def test_ffill():
     da = xr.DataArray(np.array([4, 5, np.nan], dtype=np.float64), dims='x')
@@ -348,7 +330,6 @@ def test_ffill():
     assert_equal(actual, expected)
 
 
-@requires_np112
 @requires_bottleneck
 @requires_dask
 def test_ffill_dask():
@@ -386,7 +367,6 @@ def test_bfill_dask():
 
 
 @requires_bottleneck
-@requires_np112
 def test_ffill_bfill_nonans():
 
     vals = np.array([1, 2, 3, 4, 5, 6], dtype=np.float64)
@@ -400,7 +380,6 @@ def test_ffill_bfill_nonans():
 
 
 @requires_bottleneck
-@requires_np112
 def test_ffill_bfill_allnans():
 
     vals = np.full(6, np.nan, dtype=np.float64)
@@ -414,14 +393,12 @@ def test_ffill_bfill_allnans():
 
 
 @requires_bottleneck
-@requires_np112
 def test_ffill_functions(da):
     result = da.ffill('time')
     assert result.isnull().sum() == 0
 
 
 @requires_bottleneck
-@requires_np112
 def test_ffill_limit():
     da = xr.DataArray(
         [0, np.nan, np.nan, np.nan, np.nan, 3, 4, 5, np.nan, 6, 7],
@@ -435,7 +412,6 @@ def test_ffill_limit():
         [0, 0, np.nan, np.nan, np.nan, 3, 4, 5, 5, 6, 7], dims='time')
 
 
-@requires_np112
 def test_interpolate_dataset(ds):
     actual = ds.interpolate_na(dim='time')
     # no missing values in var1
@@ -446,12 +422,10 @@ def test_interpolate_dataset(ds):
 
 
 @requires_bottleneck
-@requires_np112
 def test_ffill_dataset(ds):
     ds.ffill(dim='time')
 
 
 @requires_bottleneck
-@requires_np112
 def test_bfill_dataset(ds):
     ds.ffill(dim='time')

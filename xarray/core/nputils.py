@@ -1,9 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
+import warnings
+
 import numpy as np
 import pandas as pd
-import warnings
+
+try:
+    import bottleneck as bn
+    _USE_BOTTLENECK = True
+except ImportError:
+    # use numpy methods instead
+    bn = np
+    _USE_BOTTLENECK = False
 
 
 def _validate_axis(data, axis):
@@ -133,3 +141,98 @@ class NumpyVIndexAdapter(object):
         mixed_positions, vindex_positions = _advanced_indexer_subspaces(key)
         self._array[key] = np.moveaxis(value, vindex_positions,
                                        mixed_positions)
+
+
+def rolling_window(a, axis, window, center, fill_value):
+    """ rolling window with padding. """
+    pads = [(0, 0) for s in a.shape]
+    if center:
+        start = int(window / 2)  # 10 -> 5,  9 -> 4
+        end = window - 1 - start
+        pads[axis] = (start, end)
+    else:
+        pads[axis] = (window - 1, 0)
+    a = np.pad(a, pads, mode='constant', constant_values=fill_value)
+    return _rolling_window(a, window, axis)
+
+
+def _rolling_window(a, window, axis=-1):
+    """
+    Make an ndarray with a rolling window along axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Array to add rolling window to
+    axis: int
+        axis position along which rolling window will be applied.
+    window : int
+        Size of rolling window
+
+    Returns
+    -------
+    Array that is a view of the original array with a added dimension
+    of size w.
+
+    Examples
+    --------
+    >>> x=np.arange(10).reshape((2,5))
+    >>> np.rolling_window(x, 3, axis=-1)
+    array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
+           [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
+
+    Calculate rolling mean of last dimension:
+    >>> np.mean(np.rolling_window(x, 3, axis=-1), -1)
+    array([[ 1.,  2.,  3.],
+           [ 6.,  7.,  8.]])
+
+    This function is taken from https://github.com/numpy/numpy/pull/31
+    but slightly modified to accept axis option.
+    """
+    axis = _validate_axis(a, axis)
+    a = np.swapaxes(a, axis, -1)
+
+    if window < 1:
+        raise ValueError(
+            "`window` must be at least 1. Given : {}".format(window))
+    if window > a.shape[-1]:
+        raise ValueError("`window` is too long. Given : {}".format(window))
+
+    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
+    strides = a.strides + (a.strides[-1],)
+    rolling = np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides,
+                                              writeable=False)
+    return np.swapaxes(rolling, -2, axis)
+
+
+def _create_bottleneck_method(name, npmodule=np):
+    def f(values, axis=None, **kwds):
+        dtype = kwds.get('dtype', None)
+        bn_func = getattr(bn, name, None)
+
+        if (_USE_BOTTLENECK and bn_func is not None and
+                not isinstance(axis, tuple) and
+                values.dtype.kind in 'uifc' and
+                values.dtype.isnative and
+                (dtype is None or np.dtype(dtype) == values.dtype)):
+            # bottleneck does not take care dtype, min_count
+            kwds.pop('dtype', None)
+            result = bn_func(values, axis=axis, **kwds)
+        else:
+            result = getattr(npmodule, name)(values, axis=axis, **kwds)
+
+        return result
+
+    f.__name__ = name
+    return f
+
+
+nanmin = _create_bottleneck_method('nanmin')
+nanmax = _create_bottleneck_method('nanmax')
+nanmean = _create_bottleneck_method('nanmean')
+nanmedian = _create_bottleneck_method('nanmedian')
+nanvar = _create_bottleneck_method('nanvar')
+nanstd = _create_bottleneck_method('nanstd')
+nanprod = _create_bottleneck_method('nanprod')
+nancumsum = _create_bottleneck_method('nancumsum')
+nancumprod = _create_bottleneck_method('nancumprod')

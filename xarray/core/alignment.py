@@ -1,20 +1,17 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import functools
 import operator
-from collections import defaultdict
 import warnings
+from collections import defaultdict
 
 import numpy as np
 
-from . import duck_array_ops
-from . import dtypes
 from . import utils
 from .indexing import get_indexer_nd
-from .pycompat import iteritems, OrderedDict, suppress
-from .utils import is_full_slice, is_dict_like
-from .variable import Variable, IndexVariable
+from .pycompat import OrderedDict, iteritems, suppress
+from .utils import is_dict_like, is_full_slice
+from .variable import IndexVariable
 
 
 def _get_joiner(join):
@@ -177,11 +174,14 @@ def deep_align(objects, join='inner', copy=True, indexes=None,
 
     This function is not public API.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     if indexes is None:
         indexes = {}
 
     def is_alignable(obj):
-        return hasattr(obj, 'indexes') and hasattr(obj, 'reindex')
+        return isinstance(obj, (DataArray, Dataset))
 
     positions = []
     keys = []
@@ -306,59 +306,51 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
     from .dataarray import DataArray
 
     # build up indexers for assignment along each dimension
-    to_indexers = {}
-    from_indexers = {}
+    int_indexers = {}
+    targets = {}
+    masked_dims = set()
+    unchanged_dims = set()
+
     # size of reindexed dimensions
     new_sizes = {}
 
     for name, index in iteritems(indexes):
         if name in indexers:
-            target = utils.safe_cast_to_index(indexers[name])
             if not index.is_unique:
                 raise ValueError(
                     'cannot reindex or align along dimension %r because the '
                     'index has duplicate values' % name)
-            indexer = get_indexer_nd(index, target, method, tolerance)
 
+            target = utils.safe_cast_to_index(indexers[name])
             new_sizes[name] = len(target)
-            # Note pandas uses negative values from get_indexer_nd to signify
-            # values that are missing in the index
-            # The non-negative values thus indicate the non-missing values
-            to_indexers[name] = indexer >= 0
-            if to_indexers[name].all():
-                # If an indexer includes no negative values, then the
-                # assignment can be to a full-slice (which is much faster,
-                # and means we won't need to fill in any missing values)
-                to_indexers[name] = slice(None)
 
-            from_indexers[name] = indexer[to_indexers[name]]
-            if np.array_equal(from_indexers[name], np.arange(len(index))):
-                # If the indexer is equal to the original index, use a full
-                # slice object to speed up selection and so we can avoid
-                # unnecessary copies
-                from_indexers[name] = slice(None)
+            int_indexer = get_indexer_nd(index, target, method, tolerance)
+
+            # We uses negative values from get_indexer_nd to signify
+            # values that are missing in the index.
+            if (int_indexer < 0).any():
+                masked_dims.add(name)
+            elif np.array_equal(int_indexer, np.arange(len(index))):
+                unchanged_dims.add(name)
+
+            int_indexers[name] = int_indexer
+            targets[name] = target
 
     for dim in sizes:
         if dim not in indexes and dim in indexers:
             existing_size = sizes[dim]
-            new_size = utils.safe_cast_to_index(indexers[dim]).size
+            new_size = indexers[dim].size
             if existing_size != new_size:
                 raise ValueError(
                     'cannot reindex or align along dimension %r without an '
                     'index because its size %r is different from the size of '
                     'the new index %r' % (dim, existing_size, new_size))
 
-    def any_not_full_slices(indexers):
-        return any(not is_full_slice(idx) for idx in indexers)
-
-    def var_indexers(var, indexers):
-        return tuple(indexers.get(d, slice(None)) for d in var.dims)
-
     # create variables for the new dataset
     reindexed = OrderedDict()
 
     for dim, indexer in indexers.items():
-        if isinstance(indexer, DataArray) and indexer.dims != (dim, ):
+        if isinstance(indexer, DataArray) and indexer.dims != (dim,):
             warnings.warn(
                 "Indexer has dimensions {0:s} that are different "
                 "from that to be indexed along {1:s}. "
@@ -375,47 +367,24 @@ def reindex_variables(variables, sizes, indexes, indexers, method=None,
 
     for name, var in iteritems(variables):
         if name not in indexers:
-            assign_to = var_indexers(var, to_indexers)
-            assign_from = var_indexers(var, from_indexers)
+            key = tuple(slice(None)
+                        if d in unchanged_dims
+                        else int_indexers.get(d, slice(None))
+                        for d in var.dims)
+            needs_masking = any(d in masked_dims for d in var.dims)
 
-            if any_not_full_slices(assign_to):
-                # there are missing values to in-fill
-                data = var[assign_from].data
-                dtype, fill_value = dtypes.maybe_promote(var.dtype)
-
-                if isinstance(data, np.ndarray):
-                    shape = tuple(new_sizes.get(dim, size)
-                                  for dim, size in zip(var.dims, var.shape))
-                    new_data = np.empty(shape, dtype=dtype)
-                    new_data[...] = fill_value
-                    # create a new Variable so we can use orthogonal indexing
-                    # use fastpath=True to avoid dtype inference
-                    new_var = Variable(var.dims, new_data, var.attrs,
-                                       fastpath=True)
-                    new_var[assign_to] = data
-
-                else:  # dask array
-                    data = data.astype(dtype, copy=False)
-                    for axis, indexer in enumerate(assign_to):
-                        if not is_full_slice(indexer):
-                            indices = np.cumsum(indexer)[~indexer]
-                            data = duck_array_ops.insert(
-                                data, indices, fill_value, axis=axis)
-                    new_var = Variable(var.dims, data, var.attrs,
-                                       fastpath=True)
-
-            elif any_not_full_slices(assign_from):
-                # type coercion is not necessary as there are no missing
-                # values
-                new_var = var[assign_from]
-
-            else:
-                # no reindexing is necessary
+            if needs_masking:
+                new_var = var._getitem_with_mask(key)
+            elif all(is_full_slice(k) for k in key):
+                # no reindexing necessary
                 # here we need to manually deal with copying data, since
                 # we neither created a new ndarray nor used fancy indexing
                 new_var = var.copy(deep=copy)
+            else:
+                new_var = var[key]
 
             reindexed[name] = new_var
+
     return reindexed
 
 

@@ -1,8 +1,7 @@
 # flake8: noqa
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import sys
 
 import numpy as np
@@ -24,10 +23,14 @@ if PY3:  # pragma: no cover
 
     range = range
     zip = zip
+    from itertools import zip_longest
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
     from inspect import getfullargspec as getargspec
+
+    def move_to_end(ordered_dict, key):
+        ordered_dict.move_to_end(key)
 else:  # pragma: no cover
     # Python 2
     basestring = basestring  # noqa
@@ -42,11 +45,18 @@ else:  # pragma: no cover
         return d.itervalues()
 
     range = xrange
-    from itertools import izip as zip, imap as map
+    from itertools import (
+        izip as zip, imap as map, izip_longest as zip_longest,
+    )
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
     from inspect import getargspec
+
+    def move_to_end(ordered_dict, key):
+        value = ordered_dict[key]
+        del ordered_dict[key]
+        ordered_dict[key] = value
 
 integer_types = native_int_types + (np.integer,)
 
@@ -73,7 +83,6 @@ try:
     path_type = (Path, )
 except ImportError as e:
     path_type = ()
-
 
 try:
     from contextlib import suppress
@@ -108,7 +117,8 @@ except ImportError:
             # exactly reproduce the limitations of the CPython interpreter.
             #
             # See http://bugs.python.org/issue12029 for more details
-            return exctype is not None and issubclass(exctype, self._exceptions)
+            return exctype is not None and issubclass(
+                exctype, self._exceptions)
 try:
     from contextlib import ExitStack
 except ImportError:
@@ -185,7 +195,8 @@ except ImportError:
             If successful, also pushes its __exit__ method as a callback and
             returns the result of the __enter__ method.
             """
-            # We look up the special methods on the type to match the with statement
+            # We look up the special methods on the type to match the with
+            # statement
             _cm_type = type(cm)
             _exit = _cm_type.__exit__
             result = _cm_type.__enter__(cm)
@@ -208,7 +219,7 @@ except ImportError:
 
             def _fix_exception_context(new_exc, old_exc):
                 # Context may not be correct, so find the end of the chain
-                while 1:
+                while True:
                     exc_context = new_exc.__context__
                     if exc_context is old_exc:
                         # Context is already set correctly (see issue 20317)
@@ -231,7 +242,7 @@ except ImportError:
                         suppressed_exc = True
                         pending_raise = False
                         exc_details = (None, None, None)
-                except:
+                except BaseException:
                     new_exc_details = sys.exc_info()
                     # simulate the stack of exceptions by setting the context
                     _fix_exception_context(new_exc_details[1], exc_details[1])

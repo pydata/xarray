@@ -1,25 +1,21 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import itertools
+from __future__ import absolute_import, division, print_function
 
-import pytest
+import itertools
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from xarray import Dataset, DataArray, Variable
-from xarray.core import indexing
-from xarray.core import nputils
+from xarray import DataArray, Dataset, Variable
+from xarray.core import indexing, nputils
 from xarray.core.pycompat import native_int_types
-from . import (
-    TestCase, ReturnItem, raises_regex, IndexerMaker, assert_array_equal)
 
+from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
 B = IndexerMaker(indexing.BasicIndexer)
 
 
-class TestIndexers(TestCase):
+class TestIndexers(object):
     def set_to_zero(self, x, i):
         x = x.copy()
         x[i] = 0
@@ -28,7 +24,7 @@ class TestIndexers(TestCase):
     def test_expanded_indexer(self):
         x = np.random.randn(10, 11, 12, 13, 14)
         y = np.arange(5)
-        I = ReturnItem()  # noqa: E741  # allow ambiguous name
+        I = ReturnItem()  # noqa
         for i in [I[:], I[...], I[0, :, 10], I[..., 10], I[:5, ..., 0],
                   I[..., 0, :], I[y], I[y, y], I[..., y, y],
                   I[..., 0, 1, 2, 3, 4]]:
@@ -114,47 +110,49 @@ class TestIndexers(TestCase):
         test_indexer(data, Variable([], 1), 0)
         test_indexer(mdata, ('a', 1, -1), 0)
         test_indexer(mdata, ('a', 1),
-                     [True,  True, False, False, False, False, False, False],
+                     [True, True, False, False, False, False, False, False],
                      [-1, -2])
         test_indexer(mdata, 'a', slice(0, 4, None),
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
         test_indexer(mdata, ('a',),
-                     [True,  True,  True,  True, False, False, False, False],
+                     [True, True, True, True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
         test_indexer(mdata, [('a', 1, -1), ('b', 2, -2)], [0, 7])
         test_indexer(mdata, slice('a', 'b'), slice(0, 8, None))
         test_indexer(mdata, slice(('a', 1), ('b', 1)), slice(0, 6, None))
         test_indexer(mdata, {'one': 'a', 'two': 1, 'three': -1}, 0)
         test_indexer(mdata, {'one': 'a', 'two': 1},
-                     [True,  True, False, False, False, False, False, False],
+                     [True, True, False, False, False, False, False, False],
                      [-1, -2])
         test_indexer(mdata, {'one': 'a', 'three': -1},
-                     [True,  False, True, False, False, False, False, False],
+                     [True, False, True, False, False, False, False, False],
                      [1, 2])
         test_indexer(mdata, {'one': 'a'},
-                     [True,  True,  True,  True, False, False, False, False],
+                     [True, True, True, True, False, False, False, False],
                      pd.MultiIndex.from_product([[1, 2], [-1, -2]]))
 
 
-class TestLazyArray(TestCase):
+class TestLazyArray(object):
     def test_slice_slice(self):
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
-        x = np.arange(100)
-        slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
-                  I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
-                  I[4:4:4], I[:4:-4]]
-        for i in slices:
-            for j in slices:
-                expected = x[i][j]
-                new_slice = indexing.slice_slice(i, j, size=100)
-                actual = x[new_slice]
-                assert_array_equal(expected, actual)
+        for size in [100, 99]:
+            # We test even/odd size cases
+            x = np.arange(size)
+            slices = [I[:3], I[:4], I[2:4], I[:1], I[:-1], I[5:-1], I[-5:-1],
+                      I[::-1], I[5::-1], I[:3:-1], I[:30:-1], I[10:4:], I[::4],
+                      I[4:4:4], I[:4:-4], I[::-2]]
+            for i in slices:
+                for j in slices:
+                    expected = x[i][j]
+                    new_slice = indexing.slice_slice(i, j, size=size)
+                    actual = x[new_slice]
+                    assert_array_equal(expected, actual)
 
     def test_lazily_indexed_array(self):
         original = np.random.rand(10, 20, 30)
         x = indexing.NumpyIndexingAdapter(original)
         v = Variable(['i', 'j', 'k'], original)
-        lazy = indexing.LazilyIndexedArray(x)
+        lazy = indexing.LazilyOuterIndexedArray(x)
         v_lazy = Variable(['i', 'j', 'k'], lazy)
         I = ReturnItem()  # noqa: E741  # allow ambiguous name
         # test orthogonally applied indexers
@@ -173,7 +171,7 @@ class TestLazyArray(TestCase):
                         assert expected.shape == actual.shape
                         assert_array_equal(expected, actual)
                         assert isinstance(actual._data,
-                                          indexing.LazilyIndexedArray)
+                                          indexing.LazilyOuterIndexedArray)
 
                         # make sure actual.key is appropriate type
                         if all(isinstance(k, native_int_types + (slice, ))
@@ -188,16 +186,68 @@ class TestLazyArray(TestCase):
         indexers = [(3, 2), (I[:], 0), (I[:2], -1), (I[:4], [0]), ([4, 5], 0),
                     ([0, 1, 2], [0, 1]), ([0, 3, 5], I[:2])]
         for i, j in indexers:
-            expected = np.asarray(v[i][j])
+            expected = v[i][j]
             actual = v_lazy[i][j]
             assert expected.shape == actual.shape
             assert_array_equal(expected, actual)
-            assert isinstance(actual._data, indexing.LazilyIndexedArray)
+
+            # test transpose
+            if actual.ndim > 1:
+                order = np.random.choice(actual.ndim, actual.ndim)
+                order = np.array(actual.dims)
+                transposed = actual.transpose(*order)
+                assert_array_equal(expected.transpose(*order), transposed)
+                assert isinstance(
+                    actual._data, (indexing.LazilyVectorizedIndexedArray,
+                                   indexing.LazilyOuterIndexedArray))
+
+            assert isinstance(actual._data, indexing.LazilyOuterIndexedArray)
             assert isinstance(actual._data.array,
                               indexing.NumpyIndexingAdapter)
 
+    def test_vectorized_lazily_indexed_array(self):
+        original = np.random.rand(10, 20, 30)
+        x = indexing.NumpyIndexingAdapter(original)
+        v_eager = Variable(['i', 'j', 'k'], x)
+        lazy = indexing.LazilyOuterIndexedArray(x)
+        v_lazy = Variable(['i', 'j', 'k'], lazy)
+        I = ReturnItem()  # noqa: E741  # allow ambiguous name
 
-class TestCopyOnWriteArray(TestCase):
+        def check_indexing(v_eager, v_lazy, indexers):
+            for indexer in indexers:
+                actual = v_lazy[indexer]
+                expected = v_eager[indexer]
+                assert expected.shape == actual.shape
+                assert isinstance(actual._data,
+                                  (indexing.LazilyVectorizedIndexedArray,
+                                   indexing.LazilyOuterIndexedArray))
+                assert_array_equal(expected, actual)
+                v_eager = expected
+                v_lazy = actual
+
+        # test orthogonal indexing
+        indexers = [(I[:], 0, 1), (Variable('i', [0, 1]), )]
+        check_indexing(v_eager, v_lazy, indexers)
+
+        # vectorized indexing
+        indexers = [
+            (Variable('i', [0, 1]), Variable('i', [0, 1]), slice(None)),
+            (slice(1, 3, 2), 0)]
+        check_indexing(v_eager, v_lazy, indexers)
+
+        indexers = [
+            (slice(None, None, 2), 0, slice(None, 10)),
+            (Variable('i', [3, 2, 4, 3]), Variable('i', [3, 2, 1, 0])),
+            (Variable(['i', 'j'], [[0, 1], [1, 2]]), )]
+        check_indexing(v_eager, v_lazy, indexers)
+
+        indexers = [
+            (Variable('i', [3, 2, 4, 3]), Variable('i', [3, 2, 1, 0])),
+            (Variable(['i', 'j'], [[0, 1], [1, 2]]), )]
+        check_indexing(v_eager, v_lazy, indexers)
+
+
+class TestCopyOnWriteArray(object):
     def test_setitem(self):
         original = np.arange(10)
         wrapped = indexing.CopyOnWriteArray(original)
@@ -221,21 +271,21 @@ class TestCopyOnWriteArray(TestCase):
         assert np.array(x[B[0]][B[()]]) == 'foo'
 
 
-class TestMemoryCachedArray(TestCase):
+class TestMemoryCachedArray(object):
     def test_wrapper(self):
-        original = indexing.LazilyIndexedArray(np.arange(10))
+        original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         assert_array_equal(wrapped, np.arange(10))
         assert isinstance(wrapped.array, indexing.NumpyIndexingAdapter)
 
     def test_sub_array(self):
-        original = indexing.LazilyIndexedArray(np.arange(10))
+        original = indexing.LazilyOuterIndexedArray(np.arange(10))
         wrapped = indexing.MemoryCachedArray(original)
         child = wrapped[B[:5]]
         assert isinstance(child, indexing.MemoryCachedArray)
         assert_array_equal(child, np.arange(5))
         assert isinstance(child.array, indexing.NumpyIndexingAdapter)
-        assert isinstance(wrapped.array, indexing.LazilyIndexedArray)
+        assert isinstance(wrapped.array, indexing.LazilyOuterIndexedArray)
 
     def test_setitem(self):
         original = np.arange(10)
@@ -334,21 +384,127 @@ def test_vectorized_indexer():
                                     np.arange(5, dtype=np.int64)))
 
 
-def test_unwrap_explicit_indexer():
-    indexer = indexing.BasicIndexer((1, 2))
-    target = None
+class Test_vectorized_indexer(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.data = indexing.NumpyIndexingAdapter(np.random.randn(10, 12, 13))
+        self.indexers = [np.array([[0, 3, 2], ]),
+                         np.array([[0, 3, 3], [4, 6, 7]]),
+                         slice(2, -2, 2), slice(2, -2, 3), slice(None)]
 
-    unwrapped = indexing.unwrap_explicit_indexer(
-        indexer, target, allow=indexing.BasicIndexer)
-    assert unwrapped == (1, 2)
+    def test_arrayize_vectorized_indexer(self):
+        for i, j, k in itertools.product(self.indexers, repeat=3):
+            vindex = indexing.VectorizedIndexer((i, j, k))
+            vindex_array = indexing._arrayize_vectorized_indexer(
+                vindex, self.data.shape)
+            np.testing.assert_array_equal(
+                self.data[vindex], self.data[vindex_array],)
 
-    with raises_regex(NotImplementedError, 'Load your data'):
-        indexing.unwrap_explicit_indexer(
-            indexer, target, allow=indexing.OuterIndexer)
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((slice(None),)), shape=(5,))
+        np.testing.assert_array_equal(actual.tuple, [np.arange(5)])
 
-    with raises_regex(TypeError, 'unexpected key type'):
-        indexing.unwrap_explicit_indexer(
-            indexer.tuple, target, allow=indexing.OuterIndexer)
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((np.arange(5),) * 3), shape=(8, 10, 12))
+        expected = np.stack([np.arange(5)] * 3)
+        np.testing.assert_array_equal(np.stack(actual.tuple), expected)
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((np.arange(5), slice(None))),
+            shape=(8, 10))
+        a, b = actual.tuple
+        np.testing.assert_array_equal(a, np.arange(5)[:, np.newaxis])
+        np.testing.assert_array_equal(b, np.arange(10)[np.newaxis, :])
+
+        actual = indexing._arrayize_vectorized_indexer(
+            indexing.VectorizedIndexer((slice(None), np.arange(5))),
+            shape=(8, 10))
+        a, b = actual.tuple
+        np.testing.assert_array_equal(a, np.arange(8)[np.newaxis, :])
+        np.testing.assert_array_equal(b, np.arange(5)[:, np.newaxis])
+
+
+def get_indexers(shape, mode):
+    if mode == 'vectorized':
+        indexed_shape = (3, 4)
+        indexer = tuple(np.random.randint(0, s, size=indexed_shape)
+                        for s in shape)
+        return indexing.VectorizedIndexer(indexer)
+
+    elif mode == 'outer':
+        indexer = tuple(np.random.randint(0, s, s + 2) for s in shape)
+        return indexing.OuterIndexer(indexer)
+
+    elif mode == 'outer_scalar':
+        indexer = (np.random.randint(0, 3, 4), 0, slice(None, None, 2))
+        return indexing.OuterIndexer(indexer[:len(shape)])
+
+    elif mode == 'outer_scalar2':
+        indexer = (np.random.randint(0, 3, 4), -2, slice(None, None, 2))
+        return indexing.OuterIndexer(indexer[:len(shape)])
+
+    elif mode == 'outer1vec':
+        indexer = [slice(2, -3) for s in shape]
+        indexer[1] = np.random.randint(0, shape[1], shape[1] + 2)
+        return indexing.OuterIndexer(tuple(indexer))
+
+    elif mode == 'basic':  # basic indexer
+        indexer = [slice(2, -3) for s in shape]
+        indexer[0] = 3
+        return indexing.BasicIndexer(tuple(indexer))
+
+    elif mode == 'basic1':  # basic indexer
+        return indexing.BasicIndexer((3, ))
+
+    elif mode == 'basic2':  # basic indexer
+        indexer = [0, 2, 4]
+        return indexing.BasicIndexer(tuple(indexer[:len(shape)]))
+
+    elif mode == 'basic3':  # basic indexer
+        indexer = [slice(None) for s in shape]
+        indexer[0] = slice(-2, 2, -2)
+        indexer[1] = slice(1, -1, 2)
+        return indexing.BasicIndexer(tuple(indexer[:len(shape)]))
+
+
+@pytest.mark.parametrize('size', [100, 99])
+@pytest.mark.parametrize('sl', [slice(1, -1, 1), slice(None, -1, 2),
+                                slice(-1, 1, -1), slice(-1, 1, -2)])
+def test_decompose_slice(size, sl):
+    x = np.arange(size)
+    slice1, slice2 = indexing._decompose_slice(sl, size)
+    expected = x[sl]
+    actual = x[slice1][slice2]
+    assert_array_equal(expected, actual)
+
+
+@pytest.mark.parametrize('shape', [(10, 5, 8), (10, 3)])
+@pytest.mark.parametrize('indexer_mode',
+                         ['vectorized', 'outer', 'outer_scalar',
+                          'outer_scalar2', 'outer1vec',
+                          'basic', 'basic1', 'basic2', 'basic3'])
+@pytest.mark.parametrize('indexing_support',
+                         [indexing.IndexingSupport.BASIC,
+                          indexing.IndexingSupport.OUTER,
+                          indexing.IndexingSupport.OUTER_1VECTOR,
+                          indexing.IndexingSupport.VECTORIZED])
+def test_decompose_indexers(shape, indexer_mode, indexing_support):
+    data = np.random.randn(*shape)
+    indexer = get_indexers(shape, indexer_mode)
+
+    backend_ind, np_ind = indexing.decompose_indexer(
+        indexer, shape, indexing_support)
+
+    expected = indexing.NumpyIndexingAdapter(data)[indexer]
+    array = indexing.NumpyIndexingAdapter(data)[backend_ind]
+    if len(np_ind.tuple) > 0:
+        array = indexing.NumpyIndexingAdapter(array)[np_ind]
+    np.testing.assert_array_equal(expected, array)
+
+    if not all(isinstance(k, indexing.integer_types) for k in np_ind.tuple):
+        combined_ind = indexing._combine_indexers(backend_ind, shape, np_ind)
+        array = indexing.NumpyIndexingAdapter(data)[combined_ind]
+        np.testing.assert_array_equal(expected, array)
 
 
 def test_implicit_indexing_adapter():
@@ -385,7 +541,8 @@ def test_outer_indexer_consistency_with_broadcast_indexes_vectorized():
             expected_data = np.moveaxis(expected_data, old_order,
                                         new_order)
 
-        outer_index = (nonzero(i), nonzero(j), nonzero(k))
+        outer_index = indexing.OuterIndexer((nonzero(i), nonzero(j),
+                                             nonzero(k)))
         actual = indexing._outer_to_numpy_indexer(outer_index, v.shape)
         actual_data = v.data[actual]
         np.testing.assert_array_equal(actual_data, expected_data)

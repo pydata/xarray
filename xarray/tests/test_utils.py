@@ -1,17 +1,26 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import pytest
+from __future__ import absolute_import, division, print_function
+
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import pytest
 
+import xarray as xr
+from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
+from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
-from . import TestCase, requires_dask, assert_array_equal
+from xarray.core.utils import either_dict_or_kwargs
+from xarray.testing import assert_identical
+
+from . import (
+    assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
+    requires_dask)
+from .test_coding_times import _all_cftime_date_types
 
 
-class TestAlias(TestCase):
+class TestAlias(object):
     def test(self):
         def new_method():
             pass
@@ -21,24 +30,52 @@ class TestAlias(TestCase):
             old_method()
 
 
-class TestSafeCastToIndex(TestCase):
-    def test(self):
-        dates = pd.date_range('2000-01-01', periods=10)
-        x = np.arange(5)
-        td = x * np.timedelta64(1, 'D')
-        for expected, array in [
-                (dates, dates.values),
-                (pd.Index(x, dtype=object), x.astype(object)),
-                (pd.Index(td), td),
-                (pd.Index(td, dtype=object), td.astype(object)),
-        ]:
-            actual = utils.safe_cast_to_index(array)
-            assert_array_equal(expected, actual)
-            assert expected.dtype == actual.dtype
+def test_safe_cast_to_index():
+    dates = pd.date_range('2000-01-01', periods=10)
+    x = np.arange(5)
+    td = x * np.timedelta64(1, 'D')
+    for expected, array in [
+            (dates, dates.values),
+            (pd.Index(x, dtype=object), x.astype(object)),
+            (pd.Index(td), td),
+            (pd.Index(td, dtype=object), td.astype(object)),
+    ]:
+        actual = utils.safe_cast_to_index(array)
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+
+
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+def test_safe_cast_to_index_cftimeindex():
+    date_types = _all_cftime_date_types()
+    for date_type in date_types.values():
+        dates = [date_type(1, 1, day) for day in range(1, 20)]
+
+        if has_cftime:
+            expected = CFTimeIndex(dates)
+        else:
+            expected = pd.Index(dates)
+
+        actual = utils.safe_cast_to_index(np.array(dates))
+        assert_array_equal(expected, actual)
+        assert expected.dtype == actual.dtype
+        assert isinstance(actual, type(expected))
+
+
+# Test that datetime.datetime objects are never used in a CFTimeIndex
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+def test_safe_cast_to_index_datetime_datetime():
+    dates = [datetime(1, 1, day) for day in range(1, 20)]
+
+    expected = pd.Index(dates)
+    actual = utils.safe_cast_to_index(np.array(dates))
+    assert_array_equal(expected, actual)
+    assert isinstance(actual, pd.Index)
 
 
 def test_multiindex_from_product_levels():
-    result = utils.multiindex_from_product_levels([['b', 'a'], [1, 3, 2]])
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 3, 2])])
     np.testing.assert_array_equal(
         result.labels, [[0, 0, 0, 1, 1, 1], [0, 1, 2, 0, 1, 2]])
     np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
@@ -48,7 +85,16 @@ def test_multiindex_from_product_levels():
     np.testing.assert_array_equal(result.values, other.values)
 
 
-class TestArrayEquiv(TestCase):
+def test_multiindex_from_product_levels_non_unique():
+    result = utils.multiindex_from_product_levels(
+        [pd.Index(['b', 'a']), pd.Index([1, 1, 2])])
+    np.testing.assert_array_equal(
+        result.labels, [[0, 0, 0, 1, 1, 1], [0, 0, 1, 0, 0, 1]])
+    np.testing.assert_array_equal(result.levels[0], ['b', 'a'])
+    np.testing.assert_array_equal(result.levels[1], [1, 2])
+
+
+class TestArrayEquiv(object):
     def test_0d(self):
         # verify our work around for pd.isnull not working for 0-dimensional
         # object arrays
@@ -58,8 +104,9 @@ class TestArrayEquiv(TestCase):
         assert not duck_array_ops.array_equiv(0, np.array(1, dtype=object))
 
 
-class TestDictionaries(TestCase):
-    def setUp(self):
+class TestDictionaries(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.x = {'a': 'A', 'b': 'B'}
         self.y = {'c': 'C', 'b': 'B'}
         self.z = {'a': 'Z'}
@@ -126,7 +173,7 @@ class TestDictionaries(TestCase):
     def test_sorted_keys_dict(self):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
-        self.assertItemsEqual(y, ['a', 'b', 'c'])
+        assert list(y) == ['a', 'b', 'c']
         assert repr(utils.SortedKeysDict()) == \
             "SortedKeysDict({})"
 
@@ -141,7 +188,7 @@ class TestDictionaries(TestCase):
         m['x'] = 100
         assert m['x'] == 100
         assert m.maps[0]['x'] == 100
-        self.assertItemsEqual(['x', 'y', 'z'], m)
+        assert set(m) == {'x', 'y', 'z'}
 
 
 def test_repr_object():
@@ -149,7 +196,23 @@ def test_repr_object():
     assert repr(obj) == 'foo'
 
 
-class Test_is_uniform_and_sorted(TestCase):
+def test_is_remote_uri():
+    assert utils.is_remote_uri('http://example.com')
+    assert utils.is_remote_uri('https://example.com')
+    assert not utils.is_remote_uri(' http://example.com')
+    assert not utils.is_remote_uri('example.nc')
+
+
+def test_is_grib_path():
+    assert not utils.is_grib_path('example.nc')
+    assert not utils.is_grib_path('example.grib ')
+    assert utils.is_grib_path('example.grib')
+    assert utils.is_grib_path('example.grib2')
+    assert utils.is_grib_path('example.grb')
+    assert utils.is_grib_path('example.grb2')
+
+
+class Test_is_uniform_and_sorted(object):
 
     def test_sorted_uniform(self):
         assert utils.is_uniform_spaced(np.arange(5))
@@ -170,7 +233,7 @@ class Test_is_uniform_and_sorted(TestCase):
         assert utils.is_uniform_spaced([0, 0.97, 2], rtol=0.1)
 
 
-class Test_hashable(TestCase):
+class Test_hashable(object):
 
     def test_hashable(self):
         for v in [False, 1, (2, ), (3, 4), 'four']:
@@ -201,3 +264,56 @@ def test_hidden_key_dict():
         hkd[hidden_key]
     with pytest.raises(KeyError):
         del hkd[hidden_key]
+
+
+def test_either_dict_or_kwargs():
+
+    result = either_dict_or_kwargs(dict(a=1), None, 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    result = either_dict_or_kwargs(None, dict(a=1), 'foo')
+    expected = dict(a=1)
+    assert result == expected
+
+    with pytest.raises(ValueError, match=r'foo'):
+        result = either_dict_or_kwargs(dict(a=1), dict(a=1), 'foo')
+
+
+def test_datetime_to_numeric_datetime64():
+    times = pd.date_range('2000', periods=5, freq='7D')
+    da = xr.DataArray(times, coords=[times], dims=['time'])
+    result = utils.datetime_to_numeric(da, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    offset = da.isel(time=1)
+    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    dtype = np.float32
+    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
+    expected = 24 * xr.DataArray(
+        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
+    assert_identical(result, expected)
+
+
+@requires_cftime
+def test_datetime_to_numeric_cftime():
+    times = xr.cftime_range('2000', periods=5, freq='7D')
+    da = xr.DataArray(times, coords=[times], dims=['time'])
+    result = utils.datetime_to_numeric(da, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(0, 35, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    offset = da.isel(time=1)
+    result = utils.datetime_to_numeric(da, offset=offset, datetime_unit='h')
+    expected = 24 * xr.DataArray(np.arange(-7, 28, 7), coords=da.coords)
+    assert_identical(result, expected)
+
+    dtype = np.float32
+    result = utils.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
+    expected = 24 * xr.DataArray(
+        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
+    assert_identical(result, expected)
