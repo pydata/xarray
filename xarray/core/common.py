@@ -715,7 +715,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             else:
                 # if we're upsampling CFTimeIndex, do this:
                 binner = _adjust_binner_for_upsample(binner, closed)
-                grouper = ('upsampling', pd.Index(labels), binner, closed, label)
+                grouper = ('upsampling', pd.Index(labels), binner, closed)
         else:
             grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
 
