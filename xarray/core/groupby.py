@@ -236,19 +236,40 @@ class GroupBy(SupportsArithmetic):
             # from ..coding.cftimeindex import CFTimeIndex
             s = pd.Series(np.arange(index.size), index)
             if isinstance(grouper, tuple):
-                if grouper[0] == 'upsampling':
-                    # if we're upsampling CFTimeIndex, do this:
-                    labels = grouper[1]
-                    binner = grouper[2]
-                    first_items = s.reindex(binner, method='bfill')
-                    first_items.index = labels
-                elif grouper[0] == 'downsampling':
+                if grouper[0] == 'downsampling':
                     # if we're downsampling CFTimeIndex, do this:
                     labels = grouper[1]
                     binner = grouper[2]
                     first_items = s.groupby(binner).first().reindex(labels)
                     # reindex(grouper[1]) adds empty np.nan bins to
                     # emulate pandas behavior
+                elif grouper[0] == 'upsampling':
+                    # if we're upsampling CFTimeIndex, do this:
+                    labels = grouper[1]
+                    binner = grouper[2]
+                    closed = grouper[3]
+                    label = grouper[4]
+                    print(binner)
+                    print(labels)
+                    # first_items = s.reindex(pd.Index(binner), method='ffill')
+                    if closed == 'right':
+                        first_items = s.reindex(pd.Index(binner),
+                                                method='nearest')
+                        first_items.index = labels
+                        # if label == 'right':
+                        #     first_items = s.reindex(pd.Index(binner),
+                        #                             method='nearest')
+                        # else:
+                        #     first_items = s.reindex(pd.Index(binner),
+                        #                             method='bfill')
+                        #     first_items.index = labels
+                    else:
+                        first_items = s.reindex(pd.Index(binner),
+                                                method='bfill')
+                        first_items.index = labels
+                    # print(first_items)
+                    # print(s)
+                    # first_items = s.reindex(labels, method='bfill')
             else:
                 first_items = s.groupby(grouper).first()
             full_index = first_items.index
@@ -258,6 +279,7 @@ class GroupBy(SupportsArithmetic):
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
+            print(group_indices)
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
