@@ -1,12 +1,5 @@
-
-.. image:: _static/dataset-diagram-logo.png
-   :width: 300 px
-   :align: center
-
-|
-
-N-D labeled arrays and datasets in Python
-=========================================
+xarray: N-D labeled arrays and datasets in Python
+=================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
 that aims to bring the labeled data power of pandas_ to the physical sciences,
@@ -18,12 +11,6 @@ pandas excels. Our approach adopts the `Common Data Model`_ for self-
 describing scientific data in widespread use in the Earth sciences:
 ``xarray.Dataset`` is an in-memory representation of a netCDF file.
 
-.. note::
-
-   xray is now xarray! See :ref:`the v0.7.0 release notes<whats-new.0.7.0>`
-   for more details. The preferred URL for these docs is now
-   http://xarray.pydata.org.
-
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
@@ -32,16 +19,46 @@ describing scientific data in widespread use in the Earth sciences:
 Documentation
 -------------
 
+**Getting Started**
+
+* :doc:`why-xarray`
+* :doc:`faq`
+* :doc:`examples`
+* :doc:`installing`
+
 .. toctree::
    :maxdepth: 1
+   :hidden:
+   :caption: Getting Started
 
-   whats-new
    why-xarray
    faq
    examples
    installing
+
+**User Guide**
+
+* :doc:`data-structures`
+* :doc:`indexing`
+* :doc:`interpolation`
+* :doc:`computation`
+* :doc:`groupby`
+* :doc:`reshaping`
+* :doc:`combining`
+* :doc:`time-series`
+* :doc:`pandas`
+* :doc:`io`
+* :doc:`dask`
+* :doc:`plotting`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: User Guide
+
    data-structures
    indexing
+   interpolation
    computation
    groupby
    reshaping
@@ -51,8 +68,27 @@ Documentation
    io
    dask
    plotting
+
+**Help & reference**
+
+* :doc:`whats-new`
+* :doc:`api`
+* :doc:`internals`
+* :doc:`roadmap`
+* :doc:`contributing`
+* :doc:`related-projects`
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Help & reference
+
+   whats-new
    api
    internals
+   roadmap
+   contributing
+   related-projects
 
 See also
 --------
@@ -84,12 +120,20 @@ Get in touch
 .. _mailing list: https://groups.google.com/forum/#!forum/xarray
 .. _on GitHub: http://github.com/pydata/xarray
 
-License
--------
+NumFOCUS
+--------
 
-xarray is available under the open source `Apache License`__.
+.. image:: _static/numfocus_logo.png
+   :scale: 50 %
+   :target: https://numfocus.org/
 
-__ http://www.apache.org/licenses/LICENSE-2.0.html
+Xarray is a fiscally sponsored project of NumFOCUS_, a nonprofit dedicated
+to supporting the open source scientific computing community. If you like
+Xarray and want to support our mission, please consider making a donation_
+to support our efforts.
+
+.. _donation: https://www.flipcause.com/secure/cause_pdetails/NDE2NTU=
+
 
 History
 -------
@@ -97,6 +141,15 @@ History
 xarray is an evolution of an internal tool developed at `The Climate
 Corporation`__. It was originally written by Climate Corp researchers Stephan
 Hoyer, Alex Kleeman and Eugene Brevdo and was released as open source in
-May 2014. The project was renamed from "xray" in January 2016.
+May 2014. The project was renamed from "xray" in January 2016. Xarray became a
+fiscally sponsored project of NumFOCUS_ in August 2018.
 
 __ http://climate.com/
+.. _NumFOCUS: https://numfocus.org
+
+License
+-------
+
+xarray is available under the open source `Apache License`__.
+
+__ http://www.apache.org/licenses/LICENSE-2.0.html

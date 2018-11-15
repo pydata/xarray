@@ -1,20 +1,30 @@
 """Internal utilties; not for external use
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
-from collections import Mapping, MutableMapping, MutableSet, Iterable
+from collections import Iterable, Mapping, MutableMapping, MutableSet
 
 import numpy as np
 import pandas as pd
 
-from .pycompat import (iteritems, OrderedDict, basestring, bytes_type,
-                       dask_array_type)
+from .pycompat import (
+    OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
+
+
+def _check_inplace(inplace, default=False):
+    if inplace is None:
+        inplace = default
+    else:
+        warnings.warn('The inplace argument has been deprecated and will be '
+                      'removed in xarray 0.12.0.', FutureWarning, stacklevel=3)
+
+    return inplace
 
 
 def alias_message(old_name, new_name):
@@ -37,6 +47,18 @@ def alias(obj, old_name):
     return wrapper
 
 
+def _maybe_cast_to_cftimeindex(index):
+    from ..coding.cftimeindex import CFTimeIndex
+
+    if index.dtype == 'O':
+        try:
+            return CFTimeIndex(index)
+        except (ImportError, TypeError):
+            return index
+    else:
+        return index
+
+
 def safe_cast_to_index(array):
     """Given an array, safely cast it to a pandas.Index.
 
@@ -55,19 +77,18 @@ def safe_cast_to_index(array):
         if hasattr(array, 'dtype') and array.dtype.kind == 'O':
             kwargs['dtype'] = object
         index = pd.Index(np.asarray(array), **kwargs)
-    return index
+    return _maybe_cast_to_cftimeindex(index)
 
 
 def multiindex_from_product_levels(levels, names=None):
     """Creating a MultiIndex from a product without refactorizing levels.
 
-    Keeping levels the same is faster, and also gives back the original labels
-    when we unstack.
+    Keeping levels the same gives back the original labels when we unstack.
 
     Parameters
     ----------
-    levels : sequence of arrays
-        Unique labels for each level.
+    levels : sequence of pd.Index
+        Values for each MultiIndex level.
     names : optional sequence of objects
         Names for each level.
 
@@ -75,8 +96,11 @@ def multiindex_from_product_levels(levels, names=None):
     -------
     pandas.MultiIndex
     """
-    labels_mesh = np.meshgrid(*[np.arange(len(lev)) for lev in levels],
-                              indexing='ij')
+    if any(not isinstance(lev, pd.Index) for lev in levels):
+        raise TypeError('levels must be a list of pd.Index objects')
+
+    split_labels, levels = zip(*[lev.factorize() for lev in levels])
+    labels_mesh = np.meshgrid(*split_labels, indexing='ij')
     labels = [x.ravel() for x in labels_mesh]
     return pd.MultiIndex(levels, labels, sortorder=0, names=names)
 
@@ -168,7 +192,7 @@ def is_full_slice(value):
     return isinstance(value, slice) and value == slice(None)
 
 
-def combine_pos_and_kw_args(pos_kwargs, kw_kwargs, func_name):
+def either_dict_or_kwargs(pos_kwargs, kw_kwargs, func_name):
     if pos_kwargs is not None:
         if not is_dict_like(pos_kwargs):
             raise ValueError('the first argument to .%s must be a dictionary'
@@ -487,6 +511,11 @@ def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
 
 
+def is_grib_path(path):
+    _, ext = os.path.splitext(path)
+    return ext in ['.grib', '.grb', '.grib2', '.grb2']
+
+
 def is_uniform_spaced(arr, **kwargs):
     """Return True if values of an array are uniformly spaced and sorted.
 
@@ -574,3 +603,29 @@ class HiddenKeyDict(MutableMapping):
     def __len__(self):
         num_hidden = sum([k in self._hidden_keys for k in self._data])
         return len(self._data) - num_hidden
+
+
+def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+    """Convert an array containing datetime-like data to an array of floats.
+
+    Parameters
+    ----------
+    da : array
+        Input data
+    offset: Scalar with the same type of array or None
+        If None, subtract minimum values to reduce round off error
+    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        'us', 'ns', 'ps', 'fs', 'as'}
+    dtype: target dtype
+
+    Returns
+    -------
+    array
+    """
+    if offset is None:
+        offset = array.min()
+    array = array - offset
+
+    if datetime_unit:
+        return (array / np.timedelta64(1, datetime_unit)).astype(dtype)
+    return array.astype(dtype)

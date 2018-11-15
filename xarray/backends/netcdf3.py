@@ -1,13 +1,11 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import unicodedata
 
 import numpy as np
 
-from .. import conventions, Variable
-from ..core.pycompat import basestring, unicode_type, OrderedDict
-
+from .. import Variable, coding
+from ..core.pycompat import OrderedDict, basestring, unicode_type
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
@@ -67,7 +65,9 @@ def encode_nc3_attrs(attrs):
 
 
 def encode_nc3_variable(var):
-    var = conventions.maybe_encode_as_char_array(var)
+    for coder in [coding.strings.EncodedStringCoder(allows_unicode=False),
+                  coding.strings.CharacterArrayCoder()]:
+        var = coder.encode(var)
     data = coerce_nc3_dtype(var.data)
     attrs = encode_nc3_attrs(var.attrs)
     return Variable(var.dims, data, attrs, var.encoding)

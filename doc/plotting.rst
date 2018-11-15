@@ -60,11 +60,18 @@ For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xr.tutorial.load_dataset('air_temperature')
+    airtemps = xr.tutorial.open_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
     air = airtemps.air - 273.15
+
+    # copy attributes to get nice figure labels and change Kelvin to Celsius
+    air.attrs = airtemps.air.attrs
+    air.attrs['units'] = 'deg C'
+
+.. note::
+   Until :issue:`1614` is solved, you might need to copy over the metadata in ``attrs`` to get informative figure labels (as was done above).
 
 
 One Dimension
@@ -73,7 +80,7 @@ One Dimension
 Simple Example
 ~~~~~~~~~~~~~~
 
-xarray uses the coordinate name to label the x axis.
+The simplest way to make a plot is to call the :py:func:`xarray.DataArray.plot()` method.
 
 .. ipython:: python
 
@@ -81,6 +88,12 @@ xarray uses the coordinate name to label the x axis.
 
     @savefig plotting_1d_simple.png width=4in
     air1d.plot()
+
+xarray uses the coordinate name along with  metadata ``attrs.long_name``, ``attrs.standard_name``, ``DataArray.name`` and ``attrs.units`` (if available) to label the axes. The names ``long_name``, ``standard_name`` and ``units`` are copied from the `CF-conventions spec <http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/ch03s03.html>`_. When choosing names, the order of precedence is ``long_name``, ``standard_name`` and finally ``DataArray.name``. The y-axis label in the above plot was constructed from the ``long_name`` and ``units`` attributes of ``air1d``.
+
+.. ipython:: python
+
+    air1d.attrs
 
 Additional Arguments
 ~~~~~~~~~~~~~~~~~~~~~
@@ -195,7 +208,64 @@ It is required to explicitly specify either
 2. ``hue``: the dimension you want to represent by multiple lines.
 
 Thus, we could have made the previous plot by specifying ``hue='lat'`` instead of ``x='time'``.
-If required, the automatic legend can be turned off using ``add_legend=False``.
+If required, the automatic legend can be turned off using ``add_legend=False``. Alternatively,
+``hue`` can be passed directly to :py:func:`xarray.plot` as `air.isel(lon=10, lat=[19,21,22]).plot(hue='lat')`.
+
+
+Dimension along y-axis
+~~~~~~~~~~~~~~~~~~~~~~
+
+It is also possible to make line plots such that the data are on the x-axis and a dimension is on the y-axis. This can be done by specifying the appropriate ``y`` keyword argument.
+
+.. ipython:: python
+
+    @savefig plotting_example_xy_kwarg.png
+    air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
+
+Step plots
+~~~~~~~~~~
+
+As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
+made using 1D data. 
+
+.. ipython:: python
+
+    @savefig plotting_example_step.png width=4in
+    air1d[:20].plot.step(where='mid')
+
+The argument ``where`` defines where the steps should be placed, options are
+``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
+when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
+
+.. ipython:: python
+
+    air_grp = air.mean(['time','lon']).groupby_bins('lat',[0,23.5,66.5,90])
+    air_mean = air_grp.mean()
+    air_std = air_grp.std()
+    air_mean.plot.step()
+    (air_mean + air_std).plot.step(ls=':')
+    (air_mean - air_std).plot.step(ls=':')
+    plt.ylim(-20,30)
+    @savefig plotting_example_step_groupby.png width=4in
+    plt.title('Zonal mean temperature')
+    
+In this case, the actual boundaries of the bins are used and the ``where`` argument
+is ignored.
+
+
+Other axes kwargs
+-----------------
+
+
+The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
+
+.. ipython:: python
+
+    @savefig plotting_example_xincrease_yincrease_kwarg.png
+    air.isel(time=10, lon=[10, 11]).plot.line(y='lat', hue='lon', xincrease=False, yincrease=False)
+
+In addition, one can use ``xscale, yscale`` to set axes scaling; ``xticks, yticks`` to set axes ticks and ``xlim, ylim`` to set axes limits. These accept the same values as the matplotlib methods ``Axes.set_(x,y)scale()``, ``Axes.set_(x,y)ticks()``, ``Axes.set_(x,y)lim()`` respectively.
+
 
 Two Dimensions
 --------------
@@ -416,8 +486,15 @@ arguments to the xarray plotting methods/functions. This returns a
 
 .. ipython:: python
 
-    @savefig plot_facet_dataarray.png height=12in
+    @savefig plot_facet_dataarray.png
     g_simple = t.plot(x='lon', y='lat', col='time', col_wrap=3)
+
+Faceting also works for line plots.
+
+.. ipython:: python
+
+    @savefig plot_facet_dataarray_line.png
+    g_simple_line = t.isel(lat=slice(0,None,4)).plot(x='lon', hue='lat', col='time', col_wrap=3)
 
 4 dimensional
 ~~~~~~~~~~~~~
@@ -434,7 +511,7 @@ one were much hotter.
     # This is a 4d array
     t4d.coords
 
-    @savefig plot_facet_4d.png height=12in
+    @savefig plot_facet_4d.png
     t4d.plot(x='lon', y='lat', col='time', row='fourth_dim')
 
 Other features
@@ -448,9 +525,10 @@ Faceted plotting supports other arguments common to xarray 2d plots.
     hasoutliers[0, 0, 0] = -100
     hasoutliers[-1, -1, -1] = 400
 
-    @savefig plot_facet_robust.png height=12in
+    @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
-                                    robust=True, cmap='viridis')
+                                    robust=True, cmap='viridis',
+				     cbar_kwargs={'label': 'this has outliers'})
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -489,7 +567,7 @@ they have been plotted.
     bottomright = g.axes[-1, -1]
     bottomright.annotate('bottom right', (240, 40))
 
-    @savefig plot_facet_iterator.png height=12in
+    @savefig plot_facet_iterator.png
     plt.show()
 
 TODO: add an example of using the ``map`` method to plot dataset variables
@@ -507,7 +585,7 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.load_dataset('air_temperature').air
+    air = xr.tutorial.open_dataset('air_temperature').air
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
     air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
     @savefig plotting_maps_cartopy.png width=100%
@@ -657,3 +735,12 @@ You can however decide to infer the cell boundaries and use the
     outside the xarray framework.
 
 .. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. ipython:: python
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    @savefig plotting_example_2d_hue_xy.png
+    da.plot.line(x='lon', hue='x', ax=ax[1]);

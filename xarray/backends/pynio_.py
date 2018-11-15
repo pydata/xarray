@@ -1,16 +1,20 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import functools
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
 from .. import Variable
-from ..core.utils import (FrozenOrderedDict, Frozen)
 from ..core import indexing
+from ..core.utils import Frozen, FrozenOrderedDict
+from .common import AbstractDataStore, BackendArray
+from .file_manager import CachingFileManager
+from .locks import (
+    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, SerializableLock)
 
-from .common import AbstractDataStore, DataStorePickleMixin, BackendArray
+
+# PyNIO can invoke netCDF libraries internally
+# Add a dedicated lock just in case NCL as well isn't thread-safe.
+NCL_LOCK = SerializableLock()
+PYNIO_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK, NCL_LOCK])
 
 
 class NioArrayWrapper(BackendArray):
@@ -23,52 +27,52 @@ class NioArrayWrapper(BackendArray):
         self.dtype = np.dtype(array.typecode())
 
     def get_array(self):
-        self.datastore.assert_open()
         return self.datastore.ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        key = indexing.unwrap_explicit_indexer(
-            key, target=self, allow=indexing.BasicIndexer)
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
-        with self.datastore.ensure_open(autoclose=True):
-            array = self.get_array()
+    def _getitem(self, key):
+        array = self.get_array()
+        with self.datastore.lock:
             if key == () and self.ndim == 0:
                 return array.get_value()
             return array[key]
 
 
-class NioDataStore(AbstractDataStore, DataStorePickleMixin):
+class NioDataStore(AbstractDataStore):
     """Store for accessing datasets via PyNIO
     """
 
-    def __init__(self, filename, mode='r', autoclose=False):
+    def __init__(self, filename, mode='r', lock=None):
         import Nio
-        opener = functools.partial(Nio.open_file, filename, mode=mode)
-        self.ds = opener()
+        if lock is None:
+            lock = PYNIO_LOCK
+        self.lock = ensure_lock(lock)
+        self._manager = CachingFileManager(
+            Nio.open_file, filename, lock=lock, mode=mode)
         # xarray provides its own support for FillValue,
         # so turn off PyNIO's support for the same.
         self.ds.set_option('MaskedArrayMode', 'MaskedNever')
-        self._autoclose = autoclose
-        self._isopen = True
-        self._opener = opener
-        self._mode = mode
+
+    @property
+    def ds(self):
+        return self._manager.acquire()
 
     def open_store_variable(self, name, var):
-        data = indexing.LazilyIndexedArray(NioArrayWrapper(name, self))
+        data = indexing.LazilyOuterIndexedArray(NioArrayWrapper(name, self))
         return Variable(var.dimensions, data, var.attributes)
 
     def get_variables(self):
-        with self.ensure_open(autoclose=False):
-            return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                     for k, v in self.ds.variables.items())
+        return FrozenOrderedDict((k, self.open_store_variable(k, v))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.attributes)
+        return Frozen(self.ds.attributes)
 
     def get_dimensions(self):
-        with self.ensure_open(autoclose=True):
-            return Frozen(self.ds.dimensions)
+        return Frozen(self.ds.dimensions)
 
     def get_encoding(self):
         encoding = {}
@@ -77,6 +81,4 @@ class NioDataStore(AbstractDataStore, DataStorePickleMixin):
         return encoding
 
     def close(self):
-        if self._isopen:
-            self.ds.close()
-            self._isopen = False
+        self._manager.close()

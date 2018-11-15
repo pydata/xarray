@@ -1,34 +1,23 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
+from __future__ import absolute_import, division, print_function
+
 import logging
 import time
 import traceback
-import contextlib
-from collections import Mapping, OrderedDict
 import warnings
+from collections import Mapping, OrderedDict
+
+import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
+from ..core.pycompat import dask_array_type, iteritems
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
-from ..core.pycompat import iteritems, dask_array_type
-
-try:
-    from dask.utils import SerializableLock as Lock
-except ImportError:
-    from threading import Lock
-
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
 logger = logging.getLogger(__name__)
 
 
 NONE_VAR_NAME = '__values__'
-
-
-# dask.utils.SerializableLock if available, otherwise just a threading.Lock
-GLOBAL_LOCK = Lock()
 
 
 def _encode_variable_name(name):
@@ -85,7 +74,6 @@ class BackendArray(NdimSizeLenMixin, indexing.ExplicitlyIndexed):
 
 
 class AbstractDataStore(Mapping):
-    _autoclose = False
 
     def __iter__(self):
         return iter(self.variables)
@@ -114,7 +102,7 @@ class AbstractDataStore(Mapping):
         A centralized loading function makes it easier to create
         data stores that do automatic encoding/decoding.
 
-        For example:
+        For example::
 
             class SuffixAppendingDataStore(AbstractDataStore):
 
@@ -168,7 +156,7 @@ class AbstractDataStore(Mapping):
 
 
 class ArrayWriter(object):
-    def __init__(self, lock=GLOBAL_LOCK):
+    def __init__(self, lock=None):
         self.sources = []
         self.targets = []
         self.lock = lock
@@ -178,25 +166,23 @@ class ArrayWriter(object):
             self.sources.append(source)
             self.targets.append(target)
         else:
-            try:
-                target[...] = source
-            except TypeError:
-                # workaround for GH: scipy/scipy#6880
-                target[:] = source
+            target[...] = source
 
-    def sync(self):
+    def sync(self, compute=True):
         if self.sources:
             import dask.array as da
-            da.store(self.sources, self.targets, lock=self.lock)
+            # TODO: consider wrapping targets with dask.delayed, if this makes
+            # for any discernable difference in perforance, e.g.,
+            # targets = [dask.delayed(t) for t in self.targets]
+            delayed_store = da.store(self.sources, self.targets,
+                                     lock=self.lock, compute=compute,
+                                     flush=True)
             self.sources = []
             self.targets = []
+            return delayed_store
 
 
 class AbstractWritableDataStore(AbstractDataStore):
-    def __init__(self, writer=None):
-        if writer is None:
-            writer = ArrayWriter()
-        self.writer = writer
 
     def encode(self, variables, attributes):
         """
@@ -238,9 +224,6 @@ class AbstractWritableDataStore(AbstractDataStore):
     def set_variable(self, k, v):  # pragma: no cover
         raise NotImplementedError
 
-    def sync(self):
-        self.writer.sync()
-
     def store_dataset(self, dataset):
         """
         in stores, variables are all variables AND coordinates
@@ -251,7 +234,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         self.store(dataset, dataset.attrs)
 
     def store(self, variables, attributes, check_encoding_set=frozenset(),
-              unlimited_dims=None):
+              writer=None, unlimited_dims=None):
         """
         Top level method for putting data on this store, this method:
           - encodes variables/attributes
@@ -267,16 +250,19 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
         """
+        if writer is None:
+            writer = ArrayWriter()
 
         variables, attributes = self.encode(variables, attributes)
 
         self.set_attributes(attributes)
         self.set_dimensions(variables, unlimited_dims=unlimited_dims)
-        self.set_variables(variables, check_encoding_set,
+        self.set_variables(variables, check_encoding_set, writer,
                            unlimited_dims=unlimited_dims)
 
     def set_attributes(self, attributes):
@@ -292,7 +278,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         for k, v in iteritems(attributes):
             self.set_attribute(k, v)
 
-    def set_variables(self, variables, check_encoding_set,
+    def set_variables(self, variables, check_encoding_set, writer,
                       unlimited_dims=None):
         """
         This provides a centralized method to set the variables on the data
@@ -305,6 +291,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         check_encoding_set : list-like
             List of variables that should be checked for invalid encoding
             values
+        writer : ArrayWriter
         unlimited_dims : list-like
             List of dimension names that should be treated as unlimited
             dimensions.
@@ -316,7 +303,7 @@ class AbstractWritableDataStore(AbstractDataStore):
             target, source = self.prepare_variable(
                 name, v, check, unlimited_dims=unlimited_dims)
 
-            self.writer.add(source, target)
+            writer.add(source, target)
 
     def set_dimensions(self, variables, unlimited_dims=None):
         """
@@ -363,46 +350,3 @@ class WritableCFDataStore(AbstractWritableDataStore):
         attributes = OrderedDict([(k, self.encode_attribute(v))
                                   for k, v in attributes.items()])
         return variables, attributes
-
-
-class DataStorePickleMixin(object):
-    """Subclasses must define `ds`, `_opener` and `_mode` attributes.
-
-    Do not subclass this class: it is not part of xarray's external API.
-    """
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['ds']
-        if self._mode == 'w':
-            # file has already been created, don't override when restoring
-            state['_mode'] = 'a'
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.ds = self._opener(mode=self._mode)
-
-    @contextlib.contextmanager
-    def ensure_open(self, autoclose):
-        """
-        Helper function to make sure datasets are closed and opened
-        at appropriate times to avoid too many open file errors.
-
-        Use requires `autoclose=True` argument to `open_mfdataset`.
-        """
-        if self._autoclose and not self._isopen:
-            try:
-                self.ds = self._opener()
-                self._isopen = True
-                yield
-            finally:
-                if autoclose:
-                    self.close()
-        else:
-            yield
-
-    def assert_open(self):
-        if not self._isopen:
-            raise AssertionError('internal failure: file must be open '
-                                 'if `autoclose=True` is used.')

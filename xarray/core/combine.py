@@ -1,6 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
+
 import warnings
 
 import pandas as pd
@@ -8,9 +7,9 @@ import pandas as pd
 from . import utils
 from .alignment import align
 from .merge import merge
-from .pycompat import iteritems, OrderedDict, basestring
-from .variable import Variable, as_variable, IndexVariable, \
-    concat as concat_vars
+from .pycompat import OrderedDict, basestring, iteritems
+from .variable import IndexVariable, Variable, as_variable
+from .variable import concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -126,16 +125,17 @@ def _calc_concat_dim_coord(dim):
     Infer the dimension name and 1d coordinate variable (if appropriate)
     for concatenating along the new dimension.
     """
+    from .dataarray import DataArray
+
     if isinstance(dim, basestring):
         coord = None
-    elif not hasattr(dim, 'dims'):
-        # dim is not a DataArray or IndexVariable
+    elif not isinstance(dim, (DataArray, Variable)):
         dim_name = getattr(dim, 'name', None)
         if dim_name is None:
             dim_name = 'concat_dim'
         coord = IndexVariable(dim_name, dim)
         dim = dim_name
-    elif not hasattr(dim, 'name'):
+    elif not isinstance(dim, DataArray):
         coord = as_variable(dim).to_index_variable()
         dim, = coord.dims
     else:
@@ -341,7 +341,8 @@ def _dataarray_concat(arrays, dim, data_vars, coords, compat,
 
 
 def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
-    if len(datasets) == 1:
+    if len(datasets) == 1 and dim is None:
+        # There is nothing more to combine, so kick out early.
         return datasets[0]
     else:
         if dim is None:

@@ -24,6 +24,7 @@ Top-level functions
    full_like
    zeros_like
    ones_like
+   dot
 
 Dataset
 =======
@@ -51,6 +52,8 @@ Attributes
    Dataset.encoding
    Dataset.indexes
    Dataset.get_index
+   Dataset.chunks
+   Dataset.nbytes
 
 Dictionary interface
 --------------------
@@ -107,11 +110,31 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.squeeze
+   Dataset.interp
+   Dataset.interp_like
    Dataset.reindex
    Dataset.reindex_like
    Dataset.set_index
    Dataset.reset_index
    Dataset.reorder_levels
+
+Missing value handling
+----------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   Dataset.isnull
+   Dataset.notnull
+   Dataset.combine_first
+   Dataset.count
+   Dataset.dropna
+   Dataset.fillna
+   Dataset.ffill
+   Dataset.bfill
+   Dataset.interpolate_na
+   Dataset.where
+   Dataset.isin
 
 Computation
 -----------
@@ -127,6 +150,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -142,18 +166,8 @@ Computation
 :py:attr:`~Dataset.std`
 :py:attr:`~Dataset.var`
 
-**Missing values**:
-:py:attr:`~Dataset.isnull`
-:py:attr:`~Dataset.notnull`
-:py:attr:`~Dataset.count`
-:py:attr:`~Dataset.dropna`
-:py:attr:`~Dataset.fillna`
-:py:attr:`~Dataset.ffill`
-:py:attr:`~Dataset.bfill`
-:py:attr:`~Dataset.interpolate_na`
-:py:attr:`~Dataset.where`
-
 **ndarray methods**:
+:py:attr:`~Dataset.astype`
 :py:attr:`~Dataset.argsort`
 :py:attr:`~Dataset.clip`
 :py:attr:`~Dataset.conj`
@@ -216,6 +230,8 @@ Attributes
 :py:attr:`~DataArray.shape`
 :py:attr:`~DataArray.size`
 :py:attr:`~DataArray.dtype`
+:py:attr:`~DataArray.nbytes`
+:py:attr:`~DataArray.chunks`
 
 DataArray contents
 ------------------
@@ -250,11 +266,31 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.squeeze
+   DataArray.interp
+   DataArray.interp_like
    DataArray.reindex
    DataArray.reindex_like
    DataArray.set_index
    DataArray.reset_index
    DataArray.reorder_levels
+
+Missing value handling
+----------------------
+
+.. autosummary::
+  :toctree: generated/
+
+  DataArray.isnull
+  DataArray.notnull
+  DataArray.combine_first
+  DataArray.count
+  DataArray.dropna
+  DataArray.fillna
+  DataArray.ffill
+  DataArray.bfill
+  DataArray.interpolate_na
+  DataArray.where
+  DataArray.isin
 
 Comparisons
 -----------
@@ -276,11 +312,13 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.dt
    DataArray.resample
    DataArray.get_axis_num
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -295,17 +333,6 @@ Computation
 :py:attr:`~DataArray.sum`
 :py:attr:`~DataArray.std`
 :py:attr:`~DataArray.var`
-
-**Missing values**:
-:py:attr:`~DataArray.isnull`
-:py:attr:`~DataArray.notnull`
-:py:attr:`~DataArray.count`
-:py:attr:`~DataArray.dropna`
-:py:attr:`~DataArray.fillna`
-:py:attr:`~DataArray.ffill`
-:py:attr:`~DataArray.bfill`
-:py:attr:`~DataArray.interpolate_na`
-:py:attr:`~DataArray.where`
 
 **ndarray methods**:
 :py:attr:`~DataArray.argsort`
@@ -346,6 +373,13 @@ Reshaping and reorganizing
 
 Universal functions
 ===================
+
+.. warning::
+
+   With recent versions of numpy, dask and xarray, NumPy ufuncs are now
+   supported directly on all xarray and dask objects. This obliviates the need
+   for the ``xarray.ufuncs`` module, which should not be used for new code
+   unless compatibility with versions of NumPy prior to v1.13 is required.
 
 This functions are copied from NumPy, but extended to work on NumPy arrays,
 dask arrays and all xarray objects. You can find them in the ``xarray.ufuncs``
@@ -462,10 +496,73 @@ DataArray methods
    DataArray.from_series
    DataArray.from_cdms2
    DataArray.from_dict
+   DataArray.close
    DataArray.compute
    DataArray.persist
    DataArray.load
    DataArray.chunk
+
+GroupBy objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.groupby.DataArrayGroupBy
+   core.groupby.DataArrayGroupBy.apply
+   core.groupby.DataArrayGroupBy.reduce
+   core.groupby.DatasetGroupBy
+   core.groupby.DatasetGroupBy.apply
+   core.groupby.DatasetGroupBy.reduce
+
+Rolling objects
+===============
+
+.. autosummary::
+   :toctree: generated/
+
+   core.rolling.DataArrayRolling
+   core.rolling.DataArrayRolling.construct
+   core.rolling.DataArrayRolling.reduce
+   core.rolling.DatasetRolling
+   core.rolling.DatasetRolling.construct
+   core.rolling.DatasetRolling.reduce
+
+Resample objects
+================
+
+Resample objects also implement the GroupBy interface
+(methods like ``apply()``, ``reduce()``, ``mean()``, ``sum()``, etc.).
+
+.. autosummary::
+   :toctree: generated/
+
+   core.resample.DataArrayResample
+   core.resample.DataArrayResample.asfreq
+   core.resample.DataArrayResample.backfill
+   core.resample.DataArrayResample.interpolate
+   core.resample.DataArrayResample.nearest
+   core.resample.DataArrayResample.pad
+   core.resample.DatasetResample
+   core.resample.DatasetResample.asfreq
+   core.resample.DatasetResample.backfill
+   core.resample.DatasetResample.interpolate
+   core.resample.DatasetResample.nearest
+   core.resample.DatasetResample.pad
+
+Custom Indexes
+==============
+.. autosummary::
+   :toctree: generated/
+
+   CFTimeIndex
+
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
 
 Plotting
 ========
@@ -473,6 +570,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   DataArray.plot
    plot.plot
    plot.contourf
    plot.contour
@@ -507,6 +605,8 @@ Advanced API
 .. autosummary::
    :toctree: generated/
 
+   Dataset.variables
+   DataArray.variable
    Variable
    IndexVariable
    as_variable
@@ -524,3 +624,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager
