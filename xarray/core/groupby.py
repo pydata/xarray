@@ -247,8 +247,6 @@ class GroupBy(SupportsArithmetic):
                     labels = grouper[1]
                     binner = grouper[2]
                     closed = grouper[3]
-                    print(binner)
-                    print(labels)
                     if closed == 'right':
                         first_items = s.reindex(pd.Index(binner),
                                                 method='nearest')
@@ -266,7 +264,6 @@ class GroupBy(SupportsArithmetic):
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
-            print(group_indices)
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize
