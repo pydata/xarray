@@ -10,31 +10,13 @@ import xarray as xr
 from xarray.tests import assert_array_equal, assert_identical
 
 
-# @pytest.mark.parametrize(('start', 'stop'), [(1, 2), (1, 3)])
-# def test_nprange(start, stop):
-#     assert np.all(np.arange(start, stop) == np.arange(start, stop))
-
-
-# @pytest.fixture()
-# def nprange():
-#     return np.arange(1, 10)
-
-
-# def test_nprange2(nprange):
-#     # print(nprange)
-#     assert np.all(nprange == nprange)
-
-
-# @pytest.fixture(params=['MS', 'M'])
 @pytest.fixture()
 def pd_index():
     return pd.date_range('2000-01-01', periods=30, freq='MS', tz='UTC')
 
 
-# @pytest.fixture(params=['MS', 'M'])
 @pytest.fixture()
 def xr_index():
-    # return xr.cftime_range('2000', periods=30, freq='MS')
     return xr.cftime_range('2000-01-01', periods=30, freq='MS', tz='UTC')
 
 
@@ -58,17 +40,6 @@ def base_xr_index():
     return xr.cftime_range('2000-01-01', periods=30, freq='D', tz='UTC')
 
 
-# @pytest.fixture()
-# def da(xr_index):
-#     return xr.DataArray(np.arange(100., 100.+xr_index.size),
-#                         coords=[xr_index], dims=['time'])
-#
-#
-# @pytest.fixture()
-# def series(pd_index):
-#     return pd.Series(np.arange(100., 100.+pd_index.size), index=pd_index)
-
-
 def da(index):
     return xr.DataArray(np.arange(100., 100.+index.size),
                         coords=[index], dims=['time'])
@@ -76,30 +47,6 @@ def da(index):
 
 def series(index):
     return pd.Series(np.arange(100., 100.+index.size), index=index)
-
-
-# @pytest.fixture(params=list(itertools.product(['left', 'right'],
-#                                               ['left', 'right'],
-#                                               ['2MS', '2M', '3MS',
-#                                                '3M', '7MS', '7M'])))
-# @pytest.fixture(params=list(itertools.product(['left', 'right'],
-#                                               ['left', 'right'],
-#                                               ['T', '3T', '7T'])))
-# def da_resampler(request, da):
-#     closed = request.param[0]
-#     label = request.param[1]
-#     freq = request.param[2]
-#     return da.resample(time=freq, closed=closed, label=label).mean()
-
-
-# @pytest.fixture(params=list(itertools.product(['left', 'right'],
-#                                               ['left', 'right'],
-#                                               ['MS', '3MS', '7MS'])))
-# def series_resampler(request, series):
-#     closed = request.param[0]
-#     label = request.param[1]
-#     freq = request.param[2]
-#     return series.resample(freq, closed=closed, label=label).mean()
 
 
 @ pytest.mark.parametrize(('closed', 'label', 'freq'),

@@ -233,7 +233,6 @@ class GroupBy(SupportsArithmetic):
             if not index.is_monotonic:
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
-            # from ..coding.cftimeindex import CFTimeIndex
             s = pd.Series(np.arange(index.size), index)
             if isinstance(grouper, tuple):
                 if grouper[0] == 'downsampling':
@@ -248,28 +247,16 @@ class GroupBy(SupportsArithmetic):
                     labels = grouper[1]
                     binner = grouper[2]
                     closed = grouper[3]
-                    label = grouper[4]
                     print(binner)
                     print(labels)
-                    # first_items = s.reindex(pd.Index(binner), method='ffill')
                     if closed == 'right':
                         first_items = s.reindex(pd.Index(binner),
                                                 method='nearest')
                         first_items.index = labels
-                        # if label == 'right':
-                        #     first_items = s.reindex(pd.Index(binner),
-                        #                             method='nearest')
-                        # else:
-                        #     first_items = s.reindex(pd.Index(binner),
-                        #                             method='bfill')
-                        #     first_items.index = labels
                     else:
                         first_items = s.reindex(pd.Index(binner),
                                                 method='bfill')
                         first_items.index = labels
-                    # print(first_items)
-                    # print(s)
-                    # first_items = s.reindex(labels, method='bfill')
             else:
                 first_items = s.groupby(grouper).first()
             full_index = first_items.index
