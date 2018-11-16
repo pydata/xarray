@@ -1366,7 +1366,7 @@ class DataArray(AbstractArray, DataWithCoords):
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
         transpose_coords : boolean, default False
-            If True, also tranpose the coordinates of this DataArray.
+            If True, also transpose the coordinates of this DataArray.
 
         Returns
         -------
