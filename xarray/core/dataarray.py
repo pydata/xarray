@@ -1357,7 +1357,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims):
+    def transpose(self, *dims, transpose_coords=False):
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1365,6 +1365,8 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
+        transpose_coords : boolean, default False
+            If True, also tranpose the coordinates of this DataArray.
 
         Returns
         -------
@@ -1382,6 +1384,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         variable = self.variable.transpose(*dims)
+        if transpose_coords:
+            for c in self.coords:
+                self[c] = self[c].variable.transpose(*dims)
         return self._replace(variable)
 
     def drop(self, labels, dim=None):
