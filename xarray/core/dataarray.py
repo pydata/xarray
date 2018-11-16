@@ -1357,7 +1357,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().unstack(dim)
         return self._from_temp_dataset(ds)
 
-    def transpose(self, *dims, transpose_coords=False):
+    def transpose(self, *dims, **kwargs):
         """Return a new DataArray object with transposed dimensions.
 
         Parameters
@@ -1384,10 +1384,12 @@ class DataArray(AbstractArray, DataWithCoords):
         Dataset.transpose
         """
         variable = self.variable.transpose(*dims)
-        if transpose_coords:
-            for c in self.coords:
-                self[c] = self[c].variable.transpose(*dims)
-        return self._replace(variable)
+        if kwargs.pop('transpose_coords', False):
+            coords = {
+                c: self[c].variable.transpose(*dims) for c in self.coords}
+            return self._replace(variable, coords)
+        else:
+            return self._replace(variable)
 
     def drop(self, labels, dim=None):
         """Drop coordinates or index labels from this DataArray.

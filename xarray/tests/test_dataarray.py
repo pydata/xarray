@@ -1713,7 +1713,7 @@ class TestDataArray(object):
                        coords={'x': range(3), 'y': range(4),
                                'xy': (('x', 'y'), np.random.randn(3, 4))})
 
-        actual = da.transpose()
+        actual = da.transpose('y', 'x')
         expected = DataArray(da.values.T, dims=('y', 'x'), coords=da.coords)
         assert_equal(expected, actual)
 
