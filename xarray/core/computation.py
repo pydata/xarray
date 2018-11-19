@@ -2,18 +2,19 @@
 Functions for applying functions that act on arrays to xarray's labeled data.
 """
 from __future__ import absolute_import, division, print_function
-from distutils.version import LooseVersion
+
 import functools
 import itertools
 import operator
 from collections import Counter
+from distutils.version import LooseVersion
 
 import numpy as np
 
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, dask_array_type, basestring
+from .pycompat import OrderedDict, basestring, dask_array_type
 from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()
@@ -919,6 +920,11 @@ def apply_ufunc(func, *args, **kwargs):
 
     if input_core_dims is None:
         input_core_dims = ((),) * (len(args))
+    elif len(input_core_dims) != len(args):
+        raise ValueError(
+            'input_core_dims must be None or a tuple with the length same to '
+            'the number of arguments. Given input_core_dims: {}, '
+            'number of args: {}.'.format(input_core_dims, len(args)))
 
     signature = _UFuncSignature(input_core_dims, output_core_dims)
 

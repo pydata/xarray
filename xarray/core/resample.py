@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from . import ops
-from .groupby import DataArrayGroupBy, DatasetGroupBy
+from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
 from .pycompat import OrderedDict, dask_array_type
 
 RESAMPLE_DIM = '__resample_dim__'
@@ -273,12 +273,9 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return combined.rename({self._resample_dim: self._dim})
 
-    def reduce(self, func, dim=None, keep_attrs=False, **kwargs):
+    def reduce(self, func, dim=None, keep_attrs=None, **kwargs):
         """Reduce the items in this group by applying `func` along the
         pre-defined resampling dimension.
-
-        Note that `dim` is by default here and ignored if passed by the user;
-        this ensures compatibility with the existing reduce interface.
 
         Parameters
         ----------
@@ -286,6 +283,8 @@ class DatasetResample(DatasetGroupBy, Resample):
             Function which can be called in the form
             `func(x, axis=axis, **kwargs)` to return the result of collapsing
             an np.ndarray over an integer valued axis.
+        dim : str or sequence of str, optional
+            Dimension(s) over which to apply `func`.
         keep_attrs : bool, optional
             If True, the datasets's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -299,8 +298,11 @@ class DatasetResample(DatasetGroupBy, Resample):
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim == DEFAULT_DIMS:
+            dim = None
+
         return super(DatasetResample, self).reduce(
-            func, self._dim, keep_attrs, **kwargs)
+            func, dim, keep_attrs, **kwargs)
 
     def _interpolate(self, kind='linear'):
         """Apply scipy.interpolate.interp1d along resampling dimension."""

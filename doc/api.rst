@@ -150,6 +150,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -317,6 +318,7 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -555,6 +557,13 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+
 Plotting
 ========
 
@@ -615,3 +624,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager

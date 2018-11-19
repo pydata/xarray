@@ -15,7 +15,7 @@ from xarray.core.computation import (
     join_dict_keys, ordered_set_intersection, ordered_set_union, result_name,
     unified_dim_sizes)
 
-from . import raises_regex, requires_dask, has_dask
+from . import has_dask, raises_regex, requires_dask
 
 
 def assert_identical(a, b):
@@ -273,6 +273,22 @@ def test_apply_input_core_dimension():
                      first_element(data_array.groupby('y'), 'x'))
     assert_identical(expected_dataset_x,
                      first_element(dataset.groupby('y'), 'x'))
+
+    def multiply(*args):
+        val = args[0]
+        for arg in args[1:]:
+            val = val * arg
+        return val
+
+    # regression test for GH:2341
+    with pytest.raises(ValueError):
+        apply_ufunc(multiply, data_array, data_array['y'].values,
+                    input_core_dims=[['y']], output_core_dims=[['y']])
+    expected = xr.DataArray(multiply(data_array, data_array['y']),
+                            dims=['x', 'y'], coords=data_array.coords)
+    actual = apply_ufunc(multiply, data_array, data_array['y'].values,
+                         input_core_dims=[['y'], []], output_core_dims=[['y']])
+    assert_identical(expected, actual)
 
 
 def test_apply_output_core_dimension():

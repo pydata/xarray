@@ -3,17 +3,16 @@ from __future__ import division
 from __future__ import print_function
 import warnings
 from contextlib import contextmanager
-from distutils.version import LooseVersion
+from distutils import version
 import re
 import importlib
 
 import numpy as np
 from numpy.testing import assert_array_equal  # noqa: F401
-from xarray.core.duck_array_ops import allclose_or_equiv
+from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
 import pytest
 
 from xarray.core import utils
-from xarray.core.pycompat import PY3
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
                             assert_allclose)
@@ -25,10 +24,6 @@ except ImportError:
     # old location, for pandas < 0.20
     from pandas.util.testing import assert_frame_equal  # noqa: F401
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
 
 try:
     from unittest import mock
@@ -58,6 +53,13 @@ def _importorskip(modname, minversion=None):
     return has, func
 
 
+def LooseVersion(vstring):
+    # Our development version is something like '0.10.9+aac7bfc'
+    # This function just ignored the git commit id.
+    vstring = vstring.split('+')[0]
+    return version.LooseVersion(vstring)
+
+
 has_matplotlib, requires_matplotlib = _importorskip('matplotlib')
 has_matplotlib2, requires_matplotlib2 = _importorskip('matplotlib',
                                                       minversion='2')
@@ -74,6 +76,8 @@ has_rasterio, requires_rasterio = _importorskip('rasterio')
 has_pathlib, requires_pathlib = _importorskip('pathlib')
 has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
+has_iris, requires_iris = _importorskip('iris')
+has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4
@@ -89,7 +93,7 @@ if has_dask:
     if LooseVersion(dask.__version__) < '0.18':
         dask.set_options(get=dask.get)
     else:
-        dask.config.set(scheduler='sync')
+        dask.config.set(scheduler='single-threaded')
 try:
     import_seaborn()
     has_seaborn = True
@@ -114,39 +118,6 @@ network = pytest.mark.skipif(
     _SKIP_NETWORK_TESTS,
     reason="set --run-network-tests option to run tests requiring an "
     "internet connection")
-
-
-class TestCase(unittest.TestCase):
-    """
-    These functions are all deprecated. Instead, use functions in xr.testing
-    """
-    if PY3:
-        # Python 3 assertCountEqual is roughly equivalent to Python 2
-        # assertItemsEqual
-        def assertItemsEqual(self, first, second, msg=None):
-            __tracebackhide__ = True  # noqa: F841
-            return self.assertCountEqual(first, second, msg)
-
-    @contextmanager
-    def assertWarns(self, message):
-        __tracebackhide__ = True  # noqa: F841
-        with warnings.catch_warnings(record=True) as w:
-            warnings.filterwarnings('always', message)
-            yield
-        assert len(w) > 0
-        assert any(message in str(wi.message) for wi in w)
-
-    def assertVariableNotEqual(self, v1, v2):
-        __tracebackhide__ = True  # noqa: F841
-        assert not v1.equals(v2)
-
-    def assertEqual(self, a1, a2):
-        __tracebackhide__ = True  # noqa: F841
-        assert a1 == a2 or (a1 != a1 and a2 != a2)
-
-    def assertAllClose(self, a1, a2, rtol=1e-05, atol=1e-8):
-        __tracebackhide__ = True  # noqa: F841
-        assert allclose_or_equiv(a1, a2, rtol=rtol, atol=atol)
 
 
 @contextmanager

@@ -1,21 +1,20 @@
 import os
+import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
-import warnings
 
 import numpy as np
 
 from .. import DataArray
 from ..core import indexing
 from ..core.utils import is_scalar
-from .common import BackendArray, PickleByReconstructionWrapper
+from .common import BackendArray
+from .file_manager import CachingFileManager
+from .locks import SerializableLock
 
-try:
-    from dask.utils import SerializableLock as Lock
-except ImportError:
-    from threading import Lock
 
-RASTERIO_LOCK = Lock()
+# TODO: should this be GDAL_LOCK instead?
+RASTERIO_LOCK = SerializableLock()
 
 _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
               'valid on rasterio files. Try to load your data with ds.load()'
@@ -25,18 +24,22 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
 
-    def __init__(self, riods):
-        self.riods = riods
-        self._shape = (riods.value.count, riods.value.height,
-                       riods.value.width)
-        self._ndims = len(self.shape)
+    def __init__(self, manager):
+        self.manager = manager
+
+        # cannot save riods as an attribute: this would break pickleability
+        riods = manager.acquire()
+
+        self._shape = (riods.count, riods.height, riods.width)
+
+        dtypes = riods.dtypes
+        if not np.all(np.asarray(dtypes) == dtypes[0]):
+            raise ValueError('All bands should have the same dtype')
+        self._dtype = np.dtype(dtypes[0])
 
     @property
     def dtype(self):
-        dtypes = self.riods.value.dtypes
-        if not np.all(np.asarray(dtypes) == dtypes[0]):
-            raise ValueError('All bands should have the same dtype')
-        return np.dtype(dtypes[0])
+        return self._dtype
 
     @property
     def shape(self):
@@ -47,7 +50,7 @@ class RasterioArrayWrapper(BackendArray):
 
         Parameter
         ---------
-        key: ExplicitIndexer
+        key: tuple of int
 
         Returns
         -------
@@ -60,13 +63,11 @@ class RasterioArrayWrapper(BackendArray):
         --------
         indexing.decompose_indexer
         """
-        key, np_inds = indexing.decompose_indexer(
-            key, self.shape, indexing.IndexingSupport.OUTER)
+        assert len(key) == 3, 'rasterio datasets should always be 3D'
 
         # bands cannot be windowed but they can be listed
-        band_key = key.tuple[0]
-        new_shape = []
-        np_inds2 = []
+        band_key = key[0]
+        np_inds = []
         # bands (axis=0) cannot be windowed but they can be listed
         if isinstance(band_key, slice):
             start, stop, step = band_key.indices(self.shape[0])
@@ -74,18 +75,16 @@ class RasterioArrayWrapper(BackendArray):
         # be sure we give out a list
         band_key = (np.asarray(band_key) + 1).tolist()
         if isinstance(band_key, list):  # if band_key is not a scalar
-            new_shape.append(len(band_key))
-            np_inds2.append(slice(None))
+            np_inds.append(slice(None))
 
         # but other dims can only be windowed
         window = []
         squeeze_axis = []
-        for i, (k, n) in enumerate(zip(key.tuple[1:], self.shape[1:])):
+        for i, (k, n) in enumerate(zip(key[1:], self.shape[1:])):
             if isinstance(k, slice):
                 # step is always positive. see indexing.decompose_indexer
                 start, stop, step = k.indices(n)
-                np_inds2.append(slice(None, None, step))
-                new_shape.append(stop - start)
+                np_inds.append(slice(None, None, step))
             elif is_scalar(k):
                 # windowed operations will always return an array
                 # we will have to squeeze it later
@@ -94,21 +93,34 @@ class RasterioArrayWrapper(BackendArray):
                 stop = k + 1
             else:
                 start, stop = np.min(k), np.max(k) + 1
-                np_inds2.append(k - start)
-                new_shape.append(stop - start)
+                np_inds.append(k - start)
             window.append((start, stop))
 
-        np_inds = indexing._combine_indexers(
-            indexing.OuterIndexer(tuple(np_inds2)), new_shape, np_inds)
-        return band_key, window, tuple(squeeze_axis), np_inds
+        if isinstance(key[1], np.ndarray) and isinstance(key[2], np.ndarray):
+            # do outer-style indexing
+            np_inds[-2:] = np.ix_(*np_inds[-2:])
 
-    def __getitem__(self, key):
+        return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
+
+    def _getitem(self, key):
         band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
 
-        out = self.riods.value.read(band_key, window=tuple(window))
+        if not band_key or any(start == stop for (start, stop) in window):
+            # no need to do IO
+            shape = (len(band_key),) + tuple(
+                stop - start for (start, stop) in window)
+            out = np.zeros(shape, dtype=self.dtype)
+        else:
+            riods = self.manager.acquire()
+            out = riods.read(band_key, window=window)
+
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
-        return indexing.NumpyIndexingAdapter(out)[np_inds]
+        return out[np_inds]
+
+    def __getitem__(self, key):
+        return indexing.explicit_indexing_adapter(
+            key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
 
 
 def _parse_envi(meta):
@@ -157,7 +169,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
         from affine import Affine
         da = xr.open_rasterio('path_to_file.tif')
-        transform = Affine(*da.attrs['transform'])
+        transform = Affine.from_gdal(*da.attrs['transform'])
         nx, ny = da.sizes['x'], da.sizes['y']
         x, y = np.meshgrid(np.arange(nx)+0.5, np.arange(ny)+0.5) * transform
 
@@ -195,7 +207,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     import rasterio
 
-    riods = PickleByReconstructionWrapper(rasterio.open, filename, mode='r')
+    manager = CachingFileManager(rasterio.open, filename, mode='r')
+    riods = manager.acquire()
 
     if cache is None:
         cache = chunks is None
@@ -203,20 +216,20 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     coords = OrderedDict()
 
     # Get bands
-    if riods.value.count < 1:
+    if riods.count < 1:
         raise ValueError('Unknown dims')
-    coords['band'] = np.asarray(riods.value.indexes)
+    coords['band'] = np.asarray(riods.indexes)
 
     # Get coordinates
     if LooseVersion(rasterio.__version__) < '1.0':
-        transform = riods.value.affine
+        transform = riods.affine
     else:
-        transform = riods.value.transform
+        transform = riods.transform
     if transform.is_rectilinear:
         # 1d coordinates
         parse = True if parse_coordinates is None else parse_coordinates
         if parse:
-            nx, ny = riods.value.width, riods.value.height
+            nx, ny = riods.width, riods.height
             # xarray coordinates are pixel centered
             x, _ = (np.arange(nx) + 0.5, np.zeros(nx) + 0.5) * transform
             _, y = (np.zeros(ny) + 0.5, np.arange(ny) + 0.5) * transform
@@ -226,64 +239,60 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         # 2d coordinates
         parse = False if (parse_coordinates is None) else parse_coordinates
         if parse:
-            warnings.warn("The file coordinates' transformation isn't "
-                          "rectilinear: xarray won't parse the coordinates "
-                          "in this case. Set `parse_coordinates=False` to "
-                          "suppress this warning.",
-                          RuntimeWarning, stacklevel=3)
+            warnings.warn(
+                "The file coordinates' transformation isn't "
+                "rectilinear: xarray won't parse the coordinates "
+                "in this case. Set `parse_coordinates=False` to "
+                "suppress this warning.",
+                RuntimeWarning, stacklevel=3)
 
     # Attributes
     attrs = dict()
     # Affine transformation matrix (always available)
     # This describes coefficients mapping pixel coordinates to CRS
     # For serialization store as tuple of 6 floats, the last row being
-    # always (0, 0, 1) per definition (see https://github.com/sgillies/affine)
+    # always (0, 0, 1) per definition (see
+    # https://github.com/sgillies/affine)
     attrs['transform'] = tuple(transform)[:6]
-    if hasattr(riods.value, 'crs') and riods.value.crs:
+    if hasattr(riods, 'crs') and riods.crs:
         # CRS is a dict-like object specific to rasterio
         # If CRS is not None, we convert it back to a PROJ4 string using
         # rasterio itself
-        attrs['crs'] = riods.value.crs.to_string()
-    if hasattr(riods.value, 'res'):
+        attrs['crs'] = riods.crs.to_string()
+    if hasattr(riods, 'res'):
         # (width, height) tuple of pixels in units of CRS
-        attrs['res'] = riods.value.res
-    if hasattr(riods.value, 'is_tiled'):
+        attrs['res'] = riods.res
+    if hasattr(riods, 'is_tiled'):
         # Is the TIF tiled? (bool)
         # We cast it to an int for netCDF compatibility
-        attrs['is_tiled'] = np.uint8(riods.value.is_tiled)
-    with warnings.catch_warnings():
-        # casting riods.value.transform to a tuple makes this future proof
-        warnings.simplefilter('ignore', FutureWarning)
-        if hasattr(riods.value, 'transform'):
-            # Affine transformation matrix (tuple of floats)
-            # Describes coefficients mapping pixel coordinates to CRS
-            attrs['transform'] = tuple(riods.value.transform)
-    if hasattr(riods.value, 'nodatavals'):
+        attrs['is_tiled'] = np.uint8(riods.is_tiled)
+    if hasattr(riods, 'nodatavals'):
         # The nodata values for the raster bands
-        attrs['nodatavals'] = tuple([np.nan if nodataval is None else nodataval
-                                     for nodataval in riods.value.nodatavals])
+        attrs['nodatavals'] = tuple(
+            np.nan if nodataval is None else nodataval
+            for nodataval in riods.nodatavals)
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
 
-    driver = riods.value.driver
+    driver = riods.driver
     if driver in parsers:
-        meta = parsers[driver](riods.value.tags(ns=driver))
+        meta = parsers[driver](riods.tags(ns=driver))
 
         for k, v in meta.items():
             # Add values as coordinates if they match the band count,
             # as attributes otherwise
             if (isinstance(v, (list, np.ndarray)) and
-               len(v) == riods.value.count):
+                    len(v) == riods.count):
                 coords[k] = ('band', np.asarray(v))
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(riods))
+    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
-    if cache and (chunks is None):
+    if cache and chunks is None:
         data = indexing.MemoryCachedArray(data)
 
     result = DataArray(data=data, dims=('band', 'y', 'x'),
@@ -305,6 +314,6 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                               lock=lock)
 
     # Make the file closeable
-    result._file_obj = riods
+    result._file_obj = manager
 
     return result

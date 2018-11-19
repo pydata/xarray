@@ -9,10 +9,9 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from ..core.common import contains_cftime_datetimes
 from ..core import indexing
+from ..core.common import contains_cftime_datetimes
 from ..core.formatting import first_n_items, format_timestamp, last_item
-from ..core.options import OPTIONS
 from ..core.pycompat import PY3
 from ..core.variable import Variable
 from .variables import (
@@ -61,8 +60,9 @@ def _require_standalone_cftime():
     try:
         import cftime  # noqa: F401
     except ImportError:
-        raise ImportError('Using a CFTimeIndex requires the standalone '
-                          'version of the cftime library.')
+        raise ImportError('Decoding times with non-standard calendars '
+                          'or outside the pandas.Timestamp-valid range '
+                          'requires the standalone cftime package.')
 
 
 def _netcdf_to_numpy_timeunit(units):
@@ -84,41 +84,32 @@ def _unpack_netcdf_time_units(units):
     return delta_units, ref_date
 
 
-def _decode_datetime_with_cftime(num_dates, units, calendar,
-                                 enable_cftimeindex):
+def _decode_datetime_with_cftime(num_dates, units, calendar):
     cftime = _import_cftime()
-    if enable_cftimeindex:
-        _require_standalone_cftime()
+
+    if cftime.__name__ == 'cftime':
         dates = np.asarray(cftime.num2date(num_dates, units, calendar,
                                            only_use_cftime_datetimes=True))
     else:
+        # Must be using num2date from an old version of netCDF4 which
+        # does not have the only_use_cftime_datetimes option.
         dates = np.asarray(cftime.num2date(num_dates, units, calendar))
 
     if (dates[np.nanargmin(num_dates)].year < 1678 or
             dates[np.nanargmax(num_dates)].year >= 2262):
-        if not enable_cftimeindex or calendar in _STANDARD_CALENDARS:
+        if calendar in _STANDARD_CALENDARS:
             warnings.warn(
                 'Unable to decode time axis into full '
                 'numpy.datetime64 objects, continuing using dummy '
                 'cftime.datetime objects instead, reason: dates out '
                 'of range', SerializationWarning, stacklevel=3)
     else:
-        if enable_cftimeindex:
-            if calendar in _STANDARD_CALENDARS:
-                dates = cftime_to_nptime(dates)
-        else:
-            try:
-                dates = cftime_to_nptime(dates)
-            except ValueError as e:
-                warnings.warn(
-                    'Unable to decode time axis into full '
-                    'numpy.datetime64 objects, continuing using '
-                    'dummy cftime.datetime objects instead, reason:'
-                    '{0}'.format(e), SerializationWarning, stacklevel=3)
+        if calendar in _STANDARD_CALENDARS:
+            dates = cftime_to_nptime(dates)
     return dates
 
 
-def _decode_cf_datetime_dtype(data, units, calendar, enable_cftimeindex):
+def _decode_cf_datetime_dtype(data, units, calendar):
     # Verify that at least the first and last date can be decoded
     # successfully. Otherwise, tracebacks end up swallowed by
     # Dataset.__repr__ when users try to view their lazily decoded array.
@@ -128,8 +119,7 @@ def _decode_cf_datetime_dtype(data, units, calendar, enable_cftimeindex):
                                     last_item(values) or [0]])
 
     try:
-        result = decode_cf_datetime(example_value, units, calendar,
-                                    enable_cftimeindex)
+        result = decode_cf_datetime(example_value, units, calendar)
     except Exception:
         calendar_msg = ('the default calendar' if calendar is None
                         else 'calendar %r' % calendar)
@@ -145,8 +135,7 @@ def _decode_cf_datetime_dtype(data, units, calendar, enable_cftimeindex):
     return dtype
 
 
-def decode_cf_datetime(num_dates, units, calendar=None,
-                       enable_cftimeindex=False):
+def decode_cf_datetime(num_dates, units, calendar=None):
     """Given an array of numeric dates in netCDF format, convert it into a
     numpy array of date time objects.
 
@@ -183,8 +172,11 @@ def decode_cf_datetime(num_dates, units, calendar=None,
         # fixes: https://github.com/pydata/pandas/issues/14068
         # these lines check if the the lowest or the highest value in dates
         # cause an OutOfBoundsDatetime (Overflow) error
-        pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
-        pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', 'invalid value encountered',
+                                    RuntimeWarning)
+            pd.to_timedelta(flat_num_dates.min(), delta) + ref_date
+            pd.to_timedelta(flat_num_dates.max(), delta) + ref_date
 
         # Cast input dates to integers of nanoseconds because `pd.to_datetime`
         # works much faster when dealing with integers
@@ -197,8 +189,7 @@ def decode_cf_datetime(num_dates, units, calendar=None,
 
     except (OutOfBoundsDatetime, OverflowError):
         dates = _decode_datetime_with_cftime(
-            flat_num_dates.astype(np.float), units, calendar,
-            enable_cftimeindex)
+            flat_num_dates.astype(np.float), units, calendar)
 
     return dates.reshape(num_dates.shape)
 
@@ -288,7 +279,16 @@ def cftime_to_nptime(times):
     times = np.asarray(times)
     new = np.empty(times.shape, dtype='M8[ns]')
     for i, t in np.ndenumerate(times):
-        dt = datetime(t.year, t.month, t.day, t.hour, t.minute, t.second)
+        try:
+            # Use pandas.Timestamp in place of datetime.datetime, because
+            # NumPy casts it safely it np.datetime64[ns] for dates outside
+            # 1678 to 2262 (this is not currently the case for
+            # datetime.datetime).
+            dt = pd.Timestamp(t.year, t.month, t.day, t.hour, t.minute,
+                              t.second, t.microsecond)
+        except ValueError as e:
+            raise ValueError('Cannot convert date {} to a date in the '
+                             'standard calendar.  Reason: {}.'.format(t, e))
         new[i] = np.datetime64(dt)
     return new
 
@@ -358,7 +358,12 @@ def encode_cf_datetime(dates, units=None, calendar=None):
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype('timedelta64[ns]')
         ref_date = np.datetime64(pd.Timestamp(ref_date))
-        num = (dates - ref_date) / time_delta
+
+        # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
+        # an OverflowError is raised if the ref_date is too far away from
+        # dates to be encoded (GH 2272).
+        num = (pd.DatetimeIndex(dates.ravel()) - ref_date) / time_delta
+        num = num.values.reshape(dates.shape)
 
     except (OutOfBoundsDatetime, OverflowError):
         num = _encode_datetime_with_cftime(dates, units, calendar)
@@ -396,15 +401,12 @@ class CFDatetimeCoder(VariableCoder):
     def decode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_decoding(variable)
 
-        enable_cftimeindex = OPTIONS['enable_cftimeindex']
         if 'units' in attrs and 'since' in attrs['units']:
             units = pop_to(attrs, encoding, 'units')
             calendar = pop_to(attrs, encoding, 'calendar')
-            dtype = _decode_cf_datetime_dtype(
-                data, units, calendar, enable_cftimeindex)
+            dtype = _decode_cf_datetime_dtype(data, units, calendar)
             transform = partial(
-                decode_cf_datetime, units=units, calendar=calendar,
-                enable_cftimeindex=enable_cftimeindex)
+                decode_cf_datetime, units=units, calendar=calendar)
             data = lazy_elemwise_func(data, transform, dtype)
 
         return Variable(dims, data, attrs, encoding)

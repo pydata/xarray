@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import sys
 
-from setuptools import find_packages, setup
-
 import versioneer
-
+from setuptools import find_packages, setup
 
 DISTNAME = 'xarray'
 LICENSE = 'Apache'
@@ -20,13 +18,13 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 2',
     'Programming Language :: Python :: 2.7',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.11', 'pandas >= 0.18.0']
+INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 if sys.version_info[0] < 3:
     TESTS_REQUIRE.append('mock')
@@ -70,5 +68,6 @@ setup(name=DISTNAME,
       install_requires=INSTALL_REQUIRES,
       tests_require=TESTS_REQUIRE,
       url=URL,
+      python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
       packages=find_packages(),
       package_data={'xarray': ['tests/data/*']})

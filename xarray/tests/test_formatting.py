@@ -7,34 +7,55 @@ import pandas as pd
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
 
-from . import TestCase, raises_regex
+from . import raises_regex
 
 
-class TestFormatting(TestCase):
+class TestFormatting(object):
 
     def test_get_indexer_at_least_n_items(self):
         cases = [
-            ((20,), (slice(10),)),
-            ((3, 20,), (0, slice(10))),
-            ((2, 10,), (0, slice(10))),
-            ((2, 5,), (slice(2), slice(None))),
-            ((1, 2, 5,), (0, slice(2), slice(None))),
-            ((2, 3, 5,), (0, slice(2), slice(None))),
-            ((1, 10, 1,), (0, slice(10), slice(None))),
-            ((2, 5, 1,), (slice(2), slice(None), slice(None))),
-            ((2, 5, 3,), (0, slice(4), slice(None))),
-            ((2, 3, 3,), (slice(2), slice(None), slice(None))),
+            ((20,), (slice(10),), (slice(-10, None),)),
+            ((3, 20,), (0, slice(10)), (-1, slice(-10, None))),
+            ((2, 10,), (0, slice(10)), (-1, slice(-10, None))),
+            ((2, 5,), (slice(2), slice(None)),
+             (slice(-2, None), slice(None))),
+            ((1, 2, 5,), (0, slice(2), slice(None)),
+             (-1, slice(-2, None), slice(None))),
+            ((2, 3, 5,), (0, slice(2), slice(None)),
+             (-1, slice(-2, None), slice(None))),
+            ((1, 10, 1,), (0, slice(10), slice(None)),
+             (-1, slice(-10, None), slice(None))),
+            ((2, 5, 1,), (slice(2), slice(None), slice(None)),
+             (slice(-2, None), slice(None), slice(None))),
+            ((2, 5, 3,), (0, slice(4), slice(None)),
+             (-1, slice(-4, None), slice(None))),
+            ((2, 3, 3,), (slice(2), slice(None), slice(None)),
+             (slice(-2, None), slice(None), slice(None))),
         ]
-        for shape, expected in cases:
-            actual = formatting._get_indexer_at_least_n_items(shape, 10)
-            assert expected == actual
+        for shape, start_expected, end_expected in cases:
+            actual = formatting._get_indexer_at_least_n_items(shape, 10,
+                                                              from_end=False)
+            assert start_expected == actual
+            actual = formatting._get_indexer_at_least_n_items(shape, 10,
+                                                              from_end=True)
+            assert end_expected == actual
 
     def test_first_n_items(self):
         array = np.arange(100).reshape(10, 5, 2)
         for n in [3, 10, 13, 100, 200]:
             actual = formatting.first_n_items(array, n)
             expected = array.flat[:n]
-            self.assertItemsEqual(expected, actual)
+            assert (expected == actual).all()
+
+        with raises_regex(ValueError, 'at least one item'):
+            formatting.first_n_items(array, 0)
+
+    def test_last_n_items(self):
+        array = np.arange(100).reshape(10, 5, 2)
+        for n in [3, 10, 13, 100, 200]:
+            actual = formatting.last_n_items(array, n)
+            expected = array.flat[-n:]
+            assert (expected == actual).all()
 
         with raises_regex(ValueError, 'at least one item'):
             formatting.first_n_items(array, 0)
@@ -87,16 +108,32 @@ class TestFormatting(TestCase):
             assert expected == actual
 
     def test_format_array_flat(self):
+        actual = formatting.format_array_flat(np.arange(100), 2)
+        expected = '0 ... 99'
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(100), 9)
+        expected = '0 ... 99'
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(100), 10)
+        expected = '0 1 ... 99'
+        assert expected == actual
+
         actual = formatting.format_array_flat(np.arange(100), 13)
-        expected = '0 1 2 3 4 ...'
+        expected = '0 1 ... 98 99'
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(100), 15)
+        expected = '0 1 2 ... 98 99'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 11)
-        expected = '0.0 1.0 ...'
+        expected = '0.0 ... 99.0'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(100.0), 1)
-        expected = '0.0 ...'
+        expected = '0.0 ... 99.0'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(3), 5)
@@ -104,11 +141,23 @@ class TestFormatting(TestCase):
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4.0), 11)
-        expected = '0.0 1.0 ...'
+        expected = '0.0 ... 3.0'
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(0), 0)
+        expected = ''
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(1), 0)
+        expected = '0'
+        assert expected == actual
+
+        actual = formatting.format_array_flat(np.arange(2), 0)
+        expected = '0 1'
         assert expected == actual
 
         actual = formatting.format_array_flat(np.arange(4), 0)
-        expected = '0 ...'
+        expected = '0 ... 3'
         assert expected == actual
 
     def test_pretty_print(self):

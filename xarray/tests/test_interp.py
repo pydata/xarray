@@ -5,8 +5,11 @@ import pandas as pd
 import pytest
 
 import xarray as xr
-from xarray.tests import assert_allclose, assert_equal, requires_scipy
+from xarray.tests import (
+    assert_allclose, assert_equal, requires_cftime, requires_scipy)
+
 from . import has_dask, has_scipy
+from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .test_dataset import create_test_data
 
 try:
@@ -462,19 +465,111 @@ def test_interp_like():
 
 
 @requires_scipy
-def test_datetime():
-    da = xr.DataArray(np.random.randn(24), dims='time',
+@pytest.mark.parametrize('x_new, expected', [
+    (pd.date_range('2000-01-02', periods=3), [1, 2, 3]),
+    (np.array([np.datetime64('2000-01-01T12:00'),
+               np.datetime64('2000-01-02T12:00')]), [0.5, 1.5]),
+    (['2000-01-01T12:00', '2000-01-02T12:00'], [0.5, 1.5]),
+    (['2000-01-01T12:00'], 0.5),
+    pytest.param('2000-01-01T12:00', 0.5, marks=pytest.mark.xfail)
+])
+def test_datetime(x_new, expected):
+    da = xr.DataArray(np.arange(24), dims='time',
                       coords={'time': pd.date_range('2000-01-01', periods=24)})
 
-    x_new = pd.date_range('2000-01-02', periods=3)
     actual = da.interp(time=x_new)
-    expected = da.isel(time=[1, 2, 3])
+    expected_da = xr.DataArray(np.atleast_1d(expected), dims=['time'],
+                               coords={'time': (np.atleast_1d(x_new)
+                                                .astype('datetime64[ns]'))})
+
+    assert_allclose(actual, expected_da)
+
+
+@requires_scipy
+def test_datetime_single_string():
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+    actual = da.interp(time='2000-01-01T12:00')
+    expected = xr.DataArray(0.5)
+
+    assert_allclose(actual.drop('time'), expected)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = xr.cftime_range('2000-01-01T12:00:00', periods=3, freq='D')
+    actual = da.interp(time=times_new)
+    expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new], dims=['time'])
+
     assert_allclose(actual, expected)
 
-    x_new = np.array([np.datetime64('2000-01-01T12:00'),
-                      np.datetime64('2000-01-02T12:00')])
-    actual = da.interp(time=x_new)
-    assert_allclose(actual.isel(time=0).drop('time'),
-                    0.5 * (da.isel(time=0) + da.isel(time=1)))
-    assert_allclose(actual.isel(time=1).drop('time'),
-                    0.5 * (da.isel(time=1) + da.isel(time=2)))
+
+@requires_cftime
+@requires_scipy
+def test_cftime_type_error():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = xr.cftime_range('2000-01-01T12:00:00', periods=3, freq='D',
+                                calendar='noleap')
+    with pytest.raises(TypeError):
+        da.interp(time=times_new)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_list_of_strings():
+    from cftime import DatetimeProlepticGregorian
+
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = ['2000-01-01T12:00', '2000-01-02T12:00', '2000-01-03T12:00']
+    actual = da.interp(time=times_new)
+
+    times_new_array = _parse_array_of_cftime_strings(
+        np.array(times_new), DatetimeProlepticGregorian)
+    expected = xr.DataArray([0.5, 1.5, 2.5], coords=[times_new_array],
+                            dims=['time'])
+
+    assert_allclose(actual, expected)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_single_string():
+    from cftime import DatetimeProlepticGregorian
+
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    times_new = '2000-01-01T12:00'
+    actual = da.interp(time=times_new)
+
+    times_new_array = _parse_array_of_cftime_strings(
+        np.array(times_new), DatetimeProlepticGregorian)
+    expected = xr.DataArray(0.5, coords={'time': times_new_array})
+
+    assert_allclose(actual, expected)
+
+
+@requires_scipy
+def test_datetime_to_non_datetime_error():
+    da = xr.DataArray(np.arange(24), dims='time',
+                      coords={'time': pd.date_range('2000-01-01', periods=24)})
+    with pytest.raises(TypeError):
+        da.interp(time=0.5)
+
+
+@requires_cftime
+@requires_scipy
+def test_cftime_to_non_cftime_error():
+    times = xr.cftime_range('2000', periods=24, freq='D')
+    da = xr.DataArray(np.arange(24), coords=[times], dims='time')
+
+    with pytest.raises(TypeError):
+        da.interp(time=0.5)

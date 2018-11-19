@@ -2,14 +2,19 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, dtypes, formatting, ops
+from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
-from .utils import Frozen, SortedKeysDict
+from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
+from .options import _get_keep_attrs
+
+# Used as a sentinel value to indicate a all dimensions
+ALL_DIMS = ReprObject('<all-dims>')
 
 
 class ImplementsArrayReduce(object):
@@ -17,44 +22,44 @@ class ImplementsArrayReduce(object):
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
             def wrapped_func(self, dim=None, axis=None, skipna=None,
-                             keep_attrs=False, **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                             **kwargs):
+                return self.reduce(func, dim, axis,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=None, axis=None, keep_attrs=False,
+            def wrapped_func(self, dim=None, axis=None,
                              **kwargs):
-                return self.reduce(func, dim, axis, keep_attrs=keep_attrs,
+                return self.reduce(func, dim, axis,
                                    allow_lazy=True, **kwargs)
         return wrapped_func
 
-    _reduce_extra_args_docstring = \
-        """dim : str or sequence of str, optional
+    _reduce_extra_args_docstring = dedent("""\
+        dim : str or sequence of str, optional
             Dimension(s) over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis(es) over which to apply `{name}`. Only one of the 'dim'
             and 'axis' arguments can be supplied. If neither are supplied, then
-            `{name}` is calculated over axes."""
+            `{name}` is calculated over axes.""")
 
-    _cum_extra_args_docstring = \
-        """dim : str or sequence of str, optional
+    _cum_extra_args_docstring = dedent("""\
+        dim : str or sequence of str, optional
             Dimension over which to apply `{name}`.
         axis : int or sequence of int, optional
             Axis over which to apply `{name}`. Only one of the 'dim'
-            and 'axis' arguments can be supplied."""
+            and 'axis' arguments can be supplied.""")
 
 
 class ImplementsDatasetReduce(object):
     @classmethod
     def _reduce_method(cls, func, include_skipna, numeric_only):
         if include_skipna:
-            def wrapped_func(self, dim=None, keep_attrs=False, skipna=None,
+            def wrapped_func(self, dim=None, skipna=None,
                              **kwargs):
-                return self.reduce(func, dim, keep_attrs, skipna=skipna,
+                return self.reduce(func, dim, skipna=skipna,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-            def wrapped_func(self, dim=None, keep_attrs=False, **kwargs):
-                return self.reduce(func, dim, keep_attrs,
+            def wrapped_func(self, dim=None, **kwargs):
+                return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         return wrapped_func
@@ -308,12 +313,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         assigned : same type as caller
             A new object with the new coordinates in addition to the existing
             data.
-            
+
         Examples
         --------
-        
+
         Convert longitude coordinates from 0-359 to -180-179:
-        
+
         >>> da = xr.DataArray(np.random.rand(4),
         ...                   coords=[np.array([358, 359, 0, 1])],
         ...                   dims='lon')
@@ -339,6 +344,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         See also
         --------
         Dataset.assign
+        Dataset.swap_dims
         """
         data = self.copy(deep=False)
         results = self._calc_assign_results(kwargs)
@@ -445,11 +451,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         grouped : GroupBy
             A `GroupBy` object patterned after `pandas.GroupBy` that can be
             iterated over in the form of `(unique_value, grouped_array)` pairs.
-            
+
         Examples
         --------
         Calculate daily anomalies for daily data:
-        
+
         >>> da = xr.DataArray(np.linspace(0, 1826, num=1827),
         ...                   coords=[pd.date_range('1/1/2000', '31/12/2004',
         ...                           freq='D')],
@@ -465,7 +471,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coordinates:
           * time       (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03 ...
             dayofyear  (time) int64 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 ...
-        
+
         See Also
         --------
         core.groupby.DataArrayGroupBy
@@ -525,24 +531,24 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                              'precision': precision,
                                              'include_lowest': include_lowest})
 
-    def rolling(self, min_periods=None, center=False, **windows):
+    def rolling(self, dim=None, min_periods=None, center=False, **dim_kwargs):
         """
         Rolling window object.
 
         Parameters
         ----------
+        dim: dict, optional
+            Mapping from the dimension name to create the rolling iterator
+            along (e.g. `time`) to its moving window size.
         min_periods : int, default None
             Minimum number of observations in window required to have a value
             (otherwise result is NA). The default, None, is equivalent to
             setting min_periods equal to the size of the window.
         center : boolean, default False
             Set the labels at the center of the window.
-        **windows : dim=window
-            dim : str
-                Name of the dimension to create the rolling iterator
-                along (e.g., `time`).
-            window : int
-                Size of the moving window.
+        **dim_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
 
         Returns
         -------
@@ -581,19 +587,21 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
         """
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
+        return self._rolling_cls(self, dim, min_periods=min_periods,
+                                 center=center)
 
-        return self._rolling_cls(self, min_periods=min_periods,
-                                 center=center, **windows)
-
-    def resample(self, freq=None, dim=None, how=None, skipna=None,
-                 closed=None, label=None, base=0, keep_attrs=False, **indexer):
+    def resample(self, indexer=None, skipna=None, closed=None, label=None,
+                 base=0, keep_attrs=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
 
-        Handles both downsampling and upsampling. If any intervals contain no 
+        Handles both downsampling and upsampling. If any intervals contain no
         values from the original object, they will be given the value ``NaN``.
 
         Parameters
         ----------
+        indexer : {dim: freq}, optional
+            Mapping from the dimension name to resample frequency.
         skipna : bool, optional
             Whether to skip missing values when aggregating in downsampling.
         closed : 'left' or 'right', optional
@@ -608,19 +616,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
             object will be returned without attributes.
-        **indexer : {dim: freq}
-            Dictionary with a key indicating the dimension name to resample
-            over and a value corresponding to the resampling frequency.
+        **indexer_kwargs : {dim: freq}
+            The keyword arguments form of ``indexer``.
+            One of indexer or indexer_kwargs must be provided.
 
         Returns
         -------
         resampled : same type as caller
             This object resampled.
-            
+
         Examples
         --------
         Downsample monthly time-series data to seasonal data:
-        
+
         >>> da = xr.DataArray(np.linspace(0, 11, num=12),
         ...                   coords=[pd.date_range('15/12/1999',
         ...                           periods=12, freq=pd.DateOffset(months=1))],
@@ -637,85 +645,67 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
           * time     (time) datetime64[ns] 1999-12-01 2000-03-01 2000-06-01 2000-09-01
 
         Upsample monthly time-series data to daily data:
-        
+
         >>> da.resample(time='1D').interpolate('linear')
         <xarray.DataArray (time: 337)>
         array([ 0.      ,  0.032258,  0.064516, ..., 10.935484, 10.967742, 11.      ])
         Coordinates:
           * time     (time) datetime64[ns] 1999-12-15 1999-12-16 1999-12-17 ...
-          
+
         References
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
         """
+        # TODO support non-string indexer after removing the old API.
+
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
+        from ..coding.cftimeindex import CFTimeIndex
 
-        if dim is not None:
-            if how is None:
-                how = 'mean'
-            return self._resample_immediately(freq, dim, how, skipna, closed,
-                                              label, base, keep_attrs)
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
 
-        if (how is not None) and indexer:
-            raise TypeError("If passing an 'indexer' then 'dim' "
-                            "and 'how' should not be used")
+        # note: the second argument (now 'skipna') use to be 'dim'
+        if ((skipna is not None and not isinstance(skipna, bool))
+                or ('how' in indexer_kwargs and 'how' not in self.dims)
+                or ('dim' in indexer_kwargs and 'dim' not in self.dims)):
+            raise TypeError('resample() no longer supports the `how` or '
+                            '`dim` arguments. Instead call methods on resample '
+                            "objects, e.g., data.resample(time='1D').mean()")
+ 
+        indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
 
-        # More than one indexer is ambiguous, but we do in fact need one if
-        # "dim" was not provided, until the old API is fully deprecated
         if len(indexer) != 1:
             raise ValueError(
                 "Resampling only supported along single dimensions."
             )
         dim, freq = indexer.popitem()
 
-        if isinstance(dim, basestring):
-            dim_name = dim
-            dim = self[dim]
-        else:
-            raise TypeError("Dimension name should be a string; "
-                            "was passed %r" % dim)
-        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
+        dim_name = dim
+        dim_coord = self[dim]
+
+        if isinstance(self.indexes[dim_name], CFTimeIndex):
+            raise NotImplementedError(
+                'Resample is currently not supported along a dimension '
+                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
+                'it may be possible to work around this by converting your '
+                'time index to a DatetimeIndex using '
+                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
+                'however, because switching to a DatetimeIndex from a '
+                'CFTimeIndex with a non-standard calendar entails a change '
+                'in the calendar type, which could lead to subtle and silent '
+                'errors.'
+            )
+
+        group = DataArray(dim_coord, coords=dim_coord.coords,
+                          dims=dim_coord.dims, name=RESAMPLE_DIM)
         grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
 
         return resampler
-
-    def _resample_immediately(self, freq, dim, how, skipna,
-                              closed, label, base, keep_attrs):
-        """Implement the original version of .resample() which immediately
-        executes the desired resampling operation. """
-        from .dataarray import DataArray
-        RESAMPLE_DIM = '__resample_dim__'
-
-        warnings.warn("\n.resample() has been modified to defer "
-                      "calculations. Instead of passing 'dim' and "
-                      "how=\"{how}\", instead consider using "
-                      ".resample({dim}=\"{freq}\").{how}('{dim}') ".format(
-                      dim=dim, freq=freq, how=how),
-                      FutureWarning, stacklevel=3)
-
-        if isinstance(dim, basestring):
-            dim = self[dim]
-        group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, how=how, closed=closed, label=label,
-                             base=base)
-        gb = self._groupby_cls(self, group, grouper=grouper)
-        if isinstance(how, basestring):
-            f = getattr(gb, how)
-            if how in ['first', 'last']:
-                result = f(skipna=skipna, keep_attrs=keep_attrs)
-            elif how == 'count':
-                result = f(dim=dim.name, keep_attrs=keep_attrs)
-            else:
-                result = f(dim=dim.name, skipna=skipna, keep_attrs=keep_attrs)
-        else:
-            result = gb.reduce(how, dim=dim.name, keep_attrs=keep_attrs)
-        result = result.rename({RESAMPLE_DIM: dim.name})
-        return result
 
     def where(self, cond, other=dtypes.NA, drop=False):
         """Filter elements from this object according to a condition.
@@ -957,8 +947,8 @@ def contains_cftime_datetimes(var):
                     sample = sample.item()
             return isinstance(sample, cftime_datetime)
         else:
-            return False        
-                    
+            return False
+
 
 def _contains_datetime_like_objects(var):
     """Check if a variable contains datetime like objects (either
