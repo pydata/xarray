@@ -39,6 +39,7 @@ Enhancements
 - :py:meth:`DataArray.transpose` now accepts a keyword argument
   ``transpose_coords`` which enables transposition of coordinates in the
   same way as :py:meth:`Dataset.transpose`.
+  By `Peter Hausamann <http://github.com/phausamann>`_.
 
 Bug fixes
 ~~~~~~~~~

@@ -1709,19 +1709,24 @@ class TestDataArray(object):
         assert_identical(expected, actual)
 
     def test_transpose(self):
-        da = DataArray(np.random.randn(3, 4), dims=('x', 'y'),
-                       coords={'x': range(3), 'y': range(4),
+        da = DataArray(np.random.randn(3, 4, 5), dims=('x', 'y', 'z'),
+                       coords={'x': range(3), 'y': range(4), 'z': range(5),
                                'xy': (('x', 'y'), np.random.randn(3, 4))})
 
-        actual = da.transpose('y', 'x', transpose_coords=False)
-        expected = DataArray(da.values.T, dims=('y', 'x'), coords=da.coords)
+        actual = da.transpose(transpose_coords=False)
+        expected = DataArray(da.values.T, dims=('z', 'y', 'x'),
+                             coords=da.coords)
         assert_equal(expected, actual)
 
-        actual = da.transpose(transpose_coords=True)
-        expected = DataArray(da.values.T, dims=('y', 'x'),
+        actual = da.transpose('z', 'y', 'x', transpose_coords=True)
+        expected = DataArray(da.values.T, dims=('z', 'y', 'x'),
                              coords={'x': da.x.values, 'y': da.y.values,
+                                     'z': da.z.values,
                                      'xy': (('y', 'x'), da.xy.values.T)})
         assert_equal(expected, actual)
+
+        with pytest.raises(ValueError):
+            da.transpose('x', 'y')
 
     def test_squeeze(self):
         assert_equal(self.dv.variable.squeeze(), self.dv.squeeze().variable)

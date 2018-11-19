@@ -1383,19 +1383,27 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.transpose
         Dataset.transpose
         """
+        if dims:
+            if set(dims) ^ set(self.dims):
+                raise ValueError('arguments to transpose (%s) must be '
+                                 'permuted array dimensions (%s)'
+                                 % (dims, tuple(self.dims)))
+
         transpose_coords = kwargs.pop('transpose_coords', None)
         variable = self.variable.transpose(*dims)
         if transpose_coords:
-            coords = {
-                c: self[c].variable.transpose(*dims) for c in self.coords}
+            coords = {}
+            for name, coord in iteritems(self.coords):
+                coord_dims = tuple(dim for dim in dims if dim in coord.dims)
+                coords[name] = coord.variable.transpose(*coord_dims)
             return self._replace(variable, coords)
         else:
             if transpose_coords is None \
                     and any(self[c].ndim > 1 for c in self.coords):
                 warnings.warn('This DataArray contains multi-dimensional '
-                              'coordinates. In a future release, these '
-                              'coordinates will be transposed as well unless '
-                              'you specify transpose_coords=False.',
+                              'coordinates. In the future, these coordinates '
+                              'will be transposed as well unless you specify '
+                              'transpose_coords=False.',
                               FutureWarning, stacklevel=2)
             return self._replace(variable)
 
