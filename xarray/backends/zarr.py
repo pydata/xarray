@@ -224,7 +224,8 @@ class ZarrStore(AbstractWritableDataStore):
     """
 
     @classmethod
-    def open_group(cls, store, mode='r', synchronizer=None, group=None):
+    def open_group(cls, store, mode='r', synchronizer=None, group=None,
+                   consolidated=False):
         import zarr
         min_zarr = '2.2'
 
@@ -234,8 +235,13 @@ class ZarrStore(AbstractWritableDataStore):
                                       "installation "
                                       "http://zarr.readthedocs.io/en/stable/"
                                       "#installation" % min_zarr)
-        zarr_group = zarr.open_group(store=store, mode=mode,
-                                     synchronizer=synchronizer, path=group)
+
+        open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
+        if consolidated:
+            # TODO: an option to pass the metadata_key keyword
+            zarr_group = zarr.open_consolidated(store, **open_kwargs)
+        else:
+            zarr_group = zarr.open_group(store, **open_kwargs)
         return cls(zarr_group)
 
     def __init__(self, zarr_group):
@@ -337,7 +343,7 @@ class ZarrStore(AbstractWritableDataStore):
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
               decode_cf=True, mask_and_scale=True, decode_times=True,
               concat_characters=True, decode_coords=True,
-              drop_variables=None):
+              drop_variables=None, consolidated=False):
     """Load and decode a dataset from a Zarr store.
 
     .. note:: Experimental
@@ -383,10 +389,13 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     decode_coords : bool, optional
         If True, decode the 'coordinates' attribute to identify coordinates in
         the resulting dataset.
-    drop_variables: string or iterable, optional
+    drop_variables : string or iterable, optional
         A variable or list of variables to exclude from being parsed from the
         dataset. This may be useful to drop variables with problems or
         inconsistent values.
+    consolidated : bool, optional
+        Whether to open the store using zarr's consolidated metadata
+        capability. Only works for stores that have already been consolidated.
 
     Returns
     -------
@@ -423,7 +432,7 @@ def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,
     mode = 'r'
     zarr_store = ZarrStore.open_group(store, mode=mode,
                                       synchronizer=synchronizer,
-                                      group=group)
+                                      group=group, consolidated=consolidated)
     ds = maybe_decode_store(zarr_store)
 
     # auto chunking needs to be here and not in ZarrStore because variable
