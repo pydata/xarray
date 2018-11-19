@@ -3800,8 +3800,8 @@ class TestDataset(object):
     def test_dataset_transpose(self):
         ds = Dataset({'a': (('x', 'y'), np.random.randn(3, 4)),
                       'b': (('y', 'x'), np.random.randn(4, 3))},
-                      coords={'x': range(3), 'y': range(4),
-                              'xy': (('x', 'y'), np.random.randn(3, 4))})
+                     coords={'x': range(3), 'y': range(4),
+                             'xy': (('x', 'y'), np.random.randn(3, 4))})
 
         actual = ds.transpose()
         expected = Dataset({'a': (('y', 'x'), ds.a.values.T),

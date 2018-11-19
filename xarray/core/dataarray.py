@@ -1365,7 +1365,7 @@ class DataArray(AbstractArray, DataWithCoords):
         *dims : str, optional
             By default, reverse the dimensions. Otherwise, reorder the
             dimensions to this order.
-        transpose_coords : boolean, default False
+        transpose_coords : boolean, optional
             If True, also transpose the coordinates of this DataArray.
 
         Returns
@@ -1383,12 +1383,20 @@ class DataArray(AbstractArray, DataWithCoords):
         numpy.transpose
         Dataset.transpose
         """
+        transpose_coords = kwargs.pop('transpose_coords', None)
         variable = self.variable.transpose(*dims)
-        if kwargs.pop('transpose_coords', False):
+        if transpose_coords:
             coords = {
                 c: self[c].variable.transpose(*dims) for c in self.coords}
             return self._replace(variable, coords)
         else:
+            if transpose_coords is None \
+                    and any(self[c].ndim > 1 for c in self.coords):
+                warnings.warn('This DataArray contains multi-dimensional '
+                              'coordinates. In a future release, these '
+                              'coordinates will be transposed as well unless '
+                              'you specify transpose_coords=False.',
+                              FutureWarning, stacklevel=2)
             return self._replace(variable)
 
     def drop(self, labels, dim=None):
