@@ -1320,6 +1320,14 @@ class ZarrBase(CFEncodedBase):
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
+    def test_roundtrip_consolidated(self):
+        expected = create_test_data()
+        with self.roundtrip(expected,
+                            save_kwargs={'consolidate': True},
+                            open_kwargs={'consolidated': True}) as actual:
+            self.check_dtypes_roundtripped(expected, actual)
+            assert_identical(expected, actual)
+
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
