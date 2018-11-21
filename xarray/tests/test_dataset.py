@@ -3811,7 +3811,8 @@ class TestDataset(object):
         assert_identical(expected, actual)
 
         actual = ds.transpose('x', 'y')
-        expected = ds.apply(lambda x: x.transpose('x', 'y'))
+        expected = ds.apply(
+            lambda x: x.transpose('x', 'y', transpose_coords=True))
         assert_identical(expected, actual)
 
         ds = create_test_data()

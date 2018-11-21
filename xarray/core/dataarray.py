@@ -1390,6 +1390,9 @@ class DataArray(AbstractArray, DataWithCoords):
                                  % (dims, tuple(self.dims)))
 
         transpose_coords = kwargs.pop('transpose_coords', None)
+        if kwargs:
+            raise ValueError(
+                'Invalid keyword arguments: %s' % tuple(k for k in kwargs))
         variable = self.variable.transpose(*dims)
         if transpose_coords:
             coords = {}

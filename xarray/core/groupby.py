@@ -473,7 +473,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             return axis
 
         new_order = sorted(stacked.dims, key=lookup_order)
-        return stacked.transpose(*new_order)
+        return stacked.transpose(*new_order, transpose_coords=True)
 
     def apply(self, func, shortcut=False, **kwargs):
         """Apply a function over each array in the group and concatenate them
