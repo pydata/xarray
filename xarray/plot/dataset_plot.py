@@ -6,12 +6,12 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from ..core.common import ones_like
 from .facetgrid import FacetGrid
 from .utils import (
     ROBUST_PERCENTILE, _determine_cmap_params, _ensure_numeric,
     _interval_to_double_bound_points, _interval_to_mid_points,
-    _valid_other_type, get_axis,
-    import_matplotlib_pyplot, label_from_attrs)
+    _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
 def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
@@ -28,7 +28,7 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
     if hue and add_legend is None:
         add_legend = True
     if add_legend and not hue:
-            raise ValueError('hue must be speicifed for generating a lengend')
+            raise ValueError('hue must be specified for generating a legend')
 
     if hue and not _ensure_numeric(ds[hue].values):
         if discrete_legend is None:
@@ -72,12 +72,8 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
                 'y': ds[y].values.flatten(),
                 'color': None}
         if hue:
-            # this is a hack to make a dataarray of the shape of ds[x] whose
-            # values are the coordinate hue. There's probably a better way
-            color = ds[x]
-            color[:] = 0
-            color += ds.coords[hue]
-            data['color'] = color.values.flatten()
+            data['color'] = ((ones_like(ds[x]) * ds.coords[hue])
+                             .values.flatten())
         return data
 
 
@@ -104,7 +100,7 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         if size is None:
             size = 3
         elif figsize is not None:
-            raise ValueError('cannot provide both `figsize` and '
+            raise ValueError('Cannot provide both `figsize` and '
                              '`size` arguments')
 
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
