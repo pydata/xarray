@@ -314,14 +314,14 @@ class FacetGrid(object):
 
         return self
 
-    def map_scatter(self, x=None, y=None, hue=None, discrete_legend=False,
+    def map_scatter(self, x=None, y=None, hue=None, add_colorbar=False,
                     add_legend=None, **kwargs):
         from .dataset_plot import _infer_scatter_meta_data, scatter
 
         kwargs['add_legend'] = False
-        kwargs['discrete_legend'] = discrete_legend
+        kwargs['add_colorbar'] = add_colorbar
         meta_data = _infer_scatter_meta_data(self.data, x, y, hue,
-                                             add_legend, discrete_legend)
+                                             add_legend, add_colorbar)
         kwargs['_meta_data'] = meta_data
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -333,12 +333,12 @@ class FacetGrid(object):
 
         self._finalize_grid(meta_data['xlabel'], meta_data['ylabel'])
 
-        if hue and meta_data['add_legend']:
+        if hue and (meta_data['add_legend'] or meta_data['add_colorbar']):
             self._hue_label = meta_data.pop('hue_label', None)
-            if meta_data['discrete_legend']:
+            if meta_data['add_legend']:
                 self._hue_var = meta_data['hue_values']
                 self.add_legend()
-            else:
+            elif meta_data['add_colorbar']:
                 self.add_colorbar(label=self._hue_label)
 
         return self

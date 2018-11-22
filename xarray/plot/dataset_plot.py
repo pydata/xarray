@@ -14,7 +14,7 @@ from .utils import (
     _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
-def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
+def _infer_scatter_meta_data(ds, x, y, hue, add_legend, add_colorbar):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -25,17 +25,37 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
     if y not in dvars:
         raise ValueError(y + error_msg)
 
-    if hue and add_legend is None:
-        add_legend = True
-    if add_legend and not hue:
-            raise ValueError('hue must be specified for generating a legend')
+    if hue:
+        if add_legend is None and add_colorbar is None:
+            if not _ensure_numeric(ds[hue].values):
+                add_legend = True
+                add_colorbar = False
+            else:
+                add_legend = False
+                add_colorbar = True
 
-    if hue and not _ensure_numeric(ds[hue].values):
-        if discrete_legend is None:
-            discrete_legend = True
-        elif discrete_legend is False:
+        if add_colorbar is None:
+            if add_legend is True:
+                add_colorbar = False
+            else:
+                if _ensure_numeric(ds[hue].values):
+                    add_colorbar = True
+                else:
+                    add_colorbar = False
+
+        elif add_legend is None:
+            if add_colorbar is True:
+                add_legend = False
+            else:
+                add_legend = True
+
+        elif add_colorbar is True and not _ensure_numeric(ds[hue].values):
             raise ValueError('Cannot create a colorbar for a non numeric'
                              ' coordinate')
+
+    elif add_legend or add_colorbar:
+        raise ValueError('hue must be specified for generating a legend'
+                         ' or colorbar')
 
     dims = ds[x].dims
     if ds[y].dims != dims:
@@ -53,16 +73,16 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
         hue_label = None
 
     return {'add_legend': add_legend,
-            'discrete_legend': discrete_legend,
+            'add_colorbar': add_colorbar,
             'hue_label': hue_label,
             'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y]),
-            'hue_values': ds[x].coords[hue] if discrete_legend else None}
+            'hue_values': ds[x].coords[hue] if add_legend else None}
 
 
-def _infer_scatter_data(ds, x, y, hue, discrete_legend):
+def _infer_scatter_data(ds, x, y, hue, add_legend):
     dims = set(ds[x].dims)
-    if discrete_legend:
+    if add_legend:
         dims.remove(hue)
         xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
         yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
@@ -80,14 +100,14 @@ def _infer_scatter_data(ds, x, y, hue, discrete_legend):
 def scatter(ds, x, y, hue=None, col=None, row=None,
             col_wrap=None, sharex=True, sharey=True, aspect=None,
             size=None, subplot_kws=None, add_legend=None,
-            discrete_legend=None, **kwargs):
+            add_colorbar=None, **kwargs):
 
     if kwargs.get('_meta_data', None):
-        discrete_legend = kwargs['_meta_data']['discrete_legend']
+        add_colorbar = kwargs['_meta_data']['add_colorbar']
     else:
         meta_data = _infer_scatter_meta_data(ds, x, y, hue,
-                                             add_legend, discrete_legend)
-        discrete_legend = meta_data['discrete_legend']
+                                             add_legend, add_colorbar)
+        add_colorbar = meta_data['add_colorbar']
         add_legend = meta_data['add_legend']
 
     if col or row:
@@ -107,14 +127,14 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
                       sharex=sharex, sharey=sharey, figsize=figsize,
                       aspect=aspect, size=size, subplot_kws=subplot_kws)
         return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
-                             discrete_legend=discrete_legend, **kwargs)
+                             add_colorbar=add_colorbar, **kwargs)
 
-    data = _infer_scatter_data(ds, x, y, hue, discrete_legend)
+    data = _infer_scatter_data(ds, x, y, hue, add_legend)
 
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
     ax = get_axis(figsize, size, aspect, ax)
-    if discrete_legend:
+    if add_legend:
         primitive = ax.plot(data['x'], data['y'], '.')
     else:
         primitive = ax.scatter(data['x'], data['y'], c=data['color'])
@@ -126,11 +146,11 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
 
     if meta_data.get('ylabel', None):
         ax.set_ylabel(meta_data.get('ylabel'))
-    if add_legend and discrete_legend:
+    if add_legend:
         ax.legend(handles=primitive,
                   labels=list(meta_data['hue_values'].values),
                   title=meta_data.get('hue_label', None))
-    if add_legend and not discrete_legend:
+    if add_colorbar:
         cbar = ax.figure.colorbar(primitive)
         if meta_data.get('hue_label', None):
             cbar.ax.set_ylabel(meta_data.get('hue_label'))
