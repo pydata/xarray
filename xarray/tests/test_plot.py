@@ -1846,19 +1846,6 @@ class TestScatterPlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x, y, add_legend=add_legend)
 
-    @pytest.mark.parametrize(
-        'add_legend, add_colorbar, expected_legend, expected_colorbar',
-        [(None, None, False, True),
-         (None, True, False, True),
-         (True, None, True, False)])
-    def test_infer_scatter_meta_data(self, add_legend, add_colorbar,
-                                     expected_legend, expected_colorbar):
-        meta_data = xr.plot.dataset_plot._infer_scatter_meta_data(
-            self.ds, 'A', 'B', 'hue', add_legend, add_colorbar
-        )
-        assert meta_data['add_legend'] == expected_legend
-        assert meta_data['add_colorbar'] == expected_colorbar
-
     def test_non_numeric_legend(self):
         self.ds['hue'] = pd.date_range('2000-01-01', periods=4)
         lines = self.ds.plot.scatter(x='A', y='B', hue='hue')
@@ -1867,7 +1854,7 @@ class TestScatterPlots(PlotTestCase):
         # and raise an error if explicitly not allowed to do so
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x='A', y='B', hue='hue',
-                                 add_colorbar=True)
+                                 discrete_legend=False)
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
