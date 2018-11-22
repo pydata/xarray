@@ -462,7 +462,7 @@ class TestTileIDsFromNestedList(object):
         actual = dict(_infer_tile_ids_from_nested_list(input, ()))
         assert_combined_tile_ids_equal(expected, actual)
 
-    def test_ragged_input(self):
+    def test_uneven_depth_input(self):
         # Auto_combine won't work on ragged input
         # but this is just to increase test coverage
         ds = create_test_data
@@ -470,6 +470,17 @@ class TestTileIDsFromNestedList(object):
 
         expected = {(0,): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
         actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        assert_combined_tile_ids_equal(expected, actual)
+
+    def test_uneven_length_input(self):
+        # Auto_combine won't work on ragged input
+        # but this is just to increase test coverage
+        ds = create_test_data
+        input = [[ds(0)], [ds(1), ds(2)]]
+
+        expected = {(0, 0): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
+        actual = dict(_infer_tile_ids_from_nested_list(input, ()))
+        print(actual)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_infer_from_datasets(self):
@@ -533,10 +544,20 @@ class TestCombineND(object):
 
 class TestCheckShapeTileIDs(object):
     # TODO test all types of ValueErrors from _check_shape_tile_id
-    def test_check_lengths(self):
+    def test_check_depths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
-        with pytest.raises(ValueError):
+        with raises_regex(ValueError, 'sub-lists do not have '
+                                      'consistent depths'):
+            _check_shape_tile_ids(combined_tile_ids)
+
+    def test_check_lengths(self):
+        ds = create_test_data(0)
+        combined_tile_ids = {(0, 0): ds, (0, 1): ds,
+                             (1, 0): ds, (1, 1): ds,
+                             (0, 1): ds}
+        with raises_regex(ValueError, 'sub-lists do not have '
+                                      'consistent lengths'):
             _check_shape_tile_ids(combined_tile_ids)
 
 
@@ -556,6 +577,22 @@ class TestAutoCombineND(object):
 
         assert_equal(result, expected)
 
+    @pytest.mark.skip
     def test_ragged_input(self):
         # TODO should throw an informative error if you try this
+        ...
+
+    def test_combine_redundant_nesting(self):
+        objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
+        actual = auto_combine(objs, concat_dims=[None, 'x'])
+        expected = Dataset({'x': [0, 1]})
+        assert_identical(expected, actual)
+
+        objs = [[Dataset({'x': [0]})], [Dataset({'x': [1]})]]
+        actual = auto_combine(objs, concat_dims=['x', None])
+        expected = Dataset({'x': [0, 1]})
+        assert_identical(expected, actual)
+
+    @pytest.mark.skip
+    def test_mixed_default_concat_dims(self):
         ...
