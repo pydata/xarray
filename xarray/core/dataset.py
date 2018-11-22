@@ -36,7 +36,7 @@ from .utils import (
     decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
     hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
-from ..plot.plot import _Dataset_PlotMethods
+from ..plot.dataset_plot import _Dataset_PlotMethods
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
 _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',

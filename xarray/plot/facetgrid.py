@@ -316,7 +316,7 @@ class FacetGrid(object):
 
     def map_scatter(self, x=None, y=None, hue=None, discrete_legend=False,
                     add_legend=None, **kwargs):
-        from .plot import _infer_scatter_meta_data, scatter
+        from .dataset_plot import _infer_scatter_meta_data, scatter
 
         kwargs['add_legend'] = False
         kwargs['discrete_legend'] = discrete_legend

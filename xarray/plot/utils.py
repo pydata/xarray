@@ -4,6 +4,8 @@ import itertools
 import textwrap
 import warnings
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -450,3 +452,36 @@ def _valid_other_type(x, types):
     Do all elements of x have a type from types?
     """
     return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
+
+
+def _valid_numpy_subdtype(x, numpy_types):
+    """
+    Is any dtype from numpy_types superior to the dtype of x?
+    """
+    # If any of the types given in numpy_types is understood as numpy.generic,
+    # all possible x will be considered valid.  This is probably unwanted.
+    for t in numpy_types:
+        assert not np.issubdtype(np.generic, t)
+
+    return any(np.issubdtype(x.dtype, t) for t in numpy_types)
+
+
+def _ensure_plottable(*args):
+    """
+    Raise exception if there is anything in args that can't be plotted on an
+    axis by matplotlib.
+    """
+    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
+    other_types = [datetime]
+
+    for x in args:
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
+                or _valid_other_type(np.array(x), other_types)):
+            raise TypeError('Plotting requires coordinates to be numeric '
+                            'or dates of type np.datetime64 or '
+                            'datetime.datetime or pd.Interval.')
+
+
+def _ensure_numeric(arr):
+    numpy_types = [np.floating, np.integer]
+    return _valid_numpy_subdtype(arr, numpy_types)

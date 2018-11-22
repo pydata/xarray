@@ -9,49 +9,19 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import warnings
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
-from xarray.core.alignment import align
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels,
-    _interval_to_double_bound_points, _interval_to_mid_points,
-    _resolve_intervals_2dplot, _valid_other_type, get_axis,
-    import_matplotlib_pyplot, label_from_attrs)
-
-
-def _valid_numpy_subdtype(x, numpy_types):
-    """
-    Is any dtype from numpy_types superior to the dtype of x?
-    """
-    # If any of the types given in numpy_types is understood as numpy.generic,
-    # all possible x will be considered valid.  This is probably unwanted.
-    for t in numpy_types:
-        assert not np.issubdtype(np.generic, t)
-
-    return any(np.issubdtype(x.dtype, t) for t in numpy_types)
-
-
-def _ensure_plottable(*args):
-    """
-    Raise exception if there is anything in args that can't be plotted on an
-    axis by matplotlib.
-    """
-    numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
-    other_types = [datetime]
-
-    for x in args:
-        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
-                or _valid_other_type(np.array(x), other_types)):
-            raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates of type np.datetime64 or '
-                            'datetime.datetime or pd.Interval.')
+    ROBUST_PERCENTILE, _determine_cmap_params, _ensure_plottable,
+    _infer_xy_labels, _interval_to_double_bound_points,
+    _interval_to_mid_points, _resolve_intervals_2dplot, _valid_other_type,
+    get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -259,78 +229,6 @@ def _infer_line_data(darray, x, y, hue):
     ylabel = label_from_attrs(yplt)
 
     return xplt, yplt, hueplt, xlabel, ylabel, hue_label
-
-
-def _ensure_numeric(arr):
-    numpy_types = [np.floating, np.integer]
-    return _valid_numpy_subdtype(arr, numpy_types)
-
-
-def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
-    dvars = set(ds.data_vars.keys())
-    error_msg = (' must be either one of ({0:s})'
-                 .format(', '.join(dvars)))
-
-    if x not in dvars:
-        raise ValueError(x + error_msg)
-
-    if y not in dvars:
-        raise ValueError(y + error_msg)
-
-    if hue and add_legend is None:
-        add_legend = True
-    if add_legend and not hue:
-            raise ValueError('hue must be speicifed for generating a lengend')
-
-    if hue and not _ensure_numeric(ds[hue].values):
-        if discrete_legend is None:
-            discrete_legend = True
-        elif discrete_legend is False:
-            raise ValueError('Cannot create a colorbar for a non numeric'
-                             ' coordinate')
-
-    dims = ds[x].dims
-    if ds[y].dims != dims:
-        raise ValueError('{} and {} must have the same dimensions.'
-                         ''.format(x, y))
-
-    dims_coords = set(list(ds.coords) + list(ds.dims))
-    if hue is not None and hue not in dims_coords:
-        raise ValueError(hue + ' must be either one of ({0:s})'
-                               ''.format(', '.join(dims_coords)))
-
-    if hue:
-        hue_label = label_from_attrs(ds.coords[hue])
-    else:
-        hue_label = None
-
-    return {'add_legend': add_legend,
-            'discrete_legend': discrete_legend,
-            'hue_label': hue_label,
-            'xlabel': label_from_attrs(ds[x]),
-            'ylabel': label_from_attrs(ds[y]),
-            'hue_values': ds[x].coords[hue] if discrete_legend else None}
-
-
-def _infer_scatter_data(ds, x, y, hue, discrete_legend):
-    dims = set(ds[x].dims)
-    if discrete_legend:
-        dims.remove(hue)
-        xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
-        yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
-        return {'x': xplt, 'y': yplt}
-    else:
-        data = {'x': ds[x].values.flatten(),
-                'y': ds[y].values.flatten(),
-                'color': None}
-        if hue:
-            # this is a hack to make a dataarray of the shape of ds[x] whose
-            # values are the coordinate hue. There's probably a better way
-            color = ds[x]
-            color[:] = 0
-            color += ds.coords[hue]
-            data['color'] = color.values.flatten()
-        return data
 
 
 # This function signature should not change so that it can use
@@ -1188,82 +1086,3 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         ax.set_ylim(y[0], y[-1])
 
     return primitive
-
-
-def scatter(ds, x, y, hue=None, col=None, row=None,
-            col_wrap=None, sharex=True, sharey=True, aspect=None,
-            size=None, subplot_kws=None, add_legend=None,
-            discrete_legend=None, **kwargs):
-
-    if kwargs.get('_meta_data', None):
-        discrete_legend = kwargs['_meta_data']['discrete_legend']
-    else:
-        meta_data = _infer_scatter_meta_data(ds, x, y, hue,
-                                             add_legend, discrete_legend)
-        discrete_legend = meta_data['discrete_legend']
-        add_legend = meta_data['add_legend']
-
-    if col or row:
-        ax = kwargs.pop('ax', None)
-        figsize = kwargs.pop('figsize', None)
-        if ax is not None:
-            raise ValueError("Can't use axes when making faceted plots.")
-        if aspect is None:
-            aspect = 1
-        if size is None:
-            size = 3
-        elif figsize is not None:
-            raise ValueError('cannot provide both `figsize` and '
-                             '`size` arguments')
-
-        g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
-                      sharex=sharex, sharey=sharey, figsize=figsize,
-                      aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
-                             discrete_legend=discrete_legend, **kwargs)
-
-    data = _infer_scatter_data(ds, x, y, hue, discrete_legend)
-
-    figsize = kwargs.pop('figsize', None)
-    ax = kwargs.pop('ax', None)
-    ax = get_axis(figsize, size, aspect, ax)
-    if discrete_legend:
-        primitive = ax.plot(data['x'], data['y'], '.')
-    else:
-        primitive = ax.scatter(data['x'], data['y'], c=data['color'])
-    if '_meta_data' in kwargs:  # if this was called from map_scatter,
-        return primitive        # finish here. Else, make labels
-
-    if meta_data.get('xlabel', None):
-        ax.set_xlabel(meta_data.get('xlabel'))
-
-    if meta_data.get('ylabel', None):
-        ax.set_ylabel(meta_data.get('ylabel'))
-    if add_legend and discrete_legend:
-        ax.legend(handles=primitive,
-                  labels=list(meta_data['hue_values'].values),
-                  title=meta_data.get('hue_label', None))
-    if add_legend and not discrete_legend:
-        cbar = ax.figure.colorbar(primitive)
-        if meta_data.get('hue_label', None):
-            cbar.ax.set_ylabel(meta_data.get('hue_label'))
-
-    return primitive
-
-
-class _Dataset_PlotMethods(object):
-    """
-    Enables use of xarray.plot functions as attributes on a Dataset.
-    For example, Dataset.plot.scatter
-    """
-
-    def __init__(self, dataset):
-        self._ds = dataset
-
-    def __call__(self, *args, **kwargs):
-        raise ValueError('Dataset.plot cannot be called directly. Use'
-                         'an explicit plot method, e.g. ds.plot.scatter(...)')
-
-    @functools.wraps(scatter)
-    def scatter(self, *args, **kwargs):
-        return scatter(self._ds, *args, **kwargs)
