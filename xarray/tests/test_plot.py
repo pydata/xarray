@@ -1792,6 +1792,7 @@ class TestFacetedLinePlots(PlotTestCase):
 
 
 class TestScatterPlots(PlotTestCase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         das = [DataArray(np.random.randn(3, 3, 4, 4),
                          dims=['x', 'row', 'col', 'hue'],
@@ -1837,13 +1838,15 @@ class TestScatterPlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
 
-    def test_bad_args(self):
+    @pytest.mark.parametrize('x, y, add_legend', [
+        ('A', 'B', True),
+        ('A', 'The Spanish Inquisition', None),
+        ('The Spanish Inquisition', 'B', None)])
+    def test_bad_args(self, x, y, add_legend):
         with pytest.raises(ValueError):
-            self.ds.plot.scatter(x='A', y='B', add_legend=True)
-            self.ds.plot.scatter(x='A', y='The Spanish Inquisition')
-            self.ds.plot.scatter(x='The Spanish Inquisition', y='B')
+            self.ds.plot.scatter(x, y, add_legend=add_legend)
 
-    def test_non_numeric_legened(self):
+    def test_non_numeric_legend(self):
         self.ds['hue'] = pd.date_range('2000-01-01', periods=4)
         lines = self.ds.plot.scatter(x='A', y='B', hue='hue')
         # should make a discrete legend
@@ -1853,7 +1856,7 @@ class TestScatterPlots(PlotTestCase):
             self.ds.plot.scatter(x='A', y='B', hue='hue',
                                  discrete_legend=False)
 
-    def test_add_legened_by_default(self):
+    def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
         assert len(sc.figure.axes) == 2
 
