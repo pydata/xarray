@@ -626,7 +626,8 @@ def test_decode_cf(calendar):
 
 def test_decode_cf_time_bounds():
 
-    da = DataArray(np.arange(6).reshape((3, 2)), coords={'time': [1, 2, 3]},
+    da = DataArray(np.arange(6, dtype='int64').reshape((3, 2)),
+                   coords={'time': [1, 2, 3]},
                    dims=('time', 'nbnd'), name='time_bnds')
 
     # Simplest case
