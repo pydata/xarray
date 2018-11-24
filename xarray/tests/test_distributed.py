@@ -130,6 +130,16 @@ def test_dask_distributed_zarr_integration_test(loop):
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
+            # repeat with consolidated metadata and delayed compute
+            with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
+                                 suffix='.zarrc') as filename:
+                futures = original.to_zarr(filename, consolidate=True,
+                                           compute=False)
+                futures.compute()
+                with xr.open_zarr(filename, consolidated=True) as restored:
+                    assert isinstance(restored.var1.data, da.Array)
+                    computed = restored.compute()
+                    assert_allclose(original, computed)
 
 
 @requires_rasterio
