@@ -641,10 +641,10 @@ Consolidated Metadata
 Xarray needs to read all of the zarr metadata when it opens a dataset.
 In some storage mediums, such as with cloud object storage (e.g. amazon S3),
 this can introduce significant overhead, because two separate HTTP calls to the
-object store for each variable in the dataset.
-With version 2.3, zarr will support an feature called *consolidated metadata*,
+object store must be made for each variable in the dataset.
+With version 2.3, zarr will support a feature called *consolidated metadata*,
 which allows all metadata for the entire dataset to be stored with a single
-key (by default called ``.zmetadata``). This can drastically reduce the latency
+key (by default called ``.zmetadata``). This can drastically speed up
 opening the store. (For more information on this feature, consult the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.)
 
