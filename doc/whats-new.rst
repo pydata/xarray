@@ -36,6 +36,10 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Time bounds variables are now also decoded according to CF conventions
+  (:issue:`2565`).
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Bug fixes
 ~~~~~~~~~
 

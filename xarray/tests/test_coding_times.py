@@ -645,15 +645,16 @@ def test_decode_cf_time_bounds():
     assert ds.time_bnds.dtype == np.dtype('M8[ns]')
 
     # If previous calendar and units do not overwrite them
-    ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days since 2001-01-01'
-    ds['time'].attrs['calendar'] = 'standard'
-    ds['time'].attrs['bounds'] = 'time_bnds'
-    ds['time_bnds'].attrs['units'] = 'hours since 2001-01-01'
-    ds['time_bnds'].attrs['calendar'] = 'noleap'
-    ds = decode_cf(ds)
-    assert ds.time_bnds.dtype == np.dtype('O')
-    assert ds.time_bnds.encoding['units'] == 'hours since 2001-01-01'
+    if has_cftime_or_netCDF4:
+        ds = da.to_dataset()
+        ds['time'].attrs['units'] = 'days since 2001-01-01'
+        ds['time'].attrs['calendar'] = 'standard'
+        ds['time'].attrs['bounds'] = 'time_bnds'
+        ds['time_bnds'].attrs['units'] = 'hours since 2001-01-01'
+        ds['time_bnds'].attrs['calendar'] = 'noleap'
+        ds = decode_cf(ds)
+        assert ds.time_bnds.dtype == np.dtype('O')
+        assert ds.time_bnds.encoding['units'] == 'hours since 2001-01-01'
 
     # If bounds not available do not complain
     ds = da.to_dataset()
