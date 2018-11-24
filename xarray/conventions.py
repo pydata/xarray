@@ -350,6 +350,25 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
         drop_variables = []
     drop_variables = set(drop_variables)
 
+    # Time bounds coordinates might miss the decoding attributes
+    # https://github.com/pydata/xarray/issues/2565
+    if decode_times:
+        # We list all time variables with bounds
+        to_update = dict()
+        for v in variables.values():
+            attrs = v.attrs
+            if ('units' in attrs and 'since' in attrs['units'] and
+                    'bounds' in attrs):
+                new_attrs = {'units': attrs['units']}
+                if 'calendar' in attrs:
+                    new_attrs['calendar'] = attrs['calendar']
+                to_update[attrs['bounds']] = new_attrs
+        # For all bound variables, update their time attribute if not present
+        for k, new_attrs in to_update.items():
+            if k in variables:
+                for ak, av in new_attrs.items():
+                    variables[k].attrs.setdefault(ak, av)
+
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
         if k in drop_variables:
