@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 import toolz.itertoolz as itertoolz
+from collections import Counter
 
 import pandas as pd
 
@@ -433,27 +434,14 @@ def _check_shape_tile_ids(combined_tile_ids, contains='datasets'):
         raise ValueError("The supplied objects do not form a hypercube because"
                          " sub-lists do not have consistent depths")
 
-    # Check objects form a hypercube
-    # i.e. check all lists along one dimension are same length, monotonically-
-    # increasing with no repetitions
+    # Check all lists along one dimension are same length
     for dim in range(nesting_depths[0]):
-        try:
-            indices_along_dim = [id[dim] for id in tile_ids]
-        except IndexError:
+        indices_along_dim = [id[dim] for id in tile_ids]
+        occurrences = Counter(indices_along_dim)
+        if len(set(occurrences.values())) != 1:
             raise ValueError("The supplied objects do not form a hypercube "
                              "because sub-lists do not have consistent "
                              "lengths along dimension {}".format(str(dim)))
-
-        # TODO work out if this actually means something is wrong
-        if not set(indices_along_dim) == indices_along_dim:
-            raise ValueError("The supplied objects do not form a hypercube "
-                             "because there are repeated concatenation "
-                             "positions along concatenation dimension "
-                             "{}".format(str(dim)))
-
-        if not sorted(indices_along_dim) == indices_along_dim:
-            raise ValueError("The supplied objects have not been successfully "
-                             "ordered along dimension {}".format(str(dim)))
 
 
 def _data_vars(combined_id):

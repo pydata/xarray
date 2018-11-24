@@ -406,6 +406,8 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
 
+# TODO should we use @requires_dask? only for toolz?
+
 class TestTileIDsFromNestedList(object):
     def test_1d(self):
         ds = create_test_data
@@ -543,7 +545,6 @@ class TestCombineND(object):
 
 
 class TestCheckShapeTileIDs(object):
-    # TODO test all types of ValueErrors from _check_shape_tile_id
     def test_check_depths(self):
         ds = create_test_data(0)
         combined_tile_ids = {(0,): ds, (0, 1): ds}
@@ -553,9 +554,8 @@ class TestCheckShapeTileIDs(object):
 
     def test_check_lengths(self):
         ds = create_test_data(0)
-        combined_tile_ids = {(0, 0): ds, (0, 1): ds,
-                             (1, 0): ds, (1, 1): ds,
-                             (0, 1): ds}
+        combined_tile_ids = {(0, 0): ds, (0, 1): ds , (0, 2): ds,
+                             (1, 0): ds, (1, 1): ds}
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent lengths'):
             _check_shape_tile_ids(combined_tile_ids)
@@ -577,12 +577,20 @@ class TestAutoCombineND(object):
 
         assert_equal(result, expected)
 
-    @pytest.mark.skip
-    def test_ragged_input(self):
-        # TODO should throw an informative error if you try this
-        ...
+    def test_invalid_hypercube_input(self):
+        ds = create_test_data
 
-    def test_combine_redundant_nesting(self):
+        datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
+        with raises_regex(ValueError, 'sub-lists do not have '
+                                      'consistent lengths'):
+            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+
+        datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
+        with raises_regex(ValueError, 'sub-lists do not have '
+                                      'consistent depths'):
+            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+
+    def test_combine_concat_one_dim_merge_another(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
         actual = auto_combine(objs, concat_dims=[None, 'x'])
         expected = Dataset({'x': [0, 1]})
@@ -592,7 +600,3 @@ class TestAutoCombineND(object):
         actual = auto_combine(objs, concat_dims=['x', None])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
-
-    @pytest.mark.skip
-    def test_mixed_default_concat_dims(self):
-        ...
