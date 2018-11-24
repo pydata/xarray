@@ -263,14 +263,31 @@ class CFTimeIndex(pd.Index):
         """
         start, end = _parsed_string_to_bounds(self.date_type, resolution,
                                               parsed)
-        lhs_mask = (self._data >= start)
-        rhs_mask = (self._data <= end)
-        return (lhs_mask & rhs_mask).nonzero()[0]
+
+        times = self._data
+
+        if self.is_monotonic:
+            if (len(times) and ((start < times[0] and end < times[0]) or
+                                (start > times[-1] and end > times[-1]))):
+                # we are out of range
+                raise KeyError
+
+            # a monotonic (sorted) series can be sliced
+            left = times.searchsorted(start, side='left')
+            right = times.searchsorted(end, side='right')
+            return slice(left, right)
+
+        lhs_mask = times >= start
+        rhs_mask = times <= end
+        return np.flatnonzero(lhs_mask & rhs_mask)
 
     def _get_string_slice(self, key):
         """Adapted from pandas.tseries.index.DatetimeIndex._get_string_slice"""
         parsed, resolution = _parse_iso8601_with_reso(self.date_type, key)
-        loc = self._partial_date_slice(resolution, parsed)
+        try:
+            loc = self._partial_date_slice(resolution, parsed)
+        except KeyError:
+            raise KeyError(key)
         return loc
 
     def get_loc(self, key, method=None, tolerance=None):
@@ -431,7 +448,7 @@ class CFTimeIndex(pd.Index):
                 'calendar, {!r}, to a pandas.DatetimeIndex, which uses dates '
                 'from the standard calendar.  This may lead to subtle errors '
                 'in operations that depend on the length of time between '
-                'dates.'.format(calendar), RuntimeWarning)
+                'dates.'.format(calendar), RuntimeWarning, stacklevel=2)
         return pd.DatetimeIndex(nptimes)
 
 
