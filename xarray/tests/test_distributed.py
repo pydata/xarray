@@ -1,5 +1,6 @@
 """ isort:skip_file """
 from __future__ import absolute_import, division, print_function
+from distutils.version import LooseVersion
 import os
 import sys
 import pickle
@@ -131,6 +132,9 @@ def test_dask_distributed_zarr_integration_test(loop):
                     computed = restored.compute()
                     assert_allclose(original, computed)
             # repeat with consolidated metadata and delayed compute
+            import zarr
+            if LooseVersion(zarr.__version__) <= '2.2':
+                return
             with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
                                  suffix='.zarrc') as filename:
                 futures = original.to_zarr(filename, consolidate=True,

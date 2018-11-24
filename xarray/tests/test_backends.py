@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import contextlib
+from distutils.version import LooseVersion
 import itertools
 import math
 import os.path
@@ -1320,7 +1321,12 @@ class ZarrBase(CFEncodedBase):
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
+
     def test_roundtrip_consolidated(self):
+        # my understanding is that pytest.mark.skipif is broken here
+        import zarr
+        if LooseVersion(zarr.__version__) <= '2.2':
+            pytest.skip('zarr version 2.3 or greater needed for consolidated')
         expected = create_test_data()
         with self.roundtrip(expected,
                             save_kwargs={'consolidate': True},
