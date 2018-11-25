@@ -24,6 +24,7 @@ on a :py:class:`~xarray.Dataset`, use :py:meth:`~xarray.DataArray.transpose`:
 
     ds = xr.Dataset({'foo': (('x', 'y', 'z'), [[[42]]]), 'bar': (('y', 'z'), [[24]])})
     ds.transpose('y', 'z', 'x')
+    ds.transpose()  # transposes all dimensions
 
 Expand and squeeze dimensions
 -----------------------------
