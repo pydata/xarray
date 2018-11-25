@@ -110,6 +110,8 @@ Indexing
    Dataset.isel
    Dataset.sel
    Dataset.squeeze
+   Dataset.interp
+   Dataset.interp_like
    Dataset.reindex
    Dataset.reindex_like
    Dataset.set_index
@@ -148,6 +150,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -263,6 +266,8 @@ Indexing
    DataArray.isel
    DataArray.sel
    DataArray.squeeze
+   DataArray.interp
+   DataArray.interp_like
    DataArray.reindex
    DataArray.reindex_like
    DataArray.set_index
@@ -313,6 +318,7 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -551,6 +557,13 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+
 Plotting
 ========
 
@@ -611,3 +624,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager

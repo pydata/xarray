@@ -9,8 +9,8 @@ from ..core import indexing
 from ..core.pycompat import bytes_type, dask_array_type, unicode_type
 from ..core.variable import Variable
 from .variables import (
-    VariableCoder, lazy_elemwise_func, pop_to,
-    safe_setitem, unpack_for_decoding, unpack_for_encoding)
+    VariableCoder, lazy_elemwise_func, pop_to, safe_setitem,
+    unpack_for_decoding, unpack_for_encoding)
 
 
 def create_vlen_dtype(element_type):
@@ -43,7 +43,10 @@ class EncodedStringCoder(VariableCoder):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
         contains_unicode = is_unicode_dtype(data.dtype)
-        encode_as_char = 'dtype' in encoding and encoding['dtype'] == 'S1'
+        encode_as_char = encoding.get('dtype') == 'S1'
+
+        if encode_as_char:
+            del encoding['dtype']  # no longer relevant
 
         if contains_unicode and (encode_as_char or not self.allows_unicode):
             if '_FillValue' in attrs:
@@ -100,7 +103,7 @@ class CharacterArrayCoder(VariableCoder):
         variable = ensure_fixed_length_bytes(variable)
 
         dims, data, attrs, encoding = unpack_for_encoding(variable)
-        if data.dtype.kind == 'S':
+        if data.dtype.kind == 'S' and encoding.get('dtype') is not str:
             data = bytes_to_char(data)
             dims = dims + ('string%s' % data.shape[-1],)
         return Variable(dims, data, attrs, encoding)

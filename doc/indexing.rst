@@ -193,6 +193,14 @@ Indexing axes with monotonic decreasing labels also works, as long as the
    reversed_da.loc[3.1:0.9]
 
 
+.. note::
+
+  If you want to interpolate along coordinates rather than looking up the
+  nearest neighbors, use :py:meth:`~xarray.Dataset.interp` and
+  :py:meth:`~xarray.Dataset.interp_like`.
+  See :ref:`interpolation <interp>` for the details.
+
+
 Dataset indexing
 ----------------
 
@@ -403,7 +411,7 @@ can use indexing with ``.loc`` :
 
 .. ipython:: python
 
-    ds = xr.tutorial.load_dataset('air_temperature')
+    ds = xr.tutorial.open_dataset('air_temperature')
 
     #add an empty 2D dataarray
     ds['empty']= xr.full_like(ds.air.mean('time'),fill_value=0)
@@ -510,7 +518,7 @@ where three elements at ``(ix, iy) = ((0, 0), (1, 1), (6, 0))`` are selected
 and mapped along a new dimension ``z``.
 
 If you want to add a coordinate to the new dimension ``z``,
-you can supply a :py:meth:`~xarray.DataArray` with a coordinate,
+you can supply a :py:class:`~xarray.DataArray` with a coordinate,
 
 .. ipython:: python
 

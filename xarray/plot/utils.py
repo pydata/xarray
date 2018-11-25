@@ -1,29 +1,17 @@
 from __future__ import absolute_import, division, print_function
 
+import itertools
+import textwrap
 import warnings
 
 import numpy as np
 import pandas as pd
-import pkg_resources
 
+from ..core.options import OPTIONS
 from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
-
-
-def _load_default_cmap(fname='default_colormap.csv'):
-    """
-    Returns viridis color map
-    """
-    from matplotlib.colors import LinearSegmentedColormap
-
-    # Not sure what the first arg here should be
-    f = pkg_resources.resource_stream(__name__, fname)
-    cm_data = pd.read_csv(f, header=None).values
-    f.close()
-
-    return LinearSegmentedColormap.from_list('viridis', cm_data)
 
 
 def import_seaborn():
@@ -186,6 +174,10 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     # vlim might be computed below
     vlim = None
 
+    # save state; needed later
+    vmin_was_none = vmin is None
+    vmax_was_none = vmax is None
+
     if vmin is None:
         if robust:
             vmin = np.percentile(calc_data, ROBUST_PERCENTILE)
@@ -218,22 +210,42 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     vmin += center
     vmax += center
 
+    # now check norm and harmonize with vmin, vmax
+    if norm is not None:
+        if norm.vmin is None:
+            norm.vmin = vmin
+        else:
+            if not vmin_was_none and vmin != norm.vmin:
+                raise ValueError('Cannot supply vmin and a norm'
+                                 + ' with a different vmin.')
+            vmin = norm.vmin
+
+        if norm.vmax is None:
+            norm.vmax = vmax
+        else:
+            if not vmax_was_none and vmax != norm.vmax:
+                raise ValueError('Cannot supply vmax and a norm'
+                                 + ' with a different vmax.')
+            vmax = norm.vmax
+
+    # if BoundaryNorm, then set levels
+    if isinstance(norm, mpl.colors.BoundaryNorm):
+        levels = norm.boundaries
+
     # Choose default colormaps if not provided
     if cmap is None:
         if divergent:
-            cmap = "RdBu_r"
+            cmap = OPTIONS['cmap_divergent']
         else:
-            cmap = "viridis"
-
-    # Allow viridis before matplotlib 1.5
-    if cmap == "viridis":
-        cmap = _load_default_cmap()
+            cmap = OPTIONS['cmap_sequential']
 
     # Handle discrete levels
-    if levels is not None:
+    if levels is not None and norm is None:
         if is_scalar(levels):
-            if user_minmax or levels == 1:
+            if user_minmax:
                 levels = np.linspace(vmin, vmax, levels)
+            elif levels == 1:
+                levels = np.asarray([(vmin + vmax) / 2])
             else:
                 # N in MaxNLocator refers to bins, not ticks
                 ticker = mpl.ticker.MaxNLocator(levels - 1)
@@ -243,8 +255,9 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     if extend is None:
         extend = _determine_extend(calc_data, vmin, vmax)
 
-    if levels is not None:
-        cmap, norm = _build_discrete_cmap(cmap, levels, extend, filled)
+    if levels is not None or isinstance(norm, mpl.colors.BoundaryNorm):
+        cmap, newnorm = _build_discrete_cmap(cmap, levels, extend, filled)
+        norm = newnorm if norm is None else norm
 
     return dict(vmin=vmin, vmax=vmax, cmap=cmap, extend=extend,
                 levels=levels, norm=norm)
@@ -315,11 +328,11 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
             raise ValueError('DataArray must be 2d')
         y, x = darray.dims
     elif x is None:
-        if y not in darray.dims:
+        if y not in darray.dims and y not in darray.coords:
             raise ValueError('y must be a dimension name if x is not supplied')
         x = darray.dims[0] if y == darray.dims[1] else darray.dims[1]
     elif y is None:
-        if x not in darray.dims:
+        if x not in darray.dims and x not in darray.coords:
             raise ValueError('x must be a dimension name if y is not supplied')
         y = darray.dims[0] if x == darray.dims[1] else darray.dims[1]
     elif any(k not in darray.coords and k not in darray.dims for k in (x, y)):
@@ -354,3 +367,86 @@ def get_axis(figsize, size, aspect, ax):
         ax = plt.gca()
 
     return ax
+
+
+def label_from_attrs(da, extra=''):
+    ''' Makes informative labels if variable metadata (attrs) follows
+        CF conventions. '''
+
+    if da.attrs.get('long_name'):
+        name = da.attrs['long_name']
+    elif da.attrs.get('standard_name'):
+        name = da.attrs['standard_name']
+    elif da.name is not None:
+        name = da.name
+    else:
+        name = ''
+
+    if da.attrs.get('units'):
+        units = ' [{}]'.format(da.attrs['units'])
+    else:
+        units = ''
+
+    return '\n'.join(textwrap.wrap(name + extra + units, 30))
+
+
+def _interval_to_mid_points(array):
+    """
+    Helper function which returns an array
+    with the Intervals' mid points.
+    """
+
+    return np.array([x.mid for x in array])
+
+
+def _interval_to_bound_points(array):
+    """
+    Helper function which returns an array
+    with the Intervals' boundaries.
+    """
+
+    array_boundaries = np.array([x.left for x in array])
+    array_boundaries = np.concatenate(
+        (array_boundaries, np.array([array[-1].right])))
+
+    return array_boundaries
+
+
+def _interval_to_double_bound_points(xarray, yarray):
+    """
+    Helper function to deal with a xarray consisting of pd.Intervals. Each
+    interval is replaced with both boundaries. I.e. the length of xarray
+    doubles. yarray is modified so it matches the new shape of xarray.
+    """
+
+    xarray1 = np.array([x.left for x in xarray])
+    xarray2 = np.array([x.right for x in xarray])
+
+    xarray = list(itertools.chain.from_iterable(zip(xarray1, xarray2)))
+    yarray = list(itertools.chain.from_iterable(zip(yarray, yarray)))
+
+    return xarray, yarray
+
+
+def _resolve_intervals_2dplot(val, func_name):
+    """
+    Helper function to replace the values of a coordinate array containing
+    pd.Interval with their mid-points or - for pcolormesh - boundaries which
+    increases length by 1.
+    """
+    label_extra = ''
+    if _valid_other_type(val, [pd.Interval]):
+        if func_name == 'pcolormesh':
+            val = _interval_to_bound_points(val)
+        else:
+            val = _interval_to_mid_points(val)
+            label_extra = '_center'
+
+    return val, label_extra
+
+
+def _valid_other_type(x, types):
+    """
+    Do all elements of x have a type from types?
+    """
+    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))

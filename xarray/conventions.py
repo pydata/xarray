@@ -6,11 +6,11 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from .coding import times, strings, variables
+from .coding import strings, times, variables
 from .coding.variables import SerializationWarning
 from .core import duck_array_ops, indexing
 from .core.pycompat import (
-    OrderedDict, basestring, bytes_type, iteritems, dask_array_type,
+    OrderedDict, basestring, bytes_type, dask_array_type, iteritems,
     unicode_type)
 from .core.variable import IndexVariable, Variable, as_variable
 
@@ -79,7 +79,8 @@ def _var_as_tuple(var):
 
 
 def maybe_encode_nonstring_dtype(var, name=None):
-    if 'dtype' in var.encoding and var.encoding['dtype'] != 'S1':
+    if ('dtype' in var.encoding and
+            var.encoding['dtype'] not in ('S1', str)):
         dims, data, attrs, encoding = _var_as_tuple(var)
         dtype = np.dtype(encoding.pop('dtype'))
         if dtype != var.dtype:
@@ -89,7 +90,7 @@ def maybe_encode_nonstring_dtype(var, name=None):
                     warnings.warn('saving variable %s with floating '
                                   'point data as an integer dtype without '
                                   'any _FillValue to use for NaNs' % name,
-                                  SerializationWarning, stacklevel=3)
+                                  SerializationWarning, stacklevel=10)
                 data = duck_array_ops.around(data)[...]
             data = data.astype(dtype=dtype)
         var = Variable(dims, data, attrs, encoding)
@@ -307,12 +308,7 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
         data = NativeEndiannessArray(data)
         original_dtype = data.dtype
 
-    if 'dtype' in encoding:
-        if original_dtype != encoding['dtype']:
-            warnings.warn("CF decoding is overwriting dtype on variable {!r}"
-                          .format(name))
-    else:
-        encoding['dtype'] = original_dtype
+    encoding.setdefault('dtype', original_dtype)
 
     if 'dtype' in attributes and attributes['dtype'] == 'bool':
         del attributes['dtype']

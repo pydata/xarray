@@ -23,10 +23,14 @@ if PY3:  # pragma: no cover
 
     range = range
     zip = zip
+    from itertools import zip_longest
     from functools import reduce
     import builtins
     from urllib.request import urlretrieve
     from inspect import getfullargspec as getargspec
+
+    def move_to_end(ordered_dict, key):
+        ordered_dict.move_to_end(key)
 else:  # pragma: no cover
     # Python 2
     basestring = basestring  # noqa
@@ -41,11 +45,18 @@ else:  # pragma: no cover
         return d.itervalues()
 
     range = xrange
-    from itertools import izip as zip, imap as map
+    from itertools import (
+        izip as zip, imap as map, izip_longest as zip_longest,
+    )
     reduce = reduce
     import __builtin__ as builtins
     from urllib import urlretrieve
     from inspect import getargspec
+
+    def move_to_end(ordered_dict, key):
+        value = ordered_dict[key]
+        del ordered_dict[key]
+        ordered_dict[key] = value
 
 integer_types = native_int_types + (np.integer,)
 
@@ -72,7 +83,6 @@ try:
     path_type = (Path, )
 except ImportError as e:
     path_type = ()
-
 
 try:
     from contextlib import suppress

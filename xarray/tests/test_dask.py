@@ -15,18 +15,22 @@ from xarray.core.pycompat import OrderedDict, suppress
 from xarray.tests import mock
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_frame_equal, assert_identical, raises_regex)
+    assert_allclose, assert_array_equal, assert_equal, assert_frame_equal,
+    assert_identical, raises_regex)
 
 dask = pytest.importorskip('dask')
 da = pytest.importorskip('dask.array')
 dd = pytest.importorskip('dask.dataframe')
 
 
-class DaskTestCase(TestCase):
+class DaskTestCase(object):
     def assertLazyAnd(self, expected, actual, test):
-        with dask.set_options(get=dask.get):
+
+        with (dask.config.set(scheduler='single-threaded')
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=dask.get)):
             test(actual, expected)
+
         if isinstance(actual, Dataset):
             for k, v in actual.variables.items():
                 if k in actual.dims:
@@ -53,6 +57,7 @@ class TestVariable(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_allclose)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -197,19 +202,19 @@ class TestVariable(DaskTestCase):
         except NotImplementedError as err:
             assert 'dask' in str(err)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_univariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.sin(u), xu.sin(v))
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_bivariate_ufunc(self):
         u = self.eager_var
         v = self.lazy_var
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(v, 0))
         self.assertLazyAndAllClose(np.maximum(u, 0), xu.maximum(0, v))
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_var
         v = self.lazy_var
@@ -220,8 +225,6 @@ class TestVariable(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_var
         v = self.lazy_var + 1
@@ -247,6 +250,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_equal)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -281,8 +285,6 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = xr.concat([v[:2], v[2:]], 'x')
         self.assertLazyAndAllClose(u, actual)
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_compute(self):
         u = self.eager_array
         v = self.lazy_array
@@ -293,8 +295,6 @@ class TestDataArrayAndDataset(DaskTestCase):
 
         assert ((u + 1).data == v2.data).all()
 
-    @pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                        reason='Need dask 0.16 for new interface')
     def test_persist(self):
         u = self.eager_array
         v = self.lazy_array + 1
@@ -384,15 +384,11 @@ class TestDataArrayAndDataset(DaskTestCase):
         assert ds3['c'].data is c3
 
     def test_groupby(self):
-        if LooseVersion(dask.__version__) == LooseVersion('0.15.3'):
-            pytest.xfail('upstream bug in dask: '
-                         'https://github.com/dask/dask/issues/2718')
-
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.groupby('x').mean()
-        actual = v.groupby('x').mean()
+        expected = u.groupby('x').mean(xr.ALL_DIMS)
+        actual = v.groupby('x').mean(xr.ALL_DIMS)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -434,6 +430,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         actual = duplicate_and_merge(self.lazy_array)
         self.assertLazyAndEqual(expected, actual)
 
+    @pytest.mark.filterwarnings('ignore::PendingDeprecationWarning')
     def test_ufuncs(self):
         u = self.eager_array
         v = self.lazy_array
@@ -459,8 +456,11 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        with dask.set_options(get=counting_get):
-            ds.load()
+        if dask.__version__ < '0.19.4':
+            ds.load(get=counting_get)
+        else:
+            ds.load(scheduler=counting_get)
+
         assert count[0] == 1
 
     def test_stack(self):
@@ -587,7 +587,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-class TestToDaskDataFrame(TestCase):
+class TestToDaskDataFrame(object):
 
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
@@ -780,12 +780,8 @@ def build_dask_array(name):
 
 # test both the perist method and the dask.persist function
 # the dask.persist function requires a new version of dask
-@pytest.mark.parametrize('persist', [
-    lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                       lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16')
-])
+@pytest.mark.parametrize('persist', [lambda x: x.persist(),
+                                     lambda x: dask.persist(x)[0]])
 def test_persist_Dataset(persist):
     ds = Dataset({'foo': ('x', range(5)),
                   'bar': ('x', range(5))}).chunk()
@@ -798,12 +794,8 @@ def test_persist_Dataset(persist):
     assert len(ds.foo.data.dask) == n  # doesn't mutate in place
 
 
-@pytest.mark.parametrize('persist', [
-    lambda x: x.persist(),
-    pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                       lambda x: dask.persist(x)[0],
-                       reason='Need Dask 0.16')
-])
+@pytest.mark.parametrize('persist', [lambda x: x.persist(),
+                                     lambda x: dask.persist(x)[0]])
 def test_persist_DataArray(persist):
     x = da.arange(10, chunks=(5,))
     y = DataArray(x)
@@ -816,8 +808,6 @@ def test_persist_DataArray(persist):
     assert len(zz.data.dask) == zz.data.npartitions
 
 
-@pytest.mark.skipif(LooseVersion(dask.__version__) <= '0.15.4',
-                    reason='Need dask 0.16 for new interface')
 def test_dataarray_with_dask_coords():
     import toolz
     x = xr.Variable('x', da.arange(8, chunks=(4,)))
@@ -845,7 +835,11 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with dask.set_options(get=get):
+        with (dask.config.set(scheduler=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.19.4')
+              else dask.config.set(scheduler=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
+              else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()

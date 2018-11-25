@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from itertools import product
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -78,24 +77,18 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # while dask chunks can be variable sized
     # http://dask.pydata.org/en/latest/array-design.html#chunks
     if var_chunks and enc_chunks is None:
-        all_var_chunks = list(product(*var_chunks))
-        first_var_chunk = all_var_chunks[0]
-        # all but the last chunk have to match exactly
-        for this_chunk in all_var_chunks[:-1]:
-            if this_chunk != first_var_chunk:
-                raise ValueError(
-                    "Zarr requires uniform chunk sizes excpet for final chunk."
-                    " Variable %r has incompatible chunks. Consider "
-                    "rechunking using `chunk()`." % (var_chunks,))
-        # last chunk is allowed to be smaller
-        last_var_chunk = all_var_chunks[-1]
-        for len_first, len_last in zip(first_var_chunk, last_var_chunk):
-            if len_last > len_first:
-                raise ValueError(
-                    "Final chunk of Zarr array must be smaller than first. "
-                    "Variable %r has incompatible chunks. Consider rechunking "
-                    "using `chunk()`." % var_chunks)
-        return first_var_chunk
+        if any(len(set(chunks[:-1])) > 1 for chunks in var_chunks):
+            raise ValueError(
+                "Zarr requires uniform chunk sizes except for final chunk."
+                " Variable dask chunks %r are incompatible. Consider "
+                "rechunking using `chunk()`." % (var_chunks,))
+        if any((chunks[0] < chunks[-1]) for chunks in var_chunks):
+            raise ValueError(
+                "Final chunk of Zarr array must be the same size or smaller "
+                "than the first. Variable Dask chunks %r are incompatible. "
+                "Consider rechunking using `chunk()`." % var_chunks)
+        # return the first chunk for each dimension
+        return tuple(chunk[0] for chunk in var_chunks)
 
     # from here on, we are dealing with user-specified chunks in encoding
     # zarr allows chunks to be an integer, in which case it uses the same chunk
@@ -109,9 +102,8 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
         enc_chunks_tuple = tuple(enc_chunks)
 
     if len(enc_chunks_tuple) != ndim:
-        raise ValueError("zarr chunks tuple %r must have same length as "
-                         "variable.ndim %g" %
-                         (enc_chunks_tuple, ndim))
+        # throw away encoding chunks, start over
+        return _determine_zarr_chunks(None, var_chunks, ndim)
 
     for x in enc_chunks_tuple:
         if not isinstance(x, int):
@@ -134,7 +126,7 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
     # threads
     if var_chunks and enc_chunks_tuple:
         for zchunk, dchunks in zip(enc_chunks_tuple, var_chunks):
-            for dchunk in dchunks:
+            for dchunk in dchunks[:-1]:
                 if dchunk % zchunk:
                     raise NotImplementedError(
                         "Specified zarr chunks %r would overlap multiple dask "
@@ -142,6 +134,13 @@ def _determine_zarr_chunks(enc_chunks, var_chunks, ndim):
                         " Consider rechunking the data using "
                         "`chunk()` or specifying different chunks in encoding."
                         % (enc_chunks_tuple, var_chunks))
+            if dchunks[-1] > zchunk:
+                raise ValueError(
+                    "Final chunk of Zarr array must be the same size or "
+                    "smaller than the first. The specified Zarr chunk "
+                    "encoding is %r, but %r in variable Dask chunks %r is "
+                    "incompatible. Consider rechunking using `chunk()`."
+                    % (enc_chunks_tuple, dchunks, var_chunks))
         return enc_chunks_tuple
 
     raise AssertionError(
@@ -225,8 +224,7 @@ class ZarrStore(AbstractWritableDataStore):
     """
 
     @classmethod
-    def open_group(cls, store, mode='r', synchronizer=None, group=None,
-                   writer=None):
+    def open_group(cls, store, mode='r', synchronizer=None, group=None):
         import zarr
         min_zarr = '2.2'
 
@@ -238,23 +236,13 @@ class ZarrStore(AbstractWritableDataStore):
                                       "#installation" % min_zarr)
         zarr_group = zarr.open_group(store=store, mode=mode,
                                      synchronizer=synchronizer, path=group)
-        return cls(zarr_group, writer=writer)
+        return cls(zarr_group)
 
-    def __init__(self, zarr_group, writer=None):
+    def __init__(self, zarr_group):
         self.ds = zarr_group
         self._read_only = self.ds.read_only
         self._synchronizer = self.ds.synchronizer
         self._group = self.ds.path
-
-        if writer is None:
-            # by default, we should not need a lock for writing zarr because
-            # we do not (yet) allow overlapping chunks during write
-            zarr_writer = ArrayWriter(lock=False)
-        else:
-            zarr_writer = writer
-
-        # do we need to define attributes for all of the opener keyword args?
-        super(ZarrStore, self).__init__(zarr_writer)
 
     def open_store_variable(self, name, zarr_array):
         data = indexing.LazilyOuterIndexedArray(ZarrArrayWrapper(name, self))
@@ -342,8 +330,8 @@ class ZarrStore(AbstractWritableDataStore):
         AbstractWritableDataStore.store(self, variables, attributes,
                                         *args, **kwargs)
 
-    def sync(self, compute=True):
-        self.delayed_store = self.writer.sync(compute=compute)
+    def sync(self):
+        pass
 
 
 def open_zarr(store, group=None, synchronizer=None, auto_chunk=True,

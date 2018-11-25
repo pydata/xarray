@@ -603,7 +603,7 @@ pass to xarray::
     # write to the bucket
     ds.to_zarr(store=gcsmap)
     # read it back
-    ds_gcs = xr.open_zarr(gcsmap, mode='r')
+    ds_gcs = xr.open_zarr(gcsmap)
 
 .. _Zarr: http://zarr.readthedocs.io/
 .. _Amazon S3: https://aws.amazon.com/s3/
@@ -635,6 +635,28 @@ For example:
     Not all native zarr compression and filtering options have been tested with
     xarray.
 
+.. _io.cfgrib:
+
+GRIB format via cfgrib
+----------------------
+
+xarray supports reading GRIB files via ECMWF cfgrib_ python driver and ecCodes_
+C-library, if they are installed. To open a GRIB file supply ``engine='cfgrib'``
+to :py:func:`~xarray.open_dataset`:
+
+.. ipython::
+    :verbatim:
+
+    In [1]: ds_grib = xr.open_dataset('example.grib', engine='cfgrib')
+
+We recommend installing ecCodes via conda::
+
+    conda install -c conda-forge eccodes
+    pip install cfgrib
+
+.. _cfgrib: https://github.com/ecmwf/cfgrib
+.. _ecCodes: https://confluence.ecmwf.int/display/ECC/ecCodes+Home
+
 .. _io.pynio:
 
 Formats supported by PyNIO
@@ -650,7 +672,26 @@ We recommend installing PyNIO via conda::
 
 .. _PyNIO: https://www.pyngl.ucar.edu/Nio.shtml
 
-.. _combining multiple files:
+.. _io.PseudoNetCDF:
+
+Formats supported by PseudoNetCDF
+---------------------------------
+
+xarray can also read CAMx, BPCH, ARL PACKED BIT, and many other file
+formats supported by PseudoNetCDF_, if PseudoNetCDF is installed. 
+PseudoNetCDF can also provide Climate Forecasting Conventions to
+CMAQ files. In addition, PseudoNetCDF can automatically register custom
+readers that subclass PseudoNetCDF.PseudoNetCDFFile. PseudoNetCDF can
+identify readers heuristically, or format can be specified via a key in
+`backend_kwargs`.
+
+To use PseudoNetCDF to read such files, supply
+``engine='pseudonetcdf'`` to :py:func:`~xarray.open_dataset`.
+
+Add ``backend_kwargs={'format': '<format name>'}`` where `<format name>`
+options are listed on the PseudoNetCDF page.
+
+.. _PseudoNetCDF: http://github.com/barronh/PseudoNetCDF
 
 
 Formats supported by Pandas
@@ -661,6 +702,8 @@ exporting your objects to pandas and using its broad range of `IO tools`_.
 
 .. _IO tools: http://pandas.pydata.org/pandas-docs/stable/io.html
 
+
+.. _combining multiple files:
 
 
 Combining multiple files

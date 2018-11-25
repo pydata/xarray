@@ -5,7 +5,13 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import npcompat
+try:
+    import bottleneck as bn
+    _USE_BOTTLENECK = True
+except ImportError:
+    # use numpy methods instead
+    bn = np
+    _USE_BOTTLENECK = False
 
 
 def _validate_axis(data, axis):
@@ -194,6 +200,39 @@ def _rolling_window(a, window, axis=-1):
 
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    rolling = npcompat.as_strided(a, shape=shape, strides=strides,
-                                  writeable=False)
+    rolling = np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides,
+                                              writeable=False)
     return np.swapaxes(rolling, -2, axis)
+
+
+def _create_bottleneck_method(name, npmodule=np):
+    def f(values, axis=None, **kwds):
+        dtype = kwds.get('dtype', None)
+        bn_func = getattr(bn, name, None)
+
+        if (_USE_BOTTLENECK and bn_func is not None and
+                not isinstance(axis, tuple) and
+                values.dtype.kind in 'uifc' and
+                values.dtype.isnative and
+                (dtype is None or np.dtype(dtype) == values.dtype)):
+            # bottleneck does not take care dtype, min_count
+            kwds.pop('dtype', None)
+            result = bn_func(values, axis=axis, **kwds)
+        else:
+            result = getattr(npmodule, name)(values, axis=axis, **kwds)
+
+        return result
+
+    f.__name__ = name
+    return f
+
+
+nanmin = _create_bottleneck_method('nanmin')
+nanmax = _create_bottleneck_method('nanmax')
+nanmean = _create_bottleneck_method('nanmean')
+nanmedian = _create_bottleneck_method('nanmedian')
+nanvar = _create_bottleneck_method('nanvar')
+nanstd = _create_bottleneck_method('nanstd')
+nanprod = _create_bottleneck_method('nanprod')
+nancumsum = _create_bottleneck_method('nancumsum')
+nancumprod = _create_bottleneck_method('nancumprod')

@@ -190,10 +190,13 @@ def expand_variable_dicts(list_of_variable_dicts):
     an input's values. The values of each ordered dictionary are all
     xarray.Variable objects.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     var_dicts = []
 
     for variables in list_of_variable_dicts:
-        if hasattr(variables, 'variables'):  # duck-type Dataset
+        if isinstance(variables, Dataset):
             sanitized_vars = variables.variables
         else:
             # append coords to var_dicts before appending sanitized_vars,
@@ -201,7 +204,7 @@ def expand_variable_dicts(list_of_variable_dicts):
             sanitized_vars = OrderedDict()
 
             for name, var in variables.items():
-                if hasattr(var, '_coords'):  # duck-type DataArray
+                if isinstance(var, DataArray):
                     # use private API for speed
                     coords = var._coords.copy()
                     # explicitly overwritten variables should take precedence
@@ -232,17 +235,19 @@ def determine_coords(list_of_variable_dicts):
         All variable found in the input should appear in either the set of
         coordinate or non-coordinate names.
     """
+    from .dataarray import DataArray
+    from .dataset import Dataset
+
     coord_names = set()
     noncoord_names = set()
 
     for variables in list_of_variable_dicts:
-        if hasattr(variables, 'coords') and hasattr(variables, 'data_vars'):
-            # duck-type Dataset
+        if isinstance(variables, Dataset):
             coord_names.update(variables.coords)
             noncoord_names.update(variables.data_vars)
         else:
             for name, var in variables.items():
-                if hasattr(var, '_coords'):  # duck-type DataArray
+                if isinstance(var, DataArray):
                     coords = set(var._coords)  # use private API for speed
                     # explicitly overwritten variables should take precedence
                     coords.discard(name)
@@ -360,7 +365,17 @@ def merge_data_and_coords(data, coords, compat='broadcast_equals',
     """Used in Dataset.__init__."""
     objs = [data, coords]
     explicit_coords = coords.keys()
-    return merge_core(objs, compat, join, explicit_coords=explicit_coords)
+    indexes = dict(extract_indexes(coords))
+    return merge_core(objs, compat, join, explicit_coords=explicit_coords,
+                      indexes=indexes)
+
+
+def extract_indexes(coords):
+    """Yields the name & index of valid indexes from a mapping of coords"""
+    for name, variable in coords.items():
+        variable = as_variable(variable, name=name)
+        if variable.dims == (name,):
+            yield name, variable.to_index()
 
 
 def assert_valid_explicit_coords(variables, dims, explicit_coords):
@@ -547,21 +562,24 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
 
 
 def dataset_update_method(dataset, other):
-    """Guts of the Dataset.update method
+    """Guts of the Dataset.update method.
 
-    This drops a duplicated coordinates from `other` (GH:2068)
+    This drops a duplicated coordinates from `other` if `other` is not an
+    `xarray.Dataset`, e.g., if it's a dict with DataArray values (GH2068,
+    GH2180).
     """
     from .dataset import Dataset
     from .dataarray import DataArray
 
-    other = other.copy()
-    for k, obj in other.items():
-        if isinstance(obj, (Dataset, DataArray)):
-            # drop duplicated coordinates
-            coord_names = [c for c in obj.coords
-                           if c not in obj.dims and c in dataset.coords]
-            if coord_names:
-                other[k] = obj.drop(coord_names)
+    if not isinstance(other, Dataset):
+        other = OrderedDict(other)
+        for key, value in other.items():
+            if isinstance(value, DataArray):
+                # drop conflicting coordinates
+                coord_names = [c for c in value.coords
+                               if c not in value.dims and c in dataset.coords]
+                if coord_names:
+                    other[key] = value.drop(coord_names)
 
     return merge_core([dataset, other], priority_arg=1,
                       indexes=dataset.indexes)
