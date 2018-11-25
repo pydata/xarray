@@ -8,7 +8,7 @@ import itertools
 import os.path
 import re
 import warnings
-from collections import Iterable, Mapping, MutableMapping, MutableSet
+from collections.abc import Iterable, Mapping, MutableMapping, MutableSet
 
 import numpy as np
 import pandas as pd

@@ -3,7 +3,8 @@ from __future__ import absolute_import, division, print_function
 import functools
 import sys
 import warnings
-from collections import Mapping, defaultdict
+from collections import defaultdict
+from collections.abc import Mapping
 from distutils.version import LooseVersion
 from numbers import Number
 
@@ -1380,7 +1381,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
-        + string indexers are cast to the appropriate date type if the 
+        + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
         from .dataarray import DataArray
@@ -1963,7 +1964,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                'Instead got\n{}'.format(new_x))
             else:
                 return (x, new_x)
-            
+
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
             if name not in indexers:

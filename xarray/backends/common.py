@@ -4,7 +4,8 @@ import logging
 import time
 import traceback
 import warnings
-from collections import Mapping, OrderedDict
+from collections.abc import Mapping
+from collections import OrderedDict
 
 import numpy as np
 

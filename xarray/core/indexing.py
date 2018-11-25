@@ -2,7 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import operator
-from collections import Hashable, defaultdict
+from collections.abc import Hashable
+from collections import defaultdict
 from datetime import timedelta
 
 import numpy as np

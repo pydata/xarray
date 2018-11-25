@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 from functools import partial
 
 import numpy as np
