@@ -10,9 +10,9 @@ import pytest
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
-    _new_tile_id, _auto_combine_along_first_dim,
+    _new_tile_id, _auto_combine_all_along_first_dim,
     _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _check_shape_tile_ids, _combine_nd)
+    _check_shape_tile_ids, _combine_nd, _auto_combine_1d)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -302,42 +302,41 @@ class TestConcatDataArray(object):
 
 class TestAutoCombine(object):
 
+    @pytest.mark.parametrize("combine", [_auto_combine_1d, auto_combine])
     @requires_dask  # only for toolz
-    def test_auto_combine(self):
+    def test_auto_combine(self, combine):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
-        actual = auto_combine(objs)
+        actual = combine(objs)
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
-        actual = auto_combine(actual)
-        assert_identical(expected, actual)
-
-        actual = auto_combine([actual])
+        actual = combine([actual])
         assert_identical(expected, actual)
 
         objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
-        actual = auto_combine(objs)
+        actual = combine(objs)
         expected = Dataset({'x': [0, 1, 2]})
         assert_identical(expected, actual)
 
+        # TODO find out why this fails!!
         # ensure auto_combine handles non-sorted variables
         objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
                 Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
-        actual = auto_combine(objs)
+        actual = combine(objs)
         expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
         assert_identical(expected, actual)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
         with raises_regex(ValueError, 'too many .* dimensions'):
-            auto_combine(objs)
+            combine(objs)
 
         objs = [Dataset({'x': 0}), Dataset({'x': 1})]
         with raises_regex(ValueError, 'cannot infer dimension'):
-            auto_combine(objs)
+            combine(objs)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
         with pytest.raises(KeyError):
-            auto_combine(objs)
+            combine(objs)
 
     @requires_dask  # only for toolz
     def test_auto_combine_previously_failed(self):
@@ -412,8 +411,6 @@ class TestAutoCombine(object):
                            {'baz': [100]})
         assert_identical(expected, actual)
 
-
-# TODO should we use @requires_dask? only for toolz?
 
 class TestTileIDsFromNestedList(object):
     def test_1d(self):
@@ -518,6 +515,7 @@ def _create_tile_ids(shape):
     return list(tile_ids)
 
 
+@requires_dask  # only for toolz
 class TestCombineND(object):
     def test_get_new_tile_ids(self, create_combined_ids):
         shape = (1, 2, 3)
@@ -527,18 +525,16 @@ class TestCombineND(object):
             expected_new_tile_id = tile_id[1:]
             assert _new_tile_id(combined) == expected_new_tile_id
 
-    def test_merge_by_new_ids(self):
-        ...
-
     @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
     def test_concat_once(self, create_combined_ids, concat_dim):
         shape = (2,)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
-        result = _auto_combine_along_first_dim(combined_ids, dim=concat_dim,
-                                               data_vars='all',
-                                               coords='different',
-                                               compat='no_conflicts')
+        result = _auto_combine_all_along_first_dim(combined_ids,
+                                                   dim=concat_dim,
+                                                   data_vars='all',
+                                                   coords='different',
+                                                   compat='no_conflicts')
 
         expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
@@ -574,8 +570,19 @@ class TestCheckShapeTileIDs(object):
             _check_shape_tile_ids(combined_tile_ids)
 
 
+@requires_dask  # only for toolz
 class TestAutoCombineND(object):
     # TODO there should be a lot more tests in here testing different cases
+
+    def test_single_dataset(self):
+
+        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1]})
+        assert_identical(expected, actual)
+
+        actual = auto_combine(actual)
+        assert_identical(expected, actual)
 
     def test_auto_combine_2d(self):
         ds = create_test_data
