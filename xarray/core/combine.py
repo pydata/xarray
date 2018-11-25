@@ -380,8 +380,11 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     # TODO might be faster in this case to just work out concat_dims once here
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
-    if concat_dims is None or concat_dims == _CONCAT_DIM_DEFAULT:
+    if concat_dims == _CONCAT_DIM_DEFAULT:
         concat_dims = [_CONCAT_DIM_DEFAULT]*n_dims
+    elif concat_dims is None:
+        # TODO should this be a list of n Nones?
+        pass
     else:
         if len(concat_dims) != n_dims:
             raise ValueError("concat_dims has length " + str(len(concat_dims))
@@ -425,8 +428,6 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
 def _check_shape_tile_ids(combined_tile_ids, contains='datasets'):
     tile_ids = combined_tile_ids.keys()
 
-    # TODO cover all of these with separate unit tests
-
     # Check all tuples are the same length
     # i.e. check that all lists are nested to the same depth
     nesting_depths = [len(id) for id in tile_ids]
@@ -449,7 +450,7 @@ def _data_vars(combined_id):
     return tuple(sorted(ds.data_vars))
 
 
-def _combine_nd(combined_IDs, concat_dims, data_vars='all',
+def _combine_nd(combined_ids, concat_dims, data_vars='all',
                 coords='different', compat='no_conflicts'):
     """
     Concatenates and merges an N-dimensional structure of datasets.
@@ -459,7 +460,7 @@ def _combine_nd(combined_IDs, concat_dims, data_vars='all',
 
     Parameters
     ----------
-    combined_IDs : Dict[Tuple[int, ...]], xarray.Dataset]
+    combined_ids : Dict[Tuple[int, ...]], xarray.Dataset]
         Structure containing all datasets to be concatenated with "tile_IDs" as
         keys, which specify position within the desired final combined result.
     concat_dims : sequence of str
@@ -471,49 +472,94 @@ def _combine_nd(combined_IDs, concat_dims, data_vars='all',
 
     """
 
+    # TODO merge, don't concat if concat_dim is None
+
+    # TODO refactor this logic, possibly using method in np.blocks
+    # Perform N-D dimensional concatenation
+    # Each iteration of this loop reduces the length of the tile_IDs tuples
+    # by one. It always removes the first
+    for concat_dim in concat_dims:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+
+        combined_ids = _auto_combine_along_first_dim(combined_ids,
+                                                     dim=dim,
+                                                     data_vars=data_vars,
+                                                     coords=coords,
+                                                     compat=compat)
+    combined_ds = next(iter(combined_ids.values()))
+    #print(combined_ds)
+    return combined_ds
+
+
+def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
+                                      coords, compat):
     # Organise by data variables
     grouped_by_data_vars = itertoolz.groupby(_data_vars,
-                                             combined_IDs.items()).values()
+                                             combined_ids.items()).values()
 
-    concatenated_datasets = []
+    new_combined_ids_all_vars = []
     for tiled_datasets_group in grouped_by_data_vars:
 
-        # Convert list of tuples back into a dictionary
-        concatenated_ids = dict(tiled_datasets_group)
+        # Groupby returns list of tuples - convert back into a dictionary
+        combined_ids = dict(tiled_datasets_group)
 
-        # TODO refactor this logic, possibly using method in np.blocks
-        # Perform N-D dimensional concatenation
-        # Each iteration of this loop reduces the length of the tile_IDs tuples
-        # by one. It always removes the first
-        for concat_dim in concat_dims:
-            dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        # Group into lines of datasets which must be combined along dim
+        grouped = itertoolz.groupby(_new_tile_id, combined_ids.items())
 
-            concatenated_ids = _concat_along_first_dim(concatenated_ids,
-                                                       dim=dim,
-                                                       data_vars=data_vars,
-                                                       coords=coords)
-        concatenated_datasets = concatenated_datasets \
-                                + list(concatenated_ids.values())
-    return merge(concatenated_datasets, compat=compat)
+        new_combined_ids = {}
+        for new_id, group in grouped.items():
+            new_combined_ids[new_id] = _auto_combine_1d(group, dim, data_vars,
+                                                        coords, compat)
+
+        print("New combined IDs:")
+        print(new_combined_ids)
+        new_combined_ids_all_vars.append(new_combined_ids)
+
+    # merge the new_combined_ids dicts by using xarray.merge on elements with the same key
+    return _merge_by_new_ids(new_combined_ids_all_vars, compat=compat)
+
+
+def _auto_combine_1d(to_combine, dim, data_vars, coords, compat):
+    if dim is not None:
+        combined = _auto_concat(to_combine, dim=dim, data_vars=data_vars,
+                                coords=coords)
+    else:
+        print(to_combine)
+        combined = merge(to_combine, compat=compat)
+
+    return combined
+
+
+def _merge_by_new_ids(new_combined_ids_all_vars, compat):
+    # Merge different variables back together
+    # Merging a list of dicts
+    # Group by indexes
+    grouped_by_new_id = itertoolz.groupby(_tile_id, new_combined_ids_all_vars)
+
+    print("Grouped by new ID:")
+    print(grouped_by_new_id)
+
+    # Merge different variables back together, while retaining new tile IDs
+    merged_new_combined_ids = {}
+    for tile_id, group in grouped_by_new_id.items():
+
+        print(group)
+        to_merge = [list(combined_ds.values())[0] for combined_ds in group]
+        print(to_merge)
+        merged = merge(to_merge, compat=compat)
+        merged_new_combined_ids[tile_id] = merged
+
+    return merged_new_combined_ids
+
+
+def _tile_id(new_combined_ids):
+    return next(iter(new_combined_ids.keys()))
 
 
 def _new_tile_id(single_id_ds_pair):
     # TODO maybe replace with something like lambda x: x[0][1:]?
-    tile_id, ds = single_id_ds_pair
+    tile_id, ds = single_id_ds_pair 
     return tile_id[1:]
-
-
-def _concat_along_first_dim(combined_IDs, dim, data_vars='all',
-                                coords='different'):
-    grouped = itertoolz.groupby(_new_tile_id, combined_IDs.items())
-    new_combined_IDs = {}
-
-    for new_ID, group in grouped.items():
-        to_concat = [ds for old_ID, ds in group]
-        new_combined_IDs[new_ID] = _auto_concat(to_concat, dim=dim,
-                                                data_vars=data_vars,
-                                                coords=coords)
-    return new_combined_IDs
 
 
 def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
@@ -529,7 +575,7 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
             raise NotImplementedError
             # TODO Use coordinates to determine tile_ID for each dataset in N-D
             # Ignore how they were ordered previously
-            # Shoould look like
+            # Should look like
             # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
             # concat_dims)
         else:
@@ -546,11 +592,13 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
         # Check that the combined_ids are sensible
         _check_shape_tile_ids(combined_ids)
 
+        print(concat_dims)
+
         # Repeatedly concatenate then merge along each dimension
         combined = _combine_nd(combined_ids, concat_dims, compat=compat,
                                data_vars=data_vars, coords=coords)
     else:
-        # Case of no concatenation wanted
+        # Case of no concatenation wanted at all
         concatenated = datasets
         combined = merge(concatenated, compat=compat)
 

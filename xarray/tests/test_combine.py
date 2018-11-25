@@ -10,7 +10,7 @@ import pytest
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
-    _new_tile_id, _concat_along_first_dim,
+    _new_tile_id, _auto_combine_along_first_dim,
     _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
     _check_shape_tile_ids, _combine_nd)
 
@@ -386,6 +386,13 @@ class TestAutoCombine(object):
         actual = auto_combine([data, data, data], concat_dims=None)
         assert_identical(data, actual)
 
+        tmp1 = Dataset({'x': 0})
+        tmp2 = Dataset({'x': np.nan})
+        actual = auto_combine([tmp1, tmp2], concat_dims=None)
+        assert_identical(tmp1, actual)
+        actual = auto_combine([tmp1, tmp2], concat_dims=[None])
+        assert_identical(tmp1, actual)
+
         # Single object, with a concat_dim explicitly provided
         # Test the issue reported in GH #1988
         objs = [Dataset({'x': 0, 'y': 1})]
@@ -520,12 +527,18 @@ class TestCombineND(object):
             expected_new_tile_id = tile_id[1:]
             assert _new_tile_id(combined) == expected_new_tile_id
 
+    def test_merge_by_new_ids(self):
+        ...
+
     @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
     def test_concat_once(self, create_combined_ids, concat_dim):
         shape = (2,)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
-        result = _concat_along_first_dim(combined_ids, dim=concat_dim)
+        result = _auto_combine_along_first_dim(combined_ids, dim=concat_dim,
+                                               data_vars='all',
+                                               coords='different',
+                                               compat='no_conflicts')
 
         expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
@@ -590,7 +603,7 @@ class TestAutoCombineND(object):
                                       'consistent depths'):
             auto_combine(datasets, concat_dims=['dim1', 'dim2'])
 
-    def test_combine_concat_one_dim_merge_another(self):
+    def test_combine_concat_over_redundant_nesting(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
         actual = auto_combine(objs, concat_dims=[None, 'x'])
         expected = Dataset({'x': [0, 1]})
