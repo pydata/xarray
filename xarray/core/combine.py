@@ -375,9 +375,6 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
 
     combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
 
-    # Currently if concat_dims is not supplied then _auto_concat attempts to
-    # deduce it on every call
-    # TODO might be faster in this case to just work out concat_dims once here
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
     if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims == None:
@@ -422,10 +419,8 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
         yield current_pos, entry
 
 
-def _check_shape_tile_ids(combined_tile_ids, contains='datasets'):
+def _check_shape_tile_ids(combined_tile_ids):
     tile_ids = combined_tile_ids.keys()
-
-    # TODO a check that only the expected types of objects are contained
 
     # Check all tuples are the same length
     # i.e. check that all lists are nested to the same depth
