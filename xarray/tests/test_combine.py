@@ -318,7 +318,6 @@ class TestAutoCombine(object):
         expected = Dataset({'x': [0, 1, 2]})
         assert_identical(expected, actual)
 
-        # TODO find out why this fails!!
         # ensure auto_combine handles non-sorted variables
         objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
                 Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
@@ -409,6 +408,15 @@ class TestAutoCombine(object):
         expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
+        assert_identical(expected, actual)
+
+    @pytest.mark.xfail(reason="Not yet implemented")
+    def test_infer_order_from_coords(self):
+        data = create_test_data()
+        print(data)
+        objs = [data.isel(x=slice(4, 9)), data.isel(x=slice(4))]
+        actual = auto_combine(objs, infer_order_from_coords=True)
+        expected = data
         assert_identical(expected, actual)
 
 

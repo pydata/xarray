@@ -380,7 +380,7 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     # TODO might be faster in this case to just work out concat_dims once here
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
-    if concat_dims == _CONCAT_DIM_DEFAULT or None:
+    if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims == None:
         concat_dims = [concat_dims]*n_dims
     else:
         if len(concat_dims) != n_dims:
@@ -468,7 +468,7 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
 
     Returns
     -------
-
+    combined_ds : xarray.Dataset
     """
 
     # TODO refactor this logic, possibly using method in np.blocks
@@ -481,7 +481,7 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
                                                          data_vars=data_vars,
                                                          coords=coords,
                                                          compat=compat)
-    combined_ds = next(iter(combined_ids.values()))
+    combined_ds = list(combined_ids.values())[0]
     return combined_ds
 
 
@@ -576,7 +576,7 @@ def auto_combine(datasets,
     ----------
     datasets : sequence of xarray.Dataset
         Dataset objects to merge.
-    concat_dims : list of str or DataArray or Index, optional
+    concat_dims : list of str, DataArray, Index or None, optional
         Dimensions along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
         any of the dimensions along which you want to concatenate are not a

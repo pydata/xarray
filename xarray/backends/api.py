@@ -503,12 +503,12 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details [2].
-    concat_dims : None, str, DataArray or Index, optional
-        Dimension to concatenate files along. This argument is passed on to
+    concat_dims : list of str, DataArray, Index or None, optional
+        Dimensions to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
-        need to provide this argument if the dimension along which you want to
-        concatenate is not a dimension in the original datasets, e.g., if you
-        want to stack a collection of 2D arrays along a third dimension.
+        need to provide this argument if any of the dimensions along which you
+        want to concatenate is not a dimension in the original datasets, e.g.,
+        if you want to stack a collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
@@ -601,8 +601,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
-    # If infer_order_from_coords=True then this is unnecessary, but that's fine
-    # as it should be quick - in this case it will just loop over one list
+    # If infer_order_from_coords=True then this is unnecessary, but quick.
     # If infer_order_from_coords=False then this creates a flat list which is
     # easier to iterate over, while saving the originally-supplied structure
     combined_ids_paths, concat_dims = _infer_concat_order_from_positions\
