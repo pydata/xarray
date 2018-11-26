@@ -1321,7 +1321,6 @@ class ZarrBase(CFEncodedBase):
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
-
     def test_roundtrip_consolidated(self):
         # my understanding is that pytest.mark.skipif is broken here
         import zarr

@@ -237,7 +237,7 @@ class ZarrStore(AbstractWritableDataStore):
                                       "#installation" % min_zarr)
 
         if consolidated or consolidate_on_close:
-            if LooseVersion(zarr.__version__) <= '2.2': # pragma: no cover
+            if LooseVersion(zarr.__version__) <= '2.2':  # pragma: no cover
                 raise NotImplementedError("Zarr version 2.3 or greater is "
                                           "required by for consolidated "
                                           "metadata.")

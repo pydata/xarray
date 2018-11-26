@@ -877,9 +877,9 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_attrs(dataset)
 
     zstore = backends.ZarrStore.open_group(store=store, mode=mode,
-                                          synchronizer=synchronizer,
-                                          group=group,
-                                          consolidate_on_close=consolidate)
+                                           synchronizer=synchronizer,
+                                           group=group,
+                                           consolidate_on_close=consolidate)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
@@ -891,5 +891,5 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     else:
         import dask
         return dask.delayed(_finalize_store)(writes, zstore)
-        
+
     return zstore
