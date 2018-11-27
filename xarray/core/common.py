@@ -709,7 +709,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                           .reindex(times, method=fill_method))
                 bin_actual = np.unique(binner.values)
                 label_dict = dict(zip(bin_actual, labels.values))
-                # np.unique returns -sorted- unique values
+                # np.unique returns --sorted-- unique values
                 binner = binner.map(label_dict)
                 grouper = ('downsampling', pd.Index(labels), binner)
             else:
