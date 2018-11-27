@@ -21,9 +21,10 @@ from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
     _check_inplace, decode_numpy_dict_values, either_dict_or_kwargs,
     ensure_us_time_resolution)
+from .merge import expand_variable_dicts, merge_variables
 from .variable import (
     IndexVariable, Variable, as_compatible_data, as_variable,
-    assert_unique_multiindex_level_names)
+    assert_unique_multiindex_level_names, maybe_expand_multiindex)
 
 
 def _infer_coords_and_dims(shape, coords, dims):
@@ -58,19 +59,24 @@ def _infer_coords_and_dims(shape, coords, dims):
             if not isinstance(d, basestring):
                 raise TypeError('dimension %s is not a string' % d)
 
-    new_coords = OrderedDict()
-
-    if utils.is_dict_like(coords):
-        for k, v in coords.items():
-            new_coords[k] = as_variable(v, name=k)
-    elif coords is not None:
+    if coords is None:
+        coords = OrderedDict()
+    elif not utils.is_dict_like(coords):
+        # Convert list-like coords into a dict
+        coords_dict = OrderedDict()
         for dim, coord in zip(dims, coords):
             var = as_variable(coord, name=dim)
             var.dims = (dim,)
-            new_coords[dim] = var
+            coords_dict[dim] = var
+        coords = coords_dict
 
+    # Combine coordinates, including MultiIndex levels
+    expanded = expand_variable_dicts([coords])
+    coords = merge_variables(expanded, compat='equals')
+
+    # Check consistent
     sizes = dict(zip(dims, shape))
-    for k, v in new_coords.items():
+    for k, v in coords.items():
         if any(d not in dims for d in v.dims):
             raise ValueError('coordinate %s has dimensions %s, but these '
                              'are not a subset of the DataArray '
@@ -88,9 +94,9 @@ def _infer_coords_and_dims(shape, coords, dims):
                              'matching the dimension size'
                              % (k, v.shape, (sizes[k],)))
 
-    assert_unique_multiindex_level_names(new_coords)
+    # assert_unique_multiindex_level_names(coords)
 
-    return new_coords, dims
+    return coords, dims
 
 
 class _LocIndexer(object):
@@ -462,8 +468,7 @@ class DataArray(AbstractArray, DataWithCoords):
             var = self._coords[key]
         except KeyError:
             dim_sizes = dict(zip(self.dims, self.shape))
-            _, key, var = _get_virtual_variable(
-                self._coords, key, self._level_coords, dim_sizes)
+            _, key, var = _get_virtual_variable(self._coords, key, dim_sizes)
 
         return self._replace_maybe_drop_dims(var, name=key)
 

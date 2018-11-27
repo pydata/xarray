@@ -114,14 +114,7 @@ def as_variable(obj, name=None):
     return obj
 
 
-def as_index_or_compatible_data(data):
-    if isinstance(data, pd.Index):
-        return data
-    else:
-        return as_compatible_data(data)
-
-
-def as_variables_with_multiindex_expansion(obj, name):
+def maybe_expand_multiindex(obj, name):
     """Expand an object into one or more Variable objects.
 
     Parameters
@@ -149,51 +142,33 @@ def as_variables_with_multiindex_expansion(obj, name):
 
     >>> idx = pd.MultiIndex.from_tuples([('a', 1), ('b', 2)], names=['y', 'z'])
     >>> as_variables_with_multiindex_expansion(idx, name='x')
-    OrderedDict([('y', IndexVariable(('x',), array(['a', 'b']))),
-                 ('z', IndexVariable(('x',), array([1, 2])))])
+    OrderedDict([('y', Variable(('x',), array(['a', 'b']))),
+                 ('z', Variable(('x',), array([1, 2])))])
     """
-
-    if hasattr(obj, 'variable'):
-        # extract the primary Variable from DataArrays
-        obj = obj.variable
-
-    if isinstance(obj, Variable):
-        variable = obj.copy(deep=False)
-
-    elif utils.is_scalar(obj):
-        variable = Variable([], obj)
-
-    else:
+    tuple_with_multiindex = (isinstance(obj, tuple) and len(obj) > 1 and
+                             isinstance(obj[1], pd.MultiIndex))
+    if tuple_with_multiindex or isinstance(obj, pd.MultiIndex):
         if isinstance(obj, tuple):
-            if len(obj) < 2:
-                # use .format() instead of % because it handles tuples
-                # consistently
-                raise TypeError('tuples to convert into variables must be of '
-                                'the form (dims, data[, attrs, encoding]): '
-                                '{}'.format(obj))
-            dims, data = obj[:2]
-            data = as_index_or_compatible_data(data)
-            args = obj[2:]
+            dims, index = obj[:2]
         else:
             dims = (name,)
-            data = as_index_or_compatible_data(obj)
-            args = ()
+            index = obj
+        if any(level_name is None for level_name in index.names):
+            raise ValueError(
+                'cannot convert a MultiIndex with unknown level names {} into '
+                'xarray variables: {}'.format(index.names, index))
+        if len(set(index.names)) != len(index.names):
+            raise ValueError(
+                'cannot convert a MultiIndex with non-unique level names {} '
+                'into xarray variables: {}'.format(index.names, index))
+        multiindex_vars = OrderedDict()
+        for level_name in index.names:
+            multiindex_vars[level_name] = Variable(
+                dims, index.get_level_values(level_name))
+    else:
+        multiindex_vars = None
 
-            if data.ndim != 1:
-                raise MissingDimensionsError(
-                    'cannot set variable %r with %r-dimensional data '
-                    'without explicit dimension names. Pass a tuple of '
-                    '(dims, data) instead.' % (name, data.ndim))
-
-        if isinstance(data, pd.MultiIndex):
-            raise NotImplementedError('TODO: expand MultiIndex objects.')
-
-        if (name,) == dims or isinstance(data, pd.Index):
-            variable = IndexVariable(dims, data, *args, fastpath=True)
-        else:
-            variable = Variable(dims, data, *args, fastpath=True)
-
-    return OrderedDict([(name, variable)])
+    return multiindex_vars
 
 
 def _maybe_wrap_data(data):

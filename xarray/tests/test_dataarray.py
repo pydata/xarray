@@ -59,9 +59,9 @@ class TestDataArray(object):
         <xarray.DataArray (x: 4)>
         array([0, 1, 2, 3])
         Coordinates:
-          * x        (x) MultiIndex
-          - level_1  (x) object 'a' 'a' 'b' 'b'
-          - level_2  (x) int64 1 2 1 2""")
+          * x        (x) MultiIndex[level_1, level_2]
+            level_1  (x) object 'a' 'a' 'b' 'b'
+            level_2  (x) int64 1 2 1 2""")
         assert expected == repr(self.mda)
 
     def test_properties(self):

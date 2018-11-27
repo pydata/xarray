@@ -144,9 +144,9 @@ class TestDataset(object):
         <xarray.Dataset>
         Dimensions:  (x: 4)
         Coordinates:
-          * x        (x) MultiIndex
-          - level_1  (x) object 'a' 'a' 'b' 'b'
-          - level_2  (x) int64 1 2 1 2
+          * x        (x) MultiIndex[level_1, level_2]
+            level_1  (x) object 'a' 'a' 'b' 'b'
+            level_2  (x) int64 1 2 1 2
         Data variables:
             *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))
@@ -162,9 +162,9 @@ class TestDataset(object):
         <xarray.Dataset>
         Dimensions:                  (x: 4)
         Coordinates:
-          * x                        (x) MultiIndex
-          - a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
-          - level_2                  (x) int64 1 2 1 2
+          * x                        (x) MultiIndex[a_quite_long_level_name, level_2]
+            a_quite_long_level_name  (x) object 'a' 'a' 'b' 'b'
+            level_2                  (x) int64 1 2 1 2
         Data variables:
             *empty*""")
         actual = '\n'.join(x.rstrip() for x in repr(data).split('\n'))

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-def normalize_indexes(indexes, coords, sizes):
+def normalize_indexes(coords, sizes, indexes=None):
     """Normalize indexes for Dataset/DataArray.
 
     Validates that all indexes are pd.Index instances (or at least satisfy
@@ -16,12 +16,12 @@ def normalize_indexes(indexes, coords, sizes):
 
     Parameters
     ----------
-    indexes : Optional[Dict[Any, pandas.Index]]
-        Explicitly supplied indexes, if any.
     coords : Mapping[Any, xarray.Variable]
         Coordinate variables from which to draw default indexes.
     dim_sizes : Mapping[Any, int]
         Integer sizes for each Dataset/DataArray dimension.
+    indexes : Optional[Dict[Any, pandas.Index]]
+        Explicitly supplied indexes, if any.
 
     Returns
     -------
@@ -40,36 +40,28 @@ def normalize_indexes(indexes, coords, sizes):
                 indexes[key] = pd.Index(
                     range(sizes[key]), name=key, dtype=np.int64)
 
-    # TODO: merge logic to combine indexes along the same dimension into a
-    # MultiIndex
-
     return indexes
 
 
-def combine_indexes(input_indexes, output_coords, unsafe=True):
+def result_indexes(input_indexes, output_coords):
     """Combine indexes from inputs into indexes for an operation result.
 
     Drops indexes corresponding to dropped coordinates.
 
-    Eventually: consider combining indexes along the same dimension into a
-    MultiIndex.
+    IMPORTANT: Assumes outputs are already aligned!
 
     Parameters
     ----------
     input_indexes : Sequence[Mapping[Any, pandas.Index]]
         Sequence of mappings of indexes to combine.
-    output_coords : Optional[Sequence[Mapping[Any, pandas.Variable]]]
+    output_coords : Sequence[Mapping[Any, pandas.Variable]
         Optional sequence of mappings provided output coordinates.
-    unsafe : bool, optional
-        Whether it's OK to skip compatibility checks for input indexes.
 
     Returns
     -------
     List[Mapping[Any, pandas.Index]] mapping variable names to indexes,
     for each requested mapping of output coordinates.
     """
-    if not unsafe:
-        raise NotImplementedError('safe index combining not supported yet')
     output_indexes = []
     for output_coords_item in output_coords:
         indexes = {}
@@ -78,3 +70,4 @@ def combine_indexes(input_indexes, output_coords, unsafe=True):
                 if k in output_coords_item:
                     indexes[k] = v
         output_indexes.append(indexes)
+    return output_indexes

@@ -21,7 +21,8 @@ from xarray.core.indexing import (
     OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
 from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
-from xarray.core.variable import as_compatible_data, as_variable
+from xarray.core.variable import (
+    as_compatible_data, as_variable, maybe_expand_multiindex)
 from xarray.tests import requires_bottleneck
 
 from . import (
@@ -1947,6 +1948,44 @@ class TestAsCompatibleData(object):
         array = CustomIndexable(np.arange(3))
         orig = Variable(dims=('x'), data=array, attrs={'foo': 'bar'})
         assert isinstance(orig._data, CustomIndexable)
+
+
+def assert_dict_identical(expected, actual):
+    assert expected.keys() == actual.keys()
+    for k in expected:
+        assert_identical(expected[k], actual[k])
+
+
+def test_maybe_expand_multiindex():
+
+    result = maybe_expand_multiindex([1, 2, 3], name='x')
+    assert result is None
+
+    result = maybe_expand_multiindex(('y', [1, 2, 3]), name='x')
+    assert result is None
+
+    index = pd.MultiIndex.from_arrays([[1, 2, 3]], names=['x'])
+    result = maybe_expand_multiindex(index, name='y')
+    expected = OrderedDict([('x', Variable(('y',), [1, 2, 3]))])
+    assert_dict_identical(expected, result)
+
+    result = maybe_expand_multiindex(('y', index), name='y')
+    expected = OrderedDict([('x', Variable(('y',), [1, 2, 3]))])
+    assert_dict_identical(expected, result)
+
+    index = pd.MultiIndex.from_tuples([('a', 1), ('b', 2)], names=['y', 'z'])
+    result = maybe_expand_multiindex(index, name='x')
+    expected = OrderedDict([('y', Variable(('x',), ['a', 'b'])),
+                            ('z', Variable(('x',), [1, 2]))])
+    assert_dict_identical(expected, result)
+
+    index = pd.MultiIndex.from_arrays([[1, 2, 3]])
+    with raises_regex(ValueError, 'unknown level names'):
+        maybe_expand_multiindex(index, 'foo')
+
+    index = pd.MultiIndex.from_tuples([('a', 1), ('b', 2)], names=['A', 'A'])
+    with raises_regex(ValueError, 'non-unique level names'):
+        maybe_expand_multiindex(index, 'foo')
 
 
 def test_raise_no_warning_for_nan_in_binary_ops():

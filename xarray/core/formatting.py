@@ -253,7 +253,9 @@ def summarize_variable(name, var, col_width, show_values=True,
 
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
-    return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
+    level_names_str = ', '.join(map(str, coord.level_names))
+    return (u'%s(%s) MultiIndex[%s]' %
+            (first_col, unicode_type(coord.dims[0]), level_names_str))
 
 
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
@@ -277,9 +279,7 @@ def summarize_coord(name, var, col_width):
     if is_index:
         coord = var.variable.to_index_variable()
         if coord.level_names is not None:
-            return u'\n'.join(
-                [_summarize_coord_multiindex(coord, col_width, marker),
-                 _summarize_coord_levels(coord, col_width)])
+            return _summarize_coord_multiindex(coord, col_width, marker)
     return summarize_variable(
         name, var.variable, col_width, show_values, marker)
 

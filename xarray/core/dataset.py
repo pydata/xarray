@@ -44,12 +44,10 @@ _DATETIMEINDEX_COMPONENTS = ['year', 'month', 'day', 'hour', 'minute',
                              'quarter']
 
 
-def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
-    """Get a virtual variable (e.g., 'time.year' or a MultiIndex level)
+def _get_virtual_variable(variables, key, dim_sizes=None):
+    """Get a virtual variable (e.g., 'time.year')
     from a dict of xarray.Variable objects (if possible)
     """
-    if level_vars is None:
-        level_vars = {}
     if dim_sizes is None:
         dim_sizes = {}
 
@@ -69,11 +67,7 @@ def _get_virtual_variable(variables, key, level_vars=None, dim_sizes=None):
     else:
         raise KeyError(key)
 
-    if ref_name in level_vars:
-        dim_var = variables[level_vars[ref_name]]
-        ref_var = dim_var.to_index_variable().get_level_variable(ref_name)
-    else:
-        ref_var = variables[ref_name]
+    ref_var = variables[ref_name]
 
     if var_name is None:
         virtual_var = ref_var
@@ -843,21 +837,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return self._construct_direct(variables, coord_names, dims, attrs)
 
-    @property
-    def _level_coords(self):
-        """Return a mapping of all MultiIndex levels and their corresponding
-        coordinate name.
-        """
-        level_coords = OrderedDict()
-        for cname in self._coord_names:
-            var = self.variables[cname]
-            if var.ndim == 1 and isinstance(var, IndexVariable):
-                level_names = var.level_names
-                if level_names is not None:
-                    dim, = var.dims
-                    level_coords.update({lname: dim for lname in level_names})
-        return level_coords
-
     def _copy_listed(self, names):
         """Create a new Dataset with the listed variables from this dataset and
         the all relevant coordinates. Skips all validation.
@@ -870,7 +849,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 variables[name] = self._variables[name]
             except KeyError:
                 ref_name, var_name, var = _get_virtual_variable(
-                    self._variables, name, self._level_coords, self.dims)
+                    self._variables, name, self.dims)
                 variables[var_name] = var
                 if ref_name in self._coord_names or ref_name in self.dims:
                     coord_names.add(var_name)
@@ -887,7 +866,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             variable = self._variables[name]
         except KeyError:
             _, name, variable = _get_virtual_variable(
-                self._variables, name, self._level_coords, self.dims)
+                self._variables, name, self.dims)
 
         coords = OrderedDict()
         needed_dims = set(variable.dims)

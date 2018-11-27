@@ -5,7 +5,8 @@ import pandas as pd
 from .alignment import deep_align
 from .pycompat import OrderedDict, basestring
 from .utils import Frozen
-from .variable import as_variable, assert_unique_multiindex_level_names
+from .variable import (
+    as_variable, assert_unique_multiindex_level_names, maybe_expand_multiindex)
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 
@@ -197,11 +198,10 @@ def expand_variable_dicts(list_of_variable_dicts):
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
-            sanitized_vars = variables.variables
+            var_dicts.append(variables.variables)
         else:
-            # append coords to var_dicts before appending sanitized_vars,
-            # because we want coords to appear first
             sanitized_vars = OrderedDict()
+            var_dicts.append(sanitized_vars)
 
             for name, var in variables.items():
                 if isinstance(var, DataArray):
@@ -211,10 +211,13 @@ def expand_variable_dicts(list_of_variable_dicts):
                     coords.pop(name, None)
                     var_dicts.append(coords)
 
+                multiindex_vars = maybe_expand_multiindex(var, name)
+                if multiindex_vars is not None:
+                    var_dicts.append(multiindex_vars)
+
                 var = as_variable(var, name=name)
                 sanitized_vars[name] = var
 
-        var_dicts.append(sanitized_vars)
 
     return var_dicts
 
@@ -252,6 +255,10 @@ def determine_coords(list_of_variable_dicts):
                     # explicitly overwritten variables should take precedence
                     coords.discard(name)
                     coord_names.update(coords)
+
+                multiindex_vars = maybe_expand_multiindex(var, name)
+                if multiindex_vars is not None:
+                    coord_names.update(multiindex_vars)
 
     return coord_names, noncoord_names
 
@@ -296,7 +303,7 @@ def merge_coords_for_inplace_math(objs, priority_vars=None):
     """
     expanded = expand_variable_dicts(objs)
     variables = merge_variables(expanded, priority_vars)
-    assert_unique_multiindex_level_names(variables)
+    # assert_unique_multiindex_level_names(variables)
     return variables
 
 
@@ -443,7 +450,7 @@ def merge_core(objs,
 
     priority_vars = _get_priority_vars(aligned, priority_arg, compat=compat)
     variables = merge_variables(expanded, priority_vars, compat=compat)
-    assert_unique_multiindex_level_names(variables)
+    # assert_unique_multiindex_level_names(variables)
 
     dims = calculate_dimensions(variables)
 
