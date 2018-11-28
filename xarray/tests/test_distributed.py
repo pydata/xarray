@@ -119,28 +119,26 @@ def test_dask_distributed_read_netcdf_integration_test(
 
 
 @requires_zarr
-def test_dask_distributed_zarr_integration_test(loop):
+@pytest.mark.parametrize('consolidated', [True, False])
+@pytest.mark.parametrize('compute', [True, False])
+def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
+    if consolidated:
+        zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        write_kwargs = dict(consolidate=True)
+        read_kwargs = dict(consolidated=True)
+    else:
+        write_kwargs = read_kwargs = {}
     chunks = {'dim1': 4, 'dim2': 3, 'dim3': 5}
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as c:
             original = create_test_data().chunk(chunks)
             with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
-                                 suffix='.zarr') as filename:
-                original.to_zarr(filename)
-                with xr.open_zarr(filename) as restored:
-                    assert isinstance(restored.var1.data, da.Array)
-                    computed = restored.compute()
-                    assert_allclose(original, computed)
-            # repeat with consolidated metadata and delayed compute
-            import zarr
-            if LooseVersion(zarr.__version__) <= '2.2':
-                return
-            with create_tmp_file(allow_cleanup_failure=ON_WINDOWS,
                                  suffix='.zarrc') as filename:
-                futures = original.to_zarr(filename, consolidate=True,
-                                           compute=False)
-                futures.compute()
-                with xr.open_zarr(filename, consolidated=True) as restored:
+                maybe_futures = original.to_zarr(filename, compute=compute,
+                                                 **write_kwargs)
+                if not compute:
+                    maybe_futures.compute()
+                with xr.open_zarr(filename, **read_kwargs) as restored:
                     assert isinstance(restored.var1.data, da.Array)
                     computed = restored.compute()
                     assert_allclose(original, computed)
