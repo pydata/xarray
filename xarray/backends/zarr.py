@@ -237,9 +237,9 @@ class ZarrStore(AbstractWritableDataStore):
                                       "#installation" % min_zarr)
 
         if consolidated or consolidate_on_close:
-            if LooseVersion(zarr.__version__) <= '2.2':  # pragma: no cover
-                raise NotImplementedError("Zarr version 2.3 or greater is "
-                                          "required by for consolidated "
+            if LooseVersion(zarr.__version__) <= '2.2.1.dev2':  # pragma: no cover
+                raise NotImplementedError("Zarr version 2.2.1.dev2 or greater "
+                                          "is required by for consolidated "
                                           "metadata.")
 
         open_kwargs = dict(mode=mode, synchronizer=synchronizer, path=group)
