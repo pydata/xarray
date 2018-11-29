@@ -10,6 +10,7 @@ import pytest
 from xarray import DataArray, Variable, coding, decode_cf
 from xarray.coding.times import (_import_cftime, cftime_to_nptime,
                                  decode_cf_datetime, encode_cf_datetime)
+from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
 
 from . import (
@@ -630,55 +631,33 @@ def test_decode_cf_time_bounds():
                    coords={'time': [1, 2, 3]},
                    dims=('time', 'nbnd'), name='time_bnds')
 
-    # Simplest case
-    ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days since 2001-01-01'
-    ds['time'].attrs['calendar'] = 'standard'
-    ds['time'].attrs['bounds'] = 'time_bnds'
-    ds = decode_cf(ds)
-    assert ds.time_bnds.dtype == np.dtype('M8[ns]')
+    attrs = {'units': 'days since 2001-01',
+             'calendar': 'standard',
+             'bounds': 'time_bnds'}
 
-    # Without calendar also OK
     ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days since 2001-01-01'
-    ds['time'].attrs['bounds'] = 'time_bnds'
-    ds = decode_cf(ds)
-    assert ds.time_bnds.dtype == np.dtype('M8[ns]')
+    ds['time'].attrs.update(attrs)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == {'units': 'days since 2001-01',
+                                               'calendar': 'standard'}
+    dsc = decode_cf(ds)
+    assert dsc.time_bnds.dtype == np.dtype('M8[ns]')
+    dsc = decode_cf(ds, decode_times=False)
+    assert dsc.time_bnds.dtype == np.dtype('int64')
 
-    # If previous calendar and units do not overwrite them
-    if has_cftime_or_netCDF4:
-        ds = da.to_dataset()
-        ds['time'].attrs['units'] = 'days since 2001-01-01'
-        ds['time'].attrs['calendar'] = 'standard'
-        ds['time'].attrs['bounds'] = 'time_bnds'
-        ds['time_bnds'].attrs['units'] = 'hours since 2001-01-01'
-        ds['time_bnds'].attrs['calendar'] = 'noleap'
-        ds = decode_cf(ds)
-        assert ds.time_bnds.dtype == np.dtype('O')
-        assert ds.time_bnds.encoding['units'] == 'hours since 2001-01-01'
-
-    # If bounds not available do not complain
+    # Do not overwrite existing attrs
     ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days since 2001-01-01'
-    ds['time'].attrs['calendar'] = 'standard'
-    ds['time'].attrs['bounds'] = 'fake_time_bnds'
-    ds = decode_cf(ds)
-    assert ds.time_bnds.dtype == np.dtype('int64')
+    ds['time'].attrs.update(attrs)
+    bnd_attr = {'units': 'hours since 2001-01', 'calendar': 'noleap'}
+    ds['time_bnds'].attrs.update(bnd_attr)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == bnd_attr
 
-    # If not proper time do not change bounds
+    # If bounds variable not available do not complain
     ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days in 2001-01-01'
-    ds['time'].attrs['calendar'] = 'standard'
-    ds['time'].attrs['bounds'] = 'time_bnds'
-    ds = decode_cf(ds)
-    assert ds.time_bnds.dtype == np.dtype('int64')
-
-    # Only decode if asked for
-    ds = da.to_dataset()
-    ds['time'].attrs['units'] = 'days since 2001-01-01'
-    ds['time'].attrs['bounds'] = 'time_bnds'
-    ds = decode_cf(ds, decode_times=False)
-    assert ds.time_bnds.dtype == np.dtype('int64')
+    ds['time'].attrs.update(attrs)
+    ds['time'].attrs['bounds'] = 'fake_var'
+    _update_bounds_attributes(ds.variables)
 
 
 @pytest.fixture(params=_ALL_CALENDARS)

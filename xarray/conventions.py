@@ -320,11 +320,39 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
     return Variable(dimensions, data, attributes, encoding=encoding)
 
 
+def _update_bounds_attributes(variables):
+    """Adds time attributes to time bounds variables.
+
+    Variables handling time bounds ("Cell boundaries" in the CF
+    conventions) do not necessarily carry the necessary attributes to be
+    decoded. This copies the attributes from the time variable to the
+    associated boundaries.
+
+    See Also:
+
+    http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
+         cf-conventions.html#cell-boundaries
+
+    https://github.com/pydata/xarray/issues/2565
+    """
+
+    # For all time variables with bounds
+    for v in variables.values():
+        attrs = v.attrs
+        has_date_units = 'units' in attrs and 'since' in attrs['units']
+        if has_date_units and 'bounds' in attrs:
+            if attrs['bounds'] in variables:
+                to_update = variables[attrs['bounds']].attrs
+                to_update.setdefault('units', attrs['units'])
+                if 'calendar' in attrs:
+                    to_update.setdefault('calendar', attrs['calendar'])
+
+
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
                         decode_coords=True, drop_variables=None):
     """
-    Decode a several CF encoded variables.
+    Decode several CF encoded variables.
 
     See: decode_cf_variable
     """
@@ -351,23 +379,8 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
     drop_variables = set(drop_variables)
 
     # Time bounds coordinates might miss the decoding attributes
-    # https://github.com/pydata/xarray/issues/2565
     if decode_times:
-        # We list all time variables with bounds
-        to_update = dict()
-        for v in variables.values():
-            attrs = v.attrs
-            if ('units' in attrs and 'since' in attrs['units'] and
-                    'bounds' in attrs):
-                new_attrs = {'units': attrs['units']}
-                if 'calendar' in attrs:
-                    new_attrs['calendar'] = attrs['calendar']
-                to_update[attrs['bounds']] = new_attrs
-        # For all bound variables, update their time attribute if not present
-        for k, new_attrs in to_update.items():
-            if k in variables:
-                for ak, av in new_attrs.items():
-                    variables[k].attrs.setdefault(ak, av)
+        _update_bounds_attributes(variables)
 
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
