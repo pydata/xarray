@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-import toolz.itertoolz as itertoolz
+from toolz import itertoolz
 from collections import Counter, OrderedDict
 
 import pandas as pd
