@@ -650,10 +650,10 @@ opening the store. (For more information on this feature, consult the
 
 If you have zarr version 2.3 or greater, xarray can write and read stores
 with consolidated metadata. To write consolidated metadata, pass the
-``consolidate=True`` option to the
+``consolidated=True`` option to the
 :py:attr:`Dataset.to_zarr <xarray.Dataset.to_zarr>` method::
 
-    ds.to_zarr('foo.zarr', consolidate=True)
+    ds.to_zarr('foo.zarr', consolidated=True)
 
 To read a consolidated store, pass the ``consolidated=True`` option to
 :py:func:`~xarray.open_zarr`::

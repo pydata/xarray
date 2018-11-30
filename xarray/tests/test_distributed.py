@@ -124,7 +124,7 @@ def test_dask_distributed_read_netcdf_integration_test(
 def test_dask_distributed_zarr_integration_test(loop, consolidated, compute):
     if consolidated:
         zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
-        write_kwargs = dict(consolidate=True)
+        write_kwargs = dict(consolidated=True)
         read_kwargs = dict(consolidated=True)
     else:
         write_kwargs = read_kwargs = {}

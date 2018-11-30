@@ -1222,7 +1222,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                          compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True, consolidate=False):
+                encoding=None, compute=True, consolidated=False):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1247,7 +1247,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         compute: bool, optional
             If True compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
-        consolidate: bool, optional
+        consolidated: bool, optional
             If True, apply zarr's `consolidate_metadata` function to the store
             after writing.
 
@@ -1264,7 +1264,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
                        group=group, encoding=encoding, compute=compute,
-                       consolidate=consolidate)
+                       consolidated=consolidated)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)

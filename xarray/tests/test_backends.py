@@ -1324,7 +1324,7 @@ class ZarrBase(CFEncodedBase):
         zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
         expected = create_test_data()
         with self.roundtrip(expected,
-                            save_kwargs={'consolidate': True},
+                            save_kwargs={'consolidated': True},
                             open_kwargs={'consolidated': True}) as actual:
             self.check_dtypes_roundtripped(expected, actual)
             assert_identical(expected, actual)
