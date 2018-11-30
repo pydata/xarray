@@ -12,7 +12,7 @@ from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
     _new_tile_id, _auto_combine_all_along_first_dim,
     _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _check_shape_tile_ids, _combine_nd, _auto_combine_1d)
+    _check_shape_tile_ids, _combine_nd, _auto_combine_1d, _auto_combine)
 
 from . import (
     InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
@@ -410,15 +410,6 @@ class TestAutoCombine(object):
                            {'baz': [100]})
         assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
-    def test_infer_order_from_coords(self):
-        data = create_test_data()
-        print(data)
-        objs = [data.isel(x=slice(4, 9)), data.isel(x=slice(4))]
-        actual = auto_combine(objs, infer_order_from_coords=True)
-        expected = data
-        assert_identical(expected, actual)
-
 
 class TestTileIDsFromNestedList(object):
     def test_1d(self):
@@ -515,7 +506,8 @@ def create_combined_ids():
 def _create_combined_ids(shape):
     tile_ids = _create_tile_ids(shape)
     nums = range(len(tile_ids))
-    return {tile_id: create_test_data(num) for tile_id, num in zip(tile_ids, nums)}
+    return {tile_id: create_test_data(num)
+            for tile_id, num in zip(tile_ids, nums)}
 
 
 def _create_tile_ids(shape):
@@ -551,6 +543,7 @@ class TestCombineND(object):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
+        print(combined_ids)
         result = _auto_combine_all_along_first_dim(combined_ids,
                                                    dim='dim1',
                                                    data_vars='all',
@@ -563,7 +556,7 @@ class TestCombineND(object):
         partway3 = concat([ds(2), ds(5)], dim='dim1')
         expected_datasets = [partway1, partway2, partway3]
         expected = {(i,): ds for i, ds in enumerate(expected_datasets)}
-        
+
         assert_combined_tile_ids_equal(result, expected)
 
     @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
@@ -648,3 +641,24 @@ class TestAutoCombineND(object):
         actual = auto_combine(objs, concat_dims=['x', None])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
+
+
+# TODO test for _new_tile_id
+
+class TestAutoCombineUsingCoords(object):
+    @pytest.mark.xfail(reason="Not yet implemented")
+    def test_infer_order_from_coords(self):
+        # Should pass once inferring order from coords is implemented
+        data = create_test_data()
+        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
+        actual = auto_combine(objs, infer_order_from_coords=True)
+        expected = data
+        assert_identical(expected, actual)
+
+    def test_order_inferred_from_coords(self):
+        data = create_test_data()
+        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
+        with pytest.raises(NotImplementedError):
+            _auto_combine(objs, concat_dims=['dim2'],compat='no_conflicts',
+                          data_vars='all', coords='different',
+                          infer_order_from_coords=True, ids=True)

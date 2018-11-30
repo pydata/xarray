@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 import toolz.itertoolz as itertoolz
-from collections import Counter
+from collections import Counter, OrderedDict
 
 import pandas as pd
 
@@ -470,6 +470,7 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
     # Perform N-D dimensional concatenation
     # Each iteration of this loop reduces the length of the tile_IDs tuples
     # by one. It always removes the first
+
     for concat_dim in concat_dims:
         combined_ids = _auto_combine_all_along_first_dim(combined_ids,
                                                          dim=concat_dim,
@@ -487,11 +488,11 @@ def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
 
     new_combined_ids = {}
     for new_id, group in grouped.items():
-        combined_ids = dict(group)
+        # TODO is there a way to unpack this object without using OrderedDict?
+        combined_ids = OrderedDict(sorted(group))
         datasets = list(combined_ids.values())
         new_combined_ids[new_id] = _auto_combine_1d(datasets, dim, compat,
                                                     data_vars, coords)
-
     return new_combined_ids
 
 
