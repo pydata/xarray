@@ -436,7 +436,7 @@ def _check_shape_tile_ids(combined_tile_ids):
         if len(set(occurrences.values())) != 1:
             raise ValueError("The supplied objects do not form a hypercube "
                              "because sub-lists do not have consistent "
-                             "lengths along dimension {}".format(str(dim)))
+                             "lengths along dimension" + str(dim))
 
 
 def _data_vars(combined_id):
