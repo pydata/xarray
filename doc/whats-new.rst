@@ -52,14 +52,14 @@ Bug fixes
 
 - Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 
 .. _whats-new.0.11.0:
 
 v0.11.0 (7 November 2018)
 -------------------------
-
-- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
-  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
