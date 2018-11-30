@@ -58,6 +58,9 @@ Bug fixes
 v0.11.0 (7 November 2018)
 -------------------------
 
+- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 

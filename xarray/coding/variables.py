@@ -266,7 +266,7 @@ class UnsignedIntegerCoder(VariableCoder):
             unsigned = pop_to(attrs, encoding, '_Unsigned')
 
             if data.dtype.kind == 'i':
-                if unsigned:
+                if unsigned == 'true':
                     unsigned_dtype = np.dtype('u%s' % data.dtype.itemsize)
                     transform = partial(np.asarray, dtype=unsigned_dtype)
                     data = lazy_elemwise_func(data, transform, unsigned_dtype)
