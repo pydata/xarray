@@ -84,7 +84,7 @@ def create_encoded_masked_and_scaled_data():
 
 
 def create_unsigned_masked_scaled_data():
-    encoding = {'_FillValue': 255, '_Unsigned': 'true', 'dtype': 'i1',
+    encoding = {'_FillValue': -1, '_Unsigned': 'true', 'dtype': 'i1',
                 'add_offset': 10, 'scale_factor': np.float32(0.1)}
     x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
     return Dataset({'x': ('t', x, {}, encoding)})
@@ -95,8 +95,42 @@ def create_encoded_unsigned_masked_scaled_data():
     # be represented in the signed form.
     attributes = {'_FillValue': -1, '_Unsigned': 'true',
                   'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
+def create_bad_unsigned_masked_scaled_data():
+    encoding = {'_FillValue': 255, '_Unsigned': True, 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_bad_encoded_unsigned_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': True,
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
+def create_signed_masked_scaled_data():
+    encoding = {'_FillValue': -127, '_Unsigned': 'false', 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=np.float32)
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_signed_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -127, '_Unsigned': 'false',
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([-110, 1, 127, -127], dtype='i1')
     return Dataset({'x': ('t', sb, attributes)})
 
 
@@ -617,65 +651,52 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 
-    def test_unsigned_roundtrip_mask_and_scale(self):
-        decoded = create_unsigned_masked_scaled_data()
-        encoded = create_encoded_unsigned_masked_scaled_data()
+    @pytest.mark.parametrize(
+        'decoded_fn, encoded_fn',
+        [(create_unsigned_masked_scaled_data,
+          create_encoded_unsigned_masked_scaled_data),
+         pytest.param(create_bad_unsigned_masked_scaled_data,
+                      create_bad_encoded_unsigned_masked_scaled_data,
+                      marks=pytest.mark.xfail(reason="Bad _Unsigned attribute.")),
+         (create_signed_masked_scaled_data,
+          create_encoded_signed_masked_scaled_data),
+         (create_masked_and_scaled_data,
+          create_encoded_masked_and_scaled_data)])
+    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn):
+        decoded = decoded_fn()
+        encoded = encoded_fn()
+
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert (decoded.variables[k].dtype ==
                         actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(decoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
-            assert_allclose(encoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
-            assert_allclose(encoded, actual, decode_bytes=False)
-        # make sure roundtrip encoding didn't change the
-        # original dataset.
-        assert_allclose(
-            encoded, create_encoded_unsigned_masked_scaled_data())
-        with self.roundtrip(encoded) as actual:
-            for k in decoded.variables:
-                assert decoded.variables[k].dtype == \
-                    actual.variables[k].dtype
-            assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert encoded.variables[k].dtype == \
-                    actual.variables[k].dtype
-            assert_allclose(encoded, actual, decode_bytes=False)
 
-    def test_roundtrip_mask_and_scale(self):
-        decoded = create_masked_and_scaled_data()
-        encoded = create_encoded_masked_and_scaled_data()
-        with self.roundtrip(decoded) as actual:
-            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
+            for k in encoded.variables:
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
+
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
+
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        assert_allclose(encoded,
-                        create_encoded_masked_and_scaled_data(),
-                        decode_bytes=False)
+        assert_allclose(encoded, encoded_fn(), decode_bytes=False)
+
         with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                assert (decoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
