@@ -249,7 +249,11 @@ class UnsignedIntegerCoder(VariableCoder):
     def encode(self, variable, name=None):
         dims, data, attrs, encoding = unpack_for_encoding(variable)
 
-        if encoding.get('_Unsigned', False):
+        # from netCDF best practices
+        # https://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html
+        #     "_Unsigned = "true" to indicate that
+        #      integer data should be treated as unsigned"
+        if encoding.get('_Unsigned', 'false') == 'true':
             pop_to(encoding, attrs, '_Unsigned')
             signed_dtype = np.dtype('i%s' % data.dtype.itemsize)
             if '_FillValue' in attrs:
