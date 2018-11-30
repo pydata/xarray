@@ -242,7 +242,7 @@ class TestDataset(object):
             Dataset({'a': x1, 'b': x2})
         with raises_regex(ValueError, "disallows such variables"):
             Dataset({'a': x1, 'x': z})
-        with raises_regex(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuple of form'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with raises_regex(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
@@ -420,16 +420,12 @@ class TestDataset(object):
         assert isinstance(ds.dims.mapping, utils.SortedKeysDict)
         assert type(ds.dims.mapping.mapping) is dict  # noqa
 
-        with pytest.warns(FutureWarning):
-            assert list(ds) == list(ds.variables)
-        with pytest.warns(FutureWarning):
-            assert list(ds.keys()) == list(ds.variables)
+        assert list(ds) == list(ds.data_vars)
+        assert list(ds.keys()) == list(ds.data_vars)
         assert 'aasldfjalskdfj' not in ds.variables
         assert 'dim1' in repr(ds.variables)
-        with pytest.warns(FutureWarning):
-            assert len(ds) == 7
-        with pytest.warns(FutureWarning):
-            assert bool(ds)
+        assert len(ds) == 3
+        assert bool(ds)
 
         assert list(ds.data_vars) == ['var1', 'var2', 'var3']
         assert list(ds.data_vars.keys()) == ['var1', 'var2', 'var3']
@@ -1969,6 +1965,7 @@ class TestDataset(object):
         renamed = data.rename(newnames)
         assert_identical(renamed, data)
 
+    @pytest.mark.filterwarnings('ignore:The inplace argument')
     def test_rename_inplace(self):
         times = pd.date_range('2000-01-01', periods=3)
         data = Dataset({'z': ('x', [2, 3, 4]), 't': ('t', times)})
@@ -1994,7 +1991,7 @@ class TestDataset(object):
         assert_identical(original.set_coords('y'), roundtripped)
 
         actual = original.copy()
-        actual.swap_dims({'x': 'y'}, inplace=True)
+        actual = actual.swap_dims({'x': 'y'})
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'cannot swap'):
@@ -2016,7 +2013,7 @@ class TestDataset(object):
 
         # Make sure it raises true error also for non-dimensional coordinates
         # which has dimension.
-        original.set_coords('z', inplace=True)
+        original = original.set_coords('z')
         with raises_regex(ValueError, 'already exists'):
             original.expand_dims(dim=['z'])
 
@@ -2063,8 +2060,9 @@ class TestDataset(object):
         obj = ds.set_index(x=mindex.names)
         assert_identical(obj, expected)
 
-        ds.set_index(x=mindex.names, inplace=True)
-        assert_identical(ds, expected)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            ds.set_index(x=mindex.names, inplace=True)
+            assert_identical(ds, expected)
 
         # ensure set_index with no existing index and a single data var given
         # doesn't return multi-index
@@ -2082,8 +2080,9 @@ class TestDataset(object):
         obj = ds.reset_index('x')
         assert_identical(obj, expected)
 
-        ds.reset_index('x', inplace=True)
-        assert_identical(ds, expected)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            ds.reset_index('x', inplace=True)
+            assert_identical(ds, expected)
 
     def test_reorder_levels(self):
         ds = create_test_multiindex()
@@ -2094,8 +2093,9 @@ class TestDataset(object):
         reindexed = ds.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(reindexed, expected)
 
-        ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)
-        assert_identical(ds, expected)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            ds.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+            assert_identical(ds, expected)
 
         ds = Dataset({}, coords={'x': [1, 2]})
         with raises_regex(ValueError, 'has no MultiIndex'):
@@ -2173,14 +2173,15 @@ class TestDataset(object):
         assert_identical(expected, actual)
 
         actual = data.copy()
-        actual_result = actual.update(data, inplace=True)
+        actual_result = actual.update(data)
         assert actual_result is actual
         assert_identical(expected, actual)
 
-        actual = data.update(data, inplace=False)
-        expected = data
-        assert actual is not expected
-        assert_identical(expected, actual)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            actual = data.update(data, inplace=False)
+            expected = data
+            assert actual is not expected
+            assert_identical(expected, actual)
 
         other = Dataset(attrs={'new': 'attr'})
         actual = data.copy()
@@ -2560,7 +2561,7 @@ class TestDataset(object):
                 return [set(args[0]) & set(v.dims)] if args else []
             expected = Dataset(dict((k, v.squeeze(*get_args(v)))
                                     for k, v in iteritems(data.variables)))
-            expected.set_coords(data.coords, inplace=True)
+            expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
         # invalid squeeze
         with raises_regex(ValueError, 'cannot select a dimension'):
@@ -2857,22 +2858,21 @@ class TestDataset(object):
         actual = ds.resample(time="1H").interpolate('linear')
         assert 'tc' not in actual.coords
 
-    def test_resample_old_vs_new_api(self):
+    def test_resample_old_api(self):
 
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
                       'bar': ('time', np.random.randn(10), {'meta': 'data'}),
                       'time': times})
-        ds.attrs['dsmeta'] = 'dsdata'
 
-        for method in ['mean', 'sum', 'count', 'first', 'last']:
-            resampler = ds.resample(time='1D')
-            # Discard attributes on the call using the new api to match
-            # convention from old api
-            new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(FutureWarning):
-                old_api = ds.resample('1D', dim='time', how=method)
-            assert_identical(new_api, old_api)
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', 'time')
+
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', dim='time', how='mean')
+
+        with raises_regex(TypeError, r'resample\(\) no longer supports'):
+            ds.resample('1D', dim='time')
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
@@ -3803,10 +3803,6 @@ class TestDataset(object):
 
         actual = ds.transpose()
         expected = ds.apply(lambda x: x.transpose())
-        assert_identical(expected, actual)
-
-        with pytest.warns(FutureWarning):
-            actual = ds.T
         assert_identical(expected, actual)
 
         actual = ds.transpose('x', 'y')

@@ -113,7 +113,7 @@ def _validate_dataset_names(dataset):
 
 
 def _validate_attrs(dataset):
-    """`attrs` must have a string key and a value which is either: a number
+    """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray or a list/tuple of numbers/strings.
     """
     def check_attr(name, value):
@@ -128,8 +128,8 @@ def _validate_attrs(dataset):
 
         if not isinstance(value, (basestring, Number, np.ndarray, np.number,
                                   list, tuple)):
-            raise TypeError('Invalid value for attr: {} must be a number '
-                            'string, ndarray or a list/tuple of '
+            raise TypeError('Invalid value for attr: {} must be a number, '
+                            'a string, an ndarray or a list/tuple of '
                             'numbers/strings for serialization to netCDF '
                             'files'.format(value))
 

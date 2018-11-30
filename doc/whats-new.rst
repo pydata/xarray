@@ -25,34 +25,89 @@ What's New
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
-.. _whats-new.0.11.0:
+.. _whats-new.0.11.1:
 
-v0.11.0 (unreleased)
+v0.11.1 (unreleased)
 --------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Xarray's storage backends now automatically open and close files when
-  necessary, rather than requiring opening a file with ``autoclose=True``. A
-  global least-recently-used cache is used to store open files; the default
-  limit of 128 open files should suffice in most cases, but can be adjusted if
-  necessary with
-  ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
-  to ``open_dataset`` and related functions has been deprecated and is now a
-  no-op.
+Enhancements
+~~~~~~~~~~~~
 
-  This change, along with an internal refactor of xarray's storage backends,
-  should significantly improve performance when reading and writing
-  netCDF files with Dask, especially when working with many files or using
-  Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+- :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
+  :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
-Documentation
-~~~~~~~~~~~~~
-- Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
-  without dimension argument will change in the next release.
-  Now we warn a FutureWarning.
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+Bug fixes
+~~~~~~~~~
+
+.. _whats-new.0.11.0:
+
+v0.11.0 (7 November 2018)
+-------------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Finished deprecations (changed behavior with this release):
+
+  - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
+    Call :py:meth:`Dataset.transpose` directly instead.
+  - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
+    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
+    includes only data variables.
+  - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
+    array data, not coordinates. 
+  - The old resample syntax from before xarray 0.10, e.g.,
+    ``data.resample('1D', dim='time', how='mean')``, is no longer supported will
+    raise an error in most cases. You need to use the new resample syntax
+    instead, e.g., ``data.resample(time='1D').mean()`` or
+    ``data.resample({'time': '1D'}).mean()``. 
+
+
+- New deprecations (behavior will be changed in xarray 0.12):
+
+  - Reduction of :py:meth:`DataArray.groupby` and :py:meth:`DataArray.resample`
+    without dimension argument will change in the next release.
+    Now we warn a FutureWarning.
+    By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+  - The ``inplace`` kwarg of a number of `DataArray` and `Dataset` methods is being
+    deprecated and will be removed in the next release.
+    By `Deepak Cherian <https://github.com/dcherian>`_.
+
+
+- Refactored storage backends:
+
+  - Xarray's storage backends now automatically open and close files when
+    necessary, rather than requiring opening a file with ``autoclose=True``. A
+    global least-recently-used cache is used to store open files; the default
+    limit of 128 open files should suffice in most cases, but can be adjusted if
+    necessary with
+    ``xarray.set_options(file_cache_maxsize=...)``. The ``autoclose`` argument
+    to ``open_dataset`` and related functions has been deprecated and is now a
+    no-op.
+
+    This change, along with an internal refactor of xarray's storage backends,
+    should significantly improve performance when reading and writing
+    netCDF files with Dask, especially when working with many files or using
+    Dask Distributed. By `Stephan Hoyer <https://github.com/shoyer>`_
+
+
+- Support for non-standard calendars used in climate science:
+
+  - Xarray will now always use :py:class:`cftime.datetime` objects, rather
+    than by default trying to coerce them into ``np.datetime64[ns]`` objects.
+    A :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
+    coordinates in these cases.
+  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added 
+    to aid in converting from a  :py:class:`~xarray.CFTimeIndex` to a
+    :py:class:`pandas.DatetimeIndex` for the remaining use-cases where
+    using a :py:class:`~xarray.CFTimeIndex` is still a limitation (e.g. for
+    resample or plotting).
+  - Setting the ``enable_cftimeindex`` option is now a no-op and emits a
+    ``FutureWarning``. 
 
 Enhancements
 ~~~~~~~~~~~~
@@ -81,17 +136,39 @@ Enhancements
 
   
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- There is now a global option to either always keep or always discard
+  dataset and dataarray attrs upon operations. The option is set with
+  ``xarray.set_options(keep_attrs=True)``, and the default is to use the old
+  behaviour.
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Added a new backend for the GRIB file format based on ECMWF *cfgrib*
   python driver and *ecCodes* C-library. (:issue:`2475`)
   By `Alessandro Amici <https://github.com/alexamici>`_,
   sponsored by `ECMWF <https://github.com/ecmwf>`_.
+- Resample now supports a dictionary mapping from dimension to frequency as
+  its first argument, e.g., ``data.resample({'time': '1D'}).mean()``. This is
+  consistent with other xarray functions that accept either dictionaries or
+  keyword arguments. By `Stephan Hoyer <https://github.com/shoyer>`_.
+
+- The preferred way to access tutorial data is now to load it lazily with
+  :py:meth:`xarray.tutorial.open_dataset`.
+  :py:meth:`xarray.tutorial.load_dataset` calls `Dataset.load()` prior
+  to returning (and is now deprecated). This was changed in order to facilitate
+  using tutorial datasets with dask.
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- ``FacetGrid`` now properly uses the ``cbar_kwargs`` keyword argument.
+  (:issue:`1504`, :issue:`1717`)
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - Addition and subtraction operators used with a CFTimeIndex now preserve the
   index's type. (:issue:`2244`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- We now properly handle arrays of ``datetime.datetime`` and ``datetime.timedelta``
+  provided as coordinates. (:issue:`2512`)
+  By `Deepak Cherian <https://github.com/dcherian`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -118,6 +195,14 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - Avoid use of Dask's deprecated ``get=`` parameter in tests
   by `Matthew Rocklin <https://github.com/mrocklin/>`_.
+- An ``OverflowError`` is now accurately raised and caught during the
+  encoding process if a reference date is used that is so distant that
+  the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+- Chunked datasets can now roundtrip to Zarr storage continually 
+  with `to_zarr` and ``open_zarr`` (:issue:`2300`).
+  By `Lily Wang <https://github.com/lilyminium>`_.
 
 .. _whats-new.0.10.9:
 

@@ -39,7 +39,6 @@
    Dataset.imag
    Dataset.round
    Dataset.real
-   Dataset.T
    Dataset.cumsum
    Dataset.cumprod
    Dataset.rank
@@ -153,3 +152,4 @@
    plot.FacetGrid.map
 
    CFTimeIndex.shift
+   CFTimeIndex.to_datetimeindex

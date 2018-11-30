@@ -18,6 +18,7 @@ from .indexing import (
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
+from .options import _get_keep_attrs
 
 try:
     import dask.array as da
@@ -76,11 +77,11 @@ def as_variable(obj, name=None):
     elif isinstance(obj, tuple):
         try:
             obj = Variable(*obj)
-        except TypeError:
+        except (TypeError, ValueError) as error:
             # use .format() instead of % because it handles tuples consistently
-            raise TypeError('tuples to convert into variables must be of the '
-                            'form (dims, data[, attrs, encoding]): '
-                            '{}'.format(obj))
+            raise error.__class__('Could not convert tuple of form '
+                                  '(dims, data[, attrs, encoding]): '
+                                  '{} to Variable.'.format(obj))
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
@@ -95,7 +96,7 @@ def as_variable(obj, name=None):
                 'cannot set variable %r with %r-dimensional data '
                 'without explicit dimension names. Pass a tuple of '
                 '(dims, data) instead.' % (name, data.ndim))
-        obj = Variable(name, obj, fastpath=True)
+        obj = Variable(name, data, fastpath=True)
     else:
         raise TypeError('unable to convert object into a variable without an '
                         'explicit list of dimensions: %r' % obj)
@@ -1309,8 +1310,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=None, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1357,6 +1358,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             dims = [adim for n, adim in enumerate(self.dims)
                     if n not in removed_axes]
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
         return Variable(dims, data, attrs=attrs)

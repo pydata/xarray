@@ -1,19 +1,24 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
+
 DISPLAY_WIDTH = 'display_width'
 ARITHMETIC_JOIN = 'arithmetic_join'
 ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
 FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
+KEEP_ATTRS = 'keep_attrs'
+
 
 OPTIONS = {
     DISPLAY_WIDTH: 80,
     ARITHMETIC_JOIN: 'inner',
-    ENABLE_CFTIMEINDEX: False,
+    ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
+    KEEP_ATTRS: 'default'
 }
 
 _JOIN_OPTIONS = frozenset(['inner', 'outer', 'left', 'right', 'exact'])
@@ -28,6 +33,7 @@ _VALIDATORS = {
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
+    KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
 }
 
 
@@ -36,9 +42,28 @@ def _set_file_cache_maxsize(value):
     FILE_CACHE.maxsize = value
 
 
+def _warn_on_setting_enable_cftimeindex(enable_cftimeindex):
+    warnings.warn(
+        'The enable_cftimeindex option is now a no-op '
+        'and will be removed in a future version of xarray.',
+        FutureWarning)
+
+
 _SETTERS = {
     FILE_CACHE_MAXSIZE: _set_file_cache_maxsize,
+    ENABLE_CFTIMEINDEX: _warn_on_setting_enable_cftimeindex
 }
+
+
+def _get_keep_attrs(default):
+    global_choice = OPTIONS['keep_attrs']
+
+    if global_choice is 'default':
+        return default
+    elif global_choice in [True, False]:
+        return global_choice
+    else:
+        raise ValueError("The global option keep_attrs must be one of True, False or 'default'.")
 
 
 class set_options(object):
@@ -50,9 +75,6 @@ class set_options(object):
       Default: ``80``.
     - ``arithmetic_join``: DataArray/Dataset alignment in binary operations.
       Default: ``'inner'``.
-    - ``enable_cftimeindex``: flag to enable using a ``CFTimeIndex``
-      for time indexes with non-standard calendars or dates outside the
-      Timestamp-valid range. Default: ``False``.
     - ``file_cache_maxsize``: maximum number of open files to hold in xarray's
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
@@ -63,8 +85,13 @@ class set_options(object):
     - ``cmap_divergent``: colormap to use for divergent data plots.
       Default: ``RdBu_r``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)
+    - ``keep_attrs``: rule for whether to keep attributes on xarray
+      Datasets/dataarrays after operations. Either ``True`` to always keep
+      attrs, ``False`` to always discard them, or ``'default'`` to use original
+      logic that attrs should only be kept in unambiguous circumstances.
+      Default: ``'default'``.
 
-f    You can use ``set_options`` either as a context manager:
+    You can use ``set_options`` either as a context manager:
 
     >>> ds = xr.Dataset({'x': np.arange(1000)})
     >>> with xr.set_options(display_width=40):
@@ -82,7 +109,7 @@ f    You can use ``set_options`` either as a context manager:
     """
 
     def __init__(self, **kwargs):
-        self.old = OPTIONS.copy()
+        self.old = {}
         for k, v in kwargs.items():
             if k not in OPTIONS:
                 raise ValueError(
@@ -91,6 +118,7 @@ f    You can use ``set_options`` either as a context manager:
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 raise ValueError(
                     'option %r given an invalid value: %r' % (k, v))
+            self.old[k] = OPTIONS[k]
         self._apply_update(kwargs)
 
     def _apply_update(self, options_dict):
@@ -103,5 +131,4 @@ f    You can use ``set_options`` either as a context manager:
         return
 
     def __exit__(self, type, value, traceback):
-        OPTIONS.clear()
         self._apply_update(self.old)

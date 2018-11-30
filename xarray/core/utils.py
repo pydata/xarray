@@ -13,9 +13,18 @@ from collections import Iterable, Mapping, MutableMapping, MutableSet
 import numpy as np
 import pandas as pd
 
-from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
+
+
+def _check_inplace(inplace, default=False):
+    if inplace is None:
+        inplace = default
+    else:
+        warnings.warn('The inplace argument has been deprecated and will be '
+                      'removed in xarray 0.12.0.', FutureWarning, stacklevel=3)
+
+    return inplace
 
 
 def alias_message(old_name, new_name):
@@ -41,16 +50,13 @@ def alias(obj, old_name):
 def _maybe_cast_to_cftimeindex(index):
     from ..coding.cftimeindex import CFTimeIndex
 
-    if not OPTIONS['enable_cftimeindex']:
-        return index
-    else:
-        if index.dtype == 'O':
-            try:
-                return CFTimeIndex(index)
-            except (ImportError, TypeError):
-                return index
-        else:
+    if index.dtype == 'O':
+        try:
+            return CFTimeIndex(index)
+        except (ImportError, TypeError):
             return index
+    else:
+        return index
 
 
 def safe_cast_to_index(array):

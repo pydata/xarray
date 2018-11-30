@@ -43,7 +43,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
         If objects are DataArrays, data_vars must be 'all'.
-    coords : {'minimal', 'different', 'all' o list of str}, optional
+    coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
           * 'minimal': Only coordinates in which the dimension already appears
             are included.

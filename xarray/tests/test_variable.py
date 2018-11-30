@@ -970,8 +970,10 @@ class TestVariable(VariableSubclassobjects):
                         expected_extra.attrs, expected_extra.encoding)
         assert_identical(expected_extra, as_variable(xarray_tuple))
 
-        with raises_regex(TypeError, 'tuples to convert'):
+        with raises_regex(TypeError, 'tuple of form'):
             as_variable(tuple(data))
+        with raises_regex(ValueError, 'tuple of form'):  # GH1016
+            as_variable(('five', 'six', 'seven'))
         with raises_regex(
                 TypeError, 'without an explicit list of dimensions'):
             as_variable(data)
@@ -991,6 +993,13 @@ class TestVariable(VariableSubclassobjects):
         with raises_regex(
                 ValueError, 'has more than 1-dimension'):
             as_variable(expected, name='x')
+
+        # test datetime, timedelta conversion
+        dt = np.array([datetime(1999, 1, 1) + timedelta(days=x)
+                       for x in range(10)])
+        assert as_variable(dt, 'time').dtype.kind == 'M'
+        td = np.array([timedelta(days=x) for x in range(10)])
+        assert as_variable(td, 'time').dtype.kind == 'm'
 
     def test_repr(self):
         v = Variable(['time', 'x'], [[1, 2, 3], [4, 5, 6]], {'foo': 'bar'})
