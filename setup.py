@@ -24,7 +24,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
+INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2', 'toolz >= 0.9.0']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 if sys.version_info[0] < 3:
     TESTS_REQUIRE.append('mock')
