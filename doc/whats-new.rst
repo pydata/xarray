@@ -21,7 +21,7 @@ What's New
     always be available to python 2.7 users. For more information see the
     following references
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+     - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
@@ -32,6 +32,19 @@ v0.11.1 (unreleased)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Auto-combine along N dimensions:
+
+  - ``open_mfdataset`` and ``auto_combine`` can now combine datasets along any
+    number of dimensions, instead of just a 1D list of datasets. To combine
+    along multiple dimensions the datasets must be passed as a nested
+    list-of-lists.
+
+    Breaking because ``open_mfdataset`` and ``auto_combine`` now expect an
+    argument ``concat_dims`` instead of ``concat_dim``. ``concat_dims`` accepts
+    a list of valid ``concat_dim`` arguments, e.g. ``['dim1', 'dim2']``.
+    (:issue:`2159`)
+    By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 Enhancements
 ~~~~~~~~~~~~
