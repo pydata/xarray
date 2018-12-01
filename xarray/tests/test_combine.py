@@ -497,6 +497,10 @@ class TestTileIDsFromNestedList(object):
             (input, ['dim1'])
         assert_combined_tile_ids_equal(expected, actual)
 
+        input = [ds(0), ds(1)]
+        with pytest.raises(ValueError):
+            _infer_concat_order_from_positions(input, ['dim1', 'extra_dim'])
+
 
 @pytest.fixture(scope='module')
 def create_combined_ids():
@@ -602,10 +606,7 @@ class TestCheckShapeTileIDs(object):
 
 @requires_dask  # only for toolz
 class TestAutoCombineND(object):
-    # TODO there should be a lot more tests in here testing different cases
-
     def test_single_dataset(self):
-
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
         actual = auto_combine(objs)
         expected = Dataset({'x': [0, 1]})
@@ -640,6 +641,10 @@ class TestAutoCombineND(object):
                                       'consistent depths'):
             auto_combine(datasets, concat_dims=['dim1', 'dim2'])
 
+        datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
+        with raises_regex(ValueError, 'concat_dims has length'):
+            auto_combine(datasets, concat_dims=['dim1'])
+
     def test_combine_concat_over_redundant_nesting(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
         actual = auto_combine(objs, concat_dims=[None, 'x'])
@@ -651,16 +656,18 @@ class TestAutoCombineND(object):
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
+        objs = [[Dataset({'x': [0]})]]
+        actual = auto_combine(objs, concat_dims=[None, None])
+        expected = Dataset({'x': [0]})
+        assert_identical(expected, actual)
+
 
 class TestAutoCombineUsingCoords(object):
-    @pytest.mark.xfail(reason="Not yet implemented")
-    def test_infer_order_from_coords(self):
-        # Should pass once inferring order from coords is implemented
+    def test_infer_order_from_coords_not_implemented(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        actual = auto_combine(objs, infer_order_from_coords=True)
-        expected = data
-        assert_identical(expected, actual)
+        with pytest.raises(NotImplementedError):
+            auto_combine(objs, infer_order_from_coords=True)
 
     def test_order_inferred_from_coords(self):
         data = create_test_data()
@@ -669,3 +676,12 @@ class TestAutoCombineUsingCoords(object):
             _auto_combine(objs, concat_dims=['dim2'],compat='no_conflicts',
                           data_vars='all', coords='different',
                           infer_order_from_coords=True, ids=True)
+
+    @pytest.mark.xfail(reason="Not yet implemented")
+    def test_infer_order_from_coords(self):
+        # Should pass once inferring order from coords is implemented
+        data = create_test_data()
+        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
+        actual = auto_combine(objs)  # but with infer_order_from_coords=True
+        expected = data
+        assert_identical(expected, actual)

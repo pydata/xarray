@@ -2214,8 +2214,12 @@ class TestDask(DatasetIOBase):
             with create_tmp_file() as tmp2:
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2],
-                                    infer_order_from_coords=True) as actual:
+
+                with pytest.raises(NotImplementedError):
+                    open_mfdataset([tmp1, tmp2], infer_order_from_coords=True)
+
+                # With infer_order_from_coords=True this should pass in future
+                with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(original, actual)
 
     def test_attrs_mfdataset(self):

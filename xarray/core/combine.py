@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 from toolz import itertoolz
-from collections import Counter, OrderedDict
+from collections import Counter
 
 import pandas as pd
 
@@ -437,11 +437,6 @@ def _check_shape_tile_ids(combined_tile_ids):
             raise ValueError("The supplied objects do not form a hypercube "
                              "because sub-lists do not have consistent "
                              "lengths along dimension" + str(dim))
-
-
-def _data_vars(combined_id):
-    id, ds = combined_id
-    return tuple(sorted(ds.data_vars))
 
 
 def _combine_nd(combined_ids, concat_dims, data_vars='all',
