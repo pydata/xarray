@@ -342,10 +342,10 @@ def _update_bounds_attributes(variables):
         has_date_units = 'units' in attrs and 'since' in attrs['units']
         if has_date_units and 'bounds' in attrs:
             if attrs['bounds'] in variables:
-                to_update = variables[attrs['bounds']].attrs
-                to_update.setdefault('units', attrs['units'])
+                bounds_attrs = variables[attrs['bounds']].attrs
+                bounds_attrs.setdefault('units', attrs['units'])
                 if 'calendar' in attrs:
-                    to_update.setdefault('calendar', attrs['calendar'])
+                    bounds_attrs.setdefault('calendar', attrs['calendar'])
 
 
 def decode_cf_variables(variables, attributes, concat_characters=True,
