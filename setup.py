@@ -25,6 +25,7 @@ CLASSIFIERS = [
 ]
 
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2', 'toolz >= 0.9.0']
+SETUP_REQUIRES = ['pytest-runner >= 4.2']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 if sys.version_info[0] < 3:
     TESTS_REQUIRE.append('mock')
@@ -66,6 +67,7 @@ setup(name=DISTNAME,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
       install_requires=INSTALL_REQUIRES,
+      setup_requires=SETUP_REQUIRES,
       tests_require=TESTS_REQUIRE,
       url=URL,
       python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',

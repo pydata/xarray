@@ -164,9 +164,8 @@ Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 We can also manually iterate through ``Rolling`` objects:
 
-.. ipython:: python
+.. code:: python
 
-   @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
 
@@ -298,9 +297,9 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython:: python
+.. ipython::
+    :verbatim:
 
-    @verbatim
     In [1]: arr + xr.DataArray([1, 2], dims='x')
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
 
