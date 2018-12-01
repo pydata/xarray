@@ -377,7 +377,7 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
 
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
-    if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims == None:
+    if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims is None:
         concat_dims = [concat_dims]*n_dims
     else:
         if len(concat_dims) != n_dims:
@@ -516,39 +516,34 @@ def _new_tile_id(single_id_ds_pair):
 def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
                   infer_order_from_coords, ids):
     """
-    This function decides if any concatenation is necessary, and if so it calls
-    the logic to decide their concatenation order before concatenating.
+    Calls logic to decide concatenation order before concatenating.
     """
 
-    if concat_dims is not None:
-        # Arrange datasets for concatenation
-        if infer_order_from_coords:
-            raise NotImplementedError
-            # TODO Use coordinates to determine tile_ID for each dataset in N-D
-            # Ignore how they were ordered previously
-            # Should look like
-            # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
-            # concat_dims)
-        else:
-            # Use information from the shape of the user input
-            if not ids:
-                # Determine tile_IDs by structure of input in N-D
-                # (i.e. ordering in list-of-lists)
-                combined_ids, concat_dims = _infer_concat_order_from_positions\
-                                                        (datasets, concat_dims)
-            else:
-                # Already sorted so just use the ids already passed
-                combined_ids = dict(zip(ids, datasets))
-
-        # Check that the inferred shape is combinable
-        _check_shape_tile_ids(combined_ids)
-
-        # Repeatedly concatenate then merge along each dimension
-        combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                               data_vars=data_vars, coords=coords)
+    # Arrange datasets for concatenation
+    if infer_order_from_coords:
+        raise NotImplementedError
+        # TODO Use coordinates to determine tile_ID for each dataset in N-D
+        # Ignore how they were ordered previously
+        # Should look like:
+        # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
+        # concat_dims)
     else:
-        # Case of no concatenation wanted at all
-        combined = merge(datasets, compat=compat)
+        # Use information from the shape of the user input
+        if not ids:
+            # Determine tile_IDs by structure of input in N-D
+            # (i.e. ordering in list-of-lists)
+            combined_ids, concat_dims = _infer_concat_order_from_positions\
+                                                        (datasets, concat_dims)
+        else:
+            # Already sorted so just use the ids already passed
+            combined_ids = dict(zip(ids, datasets))
+
+    # Check that the inferred shape is combinable
+    _check_shape_tile_ids(combined_ids)
+
+    # Repeatedly concatenate then merge along each dimension
+    combined = _combine_nd(combined_ids, concat_dims, compat=compat,
+                           data_vars=data_vars, coords=coords)
     return combined
 
 

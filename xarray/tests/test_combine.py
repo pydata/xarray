@@ -661,6 +661,11 @@ class TestAutoCombineND(object):
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 
+        objs = [[Dataset({'x': [0]})]]
+        actual = auto_combine(objs, concat_dims=None)
+        expected = Dataset({'x': [0]})
+        assert_identical(expected, actual)
+
 
 class TestAutoCombineUsingCoords(object):
     def test_infer_order_from_coords_not_implemented(self):
