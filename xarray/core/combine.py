@@ -1,12 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from toolz import itertoolz
+import itertools
 from collections import Counter
 
 import pandas as pd
 
-from . import utils
 from .alignment import align
 from .merge import merge
 from .pycompat import OrderedDict, basestring, iteritems
@@ -373,7 +372,7 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 def _infer_concat_order_from_positions(datasets, concat_dims):
 
-    combined_ids = dict(_infer_tile_ids_from_nested_list(datasets, ()))
+    combined_ids = OrderedDict(_infer_tile_ids_from_nested_list(datasets, ()))
 
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
@@ -463,9 +462,9 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
 
     # TODO refactor this logic, possibly using method in np.blocks
     # Perform N-D dimensional concatenation
-    # Each iteration of this loop reduces the length of the tile_IDs tuples
-    # by one. It always removes the first
-
+    # Each iteration of this loop reduces the length of the tile_ids tuples
+    # by one. It always combines along the first dimension, removing the first
+    # element of the tuple
     for concat_dim in concat_dims:
         combined_ids = _auto_combine_all_along_first_dim(combined_ids,
                                                          dim=concat_dim,
@@ -479,13 +478,15 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
 def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
                                       coords, compat):
     # Group into lines of datasets which must be combined along dim
-    grouped = itertoolz.groupby(_new_tile_id, combined_ids.items())
+    # need to sort by _new_tile_id first for groupby to work
+    # TODO remove all these sorted OrderedDicts once python >= 3.6 only
+    combined_ids = OrderedDict(sorted(combined_ids.items(), key=_new_tile_id))
+    grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
 
     new_combined_ids = {}
-    for new_id, group in grouped.items():
-        # TODO is there a way to unpack this object without using OrderedDict?
+    for new_id, group in grouped:
         combined_ids = OrderedDict(sorted(group))
-        datasets = list(combined_ids.values())
+        datasets = combined_ids.values()
         new_combined_ids[new_id] = _auto_combine_1d(datasets, dim, compat,
                                                     data_vars, coords)
     return new_combined_ids
@@ -497,11 +498,12 @@ def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                    datasets).values()
-        concatenated = [_auto_concat(ds, dim=dim,
+        grouped = itertools.groupby(datasets,
+                                    key=lambda ds: tuple(sorted(ds.data_vars)),
+                                    )
+        concatenated = [_auto_concat(list(ds_group), dim=dim,
                                      data_vars=data_vars, coords=coords)
-                        for ds in grouped]
+                        for id, ds_group in grouped]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
@@ -536,7 +538,7 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
                                                         (datasets, concat_dims)
         else:
             # Already sorted so just use the ids already passed
-            combined_ids = dict(zip(ids, datasets))
+            combined_ids = OrderedDict(zip(ids, datasets))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)

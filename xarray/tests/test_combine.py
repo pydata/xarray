@@ -485,7 +485,6 @@ class TestTileIDsFromNestedList(object):
 
         expected = {(0, 0): ds(0), (1, 0): ds(1), (1, 1): ds(2)}
         actual = dict(_infer_tile_ids_from_nested_list(input, ()))
-        print(actual)
         assert_combined_tile_ids_equal(expected, actual)
 
     def test_infer_from_datasets(self):
@@ -555,8 +554,6 @@ class TestCombineND(object):
     def test_concat_only_first_dim(self, create_combined_ids):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
-        ds = create_test_data
-        print(combined_ids)
         result = _auto_combine_all_along_first_dim(combined_ids,
                                                    dim='dim1',
                                                    data_vars='all',
