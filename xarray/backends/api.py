@@ -488,14 +488,18 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     """Open multiple files as a single dataset.
 
     Requires dask to be installed. See documentation for details on dask [1].
+    Uses ``auto_combine`` to combine the opened datasets - see
+    ``auto_combine`` for details.
     Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open.  Paths can be given as strings or as pathlib
-        Paths.
+        list of files to open. Paths can be given as strings or as pathlib
+        Paths. If concatenation along more than one dimension is desired, then
+        ``paths`` must be a nested list-of-lists (see ``auto_combine`` for
+        details).
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -510,8 +514,8 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         want to concatenate is not a dimension in the original datasets, e.g.,
         if you want to stack a collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dim=None`` explicitly to disable
-        concatenation.
+        component files. Set ``concat_dims=[..., None, ...]`` explicitly to
+        disable concatenation along a particular dimension.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
@@ -562,12 +566,6 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
             those corresponding to other dimensions.
           * list of str: The listed coordinate variables will be concatenated,
             in addition the 'minimal' coordinates.
-    infer_order_from_coords : bool, optional
-        If true attempt to deduce the order in which the datasets should be
-        concatenated from their coordinates. To do this the coordinates should
-        be monotonic along the dimension to be concatenated.
-        If false instead read the order from the structure the datasets are
-        supplied in. This structure should be a nested list of lists.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
