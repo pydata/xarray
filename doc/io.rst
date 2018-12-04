@@ -659,6 +659,10 @@ To read a consolidated store, pass the ``consolidated=True`` option to
 :py:func:`~xarray.open_zarr`::
 
     ds = xr.open_zarr('foo.zarr', consolidated=True)
+    
+Xarray can't perform consolidation on pre-existing zarr datasets. This should
+be done directly from zarr, as described in the
+`zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.
 
 .. _io.cfgrib:
 
