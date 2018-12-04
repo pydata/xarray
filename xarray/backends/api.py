@@ -861,7 +861,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True):
+            encoding=None, compute=True, consolidated=False):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -876,16 +876,20 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    store = backends.ZarrStore.open_group(store=store, mode=mode,
-                                          synchronizer=synchronizer,
-                                          group=group)
+    zstore = backends.ZarrStore.open_group(store=store, mode=mode,
+                                           synchronizer=synchronizer,
+                                           group=group,
+                                           consolidate_on_close=consolidated)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dump_to_store(dataset, store, writer, encoding=encoding)
+    dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(compute=compute)
 
-    if not compute:
+    if compute:
+        _finalize_store(writes, zstore)
+    else:
         import dask
-        return dask.delayed(_finalize_store)(writes, store)
-    return store
+        return dask.delayed(_finalize_store)(writes, zstore)
+
+    return zstore

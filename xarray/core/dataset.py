@@ -1222,7 +1222,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                          compute=compute)
 
     def to_zarr(self, store=None, mode='w-', synchronizer=None, group=None,
-                encoding=None, compute=True):
+                encoding=None, compute=True, consolidated=False):
         """Write dataset contents to a zarr group.
 
         .. note:: Experimental
@@ -1244,9 +1244,16 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Nested dictionary with variable names as keys and dictionaries of
             variable specific encodings as values, e.g.,
             ``{'my_variable': {'dtype': 'int16', 'scale_factor': 0.1,}, ...}``
-        compute: boolean
-            If true compute immediately, otherwise return a
+        compute: bool, optional
+            If True compute immediately, otherwise return a
             ``dask.delayed.Delayed`` object that can be computed later.
+        consolidated: bool, optional
+            If True, apply zarr's `consolidate_metadata` function to the store
+            after writing.
+
+        References
+        ----------
+        https://zarr.readthedocs.io/
         """
         if encoding is None:
             encoding = {}
@@ -1256,7 +1263,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                              "and 'w-'.")
         from ..backends.api import to_zarr
         return to_zarr(self, store=store, mode=mode, synchronizer=synchronizer,
-                       group=group, encoding=encoding, compute=compute)
+                       group=group, encoding=encoding, compute=compute,
+                       consolidated=consolidated)
 
     def __unicode__(self):
         return formatting.dataset_repr(self)
@@ -1380,7 +1388,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """ Here we make sure
         + indexer has a valid keys
         + indexer is in a valid data type
-        + string indexers are cast to the appropriate date type if the 
+        + string indexers are cast to the appropriate date type if the
           associated index is a DatetimeIndex or CFTimeIndex
         """
         from .dataarray import DataArray
@@ -1963,7 +1971,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                'Instead got\n{}'.format(new_x))
             else:
                 return (x, new_x)
-            
+
         variables = OrderedDict()
         for name, var in iteritems(obj._variables):
             if name not in indexers:
