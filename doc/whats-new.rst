@@ -36,6 +36,8 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Ability to read and write consolidated metadata in zarr stores (:issue:`2558`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
@@ -56,15 +58,15 @@ Breaking changes
   - ``Dataset.T`` has been removed as a shortcut for :py:meth:`Dataset.transpose`.
     Call :py:meth:`Dataset.transpose` directly instead.
   - Iterating over a ``Dataset`` now includes only data variables, not coordinates.
-    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now  
+    Similarily, calling ``len`` and ``bool`` on a ``Dataset`` now
     includes only data variables.
   - ``DataArray.__contains__`` (used by Python's ``in`` operator) now checks
-    array data, not coordinates. 
+    array data, not coordinates.
   - The old resample syntax from before xarray 0.10, e.g.,
     ``data.resample('1D', dim='time', how='mean')``, is no longer supported will
     raise an error in most cases. You need to use the new resample syntax
     instead, e.g., ``data.resample(time='1D').mean()`` or
-    ``data.resample({'time': '1D'}).mean()``. 
+    ``data.resample({'time': '1D'}).mean()``.
 
 
 - New deprecations (behavior will be changed in xarray 0.12):
@@ -101,13 +103,13 @@ Breaking changes
     than by default trying to coerce them into ``np.datetime64[ns]`` objects.
     A :py:class:`~xarray.CFTimeIndex` will be used for indexing along time
     coordinates in these cases.
-  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added 
+  - A new method :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` has been added
     to aid in converting from a  :py:class:`~xarray.CFTimeIndex` to a
     :py:class:`pandas.DatetimeIndex` for the remaining use-cases where
     using a :py:class:`~xarray.CFTimeIndex` is still a limitation (e.g. for
     resample or plotting).
   - Setting the ``enable_cftimeindex`` option is now a no-op and emits a
-    ``FutureWarning``. 
+    ``FutureWarning``.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -194,7 +196,7 @@ Bug fixes
   the dates must be encoded using cftime rather than NumPy (:issue:`2272`).
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 
-- Chunked datasets can now roundtrip to Zarr storage continually 
+- Chunked datasets can now roundtrip to Zarr storage continually
   with `to_zarr` and ``open_zarr`` (:issue:`2300`).
   By `Lily Wang <https://github.com/lilyminium>`_.
 
