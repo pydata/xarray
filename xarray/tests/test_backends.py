@@ -3057,6 +3057,42 @@ class TestRasterio(object):
             import dask.array as da
             assert isinstance(actual.data, da.Array)
 
+    def test_rasterio_environment(self):
+        with create_tmp_geotiff() as (tmp_file, expected):
+            # Should fail with error since suffix not allowed
+            with pytest.raises(Exception):
+                with rasterio.Env(CPL_VSIL_CURL_ALLOWED_EXTENSIONS='H5'):
+                    with xr.open_rasterio(tmp_file) as actual:
+                        assert_allclose(actual, expected)
+
+    def test_rasterio_vrt(self):
+        url = 'https://storage.googleapis.com/\
+        gcp-public-data-landsat/LC08/01/047/027/\
+        LC08_L1TP_047027_20130421_20170310_01_T1/\
+        LC08_L1TP_047027_20130421_20170310_01_T1_B4.TIF'
+        env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',
+                  CPL_VSIL_CURL_USE_HEAD=False,
+                  CPL_VSIL_CURL_ALLOWED_EXTENSIONS='TIF')
+        with env:
+            with rasterio.open(url) as src:
+                with WarpedVRT(src, crs='epsg:4326') as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_crs = vrt.crs
+                    expected_res = vrt.res
+                    # Value of single pixel in center of image
+                    lon,lat = vrt.xy(vrt.width // 2, vrt.height // 2)
+                    expected_val = next(vrt.sample([(lon, lat)]))
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_crs = da.crs
+                        actual_res = da.res
+                        actual_val = da.sel(dict(x=lon, y=lat),
+                                                method='nearest').data
+
+                        assert_equal(actual_shape, expected_shape)
+                        assert_equal(actual_crs, expected_crs)
+                        assert_equal(actual_res, expected_res)
+                        assert_equal(expected_val, actual_val)
 
 class TestEncodingInvalid(object):
 
