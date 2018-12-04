@@ -36,7 +36,7 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
-- Ability to read and write consolidated metadata in zarr stores.
+- Ability to read and write consolidated metadata in zarr stores (:issue:`2558`).
   By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
