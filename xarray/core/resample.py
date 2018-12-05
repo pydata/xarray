@@ -202,6 +202,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             x = np.insert([td.total_seconds() for td in
                            t[1:].values - t[:-1].values], 0, 0).cumsum()
             #  calling total_seconds is potentially bad for performance
+            x = x.round()
+            # Rounding fixes erroneous microsecond offsets in timedelta
+            # (fault of CFTime), but destroys microsecond resolution data
         else:
             x = self._obj[self._dim].astype('float')
         y = self._obj.data
@@ -215,6 +218,9 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             new_x = np.insert([td.total_seconds() for td in
                                t[1:].values - t[:-1].values], 0, 0).cumsum()
             #  calling total_seconds is potentially bad for performance
+            new_x = new_x.round()
+            # Rounding fixes erroneous microsecond offsets in timedelta
+            # (fault of CFTime), but destroys microsecond resolution data
         else:
             new_x = self._full_index.values.astype('float')
 
