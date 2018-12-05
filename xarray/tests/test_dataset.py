@@ -41,7 +41,7 @@ def create_test_data(seed=None):
     _vars = {'var1': ['dim1', 'dim2'],
              'var2': ['dim1', 'dim2'],
              'var3': ['dim3', 'dim1']}
-    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10, 'scalar_dim': 1}
 
     obj = Dataset()
     obj['time'] = ('time', pd.date_range('2000-01-01', periods=20))
@@ -50,6 +50,8 @@ def create_test_data(seed=None):
     for v, dims in sorted(_vars.items()):
         data = rs.normal(size=tuple(_dims[d] for d in dims))
         obj[v] = (dims, data, {'foo': 'variable'})
+    obj['scalar'] = ('scalar_dim', np.array([2.0]))
+    obj['scalar'] = obj['scalar'][0]
     obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
                                               dtype='int64'))
     obj.encoding = {'foo': 'bar'}
