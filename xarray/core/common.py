@@ -657,6 +657,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
+        from ..coding.cftime_offsets import cftime_range
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
@@ -690,20 +691,35 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                             "was passed %r" % dim)
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            raise NotImplementedError(
-                'Resample is currently not supported along a dimension '
-                'indexed by a CFTimeIndex.  For certain kinds of downsampling '
-                'it may be possible to work around this by converting your '
-                'time index to a DatetimeIndex using '
-                'CFTimeIndex.to_datetimeindex.  Use caution when doing this '
-                'however, because switching to a DatetimeIndex from a '
-                'CFTimeIndex with a non-standard calendar entails a change '
-                'in the calendar type, which could lead to subtle and silent '
-                'errors.'
-            )
+            from ..coding.cftime_offsets import to_offset
+            from .resample_cftime import (_get_time_bins, _offset_timedelta,
+                                          _adjust_binner_for_upsample)
+            offset = to_offset(freq)
+            times = self.indexes[dim_name]
+            binner, labels = _get_time_bins(self.indexes[dim_name],
+                                            offset,
+                                            closed, label, base)
+            if times.size > labels.size:
+                # if we're downsampling CFTimeIndex, do this:
+                if closed == 'right':
+                    fill_method = 'bfill'
+                else:
+                    fill_method = 'ffill'
+                binner = (pd.Series(binner, index=binner)
+                          .reindex(times, method=fill_method))
+                bin_actual = np.unique(binner.values)
+                label_dict = dict(zip(bin_actual, labels.values))
+                # np.unique returns --sorted-- unique values
+                binner = binner.map(label_dict)
+                grouper = ('downsampling', pd.Index(labels), binner)
+            else:
+                # if we're upsampling CFTimeIndex, do this:
+                binner = _adjust_binner_for_upsample(binner, closed)
+                grouper = ('upsampling', pd.Index(labels), binner, closed)
+        else:
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
 
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
