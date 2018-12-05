@@ -461,7 +461,6 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
     combined_ds : xarray.Dataset
     """
 
-    # TODO refactor this logic, possibly using method in np.blocks
     # Perform N-D dimensional concatenation
     # Each iteration of this loop reduces the length of the tile_ids tuples
     # by one. It always combines along the first dimension, removing the first
@@ -557,8 +556,8 @@ def auto_combine(datasets,
                  infer_order_from_coords=False):
     """Attempt to auto-magically combine the given datasets into one.
 
-    This method attempts to combine a list (or nested list of lists) of
-    datasets into a single entity by inspecting metadata and using a
+    This method attempts to combine a group of datasets along any number of
+    dimensions into a single entity by inspecting metadata and using a
     combination of concat and merge.
 
     Does not sort data under any circumstances. It does align coordinates, but
@@ -577,8 +576,11 @@ def auto_combine(datasets,
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset
-        Dataset objects to merge.
+    datasets : sequence of xarray.Dataset, or nested list of xarray.Dataset
+        objects.
+        Dataset objects to combine.
+        If concatenation along more than one dimension is desired, then
+        datasets must be supplied in a nested list-of-lists.
     concat_dims : list of str, DataArray, Index or None, optional
         Dimensions along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
@@ -588,6 +590,8 @@ def auto_combine(datasets,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dims=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
+        Must be the same length as the depth of the list passed to
+        ``datasets``.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
