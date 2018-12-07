@@ -26,7 +26,9 @@ from xarray.tests import requires_bottleneck
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
-    raises_regex, requires_dask, source_ndarray, set_options)
+    raises_regex, requires_dask, source_ndarray)
+
+from xarray import set_options
 
 
 class VariableSubclassobjects(object):
@@ -1547,21 +1549,18 @@ class TestVariable(VariableSubclassobjects):
         
     def test_binary_ops_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
-
-        a = Variable(['x', 'y'], np.random.randn(3,3), _attrs)
-        b = Variable(['x', 'y'], np.random.randn(3,3), _attrs)
-
+        a = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
+        b = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
         # Test dropped attrs
         d = a - b   # just one operation
         assert len(d.attrs) == 0
         assert d.attrs == OrderedDict()
-
         # Test kept attrs
         with set_options(keep_attrs=True):
-            d = a - b 
+            d = a - b
         assert len(d.attrs) == len(_attrs)
         assert d.attrs == _attrs
-        
+
     def test_count(self):
         expected = Variable([], 3)
         actual = Variable(['x'], [1, 2, 3, np.nan]).count()
