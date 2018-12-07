@@ -1546,7 +1546,7 @@ class TestVariable(VariableSubclassobjects):
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
-        
+
     def test_binary_ops_keep_attrs(self):
         _attrs = {'units': 'test', 'long_name': 'testing'}
         a = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
