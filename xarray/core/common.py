@@ -717,7 +717,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 binner = _adjust_binner_for_upsample(binner, closed)
                 grouper = ('upsampling', pd.Index(labels), binner, closed)
         else:
-            grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
+            grouper = pd.Grouper(freq=freq, closed=closed, label=label,
+                                 base=base)
 
         group = DataArray(dim, [(dim.dims, dim)], name=RESAMPLE_DIM)
         resampler = self._resample_cls(self, group=group, dim=dim_name,
