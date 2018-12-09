@@ -228,9 +228,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def sync(self):
         self.ds.sync()
-        # if self.autoclose:
-        #     self.close()
-        # super(H5NetCDFStore, self).sync(compute=compute)
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)

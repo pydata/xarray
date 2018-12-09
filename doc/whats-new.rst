@@ -43,6 +43,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Ensure files are automatically closed when no longer referenced
+  (:issue:`2560`).
+
 .. _whats-new.0.11.0:
 
 v0.11.0 (7 November 2018)

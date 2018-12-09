@@ -1,3 +1,4 @@
+import gc
 import pickle
 import threading
 try:
@@ -36,6 +37,20 @@ def test_file_manager_mock_write(file_cache):
     mock_file.write.assert_called_once_with('contents')
     mock_file.close.assert_called_once_with()
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
+
+
+def test_file_manager_autoclose(cache):
+    mock_file = mock.Mock()
+    opener = mock.Mock(spec=open, return_value=mock_file)
+    cache = {}
+
+    manager = CachingFileManager(opener, 'filename', cache=cache)
+    manager.acquire()
+    del manager
+    gc.collect()
+
+    assert not cache
+    mock_file.close.assert_called_once_with()
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):

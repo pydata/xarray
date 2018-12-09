@@ -164,6 +164,10 @@ class CachingFileManager(FileManager):
         else:
             self._close()
 
+    def __del__(self):
+        # remove files from the cache when garbage collection happens
+        self.close()
+
     def __getstate__(self):
         """State for pickling."""
         lock = None if self._default_lock else self._lock
