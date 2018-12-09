@@ -45,6 +45,7 @@ Bug fixes
 
 - Ensure files are automatically closed when no longer referenced
   (:issue:`2560`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 
 .. _whats-new.0.11.0:
 

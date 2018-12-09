@@ -41,11 +41,12 @@ def test_file_manager_mock_write(file_cache):
 
 def test_file_manager_autoclose(cache):
     mock_file = mock.Mock()
-    opener = mock.Mock(spec=open, return_value=mock_file)
+    opener = mock.Mock(return_value=mock_file)
     cache = {}
 
     manager = CachingFileManager(opener, 'filename', cache=cache)
     manager.acquire()
+    assert cache
     del manager
     gc.collect()
 
