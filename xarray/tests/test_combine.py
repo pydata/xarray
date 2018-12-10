@@ -642,6 +642,24 @@ class TestAutoCombineND(object):
         with raises_regex(ValueError, 'concat_dims has length'):
             auto_combine(datasets, concat_dims=['dim1'])
 
+    def test_merge_one_dim_concat_another(self):
+        objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'bar': ('x', [10, 20])})],
+                [Dataset({'foo': ('x', [2, 3])}), Dataset({'bar': ('x', [30, 40])})]]
+        expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
+                            'bar': ('x', [10, 20, 30, 40])})
+
+        actual = auto_combine(objs, concat_dims=['x', None])
+        assert_identical(expected, actual)
+
+        actual = auto_combine(objs)
+        assert_identical(expected, actual)
+
+        # Proving it works symmetrically
+        objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'foo': ('x', [2, 3])})],
+                [Dataset({'bar': ('x', [10, 20])}), Dataset({'bar': ('x', [30, 40])})]]
+        actual = auto_combine(objs, concat_dims=[None, 'x'])
+        assert_identical(expected, actual)
+
     def test_combine_concat_over_redundant_nesting(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
         actual = auto_combine(objs, concat_dims=[None, 'x'])
