@@ -1946,7 +1946,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         from . import missing
 
-        coords = either_dict_or_kwargs(coords, coords_kwargs, 'rename')
+        coords = either_dict_or_kwargs(coords, coords_kwargs, 'interp')
         indexers = OrderedDict(self._validate_indexers(coords))
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
