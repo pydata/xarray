@@ -45,7 +45,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
         If objects are DataArrays, data_vars must be 'all'.
-    coords : {'minimal', 'different', 'all' o list of str}, optional
+    coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
           * 'minimal': Only coordinates in which the dimension already appears
             are included.
@@ -393,7 +393,7 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
     Given a list of lists (of lists...) of objects, returns a iterator
     which returns a tuple containing the index of each object in the nested
     list structure as the key, and the object. This can then be called by the
-    dict constructor to create a dictionary of the objects organised byt their
+    dict constructor to create a dictionary of the objects organised by their
     position in the original nested list.
 
     Recursively traverses the given structure, while keeping track of the
@@ -424,14 +424,14 @@ def _check_shape_tile_ids(combined_tile_ids):
 
     # Check all tuples are the same length
     # i.e. check that all lists are nested to the same depth
-    nesting_depths = [len(id) for id in tile_ids]
+    nesting_depths = [len(tile_id) for tile_id in tile_ids]
     if not set(nesting_depths) == {nesting_depths[0]}:
         raise ValueError("The supplied objects do not form a hypercube because"
                          " sub-lists do not have consistent depths")
 
     # Check all lists along one dimension are same length
     for dim in range(nesting_depths[0]):
-        indices_along_dim = [id[dim] for id in tile_ids]
+        indices_along_dim = [tile_id[dim] for tile_id in tile_ids]
         occurrences = Counter(indices_along_dim)
         if len(set(occurrences.values())) != 1:
             raise ValueError("The supplied objects do not form a hypercube "
@@ -498,9 +498,7 @@ def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertools.groupby(datasets,
-                                    key=lambda ds: tuple(sorted(ds.data_vars)),
-                                    )
+        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
         concatenated = [_auto_concat(list(ds_group), dim=dim,
                                      data_vars=data_vars, coords=coords)
                         for id, ds_group in grouped]

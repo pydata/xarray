@@ -602,10 +602,10 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     # If infer_order_from_coords=True then this is unnecessary, but quick.
     # If infer_order_from_coords=False then this creates a flat list which is
     # easier to iterate over, while saving the originally-supplied structure
-    combined_ids_paths, concat_dims = _infer_concat_order_from_positions\
-        (paths, concat_dims)
-    ids, paths = list(combined_ids_paths.keys()), \
-                 list(combined_ids_paths.values())
+    combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
+        paths, concat_dims)
+    ids, paths = (
+        list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
