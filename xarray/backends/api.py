@@ -483,9 +483,13 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   infer_order_from_coords=False,
+                   combine='manual',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
+
+    If combine='auto' then the function `auto_combine` is used, and if
+    combine='manual' then `manual_combine` is used, and the filepaths
+    must be structured accordingly.
 
     Requires dask to be installed. See documentation for details on dask [1].
     Uses ``auto_combine`` to combine the opened datasets - see
@@ -579,6 +583,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     See Also
     --------
     auto_combine
+    manual_combine
     open_dataset
 
     References
@@ -633,15 +638,21 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     # Close datasets in case of a ValueError
     try:
-        if infer_order_from_coords:
-            # Discard ordering because it should be redone from coordinates
-            ids = False
+        if combine is 'auto':
+            # Redo ordering from coordinates
+            raise NotImplementedError
+            # TODO Use coordinates to determine tile_ID for each dataset in N-D
+            # Ignore how they were ordered previously
+            # Should look like:
+            combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
+                concat_dims)
 
-        combined = _auto_combine(datasets, concat_dims=concat_dims,
-                                 compat=compat,
-                                 data_vars=data_vars, coords=coords,
-                                 infer_order_from_coords=infer_order_from_coords,
-                                 ids=ids)
+        # Check that the inferred shape is combinable
+        _check_shape_tile_ids(combined_ids)
+
+        # Repeatedly concatenate then merge along each dimension
+        combined = _combine_nd(combined_ids, concat_dims, compat=compat,
+                               data_vars=data_vars, coords=coords, combine)
     except ValueError:
         for ds in datasets:
             ds.close()

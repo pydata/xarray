@@ -547,47 +547,38 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
     return combined
 
 
-def auto_combine(datasets,
-                 concat_dims=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts',
-                 data_vars='all', coords='different',
-                 infer_order_from_coords=False):
-    """Attempt to auto-magically combine the given datasets into one.
+def manual_combine(datasets, concat_dims=_CONCAT_DIM_DEFAULT,
+                   compat='no_conflicts', data_vars='all', coords='different'):
+    """
+    Combine an N-dimensional grid of datasets into one explicitly by using a
+    succession of concat and merge operations along each dimension of the grid.
 
-    This method attempts to combine a group of datasets along any number of
-    dimensions into a single entity by inspecting metadata and using a
-    combination of concat and merge.
+    Does not sort data under any circumstances, so the datsets must be passed
+    in the order you wish them to be concatenated. It does align coordinates,
+    but different variables on datasets can cause it to fail under some
+    scenarios. In complex cases, you may need to clean up your data and use
+    concat/merge explicitly.
 
-    Does not sort data under any circumstances. It does align coordinates, but
-    different variables on datasets can cause it to fail under some scenarios.
-    In complex cases, you may need to clean up your data and use concat/merge
-    explicitly.
+    To concatenate along multiple dimensions the datasets must be passed as a
+    nested list-of-lists, with a depth equal to the length of ``concat_dims``.
+    ``manual_combine`` will concatenate along the top-level list first.
 
-    Works well if, for example, you have N years of data and M data variables,
-    and each combination of a distinct time period and set of data variables is
-    saved as its own dataset.
-
-    Can concatenate along multiple dimensions. To do this the datasets must be
-    passed as a nested list-of-lists, with a depth equal to the length of
-    ``concat_dims``. ``auto_combine`` will concatenate along the top-level list
-    first.
+    Useful for combining datasets from a set of nested directories, or for
+    collecting the output of a simulation parallelized along multiple
+    dimensions.
 
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset, or nested list of xarray.Dataset
-        objects.
+    datasets : list or nested list of xarray.Dataset objects.
         Dataset objects to combine.
-        If concatenation along more than one dimension is desired, then
-        datasets must be supplied in a nested list-of-lists.
+        If concatenation or merging along more than one dimension is desired,
+        then datasets must be supplied in a nested list-of-lists.
     concat_dims : list of str, DataArray, Index or None, optional
         Dimensions along which to concatenate variables, as used by
-        :py:func:`xarray.concat`. You only need to provide this argument if
-        any of the dimensions along which you want to concatenate are not a
-        dimension in the original datasets, e.g., if you want to stack a
-        collection of 2D arrays along a third dimension.
+        :py:func:`xarray.concat`.
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dims=[..., None, ...]`` explicitly to
-        disable concatenation along a particular dimension.
+        disable concatenation and merge instead along a particular dimension.
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {'identical', 'equals', 'broadcast_equals',
@@ -650,8 +641,83 @@ def auto_combine(datasets,
     merge
     """
 
-    # The IDs argument tells _auto_combine that the datasets are not yet sorted
-    return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
-                         data_vars=data_vars, coords=coords,
-                         infer_order_from_coords=infer_order_from_coords,
-                         ids=False)
+    # The IDs argument tells _combine that the datasets are not yet sorted
+    return _combine(datasets, concat_dims=concat_dims, compat=compat,
+                    data_vars=data_vars, coords=coords,
+                    infer_order_from_coords=False, ids=False)
+
+
+def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts', data_vars='all', coords='different'):
+    """
+    Attempt to auto-magically combine the given datasets into one.
+
+    This method attempts to combine a group of datasets along any number of
+    dimensions into a single entity by inspecting coords and metadata and using
+    a combination of concat and merge.
+
+    Will attempt to order the datasets such that their coordinate values are
+    monotonically increasing along all dimensions. If it cannot determine the
+    order in which to concatenate the datasets, it will raise an error.
+
+    It does align coordinates,
+    but different variables on datasets can cause it to fail under some
+    scenarios. In complex cases, you may need to clean up your data and use
+    concat/merge explicitly.
+
+    Works well if, for example, you have N years of data and M data variables,
+    and each combination of a distinct time period and set of data variables is
+    saved as its own dataset. Also useful for if you have a simulation which is
+    parallelized in multiple dimensions, but has global coordinates saved in
+    each file specifying it's position within the domain.
+
+
+    Parameters
+    ----------
+    datasets : sequence of xarray.Dataset
+        Dataset objects to combine.
+    concat_dim : str, DataArray, Index or None, optional
+        Dimension along which to concatenate variables, as used by
+        :py:func:`xarray.concat`. You only need to provide this argument if
+        the dimension along which you want to concatenate is not a
+        dimension in the original datasets, e.g., if you want to stack a
+        collection of 2D arrays along a third dimension.
+        By default, xarray attempts to infer this argument by examining
+        component files. Set ``concat_dim=None`` explicitly to
+        disable concatenation along a particular dimension.
+        Must be the same length as the depth of the list passed to
+        ``datasets``.
+    compat : {'identical', 'equals', 'broadcast_equals',
+              'no_conflicts'}, optional
+        String indicating how to compare variables of the same name for
+        potential conflicts:
+
+        - 'broadcast_equals': all values must be equal when variables are
+          broadcast against each other to ensure common dimensions.
+        - 'equals': all values and dimensions must be the same.
+        - 'identical': all values, dimensions and attributes must be the
+          same.
+        - 'no_conflicts': only values which are not null in both datasets
+          must be equal. The returned dataset then contains the combination
+          of all non-null values.
+    data_vars : {'minimal', 'different', 'all' or list of str}, optional
+        Details are in the documentation of concat
+    coords : {'minimal', 'different', 'all' or list of str}, optional
+        Details are in the documentation of concat
+
+    Returns
+    -------
+    combined : xarray.Dataset
+
+    See also
+    --------
+    concat
+    merge
+    """
+    if len(concat_dim) > 1:
+        raise ValueError
+
+    # The IDs argument tells _combine that the datasets are not yet sorted
+    return _combine(datasets, concat_dims=[concat_dim], compat=compat,
+                    data_vars=data_vars, coords=coords,
+                    infer_order_from_coords=True, ids=False)
