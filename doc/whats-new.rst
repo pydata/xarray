@@ -41,6 +41,9 @@ Enhancements
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
+  "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_. 
 
 Bug fixes
 ~~~~~~~~~

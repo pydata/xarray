@@ -158,7 +158,8 @@ def times_3d(times):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour',
+                                   'dayofyear', 'dayofweek'])
 def test_field_access(data, field):
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
@@ -170,7 +171,8 @@ def test_field_access(data, field):
 
 @pytest.mark.skipif(not has_dask, reason='dask not installed')
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour',
+                                   'dayofyear', 'dayofweek'])
 def test_dask_field_access_1d(data, field):
     import dask.array as da
 
@@ -186,7 +188,8 @@ def test_dask_field_access_1d(data, field):
 
 @pytest.mark.skipif(not has_dask, reason='dask not installed')
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour', 'dayofyear',
+                                   'dayofweek'])
 def test_dask_field_access(times_3d, data, field):
     import dask.array as da
 

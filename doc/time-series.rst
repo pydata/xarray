@@ -263,14 +263,16 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    da.sel(time=slice('0001-05', '0002-02'))
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
-  just "year", "month", "day", "hour", "minute", "second", "microsecond", and
-  "season"): 
+  just "year", "month", "day", "hour", "minute", "second", "microsecond",
+  "season", "dayofyear", and "dayofweek"): 
 
 .. ipython:: python
 
    da.time.dt.year
    da.time.dt.month
    da.time.dt.season
+   da.time.dt.dayofyear
+   da.time.dt.dayofweek
 
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
