@@ -356,7 +356,7 @@ class TestAutoCombine(object):
         expected = Dataset({'a': (('t', 'x'),
                                   [[np.nan, 2, 3], [1, 2, np.nan]])},
                            {'x': [0, 1, 2]})
-        actual = auto_combine(datasets, concat_dims=['t'])
+        actual = auto_combine(datasets, concat_dim='t')
         assert_identical(expected, actual)
 
     @requires_dask  # only for toolz
@@ -381,21 +381,21 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
         data = Dataset({'x': 0})
-        actual = auto_combine([data, data, data], concat_dims=None)
+        actual = auto_combine([data, data, data], concat_dim=None)
         assert_identical(data, actual)
 
         tmp1 = Dataset({'x': 0})
         tmp2 = Dataset({'x': np.nan})
-        actual = auto_combine([tmp1, tmp2], concat_dims=None)
+        actual = auto_combine([tmp1, tmp2], concat_dim=None)
         assert_identical(tmp1, actual)
-        actual = auto_combine([tmp1, tmp2], concat_dims=[None])
+        actual = auto_combine([tmp1, tmp2], concat_dim=[None])
         assert_identical(tmp1, actual)
 
         # Single object, with a concat_dim explicitly provided
         # Test the issue reported in GH #1988
         objs = [Dataset({'x': 0, 'y': 1})]
         dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dims=[dim])
+        actual = auto_combine(objs, concat_dim=dim)
         expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
                            {'baz': [100]})
         assert_identical(expected, actual)
@@ -404,7 +404,7 @@ class TestAutoCombine(object):
         # expected for non-scalar values, too.
         objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
         dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dims=[dim])
+        actual = auto_combine(objs, concat_dim=dim)
         expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
@@ -621,7 +621,7 @@ class TestAutoCombineND(object):
         expected = concat([partway1, partway2, partway3], dim='dim2')
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
-        result = auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+        result = auto_combine(datasets, concat_dim=['dim1', 'dim2'])
 
         assert_equal(result, expected)
 
@@ -631,16 +631,16 @@ class TestAutoCombineND(object):
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent lengths'):
-            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+            auto_combine(datasets, concat_dim=['dim1', 'dim2'])
 
         datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent depths'):
-            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+            auto_combine(datasets, concat_dim=['dim1', 'dim2'])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
         with raises_regex(ValueError, 'concat_dims has length'):
-            auto_combine(datasets, concat_dims=['dim1'])
+            auto_combine(datasets, concat_dim=['dim1'])
 
     def test_merge_one_dim_concat_another(self):
         objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'bar': ('x', [10, 20])})],
@@ -648,7 +648,7 @@ class TestAutoCombineND(object):
         expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
                             'bar': ('x', [10, 20, 30, 40])})
 
-        actual = auto_combine(objs, concat_dims=['x', None])
+        actual = auto_combine(objs, concat_dim=['x', None])
         assert_identical(expected, actual)
 
         actual = auto_combine(objs)
@@ -657,27 +657,27 @@ class TestAutoCombineND(object):
         # Proving it works symmetrically
         objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'foo': ('x', [2, 3])})],
                 [Dataset({'bar': ('x', [10, 20])}), Dataset({'bar': ('x', [30, 40])})]]
-        actual = auto_combine(objs, concat_dims=[None, 'x'])
+        actual = auto_combine(objs, concat_dim=[None, 'x'])
         assert_identical(expected, actual)
 
     def test_combine_concat_over_redundant_nesting(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
-        actual = auto_combine(objs, concat_dims=[None, 'x'])
+        actual = auto_combine(objs, concat_dim=[None, 'x'])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
         objs = [[Dataset({'x': [0]})], [Dataset({'x': [1]})]]
-        actual = auto_combine(objs, concat_dims=['x', None])
+        actual = auto_combine(objs, concat_dim=['x', None])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
         objs = [[Dataset({'x': [0]})]]
-        actual = auto_combine(objs, concat_dims=[None, None])
+        actual = auto_combine(objs, concat_dim=[None, None])
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 
         objs = [[Dataset({'x': [0]})]]
-        actual = auto_combine(objs, concat_dims=None)
+        actual = auto_combine(objs, concat_dim=None)
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 

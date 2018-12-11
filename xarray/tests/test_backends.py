@@ -2158,7 +2158,7 @@ class TestDask(DatasetIOBase):
                                       y=slice(4, 8)).to_netcdf(tmp4)
                         with open_mfdataset([[tmp1, tmp2],
                                              [tmp3, tmp4]],
-                                            concat_dims=['y', 'x']) as actual:
+                                            concat_dim=['y', 'x']) as actual:
                             assert isinstance(actual.foo.variable.data,
                                               da.Array)
                             assert actual.foo.variable.data.chunks == \
@@ -2166,7 +2166,7 @@ class TestDask(DatasetIOBase):
                             assert_identical(original, actual)
                         with open_mfdataset([[tmp1, tmp2],
                                              [tmp3, tmp4]],
-                                            concat_dims=['y', 'x'],
+                                            concat_dim=['y', 'x'],
                                             chunks={'x': 3, 'y': 2}) as actual:
                             assert actual.foo.variable.data.chunks == \
                                    ((3, 2, 3, 2), (2, 2, 2, 2),)
@@ -2204,7 +2204,7 @@ class TestDask(DatasetIOBase):
                                       y=slice(4, 8)).to_netcdf(tmp4)
                         with open_mfdataset([[tmp1, tmp2],
                                              [tmp3, tmp4]],
-                                            concat_dims=['y', 'x']) as actual:
+                                            concat_dim=['y', 'x']) as actual:
                             assert_identical(original, actual)
 
     @pytest.mark.xfail(reason="Not yet implemented")
@@ -2303,7 +2303,7 @@ class TestDask(DatasetIOBase):
                 data = Dataset({'x': 0})
                 data.to_netcdf(tmp1)
                 Dataset({'x': np.nan}).to_netcdf(tmp2)
-                with open_mfdataset([tmp1, tmp2], concat_dims=None) as actual:
+                with open_mfdataset([tmp1, tmp2], concat_dim=None) as actual:
                     assert_identical(data, actual)
 
     def test_open_dataset(self):
@@ -2330,7 +2330,7 @@ class TestDask(DatasetIOBase):
                            {'baz': [100]})
         with create_tmp_file() as tmp:
             original.to_netcdf(tmp)
-            with open_mfdataset([tmp], concat_dims=[dim]) as actual:
+            with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
     def test_dask_roundtrip(self):
@@ -2694,7 +2694,7 @@ class TestPseudoNetCDFFormat(object):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            concat_dims=['TSTEP'],
+            concat_dim=['TSTEP'],
             backend_kwargs={'format': 'uamiv'})
 
         data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)

@@ -24,7 +24,6 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
-
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 SETUP_REQUIRES = ['pytest-runner >= 4.2']
 TESTS_REQUIRE = ['pytest >= 2.7.1']

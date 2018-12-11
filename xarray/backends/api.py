@@ -480,26 +480,20 @@ class _MultiFileCloser(object):
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
-def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
+def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
                    infer_order_from_coords=False,
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
-
     Requires dask to be installed. See documentation for details on dask [1].
-    Uses ``auto_combine`` to combine the opened datasets - see
-    ``auto_combine`` for details.
     Attributes from the first dataset file are used for the combined dataset.
-
     Parameters
     ----------
     paths : str or sequence
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
-        list of files to open. Paths can be given as strings or as pathlib
-        Paths. If concatenation along more than one dimension is desired, then
-        ``paths`` must be a nested list-of-lists (see ``auto_combine`` for
-        details).
+        list of files to open.  Paths can be given as strings or as pathlib
+        Paths.
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
         sizes. In general, these should divide the dimensions of each dataset.
@@ -507,20 +501,19 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details [2].
-    concat_dims : list of str, DataArray, Index or None, optional
-        Dimensions to concatenate files along. This argument is passed on to
+    concat_dim : None, str, DataArray or Index, optional
+        Dimension to concatenate files along. This argument is passed on to
         :py:func:`xarray.auto_combine` along with the dataset objects. You only
-        need to provide this argument if any of the dimensions along which you
-        want to concatenate is not a dimension in the original datasets, e.g.,
-        if you want to stack a collection of 2D arrays along a third dimension.
+        need to provide this argument if the dimension along which you want to
+        concatenate is not a dimension in the original datasets, e.g., if you
+        want to stack a collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dims=[..., None, ...]`` explicitly to
-        disable concatenation along a particular dimension.
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -583,6 +576,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     References
     ----------
+
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
@@ -598,6 +592,16 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     if not paths:
         raise IOError('no files to open')
+
+    # Coerce 1D input into ND to maintain backwards-compatible API until API
+    # for N-D combine decided
+    # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
+    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+        concat_dims = concat_dim
+    elif not isinstance(concat_dim, list):
+        concat_dims = [concat_dim]
+    else:
+        concat_dims = concat_dim
 
     # If infer_order_from_coords=True then this is unnecessary, but quick.
     # If infer_order_from_coords=False then this creates a flat list which is

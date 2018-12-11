@@ -548,53 +548,37 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
 
 
 def auto_combine(datasets,
-                 concat_dims=_CONCAT_DIM_DEFAULT,
+                 concat_dim=_CONCAT_DIM_DEFAULT,
                  compat='no_conflicts',
                  data_vars='all', coords='different',
                  infer_order_from_coords=False):
     """Attempt to auto-magically combine the given datasets into one.
-
-    This method attempts to combine a group of datasets along any number of
-    dimensions into a single entity by inspecting metadata and using a
-    combination of concat and merge.
-
-    Does not sort data under any circumstances. It does align coordinates, but
-    different variables on datasets can cause it to fail under some scenarios.
-    In complex cases, you may need to clean up your data and use concat/merge
-    explicitly.
-
-    Works well if, for example, you have N years of data and M data variables,
-    and each combination of a distinct time period and set of data variables is
-    saved as its own dataset.
-
-    Can concatenate along multiple dimensions. To do this the datasets must be
-    passed as a nested list-of-lists, with a depth equal to the length of
-    ``concat_dims``. ``auto_combine`` will concatenate along the top-level list
-    first.
-
+    This method attempts to combine a list of datasets into a single entity by
+    inspecting metadata and using a combination of concat and merge.
+    It does not concatenate along more than one dimension or sort data under
+    any circumstances. It does align coordinates, but different variables on
+    datasets can cause it to fail under some scenarios. In complex cases, you
+    may need to clean up your data and use ``concat``/``merge`` explicitly.
+    ``auto_combine`` works well if you have N years of data and M data
+    variables, and each combination of a distinct time period and set of data
+    variables is saved its own dataset.
     Parameters
     ----------
-    datasets : sequence of xarray.Dataset, or nested list of xarray.Dataset
-        objects.
-        Dataset objects to combine.
-        If concatenation along more than one dimension is desired, then
-        datasets must be supplied in a nested list-of-lists.
-    concat_dims : list of str, DataArray, Index or None, optional
-        Dimensions along which to concatenate variables, as used by
+    datasets : sequence of xarray.Dataset
+        Dataset objects to merge.
+    concat_dim : str or DataArray or Index, optional
+        Dimension along which to concatenate variables, as used by
         :py:func:`xarray.concat`. You only need to provide this argument if
-        any of the dimensions along which you want to concatenate are not a
-        dimension in the original datasets, e.g., if you want to stack a
-        collection of 2D arrays along a third dimension.
+        the dimension along which you want to concatenate is not a dimension
+        in the original datasets, e.g., if you want to stack a collection of
+        2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dims=[..., None, ...]`` explicitly to
-        disable concatenation along a particular dimension.
-        Must be the same length as the depth of the list passed to
-        ``datasets``.
+        component files. Set ``concat_dim=None`` explicitly to disable
+        concatenation.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -606,49 +590,26 @@ def auto_combine(datasets,
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
-        Details are in the documentation of concat
-
+        Details are in the documentation of conca
     Returns
     -------
     combined : xarray.Dataset
 
-    Examples
-    --------
-
-    Collecting output from a parallel simulation:
-
-    Collecting data from a simulation which decomposes its domain into 4 parts,
-    2 each along both the x and y axes, requires organising the datasets into a
-    nested list, e.g.
-
-    >>> x1y1
-    <xarray.Dataset>
-    Dimensions:         (x: 2, y: 2)
-    Coordinates:
-      lon               (x, y) float64 -99.83 -99.32 -99.79 -99.23
-      lat               (x, y) float64 42.25 42.21 42.63 42.59
-    Dimensions without coordinates: x, y
-    Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
-
-    >>> ds_grid = [[x1y1, x1y2], [x2y1, x2y2]]
-    >>> combined = xr.auto_combine(ds_grid, concat_dims=['x', 'y'])
-    <xarray.Dataset>
-    Dimensions:         (x: 4, y: 4)
-    Coordinates:
-      lon               (x, y) float64 -99.83 -99.32 -99.79 -99.23
-      lat               (x, y) float64 42.25 42.21 42.63 42.59
-    Dimensions without coordinates: x, y
-    Data variables:
-      temperature       (x, y) float64 11.04 23.57 20.77 ...
-      precipitation     (x, y) float64 5.904 2.453 3.404 ...
-
     See also
     --------
     concat
-    merge
+    Dataset.merge
     """
+
+    # Coerce 1D input into ND to maintain backwards-compatible API until API
+    # for N-D combine decided
+    # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
+    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+        concat_dims = concat_dim
+    elif not isinstance(concat_dim, list):
+        concat_dims = [concat_dim]
+    else:
+        concat_dims = concat_dim
 
     # The IDs argument tells _auto_combine that the datasets are not yet sorted
     return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
