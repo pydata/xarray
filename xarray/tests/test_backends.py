@@ -1320,6 +1320,15 @@ class ZarrBase(CFEncodedBase):
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
 
+    def test_roundtrip_consolidated(self):
+        zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        expected = create_test_data()
+        with self.roundtrip(expected,
+                            save_kwargs={'consolidated': True},
+                            open_kwargs={'consolidated': True}) as actual:
+            self.check_dtypes_roundtripped(expected, actual)
+            assert_identical(expected, actual)
+
     def test_auto_chunk(self):
         original = create_test_data().chunk()
 
@@ -1831,6 +1840,8 @@ class TestH5NetCDFData(NetCDF4Base):
             data['var2'].encoding.update(compr_in)
             data['var2'].encoding.update(compr_common)
             compr_out.update(compr_common)
+            data['scalar'] = ('scalar_dim', np.array([2.0]))
+            data['scalar'] = data['scalar'][0]
             with self.roundtrip(data) as actual:
                 for k, v in compr_out.items():
                     assert v == actual['var2'].encoding[k]
