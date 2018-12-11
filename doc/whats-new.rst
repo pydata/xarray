@@ -45,6 +45,9 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+
 .. _whats-new.0.11.0:
 
 v0.11.0 (7 November 2018)

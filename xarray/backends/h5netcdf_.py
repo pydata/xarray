@@ -208,10 +208,12 @@ class H5NetCDFStore(WritableCFDataStore):
 
         encoding['chunks'] = encoding.pop('chunksizes', None)
 
-        for key in ['compression', 'compression_opts', 'shuffle',
-                    'chunks', 'fletcher32']:
-            if key in encoding:
-                kwargs[key] = encoding[key]
+        # Do not apply compression, filters or chunking to scalars.
+        if variable.shape:
+            for key in ['compression', 'compression_opts', 'shuffle',
+                        'chunks', 'fletcher32']:
+                if key in encoding:
+                    kwargs[key] = encoding[key]
         if name not in self.ds:
             nc4_var = self.ds.create_variable(
                 name, dtype=dtype, dimensions=variable.dims,

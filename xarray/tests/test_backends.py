@@ -1840,6 +1840,8 @@ class TestH5NetCDFData(NetCDF4Base):
             data['var2'].encoding.update(compr_in)
             data['var2'].encoding.update(compr_common)
             compr_out.update(compr_common)
+            data['scalar'] = ('scalar_dim', np.array([2.0]))
+            data['scalar'] = data['scalar'][0]
             with self.roundtrip(data) as actual:
                 for k, v in compr_out.items():
                     assert v == actual['var2'].encoding[k]
