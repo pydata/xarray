@@ -683,17 +683,11 @@ class TestAutoCombineND(object):
 
 
 class TestAutoCombineUsingCoords(object):
-    def test_infer_order_from_coords_not_implemented(self):
-        data = create_test_data()
-        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        with pytest.raises(NotImplementedError):
-            auto_combine(objs, infer_order_from_coords=True)
-
     def test_order_inferred_from_coords(self):
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
         with pytest.raises(NotImplementedError):
-            _auto_combine(objs, concat_dims=['dim2'],compat='no_conflicts',
+            _auto_combine(objs, concat_dims=['dim2'], compat='no_conflicts',
                           data_vars='all', coords='different',
                           infer_order_from_coords=True, ids=True)
 

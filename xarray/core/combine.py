@@ -381,9 +381,10 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
         concat_dims = [concat_dims]*n_dims
     else:
         if len(concat_dims) != n_dims:
-            raise ValueError("concat_dims has length " + str(len(concat_dims))
-                             + " but the datasets passed are nested in a " +
-                             str(n_dims) + "-dimensional structure")
+            raise ValueError("concat_dims has length {} but the datasets "
+                             "passed are nested in a {}-dimensional "
+                             "structure".format(str(len(concat_dims)),
+                                                str(n_dims)))
 
     return combined_ids, concat_dims
 
@@ -547,11 +548,8 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
     return combined
 
 
-def auto_combine(datasets,
-                 concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts',
-                 data_vars='all', coords='different',
-                 infer_order_from_coords=False):
+def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts', data_vars='all', coords='different'):
     """Attempt to auto-magically combine the given datasets into one.
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
@@ -610,6 +608,7 @@ def auto_combine(datasets,
         concat_dims = [concat_dim]
     else:
         concat_dims = concat_dim
+    infer_order_from_coords = False
 
     # The IDs argument tells _auto_combine that the datasets are not yet sorted
     return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,

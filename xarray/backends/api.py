@@ -483,7 +483,6 @@ _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   infer_order_from_coords=False,
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
     Requires dask to be installed. See documentation for details on dask [1].
@@ -602,6 +601,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         concat_dims = [concat_dim]
     else:
         concat_dims = concat_dim
+    infer_order_from_coords = False
 
     # If infer_order_from_coords=True then this is unnecessary, but quick.
     # If infer_order_from_coords=False then this creates a flat list which is
