@@ -11,7 +11,7 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.convert import from_cdms2
 from xarray.core.common import ALL_DIMS, full_like

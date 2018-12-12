@@ -8,7 +8,7 @@ from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
+from .common import AbstractWritableDataStore, BackendArray
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
