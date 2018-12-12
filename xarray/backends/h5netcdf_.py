@@ -26,8 +26,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
         key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
-        array = self.get_array()
         with self.datastore.lock:
+            array = self.get_array(needs_lock=False)
             return array[key]
 
 
