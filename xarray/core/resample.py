@@ -194,7 +194,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                 .format(self._obj.data.name)
             )
 
-        from ..coding.cftimeindex import CFTimeIndex
+        # from ..coding.cftimeindex import CFTimeIndex
         import cftime as cf
         import numpy as np
         if isinstance(self._obj[self._dim].values[0], cf.datetime):
