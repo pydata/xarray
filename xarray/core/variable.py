@@ -1658,11 +1658,13 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             if isinstance(other, (xr.DataArray, xr.Dataset)):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_compat_data(self, other)
+            keep_attrs = _get_keep_attrs(default=False)
+            attrs = self._attrs if keep_attrs else None
             with np.errstate(all='ignore'):
                 new_data = (f(self_data, other_data)
                             if not reflexive
                             else f(other_data, self_data))
-            result = Variable(dims, new_data)
+            result = Variable(dims, new_data, attrs=attrs)
             return result
         return func
 
