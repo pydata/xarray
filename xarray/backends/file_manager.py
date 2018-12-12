@@ -1,3 +1,4 @@
+import contextlib
 import threading
 
 from ..core import utils
@@ -29,6 +30,18 @@ class FileManager(object):
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError
+
+
+@contextlib.contextmanager
+def optional_locking(lock, needs_lock):
+    """Context manager for optionally acquiring a lock."""
+    try:
+        if needs_lock:
+            lock.acquire()
+        yield
+    finally:
+        if needs_lock:
+            lock.release()
 
 
 class CachingFileManager(FileManager):
@@ -118,7 +131,7 @@ class CachingFileManager(FileManager):
                  tuple(sorted(self._kwargs.items())))
         return _HashedSequence(value)
 
-    def acquire(self):
+    def acquire(self, needs_lock=True):
         """Acquiring a file object from the manager.
 
         A new file is only opened if it has expired from the
@@ -132,7 +145,7 @@ class CachingFileManager(FileManager):
         -------
         An open file object, as returned by ``opener(*args, **kwargs)``.
         """
-        with self._lock:
+        with optional_locking(self._lock, needs_lock):
             try:
                 file = self._cache[self._key]
             except KeyError:
@@ -148,24 +161,20 @@ class CachingFileManager(FileManager):
                 self._cache[self._key] = file
         return file
 
-    def _close(self):
-        default = None
-        file = self._cache.pop(self._key, default)
-        if file is not None:
-            file.close()
-
     def close(self, needs_lock=True):
         """Explicitly close any associated file object (if necessary)."""
         # TODO: remove needs_lock if/when we have a reentrant lock in
         # dask.distributed: https://github.com/dask/dask/issues/3832
-        if needs_lock:
-            with self._lock:
-                self._close()
-        else:
-            self._close()
+        with optional_locking(self._lock, needs_lock):
+            default = None
+            file = self._cache.pop(self._key, default)
+            if file is not None:
+                file.close()
 
     def __del__(self):
         # remove files from the cache when garbage collection happens
+        if self.lock.locked:
+            raise RuntimeError('closing a file with an unreleased lock')
         self.close(needs_lock=False)
 
     def __getstate__(self):

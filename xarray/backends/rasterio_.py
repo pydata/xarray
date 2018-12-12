@@ -24,8 +24,9 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
 
-    def __init__(self, manager):
+    def __init__(self, manager, lock):
         self.manager = manager
+        self.lock = lock
 
         # cannot save riods as an attribute: this would break pickleability
         riods = manager.acquire()
@@ -111,8 +112,9 @@ class RasterioArrayWrapper(BackendArray):
                 stop - start for (start, stop) in window)
             out = np.zeros(shape, dtype=self.dtype)
         else:
-            riods = self.manager.acquire()
-            out = riods.read(band_key, window=window)
+            with self.lock:
+                riods = self.manager.acquire(needs_lock=False)
+                out = riods.read(band_key, window=window)
 
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
@@ -207,7 +209,10 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     import rasterio
 
-    manager = CachingFileManager(rasterio.open, filename, mode='r')
+    if lock is None:
+        lock = RASTERIO_LOCK
+
+    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode='r')
     riods = manager.acquire()
 
     if cache is None:
@@ -288,7 +293,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
+    data = indexing.LazilyOuterIndexedArray(
+        RasterioArrayWrapper(manager, lock))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
@@ -308,10 +314,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             mtime = None
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
-        if lock is None:
-            lock = RASTERIO_LOCK
-        result = result.chunk(chunks, name_prefix=name_prefix, token=token,
-                              lock=lock)
+        result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 
     # Make the file closeable
     result._file_obj = manager
