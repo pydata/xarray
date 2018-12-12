@@ -39,8 +39,7 @@ Enhancements
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
-- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations, 
-  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
+
 
 Bug fixes
 ~~~~~~~~~
@@ -152,7 +151,9 @@ Enhancements
   to returning (and is now deprecated). This was changed in order to facilitate
   using tutorial datasets with dask.
   By `Joe Hamman <https://github.com/jhamman>`_.
-
+- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations, 
+  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
+  
 Bug fixes
 ~~~~~~~~~
 
