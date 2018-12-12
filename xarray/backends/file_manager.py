@@ -1,5 +1,6 @@
 import contextlib
 import threading
+import warnings
 
 from ..core import utils
 from ..core.options import OPTIONS
@@ -134,9 +135,9 @@ class CachingFileManager(FileManager):
         A new file is only opened if it has expired from the
         least-recently-used cache.
 
-        This method uses a reentrant lock, which ensures that it is
-        thread-safe. You can safely acquire a file in multiple threads at the
-        same time, as long as the underlying file object is thread-safe.
+        This method uses a lock, which ensures that it is thread-safe. You can
+        safely acquire a file in multiple threads at the same time, as long as
+        the underlying file object is thread-safe.
 
         Returns
         -------
@@ -169,9 +170,21 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        # remove files from the cache when garbage collection happens
-        # TODO: only close if the lock isn't acquired?
-        self.close(needs_lock=False)
+        # Remove files from the cache when garbage collection happens.
+        if self._key in self._cache:
+            if not self._lock.locked:
+                # Only close files if we can do so immediately.
+                self.close()
+            else:
+                # Otherwise, issue a warning (or ignore?)
+                args_string = ', '.join(*self._args)
+                if self._mode is not _DEFAULT_MODE:
+                    args_string += ', mode={!r}'.format(self._mode)
+                warnings.warn(
+                    'deallocating CachingFileManager for {}({}), but cannot '
+                    'acquire a lock to close the associated file. Close your '
+                    'your files explicitly to avoid this warning.'
+                    .format(self._opener, args_string), RuntimeWarning)
 
     def __getstate__(self):
         """State for pickling."""
