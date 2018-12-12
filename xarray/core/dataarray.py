@@ -16,7 +16,7 @@ from .coordinates import (
     assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .options import OPTIONS, _get_keep_attrs
+from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
     decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution)
