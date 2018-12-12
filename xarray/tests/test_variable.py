@@ -1553,12 +1553,10 @@ class TestVariable(VariableSubclassobjects):
         b = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
         # Test dropped attrs
         d = a - b   # just one operation
-        assert len(d.attrs) == 0
         assert d.attrs == OrderedDict()
         # Test kept attrs
         with set_options(keep_attrs=True):
             d = a - b
-        assert len(d.attrs) == len(_attrs)
         assert d.attrs == _attrs
 
     def test_count(self):
