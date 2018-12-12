@@ -45,6 +45,7 @@ Enhancements
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_. 
 
+
 Bug fixes
 ~~~~~~~~~
 
@@ -158,7 +159,9 @@ Enhancements
   to returning (and is now deprecated). This was changed in order to facilitate
   using tutorial datasets with dask.
   By `Joe Hamman <https://github.com/jhamman>`_.
-
+- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations, 
+  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
+  
 Bug fixes
 ~~~~~~~~~
 
