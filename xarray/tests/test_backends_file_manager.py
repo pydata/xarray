@@ -69,11 +69,19 @@ def test_file_manager_autoclose_while_locked():
     assert cache
 
     lock.acquire()
-    del manager
-    gc.collect()
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
 
     # can't clear the cache while locked, but also don't block in __del__
     assert cache
+
+
+def test_file_manager_repr():
+    opener = mock.Mock()
+    manager = CachingFileManager(opener, 'my-file')
+    assert 'my-file' in repr(manager)
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):
