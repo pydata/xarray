@@ -265,18 +265,22 @@ class DatasetIOBase(object):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            raw_pickle = pickle.dumps(roundtripped)
-            # windows doesn't like opening the same file twice
-            roundtripped.close()
-            unpickled_ds = pickle.loads(raw_pickle)
-            assert_identical(expected, unpickled_ds)
+            with roundtripped:
+                # Windows doesn't like reopening an already open file
+                raw_pickle = pickle.dumps(roundtripped)
+            with pickle.loads(raw_pickle) as unpickled_ds:
+                assert_identical(expected, unpickled_ds)
 
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
-            assert_identical(expected['foo'], unpickled_array)
+            with roundtripped:
+                raw_pickle = pickle.dumps(roundtripped['foo'])
+            # TODO: figure out how to explicitly close the file for the
+            # unpickled DataArray?
+            unpickled = pickle.loads(raw_pickle)
+            assert_identical(expected['foo'], unpickled)
 
     def test_dataset_caching(self):
         expected = Dataset({'foo': ('x', [5, 6, 7])})
@@ -1638,9 +1642,9 @@ class TestScipyFilePath(ScipyWriteBase):
 
     def test_netcdf3_endianness(self):
         # regression test for GH416
-        expected = open_example_dataset('bears.nc', engine='scipy')
-        for var in expected.variables.values():
-            assert var.dtype.isnative
+        with open_example_dataset('bears.nc', engine='scipy') as expected:
+            for var in expected.variables.values():
+                assert var.dtype.isnative
 
     @requires_netCDF4
     def test_nc4_scipy(self):
@@ -1958,13 +1962,13 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
         # check that calculation on opened datasets works properly
-        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
-                                chunks=chunks)
+        with open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                            chunks=chunks) as actual:
 
-        # check that using open_mfdataset returns dask arrays for variables
-        assert isinstance(actual['foo'].data, dask_array_type)
+            # check that using open_mfdataset returns dask arrays for variables
+            assert isinstance(actual['foo'].data, dask_array_type)
 
-        assert_identical(original, actual)
+            assert_identical(original, actual)
 
 
 @requires_scipy_or_netCDF4

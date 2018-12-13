@@ -4,6 +4,7 @@ import warnings
 
 from ..core import utils
 from ..core.options import OPTIONS
+from .locks import acquire
 from .lru_cache import LRUCache
 
 
@@ -170,21 +171,23 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        # Remove files from the cache when garbage collection happens.
         if self._key in self._cache:
-            if not self._lock.locked:
+            # Remove unclosed files from the cache upon garbage collection.
+            if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
-                self.close()
-            else:
-                # Otherwise, issue a warning (or ignore?)
-                args_string = ', '.join(*self._args)
+                try:
+                    self.close(needs_lock=False)
+                finally:
+                    self._lock.release()
+
+            if OPTIONS['warn_for_unclosed_files']:
+                args_string = ', '.join(self._args)
                 if self._mode is not _DEFAULT_MODE:
                     args_string += ', mode={!r}'.format(self._mode)
                 warnings.warn(
-                    'deallocating CachingFileManager for {}({}), but cannot '
-                    'acquire a lock to close the associated file. Close your '
-                    'your files explicitly to avoid this warning.'
-                    .format(self._opener, args_string), RuntimeWarning)
+                    'deallocating CachingFileManager for {}({}), but file is '
+                    'not already closed.'.format(self._opener, args_string),
+                    RuntimeWarning)
 
     def __getstate__(self):
         """State for pickling."""

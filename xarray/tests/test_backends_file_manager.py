@@ -10,6 +10,7 @@ import pytest
 
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
+from xarray.core.options import set_options
 
 
 @pytest.fixture(params=[1, 2, 3, None])
@@ -39,7 +40,8 @@ def test_file_manager_mock_write(file_cache):
     lock.__enter__.assert_has_calls([mock.call(), mock.call()])
 
 
-def test_file_manager_autoclose(cache):
+@pytest.mark.parametrize('expected_warning', [None, RuntimeWarning])
+def test_file_manager_autoclose(expected_warning):
     mock_file = mock.Mock()
     opener = mock.Mock(return_value=mock_file)
     cache = {}
@@ -47,11 +49,31 @@ def test_file_manager_autoclose(cache):
     manager = CachingFileManager(opener, 'filename', cache=cache)
     manager.acquire()
     assert cache
-    del manager
-    gc.collect()
+
+    with set_options(warn_for_unclosed_files=expected_warning is not None):
+        with pytest.warns(expected_warning):
+            del manager
+            gc.collect()
 
     assert not cache
     mock_file.close.assert_called_once_with()
+
+
+def test_file_manager_autoclose_while_locked():
+    opener = mock.Mock()
+    lock = threading.Lock()
+    cache = {}
+
+    manager = CachingFileManager(opener, 'filename', lock=lock, cache=cache)
+    manager.acquire()
+    assert cache
+
+    lock.acquire()
+    del manager
+    gc.collect()
+
+    # can't clear the cache while locked, but also don't block in __del__
+    assert cache
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):
