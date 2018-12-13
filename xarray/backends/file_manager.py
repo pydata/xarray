@@ -181,13 +181,10 @@ class CachingFileManager(FileManager):
                     self._lock.release()
 
             if OPTIONS['warn_for_unclosed_files']:
-                args_string = ', '.join(self._args)
-                if self._mode is not _DEFAULT_MODE:
-                    args_string += ', mode={!r}'.format(self._mode)
                 warnings.warn(
-                    'deallocating CachingFileManager for {}({}), but file is '
-                    'not already closed.'.format(self._opener, args_string),
-                    RuntimeWarning)
+                    'deallocating {}, but file is not already closed. This '
+                    'may indicate a bug.'
+                    .format(self), RuntimeWarning, stacklevel=2)
 
     def __getstate__(self):
         """State for pickling."""
@@ -198,6 +195,13 @@ class CachingFileManager(FileManager):
         """Restore from a pickle."""
         opener, args, mode, kwargs, lock = state
         self.__init__(opener, *args, mode=mode, kwargs=kwargs, lock=lock)
+
+    def __repr__(self):
+        args_string = ', '.join(map(repr, self._args))
+        if self._mode is not _DEFAULT_MODE:
+            args_string += ', mode={!r}'.format(self._mode)
+        return '{}({!r}, {}, kwargs={})'.format(
+            type(self).__name__, self._opener, args_string, self._kwargs)
 
 
 class _HashedSequence(list):

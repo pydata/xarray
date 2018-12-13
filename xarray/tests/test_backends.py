@@ -271,6 +271,7 @@ class DatasetIOBase(object):
             with pickle.loads(raw_pickle) as unpickled_ds:
                 assert_identical(expected, unpickled_ds)
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
@@ -405,13 +406,13 @@ class DatasetIOBase(object):
             assert_identical(expected, actual)
 
     def test_roundtrip_example_1_netcdf(self):
-        expected = open_example_dataset('example_1.nc')
-        with self.roundtrip(expected) as actual:
-            # we allow the attributes to differ since that
-            # will depend on the encoding used.  For example,
-            # without CF encoding 'actual' will end up with
-            # a dtype attribute.
-            assert_equal(expected, actual)
+        with open_example_dataset('example_1.nc') as expected:
+            with self.roundtrip(expected) as actual:
+                # we allow the attributes to differ since that
+                # will depend on the encoding used.  For example,
+                # without CF encoding 'actual' will end up with
+                # a dtype attribute.
+                assert_equal(expected, actual)
 
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
@@ -2015,20 +2016,13 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
 
         return ds1, ds2
 
-    def test_open_mfdataset_does_same_as_concat(self):
-        options = ['all', 'minimal', 'different', ]
-
+    @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
+    def test_open_mfdataset_does_same_as_concat(self, opt):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            for opt in options:
-                with open_mfdataset(files, data_vars=opt) as ds:
-                    kwargs = dict(data_vars=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
-
-                with open_mfdataset(files, coords=opt) as ds:
-                    kwargs = dict(coords=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
+            with open_mfdataset(files, data_vars=opt) as ds:
+                kwargs = dict(data_vars=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'
@@ -2143,12 +2137,10 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
-                    assert actual.foo.variable.data.chunks == \
-                        ((5, 5),)
+                    assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
-                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
-                    assert actual.foo.variable.data.chunks == \
-                        ((3, 2, 3, 2),)
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual2:
+                    assert actual2.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
@@ -2298,9 +2290,9 @@ class TestDask(DatasetIOBase):
             with open_mfdataset(tmp) as ds:
                 original_names = dict((k, v.data.name)
                                       for k, v in ds.data_vars.items())
-            with open_mfdataset(tmp) as ds:
+            with open_mfdataset(tmp) as ds2:
                 repeat_names = dict((k, v.data.name)
-                                    for k, v in ds.data_vars.items())
+                                    for k, v in ds2.data_vars.items())
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
                 assert dask_name[:13] == 'open_dataset-'
