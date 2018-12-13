@@ -11,7 +11,7 @@ except ImportError:
 try:
     from dask.distributed import Lock as DistributedLock
 except ImportError:
-    DistributedLock = type(None)
+    DistributedLock = None
 
 
 # Locks used by multiple backends.
@@ -122,7 +122,7 @@ def acquire(lock, blocking=True):
     if blocking:
         # no arguments needed
         return lock.acquire()
-    elif isinstance(lock, DistributedLock):
+    elif DistributedLock is not None and isinstance(lock, DistributedLock):
         # distributed.Lock doesn't support the blocking argument yet:
         # https://github.com/dask/distributed/pull/2412
         return lock.acquire(timeout=0)
