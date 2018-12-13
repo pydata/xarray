@@ -523,8 +523,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 if dask.is_dask_collection(v)]
 
     def __dask_layers__(self):
+        import dask
         return sum([v.__dask_layers__() for v in self.variables.values() if
-                    dask.is_dask_collection(v)], [])
+                    dask.is_dask_collection(v)], ())
 
     @property
     def __dask_optimize__(self):
