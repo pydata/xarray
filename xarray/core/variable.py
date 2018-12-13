@@ -352,6 +352,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def __dask_keys__(self):
         return self._data.__dask_keys__()
 
+    def __dask_layers__(self):
+        return self._data.__dask_layers__()
+
     @property
     def __dask_optimize__(self):
         return self._data.__dask_optimize__

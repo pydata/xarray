@@ -587,6 +587,9 @@ class DataArray(AbstractArray, DataWithCoords):
     def __dask_keys__(self):
         return self._to_temp_dataset().__dask_keys__()
 
+    def __dask_layers__(self):
+        return self._to_temp_dataset().__dask_layers__()
+
     @property
     def __dask_optimize__(self):
         return self._to_temp_dataset().__dask_optimize__
