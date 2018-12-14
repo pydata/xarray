@@ -82,7 +82,7 @@ Datetime indexing
 
 xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
-This allows for several useful and suscinct forms of indexing, particularly for
+This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
 items and with the `slice` object:
 
