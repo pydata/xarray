@@ -152,7 +152,7 @@ However, you will need to set dimension names explicitly, either with the
 Transitioning from pandas.Panel to xarray
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:py:class:`~pandas.Panel`, pandas's data structure for 3D arrays, has always
+:py:class:`~pandas.Panel`, pandas' data structure for 3D arrays, has always
 been a second class data structure compared to the Series and DataFrame. To
 allow pandas developers to focus more on its core functionality built around
 the DataFrame, pandas plans to eventually deprecate Panel.

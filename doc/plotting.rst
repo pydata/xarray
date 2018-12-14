@@ -461,7 +461,7 @@ about three or four dimensional arrays? That's where facets become helpful.
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
 One way to visualize this data is to make a
-seperate plot for each time period.
+separate plot for each time period.
 
 The faceted dimension should not have too many values;
 faceting on the time dimension will produce 2920 plots. That's

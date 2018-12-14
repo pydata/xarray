@@ -267,7 +267,7 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-You can explicitly broadcast xaray data structures by using the
+You can explicitly broadcast xarray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
 .. ipython:: python
