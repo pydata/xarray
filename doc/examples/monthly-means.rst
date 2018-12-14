@@ -130,7 +130,7 @@ for each monthly data record - calculate weights using
 ``groupby('time.season')``
 
 Finally, we just need to multiply our weights by the ``Dataset`` and sum
-allong the time dimension.
+along the time dimension.
 
 .. code:: python
 
