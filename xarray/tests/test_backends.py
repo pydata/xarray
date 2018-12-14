@@ -2142,11 +2142,41 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual2:
                     assert actual2.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
+
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
         with raises_regex(ValueError, 'wild-card'):
             open_mfdataset('http://some/remote/uri')
+
+    def test_open_mfdataset_2d(self):
+        original = Dataset({'foo': (['x', 'y'], np.random.randn(10, 8))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                with create_tmp_file() as tmp3:
+                    with create_tmp_file() as tmp4:
+                        original.isel(x=slice(5),
+                                      y=slice(4)).to_netcdf(tmp1)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4)).to_netcdf(tmp2)
+                        original.isel(x=slice(5),
+                                      y=slice(4, 8)).to_netcdf(tmp3)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4, 8)).to_netcdf(tmp4)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x']) as actual:
+                            assert isinstance(actual.foo.variable.data,
+                                              da.Array)
+                            assert actual.foo.variable.data.chunks == \
+                                   ((5, 5), (4, 4))
+                            assert_identical(original, actual)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x'],
+                                            chunks={'x': 3, 'y': 2}) as actual:
+                            assert actual.foo.variable.data.chunks == \
+                                   ((3, 2, 3, 2), (2, 2, 2, 2),)
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
@@ -2157,6 +2187,45 @@ class TestDask(DatasetIOBase):
                 tmp2 = Path(tmp2)
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    assert_identical(original, actual)
+
+    @requires_pathlib
+    def test_open_mfdataset_2d_pathlib(self):
+        original = Dataset({'foo': (['x', 'y'], np.random.randn(10, 8))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                with create_tmp_file() as tmp3:
+                    with create_tmp_file() as tmp4:
+                        tmp1 = Path(tmp1)
+                        tmp2 = Path(tmp2)
+                        tmp3 = Path(tmp3)
+                        tmp4 = Path(tmp4)
+                        original.isel(x=slice(5),
+                                      y=slice(4)).to_netcdf(tmp1)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4)).to_netcdf(tmp2)
+                        original.isel(x=slice(5),
+                                      y=slice(4, 8)).to_netcdf(tmp3)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4, 8)).to_netcdf(tmp4)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x']) as actual:
+                            assert_identical(original, actual)
+
+    @pytest.mark.xfail(reason="Not yet implemented")
+    def test_open_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+
+                with pytest.raises(NotImplementedError):
+                    open_mfdataset([tmp1, tmp2], infer_order_from_coords=True)
+
+                # With infer_order_from_coords=True this should pass in future
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(original, actual)
 
@@ -2632,7 +2701,7 @@ class TestPseudoNetCDFFormat(object):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            concat_dim='TSTEP',
+            concat_dim=['TSTEP'],
             backend_kwargs={'format': 'uamiv'})
 
         data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)

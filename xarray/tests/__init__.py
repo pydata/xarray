@@ -16,7 +16,7 @@ from xarray.core import utils
 from xarray.core.options import set_options
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
-                            assert_allclose)
+                            assert_allclose, assert_combined_tile_ids_equal)
 from xarray.plot.utils import import_seaborn
 
 try:

@@ -509,13 +509,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if not graphs:
             return None
         else:
-            from dask import sharedict
-            return sharedict.merge(*graphs.values())
+            try:
+                from dask.highlevelgraph import HighLevelGraph
+                return HighLevelGraph.merge(*graphs.values())
+            except ImportError:
+                from dask import sharedict
+                return sharedict.merge(*graphs.values())
+
 
     def __dask_keys__(self):
         import dask
         return [v.__dask_keys__() for v in self.variables.values()
                 if dask.is_dask_collection(v)]
+
+    def __dask_layers__(self):
+        import dask
+        return sum([v.__dask_layers__() for v in self.variables.values() if
+                    dask.is_dask_collection(v)], ())
 
     @property
     def __dask_optimize__(self):

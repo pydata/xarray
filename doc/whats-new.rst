@@ -21,7 +21,7 @@ What's New
     always be available to python 2.7 users. For more information see the
     following references
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+     - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
@@ -49,6 +49,7 @@ Enhancements
   but were not explicitly closed. This is mostly useful for debugging; we
   recommend enabling it in your test suites if you use xarray for IO.
   By `Stephan Hoyer <https://github.com/shoyer>`_
+- Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -169,6 +170,8 @@ Enhancements
   to returning (and is now deprecated). This was changed in order to facilitate
   using tutorial datasets with dask.
   By `Joe Hamman <https://github.com/jhamman>`_.
+- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations,
+  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
 
 Bug fixes
 ~~~~~~~~~
