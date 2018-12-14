@@ -84,7 +84,7 @@ def create_encoded_masked_and_scaled_data():
 
 
 def create_unsigned_masked_scaled_data():
-    encoding = {'_FillValue': -1, '_Unsigned': 'true', 'dtype': 'i1',
+    encoding = {'_FillValue': 255, '_Unsigned': 'true', 'dtype': 'i1',
                 'add_offset': 10, 'scale_factor': np.float32(0.1)}
     x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
     return Dataset({'x': ('t', x, {}, encoding)})
