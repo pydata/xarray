@@ -612,8 +612,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
-        loffset : timedelta, optional
-            Offset used to adjust the resampled time labels.
+        loffset : timedelta or str, optional
+            Offset used to adjust the resampled time labels. Some pandas date
+            offset strings are supported.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
