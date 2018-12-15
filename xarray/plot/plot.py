@@ -831,9 +831,9 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
+            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
                 cbar_kwargs['label'] = label_from_attrs(darray)
-
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
 
