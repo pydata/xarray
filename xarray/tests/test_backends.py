@@ -80,7 +80,7 @@ def create_masked_and_scaled_data():
 def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
-    return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+    return Dataset({'x': ('t', np.int16([-1, -1, 0, 1, 2]), attributes)})
 
 
 def create_unsigned_masked_scaled_data():
