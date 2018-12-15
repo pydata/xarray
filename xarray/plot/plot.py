@@ -631,14 +631,11 @@ def _plot2d(plotfunc):
 
         if add_colorbar:
             cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-            cbar_kwargs.setdefault('extend', cmap_params['extend'])
-            if cbar_ax is None:
-                cbar_kwargs.setdefault('ax', ax)
-            else:
-                cbar_kwargs.setdefault('cax', cbar_ax)
-            cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray))
+                cbar_kwargs['label'] = label_from_attrs(darray)
+            cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
+                                 cmap_params)
+
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
