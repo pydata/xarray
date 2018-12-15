@@ -18,7 +18,7 @@ from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _determine_cmap_params, _ensure_plottable,
+    ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params, _ensure_plottable,
     _infer_xy_labels, _interval_to_double_bound_points,
     _interval_to_mid_points, _resolve_intervals_2dplot, _valid_other_type,
     get_axis, import_matplotlib_pyplot, label_from_attrs)
@@ -831,15 +831,12 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-            cbar_kwargs.setdefault('extend', cmap_params['extend'])
-            if cbar_ax is None:
-                cbar_kwargs.setdefault('ax', ax)
-            else:
-                cbar_kwargs.setdefault('cax', cbar_ax)
-            cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray))
+                cbar_kwargs['label'] = label_from_attrs(darray)
+
+            cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
+                                 cmap_params)
+
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "

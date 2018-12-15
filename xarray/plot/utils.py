@@ -485,3 +485,17 @@ def _ensure_plottable(*args):
 def _ensure_numeric(arr):
     numpy_types = [np.floating, np.integer]
     return _valid_numpy_subdtype(arr, numpy_types)
+
+
+def _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params):
+    plt = import_matplotlib_pyplot()
+    cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+    cbar_kwargs.setdefault('extend', cmap_params['extend'])
+    if cbar_ax is None:
+        cbar_kwargs.setdefault('ax', ax)
+    else:
+        cbar_kwargs.setdefault('cax', cbar_ax)
+
+    cbar = plt.colorbar(primitive, **cbar_kwargs)
+
+    return cbar
