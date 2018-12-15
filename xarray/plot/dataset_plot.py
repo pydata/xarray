@@ -60,21 +60,15 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
             'hue_values': ds[x].coords[hue] if discrete_legend else None}
 
 
-def _infer_scatter_data(ds, x, y, hue, discrete_legend):
-    dims = set(ds[x].dims)
-    if discrete_legend:
-        dims.remove(hue)
-        xplt = ds[x].stack(stackdim=dims).transpose('stackdim', hue).values
-        yplt = ds[y].stack(stackdim=dims).transpose('stackdim', hue).values
-        return {'x': xplt, 'y': yplt}
-    else:
-        data = {'x': ds[x].values.flatten(),
-                'y': ds[y].values.flatten(),
-                'color': None}
-        if hue:
-            data['color'] = ((ones_like(ds[x]) * ds.coords[hue])
-                             .values.flatten())
-        return data
+def _infer_scatter_data(ds, x, y, hue):
+
+    data = {'x': ds[x].values.flatten(),
+            'y': ds[y].values.flatten(),
+            'color': None}
+    if hue:
+        data['color'] = ((ones_like(ds[x]) * ds.coords[hue])
+                         .values.flatten())
+    return data
 
 
 def scatter(ds, x, y, hue=None, col=None, row=None,
@@ -109,15 +103,18 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
                              discrete_legend=discrete_legend, **kwargs)
 
-    data = _infer_scatter_data(ds, x, y, hue, discrete_legend)
-
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
     ax = get_axis(figsize, size, aspect, ax)
     if discrete_legend:
-        primitive = ax.plot(data['x'], data['y'], '.')
+        primitive = []
+        for label, grp in ds.groupby(ds[hue]):
+            data = _infer_scatter_data(grp, x, y, hue=None)
+            primitive.append(ax.scatter(data['x'], data['y'], label=label))
     else:
+        data = _infer_scatter_data(ds, x, y, hue)
         primitive = ax.scatter(data['x'], data['y'], c=data['color'])
+
     if '_meta_data' in kwargs:  # if this was called from map_scatter,
         return primitive        # finish here. Else, make labels
 
