@@ -1659,6 +1659,29 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_coarsen(self):
+        v = self.cls(['x'], [0, 1, 2, 3, 4])
+        actual = v.coarsen({'x': 2}, func=np.mean)
+        expected = self.cls(['x'], [0.5, 2.5])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func=np.mean, side='right')
+        expected = self.cls(['x'], [1.5, 3.5])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func=np.mean, side='right',
+                           trim_excess=False)
+        expected = self.cls(['x'], [np.nan, 1.5, 3.5])
+        assert_identical(actual, expected)
+        # working test
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        for windows, func, side, trim_excess in [
+                ({'x': 2}, np.mean, 'left', True),
+                ({'x': 2}, np.median, {'x': 'left'}, False),
+                ({'x': 2, 'y': 3}, np.max, 'left', {'x': True, 'y': False})]:
+            v_coars = v.coarsen(windows, func, side, trim_excess)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):

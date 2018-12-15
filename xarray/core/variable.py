@@ -1632,6 +1632,52 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             array, axis=self.get_axis_num(dim), window=window,
             center=center, fill_value=fill_value))
 
+    def coarsen(self, windows, func, side='left', trim_excess=True):
+        if not utils.is_dict_like(side):
+            side = {d: side for d in windows.keys()}
+
+        if not utils.is_dict_like(trim_excess):
+            trim_excess = {d: trim_excess for d in windows.keys()}
+
+        for d, window in windows.items():
+            if window <= 0:
+                raise ValueError('window must be > 0')
+
+        variable = self
+        for d, window in windows.items():
+            # trim or pad the object
+            size = variable.shape[self._get_axis_num(d)]
+            n = int(size / window)
+            if trim_excess[d]:
+                if side[d] == 'left':
+                    variable = variable.isel({d: slice(window * int(n))})
+                else:
+                    excess = size - window * n
+                    variable = variable.isel({d: slice(excess, None)})
+            else:  # pad
+                pad = window * (n + 1) - size
+                if side[d] == 'left':
+                    pad_widths = {d: (0, pad)}
+                else:
+                    pad_widths = {d: (pad, 0)}
+                variable = variable.pad_with_fill_value(pad_widths)
+
+        shape = []
+        axes = []
+        axis = 0
+        for i, d in enumerate(variable.dims):
+            if d in windows:
+                size = variable.shape[i]
+                shape.append(int(size / windows[d]))
+                shape.append(windows[d])
+                axis += 1
+                axes.append(i + axis)
+            else:
+                shape.append(variable.shape[i])
+
+        data = func(variable.data.reshape(shape), axis=tuple(axes))
+        return type(self)(self.dims, data, self._attrs)
+
     @property
     def real(self):
         return type(self)(self.dims, self.data.real, self._attrs)
