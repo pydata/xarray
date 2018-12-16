@@ -329,11 +329,9 @@ class FacetGrid(object):
                 subset = self.data.loc[d]
                 maybe_mappable = scatter(subset, x=x, y=y, hue=hue,
                                          ax=ax, **kwargs)
-                # TODO: better way to verify that an artist is mappable?
-                # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
-                if (maybe_mappable
-                   and hasattr(maybe_mappable, 'autoscale_None')):
-                    self._mappables.append(maybe_mappable)
+                # TODO: this is needed to get legends to work.
+                # but maybe_mappable is a list in that case :/
+                self._mappables.append(maybe_mappable)
 
         self._finalize_grid(meta_data['xlabel'], meta_data['ylabel'])
 
