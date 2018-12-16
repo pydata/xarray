@@ -45,7 +45,8 @@ Enhancements
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
-
+- Dataset plotting API! Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~
