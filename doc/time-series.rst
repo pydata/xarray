@@ -163,6 +163,7 @@ Datetime components couple particularly well with grouped operations (see
 calculate the mean by time of day:
 
 .. ipython:: python
+   :okwarning:
 
     ds.groupby('time.hour').mean()
 
@@ -176,6 +177,7 @@ same api as ``resample`` `in pandas`_.
 For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
+   :okwarning:
 
     ds.resample(time='6H')
 
@@ -184,6 +186,7 @@ necessary for resampling. All of the reduction methods which work with
 ``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
+   :okwarning:
 
    ds.resample(time='6H').mean()
 
@@ -326,6 +329,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` method:
 
    .. ipython:: python
+      :okwarning:
 
        modern_times = xr.cftime_range('2000', periods=24, freq='MS', calendar='noleap')
        da = xr.DataArray(range(24), [('time', modern_times)])

@@ -343,7 +343,6 @@ Computation
 :py:attr:`~DataArray.searchsorted`
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
-:py:attr:`~DataArray.T`
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
 :py:attr:`~DataArray.rank`
