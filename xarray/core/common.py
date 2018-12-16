@@ -703,6 +703,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         group = DataArray(dim_coord, coords=dim_coord.coords,
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
+        # TODO: to_offset() call required for pandas==0.19.2
         grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base,
                              loffset=pd.tseries.frequencies.to_offset(loffset))
         resampler = self._resample_cls(self, group=group, dim=dim_name,

@@ -156,30 +156,29 @@ def _unique_and_monotonic(group):
 
 
 def _apply_loffset(grouper, result):
-        """
-        (copied from pandas)
-        if loffset is set, offset the result index
+    """
+    (copied from pandas)
+    if loffset is set, offset the result index
 
-        This is NOT an idempotent routine, it will be applied
-        exactly once to the result.
+    This is NOT an idempotent routine, it will be applied
+    exactly once to the result.
 
-        Parameters
-        ----------
-        result : Series or DataFrame
-            the result of resample
-        """
+    Parameters
+    ----------
+    result : Series or DataFrame
+        the result of resample
+    """
 
-        needs_offset = (
-            isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
-            and isinstance(result.index, pd.DatetimeIndex)
-            and len(result.index) > 0
-        )
+    needs_offset = (
+        isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
+        and isinstance(result.index, pd.DatetimeIndex)
+        and len(result.index) > 0
+    )
 
-        if needs_offset:
-            result.index = result.index + grouper.loffset
+    if needs_offset:
+        result.index = result.index + grouper.loffset
 
-        grouper.loffset = None
-        return grouper, result
+    grouper.loffset = None
 
 
 class GroupBy(SupportsArithmetic):
@@ -262,8 +261,8 @@ class GroupBy(SupportsArithmetic):
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
-            grouper, first_items = _apply_loffset(
-                grouper, s.groupby(grouper).first())
+            first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
             full_index = first_items.index
             if first_items.isnull().any():
                 first_items = first_items.dropna()
