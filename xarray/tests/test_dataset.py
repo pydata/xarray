@@ -4420,9 +4420,9 @@ def test_coarsen(ds, dask):
     assert_equal(actual['time'],
                  ds['time'].coarsen(time=2, x=3, side='right').max())
     # working test with pd.time
-    da = xr.DataArray(np.linspace(0, 365, num=365),
-                      dims='time', coords={
-                        'time': pd.date_range('15/12/1999', periods=365)})
+    da = xr.DataArray(
+        np.linspace(0, 365, num=365), dims='time',
+        coords={'time': pd.date_range('15/12/1999', periods=365)})
     actual = da.coarsen(time=2).mean()
 
 

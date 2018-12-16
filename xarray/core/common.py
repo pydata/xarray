@@ -627,28 +627,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...                   coords={'time': pd.date_range(
         ...                       '15/12/1999', periods=365)})
         >>> da
-        <xarray.DataArray (time: 12)>
-        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-        >>> da.rolling(time=3, center=True).mean()
-        <xarray.DataArray (time: 12)>
-        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
-        Coordinates:
-          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
-
-        Remove the NaNs using ``dropna()``:
-
-        >>> da.rolling(time=3, center=True).mean().dropna('time')
-        <xarray.DataArray (time: 10)>
-        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
-        Coordinates:
-          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
+        # TODO add example
 
         See Also
         --------
-        core.rolling.DataArrayRolling
-        core.rolling.DatasetRolling
+        core.rolling.DataArrayCoarsen
+        core.rolling.DatasetCoarsen
         """
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
         return self._coarsen_cls(

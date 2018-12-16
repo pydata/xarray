@@ -504,7 +504,7 @@ class DataArrayCoarsen(Coarsen):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                        self.windows, func, self.side, self.trim_excess)
+                self.windows, func, self.side, self.trim_excess)
             coords = {}
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
@@ -534,7 +534,7 @@ class DatasetCoarsen(Coarsen):
             reduced = OrderedDict()
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
-                        self.windows, func, self.side, self.trim_excess)
+                    self.windows, func, self.side, self.trim_excess)
 
             coords = {}
             for c, v in self.obj.coords.items():
