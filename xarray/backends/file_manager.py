@@ -36,27 +36,6 @@ class FileManager(object):
         raise NotImplementedError
 
 
-class _RefCounter(object):
-    """Class for keeping track of reference counts."""
-    def __init__(self, counts):
-        self._counts = counts
-        self._lock = threading.Lock()
-
-    def increment(self, name):
-        with self._lock:
-            count = self._counts[name] = self._counts.get(name, 0) + 1
-        return count
-
-    def decrement(self, name):
-        with self._lock:
-            count = self._counts[name] - 1
-            if count:
-                self._counts[name] = count
-            else:
-                del self._counts[name]
-        return count
-
-
 class CachingFileManager(FileManager):
     """Wrapper for automatically opening and closing file objects.
 
@@ -240,8 +219,8 @@ class CachingFileManager(FileManager):
 
     def __getstate__(self):
         """State for pickling."""
-        # cache and ref_counts are intentionally omited: we don't want to try
-        # to serailize these objects.
+        # cache and ref_counts are intentionally omitted: we don't want to try
+        # to serialize these global objects.
         lock = None if self._default_lock else self._lock
         return (self._opener, self._args, self._mode, self._kwargs, lock)
 
@@ -256,6 +235,27 @@ class CachingFileManager(FileManager):
             args_string += ', mode={!r}'.format(self._mode)
         return '{}({!r}, {}, kwargs={})'.format(
             type(self).__name__, self._opener, args_string, self._kwargs)
+
+
+class _RefCounter(object):
+    """Class for keeping track of reference counts."""
+    def __init__(self, counts):
+        self._counts = counts
+        self._lock = threading.Lock()
+
+    def increment(self, name):
+        with self._lock:
+            count = self._counts[name] = self._counts.get(name, 0) + 1
+        return count
+
+    def decrement(self, name):
+        with self._lock:
+            count = self._counts[name] - 1
+            if count:
+                self._counts[name] = count
+            else:
+                del self._counts[name]
+        return count
 
 
 class _HashedSequence(list):
