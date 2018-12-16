@@ -13,6 +13,7 @@ xarray's plotting capabilities are centered around
 :py:class:`xarray.DataArray` objects.
 To plot :py:class:`xarray.Dataset` objects
 simply access the relevant DataArrays, ie ``dset['var1']``.
+Dataset specific plotting routines are also available (see :ref:`plot-dataset`).
 Here we focus mostly on arrays 2d or larger. If your data fits
 nicely into a pandas DataFrame then you're better off using one of the more
 developed tools there.
@@ -579,6 +580,66 @@ they have been plotted.
 
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
+
+.. _plot-dataset:
+
+Datasets
+--------
+
+``xarray`` has limited support for plotting Dataset variables against each other.
+Consider this dataset
+
+.. ipython:: python
+
+   A = xr.DataArray(np.zeros([3, 11, 4, 4]), dims=[ 'x', 'y', 'z', 'w'],
+	            coords=[np.arange(3), np.linspace(0,1,11), np.arange(4),
+		            0.1*np.random.randn(4)])
+   # fake some data
+   B = 0.1*A.x**2 + A.y**2.5 + 0.1*A.z*A.w
+   A = -0.1*A.x + A.y/(5+A.z) + A.w
+
+   ds = xr.Dataset({'A':A, 'B':B})
+   ds['w'] = ['one', 'two', 'three', 'five']
+
+   # add some attributes to showcase automatic labelling
+   ds.x.attrs['units'] = 'xunits'
+   ds.y.attrs['units'] = 'yunits'
+   ds.z.attrs['units'] = 'zunits'
+   ds.A.attrs['units'] = 'Aunits'
+   ds.B.attrs['units'] = 'Bunits'
+
+
+Suppose we want to scatter the ``airtemps.fake`` against ``airtemps.air``
+
+.. ipython:: python
+
+    @savefig ds_simple_scatter.png
+    ds.plot.scatter(x='A', y='B')
+
+You can also set color using the ``hue`` kwarg
+
+.. ipython:: python
+
+    @savefig ds_hue_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='w')
+
+When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
+default. Legends are also possible using the boolean ``discrete_legend`` kwarg.
+This is set to True by default for non-numeric ``hue`` DataArrays.
+
+.. ipython:: python
+
+    @savefig ds_discrete_legend_hue_scatter.png
+    ds.plot.scatter(x='A', y='B', hue='w', discrete_legend=True)
+
+
+Faceting is also possible
+
+.. ipython:: python
+
+    @savefig ds_facet_scatter.png
+    ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', discrete_legend=True)
+
 
 .. _plot-maps:
 
