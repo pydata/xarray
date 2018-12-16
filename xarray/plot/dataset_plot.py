@@ -30,12 +30,15 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
     if add_legend and not hue:
             raise ValueError('hue must be specified for generating a legend')
 
-    if hue and not _ensure_numeric(ds[hue].values):
+    if hue and add_legend and not _ensure_numeric(ds[hue].values):
         if discrete_legend is None:
             discrete_legend = True
         elif discrete_legend is False:
             raise ValueError('Cannot create a colorbar for a non numeric'
                              ' coordinate')
+
+    if not hue and add_legend is None:
+        discrete_legend = None
 
     dims = ds[x].dims
     if ds[y].dims != dims:
@@ -49,15 +52,17 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
 
     if hue:
         hue_label = label_from_attrs(ds.coords[hue])
+        hue_values = ds[x].coords[hue] if discrete_legend else None
     else:
         hue_label = None
+        hue_values = None
 
     return {'add_legend': add_legend,
             'discrete_legend': discrete_legend,
             'hue_label': hue_label,
             'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y]),
-            'hue_values': ds[x].coords[hue] if discrete_legend else None}
+            'hue_values': hue_values}
 
 
 def _infer_scatter_data(ds, x, y, hue):
@@ -175,30 +180,40 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
     ax = get_axis(figsize, size, aspect, ax)
+
+    kwargs = kwargs.copy()
+    _meta_data = kwargs.pop('_meta_data', None)
+
     if discrete_legend:
         primitive = []
         for label, grp in ds.groupby(ds[hue]):
             data = _infer_scatter_data(grp, x, y, hue=None)
-            primitive.append(ax.scatter(data['x'], data['y'], label=label))
+            primitive.append(ax.scatter(data['x'], data['y'], label=label,
+                                        **kwargs))
     else:
         data = _infer_scatter_data(ds, x, y, hue)
-        cmap_kwargs = {'plot_data': ds[hue],
-                       'vmin': vmin,
-                       'vmax': vmax,
-                       'cmap': colors if colors else cmap,
-                       'center': center,
-                       'robust': robust,
-                       'extend': extend,
-                       'levels': levels,
-                       'filled': None,
-                       'norm': norm,
-                       }
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
-        primitive = ax.scatter(data['x'], data['y'], c=data['color'],
-                               vmin=cmap_kwargs['vmin'],
-                               vmax=cmap_kwargs['vmax'])
+        if hue is not None:
+            cmap_kwargs = {'plot_data': ds[hue],
+                           'vmin': vmin,
+                           'vmax': vmax,
+                           'cmap': colors if colors else cmap,
+                           'center': center,
+                           'robust': robust,
+                           'extend': extend,
+                           'levels': levels,
+                           'filled': None,
+                           'norm': norm}
+            cmap_params = _determine_cmap_params(**cmap_kwargs)
+            cmap_kwargs_subset = dict(
+                (vv, cmap_kwargs[vv])
+                for vv in ['vmin', 'vmax', 'norm', 'cmap'])
+        else:
+            cmap_kwargs_subset = {}
 
-    if '_meta_data' in kwargs:  # if this was called from map_scatter,
+        primitive = ax.scatter(data['x'], data['y'], c=data['color'],
+                               **cmap_kwargs_subset, **kwargs)
+
+    if _meta_data:  # if this was called from map_scatter,
         return primitive        # finish here. Else, make labels
 
     if meta_data.get('xlabel', None):

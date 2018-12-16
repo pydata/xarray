@@ -327,9 +327,13 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                mappable = scatter(subset, x=x, y=y, hue=hue,
-                                   ax=ax, **kwargs)
-                self._mappables.append(mappable)
+                maybe_mappable = scatter(subset, x=x, y=y, hue=hue,
+                                         ax=ax, **kwargs)
+                # TODO: better way to verify that an artist is mappable?
+                # https://stackoverflow.com/questions/33023036/is-it-possible-to-detect-if-a-matplotlib-artist-is-a-mappable-suitable-for-use-w#33023522
+                if (maybe_mappable
+                   and hasattr(maybe_mappable, 'autoscale_None')):
+                    self._mappables.append(maybe_mappable)
 
         self._finalize_grid(meta_data['xlabel'], meta_data['ylabel'])
 
