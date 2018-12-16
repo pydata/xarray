@@ -159,6 +159,7 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)

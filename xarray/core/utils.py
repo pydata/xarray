@@ -629,3 +629,21 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     if datetime_unit:
         return (array / np.timedelta64(1, datetime_unit)).astype(dtype)
     return array.astype(dtype)
+
+
+def get_temp_dimname(dims, new_dim):
+    """ Get an new dimension name based on new_dim, that is not used in dims.
+    If the same name exists, we add an underscore(s) in the head.
+
+    Example1:
+        dims: ['a', 'b', 'c']
+        new_dim: ['_rolling']
+        -> ['_rolling']
+    Example2:
+        dims: ['a', 'b', 'c', '_rolling']
+        new_dim: ['_rolling']
+        -> ['__rolling']
+    """
+    while new_dim in dims:
+        new_dim = '_' + new_dim
+    return new_dim

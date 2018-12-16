@@ -1632,12 +1632,33 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             array, axis=self.get_axis_num(dim), window=window,
             center=center, fill_value=fill_value))
 
-    def coarsen(self, windows, func, side='left', trim_excess=True):
+    def coarsen(self, windows, func, side='left', trim_excess=False):
+        windows = {k: v for k, v in windows.items() if k in self.dims}
+        new_dimensions = {k: utils.get_temp_dimname(self.dims, k)
+                          for k in windows}
+        reshaped = self._coarsen_reshape(windows, side, trim_excess,
+                                         new_dimensions)
+
+        axis = tuple([reshaped.get_axis_num(d) for d
+                      in new_dimensions.values()])
+        return type(self)(self.dims, func(reshaped, axis=axis), self._attrs)
+
+    def _coarsen_reshape(self, windows, side, trim_excess, coarsen_dimensions):
+        """
+        Construct a reshaped-variable for corsen
+        """
         if not utils.is_dict_like(side):
             side = {d: side for d in windows.keys()}
 
         if not utils.is_dict_like(trim_excess):
             trim_excess = {d: trim_excess for d in windows.keys()}
+
+        # remove unrelated dimensions
+        side = {k: v for k, v in side.items() if k in self.dims}
+        trim_excess = {k: v for k, v in trim_excess.items() if k in self.dims}
+
+        if windows == {}:
+            return type(self)(self.dims, self.data, self._attrs)
 
         for d, window in windows.items():
             if window <= 0:
@@ -1664,19 +1685,19 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         shape = []
         axes = []
-        axis = 0
+        dims = []
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
                 shape.append(int(size / windows[d]))
                 shape.append(windows[d])
-                axis += 1
-                axes.append(i + axis)
+                dims.append(d)
+                dims.append(coarsen_dimensions[d])
             else:
                 shape.append(variable.shape[i])
+                dims.append(d)
 
-        data = func(variable.data.reshape(shape), axis=tuple(axes))
-        return type(self)(self.dims, data, self._attrs)
+        return Variable(dims, variable.data.reshape(shape), self._attrs)
 
     @property
     def real(self):

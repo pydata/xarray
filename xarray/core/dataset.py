@@ -318,6 +318,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     """
     _groupby_cls = groupby.DatasetGroupBy
     _rolling_cls = rolling.DatasetRolling
+    _coarsen_cls = rolling.DatasetCoarsen
     _resample_cls = resample.DatasetResample
 
     def __init__(self, data_vars=None, coords=None, attrs=None,

@@ -1662,17 +1662,18 @@ class TestVariable(VariableSubclassobjects):
     def test_coarsen(self):
         v = self.cls(['x'], [0, 1, 2, 3, 4])
         actual = v.coarsen({'x': 2}, func=np.mean)
-        expected = self.cls(['x'], [0.5, 2.5])
+        expected = self.cls(['x'], [0.5, 2.5, 4])
         assert_identical(actual, expected)
 
         actual = v.coarsen({'x': 2}, func=np.mean, side='right')
-        expected = self.cls(['x'], [1.5, 3.5])
+        expected = self.cls(['x'], [0, 1.5, 3.5])
         assert_identical(actual, expected)
 
         actual = v.coarsen({'x': 2}, func=np.mean, side='right',
-                           trim_excess=False)
-        expected = self.cls(['x'], [np.nan, 1.5, 3.5])
+                           trim_excess=True)
+        expected = self.cls(['x'], [1.5, 3.5])
         assert_identical(actual, expected)
+
         # working test
         v = self.cls(['x', 'y', 'z'],
                      np.arange(40 * 30 * 2).reshape(40, 30, 2))

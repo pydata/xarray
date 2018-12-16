@@ -591,6 +591,71 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
+    def coarsen(self, dim=None, side='left', trim_excess=False,
+                coordinate_func=None, **dim_kwargs):
+        """
+        Coarsen object.
+
+        Parameters
+        ----------
+        dim: dict, optional
+            Mapping from the dimension name to the window size.
+        side : 'left' or 'right', or dict
+            If left, coarsening windows start from 0th index. The excessed
+            entries in the most right will be removed (if trim_excess is True).
+            If right, coarsen windows ends at the most right entry, while
+            excessed entries in the most left will be removed.
+        trim_excess : boolean, default False
+            If true, the excessed entries are trimed. If False, np.nan will be
+            filled.
+        **dim_kwargs : optional
+            The keyword arguments form of ``dim``.
+            One of dim or dim_kwargs must be provided.
+
+        Returns
+        -------
+        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
+        core.rolling.DatasetCoarsen for Dataset.)
+
+
+        Examples
+        --------
+        Coarsen the long time series by averaging for every seven data.
+
+        >>> da = xr.DataArray(np.linspace(0, 365, num=365),
+        ...                   dims='time',
+        ...                   coords={'time': pd.date_range(
+        ...                       '15/12/1999', periods=365)})
+        >>> da
+        <xarray.DataArray (time: 12)>
+        array([  0.,   1.,   2.,   3.,   4.,   5.,   6.,   7., 8.,   9.,  10.,  11.])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+        >>> da.rolling(time=3, center=True).mean()
+        <xarray.DataArray (time: 12)>
+        array([nan,  1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., nan])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 2000-01-15 2000-02-15 ...
+
+        Remove the NaNs using ``dropna()``:
+
+        >>> da.rolling(time=3, center=True).mean().dropna('time')
+        <xarray.DataArray (time: 10)>
+        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+        Coordinates:
+          * time     (time) datetime64[ns] 2000-01-15 2000-02-15 2000-03-15 ...
+
+        See Also
+        --------
+        core.rolling.DataArrayRolling
+        core.rolling.DatasetRolling
+        """
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        return self._coarsen_cls(
+            self, dim, side=side, trim_excess=trim_excess,
+            coordinate_func=coordinate_func)
+
+
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
                  base=0, keep_attrs=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
@@ -673,7 +738,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             raise TypeError('resample() no longer supports the `how` or '
                             '`dim` arguments. Instead call methods on resample '
                             "objects, e.g., data.resample(time='1D').mean()")
- 
+
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
 
         if len(indexer) != 1:
