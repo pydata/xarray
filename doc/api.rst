@@ -569,6 +569,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
+   Dataset.plot.scatter
    DataArray.plot
    plot.plot
    plot.contourf
