@@ -1,3 +1,4 @@
+import collections
 import contextlib
 import threading
 import warnings
@@ -13,6 +14,8 @@ FILE_CACHE = LRUCache(
     OPTIONS['file_cache_maxsize'], on_evict=lambda k, v: v.close())
 assert FILE_CACHE.maxsize, 'file cache must be at least size one'
 
+
+REF_COUNTS = {}
 
 _DEFAULT_MODE = utils.ReprObject('<unused>')
 
@@ -32,6 +35,27 @@ class FileManager(object):
     def close(self, needs_lock=True):
         """Close the file object associated with this manager, if needed."""
         raise NotImplementedError
+
+
+class _RefCounter(object):
+    """Class for keeping track of reference counts."""
+    def __init__(self, counts):
+        self._counts = counts
+        self._lock = threading.Lock()
+
+    def increment(self, name):
+        with self._lock:
+            count = self._counts[name] = self._counts.get(name, 0) + 1
+        return count
+
+    def decrement(self, name):
+        with self._lock:
+            count = self._counts[name] - 1
+            if count:
+                self._counts[name] = count
+            else:
+                del self._counts[name]
+        return count
 
 
 class CachingFileManager(FileManager):
@@ -65,6 +89,9 @@ class CachingFileManager(FileManager):
     def __init__(self, opener, *args, **keywords):
         """Initialize a FileManager.
 
+        The cache and ref_counts arguments exist solely to facilitate
+        dependency injection, and should only be set for tests.
+
         Parameters
         ----------
         opener : callable
@@ -93,6 +120,9 @@ class CachingFileManager(FileManager):
             global variable and contains non-picklable file objects, an
             unpickled FileManager objects will be restored with the default
             cache.
+        ref_counts : dict, optional
+            Optional dict to use for keeping track the number of references to
+            the same file.
         """
         # TODO: replace with real keyword arguments when we drop Python 2
         # support
@@ -100,6 +130,7 @@ class CachingFileManager(FileManager):
         kwargs = keywords.pop('kwargs', None)
         lock = keywords.pop('lock', None)
         cache = keywords.pop('cache', FILE_CACHE)
+        ref_counts = keywords.pop('ref_counts', REF_COUNTS)
         if keywords:
             raise TypeError('FileManager() got unexpected keyword arguments: '
                             '%s' % list(keywords))
@@ -108,16 +139,25 @@ class CachingFileManager(FileManager):
         self._args = args
         self._mode = mode
         self._kwargs = {} if kwargs is None else dict(kwargs)
+
         self._default_lock = lock is None or lock is False
         self._lock = threading.Lock() if self._default_lock else lock
+
+        # cache[self._key] stores the file associated with this object.
         self._cache = cache
         self._key = self._make_key()
+
+        # ref_counts[self._key] stores the number of CachingFileManager objects
+        # in memory referencing this same file. We use this to know if we can
+        # close a file when the manager is deallocated.
+        self._ref_counter = _RefCounter(ref_counts)
+        self._ref_counter.increment(self._key)
 
     def _make_key(self):
         """Make a key for caching files in the LRU cache."""
         value = (self._opener,
                  self._args,
-                 self._mode,
+                 'a' if self._mode == 'w' else self._mode,
                  tuple(sorted(self._kwargs.items())))
         return _HashedSequence(value)
 
@@ -156,7 +196,6 @@ class CachingFileManager(FileManager):
                 if self._mode == 'w':
                     # ensure file doesn't get overriden when opened again
                     self._mode = 'a'
-                    self._key = self._make_key()
                 self._cache[self._key] = file
         return file
 
@@ -171,8 +210,22 @@ class CachingFileManager(FileManager):
                 file.close()
 
     def __del__(self):
-        if self._key in self._cache:
-            # Remove unclosed files from the cache upon garbage collection.
+        # If we're the only CachingFileManger referencing a unclosed file, we
+        # should remove it from the cache upon garbage collection.
+        #
+        # Keeping our own count of file references might seem like overkill,
+        # but it's actually pretty common to reopen files with the same
+        # variable name in a notebook or command line environment, e.g., to
+        # fix the parameters used when opening a file:
+        #    >>> ds = xarray.open_dataset('myfile.nc')
+        #    >>> ds = xarray.open_dataset('myfile.nc', decode_times=False)
+        # This second assignment to "ds" drops CPython's ref-count on the first
+        # "ds" argument to zero, which can trigger garbage collections. So if
+        # we didn't check whether another object is referencing 'myfile.nc',
+        # the newly opened file would actually be immediately closed!
+        ref_count = self._ref_counter.decrement(self._key)
+
+        if not ref_count and self._key in self._cache:
             if acquire(self._lock, blocking=False):
                 # Only close files if we can do so immediately.
                 try:
@@ -182,12 +235,14 @@ class CachingFileManager(FileManager):
 
             if OPTIONS['warn_for_unclosed_files']:
                 warnings.warn(
-                    'deallocating {}, but file is not already closed. This '
-                    'may indicate a bug.'
+                    'deallocating {}, but file is not already closed. '
+                    'This may indicate a bug.'
                     .format(self), RuntimeWarning, stacklevel=2)
 
     def __getstate__(self):
         """State for pickling."""
+        # cache and ref_counts are intentionally omited: we don't want to try
+        # to serailize these objects.
         lock = None if self._default_lock else self._lock
         return (self._opener, self._args, self._mode, self._kwargs, lock)
 

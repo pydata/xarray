@@ -1,3 +1,4 @@
+import collections
 import gc
 import pickle
 import threading
@@ -82,6 +83,59 @@ def test_file_manager_repr():
     opener = mock.Mock()
     manager = CachingFileManager(opener, 'my-file')
     assert 'my-file' in repr(manager)
+
+
+def test_file_manager_refcounts():
+    mock_file = mock.Mock()
+    opener = mock.Mock(spec=open, return_value=mock_file)
+    cache = {}
+    ref_counts = {}
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert ref_counts[manager._key] == 1
+    manager.acquire()
+    assert cache
+
+    manager2 = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert cache
+    assert manager._key == manager2._key
+    assert ref_counts[manager._key] == 2
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager
+        gc.collect()
+
+    assert cache
+    assert ref_counts[manager2._key] == 1
+    mock_file.close.assert_not_called()
+
+    with set_options(warn_for_unclosed_files=False):
+        del manager2
+        gc.collect()
+
+    assert not ref_counts
+    assert not cache
+
+
+def test_file_manager_replace_object():
+    opener = mock.Mock()
+    cache = {}
+    ref_counts = {}
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    manager.acquire()
+    assert ref_counts[manager._key] == 1
+    assert cache
+
+    manager = CachingFileManager(
+        opener, 'filename', cache=cache, ref_counts=ref_counts)
+    assert ref_counts[manager._key] == 1
+    assert cache
+
+    manager.close()
 
 
 def test_file_manager_write_consecutive(tmpdir, file_cache):

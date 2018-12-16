@@ -1258,6 +1258,7 @@ class TestNetCDF4Data(NetCDF4Base):
 
 @requires_netCDF4
 @requires_dask
+@pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
 class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -2023,6 +2024,10 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                 kwargs = dict(data_vars=opt, dim='t')
                 ds_expect = xr.concat([ds1, ds2], **kwargs)
                 assert_identical(ds, ds_expect)
+            with open_mfdataset(files, coords=opt) as ds:
+                kwargs = dict(coords=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'
@@ -2139,8 +2144,8 @@ class TestDask(DatasetIOBase):
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
-                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual2:
-                    assert actual2.foo.variable.data.chunks == ((3, 2, 3, 2),)
+                with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
+                    assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
 
         with raises_regex(IOError, 'no files to open'):
@@ -2359,9 +2364,9 @@ class TestDask(DatasetIOBase):
             with open_mfdataset(tmp) as ds:
                 original_names = dict((k, v.data.name)
                                       for k, v in ds.data_vars.items())
-            with open_mfdataset(tmp) as ds2:
+            with open_mfdataset(tmp) as ds:
                 repeat_names = dict((k, v.data.name)
-                                    for k, v in ds2.data_vars.items())
+                                    for k, v in ds.data_vars.items())
             for var_name, dask_name in original_names.items():
                 assert var_name in dask_name
                 assert dask_name[:13] == 'open_dataset-'
