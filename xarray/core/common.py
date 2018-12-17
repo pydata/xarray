@@ -627,7 +627,14 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...                   coords={'time': pd.date_range(
         ...                       '15/12/1999', periods=365)})
         >>> da
-        # TODO add example
+        >>> <xarray.DataArray (time: 365)>
+        >>> array([  0.      ,   1.002747,   2.005495, ..., 363.997253,
+        >>>        365.      ])
+        >>> Coordinates:
+        >>> * time     (time) datetime64[ns] 1999-12-15 ... 2000-12-13
+
+        >>> da.coarsen(time=3).mean()
+        >>> 
 
         See Also
         --------

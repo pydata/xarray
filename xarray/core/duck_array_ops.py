@@ -13,7 +13,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, npcompat, nputils, utils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -278,14 +278,16 @@ cumsum_1d.numeric_only = True
 
 _mean = _create_nan_agg_method('mean')
 
-def mean(array, *args, **kwargs):
-    """ inhouse mean for datatime dtype """
+def mean(array, axis=None, skipna=None, **kwargs):
+    """ inhouse mean that can handle datatime dtype """
     array = asarray(array)
     if array.dtype.kind == 'M':
         offset = min(array)
-        return _mean(array - offset, *args, **kwargs) + offset
+        dtype = (array.ravel()[0] - offset).dtype  # dtype.kind == 'm'
+        return _mean(utils.datetime_to_numeric(array), axis=axis,
+                     skipna=skipna, **kwargs).astype(dtype) + offset
     else:
-        return _mean(array, *args, **kwargs)
+        return _mean(array, axis=axis, skipna=skipna, **kwargs)
 
 mean.numeric_only = True
 
