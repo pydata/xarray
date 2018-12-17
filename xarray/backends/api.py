@@ -487,13 +487,13 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
-    If combine='auto' then the function `auto_combine` is used, and if
-    combine='manual' then `manual_combine` is used, and the filepaths
-    must be structured accordingly.
+    If combine='auto' then the function `auto_combine` is used to combine the
+    datasets into one before returning the result, and if combine='manual' then
+    `manual_combine` is used. The filepaths must be structured according to
+    which combining function is used, the details of which are given in the
+    documentation for ``auto_combine`` and ``manual_combine``.
 
     Requires dask to be installed. See documentation for details on dask [1].
-    Uses ``auto_combine`` to combine the opened datasets - see
-    ``auto_combine`` for details.
     Attributes from the first dataset file are used for the combined dataset.
 
     Parameters
@@ -502,7 +502,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         Either a string glob in the form "path/to/my/files/*.nc" or an explicit
         list of files to open. Paths can be given as strings or as pathlib
         Paths. If concatenation along more than one dimension is desired, then
-        ``paths`` must be a nested list-of-lists (see ``auto_combine`` for
+        ``paths`` must be a nested list-of-lists (see ``manual_combine`` for
         details).
     chunks : int or dict, optional
         Dictionary with keys given by dimension names and values given by chunk
@@ -512,8 +512,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         memory at once. This has a major impact on performance: please see the
         full documentation for more details [2].
     concat_dims : list of str, DataArray, Index or None, optional
-        Dimensions to concatenate files along. This argument is passed on to
-        :py:func:`xarray.auto_combine` along with the dataset objects. You only
+        Dimensions to concatenate files along.  You only
         need to provide this argument if any of the dimensions along which you
         want to concatenate is not a dimension in the original datasets, e.g.,
         if you want to stack a collection of 2D arrays along a third dimension.
@@ -524,7 +523,6 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -573,6 +571,9 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
+    combine : {'manual', 'auto'}, optional
+        Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
+        combine all the data. Default is 'manual'.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -588,6 +589,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     References
     ----------
+
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
@@ -603,6 +605,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
 
     if not paths:
         raise IOError('no files to open')
+
 
     # If infer_order_from_coords=True then this is unnecessary, but quick.
     # If infer_order_from_coords=False then this creates a flat list which is
@@ -644,8 +647,8 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
             # TODO Use coordinates to determine tile_ID for each dataset in N-D
             # Ignore how they were ordered previously
             # Should look like:
-            combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
-                concat_dims)
+            combined_ids, concat_dims = _infer_tile_ids_from_coords(
+                datasets, concat_dims)
 
         # Check that the inferred shape is combinable
         _check_shape_tile_ids(combined_ids)
@@ -887,7 +890,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True):
+            encoding=None, compute=True, consolidated=False):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -902,16 +905,20 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    store = backends.ZarrStore.open_group(store=store, mode=mode,
-                                          synchronizer=synchronizer,
-                                          group=group)
+    zstore = backends.ZarrStore.open_group(store=store, mode=mode,
+                                           synchronizer=synchronizer,
+                                           group=group,
+                                           consolidate_on_close=consolidated)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dump_to_store(dataset, store, writer, encoding=encoding)
+    dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(compute=compute)
 
-    if not compute:
+    if compute:
+        _finalize_store(writes, zstore)
+    else:
         import dask
-        return dask.delayed(_finalize_store)(writes, store)
-    return store
+        return dask.delayed(_finalize_store)(writes, zstore)
+
+    return zstore

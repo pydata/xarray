@@ -301,7 +301,6 @@ class TestConcatDataArray(object):
 
 
 class TestAutoCombine(object):
-
     @pytest.mark.parametrize("combine", [_auto_combine_1d, auto_combine])
     @requires_dask  # only for toolz
     def test_auto_combine(self, combine):
@@ -622,7 +621,6 @@ class TestAutoCombineND(object):
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
         result = auto_combine(datasets, concat_dims=['dim1', 'dim2'])
-
         assert_equal(result, expected)
 
     def test_invalid_hypercube_input(self):

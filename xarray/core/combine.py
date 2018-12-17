@@ -532,8 +532,8 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
         if not ids:
             # Determine tile_IDs by structure of input in N-D
             # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_positions\
-                                                        (datasets, concat_dims)
+            combined_ids, concat_dims = _infer_concat_order_from_positions(
+                datasets, concat_dims)
         else:
             # Already sorted so just use the ids already passed
             combined_ids = OrderedDict(zip(ids, datasets))
@@ -550,10 +550,10 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
 def manual_combine(datasets, concat_dims=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', data_vars='all', coords='different'):
     """
-    Combine an N-dimensional grid of datasets into one explicitly by using a
+    Explicitly combine an N-dimensional grid of datasets into one by using a
     succession of concat and merge operations along each dimension of the grid.
 
-    Does not sort data under any circumstances, so the datsets must be passed
+    Does not sort data under any circumstances, so the datasets must be passed
     in the order you wish them to be concatenated. It does align coordinates,
     but different variables on datasets can cause it to fail under some
     scenarios. In complex cases, you may need to clean up your data and use
@@ -660,17 +660,15 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     monotonically increasing along all dimensions. If it cannot determine the
     order in which to concatenate the datasets, it will raise an error.
 
-    It does align coordinates,
-    but different variables on datasets can cause it to fail under some
-    scenarios. In complex cases, you may need to clean up your data and use
-    concat/merge explicitly.
+    Aligns coordinates, but different variables on datasets can cause it
+    to fail under some scenarios. In complex cases, you may need to clean up
+    your data and use concat/merge explicitly (also see `manual_combine`).
 
     Works well if, for example, you have N years of data and M data variables,
     and each combination of a distinct time period and set of data variables is
     saved as its own dataset. Also useful for if you have a simulation which is
     parallelized in multiple dimensions, but has global coordinates saved in
     each file specifying it's position within the domain.
-
 
     Parameters
     ----------
@@ -684,14 +682,11 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to
-        disable concatenation along a particular dimension.
-        Must be the same length as the depth of the list passed to
-        ``datasets``.
+        disable concatenation.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -713,9 +708,10 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     --------
     concat
     merge
+    manual_combine
     """
     if len(concat_dim) > 1:
-        raise ValueError
+        raise ValueError("Informative message")
 
     # The IDs argument tells _combine that the datasets are not yet sorted
     return _combine(datasets, concat_dims=[concat_dim], compat=compat,

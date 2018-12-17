@@ -207,6 +207,9 @@ class CFTimeIndex(pd.Index):
     second = _field_accessor('second', 'The seconds of the datetime')
     microsecond = _field_accessor('microsecond',
                                   'The microseconds of the datetime')
+    dayofyear = _field_accessor('dayofyr',
+                                'The ordinal day of year of the datetime')
+    dayofweek = _field_accessor('dayofwk', 'The day of week of the datetime')
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):

@@ -176,6 +176,20 @@ def test_cftimeindex_field_accessors(index, field, expected):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_dayofyear_accessor(index):
+    result = index.dayofyear
+    expected = [date.dayofyr for date in index]
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_dayofweek_accessor(index):
+    result = index.dayofweek
+    expected = [date.dayofwk for date in index]
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(('string', 'date_args', 'reso'), [
     ('1999', (1999, 1, 1), 'year'),
     ('199902', (1999, 2, 1), 'month'),
