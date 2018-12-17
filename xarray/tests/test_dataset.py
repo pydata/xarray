@@ -4426,7 +4426,6 @@ def test_coarsen(ds, dask):
     actual = da.coarsen(time=2).mean()
 
 
-
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError) as exception:
