@@ -177,7 +177,7 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - We now properly handle arrays of ``datetime.datetime`` and ``datetime.timedelta``
   provided as coordinates. (:issue:`2512`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -2219,6 +2219,7 @@ Enhancements
   for shifting/rotating datasets or arrays along a dimension:
 
   .. ipython:: python
+     :okwarning:
 
       array = xray.DataArray([5, 6, 7, 8], dims='x')
       array.shift(x=2)
@@ -2726,6 +2727,7 @@ Enhancements
   need to supply the time dimension explicitly:
 
   .. ipython:: python
+     :verbatim:
 
       time = pd.date_range('2000-01-01', freq='6H', periods=10)
       array = xray.DataArray(np.arange(10), [('time', time)])
@@ -2735,6 +2737,7 @@ Enhancements
   options such as ``closed`` and ``label`` let you control labeling:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='sum', label='right')
 
@@ -2742,6 +2745,7 @@ Enhancements
   (upsampling), xray will insert missing values:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('3H', 'time')
 
@@ -2749,12 +2753,14 @@ Enhancements
   last examples from each group along the grouped axis:
 
   .. ipython:: python
+     :verbatim:
 
       array.groupby('time.day').first()
 
   These methods combine well with ``resample``:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='first')
 

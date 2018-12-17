@@ -186,8 +186,8 @@ labels for one or several dimensions:
     array
     array['c'] = ('x', ['a', 'b', 'c'])
     array.set_index(x='c')
-    array.set_index(x='c', inplace=True)
-    array.reset_index('x', drop=True)
+    array = array.set_index(x='c')
+    array = array.reset_index('x', drop=True)
 
 .. _reshape.shift_and_roll:
 
@@ -201,7 +201,7 @@ To adjust coordinate labels, you can use the :py:meth:`~xarray.Dataset.shift` an
 
 	array = xr.DataArray([1, 2, 3, 4], dims='x')
 	array.shift(x=2)
-	array.roll(x=2)
+	array.roll(x=2, roll_coords=True)
 
 .. _reshape.sort:
 
