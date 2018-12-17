@@ -261,8 +261,6 @@ min = _create_nan_agg_method('min', coerce_strings=True)
 sum = _create_nan_agg_method('sum')
 sum.numeric_only = True
 sum.available_min_count = True
-mean = _create_nan_agg_method('mean')
-mean.numeric_only = True
 std = _create_nan_agg_method('std')
 std.numeric_only = True
 var = _create_nan_agg_method('var')
@@ -276,6 +274,20 @@ cumprod_1d = _create_nan_agg_method('cumprod')
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method('cumsum')
 cumsum_1d.numeric_only = True
+
+
+_mean = _create_nan_agg_method('mean')
+
+def mean(array, *args, **kwargs):
+    """ inhouse mean for datatime dtype """
+    array = asarray(array)
+    if array.dtype.kind == 'M':
+        offset = min(array)
+        return _mean(array - offset, *args, **kwargs) + offset
+    else:
+        return _mean(array, *args, **kwargs)
+
+mean.numeric_only = True
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
