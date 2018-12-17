@@ -560,6 +560,7 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     ``auto_combine`` works well if you have N years of data and M data
     variables, and each combination of a distinct time period and set of data
     variables is saved its own dataset.
+
     Parameters
     ----------
     datasets : sequence of xarray.Dataset
@@ -589,6 +590,7 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         Details are in the documentation of concat
     coords : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of conca
+
     Returns
     -------
     combined : xarray.Dataset

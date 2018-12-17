@@ -173,6 +173,7 @@ So you can represent a Panel, in two ways:
 Let's take a look:
 
 .. ipython:: python
+   :okwarning:
 
     panel = pd.Panel(np.random.rand(2, 3, 4), items=list('ab'), major_axis=list('mno'),
                      minor_axis=pd.date_range(start='2000', periods=4, name='date'))

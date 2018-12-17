@@ -1945,8 +1945,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         interpolated: xr.Dataset
             New dataset on the new coordinates.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
 
         See Also
@@ -2037,8 +2037,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Another dataset by interpolating this dataset's data along the
             coordinates of the other object.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
         If the dataset has object-type coordinates, reindex is used for these
         coordinates instead of the interpolation.
@@ -2548,7 +2548,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                   'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
-
             - 'broadcast_equals': all values must be equal when variables are
               broadcast against each other to ensure common dimensions.
             - 'equals': all values and dimensions must be the same.

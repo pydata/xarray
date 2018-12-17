@@ -111,7 +111,7 @@ Back in an interactive IPython session, we can use these properties:
 .. ipython:: python
    :suppress:
 
-   exec(open("examples/_code/accessor_example.py").read())
+   exec(open("doc/examples/_code/accessor_example.py").read())
 
 .. ipython:: python
 

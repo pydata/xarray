@@ -487,6 +487,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     """Open multiple files as a single dataset.
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
+
     Parameters
     ----------
     paths : str or sequence
