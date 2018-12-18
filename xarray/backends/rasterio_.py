@@ -2,8 +2,6 @@ import os
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
-import rasterio
-from rasterio.vrt import WarpedVRT
 import numpy as np
 
 from .. import DataArray
@@ -128,8 +126,9 @@ class RasterioArrayWrapper(BackendArray):
 
 class RasterioVRTWrapper(RasterioArrayWrapper):
     """A wrapper around rasterio WarpedVRT objects"""
+
     def __init__(self, manager, vrt_params):
-        #print('Using VRT Wrapper')
+        from rasterio.vrt import WarpedVRT
         self.manager = manager
         self.vrt_params = vrt_params
         # cannot save riods as an attribute: this would break pickleability
@@ -143,6 +142,7 @@ class RasterioVRTWrapper(RasterioArrayWrapper):
         self._dtype = np.dtype(dtypes[0])
 
     def _getitem(self, key):
+        from rasterio.vrt import WarpedVRT
         band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
 
         if not band_key or any(start == stop for (start, stop) in window):
@@ -158,6 +158,7 @@ class RasterioVRTWrapper(RasterioArrayWrapper):
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
         return out[np_inds]
+
 
 def _parse_envi(meta):
     """Parse ENVI metadata into Python data structures.
@@ -240,13 +241,14 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     data : DataArray
         The newly created DataArray.
     """
+    import rasterio
+
     vrt_params = None
     if isinstance(filename, rasterio.io.DatasetReader):
         filename = filename.name
     elif isinstance(filename, rasterio.vrt.WarpedVRT):
         vrt = filename
         filename = vrt.src_dataset.name
-        #crs = vrt.crs.to_string()
         vrt_params = dict(crs=vrt.crs.to_string(),
                           resampling=vrt.resampling,
                           src_nodata=vrt.src_nodata,
@@ -258,7 +260,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     riods = manager.acquire()
 
     if vrt_params:
-        riods = WarpedVRT(riods, **vrt_params)
+        riods = rasterio.vrt.WarpedVRT(riods, **vrt_params)
 
     if cache is None:
         cache = chunks is None
@@ -332,14 +334,15 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         for k, v in meta.items():
             # Add values as coordinates if they match the band count,
             # as attributes otherwise
-            if (isinstance(v, (list, np.ndarray)) and
-                    len(v) == riods.count):
+            if (isinstance(v, (list, np.ndarray))
+                    and len(v) == riods.count):
                 coords[k] = ('band', np.asarray(v))
             else:
                 attrs[k] = v
 
     if vrt_params:
-        data = indexing.LazilyOuterIndexedArray(RasterioVRTWrapper(manager, vrt_params))
+        data = indexing.LazilyOuterIndexedArray(RasterioVRTWrapper(manager,
+                                                                   vrt_params))
     else:
         data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
 
