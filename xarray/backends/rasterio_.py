@@ -162,7 +162,7 @@ def _parse_envi(meta):
 
 
 def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
-                  lock=None):
+                  lock=None, mask=False):
     """Open a file with rasterio (experimental).
 
     This should work with any file that rasterio can open (most often:
@@ -205,6 +205,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         :py:func:`dask.array.from_array`. By default, a global lock is
         used to avoid issues with concurrent access to the same file when using
         dask's multithreaded backend.
+    mask : bool, optional
+        If True, uses nodatavals to set values to NaN. Defaults to False.
 
     Returns
     -------
@@ -328,6 +330,10 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     result = DataArray(data=data, dims=('band', 'y', 'x'),
                        coords=coords, attrs=attrs)
+
+    if mask:
+        for nodataval in attrs.get('nodatavals', ()):
+            result = result.where(result!=nodataval)
 
     if chunks is not None:
         from dask.base import tokenize
