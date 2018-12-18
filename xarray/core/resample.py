@@ -214,10 +214,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                      assume_sorted=True)
         if isinstance(self._full_index.values[0], cf.datetime):
             t = self._full_index
-            # new_x = np.insert([td.total_seconds() for td in
-            #                    t[1:].values - t[:-1].values], 0, 0).cumsum()
-            #  calling total_seconds is potentially bad for performance
-            new_x = np.array(t.values - t.min(), dtype='timedelta64[s]').astype(float)
+            new_x = np.array(t.values - t.min(),
+                             dtype='timedelta64[s]').astype(float)
             new_x = new_x.round()
             # Rounding fixes erroneous microsecond offsets in timedelta
             # (fault of CFTime), but destroys microsecond resolution data

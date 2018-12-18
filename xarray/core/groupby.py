@@ -247,40 +247,29 @@ class GroupBy(SupportsArithmetic):
                     labels = grouper[1]
                     binner = grouper[2]
                     closed = grouper[3]
-                    print('len labels: ', len(labels))
+                    import datetime
+                    from xarray import CFTimeIndex
                     if closed == 'right':
-                        # first_items = s.reindex(pd.Index(binner),
-                        #                         method='nearest')
-                        # for closed=='right', binner might be suffering from
-                        # CFTimeIndex second/microsecond leap issue, try
-                        # shifting everything one second forward?
-                        import datetime
-                        from xarray import CFTimeIndex
-                        # print(type(binner), binner[0] + datetime.timedelta(seconds=1))
-                        binner = CFTimeIndex([x + datetime.timedelta(seconds=1) for x in binner])
+                        binner = CFTimeIndex([x + datetime.timedelta(seconds=1)
+                                              for x in binner])
                         first_items = s.reindex(pd.Index(binner),
                                                 method='bfill')
                         if first_items.values[0] != 0:
-                            first_items = pd.Series(data=np.concatenate(([0], first_items.values[:-1])),
-                                                    index=first_items.index)
-                        # print(first_items, len(first_items), type(first_items))
+                            first_items = pd.Series(
+                                data=np.concatenate(([0],
+                                                     first_items.values[:-1])),
+                                index=first_items.index)
                         first_items.index = labels
                     else:
-                        # first_items = s.reindex(pd.Index(binner),
-                        #                         method='bfill')
-                        # Shifting everything one second back due to
-                        # CFTimeIndex second/microsecond leap issue.
-                        import datetime
-                        from xarray import CFTimeIndex
-                        # print(type(binner), binner[0] + datetime.timedelta(seconds=1))
-                        binner = CFTimeIndex([x - datetime.timedelta(seconds=1) for x in binner])
+                        binner = CFTimeIndex([x - datetime.timedelta(seconds=1)
+                                              for x in binner])
                         first_items = s.reindex(pd.Index(binner),
                                                 method='bfill')
                         if first_items.values[0] != 0:
-                            first_items = pd.Series(data=np.concatenate(([0], first_items.values[:-1])),
-                                                    index=first_items.index)
-                        # first_items = s.reindex(pd.Index(binner),
-                        #                         method='bfill')
+                            first_items = pd.Series(
+                                data=np.concatenate(([0],
+                                                     first_items.values[:-1])),
+                                index=first_items.index)
                         first_items.index = labels
             else:
                 first_items = s.groupby(grouper).first()
@@ -291,10 +280,6 @@ class GroupBy(SupportsArithmetic):
             group_indices = ([slice(i, j)
                               for i, j in zip(sbins[:-1], sbins[1:])] +
                              [slice(sbins[-1], None)])
-            # print(len(first_items), len(sbins), len(group_indices))
-            # print(first_items.values.astype(np.int64))
-            # print(sbins)
-            # print(group_indices)
             unique_coord = IndexVariable(group.name, first_items.index)
         elif group.dims == (group.name,) and _unique_and_monotonic(group):
             # no need to factorize

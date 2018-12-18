@@ -657,7 +657,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from ..coding.cftime_offsets import cftime_range
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
@@ -707,8 +706,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                     fill_method = 'ffill'
                 binner = (pd.Series(binner, index=binner)
                           .reindex(times, method=fill_method))
-                # binner = binner.loc[binner.notnull().tolist()]
-                # using .loc[] because binner.dropna() doesn't work
                 bin_actual = np.unique(binner.values)
                 label_dict = dict(zip(bin_actual, labels.values))
                 # np.unique returns --sorted-- unique values
