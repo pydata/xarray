@@ -194,14 +194,13 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                 .format(self._obj.data.name)
             )
 
-        # from ..coding.cftimeindex import CFTimeIndex
+        from ..coding.cftimeindex import CFTimeIndex
+        from .utils import datetime_to_numeric
         import cftime as cf
         import numpy as np
-        if isinstance(self._obj[self._dim].values[0], cf.datetime):
+        if isinstance(self._obj.indexes[self._dim], CFTimeIndex):
             t = self._obj[self._dim]
-            x = np.insert([td.total_seconds() for td in
-                           t[1:].values - t[:-1].values], 0, 0).cumsum()
-            #  calling total_seconds is potentially bad for performance
+            x = datetime_to_numeric(t, datetime_unit='s')
             x = x.round()
             # Rounding fixes erroneous microsecond offsets in timedelta
             # (fault of CFTime), but destroys microsecond resolution data
@@ -215,9 +214,10 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                      assume_sorted=True)
         if isinstance(self._full_index.values[0], cf.datetime):
             t = self._full_index
-            new_x = np.insert([td.total_seconds() for td in
-                               t[1:].values - t[:-1].values], 0, 0).cumsum()
+            # new_x = np.insert([td.total_seconds() for td in
+            #                    t[1:].values - t[:-1].values], 0, 0).cumsum()
             #  calling total_seconds is potentially bad for performance
+            new_x = np.array(t.values - t.min(), dtype='timedelta64[s]').astype(float)
             new_x = new_x.round()
             # Rounding fixes erroneous microsecond offsets in timedelta
             # (fault of CFTime), but destroys microsecond resolution data
