@@ -12,6 +12,7 @@ import xarray.plot as xplt
 from xarray import DataArray, Dataset
 from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
+from xarray.plot.dataset_plot import _infer_scatter_meta_data
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
     import_seaborn, label_from_attrs)
@@ -1838,23 +1839,35 @@ class TestDatasetScatterPlots(PlotTestCase):
         with pytest.raises(ValueError):
             self.ds.plot.scatter(x='A', y='B', row='row', size=3, figsize=4)
 
-    @pytest.mark.parametrize('x, y, add_legend', [
-        ('A', 'B', True),
-        ('A', 'The Spanish Inquisition', None),
-        ('The Spanish Inquisition', 'B', None)])
-    def test_bad_args(self, x, y, add_legend):
+    @pytest.mark.parametrize('x, y, hue_style, add_legend, add_colorbar', [
+        ('A', 'B', 'something', True, False),
+        ('A', 'B', 'discrete', True, False),
+        ('A', 'B', None, True, False),
+        ('A', 'B', None, False, True),
+        ('A', 'The Spanish Inquisition', None, None, None),
+        ('The Spanish Inquisition', 'B', None, None, None)])
+    def test_bad_args(self, x, y, hue_style, add_legend, add_colorbar):
         with pytest.raises(ValueError):
-            self.ds.plot.scatter(x, y, add_legend=add_legend)
+            self.ds.plot.scatter(x, y, hue_style=hue_style,
+                                 add_legend=add_legend,
+                                 add_colorbar=add_colorbar)
+
+    @pytest.mark.parametrize('hue_style', ['discrete', 'continuous'])
+    def test_datetime_hue(self, hue_style):
+        ds2 = self.ds.copy()
+        ds2['hue'] = pd.date_range('2000-1-1', periods=4)
+        ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
 
     def test_non_numeric_legend(self):
-        self.ds['hue'] = pd.date_range('2000-01-01', periods=4)
-        lines = self.ds.plot.scatter(x='A', y='B', hue='hue')
+        ds2 = self.ds.copy()
+        ds2['hue'] = ['a', 'b', 'c', 'd']
+        lines = ds2.plot.scatter(x='A', y='B', hue='hue')
         # should make a discrete legend
         assert lines[0].axes.legend_ is not None
         # and raise an error if explicitly not allowed to do so
         with pytest.raises(ValueError):
-            self.ds.plot.scatter(x='A', y='B', hue='hue',
-                                 discrete_legend=False)
+            ds2.plot.scatter(x='A', y='B', hue='hue',
+                             hue_style='continuous')
 
     def test_add_legend_by_default(self):
         sc = self.ds.plot.scatter(x='A', y='B', hue='hue')
