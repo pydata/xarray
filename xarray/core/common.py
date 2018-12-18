@@ -692,7 +692,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
             from ..coding.cftime_offsets import to_offset
-            from .resample_cftime import (_get_time_bins, _offset_timedelta,
+            from .resample_cftime import (_get_time_bins,
                                           _adjust_binner_for_upsample)
             offset = to_offset(freq)
             times = self.indexes[dim_name]
@@ -707,6 +707,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                     fill_method = 'ffill'
                 binner = (pd.Series(binner, index=binner)
                           .reindex(times, method=fill_method))
+                # binner = binner.loc[binner.notnull().tolist()]
+                # using .loc[] because binner.dropna() doesn't work
                 bin_actual = np.unique(binner.values)
                 label_dict = dict(zip(bin_actual, labels.values))
                 # np.unique returns --sorted-- unique values
