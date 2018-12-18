@@ -333,7 +333,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     if mask:
         for nodataval in attrs.get('nodatavals', ()):
-            result = result.where(result!=nodataval)
+            result = result.where(result != nodataval)
 
     if chunks is not None:
         from dask.base import tokenize

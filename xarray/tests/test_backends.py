@@ -3129,13 +3129,13 @@ class TestRasterio(object):
                 assert len(rioda.attrs['transform']) == 6
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'],
                                               [-9765.])
+
     def test_mask(self):
         with create_tmp_geotiff(8, 10, 1, open_kwargs={'nodata': 3}) \
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file, mask=True) as rioda:
-                assert_allclose(rioda, expected.where(expected !=3 ))
-                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
-                                              [3.])
+                assert_allclose(rioda, expected.where(expected != 3))
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'], [3.])
                 assert 3 not in rioda.data
 
     def test_mask_is_false_by_default(self):
@@ -3143,8 +3143,7 @@ class TestRasterio(object):
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                np.testing.assert_array_equal(rioda.attrs['nodatavals'],
-                                              [3.])
+                np.testing.assert_array_equal(rioda.attrs['nodatavals'], [3.])
                 assert 3 in rioda.data
 
     def test_notransform(self):
