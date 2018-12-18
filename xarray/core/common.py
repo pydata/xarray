@@ -657,7 +657,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         # TODO support non-string indexer after removing the old API.
 
-        from ..coding.cftime_offsets import cftime_range
         from .dataarray import DataArray
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
@@ -692,7 +691,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
             from ..coding.cftime_offsets import to_offset
-            from .resample_cftime import (_get_time_bins, _offset_timedelta,
+            from .resample_cftime import (_get_time_bins,
                                           _adjust_binner_for_upsample)
             offset = to_offset(freq)
             times = self.indexes[dim_name]
