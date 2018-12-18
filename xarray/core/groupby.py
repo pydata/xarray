@@ -247,13 +247,29 @@ class GroupBy(SupportsArithmetic):
                     labels = grouper[1]
                     binner = grouper[2]
                     closed = grouper[3]
+                    import datetime
+                    from xarray import CFTimeIndex
                     if closed == 'right':
-                        first_items = s.reindex(pd.Index(binner),
-                                                method='nearest')
-                        first_items.index = labels
-                    else:
+                        binner = CFTimeIndex([x + datetime.timedelta(seconds=1)
+                                              for x in binner])
                         first_items = s.reindex(pd.Index(binner),
                                                 method='bfill')
+                        if first_items.values[0] != 0:
+                            first_items = pd.Series(
+                                data=np.concatenate(([0],
+                                                     first_items.values[:-1])),
+                                index=first_items.index)
+                        first_items.index = labels
+                    else:
+                        binner = CFTimeIndex([x - datetime.timedelta(seconds=1)
+                                              for x in binner])
+                        first_items = s.reindex(pd.Index(binner),
+                                                method='bfill')
+                        if first_items.values[0] != 0:
+                            first_items = pd.Series(
+                                data=np.concatenate(([0],
+                                                     first_items.values[:-1])),
+                                index=first_items.index)
                         first_items.index = labels
             else:
                 first_items = s.groupby(grouper).first()
