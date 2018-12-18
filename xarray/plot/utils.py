@@ -150,15 +150,22 @@ def _determine_cmap_params(plot_data, vmin=None, vmax=None, cmap=None,
     """
     import matplotlib as mpl
 
-    calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
+    if np.issubdtype(plot_data.dtype, np.datetime64):
+        calc_data = np.ravel(plot_data[~np.isnat(plot_data)])
+        possibly_divergent = False
+    elif np.issubdtype(plot_data.dtype, np.timedelta64):
+        calc_data = np.ravel(plot_data[~np.isnat(plot_data)]).astype('float64')
+        # Setting center=False prevents a divergent cmap
+        possibly_divergent = center is not False
+    else:
+        calc_data = np.ravel(plot_data[np.isfinite(plot_data)])
+        # Setting center=False prevents a divergent cmap
+        possibly_divergent = center is not False
 
     # Handle all-NaN input data gracefully
     if calc_data.size == 0:
         # Arbitrary default for when all values are NaN
         calc_data = np.array(0.0)
-
-    # Setting center=False prevents a divergent cmap
-    possibly_divergent = center is not False
 
     # Set center to 0 so math below makes sense but remember its state
     center_is_none = False
