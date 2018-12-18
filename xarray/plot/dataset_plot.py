@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from ..core.common import ones_like
+from ..core.alignment import broadcast
 from .facetgrid import FacetGrid
 from .utils import (
     ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params, _ensure_numeric,
@@ -14,7 +14,8 @@ from .utils import (
     _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
-def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
+def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
+                             add_legend):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -25,41 +26,55 @@ def _infer_scatter_meta_data(ds, x, y, hue, add_legend, discrete_legend):
     if y not in dvars:
         raise ValueError(y + error_msg)
 
-    if hue and add_legend is None:
-        add_legend = True
-    if add_legend and not hue:
-            raise ValueError('hue must be specified for generating a legend')
-
-    if hue and add_legend and not _ensure_numeric(ds[hue].values):
-        if discrete_legend is None:
-            discrete_legend = True
-        elif discrete_legend is False:
-            raise ValueError('Cannot create a colorbar for a non numeric'
-                             ' coordinate')
-
-    if not hue and add_legend is None:
-        discrete_legend = None
-
-    dims = ds[x].dims
-    if ds[y].dims != dims:
-        raise ValueError('{} and {} must have the same dimensions.'
-                         ''.format(x, y))
-
     dims_coords = set(list(ds.coords) + list(ds.dims))
     if hue is not None and hue not in dims_coords:
         raise ValueError(hue + ' must be either one of ({0:s})'
                                ''.format(', '.join(dims_coords)))
 
     if hue:
+        hue_is_numeric = True  # _ensure_numeric(ds[hue].values)
+
+        if hue_style is None:
+            hue_style = 'continuous' if hue_is_numeric else 'discrete'
+
+        if not hue_is_numeric and (hue_style == 'continuous'):
+            raise ValueError('Cannot create a colorbar for a non numeric'
+                             ' coordinate: ' + hue)
+
+        if add_colorbar is None:
+            add_colorbar = True if hue_style == 'continuous' else False
+
+        if add_legend is None:
+            add_legend = True if hue_style == 'discrete' else False
+
+    else:
+        if add_legend is True:
+            raise ValueError('Cannot set add_legend when hue is None.')
+        if add_colorbar is True:
+            raise ValueError('Cannot set add_colorbar when hue is None.')
+        add_legend = False
+        add_colorbar = False
+
+    if hue_style is not None and hue_style not in ['discrete', 'continuous']:
+        raise ValueError('hue_style must be either None, \'discrete\' '
+                         'or \'continuous\'.')
+
+    dims = ds[x].dims
+    if ds[y].dims != dims:
+        raise ValueError('{} and {} must have the same dimensions.'
+                         ''.format(x, y))
+
+    if hue:
         hue_label = label_from_attrs(ds.coords[hue])
-        hue_values = ds[x].coords[hue] if discrete_legend else None
+        hue_values = ds[x].coords[hue]
     else:
         hue_label = None
         hue_values = None
 
-    return {'add_legend': add_legend,
-            'discrete_legend': discrete_legend,
+    return {'add_colorbar': add_colorbar,
+            'add_legend': add_legend,
             'hue_label': hue_label,
+            'hue_style': hue_style,
             'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y]),
             'hue_values': hue_values}
@@ -71,15 +86,15 @@ def _infer_scatter_data(ds, x, y, hue):
             'y': ds[y].values.flatten(),
             'color': None}
     if hue:
-        data['color'] = ((ones_like(ds[x]) * ds.coords[hue])
+        data['color'] = (broadcast(ds.coords[hue], ds[x])[0]
                          .values.flatten())
     return data
 
 
-def scatter(ds, x, y, hue=None, col=None, row=None,
+def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
             col_wrap=None, sharex=True, sharey=True, aspect=None,
-            size=None, subplot_kws=None, add_legend=None, cbar_kwargs=None,
-            discrete_legend=None, cbar_ax=None, vmin=None, vmax=None,
+            size=None, subplot_kws=None, add_colorbar=None, cbar_kwargs=None,
+            add_legend=None, cbar_ax=None, vmin=None, vmax=None,
             norm=None, infer_intervals=None, center=None, levels=None,
             robust=None, colors=None, extend=None, cmap=None, **kwargs):
     '''
@@ -91,6 +106,13 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         Variable names for x, y axis.
     hue: str, optional
         Variable by which to color scattered points
+    hue_style: str, optional
+        Hue style.
+            - "discrete" builds a legend. This is the default for non-numeric
+               `hue` variables.
+            - "continuous" builds a colorbar
+    add_legend, add_colorbar: bool, optional
+        Turn the legend or colorbar on/off.
     row : string, optional
         If passed, make row faceted plots on this dimension name
     col : string, optional
@@ -148,15 +170,15 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         Additional keyword arguments to matplotlib
     '''
 
-    if kwargs.get('_meta_data', None):
-        discrete_legend = kwargs['_meta_data']['discrete_legend']
+    if kwargs.get('_meta_data', None):  # facetgrid call
+        meta_data = kwargs['_meta_data']
     else:
-        meta_data = _infer_scatter_meta_data(ds, x, y, hue,
-                                             add_legend, discrete_legend)
-        discrete_legend = meta_data['discrete_legend']
-        add_legend = meta_data['add_legend']
+        meta_data = _infer_scatter_meta_data(ds, x, y, hue, hue_style,
+                                             add_colorbar, add_legend)
 
-    plt = import_matplotlib_pyplot()
+    hue_style = meta_data['hue_style']
+    add_legend = meta_data['add_legend']
+    add_colorbar = meta_data['add_colorbar']
 
     if col or row:
         ax = kwargs.pop('ax', None)
@@ -174,8 +196,8 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
                       sharex=sharex, sharey=sharey, figsize=figsize,
                       aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_scatter(x=x, y=y, hue=hue, add_legend=add_legend,
-                             discrete_legend=discrete_legend, **kwargs)
+        return g.map_scatter(x=x, y=y, hue=hue, add_colorbar=add_colorbar,
+                             add_legend=add_legend, **kwargs)
 
     figsize = kwargs.pop('figsize', None)
     ax = kwargs.pop('ax', None)
@@ -184,13 +206,13 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
     kwargs = kwargs.copy()
     _meta_data = kwargs.pop('_meta_data', None)
 
-    if discrete_legend:
+    if hue_style == 'discrete':
         primitive = []
         for label, grp in ds.groupby(ds[hue]):
             data = _infer_scatter_data(grp, x, y, hue=None)
             primitive.append(ax.scatter(data['x'], data['y'], label=label,
                                         **kwargs))
-    else:
+    elif hue is None or hue_style == 'continuous':
         data = _infer_scatter_data(ds, x, y, hue)
         if hue is not None:
             cmap_kwargs = {'plot_data': ds[hue],
@@ -218,14 +240,14 @@ def scatter(ds, x, y, hue=None, col=None, row=None,
 
     if meta_data.get('xlabel', None):
         ax.set_xlabel(meta_data.get('xlabel'))
-
     if meta_data.get('ylabel', None):
         ax.set_ylabel(meta_data.get('ylabel'))
-    if add_legend and discrete_legend:
+
+    if add_legend:
         ax.legend(handles=primitive,
                   labels=list(meta_data['hue_values'].values),
                   title=meta_data.get('hue_label', None))
-    if add_legend and not discrete_legend:
+    if add_colorbar:
         cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
         if 'label' not in cbar_kwargs:
             cbar_kwargs['label'] = meta_data.get('hue_label', None)
