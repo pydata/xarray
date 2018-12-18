@@ -1,12 +1,11 @@
 from __future__ import absolute_import
 
 import pytest
-import datetime as dt
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from xarray.tests import assert_equal, assert_identical
+from xarray.tests import assert_equal
 
 
 @pytest.fixture()
@@ -155,8 +154,6 @@ def test_upsampler_3d(closed, label, freq, pd_3d_index, xr_3d_index):
 @pytest.mark.parametrize('label', ['left', 'right'])
 @pytest.mark.parametrize('base', [1, 5, 12, 17, 24])
 @pytest.mark.parametrize('freq', ['12H', '7H', '5H', '2H'])
-# @pytest.mark.parametrize('base', [5, 12])
-# @pytest.mark.parametrize('freq', ['5H', '7H'])
 def test_upsampler_base(closed, label, base, freq,
                         base_pd_index, base_xr_index):
     upsamp_pdtime = da(base_pd_index).resample(
