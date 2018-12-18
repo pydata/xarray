@@ -23,11 +23,10 @@ from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
+from xarray.core.options import set_options
 from xarray.core.pycompat import (
     ExitStack, basestring, dask_array_type, iteritems)
-from xarray.core.options import set_options
 from xarray.tests import mock
-
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
@@ -53,7 +52,6 @@ except ImportError:
         from pathlib2 import Path
     except ImportError:
         pass
-
 
 ON_WINDOWS = sys.platform == 'win32'
 
@@ -107,7 +105,6 @@ def create_boolean_data():
 
 class TestCommon(object):
     def test_robust_getitem(self):
-
         class UnreliableArrayFailure(Exception):
             pass
 
@@ -644,13 +641,13 @@ class CFEncodedBase(DatasetIOBase):
         with self.roundtrip(encoded) as actual:
             for k in decoded.variables:
                 assert decoded.variables[k].dtype == \
-                    actual.variables[k].dtype
+                       actual.variables[k].dtype
             assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
                 assert encoded.variables[k].dtype == \
-                    actual.variables[k].dtype
+                       actual.variables[k].dtype
             assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_roundtrip_mask_and_scale(self):
@@ -1035,7 +1032,7 @@ class NetCDF4Base(CFEncodedBase):
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
-                    expected['time'].encoding
+                       expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -1291,7 +1288,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
-
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
@@ -1391,7 +1387,7 @@ class ZarrBase(CFEncodedBase):
 
         # - encoding specified  -
         # specify compatible encodings
-        for chunk_enc in 4, (4, ):
+        for chunk_enc in 4, (4,):
             ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
             with self.roundtrip(ds_chunk4) as actual:
                 assert (4,) == actual['var1'].encoding['chunks']
@@ -1922,7 +1918,6 @@ def skip_if_not_engine(engine):
 
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
-
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -1962,7 +1957,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
-
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -1985,14 +1979,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                       coords={
                           't': (['t', ], t1),
                           'x': (['x', ], x)
-        })
+                      })
 
         ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
                                  self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t2),
                           'x': (['x', ], x)
-        })
+                      })
 
         return ds1, ds2
 
@@ -2017,7 +2011,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files with the data_var option
             with open_mfdataset(files, data_vars=opt) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2034,7 +2027,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files using data_vars option
             with open_mfdataset(files, data_vars=opt) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2046,7 +2038,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self):
-
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars='minimum'):
@@ -2125,11 +2116,11 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == \
-                        ((5, 5),)
+                           ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
                     assert actual.foo.variable.data.chunks == \
-                        ((3, 2, 3, 2),)
+                           ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
@@ -2328,7 +2319,7 @@ class TestPydap(object):
             ds[key] = v
         # check all dims are stored in ds
         for d in original.coords:
-            ds[d] = BaseType(d, original[d].values, dimensions=(d, ),
+            ds[d] = BaseType(d, original[d].values, dimensions=(d,),
                              **original[d].attrs)
         return ds
 
@@ -2715,7 +2706,7 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                                  'band': np.arange(nz) + 1,
                                  'y': -np.arange(ny) * d + b + dy / 2,
                                  'x': np.arange(nx) * c + a + dx / 2,
-        })
+                             })
         yield tmp_file, expected
 
 
@@ -2827,7 +2818,6 @@ class TestRasterio(object):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
                                 crs='+proj=latlong') as (tmp_file, expected):
             with xr.open_rasterio(tmp_file, cache=False) as actual:
-
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
@@ -2857,7 +2847,8 @@ class TestRasterio(object):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                ind = {'band': 0, 'x': np.array([0, 0]), 'y': np.array([1, 1, 1])}
+                ind = {'band': 0, 'x': np.array([0, 0]),
+                       'y': np.array([1, 1, 1])}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -2940,7 +2931,6 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
-
                 # This should cache everything
                 assert_allclose(actual, expected)
 
@@ -2955,7 +2945,6 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Chunk at open time
             with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
-
                 import dask.array as da
                 assert isinstance(actual.data, da.Array)
                 assert 'open_rasterio' in actual.data.name

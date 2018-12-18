@@ -1,14 +1,16 @@
 from __future__ import absolute_import
 
-import itertools
-import pytest
 import datetime as dt
+import itertools
 
 import numpy as np
 import pandas as pd
-import xarray as xr
-from xarray.tests import assert_array_equal, assert_identical
+import pytest
 
+import xarray as xr
+
+
+# from xarray.tests import assert_array_equal, assert_identical
 
 @pytest.fixture()
 def pd_index():
@@ -49,9 +51,11 @@ def series(index):
     return pd.Series(np.arange(100., 100. + index.size), index=index)
 
 
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['2MS', '2M', '3MS', '3M', '7MS', '7M'])
+@pytest.mark.parametrize(('closed', 'label', 'freq'),
+                         list(itertools.product(
+                             ['left', 'right'],
+                             ['left', 'right'],
+                             ['2MS', '2M', '3MS', '3M', '7MS', '7M'])))
 def test_downsampler(closed, label, freq):
     downsamp_series = series(pd_index()).resample(
         freq, closed=closed, label=label).mean().dropna()
@@ -63,10 +67,11 @@ def test_downsampler(closed, label, freq):
                             timestamp in downsamp_da.indexes['time']]))
 
 
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['2MS', '2M', '3MS', '3M',
-                                  'AS', 'A', '2AS', '2A'])
+@pytest.mark.parametrize(('closed', 'label', 'freq'),
+                         list(itertools.product(
+                             ['left', 'right'],
+                             ['left', 'right'],
+                             ['2MS', '2M', '3MS', '3M', 'AS', 'A', '2AS', '2A'])))
 def test_downsampler_daily(closed, label, freq):
     downsamp_series = series(daily_pd_index()).resample(
         freq, closed=closed, label=label).mean().dropna()
@@ -78,9 +83,11 @@ def test_downsampler_daily(closed, label, freq):
                             timestamp in downsamp_da.indexes['time']]))
 
 
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['MS', 'M', '7D', 'D'])
+@pytest.mark.parametrize(('closed', 'label', 'freq'),
+                         list(itertools.product(
+                             ['left', 'right'],
+                             ['left', 'right'],
+                             ['MS', 'M', '7D', 'D'])))
 def test_upsampler(closed, label, freq):
     # the testing here covers cases of equal sampling as well
     # for pandas --not xarray--, .ffill() and .bfill() gives
@@ -100,9 +107,11 @@ def test_upsampler(closed, label, freq):
                             timestamp in upsamp_da.indexes['time']]))
 
 
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('base', [1, 5, 12, 17, 24])
+@pytest.mark.parametrize(('closed', 'label', 'base'),
+                         list(itertools.product(
+                             ['left', 'right'],
+                             ['left', 'right'],
+                             [1, 5, 12, 17, 24])))
 def test_upsampler_base(closed, label, base, freq='12H'):
     upsamp_series = series(base_pd_index()).resample(
         freq, closed=closed, label=label, base=base).mean().dropna()

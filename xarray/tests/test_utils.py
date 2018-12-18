@@ -9,11 +9,10 @@ import pytest
 import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.options import set_options
+# from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
 from xarray.core.utils import either_dict_or_kwargs
 from xarray.testing import assert_identical
-
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, requires_cftime,
     requires_dask)
@@ -24,6 +23,7 @@ class TestAlias(object):
     def test(self):
         def new_method():
             pass
+
         old_method = utils.alias(new_method, 'old_method')
         assert 'deprecated' in old_method.__doc__
         with pytest.warns(Warning, match='deprecated'):
@@ -35,10 +35,10 @@ def test_safe_cast_to_index():
     x = np.arange(5)
     td = x * np.timedelta64(1, 'D')
     for expected, array in [
-            (dates, dates.values),
-            (pd.Index(x, dtype=object), x.astype(object)),
-            (pd.Index(td), td),
-            (pd.Index(td, dtype=object), td.astype(object)),
+        (dates, dates.values),
+        (pd.Index(x, dtype=object), x.astype(object)),
+        (pd.Index(td), td),
+        (pd.Index(td, dtype=object), td.astype(object)),
     ]:
         actual = utils.safe_cast_to_index(array)
         assert_array_equal(expected, actual)
@@ -129,8 +129,7 @@ class TestDictionaries(object):
             utils.update_safety_check(self.x, self.z)
 
     def test_ordered_dict_intersection(self):
-        assert {'b': 'B'} == \
-            utils.ordered_dict_intersection(self.x, self.y)
+        assert {'b': 'B'} == utils.ordered_dict_intersection(self.x, self.y)
         assert {} == utils.ordered_dict_intersection(self.x, self.z)
 
     def test_dict_equiv(self):
@@ -174,8 +173,7 @@ class TestDictionaries(object):
         x = {'a': 1, 'b': 2, 'c': 3}
         y = utils.SortedKeysDict(x)
         assert list(y) == ['a', 'b', 'c']
-        assert repr(utils.SortedKeysDict()) == \
-            "SortedKeysDict({})"
+        assert repr(utils.SortedKeysDict()) == "SortedKeysDict({})"
 
     def test_chain_map(self):
         m = utils.ChainMap({'x': 0, 'y': 1}, {'x': -100, 'z': 2})
@@ -236,7 +234,7 @@ class Test_is_uniform_and_sorted(object):
 class Test_hashable(object):
 
     def test_hashable(self):
-        for v in [False, 1, (2, ), (3, 4), 'four']:
+        for v in [False, 1, (2,), (3, 4), 'four']:
             assert utils.hashable(v)
         for v in [[5, 6], ['seven', '8'], {9: 'ten'}]:
             assert not utils.hashable(v)
@@ -267,7 +265,6 @@ def test_hidden_key_dict():
 
 
 def test_either_dict_or_kwargs():
-
     result = either_dict_or_kwargs(dict(a=1), None, 'foo')
     expected = dict(a=1)
     assert result == expected
