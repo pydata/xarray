@@ -10,6 +10,7 @@ import pytest
 from xarray import DataArray, Variable, coding, decode_cf
 from xarray.coding.times import (_import_cftime, cftime_to_nptime,
                                  decode_cf_datetime, encode_cf_datetime)
+from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
 
 from . import (
@@ -622,6 +623,41 @@ def test_decode_cf(calendar):
             assert ds.test.dtype == np.dtype('O')
         else:
             assert ds.test.dtype == np.dtype('M8[ns]')
+
+
+def test_decode_cf_time_bounds():
+
+    da = DataArray(np.arange(6, dtype='int64').reshape((3, 2)),
+                   coords={'time': [1, 2, 3]},
+                   dims=('time', 'nbnd'), name='time_bnds')
+
+    attrs = {'units': 'days since 2001-01',
+             'calendar': 'standard',
+             'bounds': 'time_bnds'}
+
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == {'units': 'days since 2001-01',
+                                               'calendar': 'standard'}
+    dsc = decode_cf(ds)
+    assert dsc.time_bnds.dtype == np.dtype('M8[ns]')
+    dsc = decode_cf(ds, decode_times=False)
+    assert dsc.time_bnds.dtype == np.dtype('int64')
+
+    # Do not overwrite existing attrs
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    bnd_attr = {'units': 'hours since 2001-01', 'calendar': 'noleap'}
+    ds['time_bnds'].attrs.update(bnd_attr)
+    _update_bounds_attributes(ds.variables)
+    assert ds.variables['time_bnds'].attrs == bnd_attr
+
+    # If bounds variable not available do not complain
+    ds = da.to_dataset()
+    ds['time'].attrs.update(attrs)
+    ds['time'].attrs['bounds'] = 'fake_var'
+    _update_bounds_attributes(ds.variables)
 
 
 @pytest.fixture(params=_ALL_CALENDARS)
