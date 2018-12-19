@@ -1858,6 +1858,9 @@ class TestDatasetScatterPlots(PlotTestCase):
         ds2['hue'] = pd.date_range('2000-1-1', periods=4)
         ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
 
+        ds2['hue'] = pd.timedelta_range('-1D', periods=4, freq='D')
+        ds2.plot.scatter(x='A', y='B', hue='hue', hue_style=hue_style)
+
     def test_non_numeric_legend(self):
         ds2 = self.ds.copy()
         ds2['hue'] = ['a', 'b', 'c', 'd']

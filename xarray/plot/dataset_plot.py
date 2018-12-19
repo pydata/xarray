@@ -29,7 +29,9 @@ def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
                                ''.format(', '.join(dims_coords)))
 
     if hue:
-        hue_is_numeric = True  # _ensure_numeric(ds[hue].values)
+        hue_is_numeric = (_ensure_numeric(ds[hue].values)
+                          or _valid_other_type(ds[hue], [np.datetime64,
+                                                         np.timedelta64]))
 
         if hue_style is None:
             hue_style = 'continuous' if hue_is_numeric else 'discrete'
