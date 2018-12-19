@@ -47,12 +47,19 @@ Enhancements
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
 - Dataset plotting API! Currently only :py:meth:`Dataset.plot.scatter` is implemented.
   By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
+  ``loffset`` kwarg just like Pandas.
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 
 Bug fixes
 ~~~~~~~~~
 
 - Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 
 .. _whats-new.0.11.0:
 

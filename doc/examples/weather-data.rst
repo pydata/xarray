@@ -17,7 +17,7 @@ Shared setup:
 .. ipython:: python
    :suppress:
 
-    fpath = "examples/_code/weather_data_setup.py"
+    fpath = "doc/examples/_code/weather_data_setup.py"
     with open(fpath) as f:
         code = compile(f.read(), fpath, 'exec')
         exec(code)
