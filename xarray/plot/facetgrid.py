@@ -331,6 +331,12 @@ class FacetGrid(object):
                                              add_legend, add_colorbar)
         kwargs['_meta_data'] = meta_data
 
+        if hue and meta_data['hue_style'] == 'continuous':
+            cmap_params, cbar_kwargs = self._process_cmap(scatter, kwargs,
+                                                          self.data[hue])
+            kwargs['_meta_data']['cmap_params'] = cmap_params
+            kwargs['_meta_data']['cbar_kwargs'] = cbar_kwargs
+
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
             if d is not None:
@@ -349,7 +355,7 @@ class FacetGrid(object):
                 self._hue_var = meta_data['hue_values']
                 self.add_legend()
             elif add_colorbar:
-                self.add_colorbar(label=self._hue_label)
+                self.add_colorbar(label=self._hue_label, **cbar_kwargs)
 
         return self
 

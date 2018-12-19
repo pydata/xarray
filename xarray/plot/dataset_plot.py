@@ -212,19 +212,24 @@ def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
     elif hue is None or hue_style == 'continuous':
         data = _infer_scatter_data(ds, x, y, hue)
         if hue is not None:
-            cmap_kwargs = {'plot_data': ds[hue],
-                           'vmin': vmin,
-                           'vmax': vmax,
-                           'cmap': colors if colors else cmap,
-                           'center': center,
-                           'robust': robust,
-                           'extend': extend,
-                           'levels': levels,
-                           'filled': None,
-                           'norm': norm}
-            cmap_params = _determine_cmap_params(**cmap_kwargs)
+            if _meta_data:
+                cbar_kwargs = _meta_data['cbar_kwargs']
+                cmap_params = _meta_data['cmap_params']
+            else:
+                cmap_kwargs = {'plot_data': ds[hue],
+                               'vmin': vmin,
+                               'vmax': vmax,
+                               'cmap': colors if colors else cmap,
+                               'center': center,
+                               'robust': robust,
+                               'extend': extend,
+                               'levels': levels,
+                               'filled': None,
+                               'norm': norm}
+                cmap_params = _determine_cmap_params(**cmap_kwargs)
+
             cmap_kwargs_subset = dict(
-                (vv, cmap_kwargs[vv])
+                (vv, cmap_params[vv])
                 for vv in ['vmin', 'vmax', 'norm', 'cmap'])
         else:
             cmap_kwargs_subset = {}
