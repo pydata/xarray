@@ -150,6 +150,7 @@ Computation
    Dataset.resample
    Dataset.diff
    Dataset.quantile
+   Dataset.differentiate
 
 **Aggregation**:
 :py:attr:`~Dataset.all`
@@ -317,6 +318,7 @@ Computation
    DataArray.diff
    DataArray.dot
    DataArray.quantile
+   DataArray.differentiate
 
 **Aggregation**:
 :py:attr:`~DataArray.all`
@@ -375,7 +377,7 @@ Universal functions
 .. warning::
 
    With recent versions of numpy, dask and xarray, NumPy ufuncs are now
-   supported directly on all xarray and dask objects. This obliviates the need
+   supported directly on all xarray and dask objects. This obviates the need
    for the ``xarray.ufuncs`` module, which should not be used for new code
    unless compatibility with versions of NumPy prior to v1.13 is required.
 
@@ -555,6 +557,13 @@ Custom Indexes
 
    CFTimeIndex
 
+Creating custom indexes
+-----------------------
+.. autosummary::
+   :toctree: generated/
+
+   cftime_range
+
 Plotting
 ========
 
@@ -615,3 +624,6 @@ arguments for the ``from_store`` and ``dump_to_store`` Dataset methods:
    backends.H5NetCDFStore
    backends.PydapDataStore
    backends.ScipyDataStore
+   backends.FileManager
+   backends.CachingFileManager
+   backends.DummyFileManager

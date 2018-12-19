@@ -1,19 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from collections import Iterable
 from functools import partial
-
-import warnings
 
 import numpy as np
 import pandas as pd
 
 from . import rolling
+from .common import _contains_datetime_like_objects
 from .computation import apply_ufunc
-from .pycompat import iteritems
-from .utils import is_scalar, OrderedSet
-from .variable import Variable, broadcast_variables
 from .duck_array_ops import dask_array_type
+from .pycompat import iteritems
+from .utils import OrderedSet, datetime_to_numeric, is_scalar
+from .variable import Variable, broadcast_variables
 
 
 class BaseInterpolator(object):
@@ -407,15 +407,16 @@ def _floatize_x(x, new_x):
     x = list(x)
     new_x = list(new_x)
     for i in range(len(x)):
-        if x[i].dtype.kind in 'Mm':
+        if _contains_datetime_like_objects(x[i]):
             # Scipy casts coordinates to np.float64, which is not accurate
             # enough for datetime64 (uses 64bit integer).
             # We assume that the most of the bits are used to represent the
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
-            xmin = np.min(x[i])
-            x[i] = (x[i] - xmin).astype(np.float64)
-            new_x[i] = (new_x[i] - xmin).astype(np.float64)
+            xmin = x[i].min()
+            x[i] = datetime_to_numeric(x[i], offset=xmin, dtype=np.float64)
+            new_x[i] = datetime_to_numeric(
+                new_x[i], offset=xmin, dtype=np.float64)
     return x, new_x
 
 

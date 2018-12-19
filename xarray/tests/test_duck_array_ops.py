@@ -1,29 +1,29 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
 import pytest
-from textwrap import dedent
 from numpy import array, nan
-import warnings
 
 from xarray import DataArray, Dataset, concat
-from xarray.core import duck_array_ops, dtypes
+from xarray.core import dtypes, duck_array_ops
 from xarray.core.duck_array_ops import (
-    array_notnull_equiv, concatenate, count, first, last, mean, rolling_window,
-    stack, where)
+    array_notnull_equiv, concatenate, count, first, gradient, last, mean,
+    rolling_window, stack, where)
 from xarray.core.pycompat import dask_array_type
 from xarray.testing import assert_allclose, assert_equal
 
 from . import (
-    TestCase, assert_array_equal, has_dask, has_np113, raises_regex,
-    requires_dask)
+    assert_array_equal, has_dask, has_np113, raises_regex, requires_dask)
 
 
-class TestOps(TestCase):
+class TestOps(object):
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.x = array([[[nan, nan, 2., nan],
                          [nan, 5., 6., nan],
@@ -309,7 +309,7 @@ def test_reduce(dim_num, dtype, dask, func, skipna, aggdim):
         assert_allclose(actual, expected, rtol=rtol)
 
         # make sure the compatiblility with pandas' results.
-        if func == 'var':
+        if func in ['var', 'std']:
             expected = series_reduce(da, func, skipna=skipna, dim=aggdim,
                                      ddof=0)
             assert_allclose(actual, expected, rtol=rtol)
@@ -415,6 +415,23 @@ def test_dask_rolling(axis, window, center):
     with pytest.raises(ValueError):
         rolling_window(dx, axis=axis, window=100, center=center,
                        fill_value=np.nan)
+
+
+@pytest.mark.skipif(not has_dask, reason='This is for dask.')
+@pytest.mark.parametrize('axis', [0, -1, 1])
+@pytest.mark.parametrize('edge_order', [1, 2])
+def test_dask_gradient(axis, edge_order):
+    import dask.array as da
+
+    array = np.array(np.random.randn(100, 5, 40))
+    x = np.exp(np.linspace(0, 1, array.shape[axis]))
+
+    darray = da.from_array(array, chunks=[(6, 30, 30, 20, 14), 5, 8])
+    expected = gradient(array, x, axis=axis, edge_order=edge_order)
+    actual = gradient(darray, x, axis=axis, edge_order=edge_order)
+
+    assert isinstance(actual, da.Array)
+    assert_array_equal(actual, expected)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])

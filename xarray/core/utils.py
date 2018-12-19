@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 import contextlib
 import functools
 import itertools
+import os.path
 import re
 import warnings
 from collections import Iterable, Mapping, MutableMapping, MutableSet
@@ -12,9 +13,18 @@ from collections import Iterable, Mapping, MutableMapping, MutableSet
 import numpy as np
 import pandas as pd
 
-from .options import OPTIONS
 from .pycompat import (
     OrderedDict, basestring, bytes_type, dask_array_type, iteritems)
+
+
+def _check_inplace(inplace, default=False):
+    if inplace is None:
+        inplace = default
+    else:
+        warnings.warn('The inplace argument has been deprecated and will be '
+                      'removed in xarray 0.12.0.', FutureWarning, stacklevel=3)
+
+    return inplace
 
 
 def alias_message(old_name, new_name):
@@ -40,16 +50,13 @@ def alias(obj, old_name):
 def _maybe_cast_to_cftimeindex(index):
     from ..coding.cftimeindex import CFTimeIndex
 
-    if not OPTIONS['enable_cftimeindex']:
-        return index
-    else:
-        if index.dtype == 'O':
-            try:
-                return CFTimeIndex(index)
-            except (ImportError, TypeError):
-                return index
-        else:
+    if index.dtype == 'O':
+        try:
+            return CFTimeIndex(index)
+        except (ImportError, TypeError):
             return index
+    else:
+        return index
 
 
 def safe_cast_to_index(array):
@@ -504,6 +511,11 @@ def is_remote_uri(path):
     return bool(re.search('^https?\://', path))
 
 
+def is_grib_path(path):
+    _, ext = os.path.splitext(path)
+    return ext in ['.grib', '.grb', '.grib2', '.grb2']
+
+
 def is_uniform_spaced(arr, **kwargs):
     """Return True if values of an array are uniformly spaced and sorted.
 
@@ -591,3 +603,29 @@ class HiddenKeyDict(MutableMapping):
     def __len__(self):
         num_hidden = sum([k in self._hidden_keys for k in self._data])
         return len(self._data) - num_hidden
+
+
+def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
+    """Convert an array containing datetime-like data to an array of floats.
+
+    Parameters
+    ----------
+    da : array
+        Input data
+    offset: Scalar with the same type of array or None
+        If None, subtract minimum values to reduce round off error
+    datetime_unit: None or any of {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms',
+        'us', 'ns', 'ps', 'fs', 'as'}
+    dtype: target dtype
+
+    Returns
+    -------
+    array
+    """
+    if offset is None:
+        offset = array.min()
+    array = array - offset
+
+    if datetime_unit:
+        return (array / np.timedelta64(1, datetime_unit)).astype(dtype)
+    return array.astype(dtype)

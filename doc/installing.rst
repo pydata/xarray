@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 2.7 [1]_, 3.5, or 3.6
+- Python 2.7 [1]_, 3.5, 3.6, or 3.7
 - `numpy <http://www.numpy.org/>`__ (1.12 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.19.2 or later)
 
@@ -34,7 +34,9 @@ For netCDF and IO
 - `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
   other gridded raster datasets.
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
-  Cube objects.
+  Cube objects
+- `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
+  *ECMWF ecCodes* library.
 
 For accelerating xarray
 ~~~~~~~~~~~~~~~~~~~~~~~

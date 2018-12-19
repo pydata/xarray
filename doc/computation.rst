@@ -164,9 +164,8 @@ Note that rolling window aggregations are faster when bottleneck_ is installed.
 
 We can also manually iterate through ``Rolling`` objects:
 
-.. ipython:: python
+.. code:: python
 
-   @verbatim
    for label, arr_window in r:
       # arr_window is a view of x
 
@@ -199,6 +198,31 @@ You can also use ``construct`` to compute a weighted rolling sum:
   This means ``rolling_da.mean('window_dim')`` is memory inefficient.
   To avoid this, use ``skipna=False`` as the above example.
 
+
+Computation using Coordinates
+=============================
+
+Xarray objects have some handy methods for the computation with their
+coordinates. :py:meth:`~xarray.DataArray.differentiate` computes derivatives by
+central finite differences using their coordinates,
+
+.. ipython:: python
+
+    a = xr.DataArray([0, 1, 2, 3], dims=['x'], coords=[[0.1, 0.11, 0.2, 0.3]])
+    a
+    a.differentiate('x')
+
+This method can be used also for multidimensional arrays,
+
+.. ipython:: python
+
+    a = xr.DataArray(np.arange(8).reshape(4, 2), dims=['x', 'y'],
+                     coords={'x': [0.1, 0.11, 0.2, 0.3]})
+    a.differentiate('x')
+
+.. note::
+    This method is limited to simple cartesian geometry. Differentiation along
+    multidimensional coordinate is not supported.
 
 .. _compute.broadcasting:
 
@@ -243,7 +267,7 @@ This means, for example, that you always subtract an array from its transpose:
 
     c - c.T
 
-You can explicitly broadcast xaray data structures by using the
+You can explicitly broadcast xarray data structures by using the
 :py:func:`~xarray.broadcast` function:
 
 .. ipython:: python
@@ -273,9 +297,9 @@ operations. The default result of a binary operation is by the *intersection*
 If coordinate values for a dimension are missing on either argument, all
 matching dimensions must have the same size:
 
-.. ipython:: python
+.. ipython::
+    :verbatim:
 
-    @verbatim
     In [1]: arr + xr.DataArray([1, 2], dims='x')
     ValueError: arguments without labels along dimension 'x' cannot be aligned because they have different dimension size(s) {2} than the size of the aligned dimension labels: 3
 

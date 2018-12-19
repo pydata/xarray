@@ -1,3 +1,5 @@
+.. _roadmap:
+
 Development roadmap
 ===================
 
@@ -184,7 +186,7 @@ Engaging more users
 
 Like many open-source projects, the documentation of xarray has grown
 together with the library's features. While we think that the xarray
-documentation is comprehensive already, we aknowledge that the adoption
+documentation is comprehensive already, we acknowledge that the adoption
 of xarray might be slowed down because of the substantial time
 investment required to learn its working principles. In particular,
 non-computer scientists or users less familiar with the pydata ecosystem
@@ -196,7 +198,7 @@ In order to lower this adoption barrier, we propose to:
 -  Develop entry-level tutorials for users with different backgrounds. For
    example, we would like to develop tutorials for users with or without
    previous knowledge of pandas, numpy, netCDF, etc. These tutorials may be
-   built as part of xarray's documentation or included in a seperate repository
+   built as part of xarray's documentation or included in a separate repository
    to enable interactive use (e.g. mybinder.org).
 -  Document typical user workflows in a dedicated website, following the example
    of `dask-stories

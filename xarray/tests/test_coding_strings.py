@@ -5,13 +5,13 @@ import numpy as np
 import pytest
 
 from xarray import Variable
-from xarray.core.pycompat import bytes_type, unicode_type, suppress
 from xarray.coding import strings
 from xarray.core import indexing
+from xarray.core.pycompat import bytes_type, suppress, unicode_type
 
-from . import (IndexerMaker, assert_array_equal, assert_identical,
-               raises_regex, requires_dask)
-
+from . import (
+    IndexerMaker, assert_array_equal, assert_identical, raises_regex,
+    requires_dask)
 
 with suppress(ImportError):
     import dask.array as da

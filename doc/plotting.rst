@@ -60,7 +60,7 @@ For these examples we'll use the North American air temperature dataset.
 
 .. ipython:: python
 
-    airtemps = xr.tutorial.load_dataset('air_temperature')
+    airtemps = xr.tutorial.open_dataset('air_temperature')
     airtemps
 
     # Convert to celsius
@@ -144,7 +144,7 @@ axes created by ``plt.subplots``.
     plt.tight_layout()
 
     @savefig plotting_example_existing_axes.png width=6in
-    plt.show()
+    plt.draw()
 
 On the right is a histogram created by :py:func:`xarray.plot.hist`.
 
@@ -222,8 +222,40 @@ It is also possible to make line plots such that the data are on the x-axis and 
     @savefig plotting_example_xy_kwarg.png
     air.isel(time=10, lon=[10, 11]).plot(y='lat', hue='lon')
 
+Step plots
+~~~~~~~~~~
+
+As an alternative, also a step plot similar to matplotlib's ``plt.step`` can be
+made using 1D data. 
+
+.. ipython:: python
+
+    @savefig plotting_example_step.png width=4in
+    air1d[:20].plot.step(where='mid')
+
+The argument ``where`` defines where the steps should be placed, options are
+``'pre'`` (default), ``'post'``, and ``'mid'``. This is particularly handy
+when plotting data grouped with :py:func:`xarray.Dataset.groupby_bins`.
+
+.. ipython:: python
+
+    air_grp = air.mean(['time','lon']).groupby_bins('lat',[0,23.5,66.5,90])
+    air_mean = air_grp.mean()
+    air_std = air_grp.std()
+    air_mean.plot.step()
+    (air_mean + air_std).plot.step(ls=':')
+    (air_mean - air_std).plot.step(ls=':')
+    plt.ylim(-20,30)
+    @savefig plotting_example_step_groupby.png width=4in
+    plt.title('Zonal mean temperature')
+    
+In this case, the actual boundaries of the bins are used and the ``where`` argument
+is ignored.
+
+
 Other axes kwargs
 -----------------
+
 
 The keyword arguments ``xincrease`` and ``yincrease`` let you control the axes direction.
 
@@ -311,7 +343,7 @@ matplotlib is available.
     plt.tight_layout()
 
     @savefig plotting_2d_call_matplotlib.png width=4in
-    plt.show()
+    plt.draw()
 
 .. note::
 
@@ -327,7 +359,7 @@ matplotlib is available.
         air2d.plot()
 
         @savefig plotting_2d_call_matplotlib2.png width=4in
-        plt.show()
+        plt.draw()
 
 Colormaps
 ~~~~~~~~~
@@ -412,9 +444,11 @@ if using ``imshow`` or ``pcolormesh`` (but not with ``contour`` or ``contourf``,
 since levels are chosen automatically).
 
 .. ipython:: python
+   :okwarning:
 
     @savefig plotting_seaborn_palette.png width=4in
     air2d.plot(levels=10, cmap='husl')
+    plt.draw()
 
 .. _plotting.faceting:
 
@@ -429,7 +463,7 @@ about three or four dimensional arrays? That's where facets become helpful.
 Consider the temperature data set. There are 4 observations per day for two
 years which makes for 2920 values along the time dimension.
 One way to visualize this data is to make a
-seperate plot for each time period.
+separate plot for each time period.
 
 The faceted dimension should not have too many values;
 faceting on the time dimension will produce 2920 plots. That's
@@ -488,6 +522,11 @@ Other features
 Faceted plotting supports other arguments common to xarray 2d plots.
 
 .. ipython:: python
+   :suppress:
+
+      plt.close('all')
+
+.. ipython:: python
 
     hasoutliers = t.isel(time=slice(0, 5)).copy()
     hasoutliers[0, 0, 0] = -100
@@ -495,7 +534,8 @@ Faceted plotting supports other arguments common to xarray 2d plots.
 
     @savefig plot_facet_robust.png
     g = hasoutliers.plot.pcolormesh('lon', 'lat', col='time', col_wrap=3,
-                                    robust=True, cmap='viridis')
+                                    robust=True, cmap='viridis',
+				    cbar_kwargs={'label': 'this has outliers'})
 
 FacetGrid Objects
 ~~~~~~~~~~~~~~~~~
@@ -535,7 +575,7 @@ they have been plotted.
     bottomright.annotate('bottom right', (240, 40))
 
     @savefig plot_facet_iterator.png
-    plt.show()
+    plt.draw()
 
 TODO: add an example of using the ``map`` method to plot dataset variables
 (e.g., with ``plt.quiver``).
@@ -552,7 +592,7 @@ This script will plot the air temperature on a map.
 .. ipython:: python
 
     import cartopy.crs as ccrs
-    air = xr.tutorial.load_dataset('air_temperature').air
+    air = xr.tutorial.open_dataset('air_temperature').air
     ax = plt.axes(projection=ccrs.Orthographic(-80, 35))
     air.isel(time=0).plot.contourf(ax=ax, transform=ccrs.PlateCarree());
     @savefig plotting_maps_cartopy.png width=100%
@@ -570,7 +610,7 @@ by faceting are accessible in the object returned by ``plot``:
         ax.coastlines()
         ax.gridlines()
     @savefig plotting_maps_cartopy_facetting.png width=100%
-    plt.show();
+    plt.draw();
 
 
 Details
@@ -601,7 +641,7 @@ These are provided for user convenience; they all call the same code.
     xplt.line(da, ax=axes[1, 1])
     plt.tight_layout()
     @savefig plotting_ways_to_use.png width=6in
-    plt.show()
+    plt.draw()
 
 Here the output is the same. Since the data is 1 dimensional the line plot
 was used.
@@ -702,3 +742,12 @@ You can however decide to infer the cell boundaries and use the
     outside the xarray framework.
 
 .. _cell boundaries: http://cfconventions.org/cf-conventions/v1.6.0/cf-conventions.html#cell-boundaries
+
+One can also make line plots with multidimensional coordinates. In this case, ``hue`` must be a dimension name, not a coordinate name.
+
+.. ipython:: python
+
+    f, ax = plt.subplots(2, 1)
+    da.plot.line(x='lon', hue='y', ax=ax[0]);
+    @savefig plotting_example_2d_hue_xy.png
+    da.plot.line(x='lon', hue='x', ax=ax[1]);

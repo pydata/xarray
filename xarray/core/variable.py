@@ -18,6 +18,7 @@ from .indexing import (
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
+from .options import _get_keep_attrs
 
 try:
     import dask.array as da
@@ -76,11 +77,11 @@ def as_variable(obj, name=None):
     elif isinstance(obj, tuple):
         try:
             obj = Variable(*obj)
-        except TypeError:
+        except (TypeError, ValueError) as error:
             # use .format() instead of % because it handles tuples consistently
-            raise TypeError('tuples to convert into variables must be of the '
-                            'form (dims, data[, attrs, encoding]): '
-                            '{}'.format(obj))
+            raise error.__class__('Could not convert tuple of form '
+                                  '(dims, data[, attrs, encoding]): '
+                                  '{} to Variable.'.format(obj))
     elif utils.is_scalar(obj):
         obj = Variable([], obj)
     elif isinstance(obj, (pd.Index, IndexVariable)) and obj.name is not None:
@@ -95,7 +96,7 @@ def as_variable(obj, name=None):
                 'cannot set variable %r with %r-dimensional data '
                 'without explicit dimension names. Pass a tuple of '
                 '(dims, data) instead.' % (name, data.ndim))
-        obj = Variable(name, obj, fastpath=True)
+        obj = Variable(name, data, fastpath=True)
     else:
         raise TypeError('unable to convert object into a variable without an '
                         'explicit list of dimensions: %r' % obj)
@@ -350,6 +351,9 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
     def __dask_keys__(self):
         return self._data.__dask_keys__()
+
+    def __dask_layers__(self):
+        return self._data.__dask_layers__()
 
     @property
     def __dask_optimize__(self):
@@ -721,24 +725,81 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         except ValueError:
             raise ValueError('encoding must be castable to a dictionary')
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
         If `deep=True`, the data array is loaded into memory and copied onto
         the new object. Dimensions, attributes and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Whether the data array is loaded into memory and copied onto
+            the new object. Default is True.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+            When `data` is used, `deep` is ignored.
+
+        Returns
+        -------
+        object : Variable
+            New object with dimensions, attributes, encodings, and optionally
+            data copied from original.
+
+        Examples
+        --------
+
+        Shallow copy versus deep copy
+
+        >>> var = xr.Variable(data=[1, 2, 3], dims='x')
+        >>> var.copy()
+        <xarray.Variable (x: 3)>
+        array([1, 2, 3])
+        >>> var_0 = var.copy(deep=False)
+        >>> var_0[0] = 7
+        >>> var_0
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+
+        Changing the data using the ``data`` argument maintains the
+        structure of the original object, but with the new data. Original
+        object is unaffected.
+
+        >>> var.copy(data=[0.1, 0.2, 0.3])
+        <xarray.Variable (x: 3)>
+        array([ 0.1,  0.2,  0.3])
+        >>> var
+        <xarray.Variable (x: 3)>
+        array([7, 2, 3])
+
+        See Also
+        --------
+        pandas.DataFrame.copy
         """
-        data = self._data
+        if data is None:
+            data = self._data
 
-        if isinstance(data, indexing.MemoryCachedArray):
-            # don't share caching between copies
-            data = indexing.MemoryCachedArray(data.array)
+            if isinstance(data, indexing.MemoryCachedArray):
+                # don't share caching between copies
+                data = indexing.MemoryCachedArray(data.array)
 
-        if deep:
-            if isinstance(data, dask_array_type):
-                data = data.copy()
-            elif not isinstance(data, PandasIndexAdapter):
-                # pandas.Index is immutable
-                data = np.array(data)
+            if deep:
+                if isinstance(data, dask_array_type):
+                    data = data.copy()
+                elif not isinstance(data, PandasIndexAdapter):
+                    # pandas.Index is immutable
+                    data = np.array(data)
+        else:
+            data = as_compatible_data(data)
+            if self.shape != data.shape:
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
 
         # note:
         # dims is already an immutable tuple
@@ -1246,8 +1307,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def where(self, cond, other=dtypes.NA):
         return ops.where_method(self, cond, other)
 
-    def reduce(self, func, dim=None, axis=None, keep_attrs=False,
-               allow_lazy=False, **kwargs):
+    def reduce(self, func, dim=None, axis=None,
+               keep_attrs=None, allow_lazy=False, **kwargs):
         """Reduce this array by applying `func` along some dimension(s).
 
         Parameters
@@ -1276,6 +1337,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Array with summarized data and the indicated dimension(s)
             removed.
         """
+        if dim is common.ALL_DIMS:
+            dim = None
         if dim is not None and axis is not None:
             raise ValueError("cannot supply both 'axis' and 'dim' arguments")
 
@@ -1292,6 +1355,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             dims = [adim for n, adim in enumerate(self.dims)
                     if n not in removed_axes]
 
+        if keep_attrs is None:
+            keep_attrs = _get_keep_attrs(default=False)
         attrs = self._attrs if keep_attrs else None
 
         return Variable(dims, data, attrs=attrs)
@@ -1596,11 +1661,13 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             if isinstance(other, (xr.DataArray, xr.Dataset)):
                 return NotImplemented
             self_data, other_data, dims = _broadcast_compat_data(self, other)
+            keep_attrs = _get_keep_attrs(default=False)
+            attrs = self._attrs if keep_attrs else None
             with np.errstate(all='ignore'):
                 new_data = (f(self_data, other_data)
                             if not reflexive
                             else f(other_data, self_data))
-            result = Variable(dims, new_data)
+            result = Variable(dims, new_data, attrs=attrs)
             return result
         return func
 
@@ -1709,14 +1776,37 @@ class IndexVariable(Variable):
 
         return cls(first_var.dims, data, attrs)
 
-    def copy(self, deep=True):
+    def copy(self, deep=True, data=None):
         """Returns a copy of this object.
 
-        `deep` is ignored since data is stored in the form of pandas.Index,
-        which is already immutable. Dimensions, attributes and encodings are
-        always copied.
+        `deep` is ignored since data is stored in the form of
+        pandas.Index, which is already immutable. Dimensions, attributes
+        and encodings are always copied.
+
+        Use `data` to create a new object with the same structure as
+        original but entirely new data.
+
+        Parameters
+        ----------
+        deep : bool, optional
+            Deep is always ignored.
+        data : array_like, optional
+            Data to use in the new object. Must have same shape as original.
+
+        Returns
+        -------
+        object : Variable
+            New object with dimensions, attributes, encodings, and optionally
+            data copied from original.
         """
-        return type(self)(self.dims, self._data, self._attrs,
+        if data is None:
+            data = self._data
+        else:
+            data = as_compatible_data(data)
+            if self.shape != data.shape:
+                raise ValueError("Data shape {} must match shape of object {}"
+                                 .format(data.shape, self.shape))
+        return type(self)(self.dims, data, self._attrs,
                           self._encoding, fastpath=True)
 
     def equals(self, other, equiv=None):

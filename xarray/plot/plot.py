@@ -14,12 +14,15 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from xarray.core.alignment import align
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels, get_axis,
+    ROBUST_PERCENTILE, _determine_cmap_params, _infer_xy_labels,
+    _interval_to_double_bound_points, _interval_to_mid_points,
+    _resolve_intervals_2dplot, _valid_other_type, get_axis,
     import_matplotlib_pyplot, label_from_attrs)
 
 
@@ -35,27 +38,20 @@ def _valid_numpy_subdtype(x, numpy_types):
     return any(np.issubdtype(x.dtype, t) for t in numpy_types)
 
 
-def _valid_other_type(x, types):
-    """
-    Do all elements of x have a type from types?
-    """
-    return all(any(isinstance(el, t) for t in types) for el in np.ravel(x))
-
-
 def _ensure_plottable(*args):
     """
     Raise exception if there is anything in args that can't be plotted on an
-    axis.
+    axis by matplotlib.
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
     other_types = [datetime]
 
     for x in args:
-        if not (_valid_numpy_subdtype(np.array(x), numpy_types) or
-                _valid_other_type(np.array(x), other_types)):
+        if not (_valid_numpy_subdtype(np.array(x), numpy_types)
+                or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
                             'or dates of type np.datetime64 or '
-                            'datetime.datetime.')
+                            'datetime.datetime or pd.Interval.')
 
 
 def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
@@ -149,8 +145,13 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     darray = darray.squeeze()
 
     if contains_cftime_datetimes(darray):
-        raise NotImplementedError('Plotting arrays of cftime.datetime objects '
-                                  'is currently not possible.')
+        raise NotImplementedError(
+            'Built-in plotting of arrays of cftime.datetime objects or arrays '
+            'indexed by cftime.datetime objects is currently not implemented '
+            'within xarray. A possible workaround is to use the '
+            'nc-time-axis package '
+            '(https://github.com/SciTools/nc-time-axis) to convert the dates '
+            'to a plottable type and plot your data directly with matplotlib.')
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)
@@ -173,8 +174,10 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
             kwargs['hue'] = hue
         elif ndims == 2:
             if hue:
-                raise ValueError('hue is not compatible with 2d data')
-            plotfunc = pcolormesh
+                plotfunc = line
+                kwargs['hue'] = hue
+            else:
+                plotfunc = pcolormesh
     else:
         if row or col or hue:
             raise ValueError(error_msg)
@@ -190,10 +193,10 @@ def _infer_line_data(darray, x, y, hue):
                  .format(', '.join([repr(dd) for dd in darray.dims])))
     ndims = len(darray.dims)
 
-    if x is not None and x not in darray.dims:
+    if x is not None and x not in darray.dims and x not in darray.coords:
         raise ValueError('x ' + error_msg)
 
-    if y is not None and y not in darray.dims:
+    if y is not None and y not in darray.dims and y not in darray.coords:
         raise ValueError('y ' + error_msg)
 
     if x is not None and y is not None:
@@ -207,11 +210,11 @@ def _infer_line_data(darray, x, y, hue):
         huelabel = ''
 
         if (x is None and y is None) or x == dim:
-            xplt = darray.coords[dim]
+            xplt = darray[dim]
             yplt = darray
 
         else:
-            yplt = darray.coords[dim]
+            yplt = darray[dim]
             xplt = darray
 
     else:
@@ -221,18 +224,37 @@ def _infer_line_data(darray, x, y, hue):
 
         if y is None:
             xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            yname = darray.name
-            xplt = darray.coords[xname]
-            yplt = darray.transpose(xname, huename)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                yplt = darray.transpose(xname, huename)
 
         else:
             yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            xname = darray.name
-            xplt = darray.transpose(yname, huename)
-            yplt = darray.coords[yname]
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
 
-        hueplt = darray.coords[huename]
+            else:
+                xplt = darray.transpose(yname, huename)
+
         huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
 
     xlabel = label_from_attrs(xplt)
     ylabel = label_from_attrs(yplt)
@@ -265,9 +287,11 @@ def line(darray, *args, **kwargs):
         Axis on which to plot this figure. By default, use the current axis.
         Mutually exclusive with ``size`` and ``figsize``.
     hue : string, optional
-        Coordinate for which you want multiple lines plotted.
+        Dimension or coordinate for which you want multiple lines plotted.
+        If plotting against a 2D coordinate, ``hue`` must be a dimension.
     x, y : string, optional
-        Coordinates for x, y axis. Only one of these may be specified.
+        Dimensions or coordinates for x, y axis.
+        Only one of these may be specified.
         The other coordinate plots values from the DataArray on which this
         plot method is called.
     xscale, yscale : 'linear', 'symlog', 'log', 'logit', optional
@@ -326,9 +350,30 @@ def line(darray, *args, **kwargs):
     xplt, yplt, hueplt, xlabel, ylabel, huelabel = \
         _infer_line_data(darray, x, y, hue)
 
-    _ensure_plottable(xplt)
+    # Remove pd.Intervals if contained in xplt.values.
+    if _valid_other_type(xplt.values, [pd.Interval]):
+        # Is it a step plot? (see matplotlib.Axes.step)
+        if kwargs.get('linestyle', '').startswith('steps-'):
+            xplt_val, yplt_val = _interval_to_double_bound_points(xplt.values,
+                                                                  yplt.values)
+            # Remove steps-* to be sure that matplotlib is not confused
+            kwargs['linestyle'] = (kwargs['linestyle']
+                                   .replace('steps-pre', '')
+                                   .replace('steps-post', '')
+                                   .replace('steps-mid', ''))
+            if kwargs['linestyle'] == '':
+                kwargs.pop('linestyle')
+        else:
+            xplt_val = _interval_to_mid_points(xplt.values)
+            yplt_val = yplt.values
+            xlabel += '_center'
+    else:
+        xplt_val = xplt.values
+        yplt_val = yplt.values
 
-    primitive = ax.plot(xplt, yplt, *args, **kwargs)
+    _ensure_plottable(xplt_val, yplt_val)
+
+    primitive = ax.plot(xplt_val, yplt_val, *args, **kwargs)
 
     if _labels:
         if xlabel is not None:
@@ -357,6 +402,46 @@ def line(darray, *args, **kwargs):
                  xticks, yticks, xlim, ylim)
 
     return primitive
+
+
+def step(darray, *args, **kwargs):
+    """
+    Step plot of DataArray index against values
+
+    Similar to :func:`matplotlib:matplotlib.pyplot.step`
+
+    Parameters
+    ----------
+    where : {'pre', 'post', 'mid'}, optional, default 'pre'
+        Define where the steps should be placed:
+        - 'pre': The y value is continued constantly to the left from
+          every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
+          value ``y[i]``.
+        - 'post': The y value is continued constantly to the right from
+          every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
+          value ``y[i]``.
+        - 'mid': Steps occur half-way between the *x* positions.
+        Note that this parameter is ignored if the x coordinate consists of
+        :py:func:`pandas.Interval` values, e.g. as a result of
+        :py:func:`xarray.Dataset.groupby_bins`. In this case, the actual
+        boundaries of the interval are used.
+
+    *args, **kwargs : optional
+        Additional arguments following :py:func:`xarray.plot.line`
+
+    """
+    if ('ls' in kwargs.keys()) and ('linestyle' not in kwargs.keys()):
+        kwargs['linestyle'] = kwargs.pop('ls')
+
+    where = kwargs.pop('where', 'pre')
+
+    if where not in ('pre', 'post', 'mid'):
+        raise ValueError("'where' argument to step must be "
+                         "'pre', 'post' or 'mid'")
+
+    kwargs['linestyle'] = 'steps-' + where + kwargs.get('linestyle', '')
+
+    return line(darray, *args, **kwargs)
 
 
 def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
@@ -476,6 +561,10 @@ class _PlotMethods(object):
     def line(self, *args, **kwargs):
         return line(self._da, *args, **kwargs)
 
+    @functools.wraps(step)
+    def step(self, *args, **kwargs):
+        return step(self._da, *args, **kwargs)
+
 
 def _rescale_imshow_rgb(darray, vmin, vmax, robust):
     assert robust or vmin is not None or vmax is not None
@@ -562,6 +651,9 @@ def _plot2d(plotfunc):
         Adds colorbar to axis
     add_labels : Boolean, optional
         Use xarray metadata to label axes
+    norm : ``matplotlib.colors.Normalize`` instance, optional
+        If the ``norm`` has vmin or vmax specified, the corresponding kwarg
+        must be None.
     vmin, vmax : floats, optional
         Values to anchor the colormap, otherwise they are inferred from the
         data and other keyword arguments. When a diverging dataset is inferred,
@@ -624,13 +716,13 @@ def _plot2d(plotfunc):
     @functools.wraps(plotfunc)
     def newplotfunc(darray, x=None, y=None, figsize=None, size=None,
                     aspect=None, ax=None, row=None, col=None,
-                    col_wrap=None, xincrease=None, yincrease=None,
+                    col_wrap=None, xincrease=True, yincrease=True,
                     add_colorbar=None, add_labels=True, vmin=None, vmax=None,
                     cmap=None, center=None, robust=False, extend=None,
                     levels=None, infer_intervals=None, colors=None,
                     subplot_kws=None, cbar_ax=None, cbar_kwargs=None,
                     xscale=None, yscale=None, xticks=None, yticks=None,
-                    xlim=None, ylim=None, **kwargs):
+                    xlim=None, ylim=None, norm=None, **kwargs):
         # All 2d plots in xarray share this function signature.
         # Method signature below should be consistent.
 
@@ -713,7 +805,11 @@ def _plot2d(plotfunc):
         # Pass the data as a masked ndarray too
         zval = darray.to_masked_array(copy=False)
 
-        _ensure_plottable(xval, yval)
+        # Replace pd.Intervals if contained in xval or yval.
+        xplt, xlab_extra = _resolve_intervals_2dplot(xval, plotfunc.__name__)
+        yplt, ylab_extra = _resolve_intervals_2dplot(yval, plotfunc.__name__)
+
+        _ensure_plottable(xplt, yplt)
 
         if 'contour' in plotfunc.__name__ and levels is None:
             levels = 7  # this is the matplotlib default
@@ -727,6 +823,7 @@ def _plot2d(plotfunc):
                        'extend': extend,
                        'levels': levels,
                        'filled': plotfunc.__name__ != 'contour',
+                       'norm': norm,
                        }
 
         cmap_params = _determine_cmap_params(**cmap_kwargs)
@@ -737,12 +834,14 @@ def _plot2d(plotfunc):
             # pcolormesh
             kwargs['extend'] = cmap_params['extend']
             kwargs['levels'] = cmap_params['levels']
+            # if colors == a single color, matplotlib draws dashed negative
+            # contours. we lose this feature if we pass cmap and not colors
+            if isinstance(colors, basestring):
+                cmap_params['cmap'] = None
+                kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
-
-        # This allows the user to pass in a custom norm coming via kwargs
-        kwargs.setdefault('norm', cmap_params['norm'])
 
         if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
             # forbid usage of mpl strings
@@ -750,15 +849,16 @@ def _plot2d(plotfunc):
                              "in xarray")
 
         ax = get_axis(figsize, size, aspect, ax)
-        primitive = plotfunc(xval, yval, zval, ax=ax, cmap=cmap_params['cmap'],
+        primitive = plotfunc(xplt, yplt, zval, ax=ax, cmap=cmap_params['cmap'],
                              vmin=cmap_params['vmin'],
                              vmax=cmap_params['vmax'],
+                             norm=cmap_params['norm'],
                              **kwargs)
 
         # Label the plot with metadata
         if add_labels:
-            ax.set_xlabel(label_from_attrs(darray[xlab]))
-            ax.set_ylabel(label_from_attrs(darray[ylab]))
+            ax.set_xlabel(label_from_attrs(darray[xlab], xlab_extra))
+            ax.set_ylabel(label_from_attrs(darray[ylab], ylab_extra))
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
@@ -770,11 +870,15 @@ def _plot2d(plotfunc):
                 cbar_kwargs.setdefault('cax', cbar_ax)
             cbar = plt.colorbar(primitive, **cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
-                cbar.set_label(label_from_attrs(darray), rotation=90)
+                cbar.set_label(label_from_attrs(darray))
         elif cbar_ax is not None or cbar_kwargs is not None:
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
+
+        # origin kwarg overrides yincrease
+        if 'origin' in kwargs:
+            yincrease = None
 
         _update_axes(ax, xincrease, yincrease, xscale, yscale,
                      xticks, yticks, xlim, ylim)
@@ -783,7 +887,7 @@ def _plot2d(plotfunc):
         # Do this without calling autofmt_xdate so that x-axes ticks
         # on other subplots (if any) are not deleted.
         # https://stackoverflow.com/questions/17430105/autofmt-xdate-deletes-x-axis-labels-of-all-subplots
-        if np.issubdtype(xval.dtype, np.datetime64):
+        if np.issubdtype(xplt.dtype, np.datetime64):
             for xlabels in ax.get_xticklabels():
                 xlabels.set_rotation(30)
                 xlabels.set_ha('right')
@@ -794,13 +898,13 @@ def _plot2d(plotfunc):
     @functools.wraps(newplotfunc)
     def plotmethod(_PlotMethods_obj, x=None, y=None, figsize=None, size=None,
                    aspect=None, ax=None, row=None, col=None, col_wrap=None,
-                   xincrease=None, yincrease=None, add_colorbar=None,
+                   xincrease=True, yincrease=True, add_colorbar=None,
                    add_labels=True, vmin=None, vmax=None, cmap=None,
                    colors=None, center=None, robust=False, extend=None,
                    levels=None, infer_intervals=None, subplot_kws=None,
                    cbar_ax=None, cbar_kwargs=None,
                    xscale=None, yscale=None, xticks=None, yticks=None,
-                   xlim=None, ylim=None, **kwargs):
+                   xlim=None, ylim=None, norm=None, **kwargs):
         """
         The method should have the same signature as the function.
 
@@ -984,14 +1088,22 @@ def pcolormesh(x, y, z, ax, infer_intervals=None, **kwargs):
         else:
             infer_intervals = True
 
-    if infer_intervals:
+    if (infer_intervals and
+            ((np.shape(x)[0] == np.shape(z)[1]) or
+             ((x.ndim > 1) and (np.shape(x)[1] == np.shape(z)[1])))):
         if len(x.shape) == 1:
             x = _infer_interval_breaks(x, check_monotonic=True)
-            y = _infer_interval_breaks(y, check_monotonic=True)
         else:
             # we have to infer the intervals on both axes
             x = _infer_interval_breaks(x, axis=1)
             x = _infer_interval_breaks(x, axis=0)
+
+    if (infer_intervals and
+            (np.shape(y)[0] == np.shape(z)[0])):
+        if len(y.shape) == 1:
+            y = _infer_interval_breaks(y, check_monotonic=True)
+        else:
+            # we have to infer the intervals on both axes
             y = _infer_interval_breaks(y, axis=1)
             y = _infer_interval_breaks(y, axis=0)
 

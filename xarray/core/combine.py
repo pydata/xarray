@@ -1,6 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+import itertools
+from collections import Counter
 
 import pandas as pd
 
@@ -8,8 +10,8 @@ from . import utils
 from .alignment import align
 from .merge import merge
 from .pycompat import OrderedDict, basestring, iteritems
-from .variable import concat as concat_vars
 from .variable import IndexVariable, Variable, as_variable
+from .variable import concat as concat_vars
 
 
 def concat(objs, dim=None, data_vars='all', coords='different',
@@ -43,7 +45,7 @@ def concat(objs, dim=None, data_vars='all', coords='different',
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
         If objects are DataArrays, data_vars must be 'all'.
-    coords : {'minimal', 'different', 'all' o list of str}, optional
+    coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
           * 'minimal': Only coordinates in which the dimension already appears
             are included.
@@ -369,20 +371,192 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
-def auto_combine(datasets,
-                 concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts',
-                 data_vars='all', coords='different'):
-    """Attempt to auto-magically combine the given datasets into one.
+def _infer_concat_order_from_positions(datasets, concat_dims):
 
+    combined_ids = OrderedDict(_infer_tile_ids_from_nested_list(datasets, ()))
+
+    tile_id, ds = list(combined_ids.items())[0]
+    n_dims = len(tile_id)
+    if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims is None:
+        concat_dims = [concat_dims]*n_dims
+    else:
+        if len(concat_dims) != n_dims:
+            raise ValueError("concat_dims has length {} but the datasets "
+                             "passed are nested in a {}-dimensional "
+                             "structure".format(str(len(concat_dims)),
+                                                str(n_dims)))
+
+    return combined_ids, concat_dims
+
+
+def _infer_tile_ids_from_nested_list(entry, current_pos):
+    """
+    Given a list of lists (of lists...) of objects, returns a iterator
+    which returns a tuple containing the index of each object in the nested
+    list structure as the key, and the object. This can then be called by the
+    dict constructor to create a dictionary of the objects organised by their
+    position in the original nested list.
+
+    Recursively traverses the given structure, while keeping track of the
+    current position. Should work for any type of object which isn't a list.
+
+    Parameters
+    ----------
+    entry : list[list[obj, obj, ...]]
+        List of lists of arbitrary depth, containing objects in the order
+        they are to be concatenated.
+
+    Returns
+    -------
+    combined_tile_ids : dict[tuple(int, ...), obj]
+    """
+
+    if isinstance(entry, list):
+        for i, item in enumerate(entry):
+            for result in _infer_tile_ids_from_nested_list(item,
+                                                           current_pos + (i,)):
+                yield result
+    else:
+        yield current_pos, entry
+
+
+def _check_shape_tile_ids(combined_tile_ids):
+    tile_ids = combined_tile_ids.keys()
+
+    # Check all tuples are the same length
+    # i.e. check that all lists are nested to the same depth
+    nesting_depths = [len(tile_id) for tile_id in tile_ids]
+    if not set(nesting_depths) == {nesting_depths[0]}:
+        raise ValueError("The supplied objects do not form a hypercube because"
+                         " sub-lists do not have consistent depths")
+
+    # Check all lists along one dimension are same length
+    for dim in range(nesting_depths[0]):
+        indices_along_dim = [tile_id[dim] for tile_id in tile_ids]
+        occurrences = Counter(indices_along_dim)
+        if len(set(occurrences.values())) != 1:
+            raise ValueError("The supplied objects do not form a hypercube "
+                             "because sub-lists do not have consistent "
+                             "lengths along dimension" + str(dim))
+
+
+def _combine_nd(combined_ids, concat_dims, data_vars='all',
+                coords='different', compat='no_conflicts'):
+    """
+    Concatenates and merges an N-dimensional structure of datasets.
+
+    No checks are performed on the consistency of the datasets, concat_dims or
+    tile_IDs, because it is assumed that this has already been done.
+
+    Parameters
+    ----------
+    combined_ids : Dict[Tuple[int, ...]], xarray.Dataset]
+        Structure containing all datasets to be concatenated with "tile_IDs" as
+        keys, which specify position within the desired final combined result.
+    concat_dims : sequence of str
+        The dimensions along which the datasets should be concatenated. Must be
+        in order, and the length must match
+
+    Returns
+    -------
+    combined_ds : xarray.Dataset
+    """
+
+    # Perform N-D dimensional concatenation
+    # Each iteration of this loop reduces the length of the tile_ids tuples
+    # by one. It always combines along the first dimension, removing the first
+    # element of the tuple
+    for concat_dim in concat_dims:
+        combined_ids = _auto_combine_all_along_first_dim(combined_ids,
+                                                         dim=concat_dim,
+                                                         data_vars=data_vars,
+                                                         coords=coords,
+                                                         compat=compat)
+    combined_ds = list(combined_ids.values())[0]
+    return combined_ds
+
+
+def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
+                                      coords, compat):
+    # Group into lines of datasets which must be combined along dim
+    # need to sort by _new_tile_id first for groupby to work
+    # TODO remove all these sorted OrderedDicts once python >= 3.6 only
+    combined_ids = OrderedDict(sorted(combined_ids.items(), key=_new_tile_id))
+    grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
+
+    new_combined_ids = {}
+    for new_id, group in grouped:
+        combined_ids = OrderedDict(sorted(group))
+        datasets = combined_ids.values()
+        new_combined_ids[new_id] = _auto_combine_1d(datasets, dim, compat,
+                                                    data_vars, coords)
+    return new_combined_ids
+
+
+def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                     compat='no_conflicts',
+                     data_vars='all', coords='different'):
+    # This is just the old auto_combine function (which only worked along 1D)
+    if concat_dim is not None:
+        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+        concatenated = [_auto_concat(list(ds_group), dim=dim,
+                                     data_vars=data_vars, coords=coords)
+                        for id, ds_group in grouped]
+    else:
+        concatenated = datasets
+    merged = merge(concatenated, compat=compat)
+    return merged
+
+
+def _new_tile_id(single_id_ds_pair):
+    tile_id, ds = single_id_ds_pair
+    return tile_id[1:]
+
+
+def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
+                  infer_order_from_coords, ids):
+    """
+    Calls logic to decide concatenation order before concatenating.
+    """
+
+    # Arrange datasets for concatenation
+    if infer_order_from_coords:
+        raise NotImplementedError
+        # TODO Use coordinates to determine tile_ID for each dataset in N-D
+        # Ignore how they were ordered previously
+        # Should look like:
+        # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
+        # concat_dims)
+    else:
+        # Use information from the shape of the user input
+        if not ids:
+            # Determine tile_IDs by structure of input in N-D
+            # (i.e. ordering in list-of-lists)
+            combined_ids, concat_dims = _infer_concat_order_from_positions\
+                                                        (datasets, concat_dims)
+        else:
+            # Already sorted so just use the ids already passed
+            combined_ids = OrderedDict(zip(ids, datasets))
+
+    # Check that the inferred shape is combinable
+    _check_shape_tile_ids(combined_ids)
+
+    # Repeatedly concatenate then merge along each dimension
+    combined = _combine_nd(combined_ids, concat_dims, compat=compat,
+                           data_vars=data_vars, coords=coords)
+    return combined
+
+
+def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                 compat='no_conflicts', data_vars='all', coords='different'):
+    """Attempt to auto-magically combine the given datasets into one.
     This method attempts to combine a list of datasets into a single entity by
     inspecting metadata and using a combination of concat and merge.
-
     It does not concatenate along more than one dimension or sort data under
     any circumstances. It does align coordinates, but different variables on
     datasets can cause it to fail under some scenarios. In complex cases, you
     may need to clean up your data and use ``concat``/``merge`` explicitly.
-
     ``auto_combine`` works well if you have N years of data and M data
     variables, and each combination of a distinct time period and set of data
     variables is saved its own dataset.
@@ -404,7 +578,6 @@ def auto_combine(datasets,
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -415,8 +588,8 @@ def auto_combine(datasets,
           of all non-null values.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         Details are in the documentation of concat
-    coords : {'minimal', 'different', 'all' o list of str}, optional
-        Details are in the documentation of concat
+    coords : {'minimal', 'different', 'all' or list of str}, optional
+        Details are in the documentation of conca
 
     Returns
     -------
@@ -427,15 +600,20 @@ def auto_combine(datasets,
     concat
     Dataset.merge
     """
-    from toolz import itertoolz
-    if concat_dim is not None:
-        dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertoolz.groupby(lambda ds: tuple(sorted(ds.data_vars)),
-                                    datasets).values()
-        concatenated = [_auto_concat(ds, dim=dim,
-                                     data_vars=data_vars, coords=coords)
-                        for ds in grouped]
+
+    # Coerce 1D input into ND to maintain backwards-compatible API until API
+    # for N-D combine decided
+    # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
+    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+        concat_dims = concat_dim
+    elif not isinstance(concat_dim, list):
+        concat_dims = [concat_dim]
     else:
-        concatenated = datasets
-    merged = merge(concatenated, compat=compat)
-    return merged
+        concat_dims = concat_dim
+    infer_order_from_coords = False
+
+    # The IDs argument tells _auto_combine that the datasets are not yet sorted
+    return _auto_combine(datasets, concat_dims=concat_dims, compat=compat,
+                         data_vars=data_vars, coords=coords,
+                         infer_order_from_coords=infer_order_from_coords,
+                         ids=False)

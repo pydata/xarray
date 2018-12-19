@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 import pickle
-from textwrap import dedent
 from distutils.version import LooseVersion
+from textwrap import dedent
 
 import numpy as np
 import pandas as pd
@@ -15,18 +15,18 @@ from xarray.core.pycompat import OrderedDict, suppress
 from xarray.tests import mock
 
 from . import (
-    TestCase, assert_allclose, assert_array_equal, assert_equal,
-    assert_frame_equal, assert_identical, raises_regex)
+    assert_allclose, assert_array_equal, assert_equal, assert_frame_equal,
+    assert_identical, raises_regex)
 
 dask = pytest.importorskip('dask')
 da = pytest.importorskip('dask.array')
 dd = pytest.importorskip('dask.dataframe')
 
 
-class DaskTestCase(TestCase):
+class DaskTestCase(object):
     def assertLazyAnd(self, expected, actual, test):
 
-        with (dask.config.set(get=dask.get)
+        with (dask.config.set(scheduler='single-threaded')
               if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=dask.get)):
             test(actual, expected)
@@ -57,6 +57,7 @@ class TestVariable(DaskTestCase):
     def assertLazyAndAllClose(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_allclose)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.RandomState(0).randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -249,6 +250,7 @@ class TestDataArrayAndDataset(DaskTestCase):
     def assertLazyAndEqual(self, expected, actual):
         self.assertLazyAnd(expected, actual, assert_equal)
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.values = np.random.randn(4, 6)
         self.data = da.from_array(self.values, chunks=(2, 2))
@@ -385,8 +387,8 @@ class TestDataArrayAndDataset(DaskTestCase):
         u = self.eager_array
         v = self.lazy_array
 
-        expected = u.groupby('x').mean()
-        actual = v.groupby('x').mean()
+        expected = u.groupby('x').mean(xr.ALL_DIMS)
+        actual = v.groupby('x').mean(xr.ALL_DIMS)
         self.assertLazyAndAllClose(expected, actual)
 
     def test_groupby_first(self):
@@ -454,7 +456,11 @@ class TestDataArrayAndDataset(DaskTestCase):
             count[0] += 1
             return dask.get(*args, **kwargs)
 
-        ds.load(get=counting_get)
+        if dask.__version__ < '0.19.4':
+            ds.load(get=counting_get)
+        else:
+            ds.load(scheduler=counting_get)
+
         assert count[0] == 1
 
     def test_stack(self):
@@ -581,7 +587,7 @@ class TestDataArrayAndDataset(DaskTestCase):
         self.assertLazyAndIdentical(self.lazy_array, a)
 
 
-class TestToDaskDataFrame(TestCase):
+class TestToDaskDataFrame(object):
 
     def test_to_dask_dataframe(self):
         # Test conversion of Datasets to dask DataFrames
@@ -829,9 +835,24 @@ def test_basic_compute():
                 dask.multiprocessing.get,
                 dask.local.get_sync,
                 None]:
-        with (dask.config.set(get=get)
+        with (dask.config.set(scheduler=get)
+              if LooseVersion(dask.__version__) >= LooseVersion('0.19.4')
+              else dask.config.set(scheduler=get)
               if LooseVersion(dask.__version__) >= LooseVersion('0.18.0')
               else dask.set_options(get=get)):
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()
+
+
+@pytest.mark.skipif(LooseVersion(dask.__version__) < LooseVersion('0.20.0'),
+                    reason='needs newer dask')
+def test_dask_layers_and_dependencies():
+    ds = Dataset({'foo': ('x', range(5)),
+                  'bar': ('x', range(5))}).chunk()
+
+    x = dask.delayed(ds)
+    assert set(x.__dask_graph__().dependencies).issuperset(
+        ds.__dask_graph__().dependencies)
+    assert set(x.foo.__dask_graph__().dependencies).issuperset(
+        ds.__dask_graph__().dependencies)

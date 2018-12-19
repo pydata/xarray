@@ -7,12 +7,13 @@ import pytest
 import xarray as xr
 
 from . import (
-    TestCase, assert_array_equal, assert_equal, raises_regex, requires_dask,
-    has_cftime, has_dask, has_cftime_or_netCDF4)
+    assert_array_equal, assert_equal, has_cftime, has_cftime_or_netCDF4,
+    has_dask, raises_regex, requires_dask)
 
 
-class TestDatetimeAccessor(TestCase):
-    def setUp(self):
+class TestDatetimeAccessor(object):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         nt = 100
         data = np.random.rand(10, 10, nt)
         lons = np.linspace(0, 11, 10)
@@ -157,7 +158,8 @@ def times_3d(times):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour',
+                                   'dayofyear', 'dayofweek'])
 def test_field_access(data, field):
     result = getattr(data.time.dt, field)
     expected = xr.DataArray(
@@ -169,7 +171,8 @@ def test_field_access(data, field):
 
 @pytest.mark.skipif(not has_dask, reason='dask not installed')
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour',
+                                   'dayofyear', 'dayofweek'])
 def test_dask_field_access_1d(data, field):
     import dask.array as da
 
@@ -185,7 +188,8 @@ def test_dask_field_access_1d(data, field):
 
 @pytest.mark.skipif(not has_dask, reason='dask not installed')
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour'])
+@pytest.mark.parametrize('field', ['year', 'month', 'day', 'hour', 'dayofyear',
+                                   'dayofweek'])
 def test_dask_field_access(times_3d, data, field):
     import dask.array as da
 
