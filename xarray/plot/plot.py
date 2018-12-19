@@ -18,8 +18,8 @@ from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params, _ensure_plottable,
-    _infer_xy_labels, _interval_to_double_bound_points,
+    ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params,
+    _ensure_plottable, _infer_xy_labels, _interval_to_double_bound_points,
     _interval_to_mid_points, _resolve_intervals_2dplot, _valid_other_type,
     get_axis, import_matplotlib_pyplot, label_from_attrs)
 
