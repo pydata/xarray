@@ -1265,6 +1265,9 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         result = self.array[key]
 
         if isinstance(result, pd.Index):
+            # GH2619. For MultiIndex, we need to call remove_unused.
+            if isinstance(result, pd.MultiIndex):
+                result = result.remove_unused_levels()
             result = PandasIndexAdapter(result, dtype=self.dtype)
         else:
             # result is a scalar
