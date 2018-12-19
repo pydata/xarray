@@ -199,6 +199,38 @@ class FacetGrid(object):
     def _bottom_axes(self):
         return self.axes[-1, :]
 
+    def _process_cmap(self, func, kwargs, data):
+        cmapkw = kwargs.get('cmap')
+        colorskw = kwargs.get('colors')
+        cbar_kwargs = kwargs.pop('cbar_kwargs', {})
+        cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
+        if kwargs.get('cbar_ax', None) is not None:
+            raise ValueError('cbar_ax not supported by FacetGrid.')
+
+        # colors is mutually exclusive with cmap
+        if cmapkw and colorskw:
+            raise ValueError("Can't specify both cmap and colors.")
+
+        # These should be consistent with xarray.plot._plot2d
+        cmap_kwargs = {'plot_data': data.values,
+                       # MPL default
+                       'levels': 7 if 'contour' in func.__name__ else None,
+                       'filled': func.__name__ != 'contour',
+                       }
+
+        cmap_args = getargspec(_determine_cmap_params).args
+        cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
+
+        cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+        if colorskw is not None:
+            cmap_params['cmap'] = None
+
+        self._cmap_extend = cmap_params.get('extend')
+
+        return cmap_params, cbar_kwargs
+
     def map_dataarray(self, func, x, y, **kwargs):
         """
         Apply a plotting function to a 2d facet's subset of the data.
@@ -221,32 +253,7 @@ class FacetGrid(object):
 
         """
 
-        cmapkw = kwargs.get('cmap')
-        colorskw = kwargs.get('colors')
-        cbar_kwargs = kwargs.pop('cbar_kwargs', {})
-        cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-
-        if kwargs.get('cbar_ax', None) is not None:
-            raise ValueError('cbar_ax not supported by FacetGrid.')
-
-        # colors is mutually exclusive with cmap
-        if cmapkw and colorskw:
-            raise ValueError("Can't specify both cmap and colors.")
-
-        # These should be consistent with xarray.plot._plot2d
-        cmap_kwargs = {'plot_data': self.data.values,
-                       # MPL default
-                       'levels': 7 if 'contour' in func.__name__ else None,
-                       'filled': func.__name__ != 'contour',
-                       }
-
-        cmap_args = getargspec(_determine_cmap_params).args
-        cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
-
-        if colorskw is not None:
-            cmap_params['cmap'] = None
+        cmap_params, cbar_kwargs = self._process_cmap(func, kwargs, self.data)
 
         # Order is important
         func_kwargs = kwargs.copy()
@@ -265,7 +272,6 @@ class FacetGrid(object):
                 mappable = func(subset, x, y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
-        self._cmap_extend = cmap_params.get('extend')
         self._finalize_grid(x, y)
 
         if kwargs.get('add_colorbar', True):
