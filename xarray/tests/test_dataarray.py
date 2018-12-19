@@ -1155,7 +1155,7 @@ class TestDataArray(object):
         assert_identical(actual, expected)
 
         actual = data.copy()
-        actual.reset_coords(drop=True, inplace=True)
+        actual = actual.reset_coords(drop=True)
         assert_identical(actual, expected)
 
         actual = data.reset_coords('bar', drop=True)
@@ -1164,8 +1164,9 @@ class TestDataArray(object):
                              dims=['x', 'y'], name='foo')
         assert_identical(actual, expected)
 
-        with raises_regex(ValueError, 'cannot reset coord'):
-            data.reset_coords(inplace=True)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            with raises_regex(ValueError, 'cannot reset coord'):
+                data = data.reset_coords(inplace=True)
         with raises_regex(ValueError, 'cannot be found'):
             data.reset_coords('foo', drop=True)
         with raises_regex(ValueError, 'cannot be found'):
@@ -1398,7 +1399,7 @@ class TestDataArray(object):
         expected = array.set_index(x=['level_1', 'level_2', 'level_3'])
         assert_identical(obj, expected)
 
-        array.set_index(x=['level_1', 'level_2', 'level_3'], inplace=True)
+        array = array.set_index(x=['level_1', 'level_2', 'level_3'])
         assert_identical(array, expected)
 
         array2d = DataArray(np.random.rand(2, 2),
@@ -1431,7 +1432,7 @@ class TestDataArray(object):
         assert_identical(obj, expected)
 
         array = self.mda.copy()
-        array.reset_index(['x'], drop=True, inplace=True)
+        array = array.reset_index(['x'], drop=True)
         assert_identical(array, expected)
 
         # single index
@@ -1447,9 +1448,10 @@ class TestDataArray(object):
         obj = self.mda.reorder_levels(x=['level_2', 'level_1'])
         assert_identical(obj, expected)
 
-        array = self.mda.copy()
-        array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
-        assert_identical(array, expected)
+        with pytest.warns(FutureWarning, message='The inplace argument'):
+            array = self.mda.copy()
+            array.reorder_levels(x=['level_2', 'level_1'], inplace=True)
+            assert_identical(array, expected)
 
         array = DataArray([1, 2], dims='x')
         with pytest.raises(KeyError):
@@ -2356,53 +2358,24 @@ class TestDataArray(object):
         actual = array.resample(time="1H").interpolate('linear')
         assert 'tc' not in actual.coords
 
-    def test_resample_old_vs_new_api(self):
+    def test_resample_keep_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
+        array.attrs['meta'] = 'data'
 
-        # Simple mean
-        with pytest.warns(FutureWarning):
-            old_mean = array.resample('1D', 'time', how='mean')
-        new_mean = array.resample(time='1D').mean()
-        assert_identical(old_mean, new_mean)
+        result = array.resample(time='1D').mean(keep_attrs=True)
+        expected = DataArray([1, 1, 1], [('time', times[::4])],
+                             attrs=array.attrs)
+        assert_identical(result, expected)
 
-        # Mean, while keeping attributes
-        attr_array = array.copy()
-        attr_array.attrs['meta'] = 'data'
+    def test_resample_skipna(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.ones(10), [('time', times)])
+        array[1] = np.nan
 
-        with pytest.warns(FutureWarning):
-            old_mean = attr_array.resample('1D', dim='time', how='mean',
-                                           keep_attrs=True)
-        new_mean = attr_array.resample(time='1D').mean(keep_attrs=True)
-        assert old_mean.attrs == new_mean.attrs
-        assert_identical(old_mean, new_mean)
-
-        # Mean, with NaN to skip
-        nan_array = array.copy()
-        nan_array[1] = np.nan
-
-        with pytest.warns(FutureWarning):
-            old_mean = nan_array.resample('1D', 'time', how='mean',
-                                          skipna=False)
-        new_mean = nan_array.resample(time='1D').mean(skipna=False)
+        result = array.resample(time='1D').mean(skipna=False)
         expected = DataArray([np.nan, 1, 1], [('time', times[::4])])
-        assert_identical(old_mean, expected)
-        assert_identical(new_mean, expected)
-
-        # Try other common resampling methods
-        resampler = array.resample(time='1D')
-        for method in ['mean', 'median', 'sum', 'first', 'last', 'count']:
-            # Discard attributes on the call using the new api to match
-            # convention from old api
-            new_api = getattr(resampler, method)(keep_attrs=False)
-            with pytest.warns(FutureWarning):
-                old_api = array.resample('1D', dim='time', how=method)
-            assert_identical(new_api, old_api)
-        for method in [np.mean, np.sum, np.max, np.min]:
-            new_api = resampler.reduce(method)
-            with pytest.warns(FutureWarning):
-                old_api = array.resample('1D', dim='time', how=method)
-            assert_identical(new_api, old_api)
+        assert_identical(result, expected)
 
     def test_upsample(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=5)
