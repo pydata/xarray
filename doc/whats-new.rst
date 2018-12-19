@@ -33,6 +33,8 @@ v0.11.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Minimum rasterio version increased from 0.36 to 1.0 (for ``open_rasterio``)
+
 Enhancements
 ~~~~~~~~~~~~
 
