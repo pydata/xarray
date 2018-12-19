@@ -21,7 +21,7 @@ What's New
     always be available to python 2.7 users. For more information see the
     following references
 
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+     - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
@@ -36,6 +36,8 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Ability to read and write consolidated metadata in zarr stores (:issue:`2558`).
+  By `Ryan Abernathey <https://github.com/rabernat>`_.
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
@@ -43,9 +45,19 @@ Enhancements
   ``open_rasterio`` instead of file path string. Allows for in-memory
   reprojection, see  (:issue:`2588`).
   By `Scott Henderson <https://github.com/scottyhq>`_.
+- Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
+  "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
 
 Bug fixes
 ~~~~~~~~~
+
+- Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
+  By `Martin Raspaud <https://github.com/mraspaud>`_.
+- Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
+  By `Deepak Cherian <https://github.com/dcherian>`_
+
 
 .. _whats-new.0.11.0:
 
@@ -154,6 +166,8 @@ Enhancements
   to returning (and is now deprecated). This was changed in order to facilitate
   using tutorial datasets with dask.
   By `Joe Hamman <https://github.com/jhamman>`_.
+- ``DataArray`` can now use ``xr.set_option(keep_attrs=True)`` and retain attributes in binary operations,
+  such as (``+, -, * ,/``). Default behaviour is unchanged (*Attributes will be dismissed*). By `Michael Blaschek <https://github.com/MBlaschek>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -166,7 +180,7 @@ Bug fixes
   By `Spencer Clark <https://github.com/spencerkclark>`_.
 - We now properly handle arrays of ``datetime.datetime`` and ``datetime.timedelta``
   provided as coordinates. (:issue:`2512`)
-  By `Deepak Cherian <https://github.com/dcherian`_.
+  By `Deepak Cherian <https://github.com/dcherian>`_.
 - ``xarray.DataArray.roll`` correctly handles multidimensional arrays.
   (:issue:`2445`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
@@ -2208,6 +2222,7 @@ Enhancements
   for shifting/rotating datasets or arrays along a dimension:
 
   .. ipython:: python
+     :okwarning:
 
       array = xray.DataArray([5, 6, 7, 8], dims='x')
       array.shift(x=2)
@@ -2715,6 +2730,7 @@ Enhancements
   need to supply the time dimension explicitly:
 
   .. ipython:: python
+     :verbatim:
 
       time = pd.date_range('2000-01-01', freq='6H', periods=10)
       array = xray.DataArray(np.arange(10), [('time', time)])
@@ -2724,6 +2740,7 @@ Enhancements
   options such as ``closed`` and ``label`` let you control labeling:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='sum', label='right')
 
@@ -2731,6 +2748,7 @@ Enhancements
   (upsampling), xray will insert missing values:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('3H', 'time')
 
@@ -2738,12 +2756,14 @@ Enhancements
   last examples from each group along the grouped axis:
 
   .. ipython:: python
+     :verbatim:
 
       array.groupby('time.day').first()
 
   These methods combine well with ``resample``:
 
   .. ipython:: python
+     :verbatim:
 
       array.resample('1D', dim='time', how='first')
 

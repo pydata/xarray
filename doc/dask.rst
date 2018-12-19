@@ -179,7 +179,7 @@ Explicit conversion by wrapping a DataArray with ``np.asarray`` also works:
 Alternatively you can load the data into memory but keep the arrays as
 Dask arrays using the :py:meth:`~xarray.Dataset.persist` method:
 
-.. ipython::
+.. ipython:: python
 
    ds = ds.persist()
 
