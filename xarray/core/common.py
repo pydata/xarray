@@ -592,7 +592,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                  center=center)
 
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
-                 base=0, keep_attrs=None, **indexer_kwargs):
+                 base=0, keep_attrs=None, loffset=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
 
         Handles both downsampling and upsampling. If any intervals contain no
@@ -612,6 +612,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             For frequencies that evenly subdivide 1 day, the "origin" of the
             aggregated intervals. For example, for '24H' frequency, base could
             range from 0 through 23.
+        loffset : timedelta or str, optional
+            Offset used to adjust the resampled time labels. Some pandas date
+            offset strings are supported.
         keep_attrs : bool, optional
             If True, the object's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new
@@ -700,7 +703,9 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         group = DataArray(dim_coord, coords=dim_coord.coords,
                           dims=dim_coord.dims, name=RESAMPLE_DIM)
-        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base)
+        # TODO: to_offset() call required for pandas==0.19.2
+        grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base,
+                             loffset=pd.tseries.frequencies.to_offset(loffset))
         resampler = self._resample_cls(self, group=group, dim=dim_name,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)

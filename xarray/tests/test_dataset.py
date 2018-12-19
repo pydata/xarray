@@ -2804,6 +2804,18 @@ class TestDataset(object):
         expected = ds.attrs
         assert expected == actual
 
+    def test_resample_loffset(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        actual = ds.resample(time='24H', loffset='-12H').mean('time').time
+        expected = xr.DataArray(ds.bar.to_series()
+                                .resample('24H', loffset='-12H').mean()).time
+        assert_identical(expected, actual)
+
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),

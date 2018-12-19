@@ -45,6 +45,9 @@ Enhancements
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
+  ``loffset`` kwarg just like Pandas.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 
 Bug fixes
