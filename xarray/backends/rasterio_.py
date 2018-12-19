@@ -22,15 +22,14 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
-
-    def __init__(self, manager, vrt=None):
+    def __init__(self, manager, vrt_params=None):
+        from rasterio.vrt import WarpedVRT
         self.manager = manager
 
         # cannot save riods as an attribute: this would break pickleability
         riods = manager.acquire()
-        if vrt:
-            riods = vrt
-
+        riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
+        self.vrt_params = vrt_params
         self._shape = (riods.count, riods.height, riods.width)
 
         dtypes = riods.dtypes
@@ -104,6 +103,7 @@ class RasterioArrayWrapper(BackendArray):
         return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
 
     def _getitem(self, key):
+        from rasterio.vrt import WarpedVRT
         band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
 
         if not band_key or any(start == stop for (start, stop) in window):
@@ -113,6 +113,7 @@ class RasterioArrayWrapper(BackendArray):
             out = np.zeros(shape, dtype=self.dtype)
         else:
             riods = self.manager.acquire()
+            riods = riods if self.vrt_params is None else WarpedVRT(riods,**self.vrt_params)
             out = riods.read(band_key, window=window)
 
         if squeeze_axis:
@@ -122,42 +123,6 @@ class RasterioArrayWrapper(BackendArray):
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.OUTER, self._getitem)
-
-
-class RasterioVRTWrapper(RasterioArrayWrapper):
-    """A wrapper around rasterio WarpedVRT objects"""
-
-    def __init__(self, manager, vrt_params):
-        from rasterio.vrt import WarpedVRT
-        self.manager = manager
-        self.vrt_params = vrt_params
-        # cannot save riods as an attribute: this would break pickleability
-        riods = manager.acquire()
-        vrt = WarpedVRT(riods, **vrt_params)
-        self._shape = (vrt.count, vrt.height, vrt.width)
-
-        dtypes = vrt.dtypes
-        if not np.all(np.asarray(dtypes) == dtypes[0]):
-            raise ValueError('All bands should have the same dtype')
-        self._dtype = np.dtype(dtypes[0])
-
-    def _getitem(self, key):
-        from rasterio.vrt import WarpedVRT
-        band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
-
-        if not band_key or any(start == stop for (start, stop) in window):
-            # no need to do IO
-            shape = (len(band_key),) + tuple(
-                stop - start for (start, stop) in window)
-            out = np.zeros(shape, dtype=self.dtype)
-        else:
-            riods = self.manager.acquire()
-            vrt = WarpedVRT(riods, **self.vrt_params)
-            out = vrt.read(band_key, window=window)
-
-        if squeeze_axis:
-            out = np.squeeze(out, axis=squeeze_axis)
-        return out[np_inds]
 
 
 def _parse_envi(meta):
@@ -242,7 +207,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         The newly created DataArray.
     """
     import rasterio
-
+    from rasterio.vrt import WarpedVRT
     vrt_params = None
     if isinstance(filename, rasterio.io.DatasetReader):
         filename = filename.name
@@ -258,9 +223,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     manager = CachingFileManager(rasterio.open, filename, mode='r')
     riods = manager.acquire()
-
-    if vrt_params:
-        riods = rasterio.vrt.WarpedVRT(riods, **vrt_params)
+    riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
 
     if cache is None:
         cache = chunks is None
@@ -340,11 +303,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             else:
                 attrs[k] = v
 
-    if vrt_params:
-        data = indexing.LazilyOuterIndexedArray(RasterioVRTWrapper(manager,
-                                                                   vrt_params))
-    else:
-        data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
+    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager, vrt_params))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
