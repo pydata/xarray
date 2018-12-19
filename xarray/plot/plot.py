@@ -8,7 +8,6 @@ Or use the methods on a DataArray:
 from __future__ import absolute_import, division, print_function
 
 import functools
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -16,13 +15,13 @@ import pandas as pd
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
-from .facetgrid import FacetGrid, _easy_facetgrid
+from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params, _ensure_plottable,
-    _infer_interval_breaks, _infer_line_data, _infer_xy_labels,
-    _interval_to_double_bound_points, _interval_to_mid_points, _is_monotonic,
-    _rescale_imshow_rgb, _resolve_intervals_2dplot, _update_axes,
-    _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
+    _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_line_data,
+    _infer_xy_labels, _interval_to_double_bound_points,
+    _interval_to_mid_points, _process_cbar_cmap_kwargs, _rescale_imshow_rgb,
+    _resolve_intervals_2dplot, _update_axes, _valid_other_type, get_axis,
+    import_matplotlib_pyplot, label_from_attrs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -522,29 +521,15 @@ def _plot2d(plotfunc):
 
         plt = import_matplotlib_pyplot()
 
-        # colors is mutually exclusive with cmap
-        if cmap and colors:
-            raise ValueError("Can't specify both cmap and colors.")
-        # colors is only valid when levels is supplied or the plot is of type
-        # contour or contourf
-        if colors and (('contour' not in plotfunc.__name__) and (not levels)):
-            raise ValueError("Can only specify colors with contour or levels")
-        # we should not be getting a list of colors in cmap anymore
-        # is there a better way to do this test?
-        if isinstance(cmap, (list, tuple)):
-            warnings.warn("Specifying a list of colors in cmap is deprecated. "
-                          "Use colors keyword instead.",
-                          DeprecationWarning, stacklevel=3)
-
         rgb = kwargs.pop('rgb', None)
-        xlab, ylab = _infer_xy_labels(
-            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
-
         if rgb is not None and plotfunc.__name__ != 'imshow':
             raise ValueError('The "rgb" keyword is only valid for imshow()')
         elif rgb is not None and not imshow_rgb:
             raise ValueError('The "rgb" keyword is only valid for imshow()'
                              'with a three-dimensional array (per facet)')
+
+        xlab, ylab = _infer_xy_labels(
+            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -579,22 +564,8 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xplt, yplt)
 
-        if 'contour' in plotfunc.__name__ and levels is None:
-            levels = 7  # this is the matplotlib default
-
-        cmap_kwargs = {'plot_data': zval.data,
-                       'vmin': vmin,
-                       'vmax': vmax,
-                       'cmap': colors if colors else cmap,
-                       'center': center,
-                       'robust': robust,
-                       'extend': extend,
-                       'levels': levels,
-                       'filled': plotfunc.__name__ != 'contour',
-                       'norm': norm,
-                       }
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
+        cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
+            plotfunc, locals(), zval.data)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
@@ -630,13 +601,13 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
                 cbar_kwargs['label'] = label_from_attrs(darray)
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
 
-        elif cbar_ax is not None or cbar_kwargs is not None:
+        elif (cbar_ax is not None
+              or (cbar_kwargs is not None and cbar_kwargs != {})):
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")

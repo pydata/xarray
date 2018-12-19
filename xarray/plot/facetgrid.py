@@ -7,9 +7,8 @@ import warnings
 import numpy as np
 
 from ..core.formatting import format_item
-from ..core.pycompat import getargspec
 from .utils import (
-    _determine_cmap_params, _infer_line_data, _infer_xy_labels,
+    _infer_line_data, _infer_xy_labels, _process_cbar_cmap_kwargs,
     import_matplotlib_pyplot, label_from_attrs)
 
 # Overrides axes.labelsize, xtick.major.size, ytick.major.size
@@ -228,33 +227,13 @@ class FacetGrid(object):
             func_kwargs['_labels'] = False
 
         else:
-            cmapkw = kwargs.get('cmap')
-            colorskw = kwargs.get('colors')
-            cbar_kwargs = kwargs.pop('cbar_kwargs', {})
-            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
-
             if kwargs.get('cbar_ax', None) is not None:
                 raise ValueError('cbar_ax not supported by FacetGrid.')
 
-            # colors is mutually exclusive with cmap
-            if cmapkw and colorskw:
-                raise ValueError("Can't specify both cmap and colors.")
+            cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
+                func, kwargs, self.data.values)
 
-            # These should be consistent with xarray.plot._plot2d
-            cmap_kwargs = {'plot_data': self.data.values,
-                           # MPL default
-                           'levels': 7 if 'contour' in func.__name__ else None,
-                           'filled': func.__name__ != 'contour',
-                           }
-
-            cmap_args = getargspec(_determine_cmap_params).args
-            cmap_kwargs.update((a, kwargs[a])
-                               for a in cmap_args if a in kwargs)
-
-            cmap_params = _determine_cmap_params(**cmap_kwargs)
-
-            if colorskw is not None:
-                cmap_params['cmap'] = None
+            self._cmap_extend = cmap_params.get('extend')
 
             # Order is important
             func_kwargs = kwargs.copy()

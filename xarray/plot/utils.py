@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
-from ..core.pycompat import basestring
+from ..core.pycompat import basestring, getargspec
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
@@ -698,3 +698,58 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     trim_last = tuple(slice(None, -1) if n == axis else slice(None)
                       for n in range(coord.ndim))
     return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+
+
+def _process_cbar_cmap_kwargs(func, kwargs, data):
+    """
+    Parameters
+    ==========
+    func : plotting function
+    kwargs : dict,
+        Dictionary with arguments that need to be parsed
+    data : ndarray,
+        Data values
+
+    Returns
+    =======
+    cmap_params
+
+    cbar_kwargs
+    """
+
+    cmap = kwargs.pop('cmap', None)
+    colors = kwargs.pop('colors', None)
+
+    cbar_kwargs = kwargs.pop('cbar_kwargs', {})
+    cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
+    levels = kwargs.pop('levels', None)
+    if 'contour' in func.__name__ and levels is None:
+        levels = 7  # this is the matplotlib default
+
+    # colors is mutually exclusive with cmap
+    if cmap and colors:
+        raise ValueError("Can't specify both cmap and colors.")
+
+    # colors is only valid when levels is supplied or the plot is of type
+    # contour or contourf
+    if colors and (('contour' not in func.__name__) and (not levels)):
+        raise ValueError("Can only specify colors with contour or levels")
+
+    # we should not be getting a list of colors in cmap anymore
+    # is there a better way to do this test?
+    if isinstance(cmap, (list, tuple)):
+        warnings.warn("Specifying a list of colors in cmap is deprecated. "
+                      "Use colors keyword instead.",
+                      DeprecationWarning, stacklevel=3)
+
+    cmap_kwargs = {'plot_data': data,
+                   'levels': levels,
+                   'cmap': colors if colors else cmap,
+                   'filled': func.__name__ != 'contour'}
+
+    cmap_args = getargspec(_determine_cmap_params).args
+    cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
+    cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+    return cmap_params, cbar_kwargs
