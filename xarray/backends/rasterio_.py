@@ -23,7 +23,7 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
 
-    def __init__(self, manager, lock, vrt_params=None):
+    def __init__(self, manager, lock, vrt_params=None, masked=False):
         from rasterio.vrt import WarpedVRT
         self.manager = manager
         self.lock = lock
@@ -39,6 +39,7 @@ class RasterioArrayWrapper(BackendArray):
         if not np.all(np.asarray(dtypes) == dtypes[0]):
             raise ValueError('All bands should have the same dtype')
         self._dtype = np.dtype(dtypes[0])
+        self.masked = masked
 
     @property
     def dtype(self):
@@ -119,7 +120,9 @@ class RasterioArrayWrapper(BackendArray):
                 riods = self.manager.acquire(needs_lock=False)
                 if self.vrt_params is not None:
                     riods = WarpedVRT(riods, **self.vrt_params)
-                out = riods.read(band_key, window=window)
+                out = riods.read(band_key, window=window, masked=self.masked)
+                if self.masked:
+                    out = np.ma.filled(out, np.nan)
 
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
@@ -277,6 +280,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     # Attributes
     attrs = dict()
+    encoding = dict()
     # Affine transformation matrix (always available)
     # This describes coefficients mapping pixel coordinates to CRS
     # For serialization store as tuple of 6 floats, the last row being
@@ -300,9 +304,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         attrs['is_tiled'] = np.uint8(riods.is_tiled)
     if hasattr(riods, 'nodatavals'):
         # The nodata values for the raster bands
-        attrs['nodatavals'] = tuple(
+        nodatavals = tuple(
             np.nan if nodataval is None else nodataval
             for nodataval in riods.nodatavals)
+        if mask:
+            encoding['nodatavals'] = nodatavals
+        else:
+            attrs['nodatavals'] = nodatavals
 
     # Parse extra metadata from tags, if supported
     parsers = {'ENVI': _parse_envi}
@@ -321,7 +329,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                 attrs[k] = v
 
     data = indexing.LazilyOuterIndexedArray(
-        RasterioArrayWrapper(manager, lock, vrt_params))
+        RasterioArrayWrapper(manager, lock, vrt_params, masked=mask))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
@@ -329,11 +337,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         data = indexing.MemoryCachedArray(data)
 
     result = DataArray(data=data, dims=('band', 'y', 'x'),
-                       coords=coords, attrs=attrs)
-
-    if mask:
-        for nodataval in attrs.get('nodatavals', ()):
-            result = result.where(result != nodataval)
+                       coords=coords, attrs=attrs, encoding=encoding)
 
     if chunks is not None:
         from dask.base import tokenize

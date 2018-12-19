@@ -3135,7 +3135,8 @@ class TestRasterio(object):
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file, mask=True) as rioda:
                 assert_allclose(rioda, expected.where(expected != 3))
-                np.testing.assert_array_equal(rioda.attrs['nodatavals'], [3.])
+                np.testing.assert_array_equal(rioda.encoding['nodatavals'], [3.])
+                assert 'nodatavals' not in rioda.attrs.keys()
                 assert 3 not in rioda.data
 
     def test_mask_is_false_by_default(self):
@@ -3144,6 +3145,7 @@ class TestRasterio(object):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
                 np.testing.assert_array_equal(rioda.attrs['nodatavals'], [3.])
+                assert 'nodatavals' not in rioda.encoding.keys()
                 assert 3 in rioda.data
 
     def test_notransform(self):
