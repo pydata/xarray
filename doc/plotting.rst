@@ -646,13 +646,13 @@ You can also set color using the ``hue`` kwarg
 
 When ``hue`` is specified, a colorbar is added for numeric ``hue`` DataArrays by
 default and a legend is added for non-numeric ``hue`` DataArrays (as above).
-You can force a legend instead of a colorbar using the boolean ``discrete_legend`` kwarg.
+You can force a legend instead of a colorbar by setting ``hue_style='discrete'``.
 
 .. ipython:: python
 
     ds.w.values = [1, 2, 3, 5]
     @savefig ds_discrete_legend_hue_scatter.png
-    ds.plot.scatter(x='A', y='B', hue='w')
+    ds.plot.scatter(x='A', y='B', hue='w', hue_style='discrete')
 
 
 Faceting is also possible
@@ -660,7 +660,7 @@ Faceting is also possible
 .. ipython:: python
 
     @savefig ds_facet_scatter.png
-    ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', discrete_legend=True)
+    ds.plot.scatter(x='A', y='B', col='x', row='z', hue='w', hue_style='discrete')
 
 
 .. _plot-maps:
