@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import functools
 import warnings
 
+import datetime
 import numpy as np
 import pandas as pd
 
@@ -154,6 +155,32 @@ def _unique_and_monotonic(group):
         return index.is_unique and index.is_monotonic
 
 
+def _apply_loffset(grouper, result):
+    """
+    (copied from pandas)
+    if loffset is set, offset the result index
+
+    This is NOT an idempotent routine, it will be applied
+    exactly once to the result.
+
+    Parameters
+    ----------
+    result : Series or DataFrame
+        the result of resample
+    """
+
+    needs_offset = (
+        isinstance(grouper.loffset, (pd.DateOffset, datetime.timedelta))
+        and isinstance(result.index, pd.DatetimeIndex)
+        and len(result.index) > 0
+    )
+
+    if needs_offset:
+        result.index = result.index + grouper.loffset
+
+    grouper.loffset = None
+
+
 class GroupBy(SupportsArithmetic):
     """A object that implements the split-apply-combine pattern.
 
@@ -235,6 +262,7 @@ class GroupBy(SupportsArithmetic):
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
             first_items = s.groupby(grouper).first()
+            _apply_loffset(grouper, first_items)
             full_index = first_items.index
             if first_items.isnull().any():
                 first_items = first_items.dropna()
