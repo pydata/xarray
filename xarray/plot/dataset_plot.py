@@ -1,17 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
 import functools
-import warnings
 
 import numpy as np
-import pandas as pd
 
 from ..core.alignment import broadcast
 from .facetgrid import FacetGrid
 from .utils import (
-    ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params, _ensure_numeric,
-    _interval_to_double_bound_points, _interval_to_mid_points,
-    _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
+    _add_colorbar, _determine_cmap_params, _ensure_numeric,
+    _valid_other_type, get_axis, label_from_attrs)
 
 
 def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
