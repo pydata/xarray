@@ -4,11 +4,12 @@ import functools
 import operator
 from collections import Hashable, defaultdict
 from datetime import timedelta
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, nputils, utils
+from . import duck_array_ops, nputils, pdcompat, utils
 from .pycompat import (
     dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
@@ -1267,7 +1268,11 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         if isinstance(result, pd.Index):
             # GH2619. For MultiIndex, we need to call remove_unused.
             if isinstance(result, pd.MultiIndex):
-                result = result.remove_unused_levels()
+                if LooseVersion(pd.__version__) >= "0.20":
+                    result = result.remove_unused_levels()
+                else:  # for pandas 0.19
+                    result = pdcompat.remove_unused_levels(result)
+
             result = PandasIndexAdapter(result, dtype=self.dtype)
         else:
             # result is a scalar
