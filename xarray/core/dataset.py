@@ -510,13 +510,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         if not graphs:
             return None
         else:
-            from dask import sharedict
-            return sharedict.merge(*graphs.values())
+            try:
+                from dask.highlevelgraph import HighLevelGraph
+                return HighLevelGraph.merge(*graphs.values())
+            except ImportError:
+                from dask import sharedict
+                return sharedict.merge(*graphs.values())
+
 
     def __dask_keys__(self):
         import dask
         return [v.__dask_keys__() for v in self.variables.values()
                 if dask.is_dask_collection(v)]
+
+    def __dask_layers__(self):
+        import dask
+        return sum([v.__dask_layers__() for v in self.variables.values() if
+                    dask.is_dask_collection(v)], ())
 
     @property
     def __dask_optimize__(self):
@@ -1936,8 +1946,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         interpolated: xr.Dataset
             New dataset on the new coordinates.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
 
         See Also
@@ -1947,7 +1957,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         from . import missing
 
-        coords = either_dict_or_kwargs(coords, coords_kwargs, 'rename')
+        coords = either_dict_or_kwargs(coords, coords_kwargs, 'interp')
         indexers = OrderedDict(self._validate_indexers(coords))
 
         obj = self if assume_sorted else self.sortby([k for k in coords])
@@ -2028,8 +2038,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Another dataset by interpolating this dataset's data along the
             coordinates of the other object.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
         If the dataset has object-type coordinates, reindex is used for these
         coordinates instead of the interpolation.
@@ -2539,7 +2549,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                   'no_conflicts'}, optional
             String indicating how to compare variables of the same name for
             potential conflicts:
-
             - 'broadcast_equals': all values must be equal when variables are
               broadcast against each other to ensure common dimensions.
             - 'equals': all values and dimensions must be the same.

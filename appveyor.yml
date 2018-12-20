@@ -7,11 +7,6 @@ branches:
 environment:
 
   matrix:
-    - PYTHON: "C:\\Python27-conda32"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-      CONDA_ENV: "py27-windows"
-
     - PYTHON: "C:\\Python27-conda64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"

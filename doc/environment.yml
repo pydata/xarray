@@ -16,7 +16,7 @@ dependencies:
   - zarr=2.2.0
   - iris=2.1.0
   - flake8=3.5.0
-  - cftime=1.0.0
+  - cftime=1.0.3.4
   - bottleneck=1.2
   - sphinx=1.7.6
   - numpydoc=0.8.0
