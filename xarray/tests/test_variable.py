@@ -1661,27 +1661,28 @@ class TestVariable(VariableSubclassobjects):
 
     def test_coarsen(self):
         v = self.cls(['x'], [0, 1, 2, 3, 4])
-        actual = v.coarsen({'x': 2}, func=np.mean)
+        actual = v.coarsen({'x': 2}, boundary='pad', func='mean')
         expected = self.cls(['x'], [0.5, 2.5, 4])
         assert_identical(actual, expected)
 
-        actual = v.coarsen({'x': 2}, func=np.mean, side='right')
+        actual = v.coarsen({'x': 2}, func='mean', boundary='pad',
+                           side='right')
         expected = self.cls(['x'], [0, 1.5, 3.5])
         assert_identical(actual, expected)
 
         actual = v.coarsen({'x': 2}, func=np.mean, side='right',
-                           trim_excess=True)
+                           boundary='trim')
         expected = self.cls(['x'], [1.5, 3.5])
         assert_identical(actual, expected)
 
         # working test
         v = self.cls(['x', 'y', 'z'],
                      np.arange(40 * 30 * 2).reshape(40, 30, 2))
-        for windows, func, side, trim_excess in [
-                ({'x': 2}, np.mean, 'left', True),
-                ({'x': 2}, np.median, {'x': 'left'}, False),
-                ({'x': 2, 'y': 3}, np.max, 'left', {'x': True, 'y': False})]:
-            v_coars = v.coarsen(windows, func, side, trim_excess)
+        for windows, func, side, boundary in [
+                ({'x': 2}, np.mean, 'left', 'trim'),
+                ({'x': 2}, np.median, {'x': 'left'}, 'pad'),
+                ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
+            v_coars = v.coarsen(windows, func, boundary, side)
 
 
 @requires_dask

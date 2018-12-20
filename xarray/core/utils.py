@@ -629,7 +629,9 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     if datetime_unit:
         array = array / np.timedelta64(1, datetime_unit)
     # convert np.NaT to np.nan
-    return np.where(np.isnat(array), np.nan, array.astype(dtype))
+    if array.dtype.kind in 'mM':
+        return np.where(np.isnat(array), np.nan, array.astype(dtype))
+    return array
 
 
 def get_temp_dimname(dims, new_dim):
