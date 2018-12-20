@@ -600,7 +600,6 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to the window size.
-        windows : A mapping from a dimension name to window size
             dim : str
                 Name of the dimension to create the rolling iterator
                 along (e.g., `time`).
@@ -608,34 +607,38 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 Size of the moving window.
         boundary : 'exact' | 'trim' | 'pad'
             If 'exact', a ValueError will be raised if dimension size is not a
-            multiple of window size. If 'trim', the excess indexes are trimed.
-            If 'pad', NA will be padded.
+            multiple of the window size. If 'trim', the excess entries are
+            dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coordinate_func: mapping from coordinate name to func (name).
+        coordinate_func: function (name) that is applied to the coordintes,
+            or a mapping from coordinate name to function (name).
 
         Returns
         -------
         Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
         core.rolling.DatasetCoarsen for Dataset.)
 
-
         Examples
         --------
-        Coarsen the long time series by averaging for every seven data.
+        Coarsen the long time series by averaging over every four days.
 
-        >>> da = xr.DataArray(np.linspace(0, 365, num=365),
+        >>> da = xr.DataArray(np.linspace(0, 364, num=364),
         ...                   dims='time',
         ...                   coords={'time': pd.date_range(
-        ...                       '15/12/1999', periods=365)})
+        ...                       '15/12/1999', periods=364)})
         >>> da
-        >>> <xarray.DataArray (time: 365)>
-        >>> array([  0.      ,   1.002747,   2.005495, ..., 363.997253,
-        >>>        365.      ])
+        >>> <xarray.DataArray (time: 364)>
+        >>> array([  0.      ,   1.002755,   2.00551 , ..., 362.997245,
+                   364.      ])
         >>> Coordinates:
-        >>> * time     (time) datetime64[ns] 1999-12-15 ... 2000-12-13
-
-        >>> da.coarsen(time=3).mean()
+        >>> * time     (time) datetime64[ns] 1999-12-15 ... 2000-12-12
         >>>
+        >>> da.coarsen(time=4).mean()
+        >>> <xarray.DataArray (time: 91)>
+        >>> array([  1.504132,   5.515152,   9.526171,  13.53719 ,  ...,
+        >>>        362.495868])
+        >>> Coordinates:
+        >>> * time     (time) datetime64[ns] 1999-12-16T12:00:00 ...
 
         See Also
         --------

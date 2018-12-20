@@ -41,6 +41,10 @@ Enhancements
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
+- :py:meth:`~xarray.DataArray.coarsen` and
+  :py:meth:`~xarray.Dataset.coarsen` are newly added.
+  (:issue:`2525`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 Bug fixes
 ~~~~~~~~~
