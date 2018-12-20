@@ -9,7 +9,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 
-from . import duck_array_ops, nputils, pdcompat, utils
+from . import duck_array_ops, nputils, utils
 from .pycompat import (
     dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
@@ -160,6 +160,10 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 tuple(label.values()), level=tuple(label.keys()))
 
+            # GH2619. Raise a KeyError if nothing is chosen
+            if indexer.dtype.kind == 'b' and indexer.sum() == 0:
+                raise KeyError('{} not found'.format(label))
+
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
             indexer = index.get_locs(label)
@@ -169,7 +173,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 label, level=list(range(len(label)))
             )
-
     else:
         label = (label if getattr(label, 'ndim', 1) > 1  # vectorized-indexing
                  else _asarray_tuplesafe(label))
@@ -1266,13 +1269,6 @@ class PandasIndexAdapter(ExplicitlyIndexedNDArrayMixin):
         result = self.array[key]
 
         if isinstance(result, pd.Index):
-            # GH2619. For MultiIndex, we need to call remove_unused.
-            if isinstance(result, pd.MultiIndex):
-                if LooseVersion(pd.__version__) >= "0.20":
-                    result = result.remove_unused_levels()
-                else:  # for pandas 0.19
-                    result = pdcompat.remove_unused_levels(result)
-
             result = PandasIndexAdapter(result, dtype=self.dtype)
         else:
             # result is a scalar
