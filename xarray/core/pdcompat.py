@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pandas.core.algorithms as algos
 
 
 # for pandas 0.19
