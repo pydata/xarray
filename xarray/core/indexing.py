@@ -4,7 +4,6 @@ import functools
 import operator
 from collections import Hashable, defaultdict
 from datetime import timedelta
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
