@@ -5,7 +5,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 
-from . import dtypes, utils
+from . import dtypes, duck_array_ops, utils
 from .dask_array_ops import dask_rolling_wrapper
 from .ops import (
     bn, has_bottleneck, inject_coarsen_methods,
@@ -447,7 +447,7 @@ class Coarsen(object):
 
     _attributes = ['windows', 'side', 'trim_excess']
 
-    def __init__(self, obj, windows, side, trim_excess, coordinate_func):
+    def __init__(self, obj, windows, boundary, side, coordinate_func):
         """
         Moving window object.
 
@@ -461,11 +461,12 @@ class Coarsen(object):
                 along (e.g., `time`).
             window : int
                 Size of the moving window.
+        boundary : 'exact' | 'trim' | 'pad'
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of window size. If 'trim', the excess indexes are trimed.
+            If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
         coordinate_func: mapping from coordinate name to func.
-
-        trim_excess : boolean, or dict of boolean default False
-            Set the labels at the center of the window.
 
         Returns
         -------
@@ -474,17 +475,17 @@ class Coarsen(object):
         self.obj = obj
         self.windows = windows
         self.side = side
-        self.trim_excess = trim_excess
+        self.boundary = boundary
 
-        if coordinate_func is None:
-            coordinate_func = {}
+        if not utils.is_dict_like(coordinate_func):
+            coordinate_func = {d: coordinate_func for d in self.obj.dims}
         for c in self.obj.coords:
             if c not in coordinate_func:
-                coordinate_func[c] = np.mean
+                coordinate_func[c] = duck_array_ops.mean
         self.coordinate_func = coordinate_func
 
     def __repr__(self):
-        """provide a nice str repr of our rolling object"""
+        """provide a nice str repr of our coarsen object"""
 
         attrs = ["{k}->{v}".format(k=k, v=getattr(self, k))
                  for k in self._attributes
@@ -497,14 +498,14 @@ class DataArrayCoarsen(Coarsen):
     @classmethod
     def _reduce_method(cls, func):
         """
-        Return a wrapped function for injecting numpy and bottoleneck methods.
+        Return a wrapped function for injecting numpy methods.
         see ops.inject_coarsen_methods
         """
         def wrapped_func(self, **kwargs):
             from .dataarray import DataArray
 
             reduced = self.obj.variable.coarsen(
-                self.windows, func, self.side, self.trim_excess)
+                self.windows, func, self.boundary, self.side)
             coords = {}
             for c, v in self.obj.coords.items():
                 if c == self.obj.name:
@@ -512,8 +513,8 @@ class DataArrayCoarsen(Coarsen):
                 else:
                     if any(d in self.windows for d in v.dims):
                         coords[c] = v.variable.coarsen(
-                            self.windows, self.coordinate_func[c], self.side,
-                            self.trim_excess)
+                            self.windows, self.coordinate_func[c],
+                            self.boundary, self.side)
                     else:
                         coords[c] = v
             return DataArray(reduced, dims=self.obj.dims, coords=coords)
@@ -525,7 +526,7 @@ class DatasetCoarsen(Coarsen):
     @classmethod
     def _reduce_method(cls, func):
         """
-        Return a wrapped function for injecting numpy and bottoleneck methods.
+        Return a wrapped function for injecting numpy methods.
         see ops.inject_coarsen_methods
         """
         def wrapped_func(self, **kwargs):
@@ -534,14 +535,14 @@ class DatasetCoarsen(Coarsen):
             reduced = OrderedDict()
             for key, da in self.obj.data_vars.items():
                 reduced[key] = da.variable.coarsen(
-                    self.windows, func, self.side, self.trim_excess)
+                    self.windows, func, self.boundary, self.side)
 
             coords = {}
             for c, v in self.obj.coords.items():
                 if any(d in self.windows for d in v.dims):
                     coords[c] = v.variable.coarsen(
-                        self.windows, self.coordinate_func[c], self.side,
-                        self.trim_excess)
+                        self.windows, self.coordinate_func[c],
+                        self.boundary, self.side)
                 else:
                     coords[c] = v.variable
             return Dataset(reduced, coords=coords)

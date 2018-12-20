@@ -1010,7 +1010,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs,
                                            'pad')
 
-        if fill_value is dtypes.NA:  # np.nan is passed
+        if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
@@ -1632,72 +1632,84 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             array, axis=self.get_axis_num(dim), window=window,
             center=center, fill_value=fill_value))
 
-    def coarsen(self, windows, func, side='left', trim_excess=False):
+    def coarsen(self, windows, func, boundary='exact', side='left'):
+        """
+        Apply
+        """
         windows = {k: v for k, v in windows.items() if k in self.dims}
-        new_dimensions = {k: utils.get_temp_dimname(self.dims, k)
-                          for k in windows}
-        reshaped = self._coarsen_reshape(windows, side, trim_excess,
-                                         new_dimensions)
+        if not windows:
+            return self.copy()
 
-        axis = tuple([reshaped.get_axis_num(d) for d
-                      in new_dimensions.values()])
-        return type(self)(self.dims, func(reshaped, axis=axis), self._attrs)
+        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        if isinstance(func, basestring):
+            name = func
+            func = getattr(duck_array_ops, name, None)
+            if func is None:
+                raise NameError('{} is not a valid method.'.format(name))
+        return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
 
-    def _coarsen_reshape(self, windows, side, trim_excess, coarsen_dimensions):
+    def _coarsen_reshape(self, windows, boundary, side):
         """
-        Construct a reshaped-variable for corsen
+        Construct a reshaped-array for corsen
         """
+        if not utils.is_dict_like(boundary):
+            boundary = {d: boundary for d in windows.keys()}
+
         if not utils.is_dict_like(side):
             side = {d: side for d in windows.keys()}
 
-        if not utils.is_dict_like(trim_excess):
-            trim_excess = {d: trim_excess for d in windows.keys()}
-
         # remove unrelated dimensions
-        side = {k: v for k, v in side.items() if k in self.dims}
-        trim_excess = {k: v for k, v in trim_excess.items() if k in self.dims}
-
-        if windows == {}:
-            return type(self)(self.dims, self.data, self._attrs)
+        boundary = {k: v for k, v in boundary.items() if k in windows}
+        side = {k: v for k, v in side.items() if k in windows}
 
         for d, window in windows.items():
             if window <= 0:
-                raise ValueError('window must be > 0')
+                raise ValueError('window must be > 0. Given {}'.format(window))
 
         variable = self
         for d, window in windows.items():
             # trim or pad the object
             size = variable.shape[self._get_axis_num(d)]
             n = int(size / window)
-            if trim_excess[d]:
+            if boundary[d] == 'exact':
+                if n * window != size:
+                    raise ValueError(
+                        'Could not coarsen a dimension of size {} with '
+                        'window {}'.format(size, window))
+            elif boundary[d] == 'trim':
                 if side[d] == 'left':
-                    variable = variable.isel({d: slice(window * int(n))})
+                    variable = variable.isel({d: slice(0, window * n)})
                 else:
                     excess = size - window * n
                     variable = variable.isel({d: slice(excess, None)})
-            else:  # pad
-                pad = window * (n + 1) - size
+            elif boundary[d] == 'pad':  # pad
+                pad = window * n - size
+                if pad < 0:
+                    pad += window
                 if side[d] == 'left':
                     pad_widths = {d: (0, pad)}
                 else:
                     pad_widths = {d: (pad, 0)}
                 variable = variable.pad_with_fill_value(pad_widths)
+            else:
+                raise TypeError(
+                    '{} is invalid for boundary. Valid option is \'exact\', '
+                    '\'trim\' and \'pad\''.format(boundary[d]))
 
         shape = []
         axes = []
-        dims = []
+        axis_count = 0
         for i, d in enumerate(variable.dims):
             if d in windows:
                 size = variable.shape[i]
                 shape.append(int(size / windows[d]))
                 shape.append(windows[d])
-                dims.append(d)
-                dims.append(coarsen_dimensions[d])
+                axis_count += 1
+                axes.append(i + axis_count)
             else:
                 shape.append(variable.shape[i])
-                dims.append(d)
 
-        return Variable(dims, variable.data.reshape(shape), self._attrs)
+        return variable.data.reshape(shape), tuple(axes)
 
     @property
     def real(self):

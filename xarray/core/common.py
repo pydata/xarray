@@ -591,8 +591,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def coarsen(self, dim=None, side='left', trim_excess=False,
-                coordinate_func=None, **dim_kwargs):
+    def coarsen(self, dim=None, boundary='exact', side='left',
+                coordinate_func='mean', **dim_kwargs):
         """
         Coarsen object.
 
@@ -600,17 +600,18 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
         dim: dict, optional
             Mapping from the dimension name to the window size.
-        side : 'left' or 'right', or dict
-            If left, coarsening windows start from 0th index. The excessed
-            entries in the most right will be removed (if trim_excess is True).
-            If right, coarsen windows ends at the most right entry, while
-            excessed entries in the most left will be removed.
-        trim_excess : boolean, default False
-            If true, the excessed entries are trimed. If False, np.nan will be
-            filled.
-        **dim_kwargs : optional
-            The keyword arguments form of ``dim``.
-            One of dim or dim_kwargs must be provided.
+        windows : A mapping from a dimension name to window size
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+        boundary : 'exact' | 'trim' | 'pad'
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of window size. If 'trim', the excess indexes are trimed.
+            If 'pad', NA will be padded.
+        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
+        coordinate_func: mapping from coordinate name to func (name).
 
         Returns
         -------
@@ -634,7 +635,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         >>> * time     (time) datetime64[ns] 1999-12-15 ... 2000-12-13
 
         >>> da.coarsen(time=3).mean()
-        >>> 
+        >>>
 
         See Also
         --------
@@ -643,9 +644,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         """
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
         return self._coarsen_cls(
-            self, dim, side=side, trim_excess=trim_excess,
+            self, dim, boundary=boundary, side=side,
             coordinate_func=coordinate_func)
-
 
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
                  base=0, keep_attrs=None, **indexer_kwargs):
