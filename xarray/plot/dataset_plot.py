@@ -25,8 +25,8 @@ def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
 
     dims_coords = set(list(ds.coords) + list(ds.dims))
     if hue is not None and hue not in dims_coords:
-        raise ValueError(hue + ' must be either one of ({0:s})'
-                               ''.format(', '.join(dims_coords)))
+        raise ValueError('hue must be one of ({0:s}) but is {hue}'
+                         'instead.'.format(', '.join(dims_coords)), hue)
 
     if hue:
         hue_is_numeric = (_ensure_numeric(ds[hue].values)
@@ -195,7 +195,8 @@ def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
         g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
                       sharex=sharex, sharey=sharey, figsize=figsize,
                       aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_scatter(x=x, y=y, hue=hue, add_colorbar=add_colorbar,
+        return g.map_scatter(x=x, y=y, hue=hue, hue_style=hue_style,
+                             add_colorbar=add_colorbar,
                              add_legend=add_legend, **kwargs)
 
     figsize = kwargs.pop('figsize', None)
