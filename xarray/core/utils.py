@@ -622,6 +622,8 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     -------
     array
     """
+    from . import duck_array_ops
+
     if offset is None:
         offset = array.min()
     array = array - offset
@@ -630,7 +632,10 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         array = array / np.timedelta64(1, datetime_unit)
     # convert np.NaT to np.nan
     if array.dtype.kind in 'mM':
-        return np.where(pd.isnull(array), np.nan, array.astype(dtype))
+        if hasattr(array, 'isnull'):
+            return np.where(array.isnull(), np.nan, array.astype(dtype))
+        return np.where(duck_array_ops.isnull(array), np.nan,
+                        array.astype(dtype))
     return array
 
 
