@@ -338,9 +338,6 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         else:
             raise ValueError('unrecognized engine for open_dataset: %r'
                              % engine)
-
-        with close_on_error(store):
-            return maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
@@ -348,7 +345,15 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
 
-    return maybe_decode_store(store)
+    with close_on_error(store):
+        ds = maybe_decode_store(store)
+
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if 'source' not in ds.encoding.keys():
+        if isinstance(filename_or_obj, basestring):
+            ds.encoding['source'] = filename_or_obj
+
+    return ds
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
