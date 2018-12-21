@@ -263,9 +263,9 @@ def test_datetime_reduce(dask):
         da = da.chunk(chunks)
 
     actual = da['time'].mean()
-    assert not np.isnat(actual)
+    assert not pd.isnull(actual)
     actual = da['time'].mean(skipna=False)
-    assert np.isnat(actual)
+    assert pd.isnull(actual)
 
 
 @pytest.mark.parametrize('dim_num', [1, 2])
