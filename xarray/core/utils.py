@@ -630,7 +630,7 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         array = array / np.timedelta64(1, datetime_unit)
     # convert np.NaT to np.nan
     if array.dtype.kind in 'mM':
-        return np.where(np.isnat(array), np.nan, array.astype(dtype))
+        return np.where(pd.isnull(array), np.nan, array.astype(dtype))
     return array
 
 
