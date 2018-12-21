@@ -97,8 +97,10 @@ def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
             norm=None, infer_intervals=None, center=None, levels=None,
             robust=None, colors=None, extend=None, cmap=None, **kwargs):
     '''
-    Inputs
-    ------
+    Scatter Dataset variables against each other.
+
+    Input
+    -----
 
     ds : Dataset
     x, y : string
