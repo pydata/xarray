@@ -45,6 +45,9 @@ Enhancements
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
+- Datasets are now guaranteed to have a ``'source'`` encoding, so the source
+  file name is always stored (:issue:`2550`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
 
 Bug fixes
