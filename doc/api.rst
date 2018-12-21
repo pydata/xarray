@@ -343,6 +343,7 @@ Computation
 :py:attr:`~DataArray.searchsorted`
 :py:attr:`~DataArray.round`
 :py:attr:`~DataArray.real`
+:py:attr:`~DataArray.T`
 :py:attr:`~DataArray.cumsum`
 :py:attr:`~DataArray.cumprod`
 :py:attr:`~DataArray.rank`
@@ -569,7 +570,7 @@ Plotting
 .. autosummary::
    :toctree: generated/
 
-   Dataset.plot.scatter
+   Dataset.plot
    DataArray.plot
    plot.plot
    plot.contourf
