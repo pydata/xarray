@@ -28,6 +28,8 @@ from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     raises_regex, requires_dask, source_ndarray)
 
+from xarray import set_options
+
 
 class VariableSubclassobjects(object):
     def test_properties(self):
@@ -1145,6 +1147,11 @@ class TestVariable(VariableSubclassobjects):
         assert v_new.dims == ('x', )
         assert_array_equal(v_new, v._data[:, 1])
 
+        # test that we obtain a modifiable view when taking a 0d slice
+        v_new = v[0, 0]
+        v_new[...] += 99
+        assert_array_equal(v_new, v._data[0, 0])
+
     def test_getitem_with_mask_2d_input(self):
         v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
         assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
@@ -1545,6 +1552,18 @@ class TestVariable(VariableSubclassobjects):
         vm = v.mean(keep_attrs=True)
         assert len(vm.attrs) == len(_attrs)
         assert vm.attrs == _attrs
+
+    def test_binary_ops_keep_attrs(self):
+        _attrs = {'units': 'test', 'long_name': 'testing'}
+        a = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
+        b = Variable(['x', 'y'], np.random.randn(3, 3), _attrs)
+        # Test dropped attrs
+        d = a - b   # just one operation
+        assert d.attrs == OrderedDict()
+        # Test kept attrs
+        with set_options(keep_attrs=True):
+            d = a - b
+        assert d.attrs == _attrs
 
     def test_count(self):
         expected = Variable([], 3)

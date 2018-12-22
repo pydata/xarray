@@ -843,3 +843,16 @@ def test_basic_compute():
             ds.compute()
             ds.foo.compute()
             ds.foo.variable.compute()
+
+
+@pytest.mark.skipif(LooseVersion(dask.__version__) < LooseVersion('0.20.0'),
+                    reason='needs newer dask')
+def test_dask_layers_and_dependencies():
+    ds = Dataset({'foo': ('x', range(5)),
+                  'bar': ('x', range(5))}).chunk()
+
+    x = dask.delayed(ds)
+    assert set(x.__dask_graph__().dependencies).issuperset(
+        ds.__dask_graph__().dependencies)
+    assert set(x.foo.__dask_graph__().dependencies).issuperset(
+        ds.__dask_graph__().dependencies)

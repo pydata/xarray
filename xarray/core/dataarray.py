@@ -587,6 +587,9 @@ class DataArray(AbstractArray, DataWithCoords):
     def __dask_keys__(self):
         return self._to_temp_dataset().__dask_keys__()
 
+    def __dask_layers__(self):
+        return self._to_temp_dataset().__dask_layers__()
+
     @property
     def __dask_optimize__(self):
         return self._to_temp_dataset().__dask_optimize__
@@ -994,8 +997,8 @@ class DataArray(AbstractArray, DataWithCoords):
         interpolated: xr.DataArray
             New dataarray on the new coordinates.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
 
         See Also
@@ -1050,8 +1053,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Another dataarray by interpolating this dataarray's data along the
             coordinates of the other object.
 
-        Note
-        ----
+        Notes
+        -----
         scipy is required.
         If the dataarray has object-type coordinates, reindex is used for these
         coordinates instead of the interpolation.
@@ -2291,13 +2294,13 @@ class DataArray(AbstractArray, DataWithCoords):
             use when the desired quantile lies between two data points
             ``i < j``:
 
-                * linear: ``i + (j - i) * fraction``, where ``fraction`` is
+                - linear: ``i + (j - i) * fraction``, where ``fraction`` is
                   the fractional part of the index surrounded by ``i`` and
                   ``j``.
-                * lower: ``i``.
-                * higher: ``j``.
-                * nearest: ``i`` or ``j``, whichever is nearest.
-                * midpoint: ``(i + j) / 2``.
+                - lower: ``i``.
+                - higher: ``j``.
+                - nearest: ``i`` or ``j``, whichever is nearest.
+                - midpoint: ``(i + j) / 2``.
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
             the original object to the new one.  If False (default), the new

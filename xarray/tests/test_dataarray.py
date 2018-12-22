@@ -2273,6 +2273,11 @@ class TestDataArray(object):
         actual = array.resample(time='24H').reduce(np.mean)
         assert_identical(expected, actual)
 
+        actual = array.resample(time='24H', loffset='-12H').mean()
+        expected = DataArray(array.to_series().resample('24H', loffset='-12H')
+                             .mean())
+        assert_identical(expected, actual)
+
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
