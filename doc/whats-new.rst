@@ -56,6 +56,9 @@ Enhancements
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- 0d slices of ndarrays are now obtained directly through indexing, rather than
+  extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
+  Wennberg <https://github.com/danielwe>`_.
 
 Bug fixes
 ~~~~~~~~~

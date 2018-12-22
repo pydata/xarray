@@ -1147,6 +1147,11 @@ class TestVariable(VariableSubclassobjects):
         assert v_new.dims == ('x', )
         assert_array_equal(v_new, v._data[:, 1])
 
+        # test that we obtain a modifiable view when taking a 0d slice
+        v_new = v[0, 0]
+        v_new[...] += 99
+        assert_array_equal(v_new, v._data[0, 0])
+
     def test_getitem_with_mask_2d_input(self):
         v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
         assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
