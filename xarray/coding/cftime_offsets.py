@@ -553,7 +553,7 @@ def _count_not_none(*args):
 
 
 def cftime_range(start=None, end=None, periods=None, freq='D',
-                 tz=None, normalize=False, name=None, closed=None,
+                 normalize=False, name=None, closed=None,
                  calendar='standard'):
     """Return a fixed frequency CFTimeIndex.
 

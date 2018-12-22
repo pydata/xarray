@@ -33,6 +33,14 @@ v0.11.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Time bounds variables are now also decoded according to CF conventions
+  (:issue:`2565`). The previous behavior was to decode them only if they
+  had specific time attributes, now these attributes are copied 
+  automatically from the corresponding time coordinate. This might 
+  brake downstream code that was relying on these variables to be
+  not decoded.
+  By `Fabien Maussion <https://github.com/fmaussion>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -49,6 +57,9 @@ Enhancements
   file name is always stored (:issue:`2550`).
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
 
+- :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
+  ``loffset`` kwarg just like Pandas.
+  By `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~

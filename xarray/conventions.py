@@ -320,11 +320,39 @@ def decode_cf_variable(name, var, concat_characters=True, mask_and_scale=True,
     return Variable(dimensions, data, attributes, encoding=encoding)
 
 
+def _update_bounds_attributes(variables):
+    """Adds time attributes to time bounds variables.
+
+    Variables handling time bounds ("Cell boundaries" in the CF
+    conventions) do not necessarily carry the necessary attributes to be
+    decoded. This copies the attributes from the time variable to the
+    associated boundaries.
+
+    See Also:
+
+    http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/
+         cf-conventions.html#cell-boundaries
+
+    https://github.com/pydata/xarray/issues/2565
+    """
+
+    # For all time variables with bounds
+    for v in variables.values():
+        attrs = v.attrs
+        has_date_units = 'units' in attrs and 'since' in attrs['units']
+        if has_date_units and 'bounds' in attrs:
+            if attrs['bounds'] in variables:
+                bounds_attrs = variables[attrs['bounds']].attrs
+                bounds_attrs.setdefault('units', attrs['units'])
+                if 'calendar' in attrs:
+                    bounds_attrs.setdefault('calendar', attrs['calendar'])
+
+
 def decode_cf_variables(variables, attributes, concat_characters=True,
                         mask_and_scale=True, decode_times=True,
                         decode_coords=True, drop_variables=None):
     """
-    Decode a several CF encoded variables.
+    Decode several CF encoded variables.
 
     See: decode_cf_variable
     """
@@ -349,6 +377,10 @@ def decode_cf_variables(variables, attributes, concat_characters=True,
     elif drop_variables is None:
         drop_variables = []
     drop_variables = set(drop_variables)
+
+    # Time bounds coordinates might miss the decoding attributes
+    if decode_times:
+        _update_bounds_attributes(variables)
 
     new_vars = OrderedDict()
     for k, v in iteritems(variables):
