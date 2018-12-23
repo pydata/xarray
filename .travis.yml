@@ -29,7 +29,7 @@ matrix:
   - env: CONDA_ENV=py36-bottleneck-dev
   - env: CONDA_ENV=py36-condaforge-rc
   - env: CONDA_ENV=py36-pynio-dev
-  - env: CONDA_ENV=py36-rasterio-0.36
+  - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
   - env: CONDA_ENV=docs
   - env: CONDA_ENV=py36-hypothesis
