@@ -57,6 +57,11 @@ Enhancements
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- The option ``'warn_for_unclosed_files'`` (False by default) has been added to
+  allow users to enable a warning when files opened by xarray are deallocated
+  but were not explicitly closed. This is mostly useful for debugging; we
+  recommend enabling it in your test suites if you use xarray for IO.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
@@ -68,6 +73,12 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Ensure files are automatically closed, if possible, when no longer referenced
+  by a Python variable (:issue:`2560`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Fixed possible race conditions when reading/writing to disk in parallel
+  (:issue:`2595`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).

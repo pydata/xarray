@@ -22,13 +22,16 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
-    def __init__(self, manager, vrt_params=None):
+
+    def __init__(self, manager, lock, vrt_params=None):
         from rasterio.vrt import WarpedVRT
         self.manager = manager
+        self.lock = lock
 
         # cannot save riods as an attribute: this would break pickleability
         riods = manager.acquire()
-        riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
+        if vrt_params is not None:
+            riods = WarpedVRT(riods, **vrt_params)
         self.vrt_params = vrt_params
         self._shape = (riods.count, riods.height, riods.width)
 
@@ -112,9 +115,11 @@ class RasterioArrayWrapper(BackendArray):
                 stop - start for (start, stop) in window)
             out = np.zeros(shape, dtype=self.dtype)
         else:
-            riods = self.manager.acquire()
-            riods = riods if self.vrt_params is None else WarpedVRT(riods,**self.vrt_params)
-            out = riods.read(band_key, window=window)
+            with self.lock:
+                riods = self.manager.acquire(needs_lock=False)
+                if self.vrt_params is not None:
+                    riods = WarpedVRT(riods, **self.vrt_params)
+                out = riods.read(band_key, window=window)
 
         if squeeze_axis:
             out = np.squeeze(out, axis=squeeze_axis)
@@ -221,9 +226,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
                           tolerance=vrt.tolerance,
                           warp_extras=vrt.warp_extras)
 
-    manager = CachingFileManager(rasterio.open, filename, mode='r')
+    if lock is None:
+        lock = RASTERIO_LOCK
+
+    manager = CachingFileManager(rasterio.open, filename, lock=lock, mode='r')
     riods = manager.acquire()
-    riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
+    if vrt_params is not None:
+        riods = WarpedVRT(riods, **vrt_params)
 
     if cache is None:
         cache = chunks is None
@@ -303,7 +312,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager, vrt_params))
+    data = indexing.LazilyOuterIndexedArray(
+        RasterioArrayWrapper(manager, lock, vrt_params))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
@@ -323,10 +333,7 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
             mtime = None
         token = tokenize(filename, mtime, chunks)
         name_prefix = 'open_rasterio-%s' % token
-        if lock is None:
-            lock = RASTERIO_LOCK
-        result = result.chunk(chunks, name_prefix=name_prefix, token=token,
-                              lock=lock)
+        result = result.chunk(chunks, name_prefix=name_prefix, token=token)
 
     # Make the file closeable
     result._file_obj = manager
