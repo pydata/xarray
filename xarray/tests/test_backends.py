@@ -233,9 +233,9 @@ class DatasetIOBase(object):
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
             string_kinds = {'O', 'S', 'U'}
-            assert (expected_dtype == actual_dtype or
-                    (expected_dtype.kind in string_kinds and
-                     actual_dtype.kind in string_kinds))
+            assert (expected_dtype == actual_dtype
+                    or (expected_dtype.kind in string_kinds and
+                        actual_dtype.kind in string_kinds))
 
     def test_roundtrip_test_data(self):
         expected = create_test_data()
@@ -415,17 +415,17 @@ class DatasetIOBase(object):
                 with self.roundtrip(expected, save_kwargs=kwds) as actual:
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t.encoding['units'] ==
-                            'days since 0001-01-01 00:00:00.000000')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                    assert (actual.t.encoding['units']
+                            == 'days since 0001-01-01 00:00:00.000000')
+                    assert (actual.t.encoding['calendar']
+                            == expected_calendar)
 
                     abs_diff = abs(actual.t0.values - expected_decoded_t0)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t0.encoding['units'] ==
-                            'days since 0001-01-01')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                    assert (actual.t0.encoding['units']
+                            == 'days since 0001-01-01')
+                    assert (actual.t.encoding['calendar']
+                            == expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -673,8 +673,8 @@ class CFEncodedBase(DatasetIOBase):
 
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
-                assert (decoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (decoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
 
         with self.roundtrip(decoded,
@@ -682,15 +682,15 @@ class CFEncodedBase(DatasetIOBase):
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (encoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
 
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (encoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
 
         # make sure roundtrip encoding didn't change the
@@ -2622,8 +2622,8 @@ class TestPseudoNetCDFFormat(object):
                 'ULOD_FLAG': '-7777', 'ULOD_VALUE': 'N/A',
                 'LLOD_FLAG': '-8888',
                 'LLOD_VALUE': ('N/A, N/A, N/A, N/A, 0.025'),
-                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/' +
-                                   'IcarttDataFormat.htm'),
+                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/'
+                                   + 'IcarttDataFormat.htm'),
                 'REVISION': 'R0',
                 'R0': 'No comments for this revision.',
                 'TFLAG': 'Start_UTC'
@@ -2712,8 +2712,8 @@ class TestPseudoNetCDFFormat(object):
         expected = xr.Variable(('TSTEP',), data,
                                dict(bounds='time_bounds',
                                     long_name=('synthesized time coordinate ' +
-                                               'from SDATE, STIME, STEP ' +
-                                               'global attributes')))
+                                               'from SDATE, STIME, STEP '
+                                               + 'global attributes')))
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
         camxfile.close()
@@ -2742,8 +2742,8 @@ class TestPseudoNetCDFFormat(object):
         data = np.concatenate([data1] * 2, axis=0)
         attrs = dict(bounds='time_bounds',
                      long_name=('synthesized time coordinate ' +
-                                'from SDATE, STIME, STEP ' +
-                                'global attributes'))
+                                'from SDATE, STIME, STEP '
+                                + 'global attributes'))
         expected = xr.Variable(('TSTEP',), data, attrs)
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
@@ -3158,6 +3158,73 @@ class TestRasterio(object):
         with xr.open_rasterio(url, chunks=(1, 256, 256)) as actual:
             import dask.array as da
             assert isinstance(actual.data, da.Array)
+
+    def test_rasterio_environment(self):
+        import rasterio
+        with create_tmp_geotiff() as (tmp_file, expected):
+            # Should fail with error since suffix not allowed
+            with pytest.raises(Exception):
+                with rasterio.Env(GDAL_SKIP='GTiff'):
+                    with xr.open_rasterio(tmp_file) as actual:
+                        assert_allclose(actual, expected)
+
+    def test_rasterio_vrt(self):
+        import rasterio
+        # tmp_file default crs is UTM: CRS({'init': 'epsg:32618'}
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with rasterio.open(tmp_file) as src:
+                with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_crs = vrt.crs
+                    print(expected_crs)
+                    expected_res = vrt.res
+                    # Value of single pixel in center of image
+                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
+                    expected_val = next(vrt.sample([(lon, lat)]))
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_crs = da.crs
+                        print(actual_crs)
+                        actual_res = da.res
+                        actual_val = da.sel(dict(x=lon, y=lat),
+                                            method='nearest').data
+
+                        assert actual_crs == expected_crs
+                        assert actual_res == expected_res
+                        assert actual_shape == expected_shape
+                        assert expected_val.all() == actual_val.all()
+
+    @network
+    def test_rasterio_vrt_network(self):
+        import rasterio
+
+        url = 'https://storage.googleapis.com/\
+        gcp-public-data-landsat/LC08/01/047/027/\
+        LC08_L1TP_047027_20130421_20170310_01_T1/\
+        LC08_L1TP_047027_20130421_20170310_01_T1_B4.TIF'
+        env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',
+                           CPL_VSIL_CURL_USE_HEAD=False,
+                           CPL_VSIL_CURL_ALLOWED_EXTENSIONS='TIF')
+        with env:
+            with rasterio.open(url) as src:
+                with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_crs = vrt.crs
+                    expected_res = vrt.res
+                    # Value of single pixel in center of image
+                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
+                    expected_val = next(vrt.sample([(lon, lat)]))
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_crs = da.crs
+                        actual_res = da.res
+                        actual_val = da.sel(dict(x=lon, y=lat),
+                                            method='nearest').data
+
+                        assert_equal(actual_shape, expected_shape)
+                        assert_equal(actual_crs, expected_crs)
+                        assert_equal(actual_res, expected_res)
+                        assert_equal(expected_val, actual_val)
 
 
 class TestEncodingInvalid(object):
