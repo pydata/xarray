@@ -2,7 +2,6 @@ import os
 import warnings
 from collections import OrderedDict
 from distutils.version import LooseVersion
-
 import numpy as np
 
 from .. import DataArray
@@ -23,13 +22,14 @@ _ERROR_MSG = ('The kind of indexing operation you are trying to do is not '
 
 class RasterioArrayWrapper(BackendArray):
     """A wrapper around rasterio dataset objects"""
-
-    def __init__(self, manager):
+    def __init__(self, manager, vrt_params=None):
+        from rasterio.vrt import WarpedVRT
         self.manager = manager
 
         # cannot save riods as an attribute: this would break pickleability
         riods = manager.acquire()
-
+        riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
+        self.vrt_params = vrt_params
         self._shape = (riods.count, riods.height, riods.width)
 
         dtypes = riods.dtypes
@@ -103,6 +103,7 @@ class RasterioArrayWrapper(BackendArray):
         return band_key, tuple(window), tuple(squeeze_axis), tuple(np_inds)
 
     def _getitem(self, key):
+        from rasterio.vrt import WarpedVRT
         band_key, window, squeeze_axis, np_inds = self._get_indexer(key)
 
         if not band_key or any(start == stop for (start, stop) in window):
@@ -112,6 +113,7 @@ class RasterioArrayWrapper(BackendArray):
             out = np.zeros(shape, dtype=self.dtype)
         else:
             riods = self.manager.acquire()
+            riods = riods if self.vrt_params is None else WarpedVRT(riods,**self.vrt_params)
             out = riods.read(band_key, window=window)
 
         if squeeze_axis:
@@ -176,8 +178,8 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
 
     Parameters
     ----------
-    filename : str
-        Path to the file to open.
+    filename : str, rasterio.DatasetReader, or rasterio.WarpedVRT
+        Path to the file to open. Or already open rasterio dataset.
     parse_coordinates : bool, optional
         Whether to parse the x and y coordinates out of the file's
         ``transform`` attribute or not. The default is to automatically
@@ -204,11 +206,24 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
     data : DataArray
         The newly created DataArray.
     """
-
     import rasterio
+    from rasterio.vrt import WarpedVRT
+    vrt_params = None
+    if isinstance(filename, rasterio.io.DatasetReader):
+        filename = filename.name
+    elif isinstance(filename, rasterio.vrt.WarpedVRT):
+        vrt = filename
+        filename = vrt.src_dataset.name
+        vrt_params = dict(crs=vrt.crs.to_string(),
+                          resampling=vrt.resampling,
+                          src_nodata=vrt.src_nodata,
+                          dst_nodata=vrt.dst_nodata,
+                          tolerance=vrt.tolerance,
+                          warp_extras=vrt.warp_extras)
 
     manager = CachingFileManager(rasterio.open, filename, mode='r')
     riods = manager.acquire()
+    riods = riods if vrt_params is None else WarpedVRT(riods, **vrt_params)
 
     if cache is None:
         cache = chunks is None
@@ -282,13 +297,13 @@ def open_rasterio(filename, parse_coordinates=None, chunks=None, cache=None,
         for k, v in meta.items():
             # Add values as coordinates if they match the band count,
             # as attributes otherwise
-            if (isinstance(v, (list, np.ndarray)) and
-                    len(v) == riods.count):
+            if (isinstance(v, (list, np.ndarray))
+                    and len(v) == riods.count):
                 coords[k] = ('band', np.asarray(v))
             else:
                 attrs[k] = v
 
-    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager))
+    data = indexing.LazilyOuterIndexedArray(RasterioArrayWrapper(manager, vrt_params))
 
     # this lets you write arrays loaded with rasterio
     data = indexing.CopyOnWriteArray(data)
