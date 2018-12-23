@@ -299,18 +299,23 @@ class DatasetIOBase(object):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            raw_pickle = pickle.dumps(roundtripped)
-            # windows doesn't like opening the same file twice
-            roundtripped.close()
-            unpickled_ds = pickle.loads(raw_pickle)
-            assert_identical(expected, unpickled_ds)
+            with roundtripped:
+                # Windows doesn't like reopening an already open file
+                raw_pickle = pickle.dumps(roundtripped)
+            with pickle.loads(raw_pickle) as unpickled_ds:
+                assert_identical(expected, unpickled_ds)
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
-            assert_identical(expected['foo'], unpickled_array)
+            with roundtripped:
+                raw_pickle = pickle.dumps(roundtripped['foo'])
+            # TODO: figure out how to explicitly close the file for the
+            # unpickled DataArray?
+            unpickled = pickle.loads(raw_pickle)
+            assert_identical(expected['foo'], unpickled)
 
     def test_dataset_caching(self):
         expected = Dataset({'foo': ('x', [5, 6, 7])})
@@ -435,13 +440,13 @@ class DatasetIOBase(object):
             assert_identical(expected, actual)
 
     def test_roundtrip_example_1_netcdf(self):
-        expected = open_example_dataset('example_1.nc')
-        with self.roundtrip(expected) as actual:
-            # we allow the attributes to differ since that
-            # will depend on the encoding used.  For example,
-            # without CF encoding 'actual' will end up with
-            # a dtype attribute.
-            assert_equal(expected, actual)
+        with open_example_dataset('example_1.nc') as expected:
+            with self.roundtrip(expected) as actual:
+                # we allow the attributes to differ since that
+                # will depend on the encoding used.  For example,
+                # without CF encoding 'actual' will end up with
+                # a dtype attribute.
+                assert_equal(expected, actual)
 
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
@@ -1274,6 +1279,7 @@ class TestNetCDF4Data(NetCDF4Base):
 
 @requires_netCDF4
 @requires_dask
+@pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
 class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -1659,9 +1665,9 @@ class TestScipyFilePath(ScipyWriteBase):
 
     def test_netcdf3_endianness(self):
         # regression test for GH416
-        expected = open_example_dataset('bears.nc', engine='scipy')
-        for var in expected.variables.values():
-            assert var.dtype.isnative
+        with open_example_dataset('bears.nc', engine='scipy') as expected:
+            for var in expected.variables.values():
+                assert var.dtype.isnative
 
     @requires_netCDF4
     def test_nc4_scipy(self):
@@ -1979,13 +1985,13 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
         # check that calculation on opened datasets works properly
-        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
-                                chunks=chunks)
+        with open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                            chunks=chunks) as actual:
 
-        # check that using open_mfdataset returns dask arrays for variables
-        assert isinstance(actual['foo'].data, dask_array_type)
+            # check that using open_mfdataset returns dask arrays for variables
+            assert isinstance(actual['foo'].data, dask_array_type)
 
-        assert_identical(original, actual)
+            assert_identical(original, actual)
 
 
 @requires_scipy_or_netCDF4
@@ -2032,20 +2038,17 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
 
         return ds1, ds2
 
-    def test_open_mfdataset_does_same_as_concat(self):
-        options = ['all', 'minimal', 'different', ]
-
+    @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
+    def test_open_mfdataset_does_same_as_concat(self, opt):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            for opt in options:
-                with open_mfdataset(files, data_vars=opt) as ds:
-                    kwargs = dict(data_vars=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
-
-                with open_mfdataset(files, coords=opt) as ds:
-                    kwargs = dict(coords=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
+            with open_mfdataset(files, data_vars=opt) as ds:
+                kwargs = dict(data_vars=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
+            with open_mfdataset(files, coords=opt) as ds:
+                kwargs = dict(coords=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'
@@ -2160,12 +2163,10 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
-                    assert actual.foo.variable.data.chunks == \
-                        ((5, 5),)
+                    assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
-                    assert actual.foo.variable.data.chunks == \
-                        ((3, 2, 3, 2),)
+                    assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
 
         with raises_regex(IOError, 'no files to open'):
