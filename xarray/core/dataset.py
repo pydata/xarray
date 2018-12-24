@@ -14,7 +14,7 @@ import xarray as xr
 
 from . import (
     alignment, computation, duck_array_ops, formatting, groupby, indexing, ops,
-    resample, rolling, utils)
+    pdcompat, resample, rolling, utils)
 from .. import conventions
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
@@ -2425,6 +2425,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     def _unstack_once(self, dim):
         index = self.get_index(dim)
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        if LooseVersion(pd.__version__) >= "0.20":
+            index = index.remove_unused_levels()
+        else:  # for pandas 0.19
+            index = pdcompat.remove_unused_levels(index)
+
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.

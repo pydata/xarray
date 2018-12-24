@@ -1027,6 +1027,20 @@ class TestDataArray(object):
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
+    def test_selection_multiindex(self):
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=['x', 'y'],
+                          coords={'x': np.arange(8), 'y': np.arange(5)})
+        ds = ds.stack(xy=['x', 'y'])
+        ds_isel = ds.isel(xy=ds['x'] < 4)
+        with pytest.raises(KeyError):
+            ds_isel.sel(x=5)
+
+        actual = ds_isel.unstack()
+        expected = ds.reset_index('xy').isel(xy=ds['x'] < 4)
+        expected = expected.set_index(xy=['x', 'y']).unstack()
+        assert_identical(expected, actual)
+
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')
         expected = DataArray(range(5), dims='x', name='x')
