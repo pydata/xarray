@@ -503,7 +503,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
         new_order = sorted(stacked.dims, key=lookup_order)
         return stacked.transpose(*new_order)
 
-    def apply(self, func, shortcut=False, **kwargs):
+    def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -532,6 +532,8 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        args : tuple, optional
+            Positional arguments passed to `func`.
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -544,7 +546,7 @@ class DataArrayGroupBy(GroupBy, ImplementsArrayReduce):
             grouped = self._iter_grouped_shortcut()
         else:
             grouped = self._iter_grouped()
-        applied = (maybe_wrap_array(arr, func(arr, **kwargs))
+        applied = (maybe_wrap_array(arr, func(arr, *args, **kwargs))
                    for arr in grouped)
         return self._combine(applied, shortcut=shortcut)
 
@@ -642,7 +644,7 @@ ops.inject_binary_ops(DataArrayGroupBy)
 
 
 class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
-    def apply(self, func, **kwargs):
+    def apply(self, func, args=(), **kwargs):
         """Apply a function over each Dataset in the group and concatenate them
         together into a new Dataset.
 
@@ -661,6 +663,8 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
         ----------
         func : function
             Callable to apply to each sub-dataset.
+        args : tuple, optional
+            Positional arguments to pass to `func`.
         **kwargs
             Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
 
@@ -670,7 +674,7 @@ class DatasetGroupBy(GroupBy, ImplementsDatasetReduce):
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
-        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         return self._combine(applied)
 
     def _combine(self, applied):

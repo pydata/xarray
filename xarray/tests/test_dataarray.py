@@ -2295,6 +2295,17 @@ class TestDataArray(object):
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
+    def test_da_resample_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', periods=3, freq='D')
+        da = xr.DataArray([1., 1., 1.], coords=[times], dims=['time'])
+        expected = xr.DataArray([3., 3., 3.], coords=[times], dims=['time'])
+        actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(actual, expected)
+
     @requires_cftime
     def test_resample_cftimeindex(self):
         cftime = _import_cftime()
