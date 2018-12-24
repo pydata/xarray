@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, resample,
-    rolling, utils)
+    alignment, duck_array_ops, formatting, groupby, indexing, ops, pdcompat,
+    resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
@@ -2426,6 +2426,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     def _unstack_once(self, dim):
         index = self.get_index(dim)
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        if LooseVersion(pd.__version__) >= "0.20":
+            index = index.remove_unused_levels()
+        else:  # for pandas 0.19
+            index = pdcompat.remove_unused_levels(index)
+
         full_idx = pd.MultiIndex.from_product(index.levels, names=index.names)
 
         # take a shortcut in case the MultiIndex was not modified.
@@ -2948,8 +2954,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Parameters
         ----------
         func : function
-            Function which can be called in the form `f(x, **kwargs)` to
-            transform each DataArray `x` in this dataset into another
+            Function which can be called in the form `func(x, *args, **kwargs)`
+            to transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from

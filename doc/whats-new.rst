@@ -66,6 +66,10 @@ Enhancements
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- The `apply` methods for `DatasetGroupBy`, `DataArrayGroupBy`,
+  `DatasetResample` and `DataArrayResample` can now pass positional arguments to
+  the applied function.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
 - 0d slices of ndarrays are now obtained directly through indexing, rather than
   extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
   Wennberg <https://github.com/danielwe>`_.
@@ -83,7 +87,11 @@ Bug fixes
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
   By `Deepak Cherian <https://github.com/dcherian>`_
-
+- Fix failure in time encoding when exporting to netCDF with versions of pandas
+  less than 0.21.1 (:issue:`2623`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
+- Fix MultiIndex selection to update label and level (:issue:`2619`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.11.0:
 
@@ -256,6 +264,9 @@ Announcements of note:
   for more details.
 - We have a new :doc:`roadmap` that outlines our future development plans.
 
+- `Dataset.apply` now properly documents the way `func` is called.
+  By `Matti Eskelinen <https://github.com/maaleske>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 
@@ -263,6 +274,7 @@ Enhancements
   :py:meth:`~xarray.Dataset.differentiate` are newly added.
   (:issue:`1332`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+
 - Default colormap for sequential and divergent data can now be set via
   :py:func:`~xarray.set_options()`
   (:issue:`2394`)
