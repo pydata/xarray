@@ -83,7 +83,8 @@ Bug fixes
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
   By `Deepak Cherian <https://github.com/dcherian>`_
-
+- Fix MultiIndex selection to update label and level (:issue:`2619`).
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
 .. _whats-new.0.11.0:
 
