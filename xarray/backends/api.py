@@ -22,11 +22,11 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 def _get_default_engine_remote_uri():
     try:
-        import netCDF4
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import pydap  # flake8: noqa
+            import pydap  # noqa
             engine = 'pydap'
         except ImportError:
             raise ValueError('netCDF4 or pydap is required for accessing '
@@ -37,12 +37,12 @@ def _get_default_engine_remote_uri():
 def _get_default_engine_grib():
     msgs = []
     try:
-        import Nio  # flake8: noqa
+        import Nio  # noqa
         msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
     except ImportError:  # pragma: no cover
         pass
     try:
-        import cfgrib  # flake8: noqa
+        import cfgrib  # noqa
         msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
     except ImportError:  # pragma: no cover
         pass
@@ -55,7 +55,7 @@ def _get_default_engine_grib():
 
 def _get_default_engine_gz():
     try:
-        import scipy  # flake8: noqa
+        import scipy  # noqa
         engine = 'scipy'
     except ImportError:  # pragma: no cover
         raise ValueError('scipy is required for accessing .gz files')
@@ -64,11 +64,11 @@ def _get_default_engine_gz():
 
 def _get_default_engine_netcdf():
     try:
-        import netCDF4  # flake8: noqa
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import scipy.io.netcdf  # flake8: noqa
+            import scipy.io.netcdf  # noqa
             engine = 'scipy'
         except ImportError:
             raise ValueError('cannot read or write netCDF files without '
@@ -578,7 +578,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
-    """
+    """  # noqa
     if isinstance(paths, basestring):
         if is_remote_uri(paths):
             raise ValueError(
@@ -641,11 +641,12 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             # Discard ordering because it should be redone from coordinates
             ids = False
 
-        combined = _auto_combine(datasets, concat_dims=concat_dims,
-                                 compat=compat,
-                                 data_vars=data_vars, coords=coords,
-                                 infer_order_from_coords=infer_order_from_coords,
-                                 ids=ids)
+        combined = _auto_combine(
+            datasets, concat_dims=concat_dims,
+            compat=compat,
+            data_vars=data_vars, coords=coords,
+            infer_order_from_coords=infer_order_from_coords,
+            ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()

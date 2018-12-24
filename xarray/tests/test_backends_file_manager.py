@@ -12,8 +12,6 @@ except ImportError:
     import mock  # noqa: F401
 
 
-
-
 @pytest.fixture(params=[1, 2, 3, None])
 def file_cache(request):
     maxsize = request.param

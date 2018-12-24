@@ -658,7 +658,8 @@ class CFEncodedBase(DatasetIOBase):
           create_encoded_unsigned_masked_scaled_data),
          pytest.param(create_bad_unsigned_masked_scaled_data,
                       create_bad_encoded_unsigned_masked_scaled_data,
-                      marks=pytest.mark.xfail(reason="Bad _Unsigned attribute.")),
+                      marks=pytest.mark.xfail(
+                          reason="Bad _Unsigned attribute.")),
          (create_signed_masked_scaled_data,
           create_encoded_signed_masked_scaled_data),
          (create_masked_and_scaled_data,
@@ -1343,7 +1344,7 @@ class ZarrBase(CFEncodedBase):
         pytest.skip("zarr backend does not support appending")
 
     def test_roundtrip_consolidated(self):
-        zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        pytest.importorskip('zarr', minversion="2.2.1.dev2")
         expected = create_test_data()
         with self.roundtrip(expected,
                             save_kwargs={'consolidated': True},
@@ -2168,7 +2169,6 @@ class TestDask(DatasetIOBase):
                     assert actual.foo.variable.data.chunks == \
                         ((3, 2, 3, 2),)
 
-
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
@@ -2195,14 +2195,14 @@ class TestDask(DatasetIOBase):
                             assert isinstance(actual.foo.variable.data,
                                               da.Array)
                             assert actual.foo.variable.data.chunks == \
-                                   ((5, 5), (4, 4))
+                                ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset([[tmp1, tmp2],
                                              [tmp3, tmp4]],
                                             concat_dim=['y', 'x'],
                                             chunks={'x': 3, 'y': 2}) as actual:
                             assert actual.foo.variable.data.chunks == \
-                                   ((3, 2, 3, 2), (2, 2, 2, 2),)
+                                ((3, 2, 3, 2), (2, 2, 2, 2),)
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
@@ -2241,7 +2241,7 @@ class TestDask(DatasetIOBase):
                             assert_identical(original, actual)
 
     @pytest.mark.xfail(reason="Not yet implemented")
-    def test_open_mfdataset(self):
+    def test_open_mfdataset_2(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -2963,7 +2963,8 @@ class TestRasterio(object):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                ind = {'band': 0, 'x': np.array([0, 0]), 'y': np.array([1, 1, 1])}
+                ind = {'band': 0, 'x': np.array(
+                    [0, 0]), 'y': np.array([1, 1, 1])}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
