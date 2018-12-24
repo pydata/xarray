@@ -1,4 +1,3 @@
-import collections
 import gc
 import pickle
 import threading
