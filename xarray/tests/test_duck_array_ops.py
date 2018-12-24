@@ -267,7 +267,7 @@ def test_datetime_reduce(dask):
     actual = da['time'].mean(skipna=False)
     assert pd.isnull(actual)
 
-    # test with 0d array
+    # test for a 0d array
     assert da['time'][0].mean() == da['time'][:1].mean()
 
 
