@@ -8,15 +8,15 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, Variable, auto_combine, concat
-from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.core.combine import (
-    _new_tile_id, _auto_combine_all_along_first_dim,
-    _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _check_shape_tile_ids, _combine_nd, _auto_combine_1d, _auto_combine)
+    _auto_combine, _auto_combine_1d, _auto_combine_all_along_first_dim,
+    _check_shape_tile_ids, _combine_nd, _infer_concat_order_from_positions,
+    _infer_tile_ids_from_nested_list, _new_tile_id)
+from xarray.core.pycompat import OrderedDict, iteritems
 
 from . import (
-    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
-    assert_combined_tile_ids_equal, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_combined_tile_ids_equal,
+    assert_equal, assert_identical, raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 

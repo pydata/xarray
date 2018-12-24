@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import warnings
 import itertools
+import warnings
 from collections import Counter
 
 import pandas as pd

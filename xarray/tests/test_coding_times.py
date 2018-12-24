@@ -8,8 +8,8 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Variable, coding, decode_cf
-from xarray.coding.times import (_import_cftime, cftime_to_nptime,
-                                 decode_cf_datetime, encode_cf_datetime)
+from xarray.coding.times import (
+    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
 from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
 

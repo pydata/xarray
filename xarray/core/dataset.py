@@ -32,7 +32,7 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, iteritems, range)
 from .utils import (
-    _check_inplace, Frozen, SortedKeysDict, datetime_to_numeric,
+    Frozen, SortedKeysDict, _check_inplace, datetime_to_numeric,
     decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
     hashable, maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables

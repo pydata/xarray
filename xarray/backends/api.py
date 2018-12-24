@@ -1,21 +1,20 @@
 from __future__ import absolute_import, division, print_function
 
 import os.path
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
-import warnings
 
 import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import _infer_concat_order_from_positions, _auto_combine
+from ..core.combine import _auto_combine, _infer_concat_order_from_positions
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri, is_grib_path
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
-
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'

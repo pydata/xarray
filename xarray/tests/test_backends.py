@@ -23,17 +23,18 @@ from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
+from xarray.core.options import set_options
 from xarray.core.pycompat import (
     ExitStack, basestring, dask_array_type, iteritems)
-from xarray.core.options import set_options
 from xarray.tests import mock
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
-    has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
-    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
-    requires_pseudonetcdf, requires_pydap, requires_pynio, requires_rasterio,
-    requires_scipy, requires_scipy_or_netCDF4, requires_zarr, requires_cfgrib)
+    has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cfgrib,
+    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
+    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
+    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
+    requires_zarr)
 from .test_dataset import create_test_data
 
 try:

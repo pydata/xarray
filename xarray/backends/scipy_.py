@@ -11,8 +11,8 @@ from ..core.indexing import NumpyIndexingAdapter
 from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
-from .locks import get_write_lock
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import get_write_lock
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 

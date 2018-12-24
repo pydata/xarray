@@ -51,7 +51,7 @@ import pandas as pd
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
-from .times import cftime_to_nptime, infer_calendar_name, _STANDARD_CALENDARS
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
 def named(name, pattern):

@@ -9,9 +9,9 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
+from .options import _get_keep_attrs
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-from .options import _get_keep_attrs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')

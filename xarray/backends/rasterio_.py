@@ -12,7 +12,6 @@ from .common import BackendArray
 from .file_manager import CachingFileManager
 from .locks import SerializableLock
 
-
 # TODO: should this be GDAL_LOCK instead?
 RASTERIO_LOCK = SerializableLock()
 
