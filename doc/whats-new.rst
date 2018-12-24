@@ -83,6 +83,9 @@ Bug fixes
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Fix failure in time encoding when exporting to netCDF with versions of pandas
+  less than 0.21.1 (:issue:`2623`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 - Fix MultiIndex selection to update label and level (:issue:`2619`).
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 
