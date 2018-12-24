@@ -278,17 +278,19 @@ cumsum_1d.numeric_only = True
 
 _mean = _create_nan_agg_method('mean')
 
+
 def mean(array, axis=None, skipna=None, **kwargs):
     """ inhouse mean that can handle datatime dtype """
     array = asarray(array)
     if array.dtype.kind == 'M':
         offset = min(array)
-        # infer the compatible timedelta dtype 
+        # infer the compatible timedelta dtype
         dtype = (np.empty((1,), dtype=array.dtype) - offset).dtype
         return _mean(utils.datetime_to_numeric(array), axis=axis,
                      skipna=skipna, **kwargs).astype(dtype) + offset
     else:
         return _mean(array, axis=axis, skipna=skipna, **kwargs)
+
 
 mean.numeric_only = True
 
