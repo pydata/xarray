@@ -2912,7 +2912,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             dims = set(dim)
 
-        missing_dimensions = [dim for d in dims if d not in self.dims]
+        missing_dimensions = [d for d in dims if d not in self.dims]
         if missing_dimensions:
             raise ValueError('Dataset does not contain the dimensions: %s'
                              % missing_dimensions)
@@ -2922,7 +2922,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         variables = OrderedDict()
         for name, var in iteritems(self._variables):
-            reduce_dims = [dim for d in var.dims if d in dims]
+            reduce_dims = [d for d in var.dims if d in dims]
             if name in self.coords:
                 if not reduce_dims:
                     variables[name] = var
@@ -3711,14 +3711,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             dims = set(dim)
 
-        _assert_empty([dim for d in dims if d not in self.dims],
+        _assert_empty([d for d in dims if d not in self.dims],
                       'Dataset does not contain the dimensions: %s')
 
         q = np.asarray(q, dtype=np.float64)
 
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
-            reduce_dims = [dim for d in var.dims if d in dims]
+            reduce_dims = [d for d in var.dims if d in dims]
             if reduce_dims or not var.dims:
                 if name not in self.coords:
                     if (not numeric_only or
