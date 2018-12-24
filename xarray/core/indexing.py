@@ -1145,15 +1145,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                             'Trying to wrap {}'.format(type(array)))
         self.array = array
 
-    def _ensure_ndarray(self, value):
-        # We always want the result of indexing to be a NumPy array. If it's
-        # not, then it really should be a 0d array. Doing the coercion here
-        # instead of inside variable.as_compatible_data makes it less error
-        # prone.
-        if not isinstance(value, np.ndarray):
-            value = utils.to_0d_array(value)
-        return value
-
     def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
             array = self.array
@@ -1163,7 +1154,10 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             key = key.tuple
         elif isinstance(key, BasicIndexer):
             array = self.array
-            key = key.tuple
+            # We want 0d slices rather than scalars. This is achieved by
+            # appending an ellipsis (see
+            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).  # noqa
+            key = key.tuple + (Ellipsis,)
         else:
             raise TypeError('unexpected key type: {}'.format(type(key)))
 
@@ -1174,7 +1168,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
-        return self._ensure_ndarray(array[key])
+        return array[key]
 
     def __setitem__(self, key, value):
         array, key = self._indexing_array_and_key(key)
