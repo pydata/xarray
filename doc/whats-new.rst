@@ -33,6 +33,7 @@ v0.11.1 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Minimum rasterio version increased from 0.36 to 1.0 (for ``open_rasterio``)
 - Time bounds variables are now also decoded according to CF conventions
   (:issue:`2565`). The previous behavior was to decode them only if they
   had specific time attributes, now these attributes are copied 
@@ -53,17 +54,35 @@ Enhancements
   :py:meth:`~xarray.Dataset.coarsen` are newly added.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Enable passing ``rasterio.io.DatasetReader`` or ``rasterio.vrt.WarpedVRT`` to
+  ``open_rasterio`` instead of file path string. Allows for in-memory
+  reprojection, see  (:issue:`2588`).
+  By `Scott Henderson <https://github.com/scottyhq>`_.
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
   "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
+- The option ``'warn_for_unclosed_files'`` (False by default) has been added to
+  allow users to enable a warning when files opened by xarray are deallocated
+  but were not explicitly closed. This is mostly useful for debugging; we
+  recommend enabling it in your test suites if you use xarray for IO.
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- 0d slices of ndarrays are now obtained directly through indexing, rather than
+  extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
+  Wennberg <https://github.com/danielwe>`_.
 
 Bug fixes
 ~~~~~~~~~
 
+- Ensure files are automatically closed, if possible, when no longer referenced
+  by a Python variable (:issue:`2560`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
+- Fixed possible race conditions when reading/writing to disk in parallel
+  (:issue:`2595`).
+  By `Stephan Hoyer <https://github.com/shoyer>`_
 - Fix h5netcdf saving scalars with filters or chunks (:issue:`2563`).
   By `Martin Raspaud <https://github.com/mraspaud>`_.
 - Fix parsing of ``_Unsigned`` attribute set by OPENDAP servers. (:issue:`2583`).

@@ -32,7 +32,7 @@ For netCDF and IO
   for accessing CAMx, GEOS-Chem (bpch), NOAA ARL files, ICARTT files
   (ffi1001) and many other.
 - `rasterio <https://github.com/mapbox/rasterio>`__: for reading GeoTiffs and
-  other gridded raster datasets.
+  other gridded raster datasets. (version 1.0 or later)
 - `iris <https://github.com/scitools/iris>`__: for conversion to and from iris'
   Cube objects
 - `cfgrib <https://github.com/ecmwf/cfgrib>`__: for reading GRIB files via the
