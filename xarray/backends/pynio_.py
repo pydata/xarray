@@ -25,18 +25,21 @@ class NioArrayWrapper(BackendArray):
         self.shape = array.shape
         self.dtype = np.dtype(array.typecode())
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name]
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock)
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
         return indexing.explicit_indexing_adapter(
             key, self.shape, indexing.IndexingSupport.BASIC, self._getitem)
 
     def _getitem(self, key):
-        array = self.get_array()
         with self.datastore.lock:
+            array = self.get_array(needs_lock=False)
+
             if key == () and self.ndim == 0:
                 return array.get_value()
+
             return array[key]
 
 
