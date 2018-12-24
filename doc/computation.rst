@@ -199,6 +199,41 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+Coarsen large arrays
+====================
+
+``DataArray`` objects include a :py:meth:`~xarray.DataArray.coarsen` method.
+This method supports the block aggregation:
+
+.. ipython:: python
+
+  da = xr.DataArray(np.linspace(0, 364, num=364), dims='time',
+                    coords={'time': pd.date_range('15/12/1999', periods=364)})
+  da
+
+In order to take a block mean for every 7 days along ``time`` dimension,
+
+.. ipython:: python
+
+  da.coarsen(time=7).mean()
+
+:py:meth:`~xarray.DataArray.coarsen` raises an Error if the data length is not
+a multiple of the window size.
+You can choose ``boundary='trim'`` or  ``boundary='pad'`` options for trimming
+the excess entries or padding ``nan`` for insufficient entries,
+
+.. ipython:: python
+
+  da.coarsen(time=30, boundary='trim').mean()
+
+If you want to apply a specific function to coordinate, you can pass the
+function of function name to ``coordinate_func`` option,
+
+.. ipython:: python
+
+  da.coarsen(time=7, coordinate_func={'time': 'min'}).mean()
+
+
 Computation using Coordinates
 =============================
 
