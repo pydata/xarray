@@ -4435,9 +4435,9 @@ def test_coarsen_coords(ds, dask):
     if dask and has_dask:
         ds = ds.chunk({'x': 4})
 
-    # check if coordinate_func works
+    # check if coord_func works
     actual = ds.coarsen(time=2, x=3, boundary='trim',
-                        coordinate_func={'time': 'max'}).max()
+                        coord_func={'time': 'max'}).max()
     assert_equal(actual['z1'],
                  ds['z1'].coarsen(time=2, x=3, boundary='trim').max())
     assert_equal(actual['time'],

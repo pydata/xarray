@@ -447,7 +447,7 @@ class Coarsen(object):
 
     _attributes = ['windows', 'side', 'trim_excess']
 
-    def __init__(self, obj, windows, boundary, side, coordinate_func):
+    def __init__(self, obj, windows, boundary, side, coord_func):
         """
         Moving window object.
 
@@ -466,7 +466,7 @@ class Coarsen(object):
             multiple of window size. If 'trim', the excess indexes are trimed.
             If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coordinate_func: mapping from coordinate name to func.
+        coord_func: mapping from coordinate name to func.
 
         Returns
         -------
@@ -477,12 +477,12 @@ class Coarsen(object):
         self.side = side
         self.boundary = boundary
 
-        if not utils.is_dict_like(coordinate_func):
-            coordinate_func = {d: coordinate_func for d in self.obj.dims}
+        if not utils.is_dict_like(coord_func):
+            coord_func = {d: coord_func for d in self.obj.dims}
         for c in self.obj.coords:
-            if c not in coordinate_func:
-                coordinate_func[c] = duck_array_ops.mean
-        self.coordinate_func = coordinate_func
+            if c not in coord_func:
+                coord_func[c] = duck_array_ops.mean
+        self.coord_func = coord_func
 
     def __repr__(self):
         """provide a nice str repr of our coarsen object"""
@@ -513,7 +513,7 @@ class DataArrayCoarsen(Coarsen):
                 else:
                     if any(d in self.windows for d in v.dims):
                         coords[c] = v.variable.coarsen(
-                            self.windows, self.coordinate_func[c],
+                            self.windows, self.coord_func[c],
                             self.boundary, self.side)
                     else:
                         coords[c] = v
@@ -541,7 +541,7 @@ class DatasetCoarsen(Coarsen):
             for c, v in self.obj.coords.items():
                 if any(d in self.windows for d in v.dims):
                     coords[c] = v.variable.coarsen(
-                        self.windows, self.coordinate_func[c],
+                        self.windows, self.coord_func[c],
                         self.boundary, self.side)
                 else:
                     coords[c] = v.variable

@@ -267,6 +267,9 @@ def test_datetime_reduce(dask):
     actual = da['time'].mean(skipna=False)
     assert pd.isnull(actual)
 
+    # test with 0d array
+    assert da['time'][0].mean() == da['time'][:1].mean()
+
 
 @pytest.mark.parametrize('dim_num', [1, 2])
 @pytest.mark.parametrize('dtype', [float, int, np.float32, np.bool_])

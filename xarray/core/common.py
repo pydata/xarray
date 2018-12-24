@@ -592,7 +592,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                                  center=center)
 
     def coarsen(self, dim=None, boundary='exact', side='left',
-                coordinate_func='mean', **dim_kwargs):
+                coord_func='mean', **dim_kwargs):
         """
         Coarsen object.
 
@@ -610,7 +610,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             multiple of the window size. If 'trim', the excess entries are
             dropped. If 'pad', NA will be padded.
         side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
-        coordinate_func: function (name) that is applied to the coordintes,
+        coord_func: function (name) that is applied to the coordintes,
             or a mapping from coordinate name to function (name).
 
         Returns
@@ -648,7 +648,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
         return self._coarsen_cls(
             self, dim, boundary=boundary, side=side,
-            coordinate_func=coordinate_func)
+            coord_func=coord_func)
 
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
                  base=0, keep_attrs=None, loffset=None, **indexer_kwargs):

@@ -283,7 +283,7 @@ def mean(array, axis=None, skipna=None, **kwargs):
     array = asarray(array)
     if array.dtype.kind == 'M':
         offset = min(array)
-        dtype = (array.ravel()[0] - offset).dtype  # dtype.kind == 'm'
+        dtype = (np.empty((1,), dtype=array.dtype) - offset).dtype
         return _mean(utils.datetime_to_numeric(array), axis=axis,
                      skipna=skipna, **kwargs).astype(dtype) + offset
     else:
