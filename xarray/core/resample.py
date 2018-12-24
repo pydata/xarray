@@ -129,7 +129,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DataArrayResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, shortcut=False, **kwargs):
+    def apply(self, func, shortcut=False, args=(), **kwargs):
         """Apply a function over each array in the group and concatenate them
         together into a new array.
 
@@ -158,6 +158,8 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             If these conditions are satisfied `shortcut` provides significant
             speedup. This should be the case for many common groupby operations
             (e.g., applying numpy ufuncs).
+        args : tuple, optional
+            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ar, **kwargs)` for each array `ar`.
 
@@ -167,7 +169,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             The result of splitting, applying and combining this array.
         """
         combined = super(DataArrayResample, self).apply(
-            func, shortcut=shortcut, **kwargs)
+            func, shortcut=shortcut, args=args, **kwargs)
 
         # If the aggregation function didn't drop the original resampling
         # dimension, then we need to do so before we can rename the proxy
@@ -240,7 +242,7 @@ class DatasetResample(DatasetGroupBy, Resample):
                              "('{}')! ".format(self._resample_dim, self._dim))
         super(DatasetResample, self).__init__(*args, **kwargs)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, args=(), **kwargs):
         """Apply a function over each Dataset in the groups generated for
         resampling  and concatenate them together into a new Dataset.
 
@@ -259,6 +261,8 @@ class DatasetResample(DatasetGroupBy, Resample):
         ----------
         func : function
             Callable to apply to each sub-dataset.
+        args : tuple, optional
+            Positional arguments passed on to `func`.
         **kwargs
             Used to call `func(ds, **kwargs)` for each sub-dataset `ar`.
 
@@ -268,7 +272,7 @@ class DatasetResample(DatasetGroupBy, Resample):
             The result of splitting, applying and combining this dataset.
         """
         kwargs.pop('shortcut', None)  # ignore shortcut if set (for now)
-        applied = (func(ds, **kwargs) for ds in self._iter_grouped())
+        applied = (func(ds, *args, **kwargs) for ds in self._iter_grouped())
         combined = self._combine(applied)
 
         return combined.rename({self._resample_dim: self._dim})

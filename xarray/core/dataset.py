@@ -2953,8 +2953,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Parameters
         ----------
         func : function
-            Function which can be called in the form `f(x, **kwargs)` to
-            transform each DataArray `x` in this dataset into another
+            Function which can be called in the form `func(x, *args, **kwargs)`
+            to transform each DataArray `x` in this dataset into another
             DataArray.
         keep_attrs : bool, optional
             If True, the dataset's attributes (`attrs`) will be copied from
