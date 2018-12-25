@@ -39,7 +39,6 @@
 
 
 import numpy as np
-import pandas as pd
 
 
 # for pandas 0.19
