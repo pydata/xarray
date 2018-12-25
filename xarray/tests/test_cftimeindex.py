@@ -175,15 +175,15 @@ def test_cftimeindex_field_accessors(index, field, expected):
     assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_cftimeindex_dayofyear_accessor(index):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
     result = index.dayofyear
     expected = [date.dayofyr for date in index]
     assert_array_equal(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_cftimeindex_dayofweek_accessor(index):
+    pytest.importorskip('cftime', minversion='1.0.2.1')
     result = index.dayofweek
     expected = [date.dayofwk for date in index]
     assert_array_equal(result, expected)
