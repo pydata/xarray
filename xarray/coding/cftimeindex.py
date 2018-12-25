@@ -161,7 +161,7 @@ def _field_accessor(name, docstring=None, min_cftime_version=None):
 
     def f(self, min_cftime_version=min_cftime_version):
         import cftime
-        
+
         version = cftime.__version__
 
         if (min_cftime_version is None or
