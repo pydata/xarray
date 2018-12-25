@@ -8,8 +8,8 @@ import pandas as pd
 import pytest
 
 from xarray import DataArray, Variable, coding, decode_cf
-from xarray.coding.times import (_import_cftime, cftime_to_nptime,
-                                 decode_cf_datetime, encode_cf_datetime)
+from xarray.coding.times import (
+    _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
 from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
 
@@ -737,3 +737,16 @@ def test_encode_cf_datetime_overflow(shape):
     num, _, _ = encode_cf_datetime(dates, units, calendar)
     roundtrip = decode_cf_datetime(num, units, calendar)
     np.testing.assert_array_equal(dates, roundtrip)
+
+
+def test_encode_cf_datetime_pandas_min():
+    # Test that encode_cf_datetime does not fail for versions
+    # of pandas < 0.21.1 (GH 2623).
+    dates = pd.date_range('2000', periods=3)
+    num, units, calendar = encode_cf_datetime(dates)
+    expected_num = np.array([0., 1., 2.])
+    expected_units = 'days since 2000-01-01 00:00:00'
+    expected_calendar = 'proleptic_gregorian'
+    np.testing.assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar
