@@ -145,4 +145,3 @@ def assert_combined_tile_ids_equal(dict1, dict2):
     for k, v in dict1.items():
         assert k in dict2.keys()
         assert_equal(dict1[k], dict2[k])
-

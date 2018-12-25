@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import warnings
-from distutils.version import LooseVersion
 from textwrap import dedent
 
 import numpy as np
@@ -9,9 +7,9 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
+from .options import _get_keep_attrs
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
-from .options import _get_keep_attrs
 
 # Used as a sentinel value to indicate a all dimensions
 ALL_DIMS = ReprObject('<all-dims>')
@@ -96,7 +94,7 @@ class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
         return complex(self.values)
 
     def __long__(self):
-        return long(self.values)  # flake8: noqa
+        return long(self.values)  # noqa
 
     def __array__(self, dtype=None):
         return np.asarray(self.values, dtype=dtype)
@@ -208,7 +206,7 @@ class AttrAccessMixin(object):
         """Provide method for the key-autocompletions in IPython.
         See http://ipython.readthedocs.io/en/stable/config/integrating.html#tab-completion
         For the details.
-        """
+        """  # noqa
         item_lists = [item
                       for sublist in self._item_sources
                       for item in sublist
@@ -426,7 +424,8 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if isinstance(func, tuple):
             func, target = func
             if target in kwargs:
-                msg = '%s is both the pipe target and a keyword argument' % target
+                msg = ('%s is both the pipe target and a keyword argument'
+                       % target)
                 raise ValueError(msg)
             kwargs[target] = self
             return func(*args, **kwargs)
@@ -476,7 +475,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.groupby.DataArrayGroupBy
         core.groupby.DatasetGroupBy
-        """
+        """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze)
 
     def groupby_bins(self, group, bins, right=True, labels=None, precision=3,
@@ -525,7 +524,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         References
         ----------
         .. [1] http://pandas.pydata.org/pandas-docs/stable/generated/pandas.cut.html
-        """
+        """  # noqa
         return self._groupby_cls(self, group, squeeze=squeeze, bins=bins,
                                  cut_kwargs={'right': right, 'labels': labels,
                                              'precision': precision,
@@ -586,7 +585,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         --------
         core.rolling.DataArrayRolling
         core.rolling.DatasetRolling
-        """
+        """  # noqa
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
@@ -659,7 +658,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ----------
 
         .. [1] http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases
-        """
+        """  # noqa
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
@@ -673,10 +672,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         if ((skipna is not None and not isinstance(skipna, bool))
                 or ('how' in indexer_kwargs and 'how' not in self.dims)
                 or ('dim' in indexer_kwargs and 'dim' not in self.dims)):
-            raise TypeError('resample() no longer supports the `how` or '
-                            '`dim` arguments. Instead call methods on resample '
-                            "objects, e.g., data.resample(time='1D').mean()")
- 
+            raise TypeError(
+                'resample() no longer supports the `how` or '
+                '`dim` arguments. Instead call methods on resample '
+                "objects, e.g., data.resample(time='1D').mean()")
+
         indexer = either_dict_or_kwargs(indexer, indexer_kwargs, 'resample')
 
         if len(indexer) != 1:

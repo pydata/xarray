@@ -7,7 +7,6 @@ from ..core.options import OPTIONS
 from .locks import acquire
 from .lru_cache import LRUCache
 
-
 # Global cache for storing open files.
 FILE_CACHE = LRUCache(
     OPTIONS['file_cache_maxsize'], on_evict=lambda k, v: v.close())

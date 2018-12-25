@@ -14,9 +14,9 @@ from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     BackendArray, WritableCFDataStore, find_root, robust_getitem)
-from .locks import (NETCDFC_LOCK, HDF5_LOCK,
-                    combine_locks, ensure_lock, get_write_lock)
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import (
+    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock)
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian

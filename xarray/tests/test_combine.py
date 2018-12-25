@@ -7,16 +7,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable, auto_combine, concat, merge
-from xarray.core.pycompat import OrderedDict, iteritems
+from xarray import DataArray, Dataset, Variable, auto_combine, concat
 from xarray.core.combine import (
-    _new_tile_id, _auto_combine_all_along_first_dim,
-    _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _check_shape_tile_ids, _combine_nd, _auto_combine_1d, _auto_combine)
+    _auto_combine, _auto_combine_1d, _auto_combine_all_along_first_dim,
+    _check_shape_tile_ids, _combine_nd, _infer_concat_order_from_positions,
+    _infer_tile_ids_from_nested_list, _new_tile_id)
+from xarray.core.pycompat import OrderedDict, iteritems
 
 from . import (
-    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
-    assert_combined_tile_ids_equal, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_combined_tile_ids_equal,
+    assert_equal, assert_identical, raises_regex, requires_dask)
 from .test_dataset import create_test_data
 
 
@@ -492,8 +492,8 @@ class TestTileIDsFromNestedList(object):
         input = [ds(0), ds(1)]
 
         expected = {(0,): ds(0), (1,): ds(1)}
-        actual, concat_dims = _infer_concat_order_from_positions\
-            (input, ['dim1'])
+        actual, concat_dims = _infer_concat_order_from_positions(input, [
+                                                                 'dim1'])
         assert_combined_tile_ids_equal(expected, actual)
 
         input = [ds(0), ds(1)]
@@ -520,11 +520,11 @@ def _create_tile_ids(shape):
 
 @requires_dask  # only for toolz
 class TestCombineND(object):
-    @pytest.mark.parametrize("old_id, new_id", [((3,0,1), (0,1)),
-                                                ((0, 0),  (0,)),
-                                                ((1,),    ()),
-                                                ((0,),    ()),
-                                                ((1, 0),  (0,))])
+    @pytest.mark.parametrize("old_id, new_id", [((3, 0, 1), (0, 1)),
+                                                ((0, 0), (0,)),
+                                                ((1,), ()),
+                                                ((0,), ()),
+                                                ((1, 0), (0,))])
     def test_new_tile_id(self, old_id, new_id):
         ds = create_test_data
         assert _new_tile_id((old_id, ds)) == new_id
@@ -594,7 +594,7 @@ class TestCheckShapeTileIDs(object):
 
     def test_check_lengths(self):
         ds = create_test_data(0)
-        combined_tile_ids = {(0, 0): ds, (0, 1): ds , (0, 2): ds,
+        combined_tile_ids = {(0, 0): ds, (0, 1): ds, (0, 2): ds,
                              (1, 0): ds, (1, 1): ds}
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent lengths'):
@@ -643,8 +643,10 @@ class TestAutoCombineND(object):
             auto_combine(datasets, concat_dim=['dim1'])
 
     def test_merge_one_dim_concat_another(self):
-        objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'bar': ('x', [10, 20])})],
-                [Dataset({'foo': ('x', [2, 3])}), Dataset({'bar': ('x', [30, 40])})]]
+        objs = [[Dataset({'foo': ('x', [0, 1])}),
+                 Dataset({'bar': ('x', [10, 20])})],
+                [Dataset({'foo': ('x', [2, 3])}),
+                 Dataset({'bar': ('x', [30, 40])})]]
         expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
                             'bar': ('x', [10, 20, 30, 40])})
 
@@ -655,8 +657,10 @@ class TestAutoCombineND(object):
         assert_identical(expected, actual)
 
         # Proving it works symmetrically
-        objs = [[Dataset({'foo': ('x', [0, 1])}), Dataset({'foo': ('x', [2, 3])})],
-                [Dataset({'bar': ('x', [10, 20])}), Dataset({'bar': ('x', [30, 40])})]]
+        objs = [[Dataset({'foo': ('x', [0, 1])}),
+                 Dataset({'foo': ('x', [2, 3])})],
+                [Dataset({'bar': ('x', [10, 20])}),
+                 Dataset({'bar': ('x', [30, 40])})]]
         actual = auto_combine(objs, concat_dim=[None, 'x'])
         assert_identical(expected, actual)
 
