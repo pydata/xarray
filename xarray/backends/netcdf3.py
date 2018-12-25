@@ -9,7 +9,7 @@ from ..core.pycompat import OrderedDict, basestring, unicode_type
 
 # Special characters that are permitted in netCDF names except in the
 # 0th position of the string
-_specialchars = '_.@+- !"#$%&\()*,:;<=>?[]^`{|}~'
+_specialchars = '_.@+- !"#$%&\\()*,:;<=>?[]^`{|}~'
 
 # The following are reserved names in CDL and may not be used as names of
 # variables, dimension, attributes

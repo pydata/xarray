@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable
+from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
 from xarray.core import indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
@@ -27,8 +27,6 @@ from xarray.tests import requires_bottleneck
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     raises_regex, requires_dask, source_ndarray)
-
-from xarray import set_options
 
 
 class VariableSubclassobjects(object):

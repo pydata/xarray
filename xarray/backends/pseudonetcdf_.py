@@ -10,7 +10,6 @@ from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock
 
-
 # psuedonetcdf can invoke netCDF libraries internally
 PNETCDF_LOCK = combine_locks([HDF5_LOCK, NETCDFC_LOCK])
 

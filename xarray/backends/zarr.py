@@ -8,7 +8,7 @@ from .. import Variable, coding, conventions
 from ..core import indexing
 from ..core.pycompat import OrderedDict, integer_types, iteritems
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
-from .common import AbstractWritableDataStore, ArrayWriter, BackendArray
+from .common import AbstractWritableDataStore, BackendArray
 
 # need some special secret attributes to tell us the dimensions
 _DIMENSION_KEY = '_ARRAY_DIMENSIONS'
@@ -237,7 +237,8 @@ class ZarrStore(AbstractWritableDataStore):
                                       "#installation" % min_zarr)
 
         if consolidated or consolidate_on_close:
-            if LooseVersion(zarr.__version__) <= '2.2.1.dev2':  # pragma: no cover
+            if LooseVersion(
+                    zarr.__version__) <= '2.2.1.dev2':  # pragma: no cover
                 raise NotImplementedError("Zarr version 2.2.1.dev2 or greater "
                                           "is required by for consolidated "
                                           "metadata.")

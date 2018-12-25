@@ -1161,8 +1161,8 @@ class Common2dMixin(object):
         a = easy_array((10, 15, 2, 3))
         d = DataArray(a, dims=['y', 'x', 'columns', 'rows'])
         with pytest.raises(ValueError):
-            g = self.plotfunc(d, x='x', y='y', col='columns', row='rows',
-                              cbar_ax=1)
+            self.plotfunc(d, x='x', y='y', col='columns', row='rows',
+                          cbar_ax=1)
 
     def test_cmap_and_color_both(self):
         with pytest.raises(ValueError):

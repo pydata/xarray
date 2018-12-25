@@ -3,10 +3,10 @@ from __future__ import absolute_import, division, print_function
 import pytest
 
 import xarray
-from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.backends.file_manager import FILE_CACHE
-from xarray.tests.test_dataset import create_test_data
 from xarray import concat, merge
+from xarray.backends.file_manager import FILE_CACHE
+from xarray.core.options import OPTIONS, _get_keep_attrs
+from xarray.tests.test_dataset import create_test_data
 
 
 def test_invalid_option_raises():

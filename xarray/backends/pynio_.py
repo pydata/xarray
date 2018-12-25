@@ -8,8 +8,7 @@ from ..core.utils import Frozen, FrozenOrderedDict
 from .common import AbstractDataStore, BackendArray
 from .file_manager import CachingFileManager
 from .locks import (
-    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, SerializableLock)
-
+    HDF5_LOCK, NETCDFC_LOCK, SerializableLock, combine_locks, ensure_lock)
 
 # PyNIO can invoke netCDF libraries internally
 # Add a dedicated lock just in case NCL as well isn't thread-safe.

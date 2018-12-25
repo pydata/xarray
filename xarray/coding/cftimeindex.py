@@ -51,7 +51,7 @@ import pandas as pd
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
-from .times import cftime_to_nptime, infer_calendar_name, _STANDARD_CALENDARS
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
 def named(name, pattern):
@@ -68,13 +68,13 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
-    pieces = [(None, 'year', '\d{4}'),
-              (date_sep, 'month', '\d{2}'),
-              (date_sep, 'day', '\d{2}'),
-              (datetime_sep, 'hour', '\d{2}'),
-              (time_sep, 'minute', '\d{2}'),
-              (time_sep, 'second', '\d{2}')]
+def build_pattern(date_sep=r'\-', datetime_sep=r'T', time_sep=r'\:'):
+    pieces = [(None, 'year', r'\d{4}'),
+              (date_sep, 'month', r'\d{2}'),
+              (date_sep, 'day', r'\d{2}'),
+              (datetime_sep, 'hour', r'\d{2}'),
+              (time_sep, 'minute', r'\d{2}'),
+              (time_sep, 'second', r'\d{2}')]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
         pattern_list.append((sep if sep else '') + named(name, sub_pattern))
@@ -152,6 +152,7 @@ def get_date_field(datetimes, field):
 
 def _field_accessor(name, docstring=None):
     """Adapted from pandas.tseries.index._field_accessor"""
+
     def f(self):
         return get_date_field(self._data, name)
 
