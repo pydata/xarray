@@ -81,7 +81,7 @@ script:
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
       sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
     elif [[ "$CONDA_ENV" == "flake" ]]; then
-      flake8 ;
+      flake8 xarray ;
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
       pytest properties ;
     else
