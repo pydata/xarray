@@ -156,7 +156,7 @@ def get_date_field(datetimes, field):
     return np.array([getattr(date, field) for date in datetimes])
 
 
-def _field_accessor(name, docstring=None, min_cftime_version=None):
+def _field_accessor(name, docstring=None, min_cftime_version='0.0'):
     """Adapted from pandas.tseries.index._field_accessor"""
 
     def f(self, min_cftime_version=min_cftime_version):
@@ -164,8 +164,7 @@ def _field_accessor(name, docstring=None, min_cftime_version=None):
 
         version = cftime.__version__
 
-        if (min_cftime_version is None or
-           LooseVersion(version) >= LooseVersion(min_cftime_version)):
+        if LooseVersion(version) >= LooseVersion(min_cftime_version):
             return get_date_field(self._data, name)
         else:
             raise ImportError('The {!r} accessor requires a minimum '
