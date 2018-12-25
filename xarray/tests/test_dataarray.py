@@ -11,7 +11,7 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.convert import from_cdms2
 from xarray.core.common import ALL_DIMS, full_like
@@ -1026,6 +1026,20 @@ class TestDataArray(object):
 
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
+
+    def test_selection_multiindex(self):
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=['x', 'y'],
+                          coords={'x': np.arange(8), 'y': np.arange(5)})
+        ds = ds.stack(xy=['x', 'y'])
+        ds_isel = ds.isel(xy=ds['x'] < 4)
+        with pytest.raises(KeyError):
+            ds_isel.sel(x=5)
+
+        actual = ds_isel.unstack()
+        expected = ds.reset_index('xy').isel(xy=ds['x'] < 4)
+        expected = expected.set_index(xy=['x', 'y']).unstack()
+        assert_identical(expected, actual)
 
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')
@@ -2280,6 +2294,17 @@ class TestDataArray(object):
 
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
+
+    def test_da_resample_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', periods=3, freq='D')
+        da = xr.DataArray([1., 1., 1.], coords=[times], dims=['time'])
+        expected = xr.DataArray([3., 3., 3.], coords=[times], dims=['time'])
+        actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(actual, expected)
 
     @requires_cftime
     def test_resample_cftimeindex(self):

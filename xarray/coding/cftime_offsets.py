@@ -419,7 +419,7 @@ _FREQUENCIES = {
 
 
 _FREQUENCY_CONDITION = '|'.join(_FREQUENCIES.keys())
-_PATTERN = '^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
+_PATTERN = r'^((?P<multiple>\d+)|())(?P<freq>({0}))$'.format(
     _FREQUENCY_CONDITION)
 
 
@@ -726,10 +726,10 @@ def cftime_range(start=None, end=None, periods=None, freq='D',
         raise ValueError("Closed must be either 'left', 'right' or None")
 
     if (not left_closed and len(dates) and
-       start is not None and dates[0] == start):
+            start is not None and dates[0] == start):
         dates = dates[1:]
     if (not right_closed and len(dates) and
-       end is not None and dates[-1] == end):
+            end is not None and dates[-1] == end):
         dates = dates[:-1]
 
     return CFTimeIndex(dates, name=name)

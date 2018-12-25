@@ -9,7 +9,6 @@ import pytest
 import xarray as xr
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import duck_array_ops, utils
-from xarray.core.options import set_options
 from xarray.core.pycompat import OrderedDict
 from xarray.core.utils import either_dict_or_kwargs
 from xarray.testing import assert_identical

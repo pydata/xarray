@@ -15,10 +15,10 @@ from . import (
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
+from .options import _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
-from .options import _get_keep_attrs
 
 try:
     import dask.array as da
