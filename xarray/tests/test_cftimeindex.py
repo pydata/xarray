@@ -12,7 +12,8 @@ from xarray.coding.cftimeindex import (
     _parsed_string_to_bounds, assert_all_valid_date_type, parse_iso8601)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime, has_cftime_or_netCDF4, raises_regex, requires_cftime
+from . import (has_cftime, has_cftime_1_0_2_1, has_cftime_or_netCDF4,
+               raises_regex, requires_cftime)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _all_cftime_date_types)
 
@@ -175,15 +176,17 @@ def test_cftimeindex_field_accessors(index, field, expected):
     assert_array_equal(result, expected)
 
 
+@pytest.mark.skipif(not has_cftime_1_0_2_1,
+                    reason='cftime not installed')
 def test_cftimeindex_dayofyear_accessor(index):
-    pytest.importorskip('cftime', minversion='1.0.2.1')
     result = index.dayofyear
     expected = [date.dayofyr for date in index]
     assert_array_equal(result, expected)
 
 
+@pytest.mark.skipif(not has_cftime_1_0_2_1,
+                    reason='cftime not installed')
 def test_cftimeindex_dayofweek_accessor(index):
-    pytest.importorskip('cftime', minversion='1.0.2.1')
     result = index.dayofweek
     expected = [date.dayofwk for date in index]
     assert_array_equal(result, expected)
