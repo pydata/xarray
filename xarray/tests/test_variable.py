@@ -1699,7 +1699,7 @@ class TestVariable(VariableSubclassobjects):
                 ({'x': 2}, np.mean, 'left', 'trim'),
                 ({'x': 2}, np.median, {'x': 'left'}, 'pad'),
                 ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
-            v_coars = v.coarsen(windows, func, boundary, side)
+            v.coarsen(windows, func, boundary, side)
 
 
 @requires_dask

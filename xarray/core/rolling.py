@@ -550,7 +550,6 @@ class DatasetCoarsen(Coarsen):
         return wrapped_func
 
 
-
 inject_bottleneck_rolling_methods(DataArrayRolling)
 inject_datasetrolling_methods(DatasetRolling)
 inject_coarsen_methods(DataArrayCoarsen)
