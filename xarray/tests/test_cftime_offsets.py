@@ -1,6 +1,7 @@
 from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from xarray import CFTimeIndex
@@ -797,3 +798,17 @@ def test_calendar_year_length(
     result = cftime_range(start, end, freq='D', closed='left',
                           calendar=calendar)
     assert len(result) == expected_number_of_days
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofweek_after_cftime_range(freq):
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofweek
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofweek
+    np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize('freq', ['A', 'M', 'D'])
+def test_dayofyear_after_cftime_range(freq):
+    result = cftime_range('2000-02-01', periods=3, freq=freq).dayofyear
+    expected = pd.date_range('2000-02-01', periods=3, freq=freq).dayofyear
+    np.testing.assert_array_equal(result, expected)
