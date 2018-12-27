@@ -73,6 +73,9 @@ Enhancements
 - 0d slices of ndarrays are now obtained directly through indexing, rather than
   extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
   Wennberg <https://github.com/danielwe>`_.
+- Added support for ``fill_value`` with
+  :py:meth:`~xarray.DataArray.shift` and :py:meth:`~xarray.Dataset.shift`
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Bug fixes
 ~~~~~~~~~

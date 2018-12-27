@@ -6,7 +6,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import computation, groupby, indexing, ops, resample, rolling, utils
+from . import (
+    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -2085,7 +2086,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """Shift this array by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. Values shifted from
@@ -2098,6 +2099,8 @@ class DataArray(AbstractArray, DataWithCoords):
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        fill_value: scalar, optional
+            Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwarg must be provided.
@@ -2122,8 +2125,9 @@ class DataArray(AbstractArray, DataWithCoords):
         Coordinates:
           * x        (x) int64 0 1 2
         """
-        ds = self._to_temp_dataset().shift(shifts=shifts, **shifts_kwargs)
-        return self._from_temp_dataset(ds)
+        variable = self.variable.shift(
+            shifts=shifts, fill_value=fill_value, **shifts_kwargs)
+        return self._replace(variable=variable)
 
     def roll(self, shifts=None, roll_coords=None, **shifts_kwargs):
         """Roll this array by an offset along one or more dimensions.
