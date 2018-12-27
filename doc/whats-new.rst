@@ -73,6 +73,9 @@ Enhancements
 - 0d slices of ndarrays are now obtained directly through indexing, rather than
   extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
   Wennberg <https://github.com/danielwe>`_.
+- Added support for ``fill_value`` with
+  :py:meth:`~xarray.DataArray.shift` and :py:meth:`~xarray.Dataset.shift`
+  By `Maximilian Roos <https://github.com/max-sixty>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -180,12 +183,6 @@ Enhancements
   :py:meth:`~xarray.DataArray.interp`, and
   :py:meth:`~xarray.Dataset.interp`.
   By `Spencer Clark <https://github.com/spencerkclark>`_
-- Added support for ``fill_value`` with
-  :py:meth:`~xarray.DataArray.shift` and :py:meth:`~xarray.Dataset.shift`
-  By `Maximilian Roos <https://github.com/max-sixty>`_
-
-  
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
 - There is now a global option to either always keep or always discard
   dataset and dataarray attrs upon operations. The option is set with
   ``xarray.set_options(keep_attrs=True)``, and the default is to use the old
