@@ -945,7 +945,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
 
-        if fill_value is dtypes.NA and True:
+        if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype

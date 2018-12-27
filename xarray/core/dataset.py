@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, pdcompat,
-    resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
+    pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
@@ -3476,7 +3476,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             return difference
 
-    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -3524,8 +3524,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
             if name in self.data_vars:
-                var_shifts = dict((k, v) for k, v in shifts.items()
-                                  if k in var.dims)
+                var_shifts = {k: v for k, v in shifts.items()
+                              if k in var.dims}
                 variables[name] = var.shift(
                     fill_value=fill_value, shifts=var_shifts)
             else:

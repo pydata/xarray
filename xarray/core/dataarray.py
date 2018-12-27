@@ -6,7 +6,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import computation, groupby, indexing, ops, resample, rolling, utils
+from . import (
+    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -2085,7 +2086,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().diff(n=n, dim=dim, label=label)
         return self._from_temp_dataset(ds)
 
-    def shift(self, shifts=None, fill_value=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """Shift this array by an offset along one or more dimensions.
 
         Only the data is moved; coordinates stay in place. Values shifted from

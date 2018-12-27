@@ -15,7 +15,7 @@ import xarray as xr
 from xarray import (
     ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
     backends, broadcast, open_dataset, set_options)
-from xarray.core import indexing, npcompat, utils
+from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
@@ -3917,12 +3917,16 @@ class TestDataset(object):
         with raises_regex(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
-    @pytest.mark.parametrize('fill_value', [np.nan, 2, 2.0])
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
     def test_shift(self, fill_value):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
         actual = ds.shift(x=1, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
         expected = Dataset({'foo': ('x', [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
