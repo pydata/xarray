@@ -13,8 +13,8 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, duck_array_ops, formatting, groupby, indexing, ops, pdcompat,
-    resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
+    pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
@@ -3476,7 +3476,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         else:
             return difference
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """Shift this dataset by an offset along one or more dimensions.
 
         Only data variables are moved; coordinates stay in place. This is
@@ -3488,6 +3488,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        fill_value: scalar, optional
+            Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwarg must be provided.
@@ -3522,9 +3524,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         variables = OrderedDict()
         for name, var in iteritems(self.variables):
             if name in self.data_vars:
-                var_shifts = dict((k, v) for k, v in shifts.items()
-                                  if k in var.dims)
-                variables[name] = var.shift(**var_shifts)
+                var_shifts = {k: v for k, v in shifts.items()
+                              if k in var.dims}
+                variables[name] = var.shift(
+                    fill_value=fill_value, shifts=var_shifts)
             else:
                 variables[name] = var
 
