@@ -301,7 +301,7 @@ class DataArrayRolling(Rolling):
                 else:
                     shift = (-self.window // 2) + 1
                     valid = (slice(None), ) * axis + (slice(-shift, None), )
-                padded = padded.pad_with_fill_value(**{self.dim: (0, -shift)})
+                padded = padded.pad_with_fill_value({self.dim: (0, -shift)})
 
             if isinstance(padded.data, dask_array_type):
                 values = dask_rolling_wrapper(func, padded,
