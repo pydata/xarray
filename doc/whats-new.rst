@@ -55,7 +55,8 @@ Enhancements
   reprojection, see  (:issue:`2588`).
   By `Scott Henderson <https://github.com/scottyhq>`_.
 - Like :py:class:`pandas.DatetimeIndex`, :py:class:`CFTimeIndex` now supports
-  "dayofyear" and "dayofweek" accessors (:issue:`2597`).  By `Spencer Clark
+  "dayofyear" and "dayofweek" accessors (:issue:`2597`).  Note this requires a
+  version of cftime greater than 1.0.2.  By `Spencer Clark
   <https://github.com/spencerkclark>`_.
 - The option ``'warn_for_unclosed_files'`` (False by default) has been added to
   allow users to enable a warning when files opened by xarray are deallocated
