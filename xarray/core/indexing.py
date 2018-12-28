@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import operator
-from collections import Hashable, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 
 import numpy as np
@@ -12,6 +12,11 @@ from . import duck_array_ops, nputils, utils
 from .pycompat import (
     dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
+
+try:
+    from collections.abc import Hashable
+except ImportError:  # Py2
+    from collections import Hashable
 
 
 def expanded_indexer(key, ndim):
