@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, ewm, groupby, indexing, ops, resample, rolling, utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -160,6 +160,7 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _ewm_cls = ewm.DataArrayEWM
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)

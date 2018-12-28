@@ -3846,3 +3846,8 @@ class TestIrisConversion(object):
         expected = Cube(data, aux_coords_and_dims=[
             (AuxCoord(coord_values, var_name='space'), 0)])
         assert result == expected
+
+
+def test_ewm(da):
+    result = da.ewm(time=2).mean()
+    assert isinstance(result, DataArray)

@@ -590,6 +590,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
+    def ewm(self, dim=None, **dim_kwargs):
+
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'ewm')
+
+        return self._ewm_cls(self, dim)
+
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
                  base=0, keep_attrs=None, loffset=None, **indexer_kwargs):
         """Returns a Resample object for performing resampling operations.
