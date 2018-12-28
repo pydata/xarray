@@ -204,7 +204,11 @@ def _shift_months(date, months, day_option='start'):
         day = _days_in_month(reference)
     else:
         raise ValueError(day_option)
-    return date.replace(year=year, month=month, day=day)
+    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+    # the returned date object in versions of cftime between 1.0.2 and
+    # 1.0.3.4.  It can be removed for versions of cftime greater than
+    # 1.0.3.4.
+    return date.replace(year=year, month=month, day=day, dayofwk=-1)
 
 
 class MonthBegin(BaseCFTimeOffset):
