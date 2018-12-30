@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import operator
-from collections import Hashable, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 
 import numpy as np
@@ -12,6 +12,11 @@ from . import duck_array_ops, nputils, utils
 from .pycompat import (
     dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
+
+try:
+    from collections.abc import Hashable
+except ImportError:  # Py2
+    from collections import Hashable
 
 
 def expanded_indexer(key, ndim):
@@ -159,6 +164,10 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 tuple(label.values()), level=tuple(label.keys()))
 
+            # GH2619. Raise a KeyError if nothing is chosen
+            if indexer.dtype.kind == 'b' and indexer.sum() == 0:
+                raise KeyError('{} not found'.format(label))
+
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
             indexer = index.get_locs(label)
@@ -168,7 +177,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 label, level=list(range(len(label)))
             )
-
     else:
         label = (label if getattr(label, 'ndim', 1) > 1  # vectorized-indexing
                  else _asarray_tuplesafe(label))

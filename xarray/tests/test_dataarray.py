@@ -11,9 +11,10 @@ import pytest
 
 import xarray as xr
 from xarray import (
-    DataArray, Dataset, IndexVariable, Variable, align, broadcast, set_options)
+    DataArray, Dataset, IndexVariable, Variable, align, broadcast)
 from xarray.coding.times import CFDatetimeCoder, _import_cftime
 from xarray.convert import from_cdms2
+from xarray.core import dtypes
 from xarray.core.common import ALL_DIMS, full_like
 from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.tests import (
@@ -1026,6 +1027,20 @@ class TestDataArray(object):
 
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
+
+    def test_selection_multiindex_remove_unused(self):
+        # GH2619. For MultiIndex, we need to call remove_unused.
+        ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=['x', 'y'],
+                          coords={'x': np.arange(8), 'y': np.arange(5)})
+        ds = ds.stack(xy=['x', 'y'])
+        ds_isel = ds.isel(xy=ds['x'] < 4)
+        with pytest.raises(KeyError):
+            ds_isel.sel(x=5)
+
+        actual = ds_isel.unstack()
+        expected = ds.reset_index('xy').isel(xy=ds['x'] < 4)
+        expected = expected.set_index(xy=['x', 'y']).unstack()
+        assert_identical(expected, actual)
 
     def test_virtual_default_coords(self):
         array = DataArray(np.zeros((5,)), dims='x')
@@ -2281,6 +2296,17 @@ class TestDataArray(object):
         with raises_regex(ValueError, 'index must be monotonic'):
             array[[2, 0, 1]].resample(time='1D')
 
+    def test_da_resample_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', periods=3, freq='D')
+        da = xr.DataArray([1., 1., 1.], coords=[times], dims=['time'])
+        expected = xr.DataArray([3., 3., 3.], coords=[times], dims=['time'])
+        actual = da.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(actual, expected)
+
     @requires_cftime
     def test_resample_cftimeindex(self):
         cftime = _import_cftime()
@@ -3103,12 +3129,19 @@ class TestDataArray(object):
         actual = lon.diff('lon')
         assert_equal(expected, actual)
 
-    @pytest.mark.parametrize('offset', [-5, -2, -1, 0, 1, 2, 5])
-    def test_shift(self, offset):
+    @pytest.mark.parametrize('offset', [-5, 0, 1, 2])
+    @pytest.mark.parametrize('fill_value, dtype',
+                             [(2, int), (dtypes.NA, float)])
+    def test_shift(self, offset, fill_value, dtype):
         arr = DataArray([1, 2, 3], dims='x')
-        actual = arr.shift(x=1)
-        expected = DataArray([np.nan, 1, 2], dims='x')
+        actual = arr.shift(x=1, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = DataArray([fill_value, 1, 2], dims='x')
         assert_identical(expected, actual)
+        assert actual.dtype == dtype
 
         arr = DataArray([1, 2, 3], [('x', ['a', 'b', 'c'])])
         expected = DataArray(arr.to_pandas().shift(offset))

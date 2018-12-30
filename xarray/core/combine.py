@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import warnings
 import itertools
+import warnings
 from collections import Counter
 
 import pandas as pd
@@ -378,7 +378,7 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
     if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims is None:
-        concat_dims = [concat_dims]*n_dims
+        concat_dims = [concat_dims] * n_dims
     else:
         if len(concat_dims) != n_dims:
             raise ValueError("concat_dims has length {} but the datasets "
@@ -533,8 +533,8 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
         if not ids:
             # Determine tile_IDs by structure of input in N-D
             # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_positions\
-                                                        (datasets, concat_dims)
+            combined_ids, concat_dims = _infer_concat_order_from_positions(
+                datasets, concat_dims)
         else:
             # Already sorted so just use the ids already passed
             combined_ids = OrderedDict(zip(ids, datasets))

@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable
-from xarray.core import indexing
+from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
+from xarray.core import dtypes, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
@@ -27,8 +27,6 @@ from xarray.tests import requires_bottleneck
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     raises_regex, requires_dask, source_ndarray)
-
-from xarray import set_options
 
 
 class VariableSubclassobjects(object):
@@ -1181,24 +1179,32 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable((), u'tmax')
         assert_identical(actual, expected)
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_shift(self, fill_value):
         v = Variable('x', [1, 2, 3, 4, 5])
 
         assert_identical(v, v.shift(x=0))
         assert v is not v.shift(x=0)
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4])
-        assert_identical(expected, v.shift(x=1))
-
         expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
         assert_identical(expected, v.shift(x=2))
 
-        expected = Variable('x', [2, 3, 4, 5, np.nan])
-        assert_identical(expected, v.shift(x=-1))
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value_exp = np.nan
+        else:
+            fill_value_exp = fill_value
 
-        expected = Variable('x', [np.nan] * 5)
-        assert_identical(expected, v.shift(x=5))
-        assert_identical(expected, v.shift(x=6))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4])
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
+
+        expected = Variable('x', [2, 3, 4, 5, fill_value_exp])
+        assert_identical(expected, v.shift(x=-1, fill_value=fill_value))
+
+        expected = Variable('x', [fill_value_exp] * 5)
+        assert_identical(expected, v.shift(x=5, fill_value=fill_value))
+        assert_identical(expected, v.shift(x=6, fill_value=fill_value))
 
         with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
@@ -1206,8 +1212,8 @@ class TestVariable(VariableSubclassobjects):
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
         assert_identical(v, v.shift(x=0))
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
-        assert_identical(expected, v.shift(x=1))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4], {'foo': 'bar'})
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
 
     def test_shift2d(self):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])

@@ -44,6 +44,7 @@ from __future__ import absolute_import
 import re
 import warnings
 from datetime import timedelta
+from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -51,7 +52,7 @@ import pandas as pd
 from xarray.core import pycompat
 from xarray.core.utils import is_scalar
 
-from .times import cftime_to_nptime, infer_calendar_name, _STANDARD_CALENDARS
+from .times import _STANDARD_CALENDARS, cftime_to_nptime, infer_calendar_name
 
 
 def named(name, pattern):
@@ -68,13 +69,13 @@ def trailing_optional(xs):
     return xs[0] + optional(trailing_optional(xs[1:]))
 
 
-def build_pattern(date_sep='\-', datetime_sep='T', time_sep='\:'):
-    pieces = [(None, 'year', '\d{4}'),
-              (date_sep, 'month', '\d{2}'),
-              (date_sep, 'day', '\d{2}'),
-              (datetime_sep, 'hour', '\d{2}'),
-              (time_sep, 'minute', '\d{2}'),
-              (time_sep, 'second', '\d{2}')]
+def build_pattern(date_sep=r'\-', datetime_sep=r'T', time_sep=r'\:'):
+    pieces = [(None, 'year', r'\d{4}'),
+              (date_sep, 'month', r'\d{2}'),
+              (date_sep, 'day', r'\d{2}'),
+              (datetime_sep, 'hour', r'\d{2}'),
+              (time_sep, 'minute', r'\d{2}'),
+              (time_sep, 'second', r'\d{2}')]
     pattern_list = []
     for sep, name, sub_pattern in pieces:
         pattern_list.append((sep if sep else '') + named(name, sub_pattern))
@@ -108,6 +109,11 @@ def _parse_iso8601_with_reso(date_type, timestr):
             replace[attr] = int(value)
             resolution = attr
 
+    # dayofwk=-1 is required to update the dayofwk and dayofyr attributes of
+    # the returned date object in versions of cftime between 1.0.2 and
+    # 1.0.3.4.  It can be removed for versions of cftime greater than
+    # 1.0.3.4.
+    replace['dayofwk'] = -1
     return default.replace(**replace), resolution
 
 
@@ -150,10 +156,21 @@ def get_date_field(datetimes, field):
     return np.array([getattr(date, field) for date in datetimes])
 
 
-def _field_accessor(name, docstring=None):
+def _field_accessor(name, docstring=None, min_cftime_version='0.0'):
     """Adapted from pandas.tseries.index._field_accessor"""
-    def f(self):
-        return get_date_field(self._data, name)
+
+    def f(self, min_cftime_version=min_cftime_version):
+        import cftime
+
+        version = cftime.__version__
+
+        if LooseVersion(version) >= LooseVersion(min_cftime_version):
+            return get_date_field(self._data, name)
+        else:
+            raise ImportError('The {!r} accessor requires a minimum '
+                              'version of cftime of {}. Found an '
+                              'installed version of {}.'.format(
+                                  name, min_cftime_version, version))
 
     f.__name__ = name
     f.__doc__ = docstring
@@ -208,8 +225,10 @@ class CFTimeIndex(pd.Index):
     microsecond = _field_accessor('microsecond',
                                   'The microseconds of the datetime')
     dayofyear = _field_accessor('dayofyr',
-                                'The ordinal day of year of the datetime')
-    dayofweek = _field_accessor('dayofwk', 'The day of week of the datetime')
+                                'The ordinal day of year of the datetime',
+                                '1.0.2.1')
+    dayofweek = _field_accessor('dayofwk', 'The day of week of the datetime',
+                                '1.0.2.1')
     date_type = property(get_date_type)
 
     def __new__(cls, data, name=None):
