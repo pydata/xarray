@@ -491,6 +491,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
+
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -530,6 +531,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding['source']``.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
         optional
         Engine to use when reading files. If not provided, the default engine
