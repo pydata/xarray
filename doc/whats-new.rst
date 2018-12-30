@@ -13,22 +13,23 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. warning::
-
-    Xarray plans to drop support for python 2.7 at the end of 2018. This
-    means that new releases of xarray published after this date will only be
-    installable on python 3+ environments, but older versions of xarray will
-    always be available to python 2.7 users. For more information see the
-    following references
-
-     - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
-  - `Python 3 Statement <http://www.python3statement.org/>`__
-  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
-
 .. _whats-new.0.11.1:
 
-v0.11.1 (unreleased)
---------------------
+v0.11.1 (29 December 2018)
+--------------------------
+
+This minor release includes a number of enhancements and bug fixes, and two
+(slightly) breaking changes.
+
+.. warning::
+
+  This is the last xarray release that will support Python 2.7. Future releases
+  will be Python 3 only, but older versions of xarray will always be available
+  for Python 2.7 users. For the more details, see:
+
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Python 3 Statement <http://www.python3statement.org/>`__
+  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -70,9 +71,9 @@ Enhancements
 - Datasets are now guaranteed to have a ``'source'`` encoding, so the source
   file name is always stored (:issue:`2550`).
   By `Tom Nicholas <http://github.com/TomNicholas>`_.
-- The `apply` methods for `DatasetGroupBy`, `DataArrayGroupBy`,
-  `DatasetResample` and `DataArrayResample` can now pass positional arguments to
-  the applied function.
+- The ``apply`` methods for ``DatasetGroupBy``, ``DataArrayGroupBy``,
+  ``DatasetResample`` and ``DataArrayResample`` now support passing positional
+  arguments to the applied function as a tuple to the ``args`` argument.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 - 0d slices of ndarrays are now obtained directly through indexing, rather than
   extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel
