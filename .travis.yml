@@ -32,6 +32,7 @@ matrix:
   - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
   - env: CONDA_ENV=docs
+  - env: CONDA_ENV=flake8
   - env: CONDA_ENV=py36-hypothesis
 
   allow_failures:
@@ -62,6 +63,8 @@ before_install:
 install:
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda env create -n test_env --file doc/environment.yml;
+    elif [[ "$CONDA_ENV" == "flake8" ]]; then
+      conda env create -n test_env --file ci/requirements-py37.yml;
     else
       conda env create -n test_env --file ci/requirements-$CONDA_ENV.yml;
     fi
@@ -77,6 +80,8 @@ script:
   - if [[ "$CONDA_ENV" == "docs" ]]; then
       conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
       sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
+    elif [[ "$CONDA_ENV" == "flake8" ]]; then
+      flake8 xarray ;
     elif [[ "$CONDA_ENV" == "py36-hypothesis" ]]; then
       pytest properties ;
     else
