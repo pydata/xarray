@@ -231,11 +231,11 @@ the excess entries or padding ``nan`` to insufficient entries,
   da.coarsen(time=30, x=2, boundary='trim').mean()
 
 If you want to apply a specific function to coordinate, you can pass the
-function of function name to ``coordinate_func`` option,
+function of function name to ``coord_func`` option,
 
 .. ipython:: python
 
-  da.coarsen(time=7, x=2, coordinate_func={'time': 'min'}).mean()
+  da.coarsen(time=7, x=2, coord_func={'time': 'min'}).mean()
 
 
 Computation using Coordinates

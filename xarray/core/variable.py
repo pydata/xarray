@@ -1696,8 +1696,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 variable = variable.pad_with_fill_value(pad_widths)
             else:
                 raise TypeError(
-                    '{} is invalid for boundary. Valid option is \'exact\', '
-                    '\'trim\' and \'pad\''.format(boundary[d]))
+                    "{} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'".format(boundary[d]))
 
         shape = []
         axes = []

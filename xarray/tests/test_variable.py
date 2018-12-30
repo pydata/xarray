@@ -1701,6 +1701,15 @@ class TestVariable(VariableSubclassobjects):
                 ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
             v.coarsen(windows, func, boundary, side)
 
+    def test_coarsen_2d(self):
+        v = self.cls(['x', 'y'], np.arange(6 * 12).reshape(6, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean')
+        assert actual.shape == (2, 3)
+
+        v = self.cls(['x', 'y'], np.arange(7 * 12).reshape(7, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        assert actual.shape == (2, 3)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
@@ -1854,6 +1863,10 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.xfail
     def test_rolling_window(self):
         super(TestIndexVariable, self).test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_coarsen_2d(self):
+        super(TestIndexVariable, self).test_coarsen_2d()
 
 
 class TestAsCompatibleData(object):

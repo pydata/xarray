@@ -4462,7 +4462,6 @@ def test_coarsen_coords(ds, dask):
     # should be no error
     ds.isel(x=slice(0, 3 * (len(ds['x']) // 3))).coarsen(x=3).mean()
 
-    # raise if exact
     # working test with pd.time
     da = xr.DataArray(
         np.linspace(0, 365, num=364), dims='time',
