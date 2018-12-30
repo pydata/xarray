@@ -284,8 +284,8 @@ def mean(array, axis=None, skipna=None, **kwargs):
     array = asarray(array)
     if array.dtype.kind == 'M':
         offset = min(array)
-        # infer the compatible timedelta dtype
-        dtype = (np.empty((1,), dtype=array.dtype) - offset).dtype
+        # xarray always uses datetime[ns] for datetime
+        dtype = 'timedelta64[ns]'
         return _mean(utils.datetime_to_numeric(array, offset), axis=axis,
                      skipna=skipna, **kwargs).astype(dtype) + offset
     else:
