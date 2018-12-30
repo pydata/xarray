@@ -1028,7 +1028,7 @@ class TestDataArray(object):
         assert_identical(mdata.sel(x={'one': 'a', 'two': 1}),
                          mdata.sel(one='a', two=1))
 
-    def test_selection_multiindex(self):
+    def test_selection_multiindex_remove_unused(self):
         # GH2619. For MultiIndex, we need to call remove_unused.
         ds = xr.DataArray(np.arange(40).reshape(8, 5), dims=['x', 'y'],
                           coords={'x': np.arange(8), 'y': np.arange(5)})
