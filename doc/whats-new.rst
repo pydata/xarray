@@ -67,6 +67,9 @@ Enhancements
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
+- Datasets are now guaranteed to have a ``'source'`` encoding, so the source
+  file name is always stored (:issue:`2550`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - The `apply` methods for `DatasetGroupBy`, `DataArrayGroupBy`,
   `DatasetResample` and `DataArrayResample` can now pass positional arguments to
   the applied function.

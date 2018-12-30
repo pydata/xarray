@@ -299,6 +299,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
+        ds = maybe_decode_store(store)
     elif isinstance(filename_or_obj, basestring):
 
         if (isinstance(filename_or_obj, bytes) and
@@ -339,15 +340,21 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              % engine)
 
         with close_on_error(store):
-            return maybe_decode_store(store)
+            ds = maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+        ds = maybe_decode_store(store)
 
-    return maybe_decode_store(store)
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if 'source' not in ds.encoding:
+        if isinstance(filename_or_obj, basestring):
+            ds.encoding['source'] = filename_or_obj
+
+    return ds
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
@@ -484,6 +491,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
+
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -523,6 +531,8 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding['source']``.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
         optional
         Engine to use when reading files. If not provided, the default engine
