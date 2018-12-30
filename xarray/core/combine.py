@@ -574,10 +574,10 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
+
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -599,7 +599,7 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     --------
     concat
     Dataset.merge
-    """
+    """  # noqa
 
     # Coerce 1D input into ND to maintain backwards-compatible API until API
     # for N-D combine decided
