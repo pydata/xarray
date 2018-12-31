@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import pandas as pd
 
 from . import formatting, indexing
+from .indexes import default_indexes
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
@@ -196,6 +197,7 @@ class DatasetCoordinates(AbstractCoordinates):
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
         self._data._dims = dict(dims)
+        self._data._indexes = default_indexes(variables, dims)
 
     def __delitem__(self, key):
         if key in self:
@@ -274,44 +276,6 @@ class LevelCoordinatesSource(object):
 
     def __iter__(self):
         return iter(self._data._level_coords)
-
-
-class Indexes(Mapping, formatting.ReprMixin):
-    """Ordered Mapping[str, pandas.Index] for xarray objects.
-    """
-
-    def __init__(self, variables, sizes):
-        """Not for public consumption.
-
-        Parameters
-        ----------
-        variables : OrderedDict[Any, Variable]
-            Reference to OrderedDict holding variable objects. Should be the
-            same dictionary used by the source object.
-        sizes : OrderedDict[Any, int]
-            Map from dimension names to sizes.
-        """
-        self._variables = variables
-        self._sizes = sizes
-
-    def __iter__(self):
-        for key in self._sizes:
-            if key in self._variables:
-                yield key
-
-    def __len__(self):
-        return sum(key in self._variables for key in self._sizes)
-
-    def __contains__(self, key):
-        return key in self._sizes and key in self._variables
-
-    def __getitem__(self, key):
-        if key not in self._sizes:
-            raise KeyError(key)
-        return self._variables[key].to_index()
-
-    def __unicode__(self):
-        return formatting.indexes_repr(self)
 
 
 def assert_coordinate_consistent(obj, coords):
