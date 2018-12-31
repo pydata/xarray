@@ -24,6 +24,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering',
 ]
 
+PYTHON_REQUIRES = '>=3.5'
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
 SETUP_REQUIRES = ['pytest-runner >= 4.2']
 TESTS_REQUIRE = ['pytest >= 2.7.1']
@@ -66,6 +67,7 @@ setup(name=DISTNAME,
       classifiers=CLASSIFIERS,
       description=DESCRIPTION,
       long_description=LONG_DESCRIPTION,
+      python_requires=PYTHON_REQUIRES,
       install_requires=INSTALL_REQUIRES,
       setup_requires=SETUP_REQUIRES,
       tests_require=TESTS_REQUIRE,
