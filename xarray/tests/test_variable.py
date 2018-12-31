@@ -1702,13 +1702,31 @@ class TestVariable(VariableSubclassobjects):
             v.coarsen(windows, func, boundary, side)
 
     def test_coarsen_2d(self):
+        # 2d-mean should be the same with the successive 1d-mean
         v = self.cls(['x', 'y'], np.arange(6 * 12).reshape(6, 12))
         actual = v.coarsen({'x': 3, 'y': 4}, func='mean')
-        assert actual.shape == (2, 3)
+        expected = v.coarsen({'x': 3}, func='mean').coarsen(
+            {'y': 4}, func='mean')
+        assert_equal(actual, expected)
 
         v = self.cls(['x', 'y'], np.arange(7 * 12).reshape(7, 12))
         actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
-        assert actual.shape == (2, 3)
+        expected = v.coarsen({'x': 3}, func='mean', boundary='trim').coarsen(
+            {'y': 4}, func='mean', boundary='trim')
+        assert_equal(actual, expected)
+
+        # if there is nan, the two should be different
+        v = self.cls(['x', 'y'], 1.0 * np.arange(6 * 12).reshape(6, 12))
+        v[2, 4] = np.nan
+        v[3, 5] = np.nan
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='sum', boundary='trim').coarsen(
+            {'y': 4}, func='sum', boundary='trim') / 12
+        assert not actual.equals(expected)
+        # adjusting the nan count
+        expected[0, 1] *= 12 / 11
+        expected[1, 1] *= 12 / 11
+        assert_allclose(actual, expected)
 
 
 @requires_dask
