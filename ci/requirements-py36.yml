@@ -22,6 +22,9 @@ dependencies:
   - zarr
   - pseudonetcdf>=3.0.1
   - eccodes
+  # - cdat-lite  # No py3 support
+  - pynio
+  - iris>=1.10
   - pip:
     - coveralls
     - pytest-cov
