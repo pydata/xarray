@@ -12,9 +12,7 @@ matrix:
   include:
   - env: CONDA_ENV=py35-min
   - env: CONDA_ENV=py35
-  - env:
-    - CONDA_ENV=py36
-    - UVCDAT_ANONYMOUS_LOG=no
+  - env: CONDA_ENV=py36
   - env: CONDA_ENV=py37
   - env:
     - CONDA_ENV=py36
