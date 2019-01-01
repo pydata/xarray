@@ -2525,6 +2525,16 @@ class TestDataArray(object):
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    def test_upsample_interpolate_bug_2197(self):
+        dates = pd.date_range('2007-02-01', '2007-03-01', freq='D')
+        da = xr.DataArray(np.arange(len(dates)), [('time', dates)])
+        result = da.resample(time='M').interpolate('linear')
+        expected_times = np.array([np.datetime64('2007-02-28'),
+                                   np.datetime64('2007-03-31')])
+        expected = xr.DataArray([27., np.nan], [('time', expected_times)])
+        assert_equal(result, expected)
+            
+    @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
         dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
         expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
