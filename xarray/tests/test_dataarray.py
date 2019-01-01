@@ -2533,7 +2533,7 @@ class TestDataArray(object):
                                    np.datetime64('2007-03-31')])
         expected = xr.DataArray([27., np.nan], [('time', expected_times)])
         assert_equal(result, expected)
-            
+
     @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
         dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
