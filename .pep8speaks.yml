@@ -4,7 +4,7 @@
 # block of setup.cfg.
 
 scanner:
-    diff_only: True  # If True, errors caused by only the patch are shown
+    diff_only: False  # If True, errors caused by only the patch are shown
 
 pycodestyle:
     max-line-length: 79
