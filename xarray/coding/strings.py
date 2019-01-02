@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 
 from ..core import indexing
-from ..core.pycompat import bytes_type, dask_array_type, unicode_type
+from ..core.pycompat import dask_array_type
 from ..core.variable import Variable
 from .variables import (
     VariableCoder, lazy_elemwise_func, pop_to, safe_setitem,
@@ -26,11 +26,11 @@ def check_vlen_dtype(dtype):
 
 
 def is_unicode_dtype(dtype):
-    return dtype.kind == 'U' or check_vlen_dtype(dtype) == unicode_type
+    return dtype.kind == 'U' or check_vlen_dtype(dtype) == str
 
 
 def is_bytes_dtype(dtype):
-    return dtype.kind == 'S' or check_vlen_dtype(dtype) == bytes_type
+    return dtype.kind == 'S' or check_vlen_dtype(dtype) == bytes
 
 
 class EncodedStringCoder(VariableCoder):
@@ -90,7 +90,7 @@ def encode_string_array(string_array, encoding='utf-8'):
 def ensure_fixed_length_bytes(var):
     """Ensure that a variable with vlen bytes is converted to fixed width."""
     dims, data, attrs, encoding = unpack_for_encoding(var)
-    if check_vlen_dtype(data.dtype) == bytes_type:
+    if check_vlen_dtype(data.dtype) == bytes:
         # TODO: figure out how to handle this with dask
         data = np.asarray(data, dtype=np.string_)
     return Variable(dims, data, attrs, encoding)

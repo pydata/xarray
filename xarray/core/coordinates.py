@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import Mapping
+from collections import Mapping, OrderedDict
 from contextlib import contextmanager
 
 import pandas as pd
@@ -8,7 +8,6 @@ import pandas as pd
 from . import formatting, indexing
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
-from .pycompat import OrderedDict
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
 from .variable import Variable
 

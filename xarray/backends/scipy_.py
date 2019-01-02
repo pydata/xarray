@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
+from collections import OrderedDict
 from distutils.version import LooseVersion
 from io import BytesIO
 
@@ -8,7 +9,6 @@ import numpy as np
 
 from .. import Variable
 from ..core.indexing import NumpyIndexingAdapter
-from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
 from .file_manager import CachingFileManager, DummyFileManager
@@ -27,7 +27,7 @@ def _decode_attrs(d):
     # don't decode _FillValue from bytes -> unicode, because we want to ensure
     # that its type matches the data exactly
     return OrderedDict((k, v if k == '_FillValue' else _decode_string(v))
-                       for (k, v) in iteritems(d))
+                       for (k, v) in d.items())
 
 
 class ScipyArrayWrapper(BackendArray):
@@ -70,7 +70,7 @@ def _open_scipy_netcdf(filename, mode, mmap, version):
     import gzip
 
     # if the string ends with .gz, then gunzip and open as netcdf file
-    if isinstance(filename, basestring) and filename.endswith('.gz'):
+    if isinstance(filename, str) and filename.endswith('.gz'):
         try:
             return scipy.io.netcdf_file(gzip.open(filename), mode=mode,
                                         mmap=mmap, version=version)
@@ -139,12 +139,12 @@ class ScipyDataStore(WritableCFDataStore):
                              % format)
 
         if (lock is None and mode != 'r' and
-                isinstance(filename_or_obj, basestring)):
+                isinstance(filename_or_obj, str)):
             lock = get_write_lock(filename_or_obj)
 
         self.lock = ensure_lock(lock)
 
-        if isinstance(filename_or_obj, basestring):
+        if isinstance(filename_or_obj, str):
             manager = CachingFileManager(
                 _open_scipy_netcdf, filename_or_obj, mode=mode, lock=lock,
                 kwargs=dict(mmap=mmap, version=version))
@@ -165,7 +165,7 @@ class ScipyDataStore(WritableCFDataStore):
 
     def get_variables(self):
         return FrozenOrderedDict((k, self.open_store_variable(k, v))
-                                 for k, v in iteritems(self.ds.variables))
+                                 for k, v in self.ds.variables.items())
 
     def get_attrs(self):
         return Frozen(_decode_attrs(self.ds._attributes))
@@ -213,7 +213,7 @@ class ScipyDataStore(WritableCFDataStore):
         if name not in self.ds.variables:
             self.ds.createVariable(name, data.dtype, variable.dims)
         scipy_var = self.ds.variables[name]
-        for k, v in iteritems(variable.attrs):
+        for k, v in variable.attrs.items():
             self._validate_attr_key(k)
             setattr(scipy_var, k, v)
 

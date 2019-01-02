@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core.common import contains_cftime_datetimes
-from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid
 from .utils import (
@@ -834,14 +833,14 @@ def _plot2d(plotfunc):
             kwargs['levels'] = cmap_params['levels']
             # if colors == a single color, matplotlib draws dashed negative
             # contours. we lose this feature if we pass cmap and not colors
-            if isinstance(colors, basestring):
+            if isinstance(colors, str):
                 cmap_params['cmap'] = None
                 kwargs['colors'] = colors
 
         if 'pcolormesh' == plotfunc.__name__:
             kwargs['infer_intervals'] = infer_intervals
 
-        if 'imshow' == plotfunc.__name__ and isinstance(aspect, basestring):
+        if 'imshow' == plotfunc.__name__ and isinstance(aspect, str):
             # forbid usage of mpl strings
             raise ValueError("plt.imshow's `aspect` kwarg is not available "
                              "in xarray")

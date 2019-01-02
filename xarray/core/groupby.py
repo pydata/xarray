@@ -12,7 +12,7 @@ from .arithmetic import SupportsArithmetic
 from .combine import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .options import _get_keep_attrs
-from .pycompat import integer_types, range, zip
+from .pycompat import integer_types
 from .utils import hashable, maybe_wrap_array, peek_at, safe_cast_to_index
 from .variable import IndexVariable, Variable, as_variable
 

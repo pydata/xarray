@@ -11,8 +11,9 @@ import hashlib
 import os as _os
 import warnings
 
+from urllib.request import urlretrieve
+
 from .backends.api import open_dataset as _open_dataset
-from .core.pycompat import urlretrieve as _urlretrieve
 
 _default_cache_dir = _os.sep.join(('~', '.xarray_tutorial_data'))
 
@@ -68,9 +69,9 @@ def open_dataset(name, cache=True, cache_dir=_default_cache_dir,
             _os.mkdir(longdir)
 
         url = '/'.join((github_url, 'raw', branch, fullname))
-        _urlretrieve(url, localfile)
+        urlretrieve(url, localfile)
         url = '/'.join((github_url, 'raw', branch, md5name))
-        _urlretrieve(url, md5file)
+        urlretrieve(url, md5file)
 
         localmd5 = file_md5_checksum(localfile)
         with open(md5file, 'r') as f:

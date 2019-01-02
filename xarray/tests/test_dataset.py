@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import warnings
+from collections import OrderedDict
 from copy import copy, deepcopy
 from io import StringIO
 from textwrap import dedent
@@ -17,8 +18,7 @@ from xarray import (
     backends, broadcast, open_dataset, set_options)
 from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import full_like
-from xarray.core.pycompat import (
-    OrderedDict, integer_types, iteritems, unicode_type)
+from xarray.core.pycompat import integer_types
 
 from . import (
     InaccessibleArray, UnexpectedDataAccess, assert_allclose,
@@ -83,7 +83,7 @@ class InaccessibleVariableDataStore(backends.InMemoryDataStore):
                 InaccessibleArray(v.values))
             return Variable(v.dims, data, v.attrs)
         return dict((k, lazy_inaccessible(k, v)) for
-                    k, v in iteritems(self._variables))
+                    k, v in self._variables.items())
 
 
 class TestDataset(object):
@@ -194,7 +194,7 @@ class TestDataset(object):
             *empty*
         Attributes:
             å:        ∑""" % (byteorder, u'ba®'))
-        actual = unicode_type(data)
+        actual = str(data)
         assert expected == actual
 
     def test_info(self):
@@ -839,7 +839,7 @@ class TestDataset(object):
             assert data[v].dims == ret[v].dims
             assert data[v].attrs == ret[v].attrs
             slice_list = [slice(None)] * data[v].values.ndim
-            for d, s in iteritems(slicers):
+            for d, s in slicers.items():
                 if d in data[v].dims:
                     inds = np.nonzero(np.array(data[v].dims) == d)[0]
                     for ind in inds:
@@ -1892,7 +1892,7 @@ class TestDataset(object):
     def test_copy_with_data(self):
         orig = create_test_data()
         new_data = {k: np.random.randn(*v.shape)
-                    for k, v in iteritems(orig.data_vars)}
+                    for k, v in orig.data_vars.items()}
         actual = orig.copy(data=new_data)
 
         expected = orig.copy()
@@ -1916,12 +1916,12 @@ class TestDataset(object):
         renamed = data.rename(newnames)
 
         variables = OrderedDict(data.variables)
-        for k, v in iteritems(newnames):
+        for k, v in newnames.items():
             variables[v] = variables.pop(k)
 
-        for k, v in iteritems(variables):
+        for k, v in variables.items():
             dims = list(v.dims)
-            for name, newname in iteritems(newnames):
+            for name, newname in newnames.items():
                 if name in dims:
                     dims[dims.index(name)] = newname
 
@@ -2560,7 +2560,7 @@ class TestDataset(object):
             def get_args(v):
                 return [set(args[0]) & set(v.dims)] if args else []
             expected = Dataset(dict((k, v.squeeze(*get_args(v)))
-                                    for k, v in iteritems(data.variables)))
+                                    for k, v in data.variables.items()))
             expected = expected.set_coords(data.coords)
             assert_identical(expected, data.squeeze(*args))
         # invalid squeeze
@@ -3439,7 +3439,7 @@ class TestDataset(object):
 
         actual = data.max()
         expected = Dataset(dict((k, v.max())
-                                for k, v in iteritems(data.data_vars)))
+                                for k, v in data.data_vars.items()))
         assert_equal(expected, actual)
 
         assert_equal(data.min(dim=['dim1']),

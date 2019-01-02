@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 import functools
 import itertools
 import operator
-from collections import Counter
+from collections import Counter, OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -14,7 +14,7 @@ import numpy as np
 from . import duck_array_ops, utils
 from .alignment import deep_align
 from .merge import expand_and_merge_variables
-from .pycompat import OrderedDict, basestring, dask_array_type
+from .pycompat import dask_array_type
 from .utils import is_dict_like
 
 _DEFAULT_FROZEN_SET = frozenset()
@@ -1039,7 +1039,7 @@ def dot(*arrays, **kwargs):
     if len(arrays) == 0:
         raise TypeError('At least one array should be given.')
 
-    if isinstance(dims, basestring):
+    if isinstance(dims, str):
         dims = (dims, )
 
     common_dims = set.intersection(*[set(arr.dims) for arr in arrays])

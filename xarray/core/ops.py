@@ -13,7 +13,6 @@ import numpy as np
 
 from . import dtypes, duck_array_ops
 from .nputils import array_eq, array_ne
-from .pycompat import PY3
 
 try:
     import bottleneck as bn
@@ -28,8 +27,6 @@ UNARY_OPS = ['neg', 'pos', 'abs', 'invert']
 CMP_BINARY_OPS = ['lt', 'le', 'ge', 'gt']
 NUM_BINARY_OPS = ['add', 'sub', 'mul', 'truediv', 'floordiv', 'mod',
                   'pow', 'and', 'xor', 'or']
-if not PY3:
-    NUM_BINARY_OPS.append('div')
 
 # methods which pass on the numpy return value unchanged
 # be careful not to list methods that we would want to wrap later

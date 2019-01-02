@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
+
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
-from .pycompat import OrderedDict, dask_array_type
+from .pycompat import dask_array_type
 
 RESAMPLE_DIM = '__resample_dim__'
 

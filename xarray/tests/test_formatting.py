@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from xarray.core import formatting
-from xarray.core.pycompat import PY3
 
 from . import raises_regex
 
@@ -80,8 +79,8 @@ class TestFormatting(object):
             (pd.Timedelta('3 hours'), '0 days 03:00:00'),
             (pd.Timedelta('NaT'), 'NaT'),
             ('foo', "'foo'"),
-            (u'foo', "'foo'" if PY3 else "u'foo'"),
-            (b'foo', "b'foo'" if PY3 else "'foo'"),
+            (u'foo', "'foo'"),
+            (b'foo', "b'foo'"),
             (1, '1'),
             (1.0, '1.0'),
         ]

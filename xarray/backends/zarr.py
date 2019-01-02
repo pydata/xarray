@@ -1,12 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
 
 from .. import Variable, coding, conventions
 from ..core import indexing
-from ..core.pycompat import OrderedDict, integer_types, iteritems
+from ..core.pycompat import integer_types
 from ..core.utils import FrozenOrderedDict, HiddenKeyDict
 from .common import AbstractWritableDataStore, BackendArray
 
@@ -331,7 +332,7 @@ class ZarrStore(AbstractWritableDataStore):
         encoded_attrs = OrderedDict()
         # the magic for storing the hidden dimension data
         encoded_attrs[_DIMENSION_KEY] = dims
-        for k, v in iteritems(attrs):
+        for k, v in attrs.items():
             encoded_attrs[k] = self.encode_attribute(v)
 
         zarr_array = self.ds.create(name, shape=shape, dtype=dtype,

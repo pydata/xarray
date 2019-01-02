@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
-from ..core.pycompat import basestring
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
@@ -104,7 +103,7 @@ def _color_palette(cmap, n_colors):
         # we have a list of colors
         cmap = ListedColormap(cmap, N=n_colors)
         pal = cmap(colors_i)
-    elif isinstance(cmap, basestring):
+    elif isinstance(cmap, str):
         # we have some sort of named palette
         try:
             # is this a matplotlib cmap?

@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import itertools
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import timedelta
 
 import numpy as np
@@ -16,8 +16,7 @@ from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
 from .options import _get_keep_attrs
-from .pycompat import (
-    OrderedDict, basestring, dask_array_type, integer_types, zip)
+from .pycompat import dask_array_type, integer_types
 from .utils import OrderedSet, either_dict_or_kwargs
 
 try:
@@ -415,7 +414,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return self._dims
 
     def _parse_dimensions(self, dims):
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = (dims,)
         dims = tuple(dims)
         if len(dims) != self.ndim:
@@ -1163,7 +1162,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         -------
         Variable
         """
-        if isinstance(dims, basestring):
+        if isinstance(dims, str):
             dims = [dims]
 
         if shape is None and utils.is_dict_like(dims):
@@ -1399,7 +1398,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Concatenated Variable formed by stacking all the supplied variables
             along the given dimension.
         """
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, str):
             dim, = dim.dims
 
         # can't do this lazily: we need to loop through variables at least
@@ -1751,7 +1750,7 @@ class IndexVariable(Variable):
         This exists because we want to avoid converting Index objects to NumPy
         arrays, if possible.
         """
-        if not isinstance(dim, basestring):
+        if not isinstance(dim, str):
             dim, = dim.dims
 
         variables = list(variables)

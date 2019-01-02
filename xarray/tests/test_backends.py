@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import warnings
+from contextlib import ExitStack
 from io import BytesIO
 
 import numpy as np
@@ -24,8 +25,7 @@ from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
 from xarray.core.options import set_options
-from xarray.core.pycompat import (
-    ExitStack, basestring, dask_array_type, iteritems)
+from xarray.core.pycompat import dask_array_type
 from xarray.tests import mock
 
 from . import (
@@ -1060,7 +1060,7 @@ class NetCDF4Base(CFEncodedBase):
             with open_dataset(tmp_file) as actual:
                 assert_equal(actual['time'], expected['time'])
                 actual_encoding = dict((k, v) for k, v in
-                                       iteritems(actual['time'].encoding)
+                                       actual['time'].encoding.items()
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
                     expected['time'].encoding
@@ -1100,7 +1100,7 @@ class NetCDF4Base(CFEncodedBase):
                                       'shuffle': True,
                                       'original_shape': data.var2.shape})
         with self.roundtrip(data) as actual:
-            for k, v in iteritems(data['var2'].encoding):
+            for k, v in data['var2'].encoding.items():
                 assert v == actual['var2'].encoding[k]
 
         # regression test for #156
@@ -2843,7 +2843,7 @@ class TestRasterio(object):
         with create_tmp_geotiff() as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -2886,7 +2886,7 @@ class TestRasterio(object):
                 as (tmp_file, expected):
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
@@ -3124,15 +3124,15 @@ class TestRasterio(object):
 
             with xr.open_rasterio(tmp_file) as rioda:
                 assert_allclose(rioda, expected)
-                assert isinstance(rioda.attrs['crs'], basestring)
+                assert isinstance(rioda.attrs['crs'], str)
                 assert isinstance(rioda.attrs['res'], tuple)
                 assert isinstance(rioda.attrs['is_tiled'], np.uint8)
                 assert isinstance(rioda.attrs['transform'], tuple)
                 assert len(rioda.attrs['transform']) == 6
                 # from ENVI tags
-                assert isinstance(rioda.attrs['description'], basestring)
-                assert isinstance(rioda.attrs['map_info'], basestring)
-                assert isinstance(rioda.attrs['samples'], basestring)
+                assert isinstance(rioda.attrs['description'], str)
+                assert isinstance(rioda.attrs['map_info'], str)
+                assert isinstance(rioda.attrs['samples'], str)
 
     def test_no_mftime(self):
         # rasterio can accept "filename" urguments that are actually urls,

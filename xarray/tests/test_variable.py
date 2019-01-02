@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import warnings
 from copy import copy, deepcopy
+from collections import OrderedDict
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent
@@ -19,7 +20,6 @@ from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
     LazilyOuterIndexedArray, MemoryCachedArray, NumpyIndexingAdapter,
     OuterIndexer, PandasIndexAdapter, VectorizedIndexer)
-from xarray.core.pycompat import PY3, OrderedDict
 from xarray.core.utils import NDArrayMixin
 from xarray.core.variable import as_compatible_data, as_variable
 from xarray.tests import requires_bottleneck
@@ -164,7 +164,7 @@ class VariableSubclassobjects(object):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_string(self):
-        for value, dtype in [('foo', np.dtype('U3' if PY3 else 'S3')),
+        for value, dtype in [('foo', np.dtype('U3')),
                              (u'foo', np.dtype('U3'))]:
             x = self.cls(['x'], [value])
             self._assertIndexedLikeNDArray(x, value, dtype)
@@ -875,7 +875,7 @@ class TestVariable(VariableSubclassobjects):
 
         v = Variable([], np.string_('foo'))
         assert v.dtype == np.dtype('S3')
-        assert v.values == bytes('foo', 'ascii') if PY3 else 'foo'
+        assert v.values == bytes('foo', 'ascii')
 
     def test_0d_datetime(self):
         v = Variable([], pd.Timestamp('2000-01-01'))

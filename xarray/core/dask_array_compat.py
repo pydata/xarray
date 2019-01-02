@@ -35,7 +35,7 @@ except ImportError:  # pragma: no cover
         return result
 
 
-if LooseVersion(dask_version) > LooseVersion('1.19.2'):
+if LooseVersion(dask_version) > LooseVersion('0.19.2'):
     gradient = da.gradient
 
 else:  # pragma: no cover

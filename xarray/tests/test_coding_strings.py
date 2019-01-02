@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+from contextlib import suppress
+
 import numpy as np
 import pytest
 
 from xarray import Variable
 from xarray.coding import strings
 from xarray.core import indexing
-from xarray.core.pycompat import bytes_type, suppress, unicode_type
 
 from . import (
     IndexerMaker, assert_array_equal, assert_identical, raises_regex,
@@ -18,17 +19,17 @@ with suppress(ImportError):
 
 
 def test_vlen_dtype():
-    dtype = strings.create_vlen_dtype(unicode_type)
-    assert dtype.metadata['element_type'] == unicode_type
+    dtype = strings.create_vlen_dtype(str)
+    assert dtype.metadata['element_type'] == str
     assert strings.is_unicode_dtype(dtype)
     assert not strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is unicode_type
+    assert strings.check_vlen_dtype(dtype) is str
 
-    dtype = strings.create_vlen_dtype(bytes_type)
-    assert dtype.metadata['element_type'] == bytes_type
+    dtype = strings.create_vlen_dtype(bytes)
+    assert dtype.metadata['element_type'] == bytes
     assert not strings.is_unicode_dtype(dtype)
     assert strings.is_bytes_dtype(dtype)
-    assert strings.check_vlen_dtype(dtype) is bytes_type
+    assert strings.check_vlen_dtype(dtype) is bytes
 
     assert strings.check_vlen_dtype(np.dtype(object)) is None
 
@@ -65,7 +66,7 @@ def test_EncodedStringCoder_decode_dask():
 
 
 def test_EncodedStringCoder_encode():
-    dtype = strings.create_vlen_dtype(unicode_type)
+    dtype = strings.create_vlen_dtype(str)
     raw_data = np.array([u'abc', u'ß∂µ∆'], dtype=dtype)
     expected_data = np.array([r.encode('utf-8') for r in raw_data],
                              dtype=object)
@@ -97,7 +98,7 @@ def test_CharacterArrayCoder_roundtrip(original):
 
 @pytest.mark.parametrize('data', [
     np.array([b'a', b'bc']),
-    np.array([b'a', b'bc'], dtype=strings.create_vlen_dtype(bytes_type)),
+    np.array([b'a', b'bc'], dtype=strings.create_vlen_dtype(bytes)),
 ])
 def test_CharacterArrayCoder_encode(data):
     coder = strings.CharacterArrayCoder()

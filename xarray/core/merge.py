@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
+
 import pandas as pd
 
 from .alignment import deep_align
-from .pycompat import OrderedDict, basestring
 from .utils import Frozen
 from .variable import as_variable, assert_unique_multiindex_level_names
 
@@ -532,7 +533,7 @@ def dataset_merge_method(dataset, other, overwrite_vars, compat, join):
     # method due for backwards compatibility
     # TODO: consider deprecating it?
 
-    if isinstance(overwrite_vars, basestring):
+    if isinstance(overwrite_vars, str):
         overwrite_vars = set([overwrite_vars])
     overwrite_vars = set(overwrite_vars)
 

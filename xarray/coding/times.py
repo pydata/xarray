@@ -12,7 +12,6 @@ import pandas as pd
 from ..core import indexing
 from ..core.common import contains_cftime_datetimes
 from ..core.formatting import first_n_items, format_timestamp, last_item
-from ..core.pycompat import PY3
 from ..core.variable import Variable
 from .variables import (
     SerializationWarning, VariableCoder, lazy_elemwise_func, pop_to,
@@ -126,8 +125,6 @@ def _decode_cf_datetime_dtype(data, units, calendar):
         msg = ('unable to decode time units %r with %s. Try '
                'opening your dataset with decode_times=False.'
                % (units, calendar_msg))
-        if not PY3:
-            msg += ' Full traceback:\n' + traceback.format_exc()
         raise ValueError(msg)
     else:
         dtype = getattr(result, 'dtype', np.dtype('object'))

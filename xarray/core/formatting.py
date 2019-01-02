@@ -9,13 +9,13 @@ from __future__ import absolute_import, division, print_function
 import contextlib
 import functools
 from datetime import datetime, timedelta
+from itertools import zip_longest
 
 import numpy as np
 import pandas as pd
 
 from .options import OPTIONS
-from .pycompat import (
-    PY2, bytes_type, dask_array_type, unicode_type, zip_longest)
+from .pycompat import dask_array_type
 
 try:
     from pandas.errors import OutOfBoundsDatetime
@@ -34,7 +34,7 @@ def pretty_print(x, numchars):
 
 
 def maybe_truncate(obj, maxlen=500):
-    s = unicode_type(obj)
+    s = str(obj)
     if len(s) > maxlen:
         s = s[:(maxlen - 3)] + u'...'
     return s
@@ -47,22 +47,11 @@ def wrap_indent(text, start='', length=None):
     return start + indent.join(x for x in text.splitlines())
 
 
-def ensure_valid_repr(string):
-    """Ensure that the given value is valid for the result of __repr__.
-
-    On Python 2, this means we need to convert unicode to bytes. We won't need
-    this function once we drop Python 2.7 support.
-    """
-    if PY2 and isinstance(string, unicode_type):
-        string = string.encode('utf-8')
-    return string
-
-
 class ReprMixin(object):
     """Mixin that defines __repr__ for a class that already has __unicode__."""
 
     def __repr__(self):
-        return ensure_valid_repr(self.__unicode__())
+        return self.__unicode__()
 
 
 def _get_indexer_at_least_n_items(shape, n_desired, from_end):
@@ -126,9 +115,9 @@ def format_timestamp(t):
     """Cast given object to a Timestamp and return a nicely formatted string"""
     # Timestamp is only valid for 1678 to 2262
     try:
-        datetime_str = unicode_type(pd.Timestamp(t))
+        datetime_str = str(pd.Timestamp(t))
     except OutOfBoundsDatetime:
-        datetime_str = unicode_type(t)
+        datetime_str = str(t)
 
     try:
         date_str, time_str = datetime_str.split()
@@ -144,7 +133,7 @@ def format_timestamp(t):
 
 def format_timedelta(t, timedelta_format=None):
     """Cast given object to a Timestamp and return a nicely formatted string"""
-    timedelta_str = unicode_type(pd.Timedelta(t))
+    timedelta_str = str(pd.Timedelta(t))
     try:
         days_str, time_str = timedelta_str.split(' days ')
     except ValueError:
@@ -165,12 +154,12 @@ def format_item(x, timedelta_format=None, quote_strings=True):
         return format_timestamp(x)
     if isinstance(x, (np.timedelta64, timedelta)):
         return format_timedelta(x, timedelta_format=timedelta_format)
-    elif isinstance(x, (unicode_type, bytes_type)):
+    elif isinstance(x, (str, bytes)):
         return repr(x) if quote_strings else x
     elif isinstance(x, (float, np.float)):
         return u'{0:.4}'.format(x)
     else:
-        return unicode_type(x)
+        return str(x)
 
 
 def format_items(x):
@@ -237,7 +226,7 @@ def summarize_variable(name, var, col_width, show_values=True,
         max_width = OPTIONS['display_width']
     first_col = pretty_print(u'  %s %s ' % (marker, name), col_width)
     if var.dims:
-        dims_str = u'(%s) ' % u', '.join(map(unicode_type, var.dims))
+        dims_str = u'(%s) ' % u', '.join(map(str, var.dims))
     else:
         dims_str = u''
     front_str = u'%s%s%s ' % (first_col, dims_str, var.dtype)
@@ -253,7 +242,7 @@ def summarize_variable(name, var, col_width, show_values=True,
 
 def _summarize_coord_multiindex(coord, col_width, marker):
     first_col = pretty_print(u'  %s %s ' % (marker, coord.name), col_width)
-    return u'%s(%s) MultiIndex' % (first_col, unicode_type(coord.dims[0]))
+    return u'%s(%s) MultiIndex' % (first_col, str(coord.dims[0]))
 
 
 def _summarize_coord_levels(coord, col_width, marker=u'-'):
@@ -291,7 +280,7 @@ def summarize_attr(key, value, col_width=None):
     if col_width is not None:
         k_str = pretty_print(k_str, col_width)
     # Replace tabs and newlines, so we print on one line in known width
-    v_str = unicode_type(value).replace(u'\t', u'\\t').replace(u'\n', u'\\n')
+    v_str = str(value).replace(u'\t', u'\\t').replace(u'\n', u'\\n')
     # Finally, truncate to the desired display width
     return maybe_truncate(u'%s %s' % (k_str, v_str), OPTIONS['display_width'])
 
@@ -317,7 +306,7 @@ def _get_col_items(mapping):
 
 
 def _calculate_col_width(col_items):
-    max_name_length = (max(len(unicode_type(s)) for s in col_items)
+    max_name_length = (max(len(str(s)) for s in col_items)
                        if col_items else 0)
     col_width = max(max_name_length, 7) + 6
     return col_width

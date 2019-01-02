@@ -46,7 +46,6 @@ from functools import partial
 
 import numpy as np
 
-from ..core.pycompat import basestring
 from .cftimeindex import CFTimeIndex, _parse_iso8601_with_reso
 from .times import format_cftime_datetime
 
@@ -451,7 +450,7 @@ def to_offset(freq):
 def to_cftime_datetime(date_str_or_date, calendar=None):
     import cftime
 
-    if isinstance(date_str_or_date, basestring):
+    if isinstance(date_str_or_date, str):
         if calendar is None:
             raise ValueError(
                 'If converting a string to a cftime.datetime object, '

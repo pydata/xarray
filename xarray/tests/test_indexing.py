@@ -8,7 +8,6 @@ import pytest
 
 from xarray import DataArray, Dataset, Variable
 from xarray.core import indexing, nputils
-from xarray.core.pycompat import native_int_types
 
 from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
@@ -174,7 +173,7 @@ class TestLazyArray(object):
                                           indexing.LazilyOuterIndexedArray)
 
                         # make sure actual.key is appropriate type
-                        if all(isinstance(k, native_int_types + (slice, ))
+                        if all(isinstance(k, (int, slice, ))
                                for k in v_lazy._data.key.tuple):
                             assert isinstance(v_lazy._data.key,
                                               indexing.BasicIndexer)
@@ -340,7 +339,7 @@ def check_integer(indexer_cls):
 def check_slice(indexer_cls):
     (value,) = indexer_cls((slice(1, None, np.int64(2)),)).tuple
     assert value == slice(1, None, 2)
-    assert isinstance(value.step, native_int_types)
+    assert isinstance(value.step, int)
 
 
 def check_array1d(indexer_cls):

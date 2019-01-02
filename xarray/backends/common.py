@@ -10,7 +10,7 @@ import numpy as np
 
 from ..conventions import cf_encoder
 from ..core import indexing
-from ..core.pycompat import dask_array_type, iteritems
+from ..core.pycompat import dask_array_type
 from ..core.utils import FrozenOrderedDict, NdimSizeLenMixin
 
 # Create a logger object, but don't add any handlers. Leave that to user code.
@@ -109,9 +109,9 @@ class AbstractDataStore(Mapping):
                 def load(self):
                     variables, attributes = AbstractDataStore.load(self)
                     variables = {'%s_suffix' % k: v
-                                 for k, v in iteritems(variables)}
+                                 for k, v in variables.items()}
                     attributes = {'%s_suffix' % k: v
-                                  for k, v in iteritems(attributes)}
+                                  for k, v in attributes.items()}
                     return variables, attributes
 
         This function will be called anytime variables or attributes
@@ -275,7 +275,7 @@ class AbstractWritableDataStore(AbstractDataStore):
         attributes : dict-like
             Dictionary of key/value (attribute name / attribute) pairs
         """
-        for k, v in iteritems(attributes):
+        for k, v in attributes.items():
             self.set_attribute(k, v)
 
     def set_variables(self, variables, check_encoding_set, writer,
@@ -297,7 +297,7 @@ class AbstractWritableDataStore(AbstractDataStore):
             dimensions.
         """
 
-        for vn, v in iteritems(variables):
+        for vn, v in variables.items():
             name = _encode_variable_name(vn)
             check = vn in check_encoding_set
             target, source = self.prepare_variable(
