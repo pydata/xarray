@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import functools
 import sys
 import warnings
-from collections import Mapping, defaultdict, OrderedDict
+from collections import Mapping, OrderedDict, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
 

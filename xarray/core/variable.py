@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import itertools
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from datetime import timedelta
 
 import numpy as np

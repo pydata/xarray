@@ -2,8 +2,8 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from copy import copy, deepcopy
 from collections import OrderedDict
+from copy import copy, deepcopy
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from textwrap import dedent

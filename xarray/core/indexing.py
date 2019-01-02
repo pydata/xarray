@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import functools
 import operator
 from collections import defaultdict
+from collections.abc import Hashable
 from contextlib import suppress
 from datetime import timedelta
 
@@ -10,10 +11,8 @@ import numpy as np
 import pandas as pd
 
 from . import duck_array_ops, nputils, utils
-from .pycompat import (dask_array_type, integer_types)
+from .pycompat import dask_array_type, integer_types
 from .utils import is_dict_like
-
-from collections.abc import Hashable
 
 
 def expanded_indexer(key, ndim):

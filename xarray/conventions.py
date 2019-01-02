@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd

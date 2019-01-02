@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict
 from contextlib import suppress
-
 from textwrap import dedent
 
 import numpy as np

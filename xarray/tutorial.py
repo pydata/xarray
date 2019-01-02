@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function
 import hashlib
 import os as _os
 import warnings
-
 from urllib.request import urlretrieve
 
 from .backends.api import open_dataset as _open_dataset

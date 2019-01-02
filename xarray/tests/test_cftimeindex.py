@@ -12,8 +12,9 @@ from xarray.coding.cftimeindex import (
     _parsed_string_to_bounds, assert_all_valid_date_type, parse_iso8601)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import (has_cftime, has_cftime_1_0_2_1, has_cftime_or_netCDF4,
-               raises_regex, requires_cftime)
+from . import (
+    has_cftime, has_cftime_1_0_2_1, has_cftime_or_netCDF4, raises_regex,
+    requires_cftime)
 from .test_coding_times import (
     _ALL_CALENDARS, _NON_STANDARD_CALENDARS, _all_cftime_date_types)
 

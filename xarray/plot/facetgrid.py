@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import functools
 import itertools
 import warnings
-
 from inspect import getfullargspec
 
 import numpy as np

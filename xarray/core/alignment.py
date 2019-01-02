@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import functools
 import operator
 import warnings
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from contextlib import suppress
 
 import numpy as np
