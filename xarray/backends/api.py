@@ -1,21 +1,20 @@
 from __future__ import absolute_import, division, print_function
 
 import os.path
+import warnings
 from glob import glob
 from io import BytesIO
 from numbers import Number
-import warnings
 
 import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import _infer_concat_order_from_positions, _auto_combine
+from ..core.combine import _auto_combine, _infer_concat_order_from_positions
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_remote_uri, is_grib_path
+from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
 from .locks import _get_scheduler
-
 
 DATAARRAY_NAME = '__xarray_dataarray_name__'
 DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
@@ -23,11 +22,11 @@ DATAARRAY_VARIABLE = '__xarray_dataarray_variable__'
 
 def _get_default_engine_remote_uri():
     try:
-        import netCDF4
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import pydap  # flake8: noqa
+            import pydap  # noqa
             engine = 'pydap'
         except ImportError:
             raise ValueError('netCDF4 or pydap is required for accessing '
@@ -38,12 +37,12 @@ def _get_default_engine_remote_uri():
 def _get_default_engine_grib():
     msgs = []
     try:
-        import Nio  # flake8: noqa
+        import Nio  # noqa
         msgs += ["set engine='pynio' to access GRIB files with PyNIO"]
     except ImportError:  # pragma: no cover
         pass
     try:
-        import cfgrib  # flake8: noqa
+        import cfgrib  # noqa
         msgs += ["set engine='cfgrib' to access GRIB files with cfgrib"]
     except ImportError:  # pragma: no cover
         pass
@@ -56,7 +55,7 @@ def _get_default_engine_grib():
 
 def _get_default_engine_gz():
     try:
-        import scipy  # flake8: noqa
+        import scipy  # noqa
         engine = 'scipy'
     except ImportError:  # pragma: no cover
         raise ValueError('scipy is required for accessing .gz files')
@@ -65,11 +64,11 @@ def _get_default_engine_gz():
 
 def _get_default_engine_netcdf():
     try:
-        import netCDF4  # flake8: noqa
+        import netCDF4  # noqa
         engine = 'netcdf4'
     except ImportError:  # pragma: no cover
         try:
-            import scipy.io.netcdf  # flake8: noqa
+            import scipy.io.netcdf  # noqa
             engine = 'scipy'
         except ImportError:
             raise ValueError('cannot read or write netCDF files without '
@@ -300,6 +299,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
+        ds = maybe_decode_store(store)
     elif isinstance(filename_or_obj, basestring):
 
         if (isinstance(filename_or_obj, bytes) and
@@ -340,15 +340,21 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              % engine)
 
         with close_on_error(store):
-            return maybe_decode_store(store)
+            ds = maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+        ds = maybe_decode_store(store)
 
-    return maybe_decode_store(store)
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if 'source' not in ds.encoding:
+        if isinstance(filename_or_obj, basestring):
+            ds.encoding['source'] = filename_or_obj
+
+    return ds
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
@@ -485,6 +491,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
+
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -510,20 +517,21 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-        - 'broadcast_equals': all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
-          same.
-        - 'no_conflicts': only values which are not null in both datasets
-          must be equal. The returned dataset then contains the combination
-          of all non-null values.
+         * 'broadcast_equals': all values must be equal when variables are
+           broadcast against each other to ensure common dimensions.
+         * 'equals': all values and dimensions must be the same.
+         * 'identical': all values, dimensions and attributes must be the
+           same.
+         * 'no_conflicts': only values which are not null in both datasets
+           must be equal. The returned dataset then contains the combination
+           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding['source']``.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
         optional
         Engine to use when reading files. If not provided, the default engine
@@ -536,29 +544,31 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
-          * 'minimal': Only data variables in which the dimension already
-            appears are included.
-          * 'different': Data variables which are not equal (ignoring
-            attributes) across all datasets are also concatenated (as well as
-            all for which dimension already appears). Beware: this option may
-            load the data payload of data variables into memory if they are not
-            already loaded.
-          * 'all': All data variables will be concatenated.
-          * list of str: The listed data variables will be concatenated, in
-            addition to the 'minimal' data variables.
+
+         * 'minimal': Only data variables in which the dimension already
+           appears are included.
+         * 'different': Data variables which are not equal (ignoring
+           attributes) across all datasets are also concatenated (as well as
+           all for which dimension already appears). Beware: this option may
+           load the data payload of data variables into memory if they are not
+           already loaded.
+         * 'all': All data variables will be concatenated.
+         * list of str: The listed data variables will be concatenated, in
+           addition to the 'minimal' data variables.
     coords : {'minimal', 'different', 'all' o list of str}, optional
         These coordinate variables will be concatenated together:
-          * 'minimal': Only coordinates in which the dimension already appears
-            are included.
-          * 'different': Coordinates which are not equal (ignoring attributes)
-            across all datasets are also concatenated (as well as all for which
-            dimension already appears). Beware: this option may load the data
-            payload of coordinate variables into memory if they are not already
-            loaded.
-          * 'all': All coordinate variables will be concatenated, except
-            those corresponding to other dimensions.
-          * list of str: The listed coordinate variables will be concatenated,
-            in addition the 'minimal' coordinates.
+
+         * 'minimal': Only coordinates in which the dimension already appears
+           are included.
+         * 'different': Coordinates which are not equal (ignoring attributes)
+           across all datasets are also concatenated (as well as all for which
+           dimension already appears). Beware: this option may load the data
+           payload of coordinate variables into memory if they are not already
+           loaded.
+         * 'all': All coordinate variables will be concatenated, except
+           those corresponding to other dimensions.
+         * list of str: The listed coordinate variables will be concatenated,
+           in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
@@ -579,7 +589,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
-    """
+    """  # noqa
     if isinstance(paths, basestring):
         if is_remote_uri(paths):
             raise ValueError(
@@ -642,11 +652,12 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
             # Discard ordering because it should be redone from coordinates
             ids = False
 
-        combined = _auto_combine(datasets, concat_dims=concat_dims,
-                                 compat=compat,
-                                 data_vars=data_vars, coords=coords,
-                                 infer_order_from_coords=infer_order_from_coords,
-                                 ids=ids)
+        combined = _auto_combine(
+            datasets, concat_dims=concat_dims,
+            compat=compat,
+            data_vars=data_vars, coords=coords,
+            infer_order_from_coords=infer_order_from_coords,
+            ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()

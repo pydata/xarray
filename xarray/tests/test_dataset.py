@@ -15,7 +15,7 @@ import xarray as xr
 from xarray import (
     ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
     backends, broadcast, open_dataset, set_options)
-from xarray.core import indexing, npcompat, utils
+from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
@@ -2886,6 +2886,19 @@ class TestDataset(object):
         with raises_regex(TypeError, r'resample\(\) no longer supports'):
             ds.resample('1D', dim='time')
 
+    def test_ds_resample_apply_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', freq='D', periods=3)
+        ds = xr.Dataset({'foo': ('time', [1., 1., 1.]),
+                         'time': times})
+        expected = xr.Dataset({'foo': ('time', [3., 3., 3.]),
+                               'time': times})
+        actual = ds.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(expected, actual)
+
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
                      coords={'c': 42}, attrs={'Conventions': 'None'})
@@ -3904,12 +3917,17 @@ class TestDataset(object):
         with raises_regex(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_shift(self, fill_value):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
-        actual = ds.shift(x=1)
-        expected = Dataset({'foo': ('x', [np.nan, 1, 2])}, coords, attrs)
+        actual = ds.shift(x=1, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'foo': ('x', [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'dimensions'):
