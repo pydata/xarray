@@ -6,7 +6,7 @@ Installation
 Required dependencies
 ---------------------
 
-- Python 2.7 [1]_, 3.5, 3.6, or 3.7
+- Python 3.5, 3.6, or 3.7
 - `numpy <http://www.numpy.org/>`__ (1.12 or later)
 - `pandas <http://pandas.pydata.org/>`__ (0.19.2 or later)
 
@@ -112,13 +112,3 @@ To run these benchmark tests in a local machine, first install
 
 and run
 ``asv run  # this will install some conda environments in ./.asv/envs``
-
-.. [1] Xarray plans to drop support for python 2.7 at the end of 2018. This
-   means that new releases of xarray published after this date will only be
-   installable on python 3+ environments, but older versions of xarray will
-   always be available to python 2.7 users. For more information see the
-   following references:
-
-      - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
-      - `Python 3 Statement <http://www.python3statement.org/>`__
-      - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__

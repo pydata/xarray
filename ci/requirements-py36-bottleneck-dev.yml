@@ -11,6 +11,9 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-env
+  - pytest-cov
+  - coveralls
   - flake8
   - numpy
   - pandas
@@ -19,5 +22,3 @@ dependencies:
   - toolz
   - pip:
     - git+https://github.com/kwgoodman/bottleneck.git
-    - coveralls
-    - pytest-cov

@@ -21,6 +21,10 @@ v0.11.2 (unreleased)
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
+- Remove support for Python 2. This is the first version of xarray that is
+  Python 3 only. (:issue:`1876`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
 Enhancements
 ~~~~~~~~~~~~
 

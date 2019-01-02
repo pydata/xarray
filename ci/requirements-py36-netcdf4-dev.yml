@@ -10,13 +10,14 @@ dependencies:
   - h5netcdf
   - matplotlib
   - pytest
+  - pytest-env
+  - pytest-cov
+  - coveralls
   - flake8
   - numpy
   - pandas
   - scipy
   - toolz
   - pip:
-    - coveralls
-    - pytest-cov
     - git+https://github.com/Unidata/netcdf4-python.git
     - git+https://github.com/Unidata/cftime.git
