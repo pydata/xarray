@@ -10,8 +10,7 @@ branches:
 matrix:
   fast_finish: true
   include:
-  - env: CONDA_ENV=py27-min
-  - env: CONDA_ENV=py27-cdat+iris+pynio
+  - env: CONDA_ENV=py35-min
   - env: CONDA_ENV=py35
   - env: CONDA_ENV=py36
   - env: CONDA_ENV=py37
