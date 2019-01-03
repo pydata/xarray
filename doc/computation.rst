@@ -199,6 +199,8 @@ You can also use ``construct`` to compute a weighted rolling sum:
   To avoid this, use ``skipna=False`` as the above example.
 
 
+.. _comput.coarsen:
+
 Coarsen large arrays
 ====================
 

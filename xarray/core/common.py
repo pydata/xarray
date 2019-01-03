@@ -626,18 +626,19 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         ...                   coords={'time': pd.date_range(
         ...                       '15/12/1999', periods=364)})
         >>> da
-        >>> <xarray.DataArray (time: 364)>
-        >>> array([  0.      ,   1.002755,   2.00551 , ..., 362.997245,
-                   364.      ])
-        >>> Coordinates:
-        >>> * time     (time) datetime64[ns] 1999-12-15 ... 2000-12-12
+        <xarray.DataArray (time: 364)>
+        array([  0.      ,   1.002755,   2.00551 , ..., 361.99449 , 362.997245,
+               364.      ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
         >>>
-        >>> da.coarsen(time=4).mean()
-        >>> <xarray.DataArray (time: 91)>
-        >>> array([  1.504132,   5.515152,   9.526171,  13.53719 ,  ...,
-        >>>        362.495868])
-        >>> Coordinates:
-        >>> * time     (time) datetime64[ns] 1999-12-16T12:00:00 ...
+        >>> da.coarsen(time=3, boundary='trim').mean()
+        <xarray.DataArray (time: 121)>
+        array([  1.002755,   4.011019,   7.019284,  ...,  358.986226,
+               361.99449 ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
+        >>>
 
         See Also
         --------
