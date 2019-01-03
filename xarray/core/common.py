@@ -806,7 +806,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         self._file_obj = None
 
     def isin(self, test_elements):
-        """Tests each value in the array for whether it is in the supplied list.
+        """Tests each value in the array for whether it is in test elements.
 
         Parameters
         ----------

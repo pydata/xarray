@@ -128,22 +128,12 @@ except ImportError:
     # Inspired by discussions on http://bugs.python.org/issue13585
     class ExitStack(object):
         """Context manager for dynamic management of a stack of exit callbacks
-
-        For example:
-
-            with ExitStack() as stack:
-                files = [stack.enter_context(open(fname)) for fname in filenames]
-                # All opened files will automatically be closed at the end of
-                # the with statement, even if attempts to open files later
-                # in the list raise an exception
-
         """
 
         def __init__(self):
             self._exit_callbacks = deque()
 
         def pop_all(self):
-            """Preserve the context stack by transferring it to a new instance"""
             new_stack = type(self)()
             new_stack._exit_callbacks = self._exit_callbacks
             self._exit_callbacks = deque()
