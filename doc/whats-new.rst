@@ -13,9 +13,9 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.11.2:
+.. _whats-new.0.11.3:
 
-v0.11.2 (unreleased)
+v0.11.3 (unreleased)
 --------------------
 
 Breaking changes
@@ -41,7 +41,7 @@ Bug fixes
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
   `Spencer Clark <https://github.com/spencerkclark>`_. 
 
-.. _whats-new.0.11.1:
+.. _whats-new.0.11.2:
 
 v0.11.2 (2 January 2019)
 ------------------------
