@@ -28,8 +28,18 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
 Bug fixes
 ~~~~~~~~~
+
+- Interpolating via resample now internally specifies ``bounds_error=False``
+  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
+  from higher frequencies to lower frequencies.  Datapoints outside the bounds
+  of the original time coordinate are now filled with NaN (:issue:`2197`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_. 
 
 .. _whats-new.0.11.1:
 
