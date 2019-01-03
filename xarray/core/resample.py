@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
-
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
 
