@@ -13,7 +13,7 @@ from xarray.core.pycompat import native_int_types
 from . import IndexerMaker, ReturnItem, assert_array_equal, raises_regex
 
 B = IndexerMaker(indexing.BasicIndexer)
-I = ReturnItem()  # noqa: E741  # allow ambiguous name
+I = ReturnItem()  # noqa: E741
 
 
 class TestIndexers(object):
