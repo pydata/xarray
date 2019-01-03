@@ -14,7 +14,7 @@ from .variable import Variable
 _THIS_ARRAY = ReprObject('<this-array>')
 
 
-class AbstractCoordinates(Mapping, formatting.ReprMixin):
+class AbstractCoordinates(Mapping):
     def __getitem__(self, key):
         raise NotImplementedError
 
@@ -44,7 +44,7 @@ class AbstractCoordinates(Mapping, formatting.ReprMixin):
     def __contains__(self, key):
         return key in self._names
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.coords_repr(self)
 
     @property
@@ -273,7 +273,7 @@ class LevelCoordinatesSource(object):
         return iter(self._data._level_coords)
 
 
-class Indexes(Mapping, formatting.ReprMixin):
+class Indexes(Mapping):
     """Ordered Mapping[str, pandas.Index] for xarray objects.
     """
 
@@ -307,7 +307,7 @@ class Indexes(Mapping, formatting.ReprMixin):
             raise KeyError(key)
         return self._variables[key].to_index()
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.indexes_repr(self)
 
 

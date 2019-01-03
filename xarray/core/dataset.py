@@ -252,7 +252,7 @@ def as_dataset(obj):
     return obj
 
 
-class DataVariables(Mapping, formatting.ReprMixin):
+class DataVariables(Mapping):
     def __init__(self, dataset):
         self._dataset = dataset
 
@@ -273,7 +273,7 @@ class DataVariables(Mapping, formatting.ReprMixin):
         else:
             raise KeyError(key)
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.data_vars_repr(self)
 
     @property
@@ -297,8 +297,7 @@ class _LocIndexer(object):
         return self.dataset.sel(**key)
 
 
-class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
-              formatting.ReprMixin):
+class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords):
     """A multi-dimensional, in memory, array database.
 
     A dataset resembles an in-memory representation of a NetCDF file, and
@@ -1273,7 +1272,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                        group=group, encoding=encoding, compute=compute,
                        consolidated=consolidated)
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.dataset_repr(self)
 
     def info(self, buf=None):

@@ -75,7 +75,7 @@ class ImplementsDatasetReduce(object):
             and 'axis' arguments can be supplied."""
 
 
-class AbstractArray(ImplementsArrayReduce, formatting.ReprMixin):
+class AbstractArray(ImplementsArrayReduce):
     """Shared base class for DataArray and Variable."""
 
     def __bool__(self):

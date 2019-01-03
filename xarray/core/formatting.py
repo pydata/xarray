@@ -1,8 +1,4 @@
 """String formatting routines for __repr__.
-
-For the sake of sanity, we only do internal formatting with unicode, which can
-be returned by the __unicode__ special method. We use ReprMixin to provide the
-__repr__ method so that things can work on Python 2.
 """
 import contextlib
 import functools
@@ -43,13 +39,6 @@ def wrap_indent(text, start='', length=None):
         length = len(start)
     indent = '\n' + ' ' * length
     return start + indent.join(x for x in text.splitlines())
-
-
-class ReprMixin(object):
-    """Mixin that defines __repr__ for a class that already has __unicode__."""
-
-    def __repr__(self):
-        return self.__unicode__()
 
 
 def _get_indexer_at_least_n_items(shape, n_desired, from_end):
