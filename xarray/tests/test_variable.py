@@ -39,7 +39,7 @@ class VariableSubclassobjects(object):
         assert v.nbytes == 80
         assert v.ndim == 1
         assert len(v) == 10
-        assert v.attrs == {'foo': u'bar'}
+        assert v.attrs == {'foo': 'bar'}
 
     def test_attrs(self):
         v = self.cls(['time'], 0.5 * np.arange(10))
@@ -161,10 +161,10 @@ class VariableSubclassobjects(object):
             self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_string(self):
-        for value, dtype in [('foo', np.dtype('U3')),
-                             (u'foo', np.dtype('U3'))]:
-            x = self.cls(['x'], [value])
-            self._assertIndexedLikeNDArray(x, value, dtype)
+        value = 'foo'
+        dtype = np.dtype('U3')
+        x = self.cls(['x'], [value])
+        self._assertIndexedLikeNDArray(x, value, dtype)
 
     def test_index_0d_datetime(self):
         d = datetime(2000, 1, 1)
@@ -866,7 +866,7 @@ class TestVariable(VariableSubclassobjects):
             assert v.values.dtype == np.dtype('timedelta64[ns]')
 
     def test_0d_str(self):
-        v = Variable([], u'foo')
+        v = Variable([], 'foo')
         assert v.dtype == np.dtype('U3')
         assert v.values == 'foo'
 
@@ -1167,13 +1167,13 @@ class TestVariable(VariableSubclassobjects):
         v = Variable([], np.string_('asdf'))
         assert_identical(v[()], v)
 
-        v = Variable([], np.unicode_(u'asdf'))
+        v = Variable([], np.unicode_('asdf'))
         assert_identical(v[()], v)
 
     def test_indexing_0d_unicode(self):
         # regression test for GH568
-        actual = Variable(('x'), [u'tmax'])[0][()]
-        expected = Variable((), u'tmax')
+        actual = Variable(('x'), ['tmax'])[0][()]
+        expected = Variable((), 'tmax')
         assert_identical(actual, expected)
 
     @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])

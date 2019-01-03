@@ -1294,24 +1294,24 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             buf = sys.stdout
 
         lines = []
-        lines.append(u'xarray.Dataset {')
-        lines.append(u'dimensions:')
+        lines.append('xarray.Dataset {')
+        lines.append('dimensions:')
         for name, size in self.dims.items():
-            lines.append(u'\t{name} = {size} ;'.format(name=name, size=size))
-        lines.append(u'\nvariables:')
+            lines.append('\t{name} = {size} ;'.format(name=name, size=size))
+        lines.append('\nvariables:')
         for name, da in self.variables.items():
-            dims = u', '.join(da.dims)
-            lines.append(u'\t{type} {name}({dims}) ;'.format(
+            dims = ', '.join(da.dims)
+            lines.append('\t{type} {name}({dims}) ;'.format(
                 type=da.dtype, name=name, dims=dims))
             for k, v in da.attrs.items():
-                lines.append(u'\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
-                                                              v=v))
-        lines.append(u'\n// global attributes:')
+                lines.append('\t\t{name}:{k} = {v} ;'.format(name=name, k=k,
+                                                             v=v))
+        lines.append('\n// global attributes:')
         for k, v in self.attrs.items():
-            lines.append(u'\t:{k} = {v} ;'.format(k=k, v=v))
-        lines.append(u'}')
+            lines.append('\t:{k} = {v} ;'.format(k=k, v=v))
+        lines.append('}')
 
-        buf.write(u'\n'.join(lines))
+        buf.write('\n'.join(lines))
 
     @property
     def chunks(self):

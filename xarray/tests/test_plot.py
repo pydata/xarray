@@ -985,7 +985,7 @@ class Common2dMixin(object):
     def test_default_title(self):
         a = DataArray(easy_array((4, 3, 2)), dims=['a', 'b', 'c'])
         a.coords['c'] = [0, 1]
-        a.coords['d'] = u'foo'
+        a.coords['d'] = 'foo'
         self.plotfunc(a.isel(c=1))
         title = plt.gca().get_title()
         assert 'c = 1, d = foo' == title or 'd = foo, c = 1' == title

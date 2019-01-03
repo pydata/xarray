@@ -35,12 +35,12 @@ def test_vlen_dtype():
 def test_EncodedStringCoder_decode():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', u'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'})
     actual = coder.decode(raw)
 
     expected = Variable(
-        ('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object))
+        ('x',), np.array(['abc', 'ß∂µ∆'], dtype=object))
     assert_identical(actual, expected)
 
     assert_identical(coder.decode(actual[0]), expected[0])
@@ -50,12 +50,12 @@ def test_EncodedStringCoder_decode():
 def test_EncodedStringCoder_decode_dask():
     coder = strings.EncodedStringCoder()
 
-    raw_data = np.array([b'abc', u'ß∂µ∆'.encode('utf-8')])
+    raw_data = np.array([b'abc', 'ß∂µ∆'.encode('utf-8')])
     raw = Variable(('x',), raw_data, {'_Encoding': 'utf-8'}).chunk()
     actual = coder.decode(raw)
     assert isinstance(actual.data, da.Array)
 
-    expected = Variable(('x',), np.array([u'abc', u'ß∂µ∆'], dtype=object))
+    expected = Variable(('x',), np.array(['abc', 'ß∂µ∆'], dtype=object))
     assert_identical(actual, expected)
 
     actual_indexed = coder.decode(actual[0])
@@ -65,7 +65,7 @@ def test_EncodedStringCoder_decode_dask():
 
 def test_EncodedStringCoder_encode():
     dtype = strings.create_vlen_dtype(str)
-    raw_data = np.array([u'abc', u'ß∂µ∆'], dtype=dtype)
+    raw_data = np.array(['abc', 'ß∂µ∆'], dtype=dtype)
     expected_data = np.array([r.encode('utf-8') for r in raw_data],
                              dtype=object)
 

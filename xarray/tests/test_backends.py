@@ -210,7 +210,7 @@ class DatasetIOBase(object):
         expected = create_test_data()
         expected['float_var'] = ([], 1.0e9, {'units': 'units of awesome'})
         expected['bytes_var'] = ([], b'foobar')
-        expected['string_var'] = ([], u'foobar')
+        expected['string_var'] = ([], 'foobar')
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
 
@@ -342,8 +342,8 @@ class DatasetIOBase(object):
         floats_nans = np.array([np.nan, np.nan, 1.0, 2.0, 3.0], dtype=object)
         bytes_ = np.array([b'ab', b'cdef', b'g'], dtype=object)
         bytes_nans = np.array([b'ab', b'cdef', np.nan], dtype=object)
-        strings = np.array([u'ab', u'cdef', u'g'], dtype=object)
-        strings_nans = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        strings = np.array(['ab', 'cdef', 'g'], dtype=object)
+        strings_nans = np.array(['ab', 'cdef', np.nan], dtype=object)
         all_nans = np.array([np.nan, np.nan], dtype=object)
         original = Dataset({'floats': ('a', floats),
                             'floats_nans': ('a', floats_nans),
@@ -365,7 +365,7 @@ class DatasetIOBase(object):
                 # explicitly set.
                 # https://github.com/pydata/xarray/issues/1647
                 expected['bytes_nans'][-1] = b''
-                expected['strings_nans'][-1] = u''
+                expected['strings_nans'][-1] = ''
                 assert_identical(expected, actual)
 
     def test_roundtrip_string_data(self):
@@ -374,7 +374,7 @@ class DatasetIOBase(object):
             assert_identical(expected, actual)
 
     def test_roundtrip_string_encoded_characters(self):
-        expected = Dataset({'x': ('t', [u'ab', u'cdef'])})
+        expected = Dataset({'x': ('t', ['ab', 'cdef'])})
         expected['x'].encoding['dtype'] = 'S1'
         with self.roundtrip(expected) as actual:
             assert_identical(expected, actual)
@@ -645,7 +645,7 @@ class CFEncodedBase(DatasetIOBase):
             assert_identical(expected, actual)
 
     def test_roundtrip_string_with_fill_value_nchar(self):
-        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
         encoding = {'dtype': 'S1', '_FillValue': b'X'}
@@ -794,7 +794,7 @@ class CFEncodedBase(DatasetIOBase):
         # regression test for GH2149
         for strings in [
             [b'foo', b'bar', b'baz'],
-            [u'foo', u'bar', u'baz'],
+            ['foo', 'bar', 'baz'],
         ]:
             ds = Dataset({'x': strings})
             kwargs = dict(encoding={'x': {'dtype': 'S1'}})
@@ -986,29 +986,29 @@ class NetCDF4Base(CFEncodedBase):
     def test_encoding_kwarg_vlen_string(self):
         for input_strings in [
             [b'foo', b'bar', b'baz'],
-            [u'foo', u'bar', u'baz'],
+            ['foo', 'bar', 'baz'],
         ]:
             original = Dataset({'x': input_strings})
-            expected = Dataset({'x': [u'foo', u'bar', u'baz']})
+            expected = Dataset({'x': ['foo', 'bar', 'baz']})
             kwargs = dict(encoding={'x': {'dtype': str}})
             with self.roundtrip(original, save_kwargs=kwargs) as actual:
                 assert actual['x'].encoding['dtype'] is str
                 assert_identical(actual, expected)
 
     def test_roundtrip_string_with_fill_value_vlen(self):
-        values = np.array([u'ab', u'cdef', np.nan], dtype=object)
+        values = np.array(['ab', 'cdef', np.nan], dtype=object)
         expected = Dataset({'x': ('t', values)})
 
         # netCDF4-based backends don't support an explicit fillvalue
         # for variable length strings yet.
         # https://github.com/Unidata/netcdf4-python/issues/730
         # https://github.com/shoyer/h5netcdf/issues/37
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': u'XXX'})})
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': 'XXX'})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 
-        original = Dataset({'x': ('t', values, {}, {'_FillValue': u''})})
+        original = Dataset({'x': ('t', values, {}, {'_FillValue': ''})})
         with pytest.raises(NotImplementedError):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
@@ -1692,7 +1692,7 @@ class TestNetCDF3ViaNetCDF4Data(CFEncodedBase, NetCDF3Only):
                 yield store
 
     def test_encoding_kwarg_vlen_string(self):
-        original = Dataset({'x': [u'foo', u'bar', u'baz']})
+        original = Dataset({'x': ['foo', 'bar', 'baz']})
         kwargs = dict(encoding={'x': {'dtype': str}})
         with raises_regex(ValueError, 'encoding dtype=str for vlen'):
             with self.roundtrip(original, save_kwargs=kwargs):

@@ -179,7 +179,7 @@ class TestDataset(object):
 
     def test_unicode_data(self):
         # regression test for GH834
-        data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
+        data = Dataset({'foø': ['ba®']}, attrs={'å': '∑'})
         repr(data)  # should not raise
 
         byteorder = '<' if sys.byteorder == 'little' else '>'
@@ -191,20 +191,20 @@ class TestDataset(object):
         Data variables:
             *empty*
         Attributes:
-            å:        ∑""" % (byteorder, u'ba®'))
+            å:        ∑""" % (byteorder, 'ba®'))
         actual = str(data)
         assert expected == actual
 
     def test_info(self):
         ds = create_test_data(seed=123)
         ds = ds.drop('dim3')  # string type prints differently in PY2 vs PY3
-        ds.attrs['unicode_attr'] = u'ba®'
+        ds.attrs['unicode_attr'] = 'ba®'
         ds.attrs['string_attr'] = 'bar'
 
         buf = StringIO()
         ds.info(buf=buf)
 
-        expected = dedent(u'''\
+        expected = dedent('''\
         xarray.Dataset {
         dimensions:
         \tdim1 = 8 ;
@@ -274,7 +274,7 @@ class TestDataset(object):
             pass
 
         d = pd.Timestamp('2000-01-01T12')
-        args = [True, None, 3.4, np.nan, 'hello', u'uni', b'raw',
+        args = [True, None, 3.4, np.nan, 'hello', b'raw',
                 np.datetime64('2000-01-01'), d, d.to_pydatetime(),
                 Arbitrary()]
         for arg in args:
@@ -3541,7 +3541,7 @@ class TestDataset(object):
         actual = ds.min()
         assert_identical(expected, actual)
 
-        expected = Dataset({'x': u'a'})
+        expected = Dataset({'x': 'a'})
         ds = Dataset({'x': ('y', np.array(['a', 'b'], 'U1'))})
         actual = ds.min()
         assert_identical(expected, actual)
@@ -4405,9 +4405,9 @@ def test_dir_non_string(data_set):
 
 
 def test_dir_unicode(data_set):
-    data_set[u'unicode'] = 'uni'
+    data_set['unicode'] = 'uni'
     result = dir(data_set)
-    assert u'unicode' in result
+    assert 'unicode' in result
 
 
 @pytest.fixture(params=[1])
