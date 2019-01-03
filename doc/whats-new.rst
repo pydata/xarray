@@ -13,13 +13,17 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
-.. _whats-new.0.11.2:
+.. _whats-new.0.11.3:
 
-v0.11.2 (unreleased)
+v0.11.3 (unreleased)
 --------------------
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+
+- Remove support for Python 2. This is the first version of xarray that is
+  Python 3 only. (:issue:`1876`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -29,17 +33,26 @@ Enhancements
   See :ref:`comput.coarsen` for details.
   (:issue:`2525`)
   By `Keisuke Fujii <https://github.com/fujiisoup>`_.
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 Bug fixes
 ~~~~~~~~~
 
-.. _whats-new.0.11.1:
+- Interpolating via resample now internally specifies ``bounds_error=False``
+  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
+  from higher frequencies to lower frequencies.  Datapoints outside the bounds
+  of the original time coordinate are now filled with NaN (:issue:`2197`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_. 
 
-v0.11.1 (29 December 2018)
---------------------------
+.. _whats-new.0.11.2:
 
-This minor release includes a number of enhancements and bug fixes, and two
-(slightly) breaking changes.
+v0.11.2 (2 January 2019)
+------------------------
+
+Removes inadvertently introduced setup dependency on pytest-runner
+(:issue:`2641`). Otherwise, this release is exactly equivalent to 0.11.1.
 
 .. warning::
 
@@ -50,6 +63,14 @@ This minor release includes a number of enhancements and bug fixes, and two
   - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
+
+.. _whats-new.0.11.1:
+
+v0.11.1 (29 December 2018)
+--------------------------
+
+This minor release includes a number of enhancements and bug fixes, and two
+(slightly) breaking changes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

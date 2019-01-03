@@ -10,6 +10,10 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-env
+  - pytest-cov
+  - coveralls
+  - hypothesis
   - flake8
   - numpy
   - pandas
@@ -19,9 +23,5 @@ dependencies:
   - rasterio
   - bottleneck
   - zarr
-  - pip:
-    - coveralls
-    - pytest-cov
-    - pydap
-    - lxml
-    - hypothesis
+  - pydap
+  - lxml

@@ -1078,7 +1078,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @property
     def data_vars(self):
-        """Dictionary of xarray.DataArray objects corresponding to data variables
+        """Dictionary of DataArray objects corresponding to data variables
         """
         return DataVariables(self)
 
@@ -2172,8 +2172,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                            inplace=inplace)
 
     def expand_dims(self, dim, axis=None):
-        """Return a new object with an additional axis (or axes) inserted at the
-        corresponding position in the array shape.
+        """Return a new object with an additional axis (or axes) inserted at
+        the corresponding position in the array shape.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -2257,8 +2257,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     def set_index(self, indexes=None, append=False, inplace=None,
                   **indexes_kwargs):
-        """Set Dataset (multi-)indexes using one or more existing coordinates or
-        variables.
+        """Set Dataset (multi-)indexes using one or more existing coordinates
+        or variables.
 
         Parameters
         ----------
