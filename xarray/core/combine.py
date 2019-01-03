@@ -6,6 +6,8 @@ from collections import Counter
 
 import pandas as pd
 
+import numpy as np
+
 from . import utils
 from .alignment import align
 from .merge import merge
@@ -417,6 +419,80 @@ def _infer_tile_ids_from_nested_list(entry, current_pos):
                 yield result
     else:
         yield current_pos, entry
+
+
+def _infer_concat_order_from_coords(datasets):
+
+    concat_dims = []
+    tile_ids = [() for ds in datasets]
+
+    # All datasets have same variables because they've been grouped as such
+    ds0 = datasets[0]
+    for dim in ds0.dims:
+
+        # Check if dim is a coordinate dimension
+        if dim in ds0:
+
+            # Need to read coordinate values to do ordering
+            coord_vals = [ds[dim].values for ds in datasets]
+
+            # If dimension coordinate values are same on every dataset then
+            # should be leaving this dimension alone (it's just a "bystander")
+            if not _all_arrays_equal(coord_vals):
+
+                # Infer order datasets should be arranged in along this dim
+                concat_dims.append(dim)
+
+                # TODO generalise this to deduce whether coord should be monotonically increasing or decreasing
+                if not all(pd.Index(coord).is_monotonic_increasing
+                           for coord in coord_vals):
+                    raise ValueError(f"Coordinate variable {dim} is not "
+                                     "monotonically increasing on all "
+                                     "datasets")
+
+                # Sort datasets along dim
+                # Assume that any two datasets whose coord along dim starts with
+                # the same value have the exact same coord values throughout.
+                first_coord_vals = [coord[0] for coord in coord_vals]
+                new_positions = _infer_order_1d(first_coord_vals,
+                                                method='dense')
+
+                # TODO check that resulting global coordinate is monotonic
+
+                # Append positions along extra dimension to structure which
+                # encodes the multi-dimensional concatentation order
+                tile_ids = [tile_id + (position,) for tile_id, position
+                            in zip(tile_ids, new_positions)]
+
+    # TODO check that this is still the correct logic for case of merging but no concatenation
+    if len(datasets) > 1 and not concat_dims:
+        raise ValueError("Could not find any suitable dimension coordinates to"
+                         " use to order the datasets for concatenation")
+
+    combined_ids = OrderedDict(zip(tile_ids, datasets))
+
+    return combined_ids, concat_dims
+
+
+def _all_arrays_equal(iterator):
+    try:
+       iterator = iter(iterator)
+       first = next(iterator)
+       return all(np.array_equal(first, rest) for rest in iterator)
+    except StopIteration:
+       return True
+
+
+def _infer_order_1d(arr, method='dense'):
+    # TODO Special cases for string coords - natural sorting instead?
+    # TODO sort datetime coords too
+    arr = np.array(arr)
+
+    # We want rank but with identical elements given identical position indices
+    # - they should be concatenated along another dimension, not along this one
+    ranks = pd.Series(arr).rank(method=method).values
+
+    return ranks.astype('int') - 1
 
 
 def _check_shape_tile_ids(combined_tile_ids):

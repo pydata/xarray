@@ -10,7 +10,9 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import _infer_concat_order_from_positions, _auto_combine
+from ..core.combine import (_infer_concat_order_from_positions,
+                            _infer_concat_order_from_coords,
+                            _check_shape_tile_ids, _combine_nd)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
@@ -643,19 +645,16 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     try:
         if combine is 'auto':
             # Redo ordering from coordinates
-            raise NotImplementedError
-            # TODO Use coordinates to determine tile_ID for each dataset in N-D
             # Ignore how they were ordered previously
-            # Should look like:
-            combined_ids, concat_dims = _infer_tile_ids_from_coords(
-                datasets, concat_dims)
+            combined_ids, concat_dims = _infer_concat_order_from_coords(
+                datasets)
 
         # Check that the inferred shape is combinable
         _check_shape_tile_ids(combined_ids)
 
         # Repeatedly concatenate then merge along each dimension
         combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                               data_vars=data_vars, coords=coords, combine)
+                               data_vars=data_vars, coords=coords, combine='auto')
     except ValueError:
         for ds in datasets:
             ds.close()
