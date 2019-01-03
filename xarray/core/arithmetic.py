@@ -1,6 +1,4 @@
 """Base classes implementing arithmetic for xarray objects."""
-from __future__ import absolute_import, division, print_function
-
 import numbers
 
 import numpy as np

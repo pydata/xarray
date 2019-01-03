@@ -5,8 +5,6 @@ Use this module directly:
 Or use the methods on a DataArray:
     DataArray.plot._____
 """
-from __future__ import absolute_import, division, print_function
-
 import functools
 import warnings
 from datetime import datetime

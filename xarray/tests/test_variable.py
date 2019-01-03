@@ -1,6 +1,3 @@
-
-from __future__ import absolute_import, division, print_function
-
 import warnings
 from collections import OrderedDict
 from copy import copy, deepcopy

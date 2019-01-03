@@ -5,8 +5,6 @@ NumPy's __array_ufunc__ and mixin classes instead of the unintuitive "inject"
 functions.
 """
 
-from __future__ import absolute_import, division, print_function
-
 import operator
 
 import numpy as np

@@ -1,7 +1,5 @@
 """Internal utilties; not for external use
 """
-from __future__ import absolute_import, division, print_function
-
 import contextlib
 import functools
 import itertools

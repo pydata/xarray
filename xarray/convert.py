@@ -1,7 +1,5 @@
 """Functions for converting to and from xarray objects
 """
-from __future__ import absolute_import, division, print_function
-
 from collections import Counter, OrderedDict
 
 import numpy as np

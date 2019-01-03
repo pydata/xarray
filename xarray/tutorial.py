@@ -5,8 +5,6 @@ Useful for:
 * building tutorials in the documentation.
 
 '''
-from __future__ import absolute_import, division, print_function
-
 import hashlib
 import os as _os
 import warnings
