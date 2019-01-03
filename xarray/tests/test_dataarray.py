@@ -2525,6 +2525,16 @@ class TestDataArray(object):
             assert_allclose(expected, actual, rtol=1e-16)
 
     @requires_scipy
+    def test_upsample_interpolate_bug_2197(self):
+        dates = pd.date_range('2007-02-01', '2007-03-01', freq='D')
+        da = xr.DataArray(np.arange(len(dates)), [('time', dates)])
+        result = da.resample(time='M').interpolate('linear')
+        expected_times = np.array([np.datetime64('2007-02-28'),
+                                   np.datetime64('2007-03-31')])
+        expected = xr.DataArray([27., np.nan], [('time', expected_times)])
+        assert_equal(result, expected)
+
+    @requires_scipy
     def test_upsample_interpolate_regression_1605(self):
         dates = pd.date_range('2016-01-01', '2016-03-31', freq='1D')
         expected = xr.DataArray(np.random.random((len(dates), 2, 3)),
@@ -2536,21 +2546,42 @@ class TestDataArray(object):
     @requires_dask
     @requires_scipy
     def test_upsample_interpolate_dask(self):
-        import dask.array as da
-
-        times = pd.date_range('2000-01-01', freq='6H', periods=5)
+        from scipy.interpolate import interp1d
         xs = np.arange(6)
         ys = np.arange(3)
+        times = pd.date_range('2000-01-01', freq='6H', periods=5)
 
         z = np.arange(5)**2
-        data = da.from_array(np.tile(z, (6, 3, 1)), (1, 3, 1))
+        data = np.tile(z, (6, 3, 1))
         array = DataArray(data,
                           {'time': times, 'x': xs, 'y': ys},
                           ('x', 'y', 'time'))
+        chunks = {'x': 2, 'y': 1}
 
-        with raises_regex(TypeError,
-                          "dask arrays are not yet supported"):
-            array.resample(time='1H').interpolate('linear')
+        expected_times = times.to_series().resample('1H').asfreq().index
+        # Split the times into equal sub-intervals to simulate the 6 hour
+        # to 1 hour up-sampling
+        new_times_idx = np.linspace(0, len(times) - 1, len(times) * 5)
+        for kind in ['linear', 'nearest', 'zero', 'slinear', 'quadratic',
+                     'cubic']:
+            actual = array.chunk(chunks).resample(time='1H').interpolate(kind)
+            actual = actual.compute()
+            f = interp1d(np.arange(len(times)), data, kind=kind, axis=-1,
+                         bounds_error=True, assume_sorted=True)
+            expected_data = f(new_times_idx)
+            expected = DataArray(expected_data,
+                                 {'time': expected_times, 'x': xs, 'y': ys},
+                                 ('x', 'y', 'time'))
+            # Use AllClose because there are some small differences in how
+            # we upsample timeseries versus the integer indexing as I've
+            # done here due to floating point arithmetic
+            assert_allclose(expected, actual, rtol=1e-16)
+
+        # Check that an error is raised if an attempt is made to interpolate
+        # over a chunked dimension
+        with raises_regex(NotImplementedError,
+                          'Chunking along the dimension to be interpolated'):
+            array.chunk({'time': 1}).resample(time='1H').interpolate('linear')
 
     def test_align(self):
         array = DataArray(np.random.random((6, 8)),
