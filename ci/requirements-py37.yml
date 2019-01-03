@@ -14,7 +14,7 @@ dependencies:
   - pytest-cov
   - pytest-env
   - coveralls
-  - flake8
+  - pycodestyle
   - numpy
   - pandas
   - scipy
