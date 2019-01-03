@@ -26,7 +26,8 @@ CLASSIFIERS = [
 
 PYTHON_REQUIRES = '>=3.5'
 INSTALL_REQUIRES = ['numpy >= 1.12', 'pandas >= 0.19.2']
-SETUP_REQUIRES = ['pytest-runner >= 4.2']
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+SETUP_REQUIRES = ['pytest-runner >= 4.2'] if needs_pytest else []
 TESTS_REQUIRE = ['pytest >= 2.7.1']
 if sys.version_info[0] < 3:
     TESTS_REQUIRE.append('mock')
