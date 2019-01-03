@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 from . import ops
 from .groupby import DEFAULT_DIMS, DataArrayGroupBy, DatasetGroupBy
-from .pycompat import dask_array_type
 
 RESAMPLE_DIM = '__resample_dim__'
 
@@ -112,7 +111,16 @@ class Resample(object):
         return self._interpolate(kind=kind)
 
     def _interpolate(self, kind='linear'):
-        raise NotImplementedError
+        """Apply scipy.interpolate.interp1d along resampling dimension."""
+        # drop any existing non-dimension coordinates along the resampling
+        # dimension
+        dummy = self._obj.copy()
+        for k, v in self._obj.coords.items():
+            if k != self._dim and self._dim in v.dims:
+                dummy = dummy.drop(k)
+        return dummy.interp(assume_sorted=True, method=kind,
+                            kwargs={'bounds_error': False},
+                            **{self._dim: self._full_index})
 
 
 class DataArrayResample(DataArrayGroupBy, Resample):
@@ -183,46 +191,6 @@ class DataArrayResample(DataArrayGroupBy, Resample):
             combined = combined.rename({self._resample_dim: self._dim})
 
         return combined
-
-    def _interpolate(self, kind='linear'):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        from .dataarray import DataArray
-        from scipy.interpolate import interp1d
-
-        if isinstance(self._obj.data, dask_array_type):
-            raise TypeError(
-                "Up-sampling via interpolation was attempted on the the "
-                "variable '{}', but it is a dask array; dask arrays are not "
-                "yet supported in resample.interpolate(). Load into "
-                "memory with Dataset.load() before resampling."
-                .format(self._obj.data.name)
-            )
-
-        x = self._obj[self._dim].astype('float')
-        y = self._obj.data
-
-        axis = self._obj.get_axis_num(self._dim)
-
-        f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
-                     assume_sorted=True)
-        new_x = self._full_index.values.astype('float')
-
-        # construct new up-sampled DataArray
-        dummy = self._obj.copy()
-        dims = dummy.dims
-
-        # drop any existing non-dimension coordinates along the resampling
-        # dimension
-        coords = OrderedDict()
-        for k, v in dummy.coords.items():
-            # is the resampling dimension
-            if k == self._dim:
-                coords[self._dim] = self._full_index
-            # else, check if resampling dim is in coordinate dimensions
-            elif self._dim not in v.dims:
-                coords[k] = v
-        return DataArray(f(new_x), coords, dims, name=dummy.name,
-                         attrs=dummy.attrs)
 
 
 ops.inject_reduce_methods(DataArrayResample)
@@ -309,50 +277,6 @@ class DatasetResample(DatasetGroupBy, Resample):
 
         return super(DatasetResample, self).reduce(
             func, dim, keep_attrs, **kwargs)
-
-    def _interpolate(self, kind='linear'):
-        """Apply scipy.interpolate.interp1d along resampling dimension."""
-        from .dataset import Dataset
-        from .variable import Variable
-        from scipy.interpolate import interp1d
-
-        old_times = self._obj[self._dim].astype(float)
-        new_times = self._full_index.values.astype(float)
-
-        data_vars = OrderedDict()
-        coords = OrderedDict()
-
-        # Apply the interpolation to each DataArray in our original Dataset
-        for name, variable in self._obj.variables.items():
-            if name in self._obj.coords:
-                if name == self._dim:
-                    coords[self._dim] = self._full_index
-                elif self._dim not in variable.dims:
-                    coords[name] = variable
-            else:
-                if isinstance(variable.data, dask_array_type):
-                    raise TypeError(
-                        "Up-sampling via interpolation was attempted on the "
-                        "variable '{}', but it is a dask array; dask arrays "
-                        "are not yet supprted in resample.interpolate(). Load "
-                        "into memory with Dataset.load() before resampling."
-                        .format(name)
-                    )
-
-                axis = variable.get_axis_num(self._dim)
-
-                # We've previously checked for monotonicity along the
-                # re-sampling dimension (in __init__ via the GroupBy
-                # constructor), so we can avoid sorting the data again by
-                # passing 'assume_sorted=True'
-                f = interp1d(old_times, variable.data, kind=kind,
-                             axis=axis, bounds_error=True,
-                             assume_sorted=True)
-                interpolated = Variable(variable.dims, f(new_times))
-
-                data_vars[name] = interpolated
-
-        return Dataset(data_vars, coords)
 
 
 ops.inject_reduce_methods(DatasetResample)
