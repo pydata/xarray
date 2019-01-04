@@ -10,7 +10,7 @@ many fields, especially physical sciences, engineering, and finance.
 Such datasets are commonly "labelled" with logical coordinate values. For e.g. say a dataset of the Earth's surface temperature `sst` contains temperature values on a latitude and longitudinal grid — the data are "labelled" with latitude and longitude values.
 Using logical labels makes the dataset a lot easier to work with: xarray lets you access the value at a particular location using `sst.sel(latitude=12, longitude=85)` instead of the less-readable standard numpy indexing `sst[10, 20]`.
 But multi-dimensional data doesn't fit neatly into pandas_, python's most
-popular data analysis package focused on label tabular data.
+popular data analysis package focused on labelled tabular data.
 Xarray provides a pandas-like and pandas-compatible toolkit for
 analytics on multi-dimensional arrays.
 Our approach adopts the `Common Data Model`_ for self-
