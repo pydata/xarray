@@ -606,7 +606,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     # Coerce 1D input into ND to maintain backwards-compatible API until API
     # for N-D combine decided
     # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
-    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+    if concat_dim is None or concat_dim is _CONCAT_DIM_DEFAULT:
         concat_dims = concat_dim
     elif not isinstance(concat_dim, list):
         concat_dims = [concat_dim]
