@@ -2,21 +2,28 @@ xarray: N-D labeled arrays and datasets in Python
 =================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
-that aims to make working with labelled multi-dimensional arrays simple,
+that makes working with labelled multi-dimensional arrays simple,
 efficient, and fun!
 
-Multi-dimensional (a.k.a. N-dimensional) arrays are encountered in
-many fields, especially physical sciences, engineering, and finance.
-Such datasets are commonly "labelled" with logical coordinate values. For e.g. say a dataset of the Earth's surface temperature `sst` contains temperature values on a latitude and longitudinal grid — the data are "labelled" with latitude and longitude values.
-Using logical labels makes the dataset a lot easier to work with: xarray lets you access the value at a particular location using `sst.sel(latitude=12, longitude=85)` instead of the less-readable standard numpy indexing `sst[10, 20]`.
-But multi-dimensional data doesn't fit neatly into pandas_, python's most
-popular data analysis package focused on labelled tabular data.
-Xarray provides a pandas-like and pandas-compatible toolkit for
-analytics on multi-dimensional arrays.
-Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences:
-``xarray.Dataset`` is an in-memory representation of a netCDF file.
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays (somtimes called "tensors")
+are an essential part of computational science.
+They are encountered in a wide range of fields, including physics, astronomy,
+geoscience, bioinformatics, engineering, finance, and deep learning.
+In python, numpy_ provides the fundamental data structure and API for
+working with raw ND arrays.
+However, real-world datasets are usually more than just raw numbers;
+they have "labels" which encode information about how the array values map
+to locations in space, time, etc.
+By adopting the the `Common Data Model`_ for self-describing scientific data,
+xarray is capable of understanding these labels and using them to provide a
+more intuitive, more concise, and less error-prone experience for working with
+ND arrays.
+Xarray also provides a large and growing library of functions for advanced
+analytics and visualization with these data structures.
+Xarray was inspired by and borrows heavily from pandas_, a highly popular data
+analysis package focused on labelled tabular data.
 
+.. _numpy: http://www.numpy.org/
 .. _pandas: http://pandas.pydata.org
 .. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
