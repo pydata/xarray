@@ -233,7 +233,7 @@ the excess entries or padding ``nan`` to insufficient entries,
   da.coarsen(time=30, x=2, boundary='trim').mean()
 
 If you want to apply a specific function to coordinate, you can pass the
-function of function name to ``coord_func`` option,
+function or method name to ``coord_func`` option,
 
 .. ipython:: python
 

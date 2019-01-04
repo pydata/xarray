@@ -44,7 +44,7 @@ Bug fixes
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_. 
+  `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.2:
 
@@ -92,10 +92,6 @@ Enhancements
 - :py:class:`CFTimeIndex` uses slicing for string indexing when possible (like
   :py:class:`pandas.DatetimeIndex`), which avoids unnecessary copies.
   By `Stephan Hoyer <https://github.com/shoyer>`_
-- :py:meth:`~xarray.DataArray.coarsen` and
-  :py:meth:`~xarray.Dataset.coarsen` are newly added.
-  (:issue:`2525`)
-  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Enable passing ``rasterio.io.DatasetReader`` or ``rasterio.vrt.WarpedVRT`` to
   ``open_rasterio`` instead of file path string. Allows for in-memory
   reprojection, see  (:issue:`2588`).
