@@ -53,6 +53,7 @@ def align(*objects, **kwargs):
     join : {'outer', 'inner', 'left', 'right', 'exact'}, optional
         Method for joining the indexes of the passed objects along each
         dimension:
+
         - 'outer': use the union of object indexes
         - 'inner': use the intersection of object indexes
         - 'left': use indexes from the first object with each dimension

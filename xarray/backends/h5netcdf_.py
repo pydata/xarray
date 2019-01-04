@@ -26,8 +26,8 @@ class H5NetCDFArrayWrapper(BaseNetCDF4Array):
         # h5py requires using lists for fancy indexing:
         # https://github.com/h5py/h5py/issues/992
         key = tuple(list(k) if isinstance(k, np.ndarray) else k for k in key)
-        array = self.get_array()
         with self.datastore.lock:
+            array = self.get_array(needs_lock=False)
             return array[key]
 
 
@@ -230,9 +230,6 @@ class H5NetCDFStore(WritableCFDataStore):
 
     def sync(self):
         self.ds.sync()
-        # if self.autoclose:
-        #     self.close()
-        # super(H5NetCDFStore, self).sync(compute=compute)
 
     def close(self, **kwargs):
         self._manager.close(**kwargs)

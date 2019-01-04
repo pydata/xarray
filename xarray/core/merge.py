@@ -49,8 +49,7 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     variables : list of xarray.Variable
         List of Variable objects, all of which go by the same name in different
         inputs.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         Type of equality check to use.
 
     Returns
@@ -60,7 +59,7 @@ def unique_variable(name, variables, compat='broadcast_equals'):
     Raises
     ------
     MergeError: if any of the variables are not equal.
-    """
+    """  # noqa
     out = variables[0]
     if len(variables) > 1:
         combine_method = None
@@ -122,8 +121,7 @@ def merge_variables(
     priority_vars : mapping with Variable or None values, optional
         If provided, variables are always taken from this dict in preference to
         the input variable dictionaries, without checking for conflicts.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'minimal', 'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'minimal', 'no_conflicts'}, optional
         Type of equality check to use when checking for conflicts.
 
     Returns
@@ -131,7 +129,7 @@ def merge_variables(
     OrderedDict with keys taken by the union of keys on list_of_variable_dicts,
     and Variable values corresponding to those that should be found on the
     merged result.
-    """
+    """  # noqa
     if priority_vars is None:
         priority_vars = {}
 
@@ -313,15 +311,14 @@ def _get_priority_vars(objects, priority_arg, compat='equals'):
         Dictionaries in which to find the priority variables.
     priority_arg : int or None
         Integer object whose variable should take priority.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
 
     Returns
     -------
     None, if priority_arg is None, or an OrderedDict with Variable objects as
     values indicating priority variables.
-    """
+    """  # noqa
     if priority_arg is None:
         priority_vars = {}
     else:
@@ -406,8 +403,7 @@ def merge_core(objs,
     ----------
     objs : list of mappings
         All values must be convertable to labeled arrays.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         Compatibility checks to use when merging variables.
     join : {'outer', 'inner', 'left', 'right'}, optional
         How to combine objects with different indexes.
@@ -430,7 +426,7 @@ def merge_core(objs,
     Raises
     ------
     MergeError if the merge cannot be done successfully.
-    """
+    """  # noqa
     from .dataset import calculate_dimensions
 
     _assert_compat_valid(compat)
@@ -472,8 +468,7 @@ def merge(objects, compat='no_conflicts', join='outer'):
     objects : Iterable[Union[xarray.Dataset, xarray.DataArray, dict]]
         Merge together all variables from these objects. If any of them are
         DataArray objects, they must have a name.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
 
@@ -516,7 +511,7 @@ def merge(objects, compat='no_conflicts', join='outer'):
     See also
     --------
     concat
-    """
+    """  # noqa
     from .dataarray import DataArray
     from .dataset import Dataset
 

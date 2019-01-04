@@ -11,8 +11,8 @@ from ..core.indexing import NumpyIndexingAdapter
 from ..core.pycompat import OrderedDict, basestring, iteritems
 from ..core.utils import Frozen, FrozenOrderedDict
 from .common import BackendArray, WritableCFDataStore
-from .locks import get_write_lock
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import ensure_lock, get_write_lock
 from .netcdf3 import (
     encode_nc3_attr_value, encode_nc3_variable, is_valid_nc3_name)
 
@@ -35,16 +35,17 @@ class ScipyArrayWrapper(BackendArray):
     def __init__(self, variable_name, datastore):
         self.datastore = datastore
         self.variable_name = variable_name
-        array = self.get_array()
+        array = self.get_variable().data
         self.shape = array.shape
         self.dtype = np.dtype(array.dtype.kind +
                               str(array.dtype.itemsize))
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name].data
+    def get_variable(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock)
+        return ds.variables[self.variable_name]
 
     def __getitem__(self, key):
-        data = NumpyIndexingAdapter(self.get_array())[key]
+        data = NumpyIndexingAdapter(self.get_variable().data)[key]
         # Copy data if the source file is mmapped. This makes things consistent
         # with the netCDF4 library by ensuring we can safely read arrays even
         # after closing associated files.
@@ -52,15 +53,16 @@ class ScipyArrayWrapper(BackendArray):
         return np.array(data, dtype=self.dtype, copy=copy)
 
     def __setitem__(self, key, value):
-        data = self.datastore.ds.variables[self.variable_name]
-        try:
-            data[key] = value
-        except TypeError:
-            if key is Ellipsis:
-                # workaround for GH: scipy/scipy#6880
-                data[:] = value
-            else:
-                raise
+        with self.datastore.lock:
+            data = self.get_variable(needs_lock=False)
+            try:
+                data[key] = value
+            except TypeError:
+                if key is Ellipsis:
+                    # workaround for GH: scipy/scipy#6880
+                    data[:] = value
+                else:
+                    raise
 
 
 def _open_scipy_netcdf(filename, mode, mmap, version):
@@ -139,6 +141,8 @@ class ScipyDataStore(WritableCFDataStore):
         if (lock is None and mode != 'r' and
                 isinstance(filename_or_obj, basestring)):
             lock = get_write_lock(filename_or_obj)
+
+        self.lock = ensure_lock(lock)
 
         if isinstance(filename_or_obj, basestring):
             manager = CachingFileManager(

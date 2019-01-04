@@ -14,9 +14,9 @@ from ..core.pycompat import PY3, OrderedDict, basestring, iteritems, suppress
 from ..core.utils import FrozenOrderedDict, close_on_error, is_remote_uri
 from .common import (
     BackendArray, WritableCFDataStore, find_root, robust_getitem)
-from .locks import (NETCDFC_LOCK, HDF5_LOCK,
-                    combine_locks, ensure_lock, get_write_lock)
 from .file_manager import CachingFileManager, DummyFileManager
+from .locks import (
+    HDF5_LOCK, NETCDFC_LOCK, combine_locks, ensure_lock, get_write_lock)
 from .netcdf3 import encode_nc3_attr_value, encode_nc3_variable
 
 # This lookup table maps from dtype.byteorder to a readable endian
@@ -48,13 +48,14 @@ class BaseNetCDF4Array(BackendArray):
 
     def __setitem__(self, key, value):
         with self.datastore.lock:
-            data = self.get_array()
+            data = self.get_array(needs_lock=False)
             data[key] = value
             if self.datastore.autoclose:
                 self.datastore.close(needs_lock=False)
 
-    def get_array(self):
-        return self.datastore.ds.variables[self.variable_name]
+    def get_array(self, needs_lock=True):
+        ds = self.datastore._manager.acquire(needs_lock).value
+        return ds.variables[self.variable_name]
 
 
 class NetCDF4ArrayWrapper(BaseNetCDF4Array):
@@ -69,10 +70,9 @@ class NetCDF4ArrayWrapper(BaseNetCDF4Array):
         else:
             getitem = operator.getitem
 
-        original_array = self.get_array()
-
         try:
             with self.datastore.lock:
+                original_array = self.get_array(needs_lock=False)
                 array = getitem(original_array, key)
         except IndexError:
             # Catch IndexError in netCDF4 and return a more informative

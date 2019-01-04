@@ -197,24 +197,30 @@ turn this decoding off manually.
 .. _CF conventions: http://cfconventions.org/
 
 You can view this encoding information (among others) in the
-:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attribute:
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` and
+:py:attr:`DataArray.encoding <xarray.DataArray.encoding>` attributes:
 
 .. ipython::
     :verbatim:
 
     In [1]: ds_disk['y'].encoding
     Out[1]:
-    {'calendar': u'proleptic_gregorian',
-     'chunksizes': None,
-     'complevel': 0,
-     'contiguous': True,
-     'dtype': dtype('float64'),
-     'fletcher32': False,
-     'least_significant_digit': None,
+    {'zlib': False,
      'shuffle': False,
+     'complevel': 0,
+     'fletcher32': False,
+     'contiguous': True,
+     'chunksizes': None,
      'source': 'saved_on_disk.nc',
-     'units': u'days since 2000-01-01 00:00:00',
-     'zlib': False}
+     'original_shape': (5,),
+     'dtype': dtype('int64'),
+     'units': 'days since 2000-01-01 00:00:00',
+     'calendar': 'proleptic_gregorian'}
+
+    In [9]: ds_disk.encoding
+    Out[9]:
+    {'unlimited_dims': set(),
+     'source': 'saved_on_disk.nc'}
 
 Note that all operations that manipulate variables other than indexing
 will remove encoding information.

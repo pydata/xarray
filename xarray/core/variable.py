@@ -15,10 +15,10 @@ from . import (
 from .indexing import (
     BasicIndexer, OuterIndexer, PandasIndexAdapter, VectorizedIndexer,
     as_indexable)
+from .options import _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
 from .utils import OrderedSet, either_dict_or_kwargs
-from .options import _get_keep_attrs
 
 try:
     import dask.array as da
@@ -933,7 +933,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         dims = common.get_squeeze_dims(self, dim)
         return self.isel({d: 0 for d in dims})
 
-    def _shift_one_dim(self, dim, count):
+    def _shift_one_dim(self, dim, count, fill_value=dtypes.NA):
         axis = self.get_axis_num(dim)
 
         if count > 0:
@@ -944,7 +944,11 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             keep = slice(None)
 
         trimmed_data = self[(slice(None),) * axis + (keep,)].data
-        dtype, fill_value = dtypes.maybe_promote(self.dtype)
+
+        if fill_value is dtypes.NA:
+            dtype, fill_value = dtypes.maybe_promote(self.dtype)
+        else:
+            dtype = self.dtype
 
         shape = list(self.shape)
         shape[axis] = min(abs(count), shape[axis])
@@ -956,12 +960,12 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         else:
             full = np.full
 
-        nans = full(shape, fill_value, dtype=dtype)
+        filler = full(shape, fill_value, dtype=dtype)
 
         if count > 0:
-            arrays = [nans, trimmed_data]
+            arrays = [filler, trimmed_data]
         else:
-            arrays = [trimmed_data, nans]
+            arrays = [trimmed_data, filler]
 
         data = duck_array_ops.concatenate(arrays, axis)
 
@@ -973,7 +977,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
 
         return type(self)(self.dims, data, self._attrs, fastpath=True)
 
-    def shift(self, shifts=None, **shifts_kwargs):
+    def shift(self, shifts=None, fill_value=dtypes.NA, **shifts_kwargs):
         """
         Return a new Variable with shifted data.
 
@@ -983,6 +987,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             Integer offset to shift along each of the given dimensions.
             Positive offsets shift to the right; negative offsets shift to the
             left.
+        fill_value: scalar, optional
+            Value to use for newly missing values
         **shifts_kwargs:
             The keyword arguments form of ``shifts``.
             One of shifts or shifts_kwarg must be provided.
@@ -995,7 +1001,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         shifts = either_dict_or_kwargs(shifts, shifts_kwargs, 'shift')
         result = self
         for dim, count in shifts.items():
-            result = result._shift_one_dim(dim, count)
+            result = result._shift_one_dim(dim, count, fill_value=fill_value)
         return result
 
     def pad_with_fill_value(self, pad_widths=None, fill_value=dtypes.NA,

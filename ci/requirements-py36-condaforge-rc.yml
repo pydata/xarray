@@ -12,12 +12,12 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
+  - pytest-env
+  - pytest-cov
+  - coveralls
   - flake8
   - numpy
   - pandas
   - seaborn
   - scipy
   - toolz
-  - pip:
-    - coveralls
-    - pytest-cov
