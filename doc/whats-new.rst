@@ -87,18 +87,6 @@ This minor release includes a number of enhancements and bug fixes, and two
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-- Auto-combine along N dimensions:
-
-  - ``open_mfdataset`` and ``auto_combine`` can now combine datasets along any
-    number of dimensions, instead of just a 1D list of datasets. To combine
-    along multiple dimensions the datasets must be passed as a nested
-    list-of-lists.
-
-    Breaking because ``open_mfdataset`` and ``auto_combine`` now expect an
-    argument ``concat_dims`` instead of ``concat_dim``. ``concat_dims`` accepts
-    a list of valid ``concat_dim`` arguments, e.g. ``['dim1', 'dim2']``.
-    (:issue:`2159`)
-    By `Tom Nicholas <http://github.com/TomNicholas>`_.
 - Minimum rasterio version increased from 0.36 to 1.0 (for ``open_rasterio``)
 - Time bounds variables are now also decoded according to CF conventions
   (:issue:`2565`). The previous behavior was to decode them only if they
