@@ -14,22 +14,21 @@ working with raw ND arrays.
 However, real-world datasets are usually more than just raw numbers;
 they have "labels" which encode information about how the array values map
 to locations in space, time, etc.
-By adopting the the `Common Data Model`_ for self-describing scientific data,
-xarray is capable of understanding these labels and using them to provide a
-more intuitive, more concise, and less error-prone experience for working with
-ND arrays.
+By introducing the concepts of *dimensions*, *coordinates*, and *attributes*
+on top of raw numpy-like arrays,
+xarray is able to understand these labels and use them to provide a
+more intuitive, more concise, and less error-prone experience.
 Xarray also provides a large and growing library of functions for advanced
 analytics and visualization with these data structures.
 Xarray was inspired by and borrows heavily from pandas_, a highly popular data
 analysis package focused on labelled tabular data.
 Xarray can read and write data from most common labeled ND-array storage
-formats and is particularly tailored to working with netCDF_ files.
+formats and is particularly tailored to working with netCDF_ files, whose
+data model is nearly identical to xarray's.
 
 .. _numpy: http://www.numpy.org/
 .. _pandas: http://pandas.pydata.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _OPeNDAP: http://www.opendap.org/
 
 Documentation
 -------------
