@@ -493,15 +493,11 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    combine='auto', autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
-<<<<<<< HEAD
     If combine='auto' then the function `auto_combine` is used to combine the
     datasets into one before returning the result, and if combine='manual' then
     `manual_combine` is used. The filepaths must be structured according to
     which combining function is used, the details of which are given in the
     documentation for ``auto_combine`` and ``manual_combine``.
-
-=======
->>>>>>> real_master
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -526,16 +522,10 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         want to concatenate is not a dimension in the original datasets, e.g.,
         if you want to stack a collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
-<<<<<<< HEAD
         component files. Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
-=======
-        component files. Set ``concat_dim=None`` explicitly to disable
-        concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
->>>>>>> real_master
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
          * 'broadcast_equals': all values must be equal when variables are
@@ -562,7 +552,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
-<<<<<<< HEAD
           * 'minimal': Only data variables in which the dimension already
             appears are included.
           * 'different': Data variables which are not equal (ignoring
@@ -574,22 +563,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
     coords : {'minimal', 'different', 'all' or list of str}, optional
-=======
-
-         * 'minimal': Only data variables in which the dimension already
-           appears are included.
-         * 'different': Data variables which are not equal (ignoring
-           attributes) across all datasets are also concatenated (as well as
-           all for which dimension already appears). Beware: this option may
-           load the data payload of data variables into memory if they are not
-           already loaded.
-         * 'all': All data variables will be concatenated.
-         * list of str: The listed data variables will be concatenated, in
-           addition to the 'minimal' data variables.
-    coords : {'minimal', 'different', 'all' o list of str}, optional
->>>>>>> real_master
         These coordinate variables will be concatenated together:
-
          * 'minimal': Only coordinates in which the dimension already appears
            are included.
          * 'different': Coordinates which are not equal (ignoring attributes)
