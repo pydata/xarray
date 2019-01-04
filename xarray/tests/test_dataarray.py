@@ -3678,14 +3678,14 @@ class TestIrisConversion(object):
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
-        assert (actual.coord('distance2').attributes['foo'] ==
-                original.coords['distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance2').attributes['foo']
+                == original.coords['distance2'].attrs['foo'])
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -3743,14 +3743,14 @@ class TestIrisConversion(object):
             assert coord.var_name == original_coord.name
             assert_array_equal(
                 coord.points, CFDatetimeCoder().encode(original_coord).values)
-            assert (actual.coord_dims(coord) ==
-                    original.get_axis_num(
+            assert (actual.coord_dims(coord)
+                    == original.get_axis_num(
                         original.coords[coord.var_name].dims))
 
         assert (actual.coord('distance2').attributes['foo'] == original.coords[
             'distance2'].attrs['foo'])
-        assert (actual.coord('distance').units ==
-                cf_units.Unit(original.coords['distance'].units))
+        assert (actual.coord('distance').units
+                == cf_units.Unit(original.coords['distance'].units))
         assert actual.attributes['baz'] == original.attrs['baz']
         assert actual.standard_name == original.attrs['standard_name']
 
@@ -3849,5 +3849,15 @@ class TestIrisConversion(object):
 
 
 def test_ewm(da):
+    da = da.isel(a=0)
     result = da.ewm(time=2).mean()
     assert isinstance(result, DataArray)
+
+    pandas_array = da.to_pandas()
+    assert pandas_array.index.name == 'time'
+    expected = xr.DataArray(pandas_array.ewm(com=2).mean())
+
+    # TODO: fix
+    # expected = expected.transpose('x', 'time')
+
+    assert_equal(expected, result)
