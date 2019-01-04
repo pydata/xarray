@@ -25,6 +25,23 @@ Breaking changes
   Python 3 only. (:issue:`1876`).
   By `Joe Hamman <https://github.com/jhamman>`_.
 
+
+- Combining datasets along N dimensions:
+
+  - ``open_mfdataset`` and ``auto_combine`` can now combine datasets along any
+    number of dimensions, instead of just a one-dimensional list of datasets.
+
+    If the datasets have monotonic global dimension coordinates then the new
+    ``auto_combine`` should be used. If not then the new ``manual_combine``
+    will accept the datasets as a a nested list-of-lists, and combine by
+    applying a series of concat and merge operations.
+
+    Breaking because some lists that were previously valid inputs to
+    ``open_mfdataset`` and ``auto_combine`` may no longer be valid, and should
+    now be combined explicitly using ``manual_combine`` instead.
+    (:issue:`2159`) By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
+
 Enhancements
 ~~~~~~~~~~~~
 
