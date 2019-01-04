@@ -589,41 +589,29 @@ def _new_tile_id(single_id_ds_pair):
     return tile_id[1:]
 
 
-def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
-                  infer_order_from_coords, ids):
-    """
-    Calls logic to decide concatenation order before concatenating.
-    """
+def _manual_combine(datasets, concat_dims, compat, data_vars, coords, ids):
 
     # Arrange datasets for concatenation
-    if infer_order_from_coords:
-        raise NotImplementedError
-        # TODO Use coordinates to determine tile_ID for each dataset in N-D
-        # Ignore how they were ordered previously
-        # Should look like:
-        # combined_ids, concat_dims = _infer_tile_ids_from_coords(datasets,
-        # concat_dims)
+    # Use information from the shape of the user input
+    if not ids:
+        # Determine tile_IDs by structure of input in N-D
+        # (i.e. ordering in list-of-lists)
+        combined_ids, concat_dims = _infer_concat_order_from_positions(
+            datasets, concat_dims)
     else:
-        # Use information from the shape of the user input
-        if not ids:
-            # Determine tile_IDs by structure of input in N-D
-            # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_positions(
-                datasets, concat_dims)
-        else:
-            # Already sorted so just use the ids already passed
-            combined_ids = OrderedDict(zip(ids, datasets))
+        # Already sorted so just use the ids already passed
+        combined_ids = OrderedDict(zip(ids, datasets))
 
     # Check that the inferred shape is combinable
     _check_shape_tile_ids(combined_ids)
 
-    # Repeatedly concatenate then merge along each dimension
+    # Apply series of concatenate or merge operations along each dimension
     combined = _combine_nd(combined_ids, concat_dims, compat=compat,
                            data_vars=data_vars, coords=coords)
     return combined
 
 
-def manual_combine(datasets, concat_dims=_CONCAT_DIM_DEFAULT,
+def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', data_vars='all', coords='different'):
     """
     Explicitly combine an N-dimensional grid of datasets into one by using a
@@ -649,18 +637,18 @@ def manual_combine(datasets, concat_dims=_CONCAT_DIM_DEFAULT,
         Dataset objects to combine.
         If concatenation or merging along more than one dimension is desired,
         then datasets must be supplied in a nested list-of-lists.
-    concat_dims : list of str, DataArray, Index or None, optional
+    concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions along which to concatenate variables, as used by
         :py:func:`xarray.concat`.
         By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dims=[..., None, ...]`` explicitly to
+        component files. Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation and merge instead along a particular dimension.
         Must be the same length as the depth of the list passed to
         ``datasets``.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
-        potential conflicts:
+        potential merge conflicts:
 
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
@@ -715,26 +703,33 @@ def manual_combine(datasets, concat_dims=_CONCAT_DIM_DEFAULT,
     --------
     concat
     merge
+    auto_combine
     """
 
-    # The IDs argument tells _combine that the datasets are not yet sorted
-    return _combine(datasets, concat_dims=concat_dims, compat=compat,
-                    data_vars=data_vars, coords=coords,
-                    infer_order_from_coords=False, ids=False)
+    if isinstance(concat_dim, str):
+        concat_dim = [concat_dim]
+
+    # The IDs argument tells _manual_combine that datasets aren't yet sorted
+    return _manual_combine(datasets, concat_dims=concat_dim, compat=compat,
+                           data_vars=data_vars, coords=coords, ids=False)
 
 
-def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                 compat='no_conflicts', data_vars='all', coords='different'):
+def auto_combine(datasets, compat='no_conflicts', data_vars='all',
+                 coords='different'):
     """
-    Attempt to auto-magically combine the given datasets into one.
+    Attempt to auto-magically combine the given datasets into one by using
+    dimension coordinates.
 
     This method attempts to combine a group of datasets along any number of
     dimensions into a single entity by inspecting coords and metadata and using
     a combination of concat and merge.
 
-    Will attempt to order the datasets such that their coordinate values are
-    monotonically increasing along all dimensions. If it cannot determine the
-    order in which to concatenate the datasets, it will raise an error.
+    Will attempt to order the datasets such that the values in their dimension
+    coordinates are monotonically increasing along all dimensions. If it cannot
+    determine the order in which to concatenate the datasets, it will raise an
+    error.
+    Non-coordinate dimensions will be ignored, as will any coordinate
+    dimensions which do not vary between each dataset.
 
     Aligns coordinates, but different variables on datasets can cause it
     to fail under some scenarios. In complex cases, you may need to clean up
@@ -750,15 +745,6 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     ----------
     datasets : sequence of xarray.Dataset
         Dataset objects to combine.
-    concat_dim : str, DataArray, Index or None, optional
-        Dimension along which to concatenate variables, as used by
-        :py:func:`xarray.concat`. You only need to provide this argument if
-        the dimension along which you want to concatenate is not a
-        dimension in the original datasets, e.g., if you want to stack a
-        collection of 2D arrays along a third dimension.
-        By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dim=None`` explicitly to
-        disable concatenation.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
@@ -786,10 +772,23 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     merge
     manual_combine
     """
-    if len(concat_dim) > 1:
-        raise ValueError("Informative message")
 
-    # The IDs argument tells _combine that the datasets are not yet sorted
-    return _combine(datasets, concat_dims=[concat_dim], compat=compat,
-                    data_vars=data_vars, coords=coords,
-                    infer_order_from_coords=True, ids=False)
+    # Group by data vars
+    grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+
+    # Perform the multidimensional combine on each group of data variables
+    # before merging back together
+    concatenated_grouped_by_data_vars = []
+    for var_group in grouped:
+        combined_ids, concat_dims = _infer_concat_order_from_coords(list(var_group))
+
+        # TODO check the shape of the combined ids?
+
+        # Concatenate along all of concat_dims one by one to create single ds
+        concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
+                                   data_vars=data_vars, coords=coords)
+
+        # TODO check the overall coordinates are monotonically increasing?
+        concatenated_grouped_by_data_vars.append(concatenated)
+
+    return merge(concatenated_grouped_by_data_vars, compat=compat)

@@ -11,8 +11,7 @@ import numpy as np
 from .. import Dataset, backends, conventions
 from ..core import indexing
 from ..core.combine import (_infer_concat_order_from_positions,
-                            _infer_concat_order_from_coords,
-                            _check_shape_tile_ids, _combine_nd)
+                            auto_combine, _manual_combine)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
@@ -482,11 +481,10 @@ class _MultiFileCloser(object):
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
-def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
+def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
-                   combine='manual',
-                   autoclose=None, parallel=False, **kwargs):
+                   combine='auto', autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
 
     If combine='auto' then the function `auto_combine` is used to combine the
@@ -513,13 +511,13 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         By default, chunks will be chosen to load entire input files into
         memory at once. This has a major impact on performance: please see the
         full documentation for more details [2].
-    concat_dims : list of str, DataArray, Index or None, optional
+    concat_dim : str, or list of str, DataArray, Index or None, optional
         Dimensions to concatenate files along.  You only
         need to provide this argument if any of the dimensions along which you
         want to concatenate is not a dimension in the original datasets, e.g.,
         if you want to stack a collection of 2D arrays along a third dimension.
         By default, xarray attempts to infer this argument by examining
-        component files. Set ``concat_dims=[..., None, ...]`` explicitly to
+        component files. Set ``concat_dim=[..., None, ...]`` explicitly to
         disable concatenation along a particular dimension.
     compat : {'identical', 'equals', 'broadcast_equals',
               'no_conflicts'}, optional
@@ -557,7 +555,7 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
           * 'all': All data variables will be concatenated.
           * list of str: The listed data variables will be concatenated, in
             addition to the 'minimal' data variables.
-    coords : {'minimal', 'different', 'all' o list of str}, optional
+    coords : {'minimal', 'different', 'all' or list of str}, optional
         These coordinate variables will be concatenated together:
           * 'minimal': Only coordinates in which the dimension already appears
             are included.
@@ -573,9 +571,9 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.
-    combine : {'manual', 'auto'}, optional
+    combine : {'auto', 'manual'}, optional
         Whether ``xarray.auto_combine`` or ``xarray.manual_combine`` is used to
-        combine all the data. Default is 'manual'.
+        combine all the data. Default is 'auto'.
     **kwargs : optional
         Additional arguments passed on to :py:func:`xarray.open_dataset`.
 
@@ -609,11 +607,11 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         raise IOError('no files to open')
 
 
-    # If infer_order_from_coords=True then this is unnecessary, but quick.
-    # If infer_order_from_coords=False then this creates a flat list which is
-    # easier to iterate over, while saving the originally-supplied structure
+    # If combine='auto' then this is unnecessary, but quick.
+    # If combine='manual' then this creates a flat list which is easier to
+    # iterate over, while saving the originally-supplied structure as "ids"
     combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
-        paths, concat_dims)
+        paths, concat_dim)
     ids, paths = (
         list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
@@ -641,20 +639,24 @@ def open_mfdataset(paths, chunks=None, concat_dims=_CONCAT_DIM_DEFAULT,
         # the underlying datasets will still be stored as dask arrays
         datasets, file_objs = dask.compute(datasets, file_objs)
 
-    # Close datasets in case of a ValueError
+    # Combine all datasets, closing them in case of a ValueError
     try:
         if combine is 'auto':
-            # Redo ordering from coordinates
-            # Ignore how they were ordered previously
-            combined_ids, concat_dims = _infer_concat_order_from_coords(
-                datasets)
+            # Will redo ordering from coordinates, ignoring how they were
+            # ordered previously
+            if concat_dim is not _CONCAT_DIM_DEFAULT:
+                raise ValueError("Cannot specify dimensions to concatenate "
+                                 "along when auto-combining")
 
-        # Check that the inferred shape is combinable
-        _check_shape_tile_ids(combined_ids)
+            combined = auto_combine(datasets, compat=compat,
+                                    data_vars=data_vars, coords=coords)
 
-        # Repeatedly concatenate then merge along each dimension
-        combined = _combine_nd(combined_ids, concat_dims, compat=compat,
-                               data_vars=data_vars, coords=coords, combine='auto')
+        else:
+            # Combined nested list by successive concat and merge operations
+            # along each dimension, using structure given by "ids"
+            combined = _manual_combine(datasets, concat_dims=concat_dim,
+                                       compat=compat, data_vars=data_vars,
+                                       coords=coords, ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()
