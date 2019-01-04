@@ -22,6 +22,8 @@ Xarray also provides a large and growing library of functions for advanced
 analytics and visualization with these data structures.
 Xarray was inspired by and borrows heavily from pandas_, a highly popular data
 analysis package focused on labelled tabular data.
+Xarray can read and write data from most common labeled ND-array storage
+formats and is particularly tailored to working with netCDF_ files.
 
 .. _numpy: http://www.numpy.org/
 .. _pandas: http://pandas.pydata.org
