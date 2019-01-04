@@ -357,7 +357,7 @@ def encode_cf_datetime(dates, units=None, calendar=None):
 
         delta_units = _netcdf_to_numpy_timeunit(delta)
         time_delta = np.timedelta64(1, delta_units).astype('timedelta64[ns]')
-        ref_date = pd.Timestamp(ref_date)
+        ref_date = pd.Timestamp(ref_date).tz_convert(None)
 
         # Wrap the dates in a DatetimeIndex to do the subtraction to ensure
         # an OverflowError is raised if the ref_date is too far away from
