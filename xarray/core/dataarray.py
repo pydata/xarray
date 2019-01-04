@@ -85,6 +85,7 @@ def _infer_coords_and_dims(
 ) -> "Tuple[Dict[Any, Variable], Tuple[Hashable, ...]]":
     """All the logic for creating a new DataArray"""
 
+<<<<<<< HEAD
     if (
         coords is not None
         and not utils.is_dict_like(coords)
@@ -97,6 +98,15 @@ def _infer_coords_and_dims(
         )
 
     if isinstance(dims, str):
+=======
+    if (coords is not None and not utils.is_dict_like(coords)
+            and len(coords) != len(shape)):
+        raise ValueError('coords is not dict-like, but it has %s items, '
+                         'which does not match the %s dimensions of the '
+                         'data' % (len(coords), len(shape)))
+
+    if isinstance(dims, basestring):
+>>>>>>> Made the code PEP8 compatible
         dims = (dims,)
 
     if dims is None:
@@ -2471,9 +2481,14 @@ class DataArray(AbstractArray, DataWithCoords):
         def compat(x, y):
             return getattr(x.variable, compat_str)(y.variable)
 
+<<<<<<< HEAD
         return utils.dict_equiv(self.coords, other.coords, compat=compat) and compat(
             self, other
         )
+=======
+        return (utils.dict_equiv(self.coords, other.coords, compat=compat)
+                and compat(self, other))
+>>>>>>> Made the code PEP8 compatible
 
     def broadcast_equals(self, other: "DataArray") -> bool:
         """Two DataArrays are broadcast equal if they are equal after
@@ -2520,7 +2535,12 @@ class DataArray(AbstractArray, DataWithCoords):
         DataArray.equal
         """
         try:
+<<<<<<< HEAD
             return self.name == other.name and self._all_compat(other, "identical")
+=======
+            return (self.name == other.name
+                    and self._all_compat(other, 'identical'))
+>>>>>>> Made the code PEP8 compatible
         except (TypeError, AttributeError):
             return False
 
@@ -3061,6 +3081,7 @@ class DataArray(AbstractArray, DataWithCoords):
         ds = self._to_temp_dataset().differentiate(coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
+<<<<<<< HEAD
     def integrate(
         self, dim: Union[Hashable, Sequence[Hashable]], datetime_unit: str = None
     ) -> "DataArray":
@@ -3184,6 +3205,9 @@ class DataArray(AbstractArray, DataWithCoords):
         return map_blocks(func, self, args, kwargs)
 
     def cov(self, other, dim = None):
+=======
+    def cov(self, other, dim=None):
+>>>>>>> Made the code PEP8 compatible
         """Compute covariance between two DataArray objects along a shared dimension.
 
         Parameters
@@ -3197,24 +3221,24 @@ class DataArray(AbstractArray, DataWithCoords):
         covariance: DataArray
         """
         # 1. Broadcast the two arrays
-        self, other     = broadcast(self, other)
+        self, other = broadcast(self, other)
 
         # 2. Ignore the nans
-        valid_values    = self.notnull() & other.notnull()
-        self            = self.where(valid_values, drop=True)
-        other           = other.where(valid_values, drop=True)
-        valid_count     = valid_values.sum(dim)
+        valid_values = self.notnull() & other.notnull()
+        self = self.where(valid_values, drop=True)
+        other = other.where(valid_values, drop=True)
+        valid_count = valid_values.sum(dim)
 
-        #3. Compute mean and standard deviation along the given dim
-        demeaned_self   = self - self.mean(dim = dim)
-        demeaned_other  = other - other.mean(dim = dim)
+        # 3. Compute mean and standard deviation along the given dim
+        demeaned_self = self - self.mean(dim=dim)
+        demeaned_other = other - other.mean(dim=dim)
 
-        #4. Compute  covariance along the given dim
-        cov             =  (demeaned_self*demeaned_other).sum(dim=dim)/(valid_count)
+        # 4. Compute  covariance along the given dim
+        cov = (demeaned_self * demeaned_other).sum(dim=dim) / (valid_count)
 
         return cov
 
-    def corr(self, other, dim = None):
+    def corr(self, other, dim=None):
         """Compute correlation between two DataArray objects along a shared dimension.
 
         Parameters
@@ -3228,18 +3252,19 @@ class DataArray(AbstractArray, DataWithCoords):
         correlation: DataArray
         """
         # 1. Broadcast the two arrays
-        self, other     = broadcast(self, other)
+        self, other = broadcast(self, other)
 
         # 2. Ignore the nans
-        valid_values    = self.notnull() & other.notnull()
-        self            = self.where(valid_values, drop=True)
-        other           = other.where(valid_values, drop=True)
+        valid_values = self.notnull() & other.notnull()
+        self = self.where(valid_values, drop=True)
+        other = other.where(valid_values, drop=True)
 
         # 3. Compute correlation based on standard deviations and cov()
-        self_std        = self.std(dim=dim)
-        other_std       = other.std(dim=dim)
+        self_std = self.std(dim=dim)
+        other_std = other.std(dim=dim)
 
-        return self.cov(other, dim = dim)/(self_std*other_std)
+        return self.cov(other, dim=dim) / (self_std * other_std)
+
 
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
