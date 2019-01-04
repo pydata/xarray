@@ -40,6 +40,7 @@ from .alignment import (
     _get_broadcast_dims_map_common_coords,
     align,
     reindex_like_indexers,
+    broadcast,
 )
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
@@ -3182,10 +3183,67 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return map_blocks(func, self, args, kwargs)
 
+    def cov(self, other, dim = None):
+        """Compute covariance between two DataArray objects along a shared dimension.
+
+        Parameters
+        ----------
+        other: DataArray
+            The other array with which the covariance will be computed
+        dim: The dimension along which the covariance will be computed
+
+        Returns
+        -------
+        covariance: DataArray
+        """
+        # 1. Broadcast the two arrays
+        self, other     = broadcast(self, other)
+
+        # 2. Ignore the nans
+        valid_values    = self.notnull() & other.notnull()
+        self            = self.where(valid_values, drop=True)
+        other           = other.where(valid_values, drop=True)
+        valid_count     = valid_values.sum(dim)
+
+        #3. Compute mean and standard deviation along the given dim
+        demeaned_self   = self - self.mean(dim = dim)
+        demeaned_other  = other - other.mean(dim = dim)
+
+        #4. Compute  covariance along the given dim
+        cov             =  (demeaned_self*demeaned_other).sum(dim=dim)/(valid_count)
+
+        return cov
+
+    def corr(self, other, dim = None):
+        """Compute correlation between two DataArray objects along a shared dimension.
+
+        Parameters
+        ----------
+        other: DataArray
+            The other array with which the correlation will be computed
+        dim: The dimension along which the correlation will be computed
+
+        Returns
+        -------
+        correlation: DataArray
+        """
+        # 1. Broadcast the two arrays
+        self, other     = broadcast(self, other)
+
+        # 2. Ignore the nans
+        valid_values    = self.notnull() & other.notnull()
+        self            = self.where(valid_values, drop=True)
+        other           = other.where(valid_values, drop=True)
+
+        # 3. Compute correlation based on standard deviations and cov()
+        self_std        = self.std(dim=dim)
+        other_std       = other.std(dim=dim)
+
+        return self.cov(other, dim = dim)/(self_std*other_std)
+
     # this needs to be at the end, or mypy will confuse with `str`
     # https://mypy.readthedocs.io/en/latest/common_issues.html#dealing-with-conflicting-names
     str = property(StringAccessor)
-
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

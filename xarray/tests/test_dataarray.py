@@ -4080,6 +4080,45 @@ class TestDataArray:
         assert_equal(y.rank("z", pct=True), y)
 
 
+    def test_corr(self):
+        # self: Load demo data and trim it's size
+        ds  = xr.tutorial.load_dataset('air_temperature')
+        air = ds.air[:18,...]
+        # other: select missaligned data, and smooth it to dampen the correlation with self.
+        air_smooth = ds.air[2:20,...].rolling(time= 3, center=True).mean(dim='time') #.
+        # A handy function to select an example grid
+        def select_pts(da):
+            return da.sel(lat=45, lon=250)
+
+        #Test #1: Misaligned 1-D dataarrays with missing values
+        ts1 = select_pts(air.copy())
+        ts2 = select_pts(air_smooth.copy())
+
+        def pd_corr(ts1,ts2):
+            """Ensure the ts are aligned and missing values ignored"""
+            # ts1,ts2 = xr.align(ts1,ts2)
+            valid_values = ts1.notnull() & ts2.notnull()
+
+            ts1  = ts1.where(valid_values, drop = True)
+            ts2  = ts2.where(valid_values, drop = True)
+
+            return ts1.to_series().corr(ts2.to_series())
+
+        expected = pd_corr(ts1, ts2)
+        actual   = ts1.corr(ts2)
+        np.allclose(expected, actual)
+
+        #Test #2: Misaligned N-D dataarrays with missing values
+        actual_ND = air.corr(air_smooth, dim = 'time')
+        actual = select_pts(actual_ND)
+        np.allclose(expected, actual)
+
+        # Test #3: One 1-D dataarray and another N-D dataarray; misaligned and having missing values
+        actual_ND = air_smooth.corr(ts1, dim = 'time')
+        actual    = select_pts(actual_ND)
+        np.allclose(actual, expected)
+
+
 @pytest.fixture(params=[1])
 def da(request):
     if request.param == 1:
