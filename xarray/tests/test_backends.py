@@ -2461,7 +2461,7 @@ class TestPydap(object):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa
+            assert_equal(actual[{'l': 2}], expected[{'l': 2}])
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),
