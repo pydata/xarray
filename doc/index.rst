@@ -5,7 +5,7 @@ xarray: N-D labeled arrays and datasets in Python
 that aims to make working with labelled multi-dimensional arrays simple,
 efficient, and fun!
 
-Labelled multi-dimensional (a.k.a. N-dimensional) arrays are encountered in
+Multi-dimensional (a.k.a. N-dimensional) arrays are encountered in
 many fields, especially physical sciences, engineering, and finance.
 But multi-dimensional data doesn't fit neatly into pandas_, python's most
 popular data analysis package focused on label tabular data.
