@@ -13,22 +13,59 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.11.3:
+
+v0.11.3 (unreleased)
+--------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Remove support for Python 2. This is the first version of xarray that is
+  Python 3 only. (:issue:`1876`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Interpolating via resample now internally specifies ``bounds_error=False``
+  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
+  from higher frequencies to lower frequencies.  Datapoints outside the bounds
+  of the original time coordinate are now filled with NaN (:issue:`2197`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_. 
+
+.. _whats-new.0.11.2:
+
+v0.11.2 (2 January 2019)
+------------------------
+
+Removes inadvertently introduced setup dependency on pytest-runner
+(:issue:`2641`). Otherwise, this release is exactly equivalent to 0.11.1.
+
 .. warning::
 
-    Xarray plans to drop support for python 2.7 at the end of 2018. This
-    means that new releases of xarray published after this date will only be
-    installable on python 3+ environments, but older versions of xarray will
-    always be available to python 2.7 users. For more information see the
-    following references
+  This is the last xarray release that will support Python 2.7. Future releases
+  will be Python 3 only, but older versions of xarray will always be available
+  for Python 2.7 users. For the more details, see:
 
-     - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
   - `Python 3 Statement <http://www.python3statement.org/>`__
   - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 .. _whats-new.0.11.1:
 
-v0.11.1 (unreleased)
---------------------
+v0.11.1 (29 December 2018)
+--------------------------
+
+This minor release includes a number of enhancements and bug fixes, and two
+(slightly) breaking changes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -67,9 +104,12 @@ Enhancements
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
-- The `apply` methods for `DatasetGroupBy`, `DataArrayGroupBy`,
-  `DatasetResample` and `DataArrayResample` can now pass positional arguments to
-  the applied function.
+- Datasets are now guaranteed to have a ``'source'`` encoding, so the source
+  file name is always stored (:issue:`2550`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- The ``apply`` methods for ``DatasetGroupBy``, ``DataArrayGroupBy``,
+  ``DatasetResample`` and ``DataArrayResample`` now support passing positional
+  arguments to the applied function as a tuple to the ``args`` argument.
   By `Matti Eskelinen <https://github.com/maaleske>`_.
 - 0d slices of ndarrays are now obtained directly through indexing, rather than
   extracting and wrapping a scalar, avoiding unnecessary copying. By `Daniel

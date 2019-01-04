@@ -10,6 +10,9 @@ dependencies:
   - matplotlib=1.5
   - netcdf4
   - pytest
+  - pytest-env
+  - pytest-cov
+  - coveralls
   - flake8
   - numpy
   - pandas
@@ -18,6 +21,3 @@ dependencies:
   - toolz
   - rasterio
   - zarr
-  - pip:
-    - coveralls
-    - pytest-cov

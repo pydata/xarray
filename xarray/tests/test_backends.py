@@ -2463,7 +2463,7 @@ class TestPydap(object):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa
+            assert_equal(actual[{'l': 2}], expected[{'l': 2}])
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),
@@ -3426,3 +3426,14 @@ def test_no_warning_from_dask_effective_get():
             ds = Dataset()
             ds.to_netcdf(tmpfile)
         assert len(record) == 0
+
+
+@requires_scipy_or_netCDF4
+def test_source_encoding_always_present():
+    # Test for GH issue #2550.
+    rnddata = np.random.randn(10)
+    original = Dataset({'foo': ('x', rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+        with open_dataset(tmp) as ds:
+            assert ds.encoding['source'] == tmp

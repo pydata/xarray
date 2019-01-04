@@ -299,6 +299,7 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
 
     if isinstance(filename_or_obj, backends.AbstractDataStore):
         store = filename_or_obj
+        ds = maybe_decode_store(store)
     elif isinstance(filename_or_obj, basestring):
 
         if (isinstance(filename_or_obj, bytes) and
@@ -339,15 +340,21 @@ def open_dataset(filename_or_obj, group=None, decode_cf=True,
                              % engine)
 
         with close_on_error(store):
-            return maybe_decode_store(store)
+            ds = maybe_decode_store(store)
     else:
         if engine is not None and engine != 'scipy':
             raise ValueError('can only read file-like objects with '
                              "default engine or engine='scipy'")
         # assume filename_or_obj is a file-like object
         store = backends.ScipyDataStore(filename_or_obj)
+        ds = maybe_decode_store(store)
 
-    return maybe_decode_store(store)
+    # Ensure source filename always stored in dataset object (GH issue #2550)
+    if 'source' not in ds.encoding:
+        if isinstance(filename_or_obj, basestring):
+            ds.encoding['source'] = filename_or_obj
+
+    return ds
 
 
 def open_dataarray(filename_or_obj, group=None, decode_cf=True,
@@ -484,6 +491,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
+
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -509,20 +517,21 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-        - 'broadcast_equals': all values must be equal when variables are
-          broadcast against each other to ensure common dimensions.
-        - 'equals': all values and dimensions must be the same.
-        - 'identical': all values, dimensions and attributes must be the
-          same.
-        - 'no_conflicts': only values which are not null in both datasets
-          must be equal. The returned dataset then contains the combination
-          of all non-null values.
+         * 'broadcast_equals': all values must be equal when variables are
+           broadcast against each other to ensure common dimensions.
+         * 'equals': all values and dimensions must be the same.
+         * 'identical': all values, dimensions and attributes must be the
+           same.
+         * 'no_conflicts': only values which are not null in both datasets
+           must be equal. The returned dataset then contains the combination
+           of all non-null values.
     preprocess : callable, optional
         If provided, call this function on each dataset prior to concatenation.
+        You can find the file-name from which each dataset was loaded in
+        ``ds.encoding['source']``.
     engine : {'netcdf4', 'scipy', 'pydap', 'h5netcdf', 'pynio', 'cfgrib'},
         optional
         Engine to use when reading files. If not provided, the default engine
@@ -535,29 +544,31 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         active dask scheduler.
     data_vars : {'minimal', 'different', 'all' or list of str}, optional
         These data variables will be concatenated together:
-          * 'minimal': Only data variables in which the dimension already
-            appears are included.
-          * 'different': Data variables which are not equal (ignoring
-            attributes) across all datasets are also concatenated (as well as
-            all for which dimension already appears). Beware: this option may
-            load the data payload of data variables into memory if they are not
-            already loaded.
-          * 'all': All data variables will be concatenated.
-          * list of str: The listed data variables will be concatenated, in
-            addition to the 'minimal' data variables.
+
+         * 'minimal': Only data variables in which the dimension already
+           appears are included.
+         * 'different': Data variables which are not equal (ignoring
+           attributes) across all datasets are also concatenated (as well as
+           all for which dimension already appears). Beware: this option may
+           load the data payload of data variables into memory if they are not
+           already loaded.
+         * 'all': All data variables will be concatenated.
+         * list of str: The listed data variables will be concatenated, in
+           addition to the 'minimal' data variables.
     coords : {'minimal', 'different', 'all' o list of str}, optional
         These coordinate variables will be concatenated together:
-          * 'minimal': Only coordinates in which the dimension already appears
-            are included.
-          * 'different': Coordinates which are not equal (ignoring attributes)
-            across all datasets are also concatenated (as well as all for which
-            dimension already appears). Beware: this option may load the data
-            payload of coordinate variables into memory if they are not already
-            loaded.
-          * 'all': All coordinate variables will be concatenated, except
-            those corresponding to other dimensions.
-          * list of str: The listed coordinate variables will be concatenated,
-            in addition the 'minimal' coordinates.
+
+         * 'minimal': Only coordinates in which the dimension already appears
+           are included.
+         * 'different': Coordinates which are not equal (ignoring attributes)
+           across all datasets are also concatenated (as well as all for which
+           dimension already appears). Beware: this option may load the data
+           payload of coordinate variables into memory if they are not already
+           loaded.
+         * 'all': All coordinate variables will be concatenated, except
+           those corresponding to other dimensions.
+         * list of str: The listed coordinate variables will be concatenated,
+           in addition the 'minimal' coordinates.
     parallel : bool, optional
         If True, the open and preprocess steps of this function will be
         performed in parallel using ``dask.delayed``. Default is False.

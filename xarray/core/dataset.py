@@ -13,16 +13,17 @@ import pandas as pd
 import xarray as xr
 
 from . import (
-    alignment, dtypes, duck_array_ops, formatting, groupby, indexing, ops,
-    pdcompat, resample, rolling, utils)
+    alignment, dtypes, duck_array_ops, formatting, groupby,
+    indexing, ops, pdcompat, resample, rolling, utils)
 from ..coding.cftimeindex import _parse_array_of_cftime_strings
 from .alignment import align
 from .common import (
     ALL_DIMS, DataWithCoords, ImplementsDatasetReduce,
     _contains_datetime_like_objects)
 from .coordinates import (
-    DatasetCoordinates, Indexes, LevelCoordinatesSource,
+    DatasetCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
+from .indexes import Indexes, default_indexes
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
     merge_variables)
@@ -364,6 +365,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             coords = {}
         if data_vars is not None or coords is not None:
             self._set_init_vars_and_dims(data_vars, coords, compat)
+
+        # TODO(shoyer): expose indexes as a public argument in __init__
+        self._indexes = None
+
         if attrs is not None:
             self.attrs = attrs
         self._encoding = None
@@ -642,7 +647,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @classmethod
     def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
-                          file_obj=None, encoding=None):
+                          indexes=None, file_obj=None, encoding=None):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
         """
@@ -650,6 +655,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         obj._variables = variables
         obj._coord_names = coord_names
         obj._dims = dims
+        obj._indexes = indexes
         obj._attrs = attrs
         obj._file_obj = file_obj
         obj._encoding = encoding
@@ -664,7 +670,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return cls._construct_direct(variables, coord_names, dims, attrs)
 
     def _replace_vars_and_dims(self, variables, coord_names=None, dims=None,
-                               attrs=__default_attrs, inplace=False):
+                               attrs=__default_attrs, indexes=None,
+                               inplace=False):
         """Fastpath constructor for internal use.
 
         Preserves coord names and attributes. If not provided explicitly,
@@ -693,13 +700,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 self._coord_names = coord_names
             if attrs is not self.__default_attrs:
                 self._attrs = attrs
+            self._indexes = indexes
             obj = self
         else:
             if coord_names is None:
                 coord_names = self._coord_names.copy()
             if attrs is self.__default_attrs:
                 attrs = self._attrs_copy()
-            obj = self._construct_direct(variables, coord_names, dims, attrs)
+            obj = self._construct_direct(
+                variables, coord_names, dims, attrs, indexes)
         return obj
 
     def _replace_indexes(self, indexes):
@@ -1064,9 +1073,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @property
     def indexes(self):
-        """OrderedDict of pandas.Index objects used for label based indexing
+        """Mapping of pandas.Index objects used for label based indexing
         """
-        return Indexes(self._variables, self._dims)
+        if self._indexes is None:
+            self._indexes = default_indexes(self._variables, self._dims)
+        return Indexes(self._indexes)
 
     @property
     def coords(self):
@@ -1077,7 +1088,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     @property
     def data_vars(self):
-        """Dictionary of xarray.DataArray objects corresponding to data variables
+        """Dictionary of DataArray objects corresponding to data variables
         """
         return DataVariables(self)
 
@@ -2171,8 +2182,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                                            inplace=inplace)
 
     def expand_dims(self, dim, axis=None):
-        """Return a new object with an additional axis (or axes) inserted at the
-        corresponding position in the array shape.
+        """Return a new object with an additional axis (or axes) inserted at
+        the corresponding position in the array shape.
 
         If dim is already a scalar coordinate, it will be promoted to a 1D
         coordinate consisting of a single value.
@@ -2256,8 +2267,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
     def set_index(self, indexes=None, append=False, inplace=None,
                   **indexes_kwargs):
-        """Set Dataset (multi-)indexes using one or more existing coordinates or
-        variables.
+        """Set Dataset (multi-)indexes using one or more existing coordinates
+        or variables.
 
         Parameters
         ----------
