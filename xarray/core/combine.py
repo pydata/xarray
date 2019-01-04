@@ -518,7 +518,8 @@ def _check_shape_tile_ids(combined_tile_ids):
 def _combine_nd(combined_ids, concat_dims, data_vars='all',
                 coords='different', compat='no_conflicts'):
     """
-    Concatenates and merges an N-dimensional structure of datasets.
+    Combines an N-dimensional structure of datasets into one by applying a
+    series of either concat and merge operations along each dimension.
 
     No checks are performed on the consistency of the datasets, concat_dims or
     tile_IDs, because it is assumed that this has already been done.
@@ -530,58 +531,63 @@ def _combine_nd(combined_ids, concat_dims, data_vars='all',
         keys, which specify position within the desired final combined result.
     concat_dims : sequence of str
         The dimensions along which the datasets should be concatenated. Must be
-        in order, and the length must match
+        in order, and the length must match the length of the tuples used as
+        keys in combined_ids. If the string is a dimension name then concat
+        along that dimension, if it is None then merge.
 
     Returns
     -------
     combined_ds : xarray.Dataset
     """
 
-    # Perform N-D dimensional concatenation
     # Each iteration of this loop reduces the length of the tile_ids tuples
     # by one. It always combines along the first dimension, removing the first
     # element of the tuple
     for concat_dim in concat_dims:
-        combined_ids = _auto_combine_all_along_first_dim(combined_ids,
-                                                         dim=concat_dim,
-                                                         data_vars=data_vars,
-                                                         coords=coords,
-                                                         compat=compat)
+        combined_ids = _combine_all_along_first_dim(combined_ids,
+                                                    dim=concat_dim,
+                                                    data_vars=data_vars,
+                                                    coords=coords,
+                                                    compat=compat)
     combined_ds = list(combined_ids.values())[0]
     return combined_ds
 
 
-def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
-                                      coords, compat):
+def _combine_all_along_first_dim(combined_ids, dim, data_vars, coords, compat):
+
     # Group into lines of datasets which must be combined along dim
     # need to sort by _new_tile_id first for groupby to work
     # TODO remove all these sorted OrderedDicts once python >= 3.6 only
     combined_ids = OrderedDict(sorted(combined_ids.items(), key=_new_tile_id))
     grouped = itertools.groupby(combined_ids.items(), key=_new_tile_id)
 
+    # Combine all of these datasets along dim
     new_combined_ids = {}
     for new_id, group in grouped:
         combined_ids = OrderedDict(sorted(group))
         datasets = combined_ids.values()
-        new_combined_ids[new_id] = _auto_combine_1d(datasets, dim, compat,
-                                                    data_vars, coords)
+        new_combined_ids[new_id] = _combine_1d(datasets, dim, compat,
+                                               data_vars, coords)
     return new_combined_ids
 
 
-def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
-                     compat='no_conflicts',
-                     data_vars='all', coords='different'):
-    # This is just the old auto_combine function (which only worked along 1D)
+def _combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
+                compat='no_conflicts', data_vars='all', coords='different'):
+    """
+    Applies either concat or merge to 1D list of datasets depending on value
+    of concat_dim
+    """
+
+    # TODO this logic is taken from old 1D auto_combine - check if it's right
+    # Should it just use concat directly instead?
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
-        concatenated = [_auto_concat(list(ds_group), dim=dim,
-                                     data_vars=data_vars, coords=coords)
-                        for id, ds_group in grouped]
+        combined = _auto_concat(datasets, dim=dim, data_vars=data_vars,
+                                coords=coords)
     else:
-        concatenated = datasets
-    merged = merge(concatenated, compat=compat)
-    return merged
+        combined = merge(datasets, compat=compat)
+
+    return combined
 
 
 def _new_tile_id(single_id_ds_pair):
