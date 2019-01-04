@@ -367,7 +367,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             self._set_init_vars_and_dims(data_vars, coords, compat)
 
         # TODO(shoyer): expose indexes as a public argument in __init__
-        self._indexes = default_indexes(self._variables, self._dims)
+        self._indexes = None
 
         if attrs is not None:
             self.attrs = attrs
@@ -655,8 +655,6 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         obj._variables = variables
         obj._coord_names = coord_names
         obj._dims = dims
-        if indexes is None:
-            indexes = default_indexes(variables, dims)
         obj._indexes = indexes
         obj._attrs = attrs
         obj._file_obj = file_obj
@@ -702,15 +700,15 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 self._coord_names = coord_names
             if attrs is not self.__default_attrs:
                 self._attrs = attrs
-            if indexes is None:
-                self._indexes = default_indexes(variables, dims)
+            self._indexes = indexes
             obj = self
         else:
             if coord_names is None:
                 coord_names = self._coord_names.copy()
             if attrs is self.__default_attrs:
                 attrs = self._attrs_copy()
-            obj = self._construct_direct(variables, coord_names, dims, attrs)
+            obj = self._construct_direct(
+                variables, coord_names, dims, attrs, indexes)
         return obj
 
     def _replace_indexes(self, indexes):
@@ -1077,6 +1075,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
     def indexes(self):
         """Mapping of pandas.Index objects used for label based indexing
         """
+        if self._indexes is None:
+            self._indexes = default_indexes(self._variables, self._dims)
         return Indexes(self._indexes)
 
     @property

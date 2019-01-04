@@ -240,8 +240,6 @@ class DataArray(AbstractArray, DataWithCoords):
 
         # TODO(shoyer): document this argument, once it becomes part of the
         # public interface.
-        if indexes is None:
-            indexes = default_indexes(coords, variable.dims)
         self._indexes = indexes
 
         self._file_obj = None
@@ -543,6 +541,8 @@ class DataArray(AbstractArray, DataWithCoords):
     def indexes(self):
         """Mapping of pandas.Index objects used for label based indexing
         """
+        if self._indexes is None:
+            self._indexes = default_indexes(self._coords, self.dims)
         return Indexes(self._indexes)
 
     @property

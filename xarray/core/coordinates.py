@@ -6,7 +6,6 @@ from contextlib import contextmanager
 import pandas as pd
 
 from . import formatting, indexing
-from .indexes import default_indexes
 from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
@@ -197,7 +196,7 @@ class DatasetCoordinates(AbstractCoordinates):
         self._data._variables = variables
         self._data._coord_names.update(new_coord_names)
         self._data._dims = dict(dims)
-        self._data._indexes = default_indexes(variables, dims)
+        self._data._indexes = None
 
     def __delitem__(self, key):
         if key in self:

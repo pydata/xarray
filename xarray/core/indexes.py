@@ -3,6 +3,7 @@ try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping
+from collections import OrderedDict
 
 from . import formatting
 
@@ -50,4 +51,5 @@ def default_indexes(coords, dims):
     Mapping[Any, pandas.Index] mapping indexing keys (levels/dimension names)
     to indexes used for indexing along that dimension.
     """
-    return {key: coords[key].to_index() for key in dims if key in coords}
+    return OrderedDict((key, coords[key].to_index())
+                       for key in dims if key in coords)
