@@ -3866,6 +3866,70 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 variables[k] = v
         return self._replace_vars_and_dims(variables)
 
+    def integrate(self, coord, datetime_unit=None):
+        """ integrate the array with the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        datetime_unit
+            Can be specify the unit if datetime coordinate is specified.One of
+            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
+             'as'}
+
+        Returns
+        -------
+        integrated: Dataset
+
+        See also
+        --------
+        DataArray.integrate
+        numpy.trapz: corresponding numpy function
+        """
+        from .variable import Variable
+
+        if coord not in self.variables and coord not in self.dims:
+            raise ValueError('Coordinate {} does not exist.'.format(coord))
+
+        coord_var = self[coord].variable
+        if coord_var.ndim != 1:
+            raise ValueError('Coordinate {} must be 1 dimensional but is {}'
+                             ' dimensional'.format(coord, coord_var.ndim))
+
+        dim = coord_var.dims[0]
+        if _contains_datetime_like_objects(coord_var):
+            if coord_var.dtype.kind in 'mM' and datetime_unit is None:
+                datetime_unit, _ = np.datetime_data(coord_var.dtype)
+            elif datetime_unit is None:
+                datetime_unit = 's'  # Default to seconds for cftime objects
+            coord_var = datetime_to_numeric(
+                coord_var, datetime_unit=datetime_unit)
+
+        variables = OrderedDict()
+        coord_names = []
+        for k, v in self.variables.items():
+            if k in self.coords:
+                if dim not in v.dims:
+                    variables[k] = v
+                    coord_names.append(k)
+            else:
+                if (k in self.data_vars and dim in v.dims):
+                    if _contains_datetime_like_objects(v):
+                        v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                    integ = duck_array_ops.trapz(
+                        v.data, coord_var, axis=v.get_axis_num(dim))
+                    v_dims = list(v.dims)
+                    v_dims.remove(dim)
+                    variables[k] = Variable(v_dims, integ)
+                else:
+                    variables[k] = v
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
+
     @property
     def real(self):
         return self._unary_op(lambda x: x.real,

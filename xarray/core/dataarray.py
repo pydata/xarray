@@ -2427,6 +2427,58 @@ class DataArray(AbstractArray, DataWithCoords):
             coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
+    def integrate(self, coord, datetime_unit=None):
+        """ integrate the array with the trapezoidal rule.
+
+        .. note::
+            This feature is limited to simple cartesian geometry, i.e. coord
+            must be one dimensional.
+
+        Parameters
+        ----------
+        coord: str
+            The coordinate to be used to compute the gradient.
+        datetime_unit
+            Can be specify the unit if datetime coordinate is specified.One of
+            {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
+             'as'}
+
+        Returns
+        -------
+        integrated: DataArray
+
+        See also
+        --------
+        numpy.trapz: corresponding numpy function
+
+        Examples
+        --------
+
+        >>> da = xr.DataArray(np.arange(12).reshape(4, 3), dims=['x', 'y'],
+        ...                   coords={'x': [0, 0.1, 1.1, 1.2]})
+        >>> da
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[ 0,  1,  2],
+               [ 3,  4,  5],
+               [ 6,  7,  8],
+               [ 9, 10, 11]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        >>>
+        >>> da.differentiate('x')
+        <xarray.DataArray (x: 4, y: 3)>
+        array([[30.      , 30.      , 30.      ],
+               [27.545455, 27.545455, 27.545455],
+               [27.545455, 27.545455, 27.545455],
+               [30.      , 30.      , 30.      ]])
+        Coordinates:
+          * x        (x) float64 0.0 0.1 1.1 1.2
+        Dimensions without coordinates: y
+        """
+        ds = self._to_temp_dataset().integrate(coord, datetime_unit)
+        return self._from_temp_dataset(ds)
+
 
 # priority most be higher than Variable to properly work with binary ufuncs
 ops.inject_all_ops_and_reduce_methods(DataArray, priority=60)

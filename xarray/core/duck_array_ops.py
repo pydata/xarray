@@ -101,6 +101,11 @@ def gradient(x, coord, axis, edge_order):
     return npcompat.gradient(x, coord, axis=axis, edge_order=edge_order)
 
 
+def trapz(x, coord, axis):
+    # np.trapz should also work for dask array
+    return np.trapz(x, coord, axis=axis)
+
+
 masked_invalid = _dask_or_eager_func(
     'masked_invalid', eager_module=np.ma,
     dask_module=getattr(dask_array, 'ma', None))
