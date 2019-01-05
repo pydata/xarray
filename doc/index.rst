@@ -12,12 +12,12 @@ geoscience, bioinformatics, engineering, finance, and deep learning.
 In python, numpy_ provides the fundamental data structure and API for
 working with raw ND arrays.
 However, real-world datasets are usually more than just raw numbers;
-they have "labels" which encode information about how the array values map
+they have labels which encode information about how the array values map
 to locations in space, time, etc.
 By introducing the concepts of *dimensions*, *coordinates*, and *attributes*
-on top of raw numpy-like arrays,
-xarray is able to understand these labels and use them to provide a
-more intuitive, more concise, and less error-prone experience.
+on top of raw numpy-like arrays, xarray is able to understand these labels and
+use them to provide a more intuitive, more concise, and less error-prone
+experience.
 Xarray also provides a large and growing library of functions for advanced
 analytics and visualization with these data structures.
 Xarray was inspired by and borrows heavily from pandas_, a highly popular data
