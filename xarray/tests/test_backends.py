@@ -2367,6 +2367,29 @@ class TestDask(DatasetIOBase):
             with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
+    def test_open_multi_dataset(self):
+        # Test for issue GH #1988 and #2647. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        # The additional wrinkle is to ensure that a length greater
+        # than one is tested as well due to numpy's implicit casting
+        # of 1-length arrays to booleans in tests, which allowed
+        # #2647 to still pass the test_open_single_dataset(),
+        # which is itself still needed as-is because the original
+        # bug caused one-length arrays to not be used correctly
+        # in concatenation.
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100, 150], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'),
+                                    np.tile(rnddata[np.newaxis, :], (2, 1)))},
+                           {'baz': [100, 150]})
+        with create_tmp_file() as tmp1, \
+                create_tmp_file() as tmp2:
+            original.to_netcdf(tmp1)
+            original.to_netcdf(tmp2)
+            with open_mfdataset([tmp1, tmp2], concat_dim=dim) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()

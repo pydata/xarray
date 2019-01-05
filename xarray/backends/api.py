@@ -10,7 +10,8 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import _auto_combine, _infer_concat_order_from_positions
+from ..core.combine import (
+    _CONCAT_DIM_DEFAULT, _auto_combine, _infer_concat_order_from_positions)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
@@ -483,9 +484,6 @@ class _MultiFileCloser(object):
             f.close()
 
 
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
-
-
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
@@ -606,7 +604,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     # Coerce 1D input into ND to maintain backwards-compatible API until API
     # for N-D combine decided
     # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
-    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+    if concat_dim is None or concat_dim is _CONCAT_DIM_DEFAULT:
         concat_dims = concat_dim
     elif not isinstance(concat_dim, list):
         concat_dims = [concat_dim]
