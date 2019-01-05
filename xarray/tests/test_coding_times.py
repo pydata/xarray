@@ -750,3 +750,19 @@ def test_encode_cf_datetime_pandas_min():
     np.testing.assert_array_equal(num, expected_num)
     assert units == expected_units
     assert calendar == expected_calendar
+
+
+def test_encode_cf_datetime_units_with_tz():
+    # Regression test for GH 2649
+    units = 'days since 2000-01-01T00:00:00-05:00'
+    calendar = 'proleptic_gregorian'
+    dates = pd.date_range('2000', periods=3, tz='US/Eastern').values
+    num, units, calendar = encode_cf_datetime(dates,
+                                              units=units,
+                                              calendar=calendar)
+    expected_num = np.array([0, 1, 2])
+    expected_units = 'days since 2000-01-01T00:00:00-05:00'
+    expected_calendar = 'proleptic_gregorian'
+    np.testing.assert_array_equal(num, expected_num)
+    assert units == expected_units
+    assert calendar == expected_calendar

@@ -39,7 +39,10 @@ Bug fixes
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
   of the original time coordinate are now filled with NaN (:issue:`2197`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_. 
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Saving files with times encoded with reference dates with timezones
+  (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
+  (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.2:
 
