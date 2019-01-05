@@ -10,7 +10,8 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import _auto_combine, _infer_concat_order_from_positions
+from ..core.combine import (
+    _CONCAT_DIM_DEFAULT, _auto_combine, _infer_concat_order_from_positions)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
@@ -481,9 +482,6 @@ class _MultiFileCloser(object):
     def close(self):
         for f in self.file_objs:
             f.close()
-
-
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
