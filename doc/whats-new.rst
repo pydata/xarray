@@ -13,6 +13,37 @@ What's New
     import xarray as xr
     np.random.seed(123456)
 
+.. _whats-new.0.11.3:
+
+v0.11.3 (unreleased)
+--------------------
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+- Remove support for Python 2. This is the first version of xarray that is
+  Python 3 only. (:issue:`1876`).
+  By `Joe Hamman <https://github.com/jhamman>`_.
+
+Enhancements
+~~~~~~~~~~~~
+
+- Upsampling an array via interpolation with resample is now dask-compatible,
+  as long as the array is not chunked along the resampling dimension.
+  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
+Bug fixes
+~~~~~~~~~
+
+- Interpolating via resample now internally specifies ``bounds_error=False``
+  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
+  from higher frequencies to lower frequencies.  Datapoints outside the bounds
+  of the original time coordinate are now filled with NaN (:issue:`2197`). By
+  `Spencer Clark <https://github.com/spencerkclark>`_.
+- Saving files with times encoded with reference dates with timezones
+  (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
+  (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+
 .. _whats-new.0.11.2:
 
 v0.11.2 (2 January 2019)
