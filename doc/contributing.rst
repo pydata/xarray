@@ -345,19 +345,26 @@ the more common ``PEP8`` issues:
   - passing arguments should have spaces after commas, e.g. ``foo(arg1, arg2, kw1='bar')``
 
 :ref:`Continuous Integration <contributing.ci>` will run
-the `flake8 <http://pypi.python.org/pypi/flake8>`_ tool
+the `pycodestyle <http://pypi.python.org/pypi/pycodestyle>`_ tool
 and report any stylistic errors in your code. Therefore, it is helpful before
 submitting code to run the check yourself::
 
-   flake8
+   pycodestyle xarray
 
-If you install `isort <https://github.com/timothycrosley/isort>`_ and
-`flake8-isort <https://github.com/gforcada/flake8-isort>`_, this will also show
-any errors from incorrectly sorted imports. These aren't currently enforced in
-CI. To automatically sort imports, you can run::
+Other recommended but optional tools for checking code quality (not currently
+enforced in CI):
 
-   isort -y
+- `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
+  make it easier to catch bugs. Please run mypy if you annotate any code with
+  `type hints <https://docs.python.org/3/library/typing.html>`_.
+- `flake8 <http://pypi.python.org/pypi/flake8>`_ includes a few more automated
+  checks than those enforced by pycodestyle.
+- `isort <https://github.com/timothycrosley/isort>`_ will highlight
+  incorrectly sorted imports. ``isort -y`` will automatically fix them. See
+  also `flake8-isort <https://github.com/gforcada/flake8-isort>`_.
 
+Note that your code editor probably supports extensions that can show results
+of these checks inline as you type.
 
 Backwards Compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -365,8 +372,7 @@ Backwards Compatibility
 Please try to maintain backward compatibility. *xarray* has growing number of users with
 lots of existing code, so don't break it if at all possible.  If you think breakage is
 required, clearly state why as part of the pull request.  Also, be careful when changing
-method signatures and add deprecation warnings where needed. Also, add the deprecated
-sphinx directive to the deprecated functions or methods.
+method signatures and add deprecation warnings where needed.
 
 .. _contributing.ci:
 
