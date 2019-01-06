@@ -19,6 +19,8 @@ Top-level functions
    broadcast
    concat
    merge
+   auto_combine
+   manual_combine
    where
    set_options
    full_like
