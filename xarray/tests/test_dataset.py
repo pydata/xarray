@@ -4432,6 +4432,48 @@ def ds(request):
                         'y': range(2)})
 
 
+@pytest.mark.parametrize('dask', [True, False])
+@pytest.mark.parametrize(('boundary', 'side'), [
+    ('trim', 'left'), ('pad', 'right')])
+def test_coarsen(ds, dask, boundary, side):
+    if dask and has_dask:
+        ds = ds.chunk({'x': 4})
+
+    actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
+    assert_equal(
+        actual['z1'],
+        ds['z1'].coarsen(time=2, x=3, boundary=boundary, side=side).max())
+    # coordinate should be mean by default
+    assert_equal(actual['time'], ds['time'].coarsen(
+        time=2, x=3, boundary=boundary, side=side).mean())
+
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_coarsen_coords(ds, dask):
+    if dask and has_dask:
+        ds = ds.chunk({'x': 4})
+
+    # check if coord_func works
+    actual = ds.coarsen(time=2, x=3, boundary='trim',
+                        coord_func={'time': 'max'}).max()
+    assert_equal(actual['z1'],
+                 ds['z1'].coarsen(time=2, x=3, boundary='trim').max())
+    assert_equal(actual['time'],
+                 ds['time'].coarsen(time=2, x=3, boundary='trim').max())
+
+    # raise if exact
+    with pytest.raises(ValueError):
+        ds.coarsen(x=3).mean()
+    # should be no error
+    ds.isel(x=slice(0, 3 * (len(ds['x']) // 3))).coarsen(x=3).mean()
+
+    # working test with pd.time
+    da = xr.DataArray(
+        np.linspace(0, 365, num=364), dims='time',
+        coords={'time': pd.date_range('15/12/1999', periods=364)})
+    actual = da.coarsen(time=2).mean()
+
+
 def test_rolling_properties(ds):
     # catching invalid args
     with pytest.raises(ValueError) as exception:

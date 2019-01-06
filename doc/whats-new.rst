@@ -28,6 +28,11 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- :py:meth:`~xarray.DataArray.coarsen` and
+  :py:meth:`~xarray.Dataset.coarsen` are newly added.
+  See :ref:`comput.coarsen` for details.
+  (:issue:`2525`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
@@ -86,6 +91,7 @@ Breaking changes
   had specific time attributes, now these attributes are copied
   automatically from the corresponding time coordinate. This might
   break downstream code that was relying on these variables to be
+  brake downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 
