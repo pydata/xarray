@@ -381,9 +381,6 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
 
-
-    # TODO concat_dims will never be None, it will be [None] instead
-
     if concat_dims is _CONCAT_DIM_DEFAULT:
         concat_dims = [_CONCAT_DIM_DEFAULT] * n_dims
     else:
@@ -791,8 +788,9 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     # Perform the multidimensional combine on each group of data variables
     # before merging back together
     concatenated_grouped_by_data_vars = []
-    for var_group in grouped:
-        combined_ids, concat_dims = _infer_concat_order_from_coords(list(var_group))
+    for vars, datasets in grouped:
+        combined_ids, concat_dims = _infer_concat_order_from_coords(
+            list(datasets))
 
         # TODO check the shape of the combined ids?
 

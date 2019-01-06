@@ -622,13 +622,14 @@ class TestManualCombine(object):
         expected = Dataset({'x': [0, 1, 2]})
         assert_identical(expected, actual)
 
-        # ensure auto_combine handles non-sorted variables
+        # ensure manual_combine handles non-sorted variables
         objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
                 Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
         actual = manual_combine(objs, concat_dim='a')
         expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
         assert_identical(expected, actual)
 
+        # TODO check these errors get raised properly
         # objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
         # with raises_regex(ValueError, 'too many .* dimensions'):
         #    auto_combine(objs)
@@ -804,18 +805,21 @@ class TestAutoCombine(object):
         assert_identical(expected, actual)
 
         # ensure auto_combine handles non-sorted variables
-        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
-                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        objs = [Dataset({'x': ('a', [0]), 'y': ('a', [0]), 'a': [0]}),
+                Dataset({'x': ('a', [1]), 'y': ('a', [1]), 'a': [1]})]
         actual = auto_combine(objs)
-        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 1]})
         assert_identical(expected, actual)
 
+        # TODO check this is the desired behaviour
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        with raises_regex(ValueError, 'too many .* dimensions'):
-            auto_combine(objs)
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1], 'y': [0, 1]})
+        assert_equal(actual, expected)
 
         objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        with raises_regex(ValueError, 'cannot infer dimension'):
+        with raises_regex(ValueError, 'Could not find any dimension '
+                                      'coordinates'):
             auto_combine(objs)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
@@ -827,7 +831,7 @@ class TestAutoCombine(object):
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
         actual = auto_combine(objs)
         expected = data
-        assert_identical(expected, actual)
+        assert expected.broadcast_equals(actual)
 
     def test_auto_combine_previously_failed(self):
         # In the above scenario, one file is missing, containing the data for
