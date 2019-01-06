@@ -2,19 +2,33 @@ xarray: N-D labeled arrays and datasets in Python
 =================================================
 
 **xarray** (formerly **xray**) is an open source project and Python package
-that aims to bring the labeled data power of pandas_ to the physical sciences,
-by providing N-dimensional variants of the core pandas data structures.
+that makes working with labelled multi-dimensional arrays simple,
+efficient, and fun!
 
-Our goal is to provide a pandas-like and pandas-compatible toolkit for
-analytics on multi-dimensional arrays, rather than the tabular data for which
-pandas excels. Our approach adopts the `Common Data Model`_ for self-
-describing scientific data in widespread use in the Earth sciences:
-``xarray.Dataset`` is an in-memory representation of a netCDF file.
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
+"tensors") are an essential part of computational science.
+They are encountered in a wide range of fields, including physics, astronomy,
+geoscience, bioinformatics, engineering, finance, and deep learning.
+In Python, NumPy_ provides the fundamental data structure and API for
+working with raw ND arrays.
+However, real-world datasets are usually more than just raw numbers;
+they have labels which encode information about how the array values map
+to locations in space, time, etc.
 
+By introducing *dimensions*, *coordinates*, and *attributes* on top of raw
+NumPy-like arrays, xarray is able to understand these labels and use them to
+provide a more intuitive, more concise, and less error-prone experience.
+Xarray also provides a large and growing library of functions for advanced
+analytics and visualization with these data structures.
+Xarray was inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
+Xarray can read and write data from most common labeled ND-array storage
+formats and is particularly tailored to working with netCDF_ files, which were
+the source of xarray's data model.
+
+.. _NumPy: http://www.numpy.org/
 .. _pandas: http://pandas.pydata.org
-.. _Common Data Model: http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/CDM
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
-.. _OPeNDAP: http://www.opendap.org/
 
 Documentation
 -------------
@@ -106,7 +120,7 @@ See also
 .. _2015 Unidata Users Workshop talk: https://www.youtube.com/watch?v=J9ypQOnt5l8
 .. _tutorial: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial.ipynb
 .. _with answers: https://github.com/Unidata/unidata-users-workshop/blob/master/notebooks/xray-tutorial-with-answers.ipynb
-.. _Nicolas Fauchereau's tutorial: http://nbviewer.ipython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
+.. _Nicolas Fauchereau's tutorial: http://nbviewer.iPython.org/github/nicolasfauchereau/metocean/blob/master/notebooks/xray.ipynb
 
 Get in touch
 ------------
