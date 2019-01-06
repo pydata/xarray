@@ -149,6 +149,7 @@ Computation
    Dataset.groupby
    Dataset.groupby_bins
    Dataset.rolling
+   Dataset.coarsen
    Dataset.resample
    Dataset.diff
    Dataset.quantile
@@ -314,6 +315,7 @@ Computation
    DataArray.groupby
    DataArray.groupby_bins
    DataArray.rolling
+   DataArray.coarsen
    DataArray.dt
    DataArray.resample
    DataArray.get_axis_num

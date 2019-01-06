@@ -14,7 +14,8 @@ from xarray import auto_combine
 from ..core.combine import (_manual_combine,
                             _infer_concat_order_from_positions)
 from ..core.pycompat import basestring, path_type
-from ..core.utils import close_on_error, is_grib_path, is_remote_uri
+from ..core.utils import (close_on_error, is_grib_path, is_remote_uri,
+    ReprObject)
 from .common import ArrayWriter
 from .locks import _get_scheduler
 
@@ -485,7 +486,7 @@ class _MultiFileCloser(object):
             f.close()
 
 
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+_CONCAT_DIM_DEFAULT = ReprObject('<inferred>')
 
 
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,

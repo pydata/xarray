@@ -370,8 +370,7 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
         return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
 
 
-# TODO make sure this gets changed to match #2648
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+_CONCAT_DIM_DEFAULT = utils.ReprObject('<inferred>')
 
 
 def _infer_concat_order_from_positions(datasets, concat_dims):
