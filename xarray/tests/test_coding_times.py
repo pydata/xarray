@@ -12,6 +12,7 @@ from xarray.coding.times import (
     _import_cftime, cftime_to_nptime, decode_cf_datetime, encode_cf_datetime)
 from xarray.conventions import _update_bounds_attributes
 from xarray.core.common import contains_cftime_datetimes
+from xarray.testing import assert_equal
 
 from . import (
     assert_array_equal, has_cftime, has_cftime_or_netCDF4, has_dask,
@@ -752,17 +753,28 @@ def test_encode_cf_datetime_pandas_min():
     assert calendar == expected_calendar
 
 
-def test_encode_cf_datetime_units_with_tz():
+@pytest.mark.skipif(not has_cftime_or_netCDF4, reason='cftime not installed')
+def test_time_units_with_timezone_roundtrip(calendar):
     # Regression test for GH 2649
-    units = 'days since 2000-01-01T00:00:00-05:00'
-    calendar = 'proleptic_gregorian'
-    dates = pd.date_range('2000', periods=3, tz='US/Eastern').values
-    num, units, calendar = encode_cf_datetime(dates,
-                                              units=units,
-                                              calendar=calendar)
-    expected_num = np.array([0, 1, 2])
     expected_units = 'days since 2000-01-01T00:00:00-05:00'
-    expected_calendar = 'proleptic_gregorian'
-    np.testing.assert_array_equal(num, expected_num)
-    assert units == expected_units
-    assert calendar == expected_calendar
+    expected_num_dates = np.array([1, 2, 3])
+    dates = decode_cf_datetime(expected_num_dates, expected_units, calendar)
+
+    # Check that dates were decoded to UTC; here the hours should all
+    # equal 5.
+    result_hours = DataArray(dates).dt.hour
+    expected_hours = DataArray([5, 5, 5])
+    assert_equal(result_hours, expected_hours)
+
+    # Check that the encoded values are accurately roundtripped.
+    result_num_dates, result_units, result_calendar = encode_cf_datetime(
+        dates, expected_units, calendar)
+
+    if calendar in _STANDARD_CALENDARS:
+        np.testing.assert_array_equal(result_num_dates, expected_num_dates)
+    else:
+        # cftime datetime arithmetic is not quite exact.
+        np.testing.assert_allclose(result_num_dates, expected_num_dates)
+
+    assert result_units == expected_units
+    assert result_calendar == calendar
