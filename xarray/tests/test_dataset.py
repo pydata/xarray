@@ -4738,6 +4738,10 @@ def test_integrate(dask):
     assert_equal(actual, ds.integrate('y')['var'])
     assert_equal(ds['var'].integrate('y'), ds.integrate('y')['var'])
 
+    # along x and y
+    actual = da.integrate(('y', 'x'))
+    assert actual.ndim == 0
+
     with pytest.raises(ValueError):
         da.integrate('x2d')
 

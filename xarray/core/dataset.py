@@ -3876,8 +3876,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        dim: str
-            The coordinate to be used to compute the integration.
+        dim: str, or a sequence of str
+            Coordinate(s) used for the integration.
         datetime_unit
             Can be specify the unit if datetime coordinate is used. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
@@ -3892,6 +3892,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         DataArray.integrate
         numpy.trapz: corresponding numpy function
         """
+        if not isinstance(dim, (list, tuple)):
+            dim = (dim, )
+        result = self
+        for d in dim:
+            result = result._integrate_one(d, datetime_unit=datetime_unit)
+        return result
+
+    def _integrate_one(self, dim, datetime_unit=None):
         from .variable import Variable
 
         if dim not in self.variables and dim not in self.dims:
