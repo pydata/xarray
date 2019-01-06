@@ -1684,7 +1684,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     if any(d in indexer_dims for d in v.dims)]
 
         coords = relevant_keys(self.coords)
-        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]  # type: ignore
+        indexers = [(k, np.asarray(v))  # type: ignore
+                    for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
         non_indexed_coords = set(self.coords) - set(coords)
