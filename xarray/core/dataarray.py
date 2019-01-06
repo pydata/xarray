@@ -2439,7 +2439,7 @@ class DataArray(AbstractArray, DataWithCoords):
         dim: str
             The coordinate to be used to compute the gradient.
         datetime_unit
-            Can be specify the unit if datetime coordinate is specified. One of
+            Can be specify the unit if datetime coordinate is used. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
              'as'}
 

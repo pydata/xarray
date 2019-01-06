@@ -3878,7 +3878,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         dim: str
             The coordinate to be used to compute the integration.
         datetime_unit
-            Can be specify the unit if datetime coordinate is specified. One of
+            Can be specify the unit if datetime coordinate is used. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
              'as'}
 
@@ -3918,7 +3918,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     variables[k] = v
                     coord_names.append(k)
             else:
-                if (k in self.data_vars and dim in v.dims):
+                if k in self.data_vars and dim in v.dims:
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     integ = duck_array_ops.trapz(
@@ -3928,7 +3928,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
-        return self._replace_vars_and_dims(variables, coord_names=coord_names)
+        return self._replace_vars_and_dims(variables,
+                                           coord_names=set(coord_names))
 
     @property
     def real(self):
