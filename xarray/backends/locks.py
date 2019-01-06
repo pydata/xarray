@@ -21,8 +21,7 @@ HDF5_LOCK = SerializableLock()
 NETCDFC_LOCK = SerializableLock()
 
 
-_FILE_LOCKS = (  # type: MutableMapping[Any, threading.Lock]
-    weakref.WeakValueDictionary())
+_FILE_LOCKS = weakref.WeakValueDictionary()  # type: MutableMapping[Any, threading.Lock]  # noqa
 
 
 def _get_threaded_lock(key):
