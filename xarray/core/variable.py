@@ -4,7 +4,7 @@ import functools
 import itertools
 from collections import defaultdict
 from datetime import timedelta
-from typing import Tuple, Type
+from typing import Tuple, Type, Union
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ class MissingDimensionsError(ValueError):
     # TODO: move this to an xarray.exceptions module?
 
 
-def as_variable(obj, name=None):
+def as_variable(obj, name=None) -> 'Union[Variable, IndexVariable]':
     """Convert an object into a Variable.
 
     Parameters

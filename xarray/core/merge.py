@@ -176,8 +176,9 @@ def merge_variables(
     return merged
 
 
-def expand_variable_dicts(list_of_variable_dicts):
-    # type: (List[Union[Dataset, Dict]]) -> List[Dict[Any, Variable]]
+def expand_variable_dicts(
+    list_of_variable_dicts: 'List[Union[Dataset, OrderedDict]]',
+) -> 'List[OrderedDict[Any, Variable]]':
     """Given a list of dicts with xarray object values, expand the values.
 
     Parameters
@@ -202,22 +203,23 @@ def expand_variable_dicts(list_of_variable_dicts):
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
-            sanitized_vars = variables.variables
-        else:
-            # append coords to var_dicts before appending sanitized_vars,
-            # because we want coords to appear first
-            sanitized_vars = OrderedDict()
+            var_dicts.append(variables.variables)
+            continue
 
-            for name, var in variables.items():
-                if isinstance(var, DataArray):
-                    # use private API for speed
-                    coords = var._coords.copy()
-                    # explicitly overwritten variables should take precedence
-                    coords.pop(name, None)
-                    var_dicts.append(coords)
+        # append coords to var_dicts before appending sanitized_vars,
+        # because we want coords to appear first
+        sanitized_vars = OrderedDict()  # type: OrderedDict[Any, Variable]
 
-                var = as_variable(var, name=name)
-                sanitized_vars[name] = var
+        for name, var in variables.items():
+            if isinstance(var, DataArray):
+                # use private API for speed
+                coords = var._coords.copy()
+                # explicitly overwritten variables should take precedence
+                coords.pop(name, None)
+                var_dicts.append(coords)
+
+            var = as_variable(var, name=name)
+            sanitized_vars[name] = var
 
         var_dicts.append(sanitized_vars)
 
@@ -527,7 +529,9 @@ def merge(objects, compat='no_conflicts', join='outer'):
         for obj in objects]
 
     variables, coord_names, dims = merge_core(dict_like_objects, compat, join)
-    merged = Dataset._construct_direct(variables, coord_names, dims)
+    # TODO: don't always recompute indexes
+    merged = Dataset._construct_direct(
+        variables, coord_names, dims, indexes=None)
 
     return merged
 

@@ -696,7 +696,9 @@ class TestDataArray(object):
         da.isel(time=(('points',), [1, 2]), x=(('points',), [2, 2]),
                 y=(('points',), [3, 4]))
         np.testing.assert_allclose(
-            da.isel_points(time=[1], x=[2], y=[4]).values.squeeze(),
+            da.isel(time=(('p',), [1]),
+                    x=(('p',), [2]),
+                    y=(('p',), [4])).values.squeeze(),
             np_array[1, 4, 2].squeeze())
         da.isel(time=(('points', ), [1, 2]))
         y = [-1, 0]
