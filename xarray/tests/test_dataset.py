@@ -4681,15 +4681,18 @@ def test_integrate(dask):
     expected_x = xr.DataArray(
         np.trapz(da, da['x'], axis=0), dims=['y'],
         coords={k: v for k, v in da.coords.items() if 'x' not in v.dims})
-    assert_equal(expected_x, actual)
+    assert_allclose(expected_x, actual.compute())
     assert_equal(ds['var'].integrate('x'), ds.integrate('x')['var'])
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
 
     # along y
     actual = da.integrate('y')
     expected_y = xr.DataArray(
         np.trapz(da, da['y'], axis=1), dims=['x'],
         coords={k: v for k, v in da.coords.items() if 'y' not in v.dims})
-    assert_equal(expected_y, actual)
+    assert_allclose(expected_y, actual.compute())
     assert_equal(actual, ds.integrate('y')['var'])
     assert_equal(ds['var'].integrate('y'), ds.integrate('y')['var'])
 
@@ -4725,7 +4728,10 @@ def test_trapz_datetime(dask, which_datetime):
     expected = xr.DataArray(
         expected_data, dims=['y'],
         coords={k: v for k, v in da.coords.items() if 'time' not in v.dims})
-    assert_equal(expected, actual)
+    assert_allclose(expected, actual.compute())
+
+    # make sure result is also a dask array (if the source is dask array)
+    assert isinstance(actual.data, type(da.data))
 
     actual2 = da.integrate('time', datetime_unit='h')
     assert_allclose(actual, actual2 / 24.0)

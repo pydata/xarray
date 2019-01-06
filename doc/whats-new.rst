@@ -82,7 +82,7 @@ Breaking changes
   (:issue:`2565`). The previous behavior was to decode them only if they
   had specific time attributes, now these attributes are copied
   automatically from the corresponding time coordinate. This might
-  brake downstream code that was relying on these variables to be
+  break downstream code that was relying on these variables to be
   not decoded.
   By `Fabien Maussion <https://github.com/fmaussion>`_.
 

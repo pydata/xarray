@@ -2427,7 +2427,7 @@ class DataArray(AbstractArray, DataWithCoords):
             coord, edge_order, datetime_unit)
         return self._from_temp_dataset(ds)
 
-    def integrate(self, coord, datetime_unit=None):
+    def integrate(self, dim, datetime_unit=None):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
@@ -2436,10 +2436,10 @@ class DataArray(AbstractArray, DataWithCoords):
 
         Parameters
         ----------
-        coord: str
+        dim: str
             The coordinate to be used to compute the gradient.
         datetime_unit
-            Can be specify the unit if datetime coordinate is specified.One of
+            Can be specify the unit if datetime coordinate is specified. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
              'as'}
 
@@ -2466,17 +2466,12 @@ class DataArray(AbstractArray, DataWithCoords):
           * x        (x) float64 0.0 0.1 1.1 1.2
         Dimensions without coordinates: y
         >>>
-        >>> da.differentiate('x')
-        <xarray.DataArray (x: 4, y: 3)>
-        array([[30.      , 30.      , 30.      ],
-               [27.545455, 27.545455, 27.545455],
-               [27.545455, 27.545455, 27.545455],
-               [30.      , 30.      , 30.      ]])
-        Coordinates:
-          * x        (x) float64 0.0 0.1 1.1 1.2
+        >>> da.integrate('x')
+        <xarray.DataArray (y: 3)>
+        array([5.4, 6.6, 7.8])
         Dimensions without coordinates: y
         """
-        ds = self._to_temp_dataset().integrate(coord, datetime_unit)
+        ds = self._to_temp_dataset().integrate(dim, datetime_unit)
         return self._from_temp_dataset(ds)
 
 

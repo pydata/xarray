@@ -3866,7 +3866,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 variables[k] = v
         return self._replace_vars_and_dims(variables)
 
-    def integrate(self, coord, datetime_unit=None):
+    def integrate(self, dim, datetime_unit=None):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
@@ -3875,10 +3875,10 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         Parameters
         ----------
-        coord: str
-            The coordinate to be used to compute the gradient.
+        dim: str
+            The coordinate to be used to compute the integration.
         datetime_unit
-            Can be specify the unit if datetime coordinate is specified.One of
+            Can be specify the unit if datetime coordinate is specified. One of
             {'Y', 'M', 'W', 'D', 'h', 'm', 's', 'ms', 'us', 'ns', 'ps', 'fs',
              'as'}
 
@@ -3893,13 +3893,13 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         """
         from .variable import Variable
 
-        if coord not in self.variables and coord not in self.dims:
-            raise ValueError('Coordinate {} does not exist.'.format(coord))
+        if dim not in self.variables and dim not in self.dims:
+            raise ValueError('Coordinate {} does not exist.'.format(dim))
 
-        coord_var = self[coord].variable
+        coord_var = self[dim].variable
         if coord_var.ndim != 1:
             raise ValueError('Coordinate {} must be 1 dimensional but is {}'
-                             ' dimensional'.format(coord, coord_var.ndim))
+                             ' dimensional'.format(dim, coord_var.ndim))
 
         dim = coord_var.dims[0]
         if _contains_datetime_like_objects(coord_var):
@@ -3922,7 +3922,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     if _contains_datetime_like_objects(v):
                         v = datetime_to_numeric(v, datetime_unit=datetime_unit)
                     integ = duck_array_ops.trapz(
-                        v.data, coord_var, axis=v.get_axis_num(dim))
+                        v.data, coord_var.data, axis=v.get_axis_num(dim))
                     v_dims = list(v.dims)
                     v_dims.remove(dim)
                     variables[k] = Variable(v_dims, integ)
