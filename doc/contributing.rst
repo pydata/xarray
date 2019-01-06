@@ -355,8 +355,8 @@ Other recommended but optional tools for checking code quality (not currently
 enforced in CI):
 
 - `mypy <http://mypy-lang.org/>`_ performs static type checking, which can
-  make it easier to catch bugs. Please run mypy if you annotate any code with
-  `type hints <https://docs.python.org/3/library/typing.html>`_.
+  make it easier to catch bugs. Please run ``mypy xarray`` if you annotate any
+  code with `type hints <https://docs.python.org/3/library/typing.html>`_.
 - `flake8 <http://pypi.python.org/pypi/flake8>`_ includes a few more automated
   checks than those enforced by pycodestyle.
 - `isort <https://github.com/timothycrosley/isort>`_ will highlight
