@@ -6,9 +6,9 @@ accept or return xarray objects.
 from __future__ import absolute_import, division, print_function
 
 import contextlib
+from functools import partial
 import inspect
 import warnings
-from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -21,8 +21,8 @@ try:
     import dask.array as dask_array
     from . import dask_array_compat
 except ImportError:
-    dask_array = None
-    dask_array_compat = None
+    dask_array = None  # type: ignore
+    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
@@ -43,10 +43,10 @@ def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
                                          (e, requires_dask))
             else:
                 wrapped = getattr(eager_module, name)
-            return wrapped(*args, ** kwargs)
+            return wrapped(*args, **kwargs)
     else:
-        def f(data, *args, **kwargs):
-            return getattr(eager_module, name)(data, *args, **kwargs)
+        def f(*args, **kwargs):
+            return getattr(eager_module, name)(*args, **kwargs)
     return f
 
 

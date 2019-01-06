@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import warnings
 from collections import Iterable
 from functools import partial
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -18,8 +19,8 @@ from .variable import Variable, broadcast_variables
 
 class BaseInterpolator(object):
     '''gerneric interpolator class for normalizing interpolation methods'''
-    cons_kwargs = {}
-    call_kwargs = {}
+    cons_kwargs = {}  # type: Dict[str, Any]
+    call_kwargs = {}  # type: Dict[str, Any]
     f = None
     method = None
 

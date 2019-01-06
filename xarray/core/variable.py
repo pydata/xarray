@@ -4,6 +4,7 @@ import functools
 import itertools
 from collections import defaultdict
 from datetime import timedelta
+from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -28,7 +29,8 @@ except ImportError:
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed, pd.Index) + dask_array_type
-BASIC_INDEXING_TYPES = integer_types + (slice,)
+# https://github.com/python/mypy/issues/224
+BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
 
 class MissingDimensionsError(ValueError):
@@ -414,6 +416,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         return self._dims
 
+    @dims.setter
+    def dims(self, value):
+        self._dims = self._parse_dimensions(value)
+
     def _parse_dimensions(self, dims):
         if isinstance(dims, basestring):
             dims = (dims,)
@@ -423,10 +429,6 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                              'number of data dimensions, ndim=%s'
                              % (dims, self.ndim))
         return dims
-
-    @dims.setter
-    def dims(self, value):
-        self._dims = self._parse_dimensions(value)
 
     def _item_key_to_tuple(self, key):
         if utils.is_dict_like(key):
@@ -816,7 +818,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):
@@ -1722,7 +1725,8 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
-    @Variable.data.setter
+    # https://github.com/python/mypy/issues/1465
+    @Variable.data.setter  # type: ignore
     def data(self, data):
         Variable.data.fset(self, data)
         if not isinstance(self._data, PandasIndexAdapter):
