@@ -629,18 +629,20 @@ class TestManualCombine(object):
         expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
         assert_identical(expected, actual)
 
-        # TODO check these errors get raised properly
-        # objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        # with raises_regex(ValueError, 'too many .* dimensions'):
-        #    auto_combine(objs)
-
-        # objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        # with raises_regex(ValueError, 'cannot infer dimension'):
-        #    auto_combine(objs)
-
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
         with pytest.raises(KeyError):
             manual_combine(objs, concat_dim='x')
+
+    # TODO weird error from auto_concat on both of these when it tries to infer dimension?
+    @pytest.mark.xfail
+    def test_manual_concat_too_many_dims_at_once(self):
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        with raises_regex(ValueError, 'too many .* dimensions'):
+           manual_combine(objs)
+
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        with raises_regex(ValueError, 'cannot infer dimension'):
+            manual_combine(objs)
 
     def test_manual_concat_along_new_dim(self):
         objs = [Dataset({'a': ('x', [10]), 'x': [0]}),
@@ -862,4 +864,3 @@ class TestAutoCombine(object):
         actual = auto_combine(objs)
         expected = Dataset({'x': 0, 'y': 1, 'z': 2})
         assert_identical(expected, actual)
-

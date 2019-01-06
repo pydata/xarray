@@ -714,8 +714,9 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     auto_combine
     """
 
-    if isinstance(concat_dim, str) or concat_dim is None:
-        concat_dim = [concat_dim]
+    if concat_dim is not _CONCAT_DIM_DEFAULT:
+        if isinstance(concat_dim, str) or concat_dim is None:
+            concat_dim = [concat_dim]
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
     return _manual_combine(datasets, concat_dims=concat_dim, compat=compat,
@@ -792,7 +793,8 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
         combined_ids, concat_dims = _infer_concat_order_from_coords(
             list(datasets))
 
-        # TODO check the shape of the combined ids?
+        # TODO checking the shape of the combined ids appropriate here?
+        _check_shape_tile_ids(combined_ids)
 
         # Concatenate along all of concat_dims one by one to create single ds
         concatenated = _combine_nd(combined_ids, concat_dims=concat_dims,
