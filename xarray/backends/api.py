@@ -10,8 +10,9 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import (_infer_concat_order_from_positions,
-                            auto_combine, _manual_combine)
+from xarray import auto_combine
+from ..core.combine import (_manual_combine,
+                            _infer_concat_order_from_positions)
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_grib_path, is_remote_uri
 from .common import ArrayWriter
@@ -613,10 +614,13 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     if not paths:
         raise IOError('no files to open')
 
-
     # If combine='auto' then this is unnecessary, but quick.
     # If combine='manual' then this creates a flat list which is easier to
     # iterate over, while saving the originally-supplied structure as "ids"
+    if combine is 'manual':
+        if concat_dim is not _CONCAT_DIM_DEFAULT:
+            if isinstance(concat_dim, str) or concat_dim is None:
+                concat_dim = [concat_dim]
     combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
         paths, concat_dim)
     ids, paths = (
