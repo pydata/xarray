@@ -8,12 +8,13 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 
-from xarray import DataArray, Dataset, Variable, auto_combine, concat
+from xarray import (DataArray, Dataset, Variable, concat, auto_combine,
+                    manual_combine)
 from xarray.core.combine import (
-    _new_tile_id, _combine_all_along_first_dim, _combine_nd, _combine_1d,
+    _new_tile_id, _check_shape_tile_ids,
+    _combine_all_along_first_dim, _combine_nd, _all_arrays_equal,
     _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _infer_concat_order_from_coords, _infer_order_1d, _all_arrays_equal,
-    _check_shape_tile_ids, auto_combine, manual_combine)
+    _infer_concat_order_from_coords, _infer_order_1d)
 from xarray.core.pycompat import OrderedDict, iteritems
 
 from . import (
@@ -302,116 +303,6 @@ class TestConcatDataArray(object):
         assert combined.dims == ('z', 'x', 'y')
 
 
-class TestAutoCombine(object):
-    @pytest.mark.parametrize("combine", [_auto_combine_1d, auto_combine])
-    @requires_dask  # only for toolz
-    def test_auto_combine(self, combine):
-        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
-        actual = combine(objs)
-        expected = Dataset({'x': [0, 1]})
-        assert_identical(expected, actual)
-
-        actual = combine([actual])
-        assert_identical(expected, actual)
-
-        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
-        actual = combine(objs)
-        expected = Dataset({'x': [0, 1, 2]})
-        assert_identical(expected, actual)
-
-        # ensure auto_combine handles non-sorted variables
-        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
-                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
-        actual = combine(objs)
-        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
-        assert_identical(expected, actual)
-
-        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
-        with raises_regex(ValueError, 'too many .* dimensions'):
-            combine(objs)
-
-        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
-        with raises_regex(ValueError, 'cannot infer dimension'):
-            combine(objs)
-
-        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
-        with pytest.raises(KeyError):
-            combine(objs)
-
-    @requires_dask  # only for toolz
-    def test_auto_combine_previously_failed(self):
-        # In the above scenario, one file is missing, containing the data for
-        # one year's data for one variable.
-        datasets = [Dataset({'a': ('x', [0]), 'x': [0]}),
-                    Dataset({'b': ('x', [0]), 'x': [0]}),
-                    Dataset({'a': ('x', [1]), 'x': [1]})]
-        expected = Dataset({'a': ('x', [0, 1]), 'b': ('x', [0, np.nan])},
-                           {'x': [0, 1]})
-        actual = auto_combine(datasets)
-        assert_identical(expected, actual)
-
-        # Your data includes "time" and "station" dimensions, and each year's
-        # data has a different set of stations.
-        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
-                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
-        expected = Dataset({'a': (('t', 'x'),
-                                  [[np.nan, 2, 3], [1, 2, np.nan]])},
-                           {'x': [0, 1, 2]})
-        actual = auto_combine(datasets, concat_dims=['t'])
-        assert_identical(expected, actual)
-
-    @requires_dask  # only for toolz
-    def test_auto_combine_still_fails(self):
-        # concat can't handle new variables (yet):
-        # https://github.com/pydata/xarray/issues/508
-        datasets = [Dataset({'x': 0}, {'y': 0}),
-                    Dataset({'x': 1}, {'y': 1, 'z': 1})]
-        with pytest.raises(ValueError):
-            auto_combine(datasets, 'y')
-
-    @requires_dask  # only for toolz
-    def test_auto_combine_no_concat(self):
-        objs = [Dataset({'x': 0}), Dataset({'y': 1})]
-        actual = auto_combine(objs)
-        expected = Dataset({'x': 0, 'y': 1})
-        assert_identical(expected, actual)
-
-        objs = [Dataset({'x': 0, 'y': 1}), Dataset({'y': np.nan, 'z': 2})]
-        actual = auto_combine(objs)
-        expected = Dataset({'x': 0, 'y': 1, 'z': 2})
-        assert_identical(expected, actual)
-
-        data = Dataset({'x': 0})
-        actual = auto_combine([data, data, data], concat_dims=None)
-        assert_identical(data, actual)
-
-        tmp1 = Dataset({'x': 0})
-        tmp2 = Dataset({'x': np.nan})
-        actual = auto_combine([tmp1, tmp2], concat_dims=None)
-        assert_identical(tmp1, actual)
-        actual = auto_combine([tmp1, tmp2], concat_dims=[None])
-        assert_identical(tmp1, actual)
-
-        # Single object, with a concat_dim explicitly provided
-        # Test the issue reported in GH #1988
-        objs = [Dataset({'x': 0, 'y': 1})]
-        dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dims=[dim])
-        expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
-                           {'baz': [100]})
-        assert_identical(expected, actual)
-
-        # Just making sure that auto_combine is doing what is
-        # expected for non-scalar values, too.
-        objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
-        dim = DataArray([100], name='baz', dims='baz')
-        actual = auto_combine(objs, concat_dims=[dim])
-        expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
-                            'y': (('baz', 'z'), [[1, 2]])},
-                           {'baz': [100]})
-        assert_identical(expected, actual)
-
-
 class TestTileIDsFromNestedList(object):
     def test_1d(self):
         ds = create_test_data
@@ -506,7 +397,7 @@ class TestInferOrder1D(object):
     def test_arrays(self):
         npt.assert_equal(_infer_order_1d([3, 1, 2, 7]), np.array([2, 0, 1, 3]))
         npt.assert_equal(_infer_order_1d([5, 7, 8, 8]), np.array([0, 1, 2, 2]))
-        npt.assert_equal(_infer_order_1d([2, 2, 0]),    np.array([0, 0, 1]))
+        npt.assert_equal(_infer_order_1d([2, 2, 0]),    np.array([1, 1, 0]))
         npt.assert_equal(_infer_order_1d([2, 5, 5, 1]), np.array([1, 2, 2, 0]))
 
     @pytest.mark.xfail
@@ -565,8 +456,7 @@ class TestTileIDsFromCoords(object):
     def test_no_dimension_coords(self):
         ds0 = Dataset({'foo': ('x', [0, 1])})
         ds1 = Dataset({'foo': ('x', [2, 3])})
-        with raises_regex(ValueError, "Could not find any dimension "
-                                      "coordinates"):
+        with raises_regex(ValueError, "Could not find any dimension"):
             _infer_concat_order_from_coords([ds1, ds0])
 
     def test_coord_not_monotonic(self):
@@ -576,7 +466,7 @@ class TestTileIDsFromCoords(object):
                                       "monotonically increasing"):
             _infer_concat_order_from_coords([ds1, ds0])
 
-    # TODO raise this error message
+    # TODO implement this error message
     @pytest.mark.xfail
     def test_check_for_impossible_ordering(self):
         ds0 = Dataset({'x': [0, 1, 5]})
@@ -632,8 +522,7 @@ def _create_tile_ids(shape):
     return list(tile_ids)
 
 
-@requires_dask  # only for toolz
-class TestCombineND(object):
+class TestNewTileIDs(object):
     @pytest.mark.parametrize("old_id, new_id", [((3, 0, 1), (0, 1)),
                                                 ((0, 0), (0,)),
                                                 ((1,), ()),
@@ -651,16 +540,17 @@ class TestCombineND(object):
         actual_tile_ids = _create_tile_ids(shape)
         assert expected_tile_ids == actual_tile_ids
 
+
+class TestCombineND(object):
     @pytest.mark.parametrize("concat_dim", ['dim1', 'new_dim'])
     def test_concat_once(self, create_combined_ids, concat_dim):
         shape = (2,)
         combined_ids = create_combined_ids(shape)
         ds = create_test_data
-        result = _auto_combine_all_along_first_dim(combined_ids,
-                                                   dim=concat_dim,
-                                                   data_vars='all',
-                                                   coords='different',
-                                                   compat='no_conflicts')
+        result = _combine_all_along_first_dim(combined_ids, dim=concat_dim,
+                                              data_vars='all',
+                                              coords='different',
+                                              compat='no_conflicts')
 
         expected_ds = concat([ds(0), ds(1)], dim=concat_dim)
         assert_combined_tile_ids_equal(result, {(): expected_ds})
@@ -668,7 +558,7 @@ class TestCombineND(object):
     def test_concat_only_first_dim(self, create_combined_ids):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
-        result = _auto_combine_all_along_first_dim(combined_ids,
+        result = _combine_all_along_first_dim(combined_ids,
                                                    dim='dim1',
                                                    data_vars='all',
                                                    coords='different',
@@ -715,16 +605,112 @@ class TestCheckShapeTileIDs(object):
             _check_shape_tile_ids(combined_tile_ids)
 
 
-@requires_dask  # only for toolz
-class TestAutoCombineND(object):
-    def test_single_dataset(self):
+class TestManualCombine(object):
+    def test_manual_concat(self):
         objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
-        actual = auto_combine(objs)
         expected = Dataset({'x': [0, 1]})
+        actual = manual_combine(objs, concat_dim='x')
+        assert_identical(expected, actual)
+        actual = manual_combine(objs, concat_dim=['x'])
         assert_identical(expected, actual)
 
-        actual = auto_combine(actual)
+        actual = manual_combine([actual], concat_dim=None)
         assert_identical(expected, actual)
+
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
+        actual = manual_combine(objs, concat_dim='x')
+        expected = Dataset({'x': [0, 1, 2]})
+        assert_identical(expected, actual)
+
+        # ensure auto_combine handles non-sorted variables
+        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
+                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        actual = manual_combine(objs, concat_dim='a')
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
+        assert_identical(expected, actual)
+
+        # objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        # with raises_regex(ValueError, 'too many .* dimensions'):
+        #    auto_combine(objs)
+
+        # objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        # with raises_regex(ValueError, 'cannot infer dimension'):
+        #    auto_combine(objs)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
+        with pytest.raises(KeyError):
+            manual_combine(objs, concat_dim='x')
+
+    def test_manual_concat_along_new_dim(self):
+        objs = [Dataset({'a': ('x', [10]), 'x': [0]}),
+                Dataset({'a': ('x', [20]), 'x': [0]})]
+        expected = Dataset({'a': (('t', 'x'), [[10], [20]]), 'x': [0]})
+        actual = manual_combine(objs, concat_dim='t')
+        assert_identical(expected, actual)
+
+        # TODO same thing but with a DataArray as the new dim
+
+    def test_manual_merge(self):
+        data = Dataset({'x': 0})
+        actual = manual_combine([data, data, data], concat_dim=None)
+        assert_identical(data, actual)
+
+        ds1 = Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})
+        ds2 = Dataset({'a': ('x', [2, 3]), 'x': [1, 2]})
+        expected = Dataset({'a': ('x', [1, 2, 3]), 'x': [0, 1, 2]})
+        actual = manual_combine([ds1, ds2], concat_dim=None)
+        assert_identical(expected, actual)
+        actual = manual_combine([ds1, ds2], concat_dim=[None])
+        assert_identical(expected, actual)
+
+        tmp1 = Dataset({'x': 0})
+        tmp2 = Dataset({'x': np.nan})
+        actual = manual_combine([tmp1, tmp2], concat_dim=None)
+        assert_identical(tmp1, actual)
+        actual = manual_combine([tmp1, tmp2], concat_dim=[None])
+        assert_identical(tmp1, actual)
+
+        # Single object, with a concat_dim explicitly provided
+        # Test the issue reported in GH #1988
+        objs = [Dataset({'x': 0, 'y': 1})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = manual_combine(objs, concat_dim=[dim])
+        expected = Dataset({'x': ('baz', [0]), 'y': ('baz', [1])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)
+
+        # Just making sure that auto_combine is doing what is
+        # expected for non-scalar values, too.
+        objs = [Dataset({'x': ('z', [0, 1]), 'y': ('z', [1, 2])})]
+        dim = DataArray([100], name='baz', dims='baz')
+        actual = manual_combine(objs, concat_dim=[dim])
+        expected = Dataset({'x': (('baz', 'z'), [[0, 1]]),
+                            'y': (('baz', 'z'), [[1, 2]])},
+                           {'baz': [100]})
+        assert_identical(expected, actual)
+
+    def test_concat_multiple_dims(self):
+        objs = [[Dataset({'a': (('x', 'y'), [[0]])}),
+                 Dataset({'a': (('x', 'y'), [[1]])})],
+                [Dataset({'a': (('x', 'y'), [[2]])}),
+                 Dataset({'a': (('x', 'y'), [[3]])})]]
+        actual = manual_combine(objs, concat_dim=['x', 'y'])
+        expected = Dataset({'a': (('x', 'y'), [[0, 1], [2, 3]])})
+        assert_identical(expected, actual)
+
+    def test_concat_one_dim_merge_another(self):
+        data = create_test_data()
+        data1 = data.copy(deep=True)
+        data2 = data.copy(deep=True)
+
+        objs = [[data1.var1.isel(dim2=slice(4)),
+                 data2.var1.isel(dim2=slice(4, 9))],
+                [data1.var2.isel(dim2=slice(4)),
+                 data2.var2.isel(dim2=slice(4, 9))]]
+
+        expected = data[['var1', 'var2']]
+        actual = manual_combine(objs, concat_dim=[None, 'dim2'])
+        assert expected.identical(actual)
 
     def test_auto_combine_2d(self):
         ds = create_test_data
@@ -735,8 +721,19 @@ class TestAutoCombineND(object):
         expected = concat([partway1, partway2, partway3], dim='dim2')
 
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4), ds(5)]]
-        result = auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+        result = manual_combine(datasets, concat_dim=['dim1', 'dim2'])
         assert_equal(result, expected)
+
+    def test_manual_combine_missing_data_new_dim(self):
+        # Your data includes "time" and "station" dimensions, and each year's
+        # data has a different set of stations.
+        datasets = [Dataset({'a': ('x', [2, 3]), 'x': [1, 2]}),
+                    Dataset({'a': ('x', [1, 2]), 'x': [0, 1]})]
+        expected = Dataset({'a': (('t', 'x'),
+                                  [[np.nan, 2, 3], [1, 2, np.nan]])},
+                           {'x': [0, 1, 2]})
+        actual = manual_combine(datasets, concat_dim='t')
+        assert_identical(expected, actual)
 
     def test_invalid_hypercube_input(self):
         ds = create_test_data
@@ -744,16 +741,16 @@ class TestAutoCombineND(object):
         datasets = [[ds(0), ds(1), ds(2)], [ds(3), ds(4)]]
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent lengths'):
-            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+            manual_combine(datasets, concat_dim=['dim1', 'dim2'])
 
         datasets = [[ds(0), ds(1)], [[ds(3), ds(4)]]]
         with raises_regex(ValueError, 'sub-lists do not have '
                                       'consistent depths'):
-            auto_combine(datasets, concat_dims=['dim1', 'dim2'])
+            manual_combine(datasets, concat_dim=['dim1', 'dim2'])
 
         datasets = [[ds(0), ds(1)], [ds(3), ds(4)]]
         with raises_regex(ValueError, 'concat_dims has length'):
-            auto_combine(datasets, concat_dims=['dim1'])
+            manual_combine(datasets, concat_dim=['dim1'])
 
     def test_merge_one_dim_concat_another(self):
         objs = [[Dataset({'foo': ('x', [0, 1])}),
@@ -763,10 +760,7 @@ class TestAutoCombineND(object):
         expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
                             'bar': ('x', [10, 20, 30, 40])})
 
-        actual = auto_combine(objs, concat_dims=['x', None])
-        assert_identical(expected, actual)
-
-        actual = auto_combine(objs)
+        actual = manual_combine(objs, concat_dim=['x', None])
         assert_identical(expected, actual)
 
         # Proving it works symmetrically
@@ -774,51 +768,94 @@ class TestAutoCombineND(object):
                  Dataset({'foo': ('x', [2, 3])})],
                 [Dataset({'bar': ('x', [10, 20])}),
                  Dataset({'bar': ('x', [30, 40])})]]
-        actual = auto_combine(objs, concat_dim=[None, 'x'])
+        actual = manual_combine(objs, concat_dim=[None, 'x'])
         assert_identical(expected, actual)
 
     def test_combine_concat_over_redundant_nesting(self):
         objs = [[Dataset({'x': [0]}), Dataset({'x': [1]})]]
-        actual = auto_combine(objs, concat_dims=[None, 'x'])
+        actual = manual_combine(objs, concat_dim=[None, 'x'])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
         objs = [[Dataset({'x': [0]})], [Dataset({'x': [1]})]]
-        actual = auto_combine(objs, concat_dims=['x', None])
+        actual = manual_combine(objs, concat_dim=['x', None])
         expected = Dataset({'x': [0, 1]})
         assert_identical(expected, actual)
 
         objs = [[Dataset({'x': [0]})]]
-        actual = auto_combine(objs, concat_dims=[None, None])
-        expected = Dataset({'x': [0]})
-        assert_identical(expected, actual)
-
-        objs = [[Dataset({'x': [0]})]]
-        actual = auto_combine(objs, concat_dims=None)
+        actual = manual_combine(objs, concat_dim=[None, None])
         expected = Dataset({'x': [0]})
         assert_identical(expected, actual)
 
 
-class TestAutoCombineUsingCoords(object):
-    def test_infer_order_from_coords_not_implemented(self):
-        data = create_test_data()
-        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        with pytest.raises(NotImplementedError):
-            auto_combine(objs, infer_order_from_coords=True)
+class TestAutoCombine(object):
+    def test_auto_combine(self):
+        objs = [Dataset({'x': [0]}), Dataset({'x': [1]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1]})
+        assert_identical(expected, actual)
 
-    def test_order_inferred_from_coords(self):
-        data = create_test_data()
-        objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        with pytest.raises(NotImplementedError):
-            _auto_combine(objs, concat_dims=['dim2'],compat='no_conflicts',
-                          data_vars='all', coords='different',
-                          infer_order_from_coords=True, ids=True)
+        actual = auto_combine([actual])
+        assert_identical(expected, actual)
 
-    @pytest.mark.xfail(reason="Not yet implemented")
+        objs = [Dataset({'x': [0, 1]}), Dataset({'x': [2]})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': [0, 1, 2]})
+        assert_identical(expected, actual)
+
+        # ensure auto_combine handles non-sorted variables
+        objs = [Dataset(OrderedDict([('x', ('a', [0])), ('y', ('a', [0]))])),
+                Dataset(OrderedDict([('y', ('a', [1])), ('x', ('a', [1]))]))]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1])})
+        assert_identical(expected, actual)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
+        with raises_regex(ValueError, 'too many .* dimensions'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': 0}), Dataset({'x': 1})]
+        with raises_regex(ValueError, 'cannot infer dimension'):
+            auto_combine(objs)
+
+        objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
+        with pytest.raises(KeyError):
+            auto_combine(objs)
+
     def test_infer_order_from_coords(self):
-        # Should pass once inferring order from coords is implemented
         data = create_test_data()
         objs = [data.isel(dim2=slice(4, 9)), data.isel(dim2=slice(4))]
-        actual = auto_combine(objs)  # but with infer_order_from_coords=True
+        actual = auto_combine(objs)
         expected = data
         assert_identical(expected, actual)
+
+    def test_auto_combine_previously_failed(self):
+        # In the above scenario, one file is missing, containing the data for
+        # one year's data for one variable.
+        datasets = [Dataset({'a': ('x', [0]), 'x': [0]}),
+                    Dataset({'b': ('x', [0]), 'x': [0]}),
+                    Dataset({'a': ('x', [1]), 'x': [1]})]
+        expected = Dataset({'a': ('x', [0, 1]), 'b': ('x', [0, np.nan])},
+                           {'x': [0, 1]})
+        actual = auto_combine(datasets)
+        assert_identical(expected, actual)
+
+    def test_auto_combine_still_fails(self):
+        # concat can't handle new variables (yet):
+        # https://github.com/pydata/xarray/issues/508
+        datasets = [Dataset({'x': 0}, {'y': 0}),
+                    Dataset({'x': 1}, {'y': 1, 'z': 1})]
+        with pytest.raises(ValueError):
+            auto_combine(datasets, 'y')
+
+    def test_auto_combine_no_concat(self):
+        objs = [Dataset({'x': 0}), Dataset({'y': 1})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1})
+        assert_identical(expected, actual)
+
+        objs = [Dataset({'x': 0, 'y': 1}), Dataset({'y': np.nan, 'z': 2})]
+        actual = auto_combine(objs)
+        expected = Dataset({'x': 0, 'y': 1, 'z': 2})
+        assert_identical(expected, actual)
+

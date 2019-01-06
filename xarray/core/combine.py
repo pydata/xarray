@@ -370,6 +370,7 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
         return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
 
 
+# TODO make sure this gets changed to match #2648
 _CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
 
 
@@ -379,8 +380,12 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
 
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
-    if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims is None:
-        concat_dims = [concat_dims] * n_dims
+
+
+    # TODO concat_dims will never be None, it will be [None] instead
+
+    if concat_dims is _CONCAT_DIM_DEFAULT:
+        concat_dims = [_CONCAT_DIM_DEFAULT] * n_dims
     else:
         if len(concat_dims) != n_dims:
             raise ValueError("concat_dims has length " + str(len(concat_dims))
@@ -466,8 +471,8 @@ def _infer_concat_order_from_coords(datasets):
 
     # TODO check that this is still the correct logic for case of merging but no concatenation
     if len(datasets) > 1 and not concat_dims:
-        raise ValueError("Could not find any suitable dimension coordinates to"
-                         " use to order the datasets for concatenation")
+        raise ValueError("Could not find any dimension coordinates to use to "
+                         "order the datasets for concatenation")
 
     combined_ids = OrderedDict(zip(tile_ids, datasets))
 
@@ -712,7 +717,7 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     auto_combine
     """
 
-    if isinstance(concat_dim, str):
+    if isinstance(concat_dim, str) or concat_dim is None:
         concat_dim = [concat_dim]
 
     # The IDs argument tells _manual_combine that datasets aren't yet sorted
