@@ -38,26 +38,17 @@ LONG_DESCRIPTION = """
 that makes working with labelled multi-dimensional arrays simple,
 efficient, and fun!
 
-Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
-"tensors") are an essential part of computational science.
-They are encountered in a wide range of fields, including physics, astronomy,
-geoscience, bioinformatics, engineering, finance, and deep learning.
-In Python, NumPy_ provides the fundamental data structure and API for
-working with raw ND arrays.
-However, real-world datasets are usually more than just raw numbers;
-they have labels which encode information about how the array values map
-to locations in space, time, etc.
+Xarray introduces labels in the form of dimensions, coordinates and
+attributes on top of raw NumPy_-like arrays, which allows for a more
+intuitive, more concise, and less error-prone developer experience.
+The package includes a large and growing library of domain-agnostic functions
+for advanced analytics and visualization with these data structures.
 
-By introducing *dimensions*, *coordinates*, and *attributes* on top of raw
-NumPy-like arrays, xarray is able to understand these labels and use them to
-provide a more intuitive, more concise, and less error-prone experience.
-Xarray also provides a large and growing library of functions for advanced
-analytics and visualization with these data structures.
 Xarray was inspired by and borrows heavily from pandas_, the popular data
 analysis package focused on labelled tabular data.
-Xarray can read and write data from most common labeled ND-array storage
-formats and is particularly tailored to working with netCDF_ files, which were
-the source of xarray's data model.
+It is particularly tailored to working with netCDF_ files, which were the
+source of xarray's data model, and integrates tightly with dask_ for parallel
+computing.
 
 .. _NumPy: http://www.numpy.org/
 .. _pandas: http://pandas.pydata.org

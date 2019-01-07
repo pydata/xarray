@@ -39,9 +39,8 @@ if you were using Panels:
   xarray ``Dataset``.
 
 You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
-Pandas gets a lot of things right, but scientific users need fully multi-
-dimensional data structures.
-
+Pandas gets a lot of things right, but scientific users (and many others) need
+fully multi-dimensional data structures.
 
 How do xarray data structures differ from those found in pandas?
 ----------------------------------------------------------------
@@ -65,7 +64,9 @@ multi-dimensional data-structures.
 
 That said, you should only bother with xarray if some aspect of data is
 fundamentally multi-dimensional. If your data is unstructured or
-one-dimensional, stick with pandas.
+one-dimensional, pandas is usually the right choice: it has better performance
+for common operations such as ``groupby`` and you'll find far more usage
+examples online.
 
 
 Why don't aggregations return Python scalars?
