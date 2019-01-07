@@ -651,7 +651,12 @@ class TestManualCombine(object):
         actual = manual_combine(objs, concat_dim='t')
         assert_identical(expected, actual)
 
-        # TODO same thing but with a DataArray as the new dim
+        # Same but with a DataArray as new dim, see GH #1988 and #2647
+        dim = DataArray([100, 150], name='baz', dims='baz')
+        expected = Dataset({'a': (('baz', 'x'), [[10], [20]]),
+                            'x': [0], 'baz': [100, 150]})
+        actual = manual_combine(objs, concat_dim=dim)
+        assert_identical(expected, actual)
 
     def test_manual_merge(self):
         data = Dataset({'x': 0})

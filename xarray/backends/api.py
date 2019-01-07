@@ -8,14 +8,13 @@ from numbers import Number
 
 import numpy as np
 
-from .. import Dataset, backends, conventions
+from .. import Dataset, DataArray, backends, conventions
 from ..core import indexing
-from xarray import auto_combine
-from ..core.combine import (_manual_combine,
+from .. import auto_combine
+from ..core.combine import (_manual_combine, _CONCAT_DIM_DEFAULT,
                             _infer_concat_order_from_positions)
 from ..core.pycompat import basestring, path_type
-from ..core.utils import (close_on_error, is_grib_path, is_remote_uri,
-    ReprObject)
+from ..core.utils import (close_on_error, is_grib_path, is_remote_uri)
 from .common import ArrayWriter
 from .locks import _get_scheduler
 
@@ -486,9 +485,6 @@ class _MultiFileCloser(object):
             f.close()
 
 
-_CONCAT_DIM_DEFAULT = ReprObject('<inferred>')
-
-
 def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    compat='no_conflicts', preprocess=None, engine=None,
                    lock=None, data_vars='all', coords='different',
@@ -620,7 +616,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
     # iterate over, while saving the originally-supplied structure as "ids"
     if combine is 'manual':
         if concat_dim is not _CONCAT_DIM_DEFAULT:
-            if isinstance(concat_dim, str) or concat_dim is None:
+            if isinstance(concat_dim, (str, DataArray)) or concat_dim is None:
                 concat_dim = [concat_dim]
     combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
         paths, concat_dim)

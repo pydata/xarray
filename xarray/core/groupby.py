@@ -9,7 +9,7 @@ import pandas as pd
 
 from . import dtypes, duck_array_ops, nputils, ops, utils
 from .arithmetic import SupportsArithmetic
-from .combine import concat
+from .concat import concat
 from .common import ALL_DIMS, ImplementsArrayReduce, ImplementsDatasetReduce
 from .options import _get_keep_attrs
 from .pycompat import integer_types, range, zip

@@ -2411,7 +2411,8 @@ class TestDask(DatasetIOBase):
                 create_tmp_file() as tmp2:
             original.to_netcdf(tmp1)
             original.to_netcdf(tmp2)
-            with open_mfdataset([tmp1, tmp2], concat_dim=dim) as actual:
+            with open_mfdataset([tmp1, tmp2], combine='manual',
+                                concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
     def test_dask_roundtrip(self):
