@@ -113,7 +113,7 @@ class TestInferOrder1D(object):
     def test_arrays(self):
         npt.assert_equal(_infer_order_1d([3, 1, 2, 7]), np.array([2, 0, 1, 3]))
         npt.assert_equal(_infer_order_1d([5, 7, 8, 8]), np.array([0, 1, 2, 2]))
-        npt.assert_equal(_infer_order_1d([2, 2, 0]),    np.array([1, 1, 0]))
+        npt.assert_equal(_infer_order_1d([2, 2, 0]), np.array([1, 1, 0]))
         npt.assert_equal(_infer_order_1d([2, 5, 5, 1]), np.array([1, 2, 2, 0]))
 
     @pytest.mark.xfail
