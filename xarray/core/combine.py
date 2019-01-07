@@ -27,11 +27,10 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     if concat_dims is _CONCAT_DIM_DEFAULT:
         concat_dims = [_CONCAT_DIM_DEFAULT] * n_dims
     else:
-        print(concat_dims)
         if len(concat_dims) != n_dims:
-            raise ValueError("concat_dims has length " + str(len(concat_dims))
-                             + " but the datasets passed are nested in a " +
-                             str(n_dims) + "-dimensional structure")
+            raise ValueError("concat_dims has length {} but the datasets "
+                             "passed are nested in a {}-dimensional structure"
+                             .format(str(len(concat_dims)), str(n_dims)))
 
     return combined_ids, concat_dims
 
@@ -93,9 +92,9 @@ def _infer_concat_order_from_coords(datasets):
                 # monotonically increasing or decreasing
                 if not all(pd.Index(coord).is_monotonic_increasing
                            for coord in coord_vals):
-                    raise ValueError(f"Coordinate variable {dim} is not "
+                    raise ValueError("Coordinate variable {} is not "
                                      "monotonically increasing on all "
-                                     "datasets")
+                                     "datasets".format(dim))
 
                 # Sort datasets along dim
                 # Assume that any two datasets whose coord along dim starts
