@@ -1759,7 +1759,7 @@ class DataArray(AbstractArray, DataWithCoords):
 
         return dataset.to_netcdf(*args, **kwargs)
 
-    def to_dict(self):
+    def to_dict(self, data=True):
         """
         Convert this xarray.DataArray into a dictionary following xarray
         naming conventions.
@@ -1768,22 +1768,20 @@ class DataArray(AbstractArray, DataWithCoords):
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
+        Parameters
+        ----------
+        data : bool, optional
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema.
+
         See also
         --------
         DataArray.from_dict
         """
-        d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
-             'dims': self.dims}
-
+        d = self.variable.to_dict(data=data)
+        d.update({'coords': {}, 'name': self.name})
         for k in self.coords:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['coords'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
-
-        d.update({'data': ensure_us_time_resolution(self.values).tolist(),
-                  'name': self.name})
+            d['coords'].update({k: self.coords[k].variable.to_dict(data=data)})
         return d
 
     @classmethod

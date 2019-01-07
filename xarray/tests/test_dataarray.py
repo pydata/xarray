@@ -2909,6 +2909,13 @@ class TestDataArray(object):
                 ValueError, "cannot convert dict without the key 'data'"):
             DataArray.from_dict(d)
 
+        # check the data=False option
+        expected_no_data = {**expected}
+        del expected_no_data['data']
+        del expected_no_data['coords']['x']['data']
+        actual_no_data = array.to_dict(data=False)
+        assert expected_no_data == actual_no_data
+
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)
         t = pd.date_range('20130101', periods=10)

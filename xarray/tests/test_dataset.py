@@ -3045,11 +3045,20 @@ class TestDataset(object):
         # check roundtrip
         assert_identical(ds, Dataset.from_dict(actual))
 
-        # verify coords are included roundtrip
-        expected = ds.set_coords('b')
-        actual = Dataset.from_dict(expected.to_dict())
+        # check the data=False option
+        expected_no_data = {**expected}
+        print(expected_no_data)
+        del expected_no_data['coords']['t']['data']
+        del expected_no_data['data_vars']['a']['data']
+        del expected_no_data['data_vars']['b']['data']
+        actual_no_data = ds.to_dict(data=False)
+        assert expected_no_data == actual_no_data
 
-        assert_identical(expected, actual)
+        # verify coords are included roundtrip
+        expected_ds = ds.set_coords('b')
+        actual = Dataset.from_dict(expected_ds.to_dict())
+
+        assert_identical(expected_ds, actual)
 
         # test some incomplete dicts:
         # this one has no attrs field, the dims are strings, and x, y are
@@ -3074,6 +3083,7 @@ class TestDataset(object):
         with raises_regex(ValueError, "cannot convert dict "
                           "without the key 'dims'"):
             Dataset.from_dict(d)
+
 
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)

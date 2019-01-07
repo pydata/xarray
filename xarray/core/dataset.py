@@ -3218,7 +3218,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
 
         return df
 
-    def to_dict(self):
+    def to_dict(self, data=True):
         """
         Convert this dataset to a dictionary following xarray naming
         conventions.
@@ -3227,25 +3227,22 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         Useful for coverting to json. To avoid datetime incompatibility
         use decode_times=False kwarg in xarrray.open_dataset.
 
+        Parameters
+        ----------
+        data : bool, optional
+            Whether to include the actual data in the dictionary. When set to
+            False, returns just the schema.
+
         See also
         --------
         Dataset.from_dict
         """
         d = {'coords': {}, 'attrs': decode_numpy_dict_values(self.attrs),
              'dims': dict(self.dims), 'data_vars': {}}
-
         for k in self.coords:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['coords'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
+            d['coords'].update({k: self[k].variable.to_dict(data=data)})
         for k in self.data_vars:
-            data = ensure_us_time_resolution(self[k].values).tolist()
-            d['data_vars'].update({
-                k: {'data': data,
-                    'dims': self[k].dims,
-                    'attrs': decode_numpy_dict_values(self[k].attrs)}})
+            d['data_vars'].update({k: self[k].variable.to_dict(data=data)})
         return d
 
     @classmethod

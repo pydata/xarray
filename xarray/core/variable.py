@@ -18,7 +18,8 @@ from .indexing import (
 from .options import _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, integer_types, zip)
-from .utils import OrderedSet, either_dict_or_kwargs
+from .utils import (OrderedSet, either_dict_or_kwargs, decode_numpy_dict_values,
+    ensure_us_time_resolution)
 
 try:
     import dask.array as da
@@ -407,6 +408,14 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
     def to_index(self):
         """Convert this variable to a pandas.Index"""
         return self.to_index_variable().to_index()
+
+    def to_dict(self, data=True):
+        """Dictionary representation of variable."""
+        item = {'dims': self.dims,
+                'attrs': decode_numpy_dict_values(self.attrs)}
+        if data:
+            item['data'] = ensure_us_time_resolution(self.values).tolist()
+        return item
 
     @property
     def dims(self):
