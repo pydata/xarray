@@ -9,7 +9,7 @@ dependencies:
   - h5py
   - h5netcdf
   - matplotlib
-  - pytest
+  - pytest==4.0.2
   - pytest-env
   - pytest-cov
   - coveralls
