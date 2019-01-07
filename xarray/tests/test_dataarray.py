@@ -2910,7 +2910,7 @@ class TestDataArray(object):
             DataArray.from_dict(d)
 
         # check the data=False option
-        expected_no_data = {**expected}
+        expected_no_data = expected.copy()
         del expected_no_data['data']
         del expected_no_data['coords']['x']['data']
         actual_no_data = array.to_dict(data=False)

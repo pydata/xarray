@@ -3046,7 +3046,7 @@ class TestDataset(object):
         assert_identical(ds, Dataset.from_dict(actual))
 
         # check the data=False option
-        expected_no_data = {**expected}
+        expected_no_data = expected.copy()
         print(expected_no_data)
         del expected_no_data['coords']['t']['data']
         del expected_no_data['data_vars']['a']['data']

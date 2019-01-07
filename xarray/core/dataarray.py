@@ -1781,7 +1781,7 @@ class DataArray(AbstractArray, DataWithCoords):
         d = self.variable.to_dict(data=data)
         d.update({'coords': {}, 'name': self.name})
         for k in self.coords:
-            d['coords'].update({k: self.coords[k].variable.to_dict(data=data)})
+            d['coords'][k] = self.coords[k].variable.to_dict(data=data)
         return d
 
     @classmethod
