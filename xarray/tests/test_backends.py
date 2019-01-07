@@ -2777,7 +2777,8 @@ class TestPseudoNetCDFFormat(object):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            concat_dims=['TSTEP'],
+            combine='manual',
+            concat_dim=['TSTEP'],
             backend_kwargs={'format': 'uamiv'})
 
         data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
