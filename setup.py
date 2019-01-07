@@ -54,10 +54,38 @@ computing.
 .. _pandas: http://pandas.pydata.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
 
-Important links
----------------
+Why xarray?
+-----------
 
-- HTML documentation: http://xarray.pydata.org
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
+"tensors") are an essential part of computational science.
+They are encountered in a wide range of fields, including physics, astronomy,
+geoscience, bioinformatics, engineering, finance, and deep learning.
+In Python, NumPy_ provides the fundamental data structure and API for
+working with raw ND arrays.
+However, real-world datasets are usually more than just raw numbers;
+they have labels which encode information about how the array values map
+to locations in space, time, etc.
+
+Xarray doesn't just keep track of labels on arrays: it uses them to provide a
+powerful and concise interface. For example:
+
+-  Apply operations over dimensions by name: ``x.sum('time')``.
+-  Select values by label instead of integer location:
+   ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
+-  Mathematical operations (e.g., ``x - y``) vectorize across multiple
+   dimensions (array broadcasting) based on dimension names, not shape.
+-  Flexible split-apply-combine operations with groupby:
+   ``x.groupby('time.dayofyear').mean()``.
+-  Database like alignment based on coordinate labels that smoothly
+   handles missing values: ``x, y = xr.align(x, y, join='outer')``.
+-  Keep track of arbitrary metadata in the form of a Python dictionary:
+   ``x.attrs``.
+
+Learn more
+----------
+
+- Documentation: http://xarray.pydata.org
 - Issue tracker: http://github.com/pydata/xarray/issues
 - Source code: http://github.com/pydata/xarray
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk
