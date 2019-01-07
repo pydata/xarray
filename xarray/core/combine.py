@@ -89,7 +89,8 @@ def _infer_concat_order_from_coords(datasets):
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
-                # TODO generalise this to deduce whether coord should be monotonically increasing or decreasing
+                # TODO generalise this to deduce whether coord should be
+                # monotonically increasing or decreasing
                 if not all(pd.Index(coord).is_monotonic_increasing
                            for coord in coord_vals):
                     raise ValueError(f"Coordinate variable {dim} is not "
@@ -97,8 +98,8 @@ def _infer_concat_order_from_coords(datasets):
                                      "datasets")
 
                 # Sort datasets along dim
-                # Assume that any two datasets whose coord along dim starts with
-                # the same value have the exact same coord values throughout.
+                # Assume that any two datasets whose coord along dim starts
+                # with the same value have the same coord values throughout.
                 first_coord_vals = [coord[0] for coord in coord_vals]
                 new_positions = _infer_order_1d(first_coord_vals,
                                                 method='dense')
@@ -110,7 +111,8 @@ def _infer_concat_order_from_coords(datasets):
                 tile_ids = [tile_id + (position,) for tile_id, position
                             in zip(tile_ids, new_positions)]
 
-    # TODO check that this is still the correct logic for case of merging but no concatenation
+    # TODO check that this is still the correct logic for case of merging but
+    # no concatenation
     if len(datasets) > 1 and not concat_dims:
         raise ValueError("Could not find any dimension coordinates to use to "
                          "order the datasets for concatenation")
@@ -122,11 +124,11 @@ def _infer_concat_order_from_coords(datasets):
 
 def _all_arrays_equal(iterator):
     try:
-       iterator = iter(iterator)
-       first = next(iterator)
-       return all(np.array_equal(first, rest) for rest in iterator)
+        iterator = iter(iterator)
+        first = next(iterator)
+        return all(np.array_equal(first, rest) for rest in iterator)
     except StopIteration:
-       return True
+        return True
 
 
 def _infer_order_1d(arr, method='dense'):

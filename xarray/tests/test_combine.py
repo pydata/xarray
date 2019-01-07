@@ -1,11 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-from copy import deepcopy
 from itertools import product
 
 import numpy as np
 import numpy.testing as npt
-import pandas as pd
 import pytest
 
 from xarray import DataArray, Dataset, concat, auto_combine, manual_combine
@@ -137,9 +135,9 @@ class TestInferOrder1D(object):
 
 
 def test_all_arrays_equal():
-    assert _all_arrays_equal([np.array([1,2,3]),
-                              np.array([1,2,3]),
-                              np.array([1,2,3])])
+    assert _all_arrays_equal([np.array([1, 2, 3]),
+                              np.array([1, 2, 3]),
+                              np.array([1, 2, 3])])
     assert not _all_arrays_equal([np.array([1, 2, 3]),
                                   np.array([1, 2, 3]),
                                   np.array([1, 2, 4])])
@@ -276,11 +274,10 @@ class TestCombineND(object):
     def test_concat_only_first_dim(self, create_combined_ids):
         shape = (2, 3)
         combined_ids = create_combined_ids(shape)
-        result = _combine_all_along_first_dim(combined_ids,
-                                                   dim='dim1',
-                                                   data_vars='all',
-                                                   coords='different',
-                                                   compat='no_conflicts')
+        result = _combine_all_along_first_dim(combined_ids, dim='dim1',
+                                              data_vars='all',
+                                              coords='different',
+                                              compat='no_conflicts')
 
         ds = create_test_data
         partway1 = concat([ds(0), ds(3)], dim='dim1')
@@ -351,12 +348,13 @@ class TestManualCombine(object):
         with pytest.raises(KeyError):
             manual_combine(objs, concat_dim='x')
 
-    # TODO weird error from auto_concat on both of these when it tries to infer dimension?
+    # TODO weird error from auto_concat on both of these when it tries to infer
+    # dimension?
     @pytest.mark.xfail
     def test_manual_concat_too_many_dims_at_once(self):
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
         with raises_regex(ValueError, 'too many .* dimensions'):
-           manual_combine(objs)
+            manual_combine(objs)
 
         objs = [Dataset({'x': 0}), Dataset({'x': 1})]
         with raises_regex(ValueError, 'cannot infer dimension'):
@@ -533,7 +531,8 @@ class TestAutoCombine(object):
         objs = [Dataset({'x': ('a', [0]), 'y': ('a', [0]), 'a': [0]}),
                 Dataset({'x': ('a', [1]), 'y': ('a', [1]), 'a': [1]})]
         actual = auto_combine(objs)
-        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]), 'a': [0, 1]})
+        expected = Dataset({'x': ('a', [0, 1]), 'y': ('a', [0, 1]),
+                            'a': [0, 1]})
         assert_identical(expected, actual)
 
         # TODO check this is the desired behaviour
