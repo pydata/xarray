@@ -12,7 +12,7 @@ dependencies:
   - matplotlib
   - netcdf4
   - pynio=dev
-  - pytest==4.0.2
+  - pytest
   - pytest-env
   - pytest-cov
   - coveralls
