@@ -5,8 +5,6 @@ from collections import Counter
 
 import pandas as pd
 
-import numpy as np
-
 from .dataarray import DataArray
 from . import utils
 from .merge import merge
@@ -79,39 +77,50 @@ def _infer_concat_order_from_coords(datasets):
         if dim in ds0:
 
             # Need to read coordinate values to do ordering
-            coord_vals = [ds[dim].values for ds in datasets]
+            indexes = [ds.indexes.get(dim) for ds in datasets]
+            if any(index is None for index in indexes):
+                raise ValueError("Every dimension needs a coordinate for "
+                                 "inferring concatenation order")
 
             # If dimension coordinate values are same on every dataset then
             # should be leaving this dimension alone (it's just a "bystander")
-            if not _all_arrays_equal(coord_vals):
+            if not all(index.equals(indexes[0]) for index in indexes[1:]):
 
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
                 # TODO generalise this to deduce whether coord should be
                 # monotonically increasing or decreasing
-                if not all(pd.Index(coord).is_monotonic_increasing
-                           for coord in coord_vals):
+                if not all(index.is_monotonic_increasing for index in indexes):
                     raise ValueError("Coordinate variable {} is not "
                                      "monotonically increasing on all "
                                      "datasets".format(dim))
 
-                # Sort datasets along dim
                 # Assume that any two datasets whose coord along dim starts
                 # with the same value have the same coord values throughout.
-                first_coord_vals = [coord[0] for coord in coord_vals]
-                new_positions = _infer_order_1d(first_coord_vals,
-                                                method='dense')
+                try:
+                    first_items = pd.Index([index.take([0])
+                                            for index in indexes])
+                except IndexError:
+                    raise ValueError('Cannot handle size zero dimensions')
+
+                # TODO This seems to work for strings and datetime objects too
+                # but is that guaranteed pandas behaviour?
+
+                # Sort datasets along dim
+                # We want rank but with identical elements given identical
+                # position indices - they should be concatenated along another
+                # dimension, not along this one
+                order = first_items.to_series().rank(method='dense').astype(
+                    int).values - 1
 
                 # TODO check that resulting global coordinate is monotonic
 
                 # Append positions along extra dimension to structure which
                 # encodes the multi-dimensional concatentation order
                 tile_ids = [tile_id + (position,) for tile_id, position
-                            in zip(tile_ids, new_positions)]
+                            in zip(tile_ids, order)]
 
-    # TODO check that this is still the correct logic for case of merging but
-    # no concatenation
     if len(datasets) > 1 and not concat_dims:
         raise ValueError("Could not find any dimension coordinates to use to "
                          "order the datasets for concatenation")
@@ -119,27 +128,6 @@ def _infer_concat_order_from_coords(datasets):
     combined_ids = OrderedDict(zip(tile_ids, datasets))
 
     return combined_ids, concat_dims
-
-
-def _all_arrays_equal(iterator):
-    try:
-        iterator = iter(iterator)
-        first = next(iterator)
-        return all(np.array_equal(first, rest) for rest in iterator)
-    except StopIteration:
-        return True
-
-
-def _infer_order_1d(arr, method='dense'):
-    # TODO Special cases for string coords - natural sorting instead?
-    # TODO sort datetime coords too
-    arr = np.array(arr)
-
-    # We want rank but with identical elements given identical position indices
-    # - they should be concatenated along another dimension, not along this one
-    ranks = pd.Series(arr).rank(method=method).values
-
-    return ranks.astype('int') - 1
 
 
 def _check_shape_tile_ids(combined_tile_ids):

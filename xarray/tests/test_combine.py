@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from itertools import product
+from datetime import datetime
 
 import numpy as np
 import numpy.testing as npt
@@ -8,10 +9,9 @@ import pytest
 
 from xarray import DataArray, Dataset, concat, auto_combine, manual_combine
 from xarray.core.combine import (
-    _new_tile_id, _check_shape_tile_ids,
-    _combine_all_along_first_dim, _combine_nd, _all_arrays_equal,
-    _infer_concat_order_from_positions, _infer_tile_ids_from_nested_list,
-    _infer_concat_order_from_coords, _infer_order_1d)
+    _new_tile_id, _check_shape_tile_ids, _combine_all_along_first_dim,
+    _combine_nd, _infer_concat_order_from_positions,
+    _infer_tile_ids_from_nested_list, _infer_concat_order_from_coords,)
 from xarray.core.pycompat import OrderedDict
 
 from . import (assert_combined_tile_ids_equal, assert_identical, assert_equal,
@@ -109,40 +109,6 @@ class TestTileIDsFromNestedList(object):
             _infer_concat_order_from_positions(input, ['dim1', 'extra_dim'])
 
 
-class TestInferOrder1D(object):
-    def test_arrays(self):
-        npt.assert_equal(_infer_order_1d([3, 1, 2, 7]), np.array([2, 0, 1, 3]))
-        npt.assert_equal(_infer_order_1d([5, 7, 8, 8]), np.array([0, 1, 2, 2]))
-        npt.assert_equal(_infer_order_1d([2, 2, 0]), np.array([1, 1, 0]))
-        npt.assert_equal(_infer_order_1d([2, 5, 5, 1]), np.array([1, 2, 2, 0]))
-
-    @pytest.mark.xfail
-    def test_strings(self):
-        npt.assert_equal(_infer_order_1d(['b', 'a']), np.array([1, 0]))
-        npt.assert_equal(_infer_order_1d(['aa', 'a']), np.array([1, 0]))
-        npt.assert_equal(_infer_order_1d(['c1', 'c0']), np.array([1, 0]))
-
-        npt.assert_equal(_infer_order_1d(['c1', 'c0', 'c0']),
-                         np.array([1, 0, 0]))
-
-        # Natural sorting
-        npt.assert_equal(_infer_order_1d(['c1', 'c0', 'c10']),
-                         np.array([1, 0, 2]))
-
-    @pytest.mark.skip
-    def test_datetimes(self):
-        pass
-
-
-def test_all_arrays_equal():
-    assert _all_arrays_equal([np.array([1, 2, 3]),
-                              np.array([1, 2, 3]),
-                              np.array([1, 2, 3])])
-    assert not _all_arrays_equal([np.array([1, 2, 3]),
-                                  np.array([1, 2, 3]),
-                                  np.array([1, 2, 4])])
-
-
 class TestTileIDsFromCoords(object):
     def test_1d(self):
         ds0 = Dataset({'x': [0, 1]})
@@ -212,13 +178,34 @@ class TestTileIDsFromCoords(object):
         assert_combined_tile_ids_equal(expected, actual)
         assert concat_dims == ['x', 'y']
 
-    @pytest.mark.skip
-    def test_string_coord(self):
-        pass
+    def test_string_coords(self):
+        ds0 = Dataset({'person': ['Alice', 'Bob']})
+        ds1 = Dataset({'person': ['Caroline', 'Daniel']})
 
-    @pytest.mark.skip
-    def test_datetime_coord(self):
-        pass
+        expected = {(0,): ds0, (1,): ds1}
+        actual, concat_dims = _infer_concat_order_from_coords([ds1, ds0])
+        assert_combined_tile_ids_equal(expected, actual)
+        assert concat_dims == ['person']
+
+    # TODO decide if natural sorting of string coords is desired
+    @pytest.mark.xfail
+    def test_natural_sort_string_coords(self):
+        ds0 = Dataset({'simulation': ['run8', 'run9']})
+        ds1 = Dataset({'simulation': ['run10', 'run11']})
+
+        expected = {(0,): ds0, (1,): ds1}
+        actual, concat_dims = _infer_concat_order_from_coords([ds1, ds0])
+        assert_combined_tile_ids_equal(expected, actual)
+        assert concat_dims == ['simulation']
+
+    def test_datetime_coords(self):
+        ds0 = Dataset({'time': [datetime(2000, 3, 6), datetime(2001, 3, 7)]})
+        ds1 = Dataset({'time': [datetime(1999, 1, 1), datetime(1999, 2, 4)]})
+
+        expected = {(0,): ds1, (1,): ds0}
+        actual, concat_dims = _infer_concat_order_from_coords([ds0, ds1])
+        assert_combined_tile_ids_equal(expected, actual)
+        assert concat_dims == ['time']
 
 
 @pytest.fixture(scope='module')
@@ -547,7 +534,7 @@ class TestAutoCombine(object):
             auto_combine(objs)
 
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'x': [0]})]
-        with pytest.raises(KeyError):
+        with raises_regex(ValueError, 'Every dimension needs a coordinate'):
             auto_combine(objs)
 
     def test_infer_order_from_coords(self):
