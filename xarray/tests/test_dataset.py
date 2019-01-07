@@ -3084,7 +3084,6 @@ class TestDataset(object):
                           "without the key 'dims'"):
             Dataset.from_dict(d)
 
-
     def test_to_and_from_dict_with_time_dim(self):
         x = np.random.randn(10, 3)
         y = np.random.randn(10, 3)
