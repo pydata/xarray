@@ -1,11 +1,18 @@
 from __future__ import absolute_import, division, print_function
 
+from typing import (
+    Any, Dict, List, Mapping, Optional, Set, Tuple, TYPE_CHECKING, Union,
+)
+
 import pandas as pd
 
 from .alignment import deep_align
 from .pycompat import OrderedDict, basestring
 from .utils import Frozen
-from .variable import as_variable, assert_unique_multiindex_level_names
+from .variable import (
+    Variable, as_variable, assert_unique_multiindex_level_names)
+if TYPE_CHECKING:
+    from .dataset import Dataset
 
 PANDAS_TYPES = (pd.Series, pd.DataFrame, pd.Panel)
 
@@ -145,13 +152,13 @@ def merge_variables(
     # variables appear
     merged = OrderedDict()
 
-    for name, variables in lookup.items():
+    for name, var_list in lookup.items():
         if name in priority_vars:
             # one of these arguments (e.g., the first for in-place arithmetic
             # or the second for Dataset.update) takes priority
             merged[name] = priority_vars[name]
         else:
-            dim_variables = [var for var in variables if (name,) == var.dims]
+            dim_variables = [var for var in var_list if (name,) == var.dims]
             if dim_variables:
                 # if there are dimension coordinates, these must be equal (or
                 # identical), and they take priority over non-dimension
@@ -159,7 +166,7 @@ def merge_variables(
                 merged[name] = unique_variable(name, dim_variables, dim_compat)
             else:
                 try:
-                    merged[name] = unique_variable(name, variables, compat)
+                    merged[name] = unique_variable(name, var_list, compat)
                 except MergeError:
                     if compat != 'minimal':
                         # we need more than "minimal" compatibility (for which
@@ -236,8 +243,8 @@ def determine_coords(list_of_variable_dicts):
     from .dataarray import DataArray
     from .dataset import Dataset
 
-    coord_names = set()
-    noncoord_names = set()
+    coord_names = set()  # type: set
+    noncoord_names = set()  # type: set
 
     for variables in list_of_variable_dicts:
         if isinstance(variables, Dataset):
