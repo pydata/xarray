@@ -11,8 +11,8 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - pytest-env
   - pytest-cov
+  - pytest-env
   - coveralls
   - numpy
   - pandas
