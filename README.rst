@@ -48,7 +48,7 @@ However, real-world datasets are usually more than just raw numbers;
 they have labels which encode information about how the array values map
 to locations in space, time, etc.
 
-Xarray doesn't just keep track of labels on arrays: it uses them to provide a
+Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
 powerful and concise interface. For example:
 
 -  Apply operations over dimensions by name: ``x.sum('time')``.

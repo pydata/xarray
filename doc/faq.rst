@@ -18,8 +18,9 @@ pandas is a fantastic library for analysis of low-dimensional labelled data -
 if it can be sensibly described as "rows and columns", pandas is probably the
 right choice.  However, sometimes we want to use higher dimensional arrays
 (`ndim > 2`), or arrays for which the order of dimensions (e.g., columns vs
-rows) shouldn't really matter. For example, climate and weather data is often
-natively expressed in 4 or more dimensions: time, x, y and z.
+rows) shouldn't really matter. For example, the images of a movie can be
+natively represented as an array with four dimensions: time, row, column and
+color.
 
 Pandas has historically supported N-dimensional panels, but deprecated them in
 version 0.20 in favor of Xarray data structures.  There are now built-in methods
@@ -39,8 +40,8 @@ if you were using Panels:
   xarray ``Dataset``.
 
 You can :ref:`read about switching from Panels to Xarray here <panel transition>`.
-Pandas gets a lot of things right, but scientific users (and many others) need
-fully multi-dimensional data structures.
+Pandas gets a lot of things right, but many science, engineering and complex
+analytics use cases need fully multi-dimensional data structures.
 
 How do xarray data structures differ from those found in pandas?
 ----------------------------------------------------------------
