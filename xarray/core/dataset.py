@@ -3920,12 +3920,12 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 coord_var, datetime_unit=datetime_unit)
 
         variables = OrderedDict()
-        coord_names = []
+        coord_names = set()
         for k, v in self.variables.items():
             if k in self.coords:
                 if dim not in v.dims:
                     variables[k] = v
-                    coord_names.append(k)
+                    coord_names.add(k)
             else:
                 if k in self.data_vars and dim in v.dims:
                     if _contains_datetime_like_objects(v):
@@ -3937,8 +3937,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     variables[k] = Variable(v_dims, integ)
                 else:
                     variables[k] = v
-        return self._replace_vars_and_dims(variables,
-                                           coord_names=set(coord_names))
+        return self._replace_vars_and_dims(variables, coord_names=coord_names)
 
     @property
     def real(self):
