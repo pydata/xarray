@@ -24,7 +24,7 @@ class ImplementsArrayReduce(object):
                 return self.reduce(func, dim, axis,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=None, axis=None,
+            def wrapped_func(self, dim=None, axis=None,  # type: ignore
                              **kwargs):
                 return self.reduce(func, dim, axis,
                                    allow_lazy=True, **kwargs)
@@ -56,7 +56,7 @@ class ImplementsDatasetReduce(object):
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-            def wrapped_func(self, dim=None, **kwargs):
+            def wrapped_func(self, dim=None, **kwargs):  # type: ignore
                 return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
@@ -589,6 +589,66 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling')
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
+
+    def coarsen(self, dim=None, boundary='exact', side='left',
+                coord_func='mean', **dim_kwargs):
+        """
+        Coarsen object.
+
+        Parameters
+        ----------
+        dim: dict, optional
+            Mapping from the dimension name to the window size.
+            dim : str
+                Name of the dimension to create the rolling iterator
+                along (e.g., `time`).
+            window : int
+                Size of the moving window.
+        boundary : 'exact' | 'trim' | 'pad'
+            If 'exact', a ValueError will be raised if dimension size is not a
+            multiple of the window size. If 'trim', the excess entries are
+            dropped. If 'pad', NA will be padded.
+        side : 'left' or 'right' or mapping from dimension to 'left' or 'right'
+        coord_func: function (name) that is applied to the coordintes,
+            or a mapping from coordinate name to function (name).
+
+        Returns
+        -------
+        Coarsen object (core.rolling.DataArrayCoarsen for DataArray,
+        core.rolling.DatasetCoarsen for Dataset.)
+
+        Examples
+        --------
+        Coarsen the long time series by averaging over every four days.
+
+        >>> da = xr.DataArray(np.linspace(0, 364, num=364),
+        ...                   dims='time',
+        ...                   coords={'time': pd.date_range(
+        ...                       '15/12/1999', periods=364)})
+        >>> da
+        <xarray.DataArray (time: 364)>
+        array([  0.      ,   1.002755,   2.00551 , ..., 361.99449 , 362.997245,
+               364.      ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-15 1999-12-16 ... 2000-12-12
+        >>>
+        >>> da.coarsen(time=3, boundary='trim').mean()
+        <xarray.DataArray (time: 121)>
+        array([  1.002755,   4.011019,   7.019284,  ...,  358.986226,
+               361.99449 ])
+        Coordinates:
+          * time     (time) datetime64[ns] 1999-12-16 1999-12-19 ... 2000-12-10
+        >>>
+
+        See Also
+        --------
+        core.rolling.DataArrayCoarsen
+        core.rolling.DatasetCoarsen
+        """
+        dim = either_dict_or_kwargs(dim, dim_kwargs, 'coarsen')
+        return self._coarsen_cls(
+            self, dim, boundary=boundary, side=side,
+            coord_func=coord_func)
 
     def resample(self, indexer=None, skipna=None, closed=None, label=None,
                  base=0, keep_attrs=None, loffset=None, **indexer_kwargs):

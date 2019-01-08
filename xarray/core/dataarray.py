@@ -161,6 +161,7 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
@@ -770,7 +771,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):

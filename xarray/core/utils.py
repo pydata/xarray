@@ -488,7 +488,7 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject(object):
     """Object that prints as the given value, for use with sentinel values."""
 
-    def __init__(self, value):  # type: str
+    def __init__(self, value: str):
         self._value = value
 
     def __repr__(self):
@@ -622,10 +622,36 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
     -------
     array
     """
+    from . import duck_array_ops
+
     if offset is None:
         offset = array.min()
     array = array - offset
 
     if datetime_unit:
-        return (array / np.timedelta64(1, datetime_unit)).astype(dtype)
-    return array.astype(dtype)
+        array = array / np.timedelta64(1, datetime_unit)
+    # convert np.NaT to np.nan
+    if array.dtype.kind in 'mM':
+        if hasattr(array, 'isnull'):
+            return np.where(array.isnull(), np.nan, array.astype(dtype))
+        return np.where(duck_array_ops.isnull(array), np.nan,
+                        array.astype(dtype))
+    return array
+
+
+def get_temp_dimname(dims, new_dim):
+    """ Get an new dimension name based on new_dim, that is not used in dims.
+    If the same name exists, we add an underscore(s) in the head.
+
+    Example1:
+        dims: ['a', 'b', 'c']
+        new_dim: ['_rolling']
+        -> ['_rolling']
+    Example2:
+        dims: ['a', 'b', 'c', '_rolling']
+        new_dim: ['_rolling']
+        -> ['__rolling']
+    """
+    while new_dim in dims:
+        new_dim = '_' + new_dim
+    return new_dim

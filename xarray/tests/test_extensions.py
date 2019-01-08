@@ -1,15 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
+import pickle
+
 import pytest
 
 import xarray as xr
 
 from . import raises_regex
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 @xr.register_dataset_accessor('example_accessor')
