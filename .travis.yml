@@ -35,12 +35,11 @@ matrix:
   - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no --set show_channel_urls true
-  - conda update -q conda
   - conda info -a
 
 install:
