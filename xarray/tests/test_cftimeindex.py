@@ -384,7 +384,7 @@ def test_resample_error(da):
 
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
-    'string-slice': slice('0001-01-01', '0001-12-30'),
+    'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore
     'bool-list': [True, True, False, False]
 }
 

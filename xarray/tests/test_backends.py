@@ -4,10 +4,12 @@ import contextlib
 import itertools
 import math
 import os.path
+from pathlib import Path
 import pickle
 import shutil
 import sys
 import tempfile
+from typing import Optional
 import warnings
 from io import BytesIO
 
@@ -46,14 +48,6 @@ try:
     import dask.array as da
 except ImportError:
     pass
-
-try:
-    from pathlib import Path
-except ImportError:
-    try:
-        from pathlib2 import Path
-    except ImportError:
-        pass
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -172,8 +166,8 @@ class NetCDF3Only(object):
 
 
 class DatasetIOBase(object):
-    engine = None
-    file_format = None
+    engine = None  # type: Optional[str]
+    file_format = None  # type: Optional[str]
 
     def create_store(self):
         raise NotImplementedError
@@ -2367,6 +2361,29 @@ class TestDask(DatasetIOBase):
             with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
+    def test_open_multi_dataset(self):
+        # Test for issue GH #1988 and #2647. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        # The additional wrinkle is to ensure that a length greater
+        # than one is tested as well due to numpy's implicit casting
+        # of 1-length arrays to booleans in tests, which allowed
+        # #2647 to still pass the test_open_single_dataset(),
+        # which is itself still needed as-is because the original
+        # bug caused one-length arrays to not be used correctly
+        # in concatenation.
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100, 150], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'),
+                                    np.tile(rnddata[np.newaxis, :], (2, 1)))},
+                           {'baz': [100, 150]})
+        with create_tmp_file() as tmp1, \
+                create_tmp_file() as tmp2:
+            original.to_netcdf(tmp1)
+            original.to_netcdf(tmp2)
+            with open_mfdataset([tmp1, tmp2], concat_dim=dim) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -2463,7 +2480,7 @@ class TestPydap(object):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa
+            assert_equal(actual[{'l': 2}], expected[{'l': 2}])
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),

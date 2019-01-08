@@ -13,10 +13,11 @@ from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, Indexes, LevelCoordinatesSource,
+    DataArrayCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
+from .indexes import default_indexes, Indexes
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
@@ -160,12 +161,13 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
+    _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
     dt = property(DatetimeAccessor)
 
     def __init__(self, data, coords=None, dims=None, name=None,
-                 attrs=None, encoding=None, fastpath=False):
+                 attrs=None, encoding=None, indexes=None, fastpath=False):
         """
         Parameters
         ----------
@@ -236,6 +238,10 @@ class DataArray(AbstractArray, DataWithCoords):
         self._variable = variable
         self._coords = coords
         self._name = name
+
+        # TODO(shoyer): document this argument, once it becomes part of the
+        # public interface.
+        self._indexes = indexes
 
         self._file_obj = None
 
@@ -534,9 +540,11 @@ class DataArray(AbstractArray, DataWithCoords):
 
     @property
     def indexes(self):
-        """OrderedDict of pandas.Index objects used for label based indexing
+        """Mapping of pandas.Index objects used for label based indexing
         """
-        return Indexes(self._coords, self.sizes)
+        if self._indexes is None:
+            self._indexes = default_indexes(self._coords, self.dims)
+        return Indexes(self._indexes)
 
     @property
     def coords(self):
@@ -763,7 +771,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):

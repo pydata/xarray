@@ -4,6 +4,7 @@ import functools
 import itertools
 from collections import defaultdict
 from datetime import timedelta
+from typing import Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -28,7 +29,8 @@ except ImportError:
 
 NON_NUMPY_SUPPORTED_ARRAY_TYPES = (
     indexing.ExplicitlyIndexed, pd.Index) + dask_array_type
-BASIC_INDEXING_TYPES = integer_types + (slice,)
+# https://github.com/python/mypy/issues/224
+BASIC_INDEXING_TYPES = integer_types + (slice,)  # type: ignore
 
 
 class MissingDimensionsError(ValueError):
@@ -414,6 +416,10 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         """
         return self._dims
 
+    @dims.setter
+    def dims(self, value):
+        self._dims = self._parse_dimensions(value)
+
     def _parse_dimensions(self, dims):
         if isinstance(dims, basestring):
             dims = (dims,)
@@ -423,10 +429,6 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                              'number of data dimensions, ndim=%s'
                              % (dims, self.ndim))
         return dims
-
-    @dims.setter
-    def dims(self, value):
-        self._dims = self._parse_dimensions(value)
 
     def _item_key_to_tuple(self, key):
         if utils.is_dict_like(key):
@@ -816,7 +818,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):
@@ -1019,7 +1022,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
         pad_widths = either_dict_or_kwargs(pad_widths, pad_widths_kwargs,
                                            'pad')
 
-        if fill_value is dtypes.NA:  # np.nan is passed
+        if fill_value is dtypes.NA:
             dtype, fill_value = dtypes.maybe_promote(self.dtype)
         else:
             dtype = self.dtype
@@ -1641,6 +1644,85 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             array, axis=self.get_axis_num(dim), window=window,
             center=center, fill_value=fill_value))
 
+    def coarsen(self, windows, func, boundary='exact', side='left'):
+        """
+        Apply
+        """
+        windows = {k: v for k, v in windows.items() if k in self.dims}
+        if not windows:
+            return self.copy()
+
+        reshaped, axes = self._coarsen_reshape(windows, boundary, side)
+        if isinstance(func, basestring):
+            name = func
+            func = getattr(duck_array_ops, name, None)
+            if func is None:
+                raise NameError('{} is not a valid method.'.format(name))
+        return type(self)(self.dims, func(reshaped, axis=axes), self._attrs)
+
+    def _coarsen_reshape(self, windows, boundary, side):
+        """
+        Construct a reshaped-array for corsen
+        """
+        if not utils.is_dict_like(boundary):
+            boundary = {d: boundary for d in windows.keys()}
+
+        if not utils.is_dict_like(side):
+            side = {d: side for d in windows.keys()}
+
+        # remove unrelated dimensions
+        boundary = {k: v for k, v in boundary.items() if k in windows}
+        side = {k: v for k, v in side.items() if k in windows}
+
+        for d, window in windows.items():
+            if window <= 0:
+                raise ValueError('window must be > 0. Given {}'.format(window))
+
+        variable = self
+        for d, window in windows.items():
+            # trim or pad the object
+            size = variable.shape[self._get_axis_num(d)]
+            n = int(size / window)
+            if boundary[d] == 'exact':
+                if n * window != size:
+                    raise ValueError(
+                        'Could not coarsen a dimension of size {} with '
+                        'window {}'.format(size, window))
+            elif boundary[d] == 'trim':
+                if side[d] == 'left':
+                    variable = variable.isel({d: slice(0, window * n)})
+                else:
+                    excess = size - window * n
+                    variable = variable.isel({d: slice(excess, None)})
+            elif boundary[d] == 'pad':  # pad
+                pad = window * n - size
+                if pad < 0:
+                    pad += window
+                if side[d] == 'left':
+                    pad_widths = {d: (0, pad)}
+                else:
+                    pad_widths = {d: (pad, 0)}
+                variable = variable.pad_with_fill_value(pad_widths)
+            else:
+                raise TypeError(
+                    "{} is invalid for boundary. Valid option is 'exact', "
+                    "'trim' and 'pad'".format(boundary[d]))
+
+        shape = []
+        axes = []
+        axis_count = 0
+        for i, d in enumerate(variable.dims):
+            if d in windows:
+                size = variable.shape[i]
+                shape.append(int(size / windows[d]))
+                shape.append(windows[d])
+                axis_count += 1
+                axes.append(i + axis_count)
+            else:
+                shape.append(variable.shape[i])
+
+        return variable.data.reshape(shape), tuple(axes)
+
     @property
     def real(self):
         return type(self)(self.dims, self.data.real, self._attrs)
@@ -1722,7 +1804,8 @@ class IndexVariable(Variable):
         # data is already loaded into memory for IndexVariable
         return self
 
-    @Variable.data.setter
+    # https://github.com/python/mypy/issues/1465
+    @Variable.data.setter  # type: ignore
     def data(self, data):
         Variable.data.fset(self, data)
         if not isinstance(self._data, PandasIndexAdapter):
