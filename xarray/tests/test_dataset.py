@@ -5,6 +5,7 @@ import sys
 import warnings
 from copy import copy, deepcopy
 from io import StringIO
+import pickle
 from textwrap import dedent
 
 import numpy as np
@@ -26,10 +27,6 @@ from . import (
     raises_regex, requires_bottleneck, requires_dask, requires_scipy,
     source_ndarray)
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 try:
     import dask.array as da
 except ImportError:

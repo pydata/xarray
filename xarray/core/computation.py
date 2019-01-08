@@ -8,6 +8,10 @@ import itertools
 import operator
 from collections import Counter
 from distutils.version import LooseVersion
+from typing import (
+    AbstractSet, Any, Dict, Iterable, List, Mapping, Union, Tuple,
+    TYPE_CHECKING, TypeVar
+)
 
 import numpy as np
 
@@ -16,8 +20,11 @@ from .alignment import deep_align
 from .merge import expand_and_merge_variables
 from .pycompat import OrderedDict, basestring, dask_array_type
 from .utils import is_dict_like
+from .variable import Variable
+if TYPE_CHECKING:
+    from .dataset import Dataset
 
-_DEFAULT_FROZEN_SET = frozenset()
+_DEFAULT_FROZEN_SET = frozenset()  # type: frozenset
 _NO_FILL_VALUE = utils.ReprObject('<no-fill-value>')
 _DEFAULT_NAME = utils.ReprObject('<default-name>')
 _JOINS_WITHOUT_FILL_VALUES = frozenset({'inner', 'exact'})
@@ -111,8 +118,7 @@ class _UFuncSignature(object):
         return str(alt_signature)
 
 
-def result_name(objects):
-    # type: List[object] -> Any
+def result_name(objects: list) -> Any:
     # use the same naming heuristics as pandas:
     # https://github.com/blaze/blaze/issues/458#issuecomment-51936356
     names = {getattr(obj, 'name', _DEFAULT_NAME) for obj in objects}
@@ -138,10 +144,10 @@ def _get_coord_variables(args):
 
 
 def build_output_coords(
-        args,                      # type: list
-        signature,                 # type: _UFuncSignature
-        exclude_dims=frozenset(),  # type: set
-):
+    args: list,
+    signature: _UFuncSignature,
+    exclude_dims: AbstractSet = frozenset(),
+) -> 'List[OrderedDict[Any, Variable]]':
     """Build output coordinates for an operation.
 
     Parameters
@@ -159,7 +165,6 @@ def build_output_coords(
     -------
     OrderedDict of Variable objects with merged coordinates.
     """
-    # type: (...) -> List[OrderedDict[Any, Variable]]
     input_coords = _get_coord_variables(args)
 
     if exclude_dims:
@@ -220,8 +225,7 @@ def apply_dataarray_ufunc(func, *args, **kwargs):
     return out
 
 
-def ordered_set_union(all_keys):
-    # type: List[Iterable] -> Iterable
+def ordered_set_union(all_keys: List[Iterable]) -> Iterable:
     result_dict = OrderedDict()
     for keys in all_keys:
         for key in keys:
@@ -229,8 +233,7 @@ def ordered_set_union(all_keys):
     return result_dict.keys()
 
 
-def ordered_set_intersection(all_keys):
-    # type: List[Iterable] -> Iterable
+def ordered_set_intersection(all_keys: List[Iterable]) -> Iterable:
     intersection = set(all_keys[0])
     for keys in all_keys[1:]:
         intersection.intersection_update(keys)
@@ -284,9 +287,9 @@ def _as_variables_or_variable(arg):
 
 def _unpack_dict_tuples(
         result_vars,  # type: Mapping[Any, Tuple[Variable]]
-        num_outputs,    # type: int
+        num_outputs,  # type: int
 ):
-    # type: (...) -> Tuple[Dict[Any, Variable]]
+    # type: (...) -> Tuple[Dict[Any, Variable], ...]
     out = tuple(OrderedDict() for _ in range(num_outputs))
     for name, values in result_vars.items():
         for value, results_dict in zip(values, out):
@@ -438,8 +441,11 @@ def apply_groupby_ufunc(func, *args):
     return combined
 
 
-def unified_dim_sizes(variables, exclude_dims=frozenset()):
-    # type: Iterable[Variable] -> OrderedDict[Any, int]
+def unified_dim_sizes(
+    variables: Iterable[Variable],
+    exclude_dims: AbstractSet = frozenset(),
+) -> 'OrderedDict[Any, int]':
+
     dim_sizes = OrderedDict()
 
     for var in variables:
@@ -460,11 +466,9 @@ def unified_dim_sizes(variables, exclude_dims=frozenset()):
 
 SLICE_NONE = slice(None)
 
-# A = TypeVar('A', numpy.ndarray, dask.array.Array)
-
 
 def broadcast_compat_data(variable, broadcast_dims, core_dims):
-    # type: (Variable[A], tuple, tuple) -> A
+    # type: (Variable, tuple, tuple) -> Any
     data = variable.data
 
     old_dims = variable.dims

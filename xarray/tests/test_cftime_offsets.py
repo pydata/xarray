@@ -141,7 +141,7 @@ _ANNUAL_OFFSET_TYPES = {
 
 
 @pytest.mark.parametrize(('month_int', 'month_label'),
-                         list(_MONTH_ABBREVIATIONS.items()) + [('', '')])
+                         list(_MONTH_ABBREVIATIONS.items()) + [(0, '')])
 @pytest.mark.parametrize('multiple', [None, 2])
 @pytest.mark.parametrize('offset_str', ['AS', 'A'])
 def test_to_offset_annual(month_label, month_int, multiple, offset_str):

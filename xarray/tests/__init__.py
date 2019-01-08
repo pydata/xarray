@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from distutils import version
 import re
 import importlib
+from unittest import mock
 
 import numpy as np
 from numpy.testing import assert_array_equal  # noqa: F401
@@ -24,12 +25,6 @@ try:
 except ImportError:
     # old location, for pandas < 0.20
     from pandas.util.testing import assert_frame_equal  # noqa: F401
-
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
 
 # import mpl and change the backend before other mpl imports
 try:

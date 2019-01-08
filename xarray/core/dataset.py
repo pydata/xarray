@@ -6,6 +6,7 @@ import warnings
 from collections import Mapping, defaultdict
 from distutils.version import LooseVersion
 from numbers import Number
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -124,14 +125,14 @@ def merge_indexes(
     Not public API. Used in Dataset and DataArray set_index
     methods.
     """
-    vars_to_replace = {}
-    vars_to_remove = []
+    vars_to_replace = {}  # Dict[Any, Variable]
+    vars_to_remove = []  # type: list
 
     for dim, var_names in indexes.items():
         if isinstance(var_names, basestring):
             var_names = [var_names]
 
-        names, labels, levels = [], [], []
+        names, labels, levels = [], [], []  # type: (list, list, list)
         current_index_variable = variables.get(dim)
 
         for n in var_names:
@@ -195,7 +196,7 @@ def split_indexes(
     if isinstance(dims_or_levels, basestring):
         dims_or_levels = [dims_or_levels]
 
-    dim_levels = defaultdict(list)
+    dim_levels = defaultdict(list)  # type: Dict[Any, list]
     dims = []
     for k in dims_or_levels:
         if k in level_coords:
@@ -1005,7 +1006,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         self._coord_names.discard(key)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     def _all_compat(self, other, compat_str):
         """Helper function for equals and identical"""
@@ -1683,7 +1685,8 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                     if any(d in indexer_dims for d in v.dims)]
 
         coords = relevant_keys(self.coords)
-        indexers = [(k, np.asarray(v)) for k, v in iteritems(indexers)]
+        indexers = [(k, np.asarray(v))  # type: ignore
+                    for k, v in iteritems(indexers)]
         indexers_dict = dict(indexers)
         non_indexed_dims = set(self.dims) - indexer_dims
         non_indexed_coords = set(self.coords) - set(coords)
@@ -1693,9 +1696,9 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         for k, v in indexers:
             if k not in self.dims:
                 raise ValueError("dimension %s does not exist" % k)
-            if v.dtype.kind != 'i':
+            if v.dtype.kind != 'i':  # type: ignore
                 raise TypeError('Indexers must be integers')
-            if v.ndim != 1:
+            if v.ndim != 1:  # type: ignore
                 raise ValueError('Indexers must be 1 dimensional')
 
         # all the indexers should have the same length

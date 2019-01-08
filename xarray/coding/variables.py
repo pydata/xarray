@@ -1,6 +1,7 @@
 """Coders for individual Variable objects."""
 from __future__ import absolute_import, division, print_function
 
+from typing import Any
 import warnings
 from functools import partial
 
@@ -126,11 +127,12 @@ def pop_to(source, dest, key, name=None):
     return value
 
 
-def _apply_mask(data,  # type: np.ndarray
-                encoded_fill_values,  # type: list
-                decoded_fill_value,  # type: Any
-                dtype,  # type: Any
-                ):  # type: np.ndarray
+def _apply_mask(
+    data: np.ndarray,
+    encoded_fill_values: list,
+    decoded_fill_value: Any,
+    dtype: Any,
+) -> np.ndarray:
     """Mask all matching values in a NumPy arrays."""
     data = np.asarray(data, dtype=dtype)
     condition = False

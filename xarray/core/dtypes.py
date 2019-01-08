@@ -42,29 +42,6 @@ PROMOTE_TO_OBJECT = [
 ]
 
 
-@functools.total_ordering
-class AlwaysGreaterThan(object):
-    def __gt__(self, other):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, type(self))
-
-
-@functools.total_ordering
-class AlwaysLessThan(object):
-    def __lt__(self, other):
-        return True
-
-    def __eq__(self, other):
-        return isinstance(other, type(self))
-
-
-# Equivalence to np.inf (-np.inf) for object-type
-INF = AlwaysGreaterThan()
-NINF = AlwaysLessThan()
-
-
 def maybe_promote(dtype):
     """Simpler equivalent of pandas.core.common._maybe_promote
 

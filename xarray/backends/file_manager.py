@@ -1,5 +1,6 @@
 import contextlib
 import threading
+from typing import Any, Dict
 import warnings
 
 from ..core import utils
@@ -13,7 +14,7 @@ FILE_CACHE = LRUCache(
 assert FILE_CACHE.maxsize, 'file cache must be at least size one'
 
 
-REF_COUNTS = {}
+REF_COUNTS = {}  # type: Dict[Any, int]
 
 _DEFAULT_MODE = utils.ReprObject('<unused>')
 

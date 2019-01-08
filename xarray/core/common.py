@@ -24,7 +24,7 @@ class ImplementsArrayReduce(object):
                 return self.reduce(func, dim, axis,
                                    skipna=skipna, allow_lazy=True, **kwargs)
         else:
-            def wrapped_func(self, dim=None, axis=None,
+            def wrapped_func(self, dim=None, axis=None,  # type: ignore
                              **kwargs):
                 return self.reduce(func, dim, axis,
                                    allow_lazy=True, **kwargs)
@@ -56,7 +56,7 @@ class ImplementsDatasetReduce(object):
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
         else:
-            def wrapped_func(self, dim=None, **kwargs):
+            def wrapped_func(self, dim=None, **kwargs):  # type: ignore
                 return self.reduce(func, dim,
                                    numeric_only=numeric_only, allow_lazy=True,
                                    **kwargs)
