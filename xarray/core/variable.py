@@ -415,6 +415,8 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
                 'attrs': decode_numpy_dict_values(self.attrs)}
         if data:
             item['data'] = ensure_us_time_resolution(self.values).tolist()
+        else:
+            item.update({'dtype': str(self.dtype), 'shape': self.shape})
         return item
 
     @property

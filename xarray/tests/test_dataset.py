@@ -3047,10 +3047,15 @@ class TestDataset(object):
 
         # check the data=False option
         expected_no_data = expected.copy()
-        print(expected_no_data)
         del expected_no_data['coords']['t']['data']
         del expected_no_data['data_vars']['a']['data']
         del expected_no_data['data_vars']['b']['data']
+        expected_no_data['coords']['t'].update({'dtype': '<U1',
+                                                'shape': (10,)})
+        expected_no_data['data_vars']['a'].update({'dtype': 'float64',
+                                                   'shape': (10,)})
+        expected_no_data['data_vars']['b'].update({'dtype': 'float64',
+                                                   'shape': (10,)})
         actual_no_data = ds.to_dict(data=False)
         assert expected_no_data == actual_no_data
 

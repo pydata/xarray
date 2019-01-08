@@ -2913,6 +2913,8 @@ class TestDataArray(object):
         expected_no_data = expected.copy()
         del expected_no_data['data']
         del expected_no_data['coords']['x']['data']
+        expected_no_data['coords']['x'].update({'dtype': '<U1', 'shape': (2,)})
+        expected_no_data.update({'dtype': 'float64', 'shape': (2, 3)})
         actual_no_data = array.to_dict(data=False)
         assert expected_no_data == actual_no_data
 
