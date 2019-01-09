@@ -112,10 +112,8 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
     if isinstance(offset, CFTIME_TICKS):
-        is_day = isinstance(offset, Day)
-        if (is_day and offset.n == 1) or not is_day:
-            return _adjust_dates_anchored(first, last, offset,
-                                          closed=closed, base=base)
+        return _adjust_dates_anchored(first, last, offset,
+                                      closed=closed, base=base)
     else:
         first = normalize_date(first)
         last = normalize_date(last)
