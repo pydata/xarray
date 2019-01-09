@@ -82,7 +82,7 @@ Datetime indexing
 
 xarray borrows powerful indexing machinery from pandas (see :ref:`indexing`).
 
-This allows for several useful and suscinct forms of indexing, particularly for
+This allows for several useful and succinct forms of indexing, particularly for
 `datetime64` data. For example, we support indexing with strings for single
 items and with the `slice` object:
 
@@ -163,6 +163,7 @@ Datetime components couple particularly well with grouped operations (see
 calculate the mean by time of day:
 
 .. ipython:: python
+   :okwarning:
 
     ds.groupby('time.hour').mean()
 
@@ -176,6 +177,7 @@ same api as ``resample`` `in pandas`_.
 For example, we can downsample our dataset from hourly to 6-hourly:
 
 .. ipython:: python
+   :okwarning:
 
     ds.resample(time='6H')
 
@@ -184,6 +186,7 @@ necessary for resampling. All of the reduction methods which work with
 ``Resample`` objects can also be used for resampling:
 
 .. ipython:: python
+   :okwarning:
 
    ds.resample(time='6H').mean()
 
@@ -198,17 +201,6 @@ For upsampling, xarray provides four methods: ``asfreq``, ``ffill``, ``bfill``,
 and ``interpolate``. ``interpolate`` extends ``scipy.interpolate.interp1d`` and
 supports all of its schemes. All of these resampling operations work on both
 Dataset and DataArray objects with an arbitrary number of dimensions.
-
-.. note::
-
-   The ``resample`` api was updated in version 0.10.0 to reflect similar
-   updates in pandas ``resample`` api to be more groupby-like. Older style
-   calls to ``resample`` will still be supported for a short period:
-
-   .. ipython:: python
-
-    ds.resample('6H', dim='time', how='mean')
-
 
 For more examples of using grouped operations on a time dimension, see
 :ref:`toy weather data`.
@@ -274,14 +266,16 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    da.sel(time=slice('0001-05', '0002-02'))
 
 - Access of basic datetime components via the ``dt`` accessor (in this case
-  just "year", "month", "day", "hour", "minute", "second", "microsecond", and
-  "season"): 
+  just "year", "month", "day", "hour", "minute", "second", "microsecond",
+  "season", "dayofyear", and "dayofweek"): 
 
 .. ipython:: python
 
    da.time.dt.year
    da.time.dt.month
    da.time.dt.season
+   da.time.dt.dayofyear
+   da.time.dt.dayofweek
 
 - Group-by operations based on datetime accessor attributes (e.g. by month of
   the year):
@@ -335,6 +329,7 @@ For data indexed by a :py:class:`~xarray.CFTimeIndex` xarray currently supports:
    :py:meth:`~xarray.CFTimeIndex.to_datetimeindex` method:
 
    .. ipython:: python
+      :okwarning:
 
        modern_times = xr.cftime_range('2000', periods=24, freq='MS', calendar='noleap')
        da = xr.DataArray(range(24), [('time', modern_times)])

@@ -57,7 +57,7 @@ To interpolate data with a :py:func:`numpy.datetime64` coordinate you can pass a
     da_dt64.interp(time='2000-01-02')
 
 The interpolated data can be merged into the original :py:class:`~xarray.DataArray`
-by specifing the time periods required.
+by specifying the time periods required.
 
 .. ipython:: python
 
@@ -232,7 +232,7 @@ then make the interpolation
     dropped
     dropped.interp(x=[0.5, 1.5, 2.5], method='cubic')
 
-If NaNs are distributed rondomly in your multidimensional array,
+If NaNs are distributed randomly in your multidimensional array,
 dropping all the columns containing more than one NaNs by
 :py:meth:`~xarray.DataArray.dropna` may lose a significant amount of information.
 In such a case, you can fill NaN by :py:meth:`~xarray.DataArray.interpolate_na`,
@@ -262,7 +262,7 @@ Let's see how :py:meth:`~xarray.DataArray.interp` works on real data.
 .. ipython:: python
 
     # Raw data
-    ds = xr.tutorial.load_dataset('air_temperature').isel(time=0)
+    ds = xr.tutorial.open_dataset('air_temperature').isel(time=0)
     fig, axes = plt.subplots(ncols=2, figsize=(10, 4))
     ds.air.plot(ax=axes[0])
     axes[0].set_title('Raw data')

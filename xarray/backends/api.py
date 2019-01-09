@@ -10,7 +10,7 @@ import numpy as np
 
 from .. import Dataset, backends, conventions
 from ..core import indexing
-from ..core.combine import auto_combine
+from ..core.combine import _infer_concat_order_from_positions, _auto_combine
 from ..core.pycompat import basestring, path_type
 from ..core.utils import close_on_error, is_remote_uri, is_grib_path
 from .common import ArrayWriter
@@ -113,7 +113,7 @@ def _validate_dataset_names(dataset):
 
 
 def _validate_attrs(dataset):
-    """`attrs` must have a string key and a value which is either: a number
+    """`attrs` must have a string key and a value which is either: a number,
     a string, an ndarray or a list/tuple of numbers/strings.
     """
     def check_attr(name, value):
@@ -128,8 +128,8 @@ def _validate_attrs(dataset):
 
         if not isinstance(value, (basestring, Number, np.ndarray, np.number,
                                   list, tuple)):
-            raise TypeError('Invalid value for attr: {} must be a number '
-                            'string, ndarray or a list/tuple of '
+            raise TypeError('Invalid value for attr: {} must be a number, '
+                            'a string, an ndarray or a list/tuple of '
                             'numbers/strings for serialization to netCDF '
                             'files'.format(value))
 
@@ -485,7 +485,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
                    lock=None, data_vars='all', coords='different',
                    autoclose=None, parallel=False, **kwargs):
     """Open multiple files as a single dataset.
-
     Requires dask to be installed. See documentation for details on dask [1].
     Attributes from the first dataset file are used for the combined dataset.
 
@@ -515,7 +514,6 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
               'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts when merging:
-
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -578,6 +576,7 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     References
     ----------
+
     .. [1] http://xarray.pydata.org/en/stable/dask.html
     .. [2] http://xarray.pydata.org/en/stable/dask.html#chunking-and-performance
     """
@@ -593,6 +592,25 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
 
     if not paths:
         raise IOError('no files to open')
+
+    # Coerce 1D input into ND to maintain backwards-compatible API until API
+    # for N-D combine decided
+    # (see https://github.com/pydata/xarray/pull/2553/#issuecomment-445892746)
+    if concat_dim is None or concat_dim == _CONCAT_DIM_DEFAULT:
+        concat_dims = concat_dim
+    elif not isinstance(concat_dim, list):
+        concat_dims = [concat_dim]
+    else:
+        concat_dims = concat_dim
+    infer_order_from_coords = False
+
+    # If infer_order_from_coords=True then this is unnecessary, but quick.
+    # If infer_order_from_coords=False then this creates a flat list which is
+    # easier to iterate over, while saving the originally-supplied structure
+    combined_ids_paths, concat_dims = _infer_concat_order_from_positions(
+        paths, concat_dims)
+    ids, paths = (
+        list(combined_ids_paths.keys()), list(combined_ids_paths.values()))
 
     open_kwargs = dict(engine=engine, chunks=chunks or {}, lock=lock,
                        autoclose=autoclose, **kwargs)
@@ -618,15 +636,17 @@ def open_mfdataset(paths, chunks=None, concat_dim=_CONCAT_DIM_DEFAULT,
         # the underlying datasets will still be stored as dask arrays
         datasets, file_objs = dask.compute(datasets, file_objs)
 
-    # close datasets in case of a ValueError
+    # Close datasets in case of a ValueError
     try:
-        if concat_dim is _CONCAT_DIM_DEFAULT:
-            combined = auto_combine(datasets, compat=compat,
-                                    data_vars=data_vars, coords=coords)
-        else:
-            combined = auto_combine(datasets, concat_dim=concat_dim,
-                                    compat=compat,
-                                    data_vars=data_vars, coords=coords)
+        if infer_order_from_coords:
+            # Discard ordering because it should be redone from coordinates
+            ids = False
+
+        combined = _auto_combine(datasets, concat_dims=concat_dims,
+                                 compat=compat,
+                                 data_vars=data_vars, coords=coords,
+                                 infer_order_from_coords=infer_order_from_coords,
+                                 ids=ids)
     except ValueError:
         for ds in datasets:
             ds.close()
@@ -861,7 +881,7 @@ def save_mfdataset(datasets, paths, mode='w', format=None, groups=None,
 
 
 def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
-            encoding=None, compute=True):
+            encoding=None, compute=True, consolidated=False):
     """This function creates an appropriate datastore for writing a dataset to
     a zarr ztore
 
@@ -876,16 +896,20 @@ def to_zarr(dataset, store=None, mode='w-', synchronizer=None, group=None,
     _validate_dataset_names(dataset)
     _validate_attrs(dataset)
 
-    store = backends.ZarrStore.open_group(store=store, mode=mode,
-                                          synchronizer=synchronizer,
-                                          group=group)
+    zstore = backends.ZarrStore.open_group(store=store, mode=mode,
+                                           synchronizer=synchronizer,
+                                           group=group,
+                                           consolidate_on_close=consolidated)
 
     writer = ArrayWriter()
     # TODO: figure out how to properly handle unlimited_dims
-    dump_to_store(dataset, store, writer, encoding=encoding)
+    dump_to_store(dataset, zstore, writer, encoding=encoding)
     writes = writer.sync(compute=compute)
 
-    if not compute:
+    if compute:
+        _finalize_store(writes, zstore)
+    else:
         import dask
-        return dask.delayed(_finalize_store)(writes, store)
-    return store
+        return dask.delayed(_finalize_store)(writes, zstore)
+
+    return zstore
