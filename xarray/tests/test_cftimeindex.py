@@ -12,7 +12,7 @@ from xarray.coding.cftimeindex import (
     _parsed_string_to_bounds, assert_all_valid_date_type, parse_iso8601)
 from xarray.tests import assert_array_equal, assert_identical
 
-from . import has_cftime, has_cftime_or_netCDF4, requires_cftime
+from . import has_cftime, has_cftime_or_netCDF4, requires_cftime, raises_regex
 from .test_coding_times import (_all_cftime_date_types, _ALL_CALENDARS,
                                 _NON_STANDARD_CALENDARS)
 
@@ -176,6 +176,20 @@ def test_cftimeindex_field_accessors(index, field, expected):
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_dayofyear_accessor(index):
+    result = index.dayofyear
+    expected = [date.dayofyr for date in index]
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_cftimeindex_dayofweek_accessor(index):
+    result = index.dayofweek
+    expected = [date.dayofwk for date in index]
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize(('string', 'date_args', 'reso'), [
     ('1999', (1999, 1, 1), 'year'),
     ('199902', (1999, 2, 1), 'month'),
@@ -251,16 +265,16 @@ def test_parsed_string_to_bounds_raises(date_type):
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 def test_get_loc(date_type, index):
     result = index.get_loc('0001')
-    expected = [0, 1]
-    assert_array_equal(result, expected)
+    assert result == slice(0, 2)
 
     result = index.get_loc(date_type(1, 2, 1))
-    expected = 1
-    assert result == expected
+    assert result == 1
 
     result = index.get_loc('0001-02-01')
-    expected = 1
-    assert result == expected
+    assert result == slice(1, 2)
+
+    with raises_regex(KeyError, '1234'):
+        index.get_loc('1234')
 
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
@@ -758,7 +772,7 @@ def test_to_datetimeindex(calendar, unsafe):
         with pytest.warns(RuntimeWarning, match='non-standard'):
             result = index.to_datetimeindex()
     else:
-        result = index.to_datetimeindex()
+        result = index.to_datetimeindex(unsafe=unsafe)
 
     assert result.equals(expected)
     np.testing.assert_array_equal(result, expected)
@@ -779,3 +793,10 @@ def test_to_datetimeindex_feb_29(calendar):
     index = xr.cftime_range('2001-02-28', periods=2, calendar=calendar)
     with pytest.raises(ValueError, match='29'):
         index.to_datetimeindex()
+
+
+@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
+def test_multiindex():
+    index = xr.cftime_range('2001-01-01', periods=100, calendar='360_day')
+    mindex = pd.MultiIndex.from_arrays([index])
+    assert mindex.get_loc('2001-01') == slice(0, 30)

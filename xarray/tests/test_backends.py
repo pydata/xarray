@@ -23,11 +23,10 @@ from xarray.backends.common import robust_getitem
 from xarray.backends.netCDF4_ import _extract_nc4_variable_encoding
 from xarray.backends.pydap_ import PydapDataStore
 from xarray.core import indexing
+from xarray.core.options import set_options
 from xarray.core.pycompat import (
     ExitStack, basestring, dask_array_type, iteritems)
-from xarray.core.options import set_options
 from xarray.tests import mock
-
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
@@ -54,7 +53,6 @@ except ImportError:
     except ImportError:
         pass
 
-
 ON_WINDOWS = sys.platform == 'win32'
 
 
@@ -80,7 +78,7 @@ def create_masked_and_scaled_data():
 def create_encoded_masked_and_scaled_data():
     attributes = {'_FillValue': -1, 'add_offset': 10,
                   'scale_factor': np.float32(0.1)}
-    return Dataset({'x': ('t', [-1, -1, 0, 1, 2], attributes)})
+    return Dataset({'x': ('t', np.int16([-1, -1, 0, 1, 2]), attributes)})
 
 
 def create_unsigned_masked_scaled_data():
@@ -95,8 +93,42 @@ def create_encoded_unsigned_masked_scaled_data():
     # be represented in the signed form.
     attributes = {'_FillValue': -1, '_Unsigned': 'true',
                   'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create unsigned data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
+def create_bad_unsigned_masked_scaled_data():
+    encoding = {'_FillValue': 255, '_Unsigned': True, 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([10.0, 10.1, 22.7, 22.8, np.nan], dtype=np.float32)
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_bad_encoded_unsigned_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -1, '_Unsigned': True,
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
     # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
     sb = np.asarray([0, 1, 127, -128, -1], dtype='i1')
+    return Dataset({'x': ('t', sb, attributes)})
+
+
+def create_signed_masked_scaled_data():
+    encoding = {'_FillValue': -127, '_Unsigned': 'false', 'dtype': 'i1',
+                'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    x = np.array([-1.0, 10.1, 22.7, np.nan], dtype=np.float32)
+    return Dataset({'x': ('t', x, {}, encoding)})
+
+
+def create_encoded_signed_masked_scaled_data():
+    # These are values as written to the file: the _FillValue will
+    # be represented in the signed form.
+    attributes = {'_FillValue': -127, '_Unsigned': 'false',
+                  'add_offset': 10, 'scale_factor': np.float32(0.1)}
+    # Create signed data corresponding to [0, 1, 127, 128, 255] unsigned
+    sb = np.asarray([-110, 1, 127, -127], dtype='i1')
     return Dataset({'x': ('t', sb, attributes)})
 
 
@@ -107,7 +139,6 @@ def create_boolean_data():
 
 class TestCommon(object):
     def test_robust_getitem(self):
-
         class UnreliableArrayFailure(Exception):
             pass
 
@@ -617,65 +648,52 @@ class CFEncodedBase(DatasetIOBase):
             with self.roundtrip(original) as actual:
                 assert_identical(expected, actual)
 
-    def test_unsigned_roundtrip_mask_and_scale(self):
-        decoded = create_unsigned_masked_scaled_data()
-        encoded = create_encoded_unsigned_masked_scaled_data()
+    @pytest.mark.parametrize(
+        'decoded_fn, encoded_fn',
+        [(create_unsigned_masked_scaled_data,
+          create_encoded_unsigned_masked_scaled_data),
+         pytest.param(create_bad_unsigned_masked_scaled_data,
+                      create_bad_encoded_unsigned_masked_scaled_data,
+                      marks=pytest.mark.xfail(reason="Bad _Unsigned attribute.")),
+         (create_signed_masked_scaled_data,
+          create_encoded_signed_masked_scaled_data),
+         (create_masked_and_scaled_data,
+          create_encoded_masked_and_scaled_data)])
+    def test_roundtrip_mask_and_scale(self, decoded_fn, encoded_fn):
+        decoded = decoded_fn()
+        encoded = encoded_fn()
+
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
                 assert (decoded.variables[k].dtype ==
                         actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(decoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
-            assert_allclose(encoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
-            assert_allclose(encoded, actual, decode_bytes=False)
-        # make sure roundtrip encoding didn't change the
-        # original dataset.
-        assert_allclose(
-            encoded, create_encoded_unsigned_masked_scaled_data())
-        with self.roundtrip(encoded) as actual:
-            for k in decoded.variables:
-                assert decoded.variables[k].dtype == \
-                    actual.variables[k].dtype
-            assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            for k in encoded.variables:
-                assert encoded.variables[k].dtype == \
-                    actual.variables[k].dtype
-            assert_allclose(encoded, actual, decode_bytes=False)
 
-    def test_roundtrip_mask_and_scale(self):
-        decoded = create_masked_and_scaled_data()
-        encoded = create_encoded_masked_and_scaled_data()
-        with self.roundtrip(decoded) as actual:
-            assert_allclose(decoded, actual, decode_bytes=False)
         with self.roundtrip(decoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
+            for k in encoded.variables:
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
+
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
+            for k in encoded.variables:
+                assert (encoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
+
         # make sure roundtrip encoding didn't change the
         # original dataset.
-        assert_allclose(encoded,
-                        create_encoded_masked_and_scaled_data(),
-                        decode_bytes=False)
+        assert_allclose(encoded, encoded_fn(), decode_bytes=False)
+
         with self.roundtrip(encoded) as actual:
+            for k in decoded.variables:
+                assert (decoded.variables[k].dtype ==
+                        actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
-        with self.roundtrip(encoded,
-                            open_kwargs=dict(decode_cf=False)) as actual:
-            assert_allclose(encoded, actual, decode_bytes=False)
 
     def test_coordinates_encoding(self):
         def equals_latlon(obj):
@@ -1035,7 +1053,7 @@ class NetCDF4Base(CFEncodedBase):
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
-                    expected['time'].encoding
+                       expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -1291,7 +1309,6 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
-
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
@@ -1319,6 +1336,15 @@ class ZarrBase(CFEncodedBase):
     def roundtrip_append(self, data, save_kwargs={}, open_kwargs={},
                          allow_cleanup_failure=False):
         pytest.skip("zarr backend does not support appending")
+
+    def test_roundtrip_consolidated(self):
+        zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        expected = create_test_data()
+        with self.roundtrip(expected,
+                            save_kwargs={'consolidated': True},
+                            open_kwargs={'consolidated': True}) as actual:
+            self.check_dtypes_roundtripped(expected, actual)
+            assert_identical(expected, actual)
 
     def test_auto_chunk(self):
         original = create_test_data().chunk()
@@ -1388,10 +1414,14 @@ class ZarrBase(CFEncodedBase):
         ds_chunk_irreg = ds.chunk({'x': (5, 5, 2)})
         with self.roundtrip(ds_chunk_irreg) as actual:
             assert (5,) == actual['var1'].encoding['chunks']
+        # re-save Zarr arrays
+        with self.roundtrip(ds_chunk_irreg) as original:
+            with self.roundtrip(original) as actual:
+                assert_identical(original, actual)
 
         # - encoding specified  -
         # specify compatible encodings
-        for chunk_enc in 4, (4, ):
+        for chunk_enc in 4, (4,):
             ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
             with self.roundtrip(ds_chunk4) as actual:
                 assert (4,) == actual['var1'].encoding['chunks']
@@ -1827,6 +1857,8 @@ class TestH5NetCDFData(NetCDF4Base):
             data['var2'].encoding.update(compr_in)
             data['var2'].encoding.update(compr_common)
             compr_out.update(compr_common)
+            data['scalar'] = ('scalar_dim', np.array([2.0]))
+            data['scalar'] = data['scalar'][0]
             with self.roundtrip(data) as actual:
                 for k, v in compr_out.items():
                     assert v == actual['var2'].encoding[k]
@@ -1922,7 +1954,6 @@ def skip_if_not_engine(engine):
 
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
-
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -1962,7 +1993,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
-
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -1985,14 +2015,14 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                       coords={
                           't': (['t', ], t1),
                           'x': (['x', ], x)
-        })
+                      })
 
         ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
                                  self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t2),
                           'x': (['x', ], x)
-        })
+                      })
 
         return ds1, ds2
 
@@ -2017,7 +2047,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files with the data_var option
             with open_mfdataset(files, data_vars=opt) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2034,7 +2063,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files using data_vars option
             with open_mfdataset(files, data_vars=opt) as ds:
-
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2046,7 +2074,6 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self):
-
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars='minimum'):
@@ -2125,17 +2152,47 @@ class TestDask(DatasetIOBase):
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
                     assert actual.foo.variable.data.chunks == \
-                        ((5, 5),)
+                           ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
                     assert actual.foo.variable.data.chunks == \
-                        ((3, 2, 3, 2),)
+                           ((3, 2, 3, 2),)
+
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
 
         with raises_regex(ValueError, 'wild-card'):
             open_mfdataset('http://some/remote/uri')
+
+    def test_open_mfdataset_2d(self):
+        original = Dataset({'foo': (['x', 'y'], np.random.randn(10, 8))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                with create_tmp_file() as tmp3:
+                    with create_tmp_file() as tmp4:
+                        original.isel(x=slice(5),
+                                      y=slice(4)).to_netcdf(tmp1)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4)).to_netcdf(tmp2)
+                        original.isel(x=slice(5),
+                                      y=slice(4, 8)).to_netcdf(tmp3)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4, 8)).to_netcdf(tmp4)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x']) as actual:
+                            assert isinstance(actual.foo.variable.data,
+                                              da.Array)
+                            assert actual.foo.variable.data.chunks == \
+                                   ((5, 5), (4, 4))
+                            assert_identical(original, actual)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x'],
+                                            chunks={'x': 3, 'y': 2}) as actual:
+                            assert actual.foo.variable.data.chunks == \
+                                   ((3, 2, 3, 2), (2, 2, 2, 2),)
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
@@ -2146,6 +2203,45 @@ class TestDask(DatasetIOBase):
                 tmp2 = Path(tmp2)
                 original.isel(x=slice(5)).to_netcdf(tmp1)
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+                with open_mfdataset([tmp1, tmp2]) as actual:
+                    assert_identical(original, actual)
+
+    @requires_pathlib
+    def test_open_mfdataset_2d_pathlib(self):
+        original = Dataset({'foo': (['x', 'y'], np.random.randn(10, 8))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                with create_tmp_file() as tmp3:
+                    with create_tmp_file() as tmp4:
+                        tmp1 = Path(tmp1)
+                        tmp2 = Path(tmp2)
+                        tmp3 = Path(tmp3)
+                        tmp4 = Path(tmp4)
+                        original.isel(x=slice(5),
+                                      y=slice(4)).to_netcdf(tmp1)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4)).to_netcdf(tmp2)
+                        original.isel(x=slice(5),
+                                      y=slice(4, 8)).to_netcdf(tmp3)
+                        original.isel(x=slice(5, 10),
+                                      y=slice(4, 8)).to_netcdf(tmp4)
+                        with open_mfdataset([[tmp1, tmp2],
+                                             [tmp3, tmp4]],
+                                            concat_dim=['y', 'x']) as actual:
+                            assert_identical(original, actual)
+
+    @pytest.mark.xfail(reason="Not yet implemented")
+    def test_open_mfdataset(self):
+        original = Dataset({'foo': ('x', np.random.randn(10))})
+        with create_tmp_file() as tmp1:
+            with create_tmp_file() as tmp2:
+                original.isel(x=slice(5)).to_netcdf(tmp1)
+                original.isel(x=slice(5, 10)).to_netcdf(tmp2)
+
+                with pytest.raises(NotImplementedError):
+                    open_mfdataset([tmp1, tmp2], infer_order_from_coords=True)
+
+                # With infer_order_from_coords=True this should pass in future
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert_identical(original, actual)
 
@@ -2328,7 +2424,7 @@ class TestPydap(object):
             ds[key] = v
         # check all dims are stored in ds
         for d in original.coords:
-            ds[d] = BaseType(d, original[d].values, dimensions=(d, ),
+            ds[d] = BaseType(d, original[d].values, dimensions=(d,),
                              **original[d].attrs)
         return ds
 
@@ -2621,7 +2717,7 @@ class TestPseudoNetCDFFormat(object):
             ['example.uamiv',
              'example.uamiv'],
             engine='pseudonetcdf',
-            concat_dim='TSTEP',
+            concat_dim=['TSTEP'],
             backend_kwargs={'format': 'uamiv'})
 
         data1 = np.arange(20, dtype='f').reshape(1, 1, 4, 5)
@@ -2715,7 +2811,7 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                                  'band': np.arange(nz) + 1,
                                  'y': -np.arange(ny) * d + b + dy / 2,
                                  'x': np.arange(nx) * c + a + dx / 2,
-        })
+                             })
         yield tmp_file, expected
 
 
@@ -2827,7 +2923,6 @@ class TestRasterio(object):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
                                 crs='+proj=latlong') as (tmp_file, expected):
             with xr.open_rasterio(tmp_file, cache=False) as actual:
-
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
@@ -2857,7 +2952,8 @@ class TestRasterio(object):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                ind = {'band': 0, 'x': np.array([0, 0]), 'y': np.array([1, 1, 1])}
+                ind = {'band': 0, 'x': np.array([0, 0]),
+                       'y': np.array([1, 1, 1])}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -2940,7 +3036,6 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
-
                 # This should cache everything
                 assert_allclose(actual, expected)
 
@@ -2955,7 +3050,6 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Chunk at open time
             with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
-
                 import dask.array as da
                 assert isinstance(actual.data, da.Array)
                 assert 'open_rasterio' in actual.data.name

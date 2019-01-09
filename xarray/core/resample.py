@@ -194,14 +194,33 @@ class DataArrayResample(DataArrayGroupBy, Resample):
                 .format(self._obj.data.name)
             )
 
-        x = self._obj[self._dim].astype('float')
+        from ..coding.cftimeindex import CFTimeIndex
+        from .utils import datetime_to_numeric
+        import cftime as cf
+        import numpy as np
+        if isinstance(self._obj.indexes[self._dim], CFTimeIndex):
+            t = self._obj[self._dim]
+            x = datetime_to_numeric(t, datetime_unit='s')
+            x = x.round()
+            # Rounding fixes erroneous microsecond offsets in timedelta
+            # (fault of CFTime), but destroys microsecond resolution data
+        else:
+            x = self._obj[self._dim].astype('float')
         y = self._obj.data
 
         axis = self._obj.get_axis_num(self._dim)
 
         f = interp1d(x, y, kind=kind, axis=axis, bounds_error=True,
                      assume_sorted=True)
-        new_x = self._full_index.values.astype('float')
+        if isinstance(self._full_index.values[0], cf.datetime):
+            t = self._full_index
+            new_x = np.array(t.values - t.min(),
+                             dtype='timedelta64[s]').astype(float)
+            new_x = new_x.round()
+            # Rounding fixes erroneous microsecond offsets in timedelta
+            # (fault of CFTime), but destroys microsecond resolution data
+        else:
+            new_x = self._full_index.values.astype('float')
 
         # construct new up-sampled DataArray
         dummy = self._obj.copy()
