@@ -1002,6 +1002,7 @@ def contains_cftime_datetimes(var):
     try:
         from cftime import datetime as cftime_datetime
     except ImportError:
+        print('Could not import cftime')
         return False
     else:
         if var.dtype == np.dtype('O') and var.data.size > 0:

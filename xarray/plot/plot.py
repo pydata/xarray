@@ -20,6 +20,12 @@ from .utils import (
     _update_axes, _valid_other_type, get_axis, import_matplotlib_pyplot,
     label_from_attrs)
 
+try:
+    from nc_time_axis import CalendarDateTime
+    nc_axis_available = True
+except ImportError:
+    nc_axis_available = False
+
 
 def _infer_line_data(darray, x, y, hue):
     error_msg = ('must be either None or one of ({0:s})'
@@ -98,6 +104,26 @@ def _infer_line_data(darray, x, y, hue):
     return xplt, yplt, hueplt, xlabel, ylabel, huelabel
 
 
+def _convert_cftime_data(values):
+    converted = [CalendarDateTime(v, v.calendar) for v in values]
+    return converted
+
+
+def _convert_all_cftime(da):
+    try:
+        from cftime import datetime as cftime_datetime
+    except ImportError:
+        raise ImportError('cftime package missing')
+    da = da.copy()
+    # find the dim that has a cftime datatype
+    dims = set(da.dims)
+    cftime_dims = [d for d in dims if isinstance(da[d].data.ravel()[0],
+                                                 cftime_datetime)]
+    for cd in cftime_dims:
+        da[cd].data = _convert_cftime_data(da[cd].data)
+    return da
+
+
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
          rtol=0.01, subplot_kws=None, **kwargs):
     """
@@ -139,14 +165,20 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     """
     darray = darray.squeeze()
 
-    if contains_cftime_datetimes(darray):
-        raise NotImplementedError(
-            'Built-in plotting of arrays of cftime.datetime objects or arrays '
-            'indexed by cftime.datetime objects is currently not implemented '
-            'within xarray. A possible workaround is to use the '
-            'nc-time-axis package '
-            '(https://github.com/SciTools/nc-time-axis) to convert the dates '
-            'to a plottable type and plot your data directly with matplotlib.')
+    # If I am not mistaken, this did check only if there are cftime.datetime
+    # objects in the actual data, not dims.
+    # Correction below
+
+    if any([contains_cftime_datetimes(darray[dim]) for dim in darray.dims]):
+        if nc_axis_available:
+            darray = _convert_all_cftime(darray)
+        else:
+            raise ImportError(
+                'Built-in plotting of arrays of cftime.datetime objects or  '
+                'arrays indexed by cftime.datetime objects requires the '
+                'optional `nc-time-axis` package '
+                '(https://github.com/SciTools/nc-time-axis).'
+            )
 
     plot_dims = set(darray.dims)
     plot_dims.discard(row)

@@ -471,13 +471,25 @@ def _ensure_plottable(*args):
     """
     numpy_types = [np.floating, np.integer, np.timedelta64, np.datetime64]
     other_types = [datetime]
-
+    try:
+        import cftime
+        cftime_datetime = [cftime.datetime]
+    except ImportError:
+        cftime_datetime = []
+        other_types = other_types + cftime_datetime
     for x in args:
         if not (_valid_numpy_subdtype(np.array(x), numpy_types)
                 or _valid_other_type(np.array(x), other_types)):
             raise TypeError('Plotting requires coordinates to be numeric '
-                            'or dates of type np.datetime64 or '
-                            'datetime.datetime or pd.Interval.')
+                            'or dates of type np.datetime64, '
+                            'datetime.datetime, or cftime.datetime or '
+                            'pd.Interval.')
+        if (_valid_other_type(np.array(x), cftime_datetime)
+                and not nc_time_axis_available):
+            raise ImportError('Plotting of arrays of cftime.datetime '
+                              'objects or arrays indexed by '
+                              'cftime.datetime objects requires the '
+                              'optional `nc-time-axis` package.')
 
 
 def _ensure_numeric(arr):
