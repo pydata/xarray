@@ -3867,7 +3867,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 variables[k] = v
         return self._replace_vars_and_dims(variables)
 
-    def integrate(self, dim, datetime_unit=None):
+    def integrate(self, coord, datetime_unit=None):
         """ integrate the array with the trapezoidal rule.
 
         .. note::
@@ -3892,23 +3892,23 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         DataArray.integrate
         numpy.trapz: corresponding numpy function
         """
-        if not isinstance(dim, (list, tuple)):
-            dim = (dim, )
+        if not isinstance(coord, (list, tuple)):
+            coord = (coord, )
         result = self
-        for d in dim:
-            result = result._integrate_one(d, datetime_unit=datetime_unit)
+        for c in coord:
+            result = result._integrate_one(c, datetime_unit=datetime_unit)
         return result
 
-    def _integrate_one(self, dim, datetime_unit=None):
+    def _integrate_one(self, coord, datetime_unit=None):
         from .variable import Variable
 
-        if dim not in self.variables and dim not in self.dims:
+        if coord not in self.variables and coord not in self.dims:
             raise ValueError('Coordinate {} does not exist.'.format(dim))
 
-        coord_var = self[dim].variable
+        coord_var = self[coord].variable
         if coord_var.ndim != 1:
             raise ValueError('Coordinate {} must be 1 dimensional but is {}'
-                             ' dimensional'.format(dim, coord_var.ndim))
+                             ' dimensional'.format(coord, coord_var.ndim))
 
         dim = coord_var.dims[0]
         if _contains_datetime_like_objects(coord_var):
