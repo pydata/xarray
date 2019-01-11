@@ -1,11 +1,21 @@
 Overview: Why xarray?
 =====================
 
-Features
---------
+What labels enable
+------------------
 
-Adding dimensions names and coordinate indexes to numpy's ndarray_ makes many
-powerful array operations possible:
+Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
+"tensors") are an essential part of computational science.
+They are encountered in a wide range of fields, including physics, astronomy,
+geoscience, bioinformatics, engineering, finance, and deep learning.
+In Python, NumPy_ provides the fundamental data structure and API for
+working with raw ND arrays.
+However, real-world datasets are usually more than just raw numbers;
+they have labels which encode information about how the array values map
+to locations in space, time, etc.
+
+Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
+powerful and concise interface. For example:
 
 -  Apply operations over dimensions by name: ``x.sum('time')``.
 -  Select values by label instead of integer location:
@@ -19,9 +29,6 @@ powerful array operations possible:
 -  Keep track of arbitrary metadata in the form of a Python dictionary:
    ``x.attrs``.
 
-pandas_ provides many of these features, but it does not make use of dimension
-names, and its core data structures are fixed dimensional arrays.
-
 The N-dimensional nature of xarray's data structures makes it suitable for dealing
 with multi-dimensional scientific data, and its use of dimension names
 instead of axis labels (``dim='time'`` instead of ``axis=0``) makes such
@@ -29,10 +36,15 @@ arrays much more manageable than the raw numpy ndarray: with xarray, you don't
 need to keep track of the order of arrays dimensions or insert dummy dimensions
 (e.g., ``np.newaxis``) to align arrays.
 
+The immediate payoff of using xarray is that you'll write less code. The
+long-term payoff is that you'll understand what you were thinking when you come
+back to look at it weeks or months later.
+
 Core data structures
 --------------------
 
-xarray has two core data structures. Both are fundamentally N-dimensional:
+xarray has two core data structures, which build upon and extend the core
+strengths of  NumPy_ and pandas_. Both are fundamentally N-dimensional:
 
 - :py:class:`~xarray.DataArray` is our implementation of a labeled, N-dimensional
   array. It is an N-D generalization of a :py:class:`pandas.Series`. The name
@@ -42,8 +54,6 @@ xarray has two core data structures. Both are fundamentally N-dimensional:
   It is a dict-like container of ``DataArray`` objects aligned along any number of
   shared dimensions, and serves a similar purpose in xarray to the
   :py:class:`pandas.DataFrame`.
-
-.. _datarray: https://github.com/fperez/datarray
 
 The value of attaching labels to numpy's :py:class:`numpy.ndarray` may be
 fairly obvious, but the dataset may need more motivation.
@@ -69,23 +79,33 @@ metadata once, not every time you save a file.
 Goals and aspirations
 ---------------------
 
-pandas_ excels at working with tabular data. That suffices for many statistical
-analyses, but physical scientists rely on N-dimensional arrays -- which is
-where xarray comes in.
+Xarray contributes domain-agnostic data-structures and tools for labeled
+multi-dimensional arrays to Python's SciPy_ ecosystem for numerical computing.
+In particular, xarray builds upon and integrates with NumPy_ and pandas_:
 
-xarray aims to provide a data analysis toolkit as powerful as pandas_ but
-designed for working with homogeneous N-dimensional arrays
-instead of tabular data. When possible, we copy the pandas API and rely on
-pandas's highly optimized internals (in particular, for fast indexing).
+- Our user-facing interfaces aim to be more explicit verisons of those found in
+  NumPy/pandas.
+- Compatibility with the broader ecosystem is a major goal: it should be easy
+  to get your data in and out.
+- We try to keep a tight focus on functionality and interfaces related to
+  labeled data, and leverage other Python libraries for everything else, e.g.,
+  NumPy/pandas for fast arrays/indexing (xarray itself contains no compiled
+  code), Dask_ for parallel computing, matplotlib_ for plotting, etc.
 
-Importantly, xarray has robust support for converting its objects to and
-from a numpy ``ndarray`` or a pandas ``DataFrame`` or ``Series``, providing
-compatibility with the full `PyData ecosystem <http://pydata.org/>`__.
+Xarray is a collaborative and community driven project, run entirely on
+volunteer effort (see :ref:`contributing`).
+Our target audience is anyone who needs N-dimensional labeled arrays in Python.
+Originally, development was driven by the data analysis needs of physical
+scientists (especially geoscientists who already know and love
+netCDF_), but it has become a much more broadly useful tool, and is still
+under active development.
+See our technical :ref:`roadmap` for more details, and feel free to reach out
+with questions about whether xarray is the right tool for your needs.
 
-Our target audience is anyone who needs N-dimensional labeled arrays, but we
-are particularly focused on the data analysis needs of physical scientists --
-especially geoscientists who already know and love netCDF_.
-
-.. _ndarray: http://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html
+.. _datarray: https://github.com/fperez/datarray
+.. _Dask: http://dask.org
+.. _matplotlib: http://matplotlib.org
 .. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+.. _NumPy: http://www.numpy.org
 .. _pandas: http://pandas.pydata.org
+.. _SciPy: http://www.scipy.org
