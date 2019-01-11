@@ -24,6 +24,7 @@ from .common import (
 from .coordinates import (
     DatasetCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
+from .duck_array_ops import datetime_to_numeric
 from .indexes import Indexes, default_indexes
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
@@ -32,9 +33,9 @@ from .options import OPTIONS, _get_keep_attrs
 from .pycompat import (
     OrderedDict, basestring, dask_array_type, iteritems, range)
 from .utils import (
-    Frozen, SortedKeysDict, _check_inplace, datetime_to_numeric,
-    decode_numpy_dict_values, either_dict_or_kwargs, ensure_us_time_resolution,
-    hashable, maybe_wrap_array)
+    Frozen, SortedKeysDict, _check_inplace, decode_numpy_dict_values,
+    either_dict_or_kwargs, ensure_us_time_resolution, hashable,
+    maybe_wrap_array)
 from .variable import IndexVariable, Variable, as_variable, broadcast_variables
 
 # list of attributes of pd.DatetimeIndex that are ndarrays of time info
