@@ -7,10 +7,86 @@ from __future__ import absolute_import, division, print_function
 
 from ..coding.cftimeindex import CFTimeIndex
 from ..coding.cftime_offsets import (cftime_range, normalize_date,
-                                     Day, CFTIME_TICKS)
+                                     Day, MonthEnd, YearEnd,
+                                     CFTIME_TICKS, to_offset)
+import datetime
+import numpy as np
+import pandas as pd
+
+
+class CFTimeGrouper(object):
+    """This is a simple container for the grouping parameters that implements a
+    single method, the only one required for resampling in xarray.  It cannot
+    be used in a call to groupby like a pandas.Grouper object can."""
+
+    def __init__(self, freq, closed, label, base):
+        self.freq = to_offset(freq)
+        self.closed = closed
+        self.label = label
+        self.base = base
+
+    def first_items(self, index):
+        """Meant to reproduce the results of the following
+
+        grouper = pandas.Grouper(...)
+        first_items = pd.Series(np.arange(len(index)), index).groupby(grouper).first()
+
+        with index being a CFTimeIndex instead of a DatetimeIndex.
+        """
+        datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
+                                               self.label, self.base)
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
+                       :-1]
+        first_items = pd.Series(integer_bins, labels)
+
+        # Mask duplicate values with NaNs, preserving the last values
+        non_duplicate = ~first_items.duplicated('last')
+        return first_items.where(non_duplicate)
 
 
 def _get_time_bins(index, freq, closed, label, base):
+    """This is basically the same with the exception of the call to
+    _adjust_bin_edges."""
+    # This portion of code comes from TimeGrouper __init__ #
+    if closed is None:
+        closed = _default_closed_or_label(freq)
+
+    if label is None:
+        label = _default_closed_or_label(freq)
+    # This portion of code comes from TimeGrouper __init__ #
+
+    if not isinstance(index, CFTimeIndex):
+        raise TypeError('index must be a CFTimeIndex, but got '
+                        'an instance of %r' % type(index).__name__)
+    if len(index) == 0:
+        datetime_bins = labels = CFTimeIndex(data=[], name=index.name)
+        return datetime_bins, labels
+
+    first, last = _get_range_edges(index.min(), index.max(), freq,
+                                   closed=closed,
+                                   base=base)
+    datetime_bins = labels = cftime_range(freq=freq,
+                                          start=first,
+                                          end=last,
+                                          name=index.name)
+
+    datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed)
+
+    if closed == 'right':
+        if label == 'right':
+            labels = labels[1:]
+        else:
+            labels = labels[:-1]
+    else:
+        if label == 'right':
+            labels = labels[1:]
+        else:
+            labels = labels[:-1]
+
+    return datetime_bins, labels
+
+
+def _get_time_bins_old(index, freq, closed, label, base):
     """Obtain the bins and their respective labels for resampling operations.
 
     Parameters
@@ -65,8 +141,14 @@ def _get_time_bins(index, freq, closed, label, base):
                                    start=first,
                                    end=last,
                                    name=index.name)
+    binner = _adjust_bin_edges(binner, freq, closed)
+    # binner, adjusted_bool = _adjust_bin_edges(binner, freq, closed)
 
     if closed == 'right':
+        # if adjusted_bool:
+        #     labels = binner + datetime.timedelta(days=-1, microseconds=1)
+        # else:
+        #     labels = binner
         labels = binner
         if label == 'right':
             labels = labels[1:]
@@ -78,7 +160,68 @@ def _get_time_bins(index, freq, closed, label, base):
         else:
             labels = labels[:-1]
 
+    # if closed == 'right':
+    #     labels = binner
+    #     if label == 'right':
+    #         labels = labels[1:]
+    # elif label == 'right':
+    #     labels = labels[1:]
+    # if len(binner) < len(labels):
+    #     labels = labels[:len(binner)]
+
     return binner, labels
+
+
+def _adjust_bin_edges(datetime_bins, offset, closed):
+    """This is required for determining the bin edges resampling with
+    daily frequencies greater than one day, month end, and year end
+    frequencies.
+
+    Consider the following example.  Let's say you want to downsample the
+    time series with the following coordinates to month end frequency:
+
+    CFTimeIndex([2000-01-01 12:00:00, 2000-01-31 12:00:00, 2000-02-01 12:00:00], dtype='object')
+
+    Without this adjustment, _get_time_bins with month-end frequency will
+    return the following index for the bin edges (default closed='right' and
+    label='right' in this case):
+
+    CFTimeIndex([1999-12-31 00:00:00, 2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
+
+    If 2000-01-31 is used as a bound for a bin, the value on
+    2000-01-31T12:00:00 (at noon on January 31st), will not be included in the
+    month of January.  To account for this, pandas adds a day minus one worth
+    of microseconds to the bin edges generated by cftime range, so that we do
+    bin the value at noon on January 31st in the January bin.  This results in
+    an index with bin edges like the following:
+
+    CFTimeIndex([1999-12-31 23:59:59, 2000-01-31 23:59:59, 2000-02-29 23:59:59], dtype='object')
+
+    The labels are still:
+
+    CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
+
+    This is also required for daily frequencies longer than one day and
+    year-end frequencies.
+    """
+    # adjusted_bool = False
+    is_super_daily = (isinstance(offset, (MonthEnd, YearEnd)) or
+                      (isinstance(offset, Day) and offset.n > 1))
+    if is_super_daily and closed == 'right':
+        # adjusted_bool = True
+        datetime_bins = datetime_bins + datetime.timedelta(days=1,
+                                                           microseconds=-1)
+    return datetime_bins
+
+
+# def _adjust_bin_edges_alt(datetime_bins, offset, closed):
+#     adjusted_bool = False
+#     if not isinstance(offset, Day) and not isinstance(offset, CFTIME_TICKS):
+#         if closed == 'right':
+#             adjusted_bool = True
+#             datetime_bins = datetime_bins + datetime.timedelta(days=1,
+#                                                                microseconds=-1)
+#     return datetime_bins, adjusted_bool
 
 
 def _get_range_edges(first, last, offset, closed='left', base=0):

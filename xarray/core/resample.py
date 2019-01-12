@@ -201,7 +201,7 @@ class DataArrayResample(DataArrayGroupBy, Resample):
         if isinstance(self._obj.indexes[self._dim], CFTimeIndex):
             t = self._obj[self._dim]
             x = datetime_to_numeric(t, datetime_unit='s')
-            x = x.round()
+            # x = x.round()
             # Rounding fixes erroneous microsecond offsets in timedelta
             # (fault of CFTime), but destroys microsecond resolution data
         else:
