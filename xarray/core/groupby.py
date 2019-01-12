@@ -234,49 +234,13 @@ class GroupBy(SupportsArithmetic):
                 # TODO: sort instead of raising an error
                 raise ValueError('index must be monotonic for resampling')
             s = pd.Series(np.arange(index.size), index)
-            # if isinstance(grouper, tuple):
-            #     if grouper[0] == 'downsampling':
-            #         # if we're downsampling CFTimeIndex, do this:
-            #         labels = grouper[1]
-            #         binner = grouper[2]
-            #         first_items = s.groupby(binner).first().reindex(labels)
-            #         # reindex(grouper[1]) adds empty np.nan bins to
-            #         # emulate pandas behavior
-            #     elif grouper[0] == 'upsampling':
-            #         # if we're upsampling CFTimeIndex, do this:
-            #         labels = grouper[1]
-            #         binner = grouper[2]
-            #         closed = grouper[3]
-            #         import datetime
-            #         from xarray import CFTimeIndex
-            #         if closed == 'right':
-            #             binner = CFTimeIndex([x + datetime.timedelta(seconds=1)
-            #                                   for x in binner])
-            #             first_items = s.reindex(pd.Index(binner),
-            #                                     method='bfill')
-            #             if first_items.values[0] != 0:
-            #                 first_items = pd.Series(
-            #                     data=np.concatenate(([0],
-            #                                          first_items.values[:-1])),
-            #                     index=first_items.index)
-            #             first_items.index = labels
-            #         else:
-            #             binner = CFTimeIndex([x - datetime.timedelta(seconds=1)
-            #                                   for x in binner])
-            #             first_items = s.reindex(pd.Index(binner),
-            #                                     method='bfill')
-            #             if first_items.values[0] != 0:
-            #                 first_items = pd.Series(
-            #                     data=np.concatenate(([0],
-            #                                          first_items.values[:-1])),
-            #                     index=first_items.index)
-            #             first_items.index = labels
             from .resample_cftime import CFTimeGrouper
             if isinstance(grouper, CFTimeGrouper):
                 first_items = grouper.first_items(index)
             else:
                 first_items = s.groupby(grouper).first()
             full_index = first_items.index
+            # Commented out due to conflict with CFTimeGrouper
             # if first_items.isnull().any():
             #     first_items = first_items.dropna()
             sbins = first_items.values.astype(np.int64)
