@@ -3,13 +3,13 @@ from numbagg.moving import ewm_nanmean
 from .computation import apply_ufunc
 
 
-def _ewm_nanmean(array, com):
+def _rolling_exp_nanmean(array, com):
     # wrapper b/c of kwarg
     # potentially this fuction should be in numbagg?
     return ewm_nanmean(array, com)
 
 
-class EWM(object):
+class RollingExp(object):
     _attributes = ['com', 'dim']
 
     def __init__(self, obj, spans):
@@ -20,10 +20,10 @@ class EWM(object):
         self.span = span
 
 
-class DataArrayEWM(EWM):
+class DataArrayRollingExp(RollingExp):
     def mean(self):
         return apply_ufunc(
-            _ewm_nanmean,
+            _rolling_exp_nanmean,
             self.obj,
             input_core_dims=[[self.dim]],
             output_core_dims=[[self.dim]],

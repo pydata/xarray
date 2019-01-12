@@ -3879,14 +3879,14 @@ class TestIrisConversion(object):
         assert result == expected
 
 
-def test_ewm(da):
+def test_rolling_exp(da):
     da = da.isel(a=0)
-    result = da.ewm(time=2).mean()
+    result = da.rolling_exp(time=2).mean()
     assert isinstance(result, DataArray)
 
     pandas_array = da.to_pandas()
     assert pandas_array.index.name == 'time'
-    expected = xr.DataArray(pandas_array.ewm(com=2).mean())
+    expected = xr.DataArray(pandas_array.rolling_exp(com=2).mean())
 
     # TODO: fix
     # expected = expected.transpose('x', 'time')

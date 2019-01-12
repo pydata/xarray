@@ -7,17 +7,18 @@ import numpy as np
 import pandas as pd
 
 from . import (
-    computation, dtypes, ewm, groupby, indexing, ops, resample, rolling, utils)
+    computation, dtypes, groupby, indexing, ops, resample, rolling,
+    rolling_exp, utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
 from .common import AbstractArray, DataWithCoords
 from .coordinates import (
-    DataArrayCoordinates, LevelCoordinatesSource,
-    assert_coordinate_consistent, remap_label_indexers)
+    DataArrayCoordinates, LevelCoordinatesSource, assert_coordinate_consistent,
+    remap_label_indexers)
 from .dataset import Dataset, merge_indexes, split_indexes
 from .formatting import format_item
-from .indexes import default_indexes, Indexes
+from .indexes import Indexes, default_indexes
 from .options import OPTIONS
 from .pycompat import OrderedDict, basestring, iteritems, range, zip
 from .utils import (
@@ -161,7 +162,7 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
-    _ewm_cls = ewm.DataArrayEWM
+    _rolling_exp_cls = rolling_exp.DataArrayRollingExp
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 
