@@ -40,6 +40,8 @@ Enhancements
 Bug fixes
 ~~~~~~~~~
 
+- Bug fix for interpolation with an datetime array. (:issue:`2668`)
+  By `Keisuke Fujii <https://github.com/fujiisoup>`_.
 - Interpolating via resample now internally specifies ``bounds_error=False``
   as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
   from higher frequencies to lower frequencies.  Datapoints outside the bounds
