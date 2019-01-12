@@ -86,92 +86,6 @@ def _get_time_bins(index, freq, closed, label, base):
     return datetime_bins, labels
 
 
-def _get_time_bins_old(index, freq, closed, label, base):
-    """Obtain the bins and their respective labels for resampling operations.
-
-    Parameters
-    ----------
-    index : CFTimeIndex
-        Index object to be resampled (e.g., CFTimeIndex named 'time').
-    freq : xarray.coding.cftime_offsets.BaseCFTimeOffset
-        The offset object representing target conversion a.k.a. resampling
-        frequency (e.g., 'MS', '2D', 'H', or '3T' with
-        coding.cftime_offsets.to_offset() applied to it).
-    closed : 'left' or 'right', optional
-        Which side of bin interval is closed.
-        The default is 'left' for all frequency offsets except for 'M' and 'A',
-        which have a default of 'right'.
-    label : 'left' or 'right', optional
-        Which bin edge label to label bucket with.
-        The default is 'left' for all frequency offsets except for 'M' and 'A',
-        which have a default of 'right'.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for '5min' frequency, base could
-        range from 0 through 4. Defaults to 0.
-
-    Returns
-    -------
-    binner : CFTimeIndex
-        Defines the edge of resampling bins by which original index values will
-        be grouped into.
-    labels : CFTimeIndex
-        Define what the user actually sees the bins labeled as.
-    """
-
-    # This portion of code comes from TimeGrouper __init__ #
-    if closed is None:
-        closed = _default_closed_or_label(freq)
-
-    if label is None:
-        label = _default_closed_or_label(freq)
-    # This portion of code comes from TimeGrouper __init__ #
-
-    if not isinstance(index, CFTimeIndex):
-        raise TypeError('index must be a CFTimeIndex, but got '
-                        'an instance of %r' % type(index).__name__)
-    if len(index) == 0:
-        binner = labels = CFTimeIndex(data=[], name=index.name)
-        return binner, [], labels
-
-    first, last = _get_range_edges(index.min(), index.max(), freq,
-                                   closed=closed,
-                                   base=base)
-    binner = labels = cftime_range(freq=freq,
-                                   start=first,
-                                   end=last,
-                                   name=index.name)
-    binner = _adjust_bin_edges(binner, freq, closed)
-    # binner, adjusted_bool = _adjust_bin_edges(binner, freq, closed)
-
-    if closed == 'right':
-        # if adjusted_bool:
-        #     labels = binner + datetime.timedelta(days=-1, microseconds=1)
-        # else:
-        #     labels = binner
-        labels = binner
-        if label == 'right':
-            labels = labels[1:]
-        else:
-            labels = labels[:-1]
-    else:
-        if label == 'right':
-            labels = labels[1:]
-        else:
-            labels = labels[:-1]
-
-    # if closed == 'right':
-    #     labels = binner
-    #     if label == 'right':
-    #         labels = labels[1:]
-    # elif label == 'right':
-    #     labels = labels[1:]
-    # if len(binner) < len(labels):
-    #     labels = labels[:len(binner)]
-
-    return binner, labels
-
-
 def _adjust_bin_edges(datetime_bins, offset, closed):
     """This is required for determining the bin edges resampling with
     daily frequencies greater than one day, month end, and year end
@@ -204,24 +118,12 @@ def _adjust_bin_edges(datetime_bins, offset, closed):
     This is also required for daily frequencies longer than one day and
     year-end frequencies.
     """
-    # adjusted_bool = False
     is_super_daily = (isinstance(offset, (MonthEnd, YearEnd)) or
                       (isinstance(offset, Day) and offset.n > 1))
     if is_super_daily and closed == 'right':
-        # adjusted_bool = True
         datetime_bins = datetime_bins + datetime.timedelta(days=1,
                                                            microseconds=-1)
     return datetime_bins
-
-
-# def _adjust_bin_edges_alt(datetime_bins, offset, closed):
-#     adjusted_bool = False
-#     if not isinstance(offset, Day) and not isinstance(offset, CFTIME_TICKS):
-#         if closed == 'right':
-#             adjusted_bool = True
-#             datetime_bins = datetime_bins + datetime.timedelta(days=1,
-#                                                                microseconds=-1)
-#     return datetime_bins, adjusted_bool
 
 
 def _get_range_edges(first, last, offset, closed='left', base=0):
