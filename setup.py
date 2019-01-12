@@ -38,6 +38,25 @@ LONG_DESCRIPTION = """
 that makes working with labelled multi-dimensional arrays simple,
 efficient, and fun!
 
+Xarray introduces labels in the form of dimensions, coordinates and
+attributes on top of raw NumPy_-like arrays, which allows for a more
+intuitive, more concise, and less error-prone developer experience.
+The package includes a large and growing library of domain-agnostic functions
+for advanced analytics and visualization with these data structures.
+
+Xarray was inspired by and borrows heavily from pandas_, the popular data
+analysis package focused on labelled tabular data.
+It is particularly tailored to working with netCDF_ files, which were the
+source of xarray's data model, and integrates tightly with dask_ for parallel
+computing.
+
+.. _NumPy: http://www.numpy.org/
+.. _pandas: http://pandas.pydata.org
+.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+
+Why xarray?
+-----------
+
 Multi-dimensional (a.k.a. N-dimensional, ND) arrays (sometimes called
 "tensors") are an essential part of computational science.
 They are encountered in a wide range of fields, including physics, astronomy,
@@ -48,25 +67,25 @@ However, real-world datasets are usually more than just raw numbers;
 they have labels which encode information about how the array values map
 to locations in space, time, etc.
 
-By introducing *dimensions*, *coordinates*, and *attributes* on top of raw
-NumPy-like arrays, xarray is able to understand these labels and use them to
-provide a more intuitive, more concise, and less error-prone experience.
-Xarray also provides a large and growing library of functions for advanced
-analytics and visualization with these data structures.
-Xarray was inspired by and borrows heavily from pandas_, the popular data
-analysis package focused on labelled tabular data.
-Xarray can read and write data from most common labeled ND-array storage
-formats and is particularly tailored to working with netCDF_ files, which were
-the source of xarray's data model.
+Xarray doesn't just keep track of labels on arrays -- it uses them to provide a
+powerful and concise interface. For example:
 
-.. _NumPy: http://www.numpy.org/
-.. _pandas: http://pandas.pydata.org
-.. _netCDF: http://www.unidata.ucar.edu/software/netcdf
+-  Apply operations over dimensions by name: ``x.sum('time')``.
+-  Select values by label instead of integer location:
+   ``x.loc['2014-01-01']`` or ``x.sel(time='2014-01-01')``.
+-  Mathematical operations (e.g., ``x - y``) vectorize across multiple
+   dimensions (array broadcasting) based on dimension names, not shape.
+-  Flexible split-apply-combine operations with groupby:
+   ``x.groupby('time.dayofyear').mean()``.
+-  Database like alignment based on coordinate labels that smoothly
+   handles missing values: ``x, y = xr.align(x, y, join='outer')``.
+-  Keep track of arbitrary metadata in the form of a Python dictionary:
+   ``x.attrs``.
 
-Important links
----------------
+Learn more
+----------
 
-- HTML documentation: http://xarray.pydata.org
+- Documentation: http://xarray.pydata.org
 - Issue tracker: http://github.com/pydata/xarray/issues
 - Source code: http://github.com/pydata/xarray
 - SciPy2015 talk: https://www.youtube.com/watch?v=X0pAhJgySxk

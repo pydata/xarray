@@ -772,7 +772,8 @@ class DataArray(AbstractArray, DataWithCoords):
         return self.copy(deep=True)
 
     # mutable objects should not be hashable
-    __hash__ = None
+    # https://github.com/python/mypy/issues/4266
+    __hash__ = None  # type: ignore
 
     @property
     def chunks(self):

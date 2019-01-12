@@ -488,7 +488,7 @@ class NDArrayMixin(NdimSizeLenMixin):
 class ReprObject(object):
     """Object that prints as the given value, for use with sentinel values."""
 
-    def __init__(self, value):  # type: str
+    def __init__(self, value: str):
         self._value = value
 
     def __repr__(self):

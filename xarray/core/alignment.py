@@ -31,7 +31,7 @@ def _get_joiner(join):
         raise ValueError('invalid value for join: %s' % join)
 
 
-_DEFAULT_EXCLUDE = frozenset()
+_DEFAULT_EXCLUDE = frozenset()  # type: frozenset
 
 
 def align(*objects, **kwargs):
