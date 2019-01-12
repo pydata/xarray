@@ -302,16 +302,18 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
 
     if datetime_unit:
         array = array / np.timedelta64(1, datetime_unit)
+
+    if not hasattr(array, 'dtype'):  # scalar is converted to 0d-array
+        array = np.array(array)
+
+    if array.dtype.kind in 'O':
+        # possibly convert object array containing datetime.datetime
+        array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+
     # convert np.NaT to np.nan
-    if hasattr(array, 'dtype'):
-        if array.dtype.kind in 'mM':
-            return np.where(isnull(array), np.nan, array.astype(dtype))
-        else:
-            print(type(array), array.dtype)
-            print(array)
-            return array.astype(dtype)
-    # scalar
-    return array.astype(np.array(dtype))
+    if array.dtype.kind in 'mM':
+        return np.where(isnull(array), np.nan, array.astype(dtype))
+    return array.astype(dtype)
 
 
 def mean(array, axis=None, skipna=None, **kwargs):
