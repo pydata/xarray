@@ -686,31 +686,33 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         dim_coord = self[dim]
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            from ..coding.cftime_offsets import to_offset
-            from .resample_cftime import (_get_time_bins,
-                                          _adjust_binner_for_upsample)
-            offset = to_offset(freq)
-            times = self.indexes[dim_name]
-            binner, labels = _get_time_bins(self.indexes[dim_name],
-                                            offset,
-                                            closed, label, base)
-            if times.size > labels.size:
-                # if we're downsampling CFTimeIndex, do this:
-                if closed == 'right':
-                    fill_method = 'bfill'
-                else:
-                    fill_method = 'ffill'
-                binner = (pd.Series(binner, index=binner)
-                          .reindex(times, method=fill_method))
-                bin_actual = np.unique(binner.values)
-                label_dict = dict(zip(bin_actual, labels.values))
-                # np.unique returns --sorted-- unique values
-                binner = binner.map(label_dict)
-                grouper = ('downsampling', pd.Index(labels), binner)
-            else:
-                # if we're upsampling CFTimeIndex, do this:
-                binner = _adjust_binner_for_upsample(binner, closed)
-                grouper = ('upsampling', pd.Index(labels), binner, closed)
+            # from ..coding.cftime_offsets import to_offset
+            # from .resample_cftime import (_get_time_bins,
+            #                               _adjust_binner_for_upsample)
+            # offset = to_offset(freq)
+            # times = self.indexes[dim_name]
+            # binner, labels = _get_time_bins(self.indexes[dim_name],
+            #                                 offset,
+            #                                 closed, label, base)
+            # if times.size > labels.size:
+            #     # if we're downsampling CFTimeIndex, do this:
+            #     if closed == 'right':
+            #         fill_method = 'bfill'
+            #     else:
+            #         fill_method = 'ffill'
+            #     binner = (pd.Series(binner, index=binner)
+            #               .reindex(times, method=fill_method))
+            #     bin_actual = np.unique(binner.values)
+            #     label_dict = dict(zip(bin_actual, labels.values))
+            #     # np.unique returns --sorted-- unique values
+            #     binner = binner.map(label_dict)
+            #     grouper = ('downsampling', pd.Index(labels), binner)
+            # else:
+            #     # if we're upsampling CFTimeIndex, do this:
+            #     binner = _adjust_binner_for_upsample(binner, closed)
+            #     grouper = ('upsampling', pd.Index(labels), binner, closed)
+            from .resample_cftime import CFTimeGrouper
+            grouper = CFTimeGrouper(freq, closed, label, base)
         else:
             grouper = pd.Grouper(freq=freq, closed=closed, label=label,
                                  base=base)

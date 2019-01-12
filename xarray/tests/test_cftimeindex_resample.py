@@ -88,6 +88,8 @@ def test_downsampler(closed, label, freq, pd_index, xr_index):
     downsamp_cftime = da(xr_index).resample(
         time=freq, closed=closed, label=label).mean()
     downsamp_cftime['time'] = downsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(downsamp_pdtime['time'].values, downsamp_cftime['time'].values)
+    np.testing.assert_equal(downsamp_pdtime.values, downsamp_cftime.values)
     assert_equal(downsamp_pdtime, downsamp_cftime)
 
 
@@ -104,6 +106,8 @@ def test_downsampler_daily(closed, label, freq, daily_pd_index, daily_xr_index):
     downsamp_cftime = da(daily_xr_index).resample(
         time=freq, closed=closed, label=label).mean()
     downsamp_cftime['time'] = downsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(downsamp_pdtime['time'].values, downsamp_cftime['time'].values)
+    np.testing.assert_equal(downsamp_pdtime.values, downsamp_cftime.values)
     assert_equal(downsamp_pdtime, downsamp_cftime)
 
 
@@ -119,6 +123,8 @@ def test_upsampler(closed, label, freq, pd_index, xr_index):
     upsamp_cftime = da(xr_index).resample(
         time=freq, closed=closed, label=label).mean()
     upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
+    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
     assert_equal(upsamp_pdtime, upsamp_cftime)
 
 
@@ -133,6 +139,8 @@ def test_upsampler_3ms(closed, label, freq, pd_3ms_index, xr_3ms_index):
     upsamp_cftime = da(xr_3ms_index).resample(
         time=freq, closed=closed, label=label).mean()
     upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
+    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
     assert_equal(upsamp_pdtime, upsamp_cftime)
 
 
@@ -147,6 +155,8 @@ def test_upsampler_3d(closed, label, freq, pd_3d_index, xr_3d_index):
     upsamp_cftime = da(xr_3d_index).resample(
         time=freq, closed=closed, label=label).mean()
     upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
+    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
     assert_equal(upsamp_pdtime, upsamp_cftime)
 
 
@@ -161,4 +171,6 @@ def test_upsampler_base(closed, label, base, freq,
     upsamp_cftime = da(base_xr_index).resample(
         time=freq, closed=closed, label=label).mean()
     upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
+    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
+    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
     assert_equal(upsamp_pdtime, upsamp_cftime)
