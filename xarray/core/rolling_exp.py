@@ -22,10 +22,11 @@ class RollingExp(object):
 
 class DataArrayRollingExp(RollingExp):
     def mean(self):
-        return apply_ufunc(
+        da = apply_ufunc(
             _rolling_exp_nanmean,
             self.obj,
             input_core_dims=[[self.dim]],
             output_core_dims=[[self.dim]],
             kwargs=dict(com=self.span),
         )
+        return da.transpose(*self.obj.dims)

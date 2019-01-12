@@ -3879,16 +3879,19 @@ class TestIrisConversion(object):
         assert result == expected
 
 
-def test_rolling_exp(da):
+@pytest.mark.parametrize('dim', ['time', 'x'])
+def test_rolling_exp(da, dim):
     da = da.isel(a=0)
-    result = da.rolling_exp(time=2).mean()
+    result = da.rolling_exp(**{dim: 2}).mean()
     assert isinstance(result, DataArray)
 
     pandas_array = da.to_pandas()
     assert pandas_array.index.name == 'time'
-    expected = xr.DataArray(pandas_array.rolling_exp(com=2).mean())
+    if dim == 'x':
+        pandas_array = pandas_array.T
+    expected = (
+        xr.DataArray(pandas_array.ewm(com=2).mean())
+        .transpose(*da.dims)
+    )
 
-    # TODO: fix
-    # expected = expected.transpose('x', 'time')
-
-    assert_equal(expected, result)
+    assert_equal(expected.variable, result.variable)
