@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from distutils import version
 import re
 import importlib
-from unittest import mock
+from unittest import mock  # noqa
 
 import numpy as np
 from numpy.testing import assert_array_equal  # noqa: F401
@@ -76,6 +76,7 @@ has_zarr, requires_zarr = _importorskip('zarr', minversion='2.2')
 has_np113, requires_np113 = _importorskip('numpy', minversion='1.13.0')
 has_iris, requires_iris = _importorskip('iris')
 has_cfgrib, requires_cfgrib = _importorskip('cfgrib')
+has_numbagg, requires_numbagg = _importorskip('numbagg')
 
 # some special cases
 has_scipy_or_netCDF4 = has_scipy or has_netCDF4

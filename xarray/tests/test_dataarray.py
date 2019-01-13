@@ -21,7 +21,7 @@ from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
     requires_cftime, requires_dask, requires_iris, requires_np113,
-    requires_scipy, source_ndarray)
+    requires_scipy, source_ndarray, requires_numbagg)
 
 
 class TestDataArray(object):
@@ -3879,10 +3879,18 @@ class TestIrisConversion(object):
         assert result == expected
 
 
+@requires_numbagg
 @pytest.mark.parametrize('dim', ['time', 'x'])
-def test_rolling_exp(da, dim):
+@pytest.mark.parametrize('window_type, window', [
+    ['span', 5],
+    ['alpha', 0.5],
+    ['com', 0.5],
+    ['halflife', 5],
+])
+def test_rolling_exp(da, dim, window_type, window):
     da = da.isel(a=0)
-    result = da.rolling_exp(**{dim: 2}).mean()
+    # da = da.where(da > 0.1)
+    result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
 
     pandas_array = da.to_pandas()
@@ -3890,8 +3898,8 @@ def test_rolling_exp(da, dim):
     if dim == 'x':
         pandas_array = pandas_array.T
     expected = (
-        xr.DataArray(pandas_array.ewm(com=2).mean())
+        xr.DataArray(pandas_array.ewm(**{window_type: window}).mean())
         .transpose(*da.dims)
     )
 
-    assert_equal(expected.variable, result.variable)
+    assert_allclose(expected.variable, result.variable)

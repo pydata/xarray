@@ -590,11 +590,11 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         return self._rolling_cls(self, dim, min_periods=min_periods,
                                  center=center)
 
-    def rolling_exp(self, dim=None, **dim_kwargs):
+    def rolling_exp(self, dim=None, window_type='span', **dim_kwargs):
 
         dim = either_dict_or_kwargs(dim, dim_kwargs, 'rolling_exp')
 
-        return self._rolling_exp_cls(self, dim)
+        return self._rolling_exp_cls(self, dim, window_type)
 
     def coarsen(self, dim=None, boundary='exact', side='left',
                 coord_func='mean', **dim_kwargs):
