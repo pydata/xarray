@@ -604,12 +604,14 @@ def test_datetime_to_numeric_cftime():
     assert_identical(result, expected)
 
     offset = da.isel(time=1)
-    result = duck_array_ops.datetime_to_numeric(da, offset=offset, datetime_unit='h')
+    result = duck_array_ops.datetime_to_numeric(
+        da, offset=offset, datetime_unit='h')
     expected = 24 * DataArray(np.arange(-7, 28, 7), coords=da.coords)
     assert_identical(result, expected)
 
     dtype = np.float32
-    result = duck_array_ops.datetime_to_numeric(da, datetime_unit='h', dtype=dtype)
+    result = duck_array_ops.datetime_to_numeric(
+        da, datetime_unit='h', dtype=dtype)
     expected = 24 * DataArray(
         np.arange(0, 35, 7), coords=da.coords).astype(dtype)
     assert_identical(result, expected)
