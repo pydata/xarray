@@ -622,7 +622,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         Coarsen the long time series by averaging over every four days.
 
         >>> da = xr.DataArray(np.linspace(0, 364, num=364),
-        ...                   dims='time',
+        ...                   dim='time',
         ...                   coords={'time': pd.date_range(
         ...                       '15/12/1999', periods=364)})
         >>> da
