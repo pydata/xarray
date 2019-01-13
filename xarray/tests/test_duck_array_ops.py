@@ -575,43 +575,39 @@ def test_docs():
 
 
 def test_datetime_to_numeric_datetime64():
-    times = pd.date_range('2000', periods=5, freq='7D')
-    da = DataArray(times, coords=[times], dims=['time'])
-    result = duck_array_ops.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
+    times = pd.date_range('2000', periods=5, freq='7D').values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit='h')
+    expected = 24 * np.arange(0, 35, 7)
+    np.testing.assert_array_equal(result, expected)
 
-    offset = da.isel(time=1)
+    offset = times[1]
     result = duck_array_ops.datetime_to_numeric(
-        da, offset=offset, datetime_unit='h')
-    expected = 24 * DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
+        times, offset=offset, datetime_unit='h')
+    expected = 24 * np.arange(-7, 28, 7)
+    np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
     result = duck_array_ops.datetime_to_numeric(
-        da, datetime_unit='h', dtype=dtype)
-    expected = 24 * DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)
+        times, datetime_unit='h', dtype=dtype)
+    expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)
 
 
 @requires_cftime
 def test_datetime_to_numeric_cftime():
-    times = cftime_range('2000', periods=5, freq='7D')
-    da = DataArray(times, coords=[times], dims=['time'])
-    result = duck_array_ops.datetime_to_numeric(da, datetime_unit='h')
-    expected = 24 * DataArray(np.arange(0, 35, 7), coords=da.coords)
-    assert_identical(result, expected)
+    times = cftime_range('2000', periods=5, freq='7D').values
+    result = duck_array_ops.datetime_to_numeric(times, datetime_unit='h')
+    expected = 24 * np.arange(0, 35, 7)
+    np.testing.assert_array_equal(result, expected)
 
-    offset = da.isel(time=1)
+    offset = times[1]
     result = duck_array_ops.datetime_to_numeric(
-        da, offset=offset, datetime_unit='h')
-    expected = 24 * DataArray(np.arange(-7, 28, 7), coords=da.coords)
-    assert_identical(result, expected)
+        times, offset=offset, datetime_unit='h')
+    expected = 24 * np.arange(-7, 28, 7)
+    np.testing.assert_array_equal(result, expected)
 
     dtype = np.float32
     result = duck_array_ops.datetime_to_numeric(
-        da, datetime_unit='h', dtype=dtype)
-    expected = 24 * DataArray(
-        np.arange(0, 35, 7), coords=da.coords).astype(dtype)
-    assert_identical(result, expected)
+        times, datetime_unit='h', dtype=dtype)
+    expected = 24 * np.arange(0, 35, 7).astype(dtype)
+    np.testing.assert_array_equal(result, expected)

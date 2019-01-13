@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils, utils
+from . import dask_array_ops, dtypes, npcompat, nputils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -300,15 +300,15 @@ def datetime_to_numeric(array, offset=None, datetime_unit=None, dtype=float):
         offset = array.min()
     array = array - offset
 
-    if datetime_unit:
-        array = array / np.timedelta64(1, datetime_unit)
-
     if not hasattr(array, 'dtype'):  # scalar is converted to 0d-array
         array = np.array(array)
 
     if array.dtype.kind in 'O':
-        # possibly convert object array containing datetime.datetime
+        # possibly convert object array containing datetime.timedelta
         array = np.asarray(pd.Series(array.ravel())).reshape(array.shape)
+
+    if datetime_unit:
+        array = array / np.timedelta64(1, datetime_unit)
 
     # convert np.NaT to np.nan
     if array.dtype.kind in 'mM':
