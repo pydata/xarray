@@ -415,10 +415,8 @@ def _floatize_x(x, new_x):
             # offset (min(x)) and the variation (x - min(x)) can be
             # represented by float.
             xmin = x[i].values.min()
-            x[i] = Variable(x[i].dims, datetime_to_numeric(
-                x[i].values, offset=xmin, dtype=np.float64))
-            new_x[i] = Variable(new_x[i].dims, datetime_to_numeric(
-                new_x[i].values, offset=xmin, dtype=np.float64))
+            x[i] = x[i]._to_numeric(offset=xmin, dtype=np.float64)
+            new_x[i] = new_x[i]._to_numeric(offset=xmin, dtype=np.float64)
     return x, new_x
 
 
