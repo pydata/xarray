@@ -5,11 +5,11 @@ from .computation import apply_ufunc
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
-    # pandas defines in terms of comass, so use its function
-    # but then convert to alpha
+    # pandas defines in terms of com (converting to alpha in the algo)
+    # so use its function to get a com and then convert to alpha
 
-    comass = _get_center_of_mass(com, span, halflife, alpha)
-    return 1 / (1 + comass)
+    com = _get_center_of_mass(com, span, halflife, alpha)
+    return 1 / (1 + com)
 
 
 class RollingExp(object):
