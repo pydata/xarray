@@ -16,7 +16,7 @@ import xarray as xr
 from xarray import (
     ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
     backends, broadcast, open_dataset, set_options)
-from xarray.core import dtypes, indexing, npcompat, utils
+from xarray.core import dtypes, duck_array_ops, indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
@@ -4654,7 +4654,7 @@ def test_differentiate_datetime(dask):
     actual = da.differentiate('x', edge_order=1, datetime_unit='D')
     expected_x = xr.DataArray(
         npcompat.gradient(
-            da, utils.datetime_to_numeric(da['x'], datetime_unit='D'),
+            da, duck_array_ops.datetime_to_numeric(da['x'], datetime_unit='D'),
             axis=0, edge_order=1), dims=da.dims, coords=da.coords)
     assert_equal(expected_x, actual)
 
@@ -4688,7 +4688,7 @@ def test_differentiate_cftime(dask):
 
     actual = da.differentiate('time', edge_order=1, datetime_unit='D')
     expected_data = npcompat.gradient(
-        da, utils.datetime_to_numeric(da['time'], datetime_unit='D'),
+        da, duck_array_ops.datetime_to_numeric(da['time'], datetime_unit='D'),
         axis=0, edge_order=1)
     expected = xr.DataArray(expected_data, coords=da.coords, dims=da.dims)
     assert_equal(expected, actual)
