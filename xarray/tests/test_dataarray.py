@@ -21,7 +21,7 @@ from xarray.tests import (
     LooseVersion, ReturnItem, assert_allclose, assert_array_equal,
     assert_equal, assert_identical, raises_regex, requires_bottleneck,
     requires_cftime, requires_dask, requires_iris, requires_np113,
-    requires_scipy, source_ndarray, requires_numbagg)
+    requires_numbagg, requires_scipy, source_ndarray)
 
 
 class TestDataArray(object):
@@ -3889,7 +3889,8 @@ class TestIrisConversion(object):
 ])
 def test_rolling_exp(da, dim, window_type, window):
     da = da.isel(a=0)
-    # da = da.where(da > 0.1)
+    da = da.where(da > 0.2)
+
     result = da.rolling_exp(window_type=window_type, **{dim: window}).mean()
     assert isinstance(result, DataArray)
 
