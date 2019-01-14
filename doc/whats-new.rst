@@ -48,6 +48,10 @@ Bug fixes
 - Saving files with times encoded with reference dates with timezones
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Subtracting a scalar ``cftime.datetime`` object from a
+  :py:class:`CFTimeIndex` now results in a :py:class:`pandas.TimedeltaIndex`
+  instead of raising a ``TypeError`` (:issue:`2671`).  By `Spencer Clark
+  <https://github.com/spencerkclark>`_.
 
 .. _whats-new.0.11.2:
 
