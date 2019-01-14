@@ -5,10 +5,10 @@ import functools
 import numpy as np
 
 from ..core.alignment import broadcast
-from .facetgrid import FacetGrid
+from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params, _ensure_numeric,
-    _valid_other_type, get_axis, label_from_attrs)
+    _add_colorbar, _determine_cmap_params,
+    _ensure_numeric, _valid_other_type, get_axis, label_from_attrs)
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
@@ -77,32 +77,6 @@ def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
             'xlabel': label_from_attrs(ds[x]),
             'ylabel': label_from_attrs(ds[y]),
             'hue_values': hue_values}
-
-
-def _easy_facetgrid(ds, plotfunc, x, y, row=None, col=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
-
-    kwargs are the arguments to 2d plotting method
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
-
-    g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-
-    return g.map_dataset(plotfunc, x, y, **kwargs)
 
 
 def _infer_scatter_data(ds, x, y, hue):
@@ -231,18 +205,17 @@ def _dsplot(plotfunc):
         if col or row:
             allargs = locals().copy()
             allargs['plotfunc'] = globals()[plotfunc.__name__]
-
+            allargs['data'] = ds
             # TODO dcherian: why do I need to remove kwargs?
-            for arg in ['meta_data', 'kwargs']:
+            for arg in ['meta_data', 'kwargs', 'ds']:
                 del allargs[arg]
 
-            return _easy_facetgrid(**allargs)
+            return _easy_facetgrid(kind='dataset', **allargs)
 
         figsize = kwargs.pop('figsize', None)
-        ax = kwargs.pop('ax', None)
         ax = get_axis(figsize, size, aspect, ax)
-
-        kwargs = kwargs.copy()
+        # TODO dcherian: _meta_data should not be needed
+        # I'm trying to avoid calling _determine_cmap_params multiple times
         _meta_data = kwargs.pop('_meta_data', None)
 
         if hue_style == 'continuous' and hue is not None:
@@ -271,8 +244,10 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
-        primitive = plotfunc(ax, ds, x, y, hue, hue_style,
-                             cmap_params=cmap_params_subset, **kwargs)
+        # TODO dcherian: hue, hue_style shouldn't be needed for all methods
+        # update signatures
+        primitive = plotfunc(ds=ds, x=x, y=y, hue=hue, hue_style=hue_style,
+                             ax=ax, cmap_params=cmap_params_subset, **kwargs)
 
         if _meta_data:  # if this was called from Facetgrid.map_dataset,
             return primitive        # finish here. Else, make labels
@@ -325,9 +300,8 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ax, ds, x, y, hue, hue_style, **kwargs):
+def scatter(ds, x, y, hue, hue_style, ax, **kwargs):
     """ Scatter Dataset data variables against each other. """
-
     cmap_params = kwargs.pop('cmap_params')
 
     if hue_style == 'discrete':

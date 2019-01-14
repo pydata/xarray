@@ -341,7 +341,8 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                maybe_mappable = func(subset, x=x, y=y, hue=hue,
+                maybe_mappable = func(ds=subset, x=x, y=y,
+                                      hue=hue, hue_style=hue_style,
                                       ax=ax, **kwargs)
                 # TODO: this is needed to get legends to work.
                 # but maybe_mappable is a list in that case :/
@@ -597,4 +598,5 @@ def _easy_facetgrid(data, plotfunc, x=None, y=None, kind=None, row=None, col=Non
         return g.map_dataarray(plotfunc, x, y, **kwargs)
     elif kind == 'array line':
         return g.map_dataarray_line(hue=kwargs.pop('hue'), **kwargs)
+    elif kind == 'dataset':
         return g.map_dataset(plotfunc, x, y, **kwargs)
