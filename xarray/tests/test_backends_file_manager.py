@@ -1,17 +1,13 @@
 import gc
 import pickle
 import threading
+from unittest import mock
 
 import pytest
 
 from xarray.backends.file_manager import CachingFileManager
 from xarray.backends.lru_cache import LRUCache
 from xarray.core.options import set_options
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
 
 
 @pytest.fixture(params=[1, 2, 3, None])
