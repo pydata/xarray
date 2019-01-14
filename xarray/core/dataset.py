@@ -24,7 +24,6 @@ from .common import (
 from .coordinates import (
     DatasetCoordinates, LevelCoordinatesSource,
     assert_coordinate_consistent, remap_label_indexers)
-from .duck_array_ops import datetime_to_numeric
 from .indexes import Indexes, default_indexes
 from .merge import (
     dataset_merge_method, dataset_update_method, merge_data_and_coords,
@@ -3854,15 +3853,14 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
                 datetime_unit, _ = np.datetime_data(coord_var.dtype)
             elif datetime_unit is None:
                 datetime_unit = 's'  # Default to seconds for cftime objects
-            coord_var = datetime_to_numeric(
-                coord_var, datetime_unit=datetime_unit)
+            coord_var = coord_var._to_numeric(datetime_unit=datetime_unit)
 
         variables = OrderedDict()
         for k, v in self.variables.items():
             if (k in self.data_vars and dim in v.dims and
                     k not in self.coords):
                 if _contains_datetime_like_objects(v):
-                    v = datetime_to_numeric(v, datetime_unit=datetime_unit)
+                    v = v._to_numeric(datetime_unit=datetime_unit)
                 grad = duck_array_ops.gradient(
                     v.data, coord_var, edge_order=edge_order,
                     axis=v.get_axis_num(dim))
