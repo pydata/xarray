@@ -18,12 +18,11 @@ from xarray.core.pycompat import basestring
 
 from .facetgrid import FacetGrid, _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params,
-    _ensure_plottable, _infer_interval_breaks, _infer_line_data,
-    _infer_xy_labels, _interval_to_double_bound_points,
-    _interval_to_mid_points, _is_monotonic, _rescale_imshow_rgb,
-    _resolve_intervals_2dplot, _update_axes, _valid_other_type,
-    get_axis, import_matplotlib_pyplot, label_from_attrs)
+    _add_colorbar, _determine_cmap_params, _ensure_plottable,
+    _infer_interval_breaks, _infer_line_data, _infer_xy_labels,
+    _interval_to_double_bound_points, _interval_to_mid_points, _is_monotonic,
+    _rescale_imshow_rgb, _resolve_intervals_2dplot, _update_axes,
+    _valid_other_type, get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
