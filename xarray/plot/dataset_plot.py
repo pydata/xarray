@@ -11,8 +11,8 @@ from .utils import (
     _valid_other_type, get_axis, label_from_attrs)
 
 
-def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
-                             add_legend):
+def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
+                     add_legend):
     dvars = set(ds.data_vars.keys())
     error_msg = (' must be either one of ({0:s})'
                  .format(', '.join(dvars)))
@@ -79,6 +79,32 @@ def _infer_scatter_meta_data(ds, x, y, hue, hue_style, add_colorbar,
             'hue_values': hue_values}
 
 
+def _easy_facetgrid(ds, plotfunc, x, y, row=None, col=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=None,
+                    size=None, subplot_kws=None, **kwargs):
+    """
+    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+
+    kwargs are the arguments to 2d plotting method
+    """
+    ax = kwargs.pop('ax', None)
+    figsize = kwargs.pop('figsize', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
+
+    g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+
+    return g.map_dataset(plotfunc, x, y, **kwargs)
+
+
 def _infer_scatter_data(ds, x, y, hue):
 
     data = {'x': ds[x].values.flatten(),
@@ -90,15 +116,22 @@ def _infer_scatter_data(ds, x, y, hue):
     return data
 
 
-def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
-            col_wrap=None, sharex=True, sharey=True, aspect=None,
-            size=None, subplot_kws=None, add_colorbar=None, cbar_kwargs=None,
-            add_legend=None, cbar_ax=None, vmin=None, vmax=None,
-            norm=None, infer_intervals=None, center=None, levels=None,
-            robust=None, colors=None, extend=None, cmap=None, **kwargs):
-    '''
-    Scatter Dataset variables against each other.
+class _Dataset_PlotMethods(object):
+    """
+    Enables use of xarray.plot functions as attributes on a Dataset.
+    For example, Dataset.plot.scatter
+    """
 
+    def __init__(self, dataset):
+        self._ds = dataset
+
+    def __call__(self, *args, **kwargs):
+        raise ValueError('Dataset.plot cannot be called directly. Use '
+                         'an explicit plot method, e.g. ds.plot.scatter(...)')
+
+
+def _dsplot(plotfunc):
+    commondoc = """
     Input
     -----
 
@@ -169,54 +202,50 @@ def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
         setting ``levels=np.linspace(vmin, vmax, N)``.
     **kwargs : optional
         Additional keyword arguments to matplotlib
-    '''
+    """
 
-    if kwargs.get('_meta_data', None):  # facetgrid call
-        meta_data = kwargs['_meta_data']
-    else:
-        meta_data = _infer_scatter_meta_data(ds, x, y, hue, hue_style,
-                                             add_colorbar, add_legend)
+    # Build on the original docstring
+    plotfunc.__doc__ = '%s\n%s' % (plotfunc.__doc__, commondoc)
 
-    hue_style = meta_data['hue_style']
-    add_legend = meta_data['add_legend']
-    add_colorbar = meta_data['add_colorbar']
+    @functools.wraps(plotfunc)
+    def newplotfunc(ds, x=None, y=None, hue=None, hue_style=None,
+                    col=None, row=None, ax=None, figsize=None, size=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=None,
+                    subplot_kws=None, add_colorbar=None, cbar_kwargs=None,
+                    add_legend=None, cbar_ax=None, vmin=None, vmax=None,
+                    norm=None, infer_intervals=None, center=None, levels=None,
+                    robust=None, colors=None, extend=None, cmap=None,
+                    **kwargs):
 
-    if col or row:
-        ax = kwargs.pop('ax', None)
+        if kwargs.get('_meta_data', None):  # facetgrid call
+            meta_data = kwargs['_meta_data']
+        else:
+            meta_data = _infer_meta_data(ds, x, y, hue, hue_style,
+                                         add_colorbar, add_legend)
+
+        hue_style = meta_data['hue_style']
+        add_legend = meta_data['add_legend']
+        add_colorbar = meta_data['add_colorbar']
+
+        # handle facetgrids first
+        if col or row:
+            allargs = locals().copy()
+            allargs['plotfunc'] = globals()[plotfunc.__name__]
+
+            # TODO dcherian: why do I need to remove kwargs?
+            for arg in ['meta_data', 'kwargs']:
+                del allargs[arg]
+
+            return _easy_facetgrid(**allargs)
+
         figsize = kwargs.pop('figsize', None)
-        if ax is not None:
-            raise ValueError("Can't use axes when making faceted plots.")
-        if aspect is None:
-            aspect = 1
-        if size is None:
-            size = 3
-        elif figsize is not None:
-            raise ValueError('Cannot provide both `figsize` and '
-                             '`size` arguments')
+        ax = kwargs.pop('ax', None)
+        ax = get_axis(figsize, size, aspect, ax)
 
-        g = FacetGrid(data=ds, col=col, row=row, col_wrap=col_wrap,
-                      sharex=sharex, sharey=sharey, figsize=figsize,
-                      aspect=aspect, size=size, subplot_kws=subplot_kws)
-        return g.map_scatter(x=x, y=y, hue=hue, hue_style=hue_style,
-                             add_colorbar=add_colorbar,
-                             add_legend=add_legend, **kwargs)
+        kwargs = kwargs.copy()
+        _meta_data = kwargs.pop('_meta_data', None)
 
-    figsize = kwargs.pop('figsize', None)
-    ax = kwargs.pop('ax', None)
-    ax = get_axis(figsize, size, aspect, ax)
-
-    kwargs = kwargs.copy()
-    _meta_data = kwargs.pop('_meta_data', None)
-
-    if hue_style == 'discrete':
-        primitive = []
-        for label, grp in ds.groupby(ds[hue]):
-            data = _infer_scatter_data(grp, x, y, hue=None)
-            primitive.append(ax.scatter(data['x'], data['y'], label=label,
-                                        **kwargs))
-    elif hue is None or hue_style == 'continuous':
-        data = _infer_scatter_data(ds, x, y, hue)
-        if hue is not None:
+        if hue_style == 'continuous' and hue is not None:
             if _meta_data:
                 cbar_kwargs = _meta_data['cbar_kwargs']
                 cmap_params = _meta_data['cmap_params']
@@ -231,51 +260,90 @@ def scatter(ds, x, y, hue=None, hue_style=None, col=None, row=None,
                                'levels': levels,
                                'filled': None,
                                'norm': norm}
+
                 cmap_params = _determine_cmap_params(**cmap_kwargs)
 
-            cmap_kwargs_subset = dict(
+            # subset that can be passed to scatter, hist2d
+            cmap_params_subset = dict(
                 (vv, cmap_params[vv])
                 for vv in ['vmin', 'vmax', 'norm', 'cmap'])
+
         else:
-            cmap_kwargs_subset = {}
+            cmap_params_subset = {}
+
+        primitive = plotfunc(ax, ds, x, y, hue, hue_style,
+                             cmap_params=cmap_params_subset, **kwargs)
+
+        if _meta_data:  # if this was called from Facetgrid.map_dataset,
+            return primitive        # finish here. Else, make labels
+
+        if meta_data.get('xlabel', None):
+            ax.set_xlabel(meta_data.get('xlabel'))
+        if meta_data.get('ylabel', None):
+            ax.set_ylabel(meta_data.get('ylabel'))
+
+        if add_legend:
+            ax.legend(handles=primitive,
+                      labels=list(meta_data['hue_values'].values),
+                      title=meta_data.get('hue_label', None))
+        if add_colorbar:
+            cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
+            if 'label' not in cbar_kwargs:
+                cbar_kwargs['label'] = meta_data.get('hue_label', None)
+            _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+
+        return primitive
+
+    @functools.wraps(newplotfunc)
+    def plotmethod(_PlotMethods_obj, x=None, y=None, hue=None,
+                   hue_style=None, col=None, row=None, ax=None,
+                   figsize=None,
+                   col_wrap=None, sharex=True, sharey=True, aspect=None,
+                   size=None, subplot_kws=None, add_colorbar=None,
+                   cbar_kwargs=None,
+                   add_legend=None, cbar_ax=None, vmin=None, vmax=None,
+                   norm=None, infer_intervals=None, center=None, levels=None,
+                   robust=None, colors=None, extend=None, cmap=None,
+                   **kwargs):
+        """
+        The method should have the same signature as the function.
+
+        This just makes the method work on Plotmethods objects,
+        and passes all the other arguments straight through.
+        """
+        allargs = locals()
+        allargs['ds'] = _PlotMethods_obj._ds
+        allargs.update(kwargs)
+        for arg in ['_PlotMethods_obj', 'newplotfunc', 'kwargs']:
+            del allargs[arg]
+        return newplotfunc(**allargs)
+
+    # Add to class _PlotMethods
+    setattr(_Dataset_PlotMethods, plotmethod.__name__, plotmethod)
+
+    return newplotfunc
+
+
+@_dsplot
+def scatter(ax, ds, x, y, hue, hue_style, **kwargs):
+    """ Scatter Dataset data variables against each other. """
+
+    cmap_params = kwargs.pop('cmap_params')
+
+    if hue_style == 'discrete':
+        primitive = []
+        for label, grp in ds.groupby(ds[hue]):
+            data = _infer_scatter_data(grp, x, y, hue=None)
+            primitive.append(ax.scatter(data['x'], data['y'], label=label,
+                                        **kwargs))
+
+    elif hue is None or hue_style == 'continuous':
+        data = _infer_scatter_data(ds, x, y, hue)
 
         primitive = ax.scatter(data['x'], data['y'], c=data['color'],
-                               **cmap_kwargs_subset, **kwargs)
-
-    if _meta_data:  # if this was called from map_scatter,
-        return primitive        # finish here. Else, make labels
-
-    if meta_data.get('xlabel', None):
-        ax.set_xlabel(meta_data.get('xlabel'))
-    if meta_data.get('ylabel', None):
-        ax.set_ylabel(meta_data.get('ylabel'))
-
-    if add_legend:
-        ax.legend(handles=primitive,
-                  labels=list(meta_data['hue_values'].values),
-                  title=meta_data.get('hue_label', None))
-    if add_colorbar:
-        cbar_kwargs = {} if cbar_kwargs is None else cbar_kwargs
-        if 'label' not in cbar_kwargs:
-            cbar_kwargs['label'] = meta_data.get('hue_label', None)
-        _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs, cmap_params)
+                               **cmap_params, **kwargs)
 
     return primitive
 
 
-class _Dataset_PlotMethods(object):
-    """
-    Enables use of xarray.plot functions as attributes on a Dataset.
-    For example, Dataset.plot.scatter
-    """
-
-    def __init__(self, dataset):
-        self._ds = dataset
-
-    def __call__(self, *args, **kwargs):
-        raise ValueError('Dataset.plot cannot be called directly. Use '
-                         'an explicit plot method, e.g. ds.plot.scatter(...)')
-
-    @functools.wraps(scatter)
-    def scatter(self, *args, **kwargs):
-        return scatter(self._ds, *args, **kwargs)
+    return primitive

@@ -12,7 +12,6 @@ import xarray.plot as xplt
 from xarray import DataArray, Dataset
 from xarray.coding.times import _import_cftime
 from xarray.plot.plot import _infer_interval_breaks
-from xarray.plot.dataset_plot import _infer_scatter_meta_data
 from xarray.plot.utils import (
     _build_discrete_cmap, _color_palette, _determine_cmap_params,
     import_seaborn, label_from_attrs)
