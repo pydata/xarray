@@ -273,7 +273,7 @@ class _Dataset_PlotMethods(object):
         self._ds = dataset
 
     def __call__(self, *args, **kwargs):
-        raise ValueError('Dataset.plot cannot be called directly. Use'
+        raise ValueError('Dataset.plot cannot be called directly. Use '
                          'an explicit plot method, e.g. ds.plot.scatter(...)')
 
     @functools.wraps(scatter)

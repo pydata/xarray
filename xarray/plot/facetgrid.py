@@ -320,7 +320,7 @@ class FacetGrid(object):
 
         return self
 
-    def map_scatter(self, x=None, y=None, hue=None, hue_style=None,
+    def map_dataset(self, func, x=None, y=None, hue=None, hue_style=None,
                     add_colorbar=None, add_legend=None, **kwargs):
         from .dataset_plot import _infer_scatter_meta_data, scatter
 
@@ -341,8 +341,8 @@ class FacetGrid(object):
             # None is the sentinel value
             if d is not None:
                 subset = self.data.loc[d]
-                maybe_mappable = scatter(subset, x=x, y=y, hue=hue,
-                                         ax=ax, **kwargs)
+                maybe_mappable = func(subset, x=x, y=y, hue=hue,
+                                      ax=ax, **kwargs)
                 # TODO: this is needed to get legends to work.
                 # but maybe_mappable is a list in that case :/
                 self._mappables.append(maybe_mappable)
