@@ -16,56 +16,14 @@ import pandas as pd
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
-from .facetgrid import FacetGrid
+from .facetgrid import FacetGrid, _easy_facetgrid
 from .utils import (
-
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
-
-    kwargs are the arguments to 2d plotting method
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
-
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray(plotfunc, x, y, **kwargs)
-
-
-def _line_facetgrid(darray, row=None, col=None, hue=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid for line plots
-    kwargs are the arguments to pyplot.plot()
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
-
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray_line(hue=hue, **kwargs)
+    _add_colorbar, _determine_cmap_params,
+    _ensure_plottable, _infer_interval_breaks, _infer_line_data,
+    _infer_xy_labels, _interval_to_double_bound_points,
+    _interval_to_mid_points, _is_monotonic, _rescale_imshow_rgb,
+    _resolve_intervals_2dplot, _update_axes, _valid_other_type,
+    get_axis, import_matplotlib_pyplot, label_from_attrs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -208,7 +166,8 @@ def line(darray, *args, **kwargs):
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
-        return _line_facetgrid(**allargs)
+        allargs.pop('darray')
+        return _easy_facetgrid(darray, line, **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -557,11 +516,10 @@ def _plot2d(plotfunc):
             allargs = locals().copy()
             allargs.pop('imshow_rgb')
             allargs.update(allargs.pop('kwargs'))
-
+            allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
-
-            return _easy_facetgrid(**allargs)
+            return _easy_facetgrid(darray, **allargs)
 
         plt = import_matplotlib_pyplot()
 
