@@ -710,7 +710,7 @@ def test_cftimeindex_sub_cftime_datetime(calendar):
     expected = pd.TimedeltaIndex([timedelta(days=i) for i in range(5)])
     assert result.equals(expected)
     assert isinstance(result, pd.TimedeltaIndex)
-    
+
 
 @pytest.mark.skipif(not has_cftime, reason='cftime not installed')
 @pytest.mark.parametrize('calendar', _CFTIME_CALENDARS)
