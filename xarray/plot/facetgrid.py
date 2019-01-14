@@ -568,3 +568,33 @@ class FacetGrid(object):
         self._finalize_grid(*args[:2])
 
         return self
+
+
+def _easy_facetgrid(data, plotfunc, x=None, y=None, kind=None, row=None, col=None,
+                    col_wrap=None, sharex=True, sharey=True, aspect=None,
+                    size=None, subplot_kws=None, **kwargs):
+    """
+    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
+
+    kwargs are the arguments to 2d plotting method
+    """
+    ax = kwargs.pop('ax', None)
+    figsize = kwargs.pop('figsize', None)
+    if ax is not None:
+        raise ValueError("Can't use axes when making faceted plots.")
+    if aspect is None:
+        aspect = 1
+    if size is None:
+        size = 3
+    elif figsize is not None:
+        raise ValueError('cannot provide both `figsize` and `size` arguments')
+
+    g = FacetGrid(data=data, col=col, row=row, col_wrap=col_wrap,
+                  sharex=sharex, sharey=sharey, figsize=figsize,
+                  aspect=aspect, size=size, subplot_kws=subplot_kws)
+
+    if kind == 'dataarray':
+        return g.map_dataarray(plotfunc, x, y, **kwargs)
+    elif kind == 'array line':
+        return g.map_dataarray_line(hue=kwargs.pop('hue'), **kwargs)
+        return g.map_dataset(plotfunc, x, y, **kwargs)

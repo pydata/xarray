@@ -17,61 +17,14 @@ import pandas as pd
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
-from .facetgrid import FacetGrid
+from .facetgrid import FacetGrid, _easy_facetgrid
 from .utils import (
-    ROBUST_PERCENTILE, _add_colorbar, _determine_cmap_params,
-    _ensure_plottable, _infer_xy_labels, _interval_to_double_bound_points,
-    _interval_to_mid_points, _resolve_intervals_2dplot, _valid_other_type,
+    _add_colorbar, _determine_cmap_params,
+    _ensure_plottable, _infer_interval_breaks,
+    _infer_xy_labels, _interval_to_double_bound_points,
+    _interval_to_mid_points, _is_monotonic, _rescale_imshow_rgb,
+    _resolve_intervals_2dplot, _update_axes, _valid_other_type,
     get_axis, import_matplotlib_pyplot, label_from_attrs)
-
-
-def _easy_facetgrid(darray, plotfunc, x, y, row=None, col=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid from 2d plotting methods
-
-    kwargs are the arguments to 2d plotting method
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
-
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray(plotfunc, x, y, **kwargs)
-
-
-def _line_facetgrid(darray, row=None, col=None, hue=None,
-                    col_wrap=None, sharex=True, sharey=True, aspect=None,
-                    size=None, subplot_kws=None, **kwargs):
-    """
-    Convenience method to call xarray.plot.FacetGrid for line plots
-    kwargs are the arguments to pyplot.plot()
-    """
-    ax = kwargs.pop('ax', None)
-    figsize = kwargs.pop('figsize', None)
-    if ax is not None:
-        raise ValueError("Can't use axes when making faceted plots.")
-    if aspect is None:
-        aspect = 1
-    if size is None:
-        size = 3
-    elif figsize is not None:
-        raise ValueError('cannot provide both `figsize` and `size` arguments')
-
-    g = FacetGrid(data=darray, col=col, row=row, col_wrap=col_wrap,
-                  sharex=sharex, sharey=sharey, figsize=figsize,
-                  aspect=aspect, size=size, subplot_kws=subplot_kws)
-    return g.map_dataarray_line(hue=hue, **kwargs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -287,7 +240,10 @@ def line(darray, *args, **kwargs):
     if row or col:
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
-        return _line_facetgrid(**allargs)
+        allargs.pop('darray')
+        allargs['data'] = darray
+        allargs['plotfunc'] = line
+        return _easy_facetgrid(kind='array line', **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -467,48 +423,6 @@ def hist(darray, figsize=None, size=None, aspect=None, ax=None, **kwargs):
     return primitive
 
 
-def _update_axes(ax, xincrease, yincrease,
-                 xscale=None, yscale=None,
-                 xticks=None, yticks=None,
-                 xlim=None, ylim=None):
-    """
-    Update axes with provided parameters
-    """
-    if xincrease is None:
-        pass
-    elif xincrease and ax.xaxis_inverted():
-        ax.invert_xaxis()
-    elif not xincrease and not ax.xaxis_inverted():
-        ax.invert_xaxis()
-
-    if yincrease is None:
-        pass
-    elif yincrease and ax.yaxis_inverted():
-        ax.invert_yaxis()
-    elif not yincrease and not ax.yaxis_inverted():
-        ax.invert_yaxis()
-
-    # The default xscale, yscale needs to be None.
-    # If we set a scale it resets the axes formatters,
-    # This means that set_xscale('linear') on a datetime axis
-    # will remove the date labels. So only set the scale when explicitly
-    # asked to. https://github.com/matplotlib/matplotlib/issues/8740
-    if xscale is not None:
-        ax.set_xscale(xscale)
-    if yscale is not None:
-        ax.set_yscale(yscale)
-
-    if xticks is not None:
-        ax.set_xticks(xticks)
-    if yticks is not None:
-        ax.set_yticks(yticks)
-
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
-
-
 # MUST run before any 2d plotting functions are defined since
 # _plot2d decorator adds them as methods here.
 class _PlotMethods(object):
@@ -534,44 +448,6 @@ class _PlotMethods(object):
     @functools.wraps(step)
     def step(self, *args, **kwargs):
         return step(self._da, *args, **kwargs)
-
-
-def _rescale_imshow_rgb(darray, vmin, vmax, robust):
-    assert robust or vmin is not None or vmax is not None
-    # TODO: remove when min numpy version is bumped to 1.13
-    # There's a cyclic dependency via DataArray, so we can't import from
-    # xarray.ufuncs in global scope.
-    from xarray.ufuncs import maximum, minimum
-
-    # Calculate vmin and vmax automatically for `robust=True`
-    if robust:
-        if vmax is None:
-            vmax = np.nanpercentile(darray, 100 - ROBUST_PERCENTILE)
-        if vmin is None:
-            vmin = np.nanpercentile(darray, ROBUST_PERCENTILE)
-    # If not robust and one bound is None, calculate the default other bound
-    # and check that an interval between them exists.
-    elif vmax is None:
-        vmax = 255 if np.issubdtype(darray.dtype, np.integer) else 1
-        if vmax < vmin:
-            raise ValueError(
-                'vmin=%r is less than the default vmax (%r) - you must supply '
-                'a vmax > vmin in this case.' % (vmin, vmax))
-    elif vmin is None:
-        vmin = 0
-        if vmin > vmax:
-            raise ValueError(
-                'vmax=%r is less than the default vmin (0) - you must supply '
-                'a vmin < vmax in this case.' % vmax)
-    # Scale interval [vmin .. vmax] to [0 .. 1], with darray as 64-bit float
-    # to avoid precision loss, integer over/underflow, etc with extreme inputs.
-    # After scaling, downcast to 32-bit float.  This substantially reduces
-    # memory usage after we hand `darray` off to matplotlib.
-    darray = ((darray.astype('f8') - vmin) / (vmax - vmin)).astype('f4')
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', 'xarray.ufuncs',
-                                PendingDeprecationWarning)
-        return minimum(maximum(darray, 0), 1)
 
 
 def _plot2d(plotfunc):
@@ -719,8 +595,10 @@ def _plot2d(plotfunc):
 
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
+            allargs['data'] = darray
+            del allargs['darray']
 
-            return _easy_facetgrid(**allargs)
+            return _easy_facetgrid(kind='dataarray', **allargs)
 
         plt = import_matplotlib_pyplot()
 
@@ -986,54 +864,6 @@ def contourf(x, y, z, ax, **kwargs):
     """
     primitive = ax.contourf(x, y, z, **kwargs)
     return primitive
-
-
-def _is_monotonic(coord, axis=0):
-    """
-    >>> _is_monotonic(np.array([0, 1, 2]))
-    True
-    >>> _is_monotonic(np.array([2, 1, 0]))
-    True
-    >>> _is_monotonic(np.array([0, 2, 1]))
-    False
-    """
-    if coord.shape[axis] < 3:
-        return True
-    else:
-        n = coord.shape[axis]
-        delta_pos = (coord.take(np.arange(1, n), axis=axis) >=
-                     coord.take(np.arange(0, n - 1), axis=axis))
-        delta_neg = (coord.take(np.arange(1, n), axis=axis) <=
-                     coord.take(np.arange(0, n - 1), axis=axis))
-        return np.all(delta_pos) or np.all(delta_neg)
-
-
-def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
-    """
-    >>> _infer_interval_breaks(np.arange(5))
-    array([-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
-    >>> _infer_interval_breaks([[0, 1], [3, 4]], axis=1)
-    array([[-0.5,  0.5,  1.5],
-           [ 2.5,  3.5,  4.5]])
-    """
-    coord = np.asarray(coord)
-
-    if check_monotonic and not _is_monotonic(coord, axis=axis):
-        raise ValueError("The input coordinate is not sorted in increasing "
-                         "order along axis %d. This can lead to unexpected "
-                         "results. Consider calling the `sortby` method on "
-                         "the input DataArray. To plot data with categorical "
-                         "axes, consider using the `heatmap` function from "
-                         "the `seaborn` statistical plotting library." % axis)
-
-    deltas = 0.5 * np.diff(coord, axis=axis)
-    if deltas.size == 0:
-        deltas = np.array(0.0)
-    first = np.take(coord, [0], axis=axis) - np.take(deltas, [0], axis=axis)
-    last = np.take(coord, [-1], axis=axis) + np.take(deltas, [-1], axis=axis)
-    trim_last = tuple(slice(None, -1) if n == axis else slice(None)
-                      for n in range(coord.ndim))
-    return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
 
 
 @_plot2d
