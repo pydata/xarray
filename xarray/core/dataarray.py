@@ -7,8 +7,7 @@ import numpy as np
 import pandas as pd
 
 from . import (
-    computation, dtypes, groupby, indexing, ops, resample, rolling,
-    rolling_exp, utils)
+    computation, dtypes, groupby, indexing, ops, resample, rolling, utils)
 from ..plot.plot import _PlotMethods
 from .accessors import DatetimeAccessor
 from .alignment import align, reindex_like_indexers
@@ -162,7 +161,6 @@ class DataArray(AbstractArray, DataWithCoords):
     """
     _groupby_cls = groupby.DataArrayGroupBy
     _rolling_cls = rolling.DataArrayRolling
-    _rolling_exp_cls = rolling_exp.DataArrayRollingExp
     _coarsen_cls = rolling.DataArrayCoarsen
     _resample_cls = resample.DataArrayResample
 

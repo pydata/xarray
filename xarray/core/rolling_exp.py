@@ -1,7 +1,6 @@
 
+import numpy as np
 from pandas.core.window import _get_center_of_mass
-
-from .computation import apply_ufunc
 
 
 def _get_alpha(com=None, span=None, halflife=None, alpha=None):
@@ -10,6 +9,15 @@ def _get_alpha(com=None, span=None, halflife=None, alpha=None):
 
     com = _get_center_of_mass(com, span, halflife, alpha)
     return 1 / (1 + com)
+
+
+def rolling_exp_nanmean(array, *, axis, window):
+    import numbagg
+    if axis == ():
+        return array.astype(np.float)
+    else:
+        return numbagg.moving.rolling_exp_nanmean(
+            array, axis=axis, window=window)
 
 
 class RollingExp(object):
@@ -21,16 +29,6 @@ class RollingExp(object):
         self.dim = dim
         self.alpha = _get_alpha(**{window_type: window})
 
-
-class DataArrayRollingExp(RollingExp):
     def mean(self):
-        from numbagg.moving import rolling_exp_nanmean
-
-        da = apply_ufunc(
-            rolling_exp_nanmean,
-            self.obj,
-            input_core_dims=[[self.dim]],
-            output_core_dims=[[self.dim]],
-            kwargs=dict(window=self.alpha),
-        )
-        return da.transpose(*self.obj.dims)
+        return self.obj.reduce(
+            rolling_exp_nanmean, dim=self.dim, window=self.alpha)

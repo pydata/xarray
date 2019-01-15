@@ -9,6 +9,7 @@ from . import dtypes, duck_array_ops, formatting, ops
 from .arithmetic import SupportsArithmetic
 from .options import _get_keep_attrs
 from .pycompat import OrderedDict, basestring, dask_array_type, suppress
+from .rolling_exp import RollingExp
 from .utils import Frozen, ReprObject, SortedKeysDict, either_dict_or_kwargs
 
 # Used as a sentinel value to indicate a all dimensions
@@ -242,6 +243,8 @@ def get_squeeze_dims(xarray_obj, dim, axis=None):
 
 class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
     """Shared base class for Dataset and DataArray."""
+
+    _rolling_exp_cls = RollingExp
 
     def squeeze(self, dim=None, drop=False, axis=None):
         """Return a new object with squeezed data.
