@@ -165,7 +165,7 @@ def line(darray, *args, **kwargs):
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
         allargs.pop('darray')
-        return _easy_facetgrid(darray, line, kind='line',**allargs)
+        return _easy_facetgrid(darray, line, kind='line', **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
