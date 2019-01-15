@@ -53,6 +53,17 @@ class RollingExp(object):
         self.alpha = _get_alpha(**{window_type: window})
 
     def mean(self):
-        """Exponentially weighted average"""
+        """
+        Exponentially weighted moving average
+
+        Examples
+        --------
+        >>> da = xr.DataArray([1,1,2,2,2], dims='x')
+        >>> da.rolling_exp(x=2, window_type='span').mean()
+        <xarray.DataArray (x: 5)>
+        array([1.      , 1.      , 1.692308, 1.9     , 1.966942])
+        Dimensions without coordinates: x
+        """
+
         return self.obj.reduce(
             rolling_exp_nanmean, dim=self.dim, window=self.alpha)
