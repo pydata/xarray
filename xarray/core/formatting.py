@@ -472,8 +472,8 @@ def dataset_repr(ds):
 
 def diff_dim_summary(a, b):
     if a.dims != b.dims:
-        ab_dim_summaries = [dim_summary(obj) for obj in (a, b)]
-        return "Differing dimensions:\n({}) != ({})".format(*ab_dim_summaries)
+        return "Differing dimensions:\n    ({}) != ({})".format(
+            dim_summary(a), dim_summary(b))
     else:
         return ""
 
@@ -481,8 +481,8 @@ def diff_dim_summary(a, b):
 def _diff_mapping_repr(a_mapping, b_mapping, compat,
                        title, summarizer, col_width=None):
 
-    def extra_items_repr(extra_keys, vars, ab_side):
-        extra_repr = [summarizer(k, vars[k], col_width) for k in extra_keys]
+    def extra_items_repr(extra_keys, mapping, ab_side):
+        extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
             return ["{} contains more {}:".format(ab_side, title)] + extra_repr
         else:
@@ -532,7 +532,8 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat,
     return "\n".join(summary)
 
 
-diff_coords_repr = functools.partial(_diff_mapping_repr, title="coordinates",
+diff_coords_repr = functools.partial(_diff_mapping_repr,
+                                     title="coordinates",
                                      summarizer=summarize_coord)
 
 
