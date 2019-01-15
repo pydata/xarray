@@ -220,30 +220,23 @@ class FacetGrid(object):
 
         """
 
-        if func.__name__ == 'line':
-            add_legend = kwargs.pop('add_legend', True)
-            kwargs['add_legend'] = False
-            func_kwargs = kwargs.copy()
-            func_kwargs['_labels'] = False
+        if kwargs.get('cbar_ax', None) is not None:
+            raise ValueError('cbar_ax not supported by FacetGrid.')
 
-        else:
-            if kwargs.get('cbar_ax', None) is not None:
-                raise ValueError('cbar_ax not supported by FacetGrid.')
+        cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
+            func, kwargs, self.data.values)
 
-            cmap_params, cbar_kwargs = _process_cbar_cmap_kwargs(
-                func, kwargs, self.data.values)
+        self._cmap_extend = cmap_params.get('extend')
 
-            self._cmap_extend = cmap_params.get('extend')
+        # Order is important
+        func_kwargs = kwargs.copy()
+        func_kwargs.update(cmap_params)
+        func_kwargs.update({'add_colorbar': False, 'add_labels': False})
 
-            # Order is important
-            func_kwargs = kwargs.copy()
-            func_kwargs.update(cmap_params)
-            func_kwargs.update({'add_colorbar': False, 'add_labels': False})
-
-            # Get x, y labels for the first subplot
-            x, y = _infer_xy_labels(
-                darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y,
-                imshow=func.__name__ == 'imshow', rgb=kwargs.get('rgb', None))
+        # Get x, y labels for the first subplot
+        x, y = _infer_xy_labels(
+            darray=self.data.loc[self.name_dicts.flat[0]], x=x, y=y,
+            imshow=func.__name__ == 'imshow', rgb=kwargs.get('rgb', None))
 
         for d, ax in zip(self.name_dicts.flat, self.axes.flat):
             # None is the sentinel value
@@ -252,23 +245,38 @@ class FacetGrid(object):
                 mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
                 self._mappables.append(mappable)
 
-        if func.__name__ == 'line':
-            _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
-                darray=self.data.loc[self.name_dicts.flat[0]],
-                x=x, y=y, hue=func_kwargs['hue'])
+        self._cmap_extend = cmap_params.get('extend')
+        self._finalize_grid(x, y)
 
-            self._hue_var = hueplt
-            self._hue_label = huelabel
-            self._finalize_grid(xlabel, ylabel)
+        if kwargs.get('add_colorbar', True):
+            self.add_colorbar(**cbar_kwargs)
 
-            if add_legend and hueplt is not None and huelabel is not None:
-                self.add_legend()
-        else:
-            self._cmap_extend = cmap_params.get('extend')
-            self._finalize_grid(x, y)
+        return self
 
-            if kwargs.get('add_colorbar', True):
-                self.add_colorbar(**cbar_kwargs)
+    def map_dataarray_line(self, func, x, y, **kwargs):
+
+        add_legend = kwargs.pop('add_legend', True)
+        kwargs['add_legend'] = False
+        func_kwargs = kwargs.copy()
+        func_kwargs['_labels'] = False
+
+        for d, ax in zip(self.name_dicts.flat, self.axes.flat):
+            # None is the sentinel value
+            if d is not None:
+                subset = self.data.loc[d]
+                mappable = func(subset, x=x, y=y, ax=ax, **func_kwargs)
+                self._mappables.append(mappable)
+
+        _, _, hueplt, xlabel, ylabel, huelabel = _infer_line_data(
+            darray=self.data.loc[self.name_dicts.flat[0]],
+            x=x, y=y, hue=func_kwargs['hue'])
+
+        self._hue_var = hueplt
+        self._hue_label = huelabel
+        self._finalize_grid(xlabel, ylabel)
+
+        if add_legend and hueplt is not None and huelabel is not None:
+            self.add_legend()
 
         return self
 
@@ -483,7 +491,7 @@ class FacetGrid(object):
         return self
 
 
-def _easy_facetgrid(data, plotfunc, x=None, y=None, row=None,
+def _easy_facetgrid(data, plotfunc, kind, x=None, y=None, row=None,
                     col=None, col_wrap=None, sharex=True, sharey=True,
                     aspect=None, size=None, subplot_kws=None, **kwargs):
     """
@@ -506,4 +514,8 @@ def _easy_facetgrid(data, plotfunc, x=None, y=None, row=None,
                   sharex=sharex, sharey=sharey, figsize=figsize,
                   aspect=aspect, size=size, subplot_kws=subplot_kws)
 
-    return g.map_dataarray(plotfunc, x, y, **kwargs)
+    if kind == 'line':
+        return g.map_dataarray_line(plotfunc, x, y, **kwargs)
+
+    if kind == 'dataarray':
+        return g.map_dataarray(plotfunc, x, y, **kwargs)

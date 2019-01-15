@@ -165,7 +165,7 @@ def line(darray, *args, **kwargs):
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
         allargs.pop('darray')
-        return _easy_facetgrid(darray, line, **allargs)
+        return _easy_facetgrid(darray, line, kind='line',**allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -517,7 +517,7 @@ def _plot2d(plotfunc):
             allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
-            return _easy_facetgrid(darray, **allargs)
+            return _easy_facetgrid(darray, kind='dataarray', **allargs)
 
         plt = import_matplotlib_pyplot()
 
