@@ -140,8 +140,8 @@ class VariableSubclassobjects(object):
         # check value is equal for both ndarray and Variable
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
-            assert variable.values[0] == expected_value0
-            assert variable[0].values == expected_value0
+            np.testing.assert_equal(variable.values[0], expected_value0)
+            np.testing.assert_equal(variable[0].values, expected_value0)
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
