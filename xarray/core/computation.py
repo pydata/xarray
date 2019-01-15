@@ -314,6 +314,11 @@ def apply_dict_of_variables_ufunc(func, *args, **kwargs):
 
     result_vars = OrderedDict()
     for name, variable_args in zip(names, grouped_by_name):
+        if len(variable_args) == 1 and signature.all_input_core_dims:
+            variable_arg, = variable_args
+            if not set(variable_arg.dims) & signature.all_core_dims:
+                result_vars[name] = variable_arg
+                continue
         result_vars[name] = func(*variable_args)
 
     if signature.num_outputs > 1:

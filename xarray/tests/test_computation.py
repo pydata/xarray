@@ -3,6 +3,7 @@ import operator
 import pickle
 from collections import OrderedDict
 from distutils.version import LooseVersion
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -848,6 +849,17 @@ def test_output_wrong_dim_size():
                      apply_truncate_x_x_valid(data_array))
     assert_identical(xr.Dataset({'y': ('x', array[:5])}),
                      apply_truncate_x_x_valid(dataset))
+
+
+def test_ignore_variables_without_dim():
+
+    ds = xr.Dataset(dict(
+        a=xr.DataArray(np.random.rand(2, 3), dims=list('xy')),
+        b=xr.DataArray(np.random.rand(3, 4), dims=list('yz'))
+    ))
+    result = apply_ufunc(partial(np.nansum, axis=-1),
+                         ds, input_core_dims=[['x']])
+    assert set(result.dims) == set('yz')
 
 
 @pytest.mark.parametrize('use_dask', [True, False])
