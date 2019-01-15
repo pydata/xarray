@@ -417,14 +417,16 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     """
 
     # Group by data vars
-    grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+    sorted_datasets = sorted(datasets, key=lambda ds: tuple(sorted(ds)))
+    grouped_by_vars = itertools.groupby(sorted_datasets,
+                                        key=lambda ds: tuple(sorted(ds)))
 
     # Perform the multidimensional combine on each group of data variables
     # before merging back together
     concatenated_grouped_by_data_vars = []
-    for vars, datasets in grouped:
+    for vars, datasets_with_same_vars in grouped_by_vars:
         combined_ids, concat_dims = _infer_concat_order_from_coords(
-            list(datasets))
+            list(datasets_with_same_vars))
 
         # TODO checking the shape of the combined ids appropriate here?
         _check_shape_tile_ids(combined_ids)
