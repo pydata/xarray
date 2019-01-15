@@ -705,9 +705,13 @@ def test_cftimeindex_sub_cftimeindex(calendar):
 @pytest.mark.parametrize('calendar', _CFTIME_CALENDARS)
 def test_cftimeindex_sub_cftime_datetime(calendar):
     a = xr.cftime_range('2000', periods=5, calendar=calendar)
-    b = a[0]
-    result = a - b
+    result = a - a[0]
     expected = pd.TimedeltaIndex([timedelta(days=i) for i in range(5)])
+    assert result.equals(expected)
+    assert isinstance(result, pd.TimedeltaIndex)
+
+    result = a[0] - a
+    expected = pd.TimedeltaIndex([timedelta(days=-i) for i in range(5)])
     assert result.equals(expected)
     assert isinstance(result, pd.TimedeltaIndex)
 
