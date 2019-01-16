@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 from ..coding.cftimeindex import CFTimeIndex
 from ..coding.cftime_offsets import (cftime_range, normalize_date,
                                      Day, MonthEnd, YearEnd,
+                                     Hour, Minute, Second,
                                      CFTIME_TICKS, to_offset)
 import datetime
 import numpy as np
@@ -37,6 +38,11 @@ class CFTimeGrouper(object):
                                                self.label, self.base)
         integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
                        :-1]
+        # integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)
+        print('len integer_bins: ', len(integer_bins),
+              'len labels: ', len(labels))
+        if len(integer_bins) < len(labels):
+            labels = labels[:len(integer_bins)]
         first_items = pd.Series(integer_bins, labels)
 
         # Mask duplicate values with NaNs, preserving the last values
@@ -69,19 +75,47 @@ def _get_time_bins(index, freq, closed, label, base):
                                           start=first,
                                           end=last,
                                           name=index.name)
+    print(index.min(), index.max())
+    print(first, last)
+    print('initial range\n', datetime_bins)
+    print('len datetime_bins', len(datetime_bins),
+          'len labels', len(labels))
 
-    datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed)
+    # datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed)
+    datetime_bins = _adjust_bin_edges_alt(datetime_bins, freq, closed, index)
+    print('len datetime_bins', len(datetime_bins),
+          'len labels', len(labels))
+    print('_adjust_bin_edges\n', datetime_bins)
 
+    # if closed == 'right':
+    #     if label == 'right':
+    #         labels = labels[1:]
+    #     else:
+    #         labels = labels[:-1]
+    # else:
+    #     if label == 'right':
+    #         labels = labels[1:]
+    #     else:
+    #         labels = labels[:-1]
     if closed == 'right':
+        # labels = datetime_bins  # allowing this would make the _adjust_bin_edges results visible (59.9999)
         if label == 'right':
             labels = labels[1:]
-        else:
-            labels = labels[:-1]
-    else:
-        if label == 'right':
-            labels = labels[1:]
-        else:
-            labels = labels[:-1]
+    elif label == 'right':
+        labels = labels[1:]
+
+    if index.hasnans:  # cannot be true since CFTimeIndex does not allow NaNs
+        datetime_bins = datetime_bins.insert(0, pd.NaT)
+        labels = labels.insert(0, pd.NaT)
+
+    print('len datetime_bins: ', len(datetime_bins),
+          'len labels: ', len(labels))
+
+    # if len(datetime_bins) < len(labels):
+    #     labels = labels[:len(datetime_bins)]
+
+    print('len datetime_bins: ', len(datetime_bins),
+          'len labels: ', len(labels))
 
     return datetime_bins, labels
 
@@ -126,6 +160,32 @@ def _adjust_bin_edges(datetime_bins, offset, closed):
     return datetime_bins
 
 
+def _adjust_bin_edges_alt(datetime_bins, offset, closed, index):
+    # if not isinstance(offset, CFTIME_TICKS):
+    # is_super_daily = (isinstance(offset, Day) and offset.n > 1)
+    is_super_daily = (isinstance(offset, (MonthEnd, YearEnd)) or
+                      (isinstance(offset, Day) and offset.n > 1))
+    # if not isinstance(offset, (Day, Hour, Minute, Second)) or is_super_daily:
+    if is_super_daily:
+        if closed == 'right':
+            # if len(datetime_bins) > 1:
+            #     datetime_bins = \
+            #         CFTimeIndex(
+            #             datetime_bins[0:1].tolist() +
+            #             (datetime_bins[1:] +
+            #              datetime.timedelta(days=1, microseconds=-1)).tolist()
+            #         )
+            # else:
+            datetime_bins = datetime_bins + \
+                            datetime.timedelta(days=1, microseconds=-1)
+        print('datetime_bins[-2]: ', datetime_bins[-2],
+              'index.max(): ', index.max())
+        if datetime_bins[-2] > index.max():
+            datetime_bins = datetime_bins[:-1]
+            print('binner adjusted')
+    return datetime_bins
+
+
 def _get_range_edges(first, last, offset, closed='left', base=0):
     """ Get the correct starting and ending datetimes for the resampled
     CFTimeIndex range.
@@ -157,11 +217,16 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
     if isinstance(offset, CFTIME_TICKS):
-        return _adjust_dates_anchored(first, last, offset,
-                                      closed=closed, base=base)
+        first, last = _adjust_dates_anchored(first, last, offset,
+                                             closed=closed, base=base)
+        # if isinstance(offset, Day):
+        # first = normalize_date(first)
+        # last = normalize_date(last)
+        return first, last
     else:
         first = normalize_date(first)
         last = normalize_date(last)
+    print('_get_range_edges 1', first, last)
 
     if closed == 'left':
         first = offset.rollback(first)
@@ -169,6 +234,7 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
         first = first - offset
 
     last = last + offset
+    print('_get_range_edges 2', first, last)
     return first, last
 
 
@@ -221,6 +287,7 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
             lresult = last + (offset.as_timedelta() - loffset)
         else:
             lresult = last
+        print('_adjust_dates_anchored 1', fresult, lresult)
     else:
         if foffset.total_seconds() > 0:
             fresult = first - foffset
@@ -231,6 +298,7 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
             lresult = last + (offset.as_timedelta() - loffset)
         else:
             lresult = last + offset.as_timedelta()
+        print('_adjust_dates_anchored 2', fresult, lresult)
     return fresult, lresult
 
 
