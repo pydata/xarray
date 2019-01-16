@@ -215,9 +215,9 @@ class TestFormatting(object):
         Differing values:
         L
             array([[1, 2, 3],
-                   [4, 5, 6]])
+                   [4, 5, 6]], dtype=int64)
         R
-            array([1, 2])
+            array([1, 2], dtype=int64)
         Differing coordinates:
         L * x        (x) <U1 'a' 'b'
         R * x        (x) <U1 'a' 'c'
@@ -232,7 +232,11 @@ class TestFormatting(object):
             description: desc""")
 
         actual = formatting.diff_array_repr(da_a, da_b, 'identical')
-        assert actual == expected
+        try:
+            assert actual == expected
+        except AssertionError:
+            # depending on platform, dtype may not be shown in numpy array repr
+            assert actual == expected.replace(", dtype=int64", "")
 
         va = xr.Variable('x', np.array([1, 2, 3], dtype='int64'),
                          {'title': 'test Variable'})
@@ -245,13 +249,16 @@ class TestFormatting(object):
             (x: 3) != (x: 2, y: 3)
         Differing values:
         L
-            array([1, 2, 3])
+            array([1, 2, 3], dtype=int64)
         R
             array([[1, 2, 3],
-                   [4, 5, 6]])""")
+                   [4, 5, 6]], dtype=int64)""")
 
         actual = formatting.diff_array_repr(va, vb, 'equals')
-        assert actual == expected
+        try:
+            assert actual == expected
+        except AssertionError:
+            assert actual == expected.replace(", dtype=int64", "")
 
     def test_diff_dataset_repr(self):
         ds_a = xr.Dataset(
