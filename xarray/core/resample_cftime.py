@@ -7,42 +7,48 @@ from __future__ import absolute_import, division, print_function
 
 from ..coding.cftimeindex import CFTimeIndex
 from ..coding.cftime_offsets import (cftime_range, normalize_date,
-                                     Day, CFTIME_TICKS)
+                                     Day, MonthEnd, YearEnd,
+                                     CFTIME_TICKS, to_offset)
+import datetime
+import numpy as np
+import pandas as pd
+
+
+class CFTimeGrouper(object):
+    """This is a simple container for the grouping parameters that implements a
+    single method, the only one required for resampling in xarray.  It cannot
+    be used in a call to groupby like a pandas.Grouper object can."""
+
+    def __init__(self, freq, closed, label, base):
+        self.freq = to_offset(freq)
+        self.closed = closed
+        self.label = label
+        self.base = base
+
+    def first_items(self, index):
+        """Meant to reproduce the results of the following
+
+        grouper = pandas.Grouper(...)
+        first_items = pd.Series(np.arange(len(index)), index).groupby(grouper).first()
+
+        with index being a CFTimeIndex instead of a DatetimeIndex.
+        """
+        datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
+                                               self.label, self.base)
+        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
+                       :-1]
+        if len(integer_bins) < len(labels):
+            labels = labels[:len(integer_bins)]
+        first_items = pd.Series(integer_bins, labels)
+
+        # Mask duplicate values with NaNs, preserving the last values
+        non_duplicate = ~first_items.duplicated('last')
+        return first_items.where(non_duplicate)
 
 
 def _get_time_bins(index, freq, closed, label, base):
-    """Obtain the bins and their respective labels for resampling operations.
-
-    Parameters
-    ----------
-    index : CFTimeIndex
-        Index object to be resampled (e.g., CFTimeIndex named 'time').
-    freq : xarray.coding.cftime_offsets.BaseCFTimeOffset
-        The offset object representing target conversion a.k.a. resampling
-        frequency (e.g., 'MS', '2D', 'H', or '3T' with
-        coding.cftime_offsets.to_offset() applied to it).
-    closed : 'left' or 'right', optional
-        Which side of bin interval is closed.
-        The default is 'left' for all frequency offsets except for 'M' and 'A',
-        which have a default of 'right'.
-    label : 'left' or 'right', optional
-        Which bin edge label to label bucket with.
-        The default is 'left' for all frequency offsets except for 'M' and 'A',
-        which have a default of 'right'.
-    base : int, optional
-        For frequencies that evenly subdivide 1 day, the "origin" of the
-        aggregated intervals. For example, for '5min' frequency, base could
-        range from 0 through 4. Defaults to 0.
-
-    Returns
-    -------
-    binner : CFTimeIndex
-        Defines the edge of resampling bins by which original index values will
-        be grouped into.
-    labels : CFTimeIndex
-        Define what the user actually sees the bins labeled as.
-    """
-
+    """This is basically the same with the exception of the call to
+    _adjust_bin_edges."""
     # This portion of code comes from TimeGrouper __init__ #
     if closed is None:
         closed = _default_closed_or_label(freq)
@@ -55,30 +61,81 @@ def _get_time_bins(index, freq, closed, label, base):
         raise TypeError('index must be a CFTimeIndex, but got '
                         'an instance of %r' % type(index).__name__)
     if len(index) == 0:
-        binner = labels = CFTimeIndex(data=[], name=index.name)
-        return binner, [], labels
+        datetime_bins = labels = CFTimeIndex(data=[], name=index.name)
+        return datetime_bins, labels
 
     first, last = _get_range_edges(index.min(), index.max(), freq,
                                    closed=closed,
                                    base=base)
-    binner = labels = cftime_range(freq=freq,
-                                   start=first,
-                                   end=last,
-                                   name=index.name)
+    datetime_bins = labels = cftime_range(freq=freq,
+                                          start=first,
+                                          end=last,
+                                          name=index.name)
+
+    datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed, index)
 
     if closed == 'right':
-        labels = binner
         if label == 'right':
             labels = labels[1:]
-        else:
-            labels = labels[:-1]
-    else:
-        if label == 'right':
-            labels = labels[1:]
-        else:
-            labels = labels[:-1]
+    elif label == 'right':
+        labels = labels[1:]
 
-    return binner, labels
+    if index.hasnans:  # cannot be true since CFTimeIndex does not allow NaNs
+        datetime_bins = datetime_bins.insert(0, pd.NaT)
+        labels = labels.insert(0, pd.NaT)
+
+    return datetime_bins, labels
+
+
+def _adjust_bin_edges(datetime_bins, offset, closed, index):
+    """This is required for determining the bin edges resampling with
+    daily frequencies greater than one day, month end, and year end
+    frequencies.
+
+    Consider the following example.  Let's say you want to downsample the
+    time series with the following coordinates to month end frequency:
+
+    CFTimeIndex([2000-01-01 12:00:00, 2000-01-31 12:00:00, 2000-02-01 12:00:00], dtype='object')
+
+    Without this adjustment, _get_time_bins with month-end frequency will
+    return the following index for the bin edges (default closed='right' and
+    label='right' in this case):
+
+    CFTimeIndex([1999-12-31 00:00:00, 2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
+
+    If 2000-01-31 is used as a bound for a bin, the value on
+    2000-01-31T12:00:00 (at noon on January 31st), will not be included in the
+    month of January.  To account for this, pandas adds a day minus one worth
+    of microseconds to the bin edges generated by cftime range, so that we do
+    bin the value at noon on January 31st in the January bin.  This results in
+    an index with bin edges like the following:
+
+    CFTimeIndex([1999-12-31 23:59:59, 2000-01-31 23:59:59, 2000-02-29 23:59:59], dtype='object')
+
+    The labels are still:
+
+    CFTimeIndex([2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
+
+    This is also required for daily frequencies longer than one day and
+    year-end frequencies.
+    """
+    is_super_daily = (isinstance(offset, (MonthEnd, YearEnd)) or
+                      (isinstance(offset, Day) and offset.n > 1))
+    if is_super_daily:
+        if closed == 'right':
+            if len(datetime_bins) > 1:
+                datetime_bins = \
+                    CFTimeIndex(
+                        datetime_bins[0:1].tolist() +
+                        (datetime_bins[1:] +
+                         datetime.timedelta(days=1, microseconds=-1)).tolist()
+                    )
+            else:
+                datetime_bins = datetime_bins + \
+                                datetime.timedelta(days=1, microseconds=-1)
+        if datetime_bins[-2] > index.max():
+            datetime_bins = datetime_bins[:-1]
+    return datetime_bins
 
 
 def _get_range_edges(first, last, offset, closed='left', base=0):
@@ -112,10 +169,12 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
         Corrected ending datetime object for resampled CFTimeIndex range.
     """
     if isinstance(offset, CFTIME_TICKS):
-        is_day = isinstance(offset, Day)
-        if (is_day and offset.n == 1) or not is_day:
-            return _adjust_dates_anchored(first, last, offset,
-                                          closed=closed, base=base)
+        first, last = _adjust_dates_anchored(first, last, offset,
+                                             closed=closed, base=base)
+        # if isinstance(offset, Day):
+        # first = normalize_date(first)
+        # last = normalize_date(last)
+        return first, last
     else:
         first = normalize_date(first)
         last = normalize_date(last)
