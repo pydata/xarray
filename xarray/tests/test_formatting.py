@@ -244,15 +244,19 @@ class TestFormatting(object):
         assert actual == expected
 
     def test_diff_dataset_repr(self):
-        ds_a = xr.Dataset(data_vars={'var1': (('x', 'y'), [[1, 2, 3], [4, 5, 7]]),
-                                     'var2': ('x', [3, 4])},
-                          coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
-                          attrs={'units': 'm', 'description': 'desc'})
+        ds_a = xr.Dataset(
+            data_vars={'var1': (('x', 'y'), [[1, 2, 3], [4, 5, 7]]),
+                       'var2': ('x', [3, 4])},
+            coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
+            attrs={'units': 'm', 'description': 'desc'}
+        )
 
-        ds_b = xr.Dataset(data_vars={'var1': ('x', [1, 2])},
-                          coords={'x': ('x', ['a', 'c'], {'source': 0}),
-                                  'label': ('x', [1, 2])},
-                          attrs={'units': 'kg'})
+        ds_b = xr.Dataset(
+            data_vars={'var1': ('x', [1, 2])},
+            coords={'x': ('x', ['a', 'c'], {'source': 0}),
+                    'label': ('x', [1, 2])},
+            attrs={'units': 'kg'}
+        )
 
         expected = dedent("""\
         Left and right Dataset objects are not identical
