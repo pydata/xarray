@@ -36,6 +36,11 @@ Enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~
