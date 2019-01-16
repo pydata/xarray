@@ -36,6 +36,12 @@ Enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:meth:`~xarray.DataArray.rolling_exp` and
+  :py:meth:`~xarray.Dataset.rolling_exp` added, similar to pandas' 
+  ``pd.DataFrame.ewm`` method. Calling ``.mean`` on the resulting object 
+  will return an exponentially weighted moving average.
+  By `Maximilian Roos <https://github.com/max-sixty>`_.
+  
 
 Bug fixes
 ~~~~~~~~~

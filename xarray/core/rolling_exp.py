@@ -23,6 +23,7 @@ def rolling_exp_nanmean(array, *, axis, window):
 class RollingExp(object):
     """
     Exponentially-weighted moving window object.
+    Similar to EWM in pandas
 
     Parameters
     ----------
