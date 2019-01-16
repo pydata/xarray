@@ -5,7 +5,7 @@ daysUntilStale: 700  # start with a large number and reduce shortly
 
 # Number of days of inactivity before an Issue or Pull Request with the stale label is closed.
 # Set to false to disable. If disabled, issues still need to be closed manually, but will remain marked as stale.
-daysUntilClose: 7 # start with a large number and reduce over time
+daysUntilClose: 30
 
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
 exemptLabels:
