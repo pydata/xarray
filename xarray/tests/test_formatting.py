@@ -206,6 +206,8 @@ class TestFormatting(object):
 
         expected = dedent("""\
         Left and right DataArray objects are not identical
+        Differing dimensions:
+            (x: 2, y: 3) != (x: 2)
         Differing values:
         L
             array([[1, 2, 3],
@@ -233,6 +235,8 @@ class TestFormatting(object):
 
         expected = dedent("""\
         Left and right Variable objects are not equal
+        Differing dimensions:
+            (x: 3) != (x: 2, y: 3)
         Differing values:
         L
             array([1, 2, 3])

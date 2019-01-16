@@ -559,6 +559,8 @@ def diff_array_repr(a, b, compat):
     summary = ["Left and right {} objects are not {}"
                .format(type(a).__name__, _compat_to_str(compat))]
 
+    summary.append(diff_dim_summary(a, b))
+
     if not array_equiv(a.data, b.data):
         temp = [wrap_indent(short_array_repr(obj), start='    ')
                 for obj in (a, b)]
