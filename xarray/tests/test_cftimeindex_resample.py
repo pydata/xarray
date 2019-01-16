@@ -5,7 +5,6 @@ import pytest
 import numpy as np
 import pandas as pd
 import xarray as xr
-from xarray.tests import assert_equal
 
 
 @pytest.fixture(
@@ -20,7 +19,6 @@ from xarray.tests import assert_equal
         dict(start='1892', periods=10, freq='6AS-JUN')
     ],
     ids=['37_A', '31_3MS', '31_MS', '31_3D', '901D', '31D', 'XT', '6AS_JUN']
-    # ids = ['901D']
 )
 def time_range_kwargs(request):
     return request.param
@@ -41,10 +39,6 @@ def da(index):
                         coords=[index], dims=['time'])
 
 
-# def series(index):
-#     return pd.Series(np.arange(100., 100. + index.size), index=index)
-
-
 @pytest.mark.parametrize('freq', [
     '600003T',
     '2H', '5H', '7H', '12H', '8001H',
@@ -55,18 +49,6 @@ def da(index):
 @pytest.mark.parametrize('closed', ['left', 'right'])
 @pytest.mark.parametrize('label', ['left', 'right'])
 @pytest.mark.parametrize('base', [1, 5, 12, 17, 24])
-# @pytest.mark.parametrize('freq', [
-#     '2H',
-#     '2D',
-#     '2MS', '2M',
-#     '2AS', '2A'])
-# @pytest.mark.parametrize('closed', ['left', 'right'])
-# @pytest.mark.parametrize('label', ['left', 'right'])
-# @pytest.mark.parametrize('base', [5])
-# @pytest.mark.parametrize('freq', ['11M', '8001H', '600003T', '3MS'])
-# @pytest.mark.parametrize('closed', ['left', 'right'])
-# @pytest.mark.parametrize('label', ['left', 'right'])
-# @pytest.mark.parametrize('base', [0, 1])
 @pytest.mark.xfail(raises=ValueError)
 def test_resampler(closed, label, base, freq,
                    datetime_index, cftime_index):
@@ -75,12 +57,6 @@ def test_resampler(closed, label, base, freq,
     da_cftime['time'] = da_cftime.indexes['time'].to_datetimeindex()
     da_datetime = da(datetime_index).resample(
         time=freq, closed=closed, label=label, base=base).mean()
-    # np.testing.assert_equal(da_cftime.values, da_datetime.values)
-    # np.testing.assert_equal(da_cftime['time'].values,
-    #                         da_datetime['time'].values)
     np.testing.assert_equal(da_cftime.values, da_datetime.values)
     np.testing.assert_allclose(da_cftime['time'].values.astype(np.float64),
                                da_datetime['time'].values.astype(np.float64))
-    # np.testing.assert_equal(da_cftime['time'].values,
-    #                         da_datetime['time'].values)
-    # assert_equal(da_cftime, da_datetime)
