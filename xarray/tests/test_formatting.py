@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, division, print_function
 
+from textwrap import dedent
+
 import numpy as np
 import pandas as pd
 
+import xarray as xr
 from xarray.core import formatting
 from xarray.core.pycompat import PY3
 
@@ -189,6 +192,93 @@ class TestFormatting(object):
         assert long.endswith(u'...')
         assert u'\n' not in newlines
         assert u'\t' not in tabs
+
+    def test_diff_array_repr(self):
+        da_a = xr.DataArray([[1, 2, 3], [4, 5, 7]],
+                            dims=('x', 'y'),
+                            coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
+                            attrs={'units': 'm', 'description': 'desc'})
+
+        da_b = xr.DataArray([1, 2],
+                            dims='x',
+                            coords={'x': ['a', 'c'], 'label': ('x', [1, 2])},
+                            attrs={'units': 'kg'})
+
+        expected = dedent("""\
+        Left and right DataArray objects are not identical
+        Differing values:
+        L
+            array([[1, 2, 3],
+                   [4, 5, 7]])
+        R
+            array([1, 2])
+        Differing coordinates:
+        L * x        (x) <U1 'a' 'b'
+        R * x        (x) <U1 'a' 'c'
+        Left contains more coordinates:
+          * y        (y) int64 1 2 3
+        Right contains more coordinates:
+            label    (x) int64 1 2
+        Differing attributes:
+        L   units: m
+        R   units: kg
+        Left contains more attributes:
+            description: desc""")
+
+        actual = formatting.diff_array_repr(da_a, da_b, 'identical')
+        assert actual == expected
+
+        va = xr.Variable('x', [1, 2, 3], {'title': 'test Variable'})
+        vb = xr.Variable(('x', 'y'), [[1, 2, 3], [4, 5, 6]])
+
+        expected = dedent("""\
+        Left and right Variable objects are not equal
+        Differing values:
+        L
+            array([1, 2, 3])
+        R
+            array([[1, 2, 3],
+                   [4, 5, 6]])""")
+
+        actual = formatting.diff_array_repr(va, vb, 'equals')
+        assert actual == expected
+
+    def test_diff_dataset_repr(self):
+        ds_a = xr.Dataset(data_vars={'var1': (('x', 'y'), [[1, 2, 3], [4, 5, 7]]),
+                                     'var2': ('x', [3, 4])},
+                          coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
+                          attrs={'units': 'm', 'description': 'desc'})
+
+        ds_b = xr.Dataset(data_vars={'var1': ('x', [1, 2])},
+                          coords={'x': ('x', ['a', 'c'], {'source': 0}),
+                                  'label': ('x', [1, 2])},
+                          attrs={'units': 'kg'})
+
+        expected = dedent("""\
+        Left and right Dataset objects are not identical
+        Differing dimensions:
+            (x: 2, y: 3) != (x: 2)
+        Differing coordinates:
+        L * x        (x) <U1 'a' 'b'
+        R * x        (x) <U1 'a' 'c'
+            source: 0
+        Left contains more coordinates:
+          * y        (y) int64 1 2 3
+        Right contains more coordinates:
+            label    (x) int64 1 2
+        Differing data variables:
+        L   var1     (x, y) int64 1 2 3 4 5 7
+        R   var1     (x) int64 1 2
+        Left contains more data variables:
+            var2     (x) int64 3 4
+        Differing attributes:
+        L   units: m
+        R   units: kg
+        Left contains more attributes:
+            description: desc""")
+
+        actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
+        assert actual == expected
 
 
 def test_set_numpy_options():
