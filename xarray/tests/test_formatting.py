@@ -194,15 +194,19 @@ class TestFormatting(object):
         assert u'\t' not in tabs
 
     def test_diff_array_repr(self):
-        da_a = xr.DataArray([[1, 2, 3], [4, 5, 7]],
-                            dims=('x', 'y'),
-                            coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
-                            attrs={'units': 'm', 'description': 'desc'})
+        da_a = xr.DataArray(
+            np.array([[1, 2, 3], [4, 5, 6]], dtype='int64'),
+            dims=('x', 'y'),
+            coords={'x': np.array(['a', 'b'], dtype='U1'),
+                    'y': np.array([1, 2, 3], dtype='int64')},
+            attrs={'units': 'm', 'description': 'desc'})
 
-        da_b = xr.DataArray([1, 2],
-                            dims='x',
-                            coords={'x': ['a', 'c'], 'label': ('x', [1, 2])},
-                            attrs={'units': 'kg'})
+        da_b = xr.DataArray(
+            np.array([1, 2], dtype='int64'),
+            dims='x',
+            coords={'x': np.array(['a', 'c'], dtype='U1'),
+                    'label': ('x', np.array([1, 2], dtype='int64'))},
+            attrs={'units': 'kg'})
 
         expected = dedent("""\
         Left and right DataArray objects are not identical
@@ -211,7 +215,7 @@ class TestFormatting(object):
         Differing values:
         L
             array([[1, 2, 3],
-                   [4, 5, 7]])
+                   [4, 5, 6]])
         R
             array([1, 2])
         Differing coordinates:
@@ -230,8 +234,10 @@ class TestFormatting(object):
         actual = formatting.diff_array_repr(da_a, da_b, 'identical')
         assert actual == expected
 
-        va = xr.Variable('x', [1, 2, 3], {'title': 'test Variable'})
-        vb = xr.Variable(('x', 'y'), [[1, 2, 3], [4, 5, 6]])
+        va = xr.Variable('x', np.array([1, 2, 3], dtype='int64'),
+                         {'title': 'test Variable'})
+        vb = xr.Variable(('x', 'y'),
+                         np.array([[1, 2, 3], [4, 5, 6]], dtype='int64'))
 
         expected = dedent("""\
         Left and right Variable objects are not equal
@@ -249,16 +255,22 @@ class TestFormatting(object):
 
     def test_diff_dataset_repr(self):
         ds_a = xr.Dataset(
-            data_vars={'var1': (('x', 'y'), [[1, 2, 3], [4, 5, 7]]),
-                       'var2': ('x', [3, 4])},
-            coords={'x': ['a', 'b'], 'y': [1, 2, 3]},
+            data_vars={
+                'var1': (('x', 'y'),
+                         np.array([[1, 2, 3], [4, 5, 6]], dtype='int64')),
+                'var2': ('x', np.array([3, 4], dtype='int64'))
+            },
+            coords={'x': np.array(['a', 'b'], dtype='U1'),
+                    'y': np.array([1, 2, 3], dtype='int64')},
             attrs={'units': 'm', 'description': 'desc'}
         )
 
         ds_b = xr.Dataset(
-            data_vars={'var1': ('x', [1, 2])},
-            coords={'x': ('x', ['a', 'c'], {'source': 0}),
-                    'label': ('x', [1, 2])},
+            data_vars={'var1': ('x', np.array([1, 2], dtype='int64'))},
+            coords={
+                'x': ('x', np.array(['a', 'c'], dtype='U1'), {'source': 0}),
+                'label': ('x', np.array([1, 2], dtype='int64'))
+            },
             attrs={'units': 'kg'}
         )
 
@@ -275,7 +287,7 @@ class TestFormatting(object):
         Right contains more coordinates:
             label    (x) int64 1 2
         Differing data variables:
-        L   var1     (x, y) int64 1 2 3 4 5 7
+        L   var1     (x, y) int64 1 2 3 4 5 6
         R   var1     (x) int64 1 2
         Left contains more data variables:
             var2     (x) int64 3 4
