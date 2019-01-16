@@ -237,6 +237,7 @@ class GroupBy(SupportsArithmetic):
             from .resample_cftime import CFTimeGrouper
             if isinstance(grouper, CFTimeGrouper):
                 first_items = grouper.first_items(index)
+                print('grouper.py\n', first_items)
             else:
                 first_items = s.groupby(grouper).first()
             full_index = first_items.index

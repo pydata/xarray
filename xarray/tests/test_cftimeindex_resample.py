@@ -8,64 +8,32 @@ import xarray as xr
 from xarray.tests import assert_equal
 
 
-@pytest.fixture()
-def pd_index():
-    return pd.date_range('2004-01-01', periods=31, freq='MS')
-    # specifying tz='UTC' results in TypeError: Only valid with DatetimeIndex,
-    # TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
+@pytest.fixture(
+    params=[
+        dict(start='2004-01-01T12:07:01', periods=37, freq='A'),
+        dict(start='2004-01-01T12:07:01', periods=31, freq='3MS'),
+        dict(start='2004-01-01T12:07:01', periods=31, freq='MS'),
+        dict(start='2004-01-01T12:07:01', periods=31, freq='3D'),
+        dict(start='2004-01-01T12:07:04', periods=901, freq='D'),
+        dict(start='2004-01-01T12:07:01', periods=31, freq='D'),
+        dict(start='1892-01-01T12:00:00', periods=15, freq='5256113T'),
+        dict(start='1892', periods=10, freq='6AS-JUN')
+    ],
+    ids=['37_A', '31_3MS', '31_MS', '31_3D', '901D', '31D', 'XT', '6AS_JUN']
+    # ids = ['901D']
+)
+def time_range_kwargs(request):
+    return request.param
 
 
 @pytest.fixture()
-def xr_index():
-    return xr.cftime_range('2004-01-01', periods=31, freq='MS')
+def datetime_index(time_range_kwargs):
+    return pd.date_range(**time_range_kwargs)
 
 
 @pytest.fixture()
-def pd_3ms_index():
-    return pd.date_range('2004-01-01', periods=31, freq='3MS')
-    # specifying tz='UTC' results in TypeError: Only valid with DatetimeIndex,
-    # TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
-
-
-@pytest.fixture()
-def xr_3ms_index():
-    return xr.cftime_range('2004-01-01', periods=31, freq='3MS')
-
-
-@pytest.fixture()
-def pd_3d_index():
-    return pd.date_range('2004-01-01', periods=31, freq='3D')
-    # specifying tz='UTC' results in TypeError: Only valid with DatetimeIndex,
-    # TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
-
-
-@pytest.fixture()
-def xr_3d_index():
-    return xr.cftime_range('2004-01-01', periods=31, freq='3D')
-
-
-@pytest.fixture()
-def daily_pd_index():
-    return pd.date_range('2004-01-01', periods=901, freq='D')
-    # specifying tz='UTC' results in TypeError: Only valid with DatetimeIndex,
-    # TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
-
-
-@pytest.fixture()
-def daily_xr_index():
-    return xr.cftime_range('2004-01-01', periods=901, freq='D')
-
-
-@pytest.fixture()
-def base_pd_index():
-    return pd.date_range('2004-01-01', periods=31, freq='D')
-    # specifying tz='UTC' results in TypeError: Only valid with DatetimeIndex,
-    # TimedeltaIndex or PeriodIndex, but got an instance of 'Index'
-
-
-@pytest.fixture()
-def base_xr_index():
-    return xr.cftime_range('2004-01-01', periods=31, freq='D')
+def cftime_index(time_range_kwargs):
+    return xr.cftime_range(**time_range_kwargs)
 
 
 def da(index):
@@ -73,104 +41,46 @@ def da(index):
                         coords=[index], dims=['time'])
 
 
-def series(index):
-    return pd.Series(np.arange(100., 100. + index.size), index=index)
+# def series(index):
+#     return pd.Series(np.arange(100., 100. + index.size), index=index)
 
 
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['2MS', '2M', '3MS', '3M',
-                                  '4MS', '4M', '5MS', '5M',
-                                  '7MS', '7M', '8MS', '8M'])
-def test_downsampler(closed, label, freq, pd_index, xr_index):
-    downsamp_pdtime = da(pd_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    downsamp_cftime = da(xr_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    downsamp_cftime['time'] = downsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(downsamp_pdtime['time'].values, downsamp_cftime['time'].values)
-    np.testing.assert_equal(downsamp_pdtime.values, downsamp_cftime.values)
-    assert_equal(downsamp_pdtime, downsamp_cftime)
-
-
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['2MS', '2M', '3MS', '3M',
-                                  '4MS', '4M', '5MS', '5M',
-                                  '7MS', '7M', '8MS', '8M',
-                                  'AS', 'A', '2AS', '2A',
-                                  '3AS', '3A', '4AS', '4A'])
-def test_downsampler_daily(closed, label, freq, daily_pd_index, daily_xr_index):
-    downsamp_pdtime = da(daily_pd_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    downsamp_cftime = da(daily_xr_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    downsamp_cftime['time'] = downsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(downsamp_pdtime['time'].values, downsamp_cftime['time'].values)
-    np.testing.assert_equal(downsamp_pdtime.values, downsamp_cftime.values)
-    assert_equal(downsamp_pdtime, downsamp_cftime)
-
-
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['MS', 'M', '7D', '5D', '8D', '4D', 'D'])
-def test_upsampler(closed, label, freq, pd_index, xr_index):
-    # The testing here covers cases of equal sampling as well.
-    # For pandas, --not xarray--, .ffill() and .bfill() gives
-    # error (mismatched length).
-    upsamp_pdtime = da(pd_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime = da(xr_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
-    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
-    assert_equal(upsamp_pdtime, upsamp_cftime)
-
-
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['3MS', '3M', '2MS', '2M', 'MS', 'M',
-                                  '7D', '5D', '8D', '4D', 'D'])
-def test_upsampler_3ms(closed, label, freq, pd_3ms_index, xr_3ms_index):
-    # The testing here covers cases of equal sampling as well.
-    upsamp_pdtime = da(pd_3ms_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime = da(xr_3ms_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
-    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
-    assert_equal(upsamp_pdtime, upsamp_cftime)
-
-
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('freq', ['3D', '2D', 'D',
-                                  '7H', '5H', '2H'])
-def test_upsampler_3d(closed, label, freq, pd_3d_index, xr_3d_index):
-    # The testing here covers cases of equal sampling as well.
-    upsamp_pdtime = da(pd_3d_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime = da(xr_3d_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
-    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
-    assert_equal(upsamp_pdtime, upsamp_cftime)
-
-
+@pytest.mark.parametrize('freq', [
+    '600003T',
+    '2H', '5H', '7H', '12H', '8001H',
+    'D', '2D', '3D', '4D', '5D', '7D', '8D',
+    'MS', 'M', '2MS', '2M', '3MS', '3M', '4MS', '4M',
+    '5MS', '5M', '7MS', '7M', '8MS', '8M', '11M', '11MS',
+    'AS', 'A', '2AS', '2A', '3AS', '3A', '4AS', '4A'])
 @pytest.mark.parametrize('closed', ['left', 'right'])
 @pytest.mark.parametrize('label', ['left', 'right'])
 @pytest.mark.parametrize('base', [1, 5, 12, 17, 24])
-@pytest.mark.parametrize('freq', ['12H', '7H', '5H', '2H'])
-def test_upsampler_base(closed, label, base, freq,
-                        base_pd_index, base_xr_index):
-    upsamp_pdtime = da(base_pd_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime = da(base_xr_index).resample(
-        time=freq, closed=closed, label=label).mean()
-    upsamp_cftime['time'] = upsamp_cftime.indexes['time'].to_datetimeindex()
-    np.testing.assert_equal(upsamp_pdtime['time'].values, upsamp_cftime['time'].values)
-    np.testing.assert_equal(upsamp_pdtime.values, upsamp_cftime.values)
-    assert_equal(upsamp_pdtime, upsamp_cftime)
+# @pytest.mark.parametrize('freq', [
+#     '2H',
+#     '2D',
+#     '2MS', '2M',
+#     '2AS', '2A'])
+# @pytest.mark.parametrize('closed', ['left', 'right'])
+# @pytest.mark.parametrize('label', ['left', 'right'])
+# @pytest.mark.parametrize('base', [5])
+# @pytest.mark.parametrize('freq', ['11M', '8001H', '600003T', '3MS'])
+# @pytest.mark.parametrize('closed', ['left', 'right'])
+# @pytest.mark.parametrize('label', ['left', 'right'])
+# @pytest.mark.parametrize('base', [0, 1])
+@pytest.mark.xfail(raises=ValueError)
+def test_resampler(closed, label, base, freq,
+                   datetime_index, cftime_index):
+    da_cftime = da(cftime_index).resample(
+        time=freq, closed=closed, label=label, base=base).mean()
+    da_cftime['time'] = da_cftime.indexes['time'].to_datetimeindex()
+    da_datetime = da(datetime_index).resample(
+        time=freq, closed=closed, label=label, base=base).mean()
+    # np.testing.assert_equal(da_cftime.values, da_datetime.values)
+    # np.testing.assert_equal(da_cftime['time'].values,
+    #                         da_datetime['time'].values)
+    np.testing.assert_equal(da_cftime.values, da_datetime.values)
+    np.testing.assert_allclose(da_cftime['time'].values.astype(np.float64),
+                               da_datetime['time'].values.astype(np.float64))
+    # np.testing.assert_equal(da_cftime['time'].values,
+    #                         da_datetime['time'].values)
+    # assert_equal(da_cftime, da_datetime)
