@@ -1,8 +1,6 @@
 """Testing functions exposed to the user API"""
 from __future__ import absolute_import, division, print_function
 
-from io import StringIO
-
 import numpy as np
 
 from xarray.core import duck_array_ops

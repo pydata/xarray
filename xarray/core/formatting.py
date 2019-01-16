@@ -484,7 +484,8 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat,
     def extra_items_repr(extra_keys, mapping, ab_side):
         extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
         if extra_repr:
-            return ["{} contains more {}:".format(ab_side, title)] + extra_repr
+            header = "{} only on the {} object:".format(title, ab_side)
+            return [header] + extra_repr
         else:
             return []
 
@@ -524,26 +525,26 @@ def _diff_mapping_repr(a_mapping, b_mapping, compat,
                            for ab_side, s in zip(('L', 'R'), temp)]
 
     if diff_items:
-        summary += ["Differing {}:".format(title)] + diff_items
+        summary += ["Differing {}:".format(title.lower())] + diff_items
 
-    summary += extra_items_repr(a_keys - b_keys, a_mapping, "Left")
-    summary += extra_items_repr(b_keys - a_keys, b_mapping, "Right")
+    summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
+    summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")
 
     return "\n".join(summary)
 
 
 diff_coords_repr = functools.partial(_diff_mapping_repr,
-                                     title="coordinates",
+                                     title="Coordinates",
                                      summarizer=summarize_coord)
 
 
 diff_data_vars_repr = functools.partial(_diff_mapping_repr,
-                                        title="data variables",
+                                        title="Data variables",
                                         summarizer=summarize_datavar)
 
 
 diff_attrs_repr = functools.partial(_diff_mapping_repr,
-                                    title="attributes",
+                                    title="Attributes",
                                     summarizer=summarize_attr)
 
 

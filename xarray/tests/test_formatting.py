@@ -221,14 +221,14 @@ class TestFormatting(object):
         Differing coordinates:
         L * x        (x) <U1 'a' 'b'
         R * x        (x) <U1 'a' 'c'
-        Left contains more coordinates:
+        Coordinates only on the left object:
           * y        (y) int64 1 2 3
-        Right contains more coordinates:
+        Coordinates only on the right object:
             label    (x) int64 1 2
         Differing attributes:
         L   units: m
         R   units: kg
-        Left contains more attributes:
+        Attributes only on the left object:
             description: desc""")
 
         actual = formatting.diff_array_repr(da_a, da_b, 'identical')
@@ -289,19 +289,19 @@ class TestFormatting(object):
         L * x        (x) <U1 'a' 'b'
         R * x        (x) <U1 'a' 'c'
             source: 0
-        Left contains more coordinates:
+        Coordinates only on the left object:
           * y        (y) int64 1 2 3
-        Right contains more coordinates:
+        Coordinates only on the right object:
             label    (x) int64 1 2
         Differing data variables:
         L   var1     (x, y) int64 1 2 3 4 5 6
         R   var1     (x) int64 1 2
-        Left contains more data variables:
+        Data variables only on the left object:
             var2     (x) int64 3 4
         Differing attributes:
         L   units: m
         R   units: kg
-        Left contains more attributes:
+        Attributes only on the left object:
             description: desc""")
 
         actual = formatting.diff_dataset_repr(ds_a, ds_b, 'identical')
