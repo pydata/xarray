@@ -493,16 +493,21 @@ def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
     return new_combined_ids
 
 
+def vars_as_keys(ds):
+    return tuple(sorted(ds))
+
+
 def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                      compat='no_conflicts',
                      data_vars='all', coords='different'):
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
         concatenated = [_auto_concat(list(ds_group), dim=dim,
                                      data_vars=data_vars, coords=coords)
-                        for id, ds_group in grouped]
+                        for id, ds_group in grouped_by_vars]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
