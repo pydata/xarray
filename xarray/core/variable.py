@@ -1789,12 +1789,17 @@ class IndexVariable(Variable):
     unless another name is given.
     """
 
-    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False):
+    def __init__(self, dims, data, attrs=None, encoding=None, fastpath=False, name=None):
         super(IndexVariable, self).__init__(dims, data, attrs, encoding,
                                             fastpath)
         if self.ndim != 1:
             raise ValueError('%s objects must be 1-dimensional' %
                              type(self).__name__)
+        
+        if name is None:
+            self._name = self.dims[0]
+        else:
+            self._name = name
 
         # Unlike in Variable, always eagerly load values into memory
         if not isinstance(self._data, PandasIndexAdapter):
@@ -1956,7 +1961,7 @@ class IndexVariable(Variable):
 
     @property
     def name(self):
-        return self.dims[0]
+        return self._name
 
     @name.setter
     def name(self, value):

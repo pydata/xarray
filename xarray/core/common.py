@@ -722,6 +722,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
         # TODO support non-string indexer after removing the old API.
 
         from .dataarray import DataArray
+        from .variable import IndexVariable
         from .resample import RESAMPLE_DIM
         from ..coding.cftimeindex import CFTimeIndex
 
@@ -745,10 +746,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
             )
         dim, freq = indexer.popitem()
 
-        dim_name = dim
-        dim_coord = self[dim]
-
-        if isinstance(self.indexes[dim_name], CFTimeIndex):
+        if isinstance(self.indexes[dim], CFTimeIndex):
             raise NotImplementedError(
                 'Resample is currently not supported along a dimension '
                 'indexed by a CFTimeIndex.  For certain kinds of downsampling '
@@ -761,12 +759,12 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                 'errors.'
             )
 
-        group = DataArray(dim_coord, coords=dim_coord.coords,
-                          dims=dim_coord.dims, name=RESAMPLE_DIM)
+        group = IndexVariable(
+            data=self.indexes[dim], dims=[dim], name=RESAMPLE_DIM)
         # TODO: to_offset() call required for pandas==0.19.2
         grouper = pd.Grouper(freq=freq, closed=closed, label=label, base=base,
                              loffset=pd.tseries.frequencies.to_offset(loffset))
-        resampler = self._resample_cls(self, group=group, dim=dim_name,
+        resampler = self._resample_cls(self, group=group, dim=dim,
                                        grouper=grouper,
                                        resample_dim=RESAMPLE_DIM)
 

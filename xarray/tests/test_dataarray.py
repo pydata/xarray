@@ -2399,6 +2399,14 @@ class TestDataArray(object):
                              attrs=array.attrs)
         assert_identical(result, expected)
 
+    def test_resample_period_index(self):
+        times = pd.period_range('2000-01-01', freq='6H', periods=10)
+        array = DataArray(np.arange(10), [('time', times)])
+
+        actual = array.resample(time='24H').mean()
+        expected = DataArray(array.to_series().resample('24H').mean())
+        assert_identical(expected, actual)
+
     def test_resample_skipna(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         array = DataArray(np.ones(10), [('time', times)])
