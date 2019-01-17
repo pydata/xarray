@@ -650,7 +650,7 @@ class TestAutoCombineND(object):
         expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
                             'bar': ('x', [10, 20, 30, 40])})
 
-        actual = auto_combine(objs, concat_dim=['x', None])
+        actual = auto_combine(objs, concat_dim=['x', None], compat='equals')
         assert_identical(expected, actual)
 
         actual = auto_combine(objs)
@@ -661,7 +661,18 @@ class TestAutoCombineND(object):
                  Dataset({'foo': ('x', [2, 3])})],
                 [Dataset({'bar': ('x', [10, 20])}),
                  Dataset({'bar': ('x', [30, 40])})]]
-        actual = auto_combine(objs, concat_dim=[None, 'x'])
+        actual = auto_combine(objs, concat_dim=[None, 'x'], compat='equals')
+        assert_identical(expected, actual)
+
+    def test_internal_odering(self):
+        # See GH #2662
+        objs = [Dataset({'foo': ('x', [0, 1])}),
+                Dataset({'bar': ('x', [10, 20])}),
+                Dataset({'foo': ('x', [2, 3])}),
+                Dataset({'bar': ('x', [30, 40])})]
+        actual = auto_combine(objs, concat_dim='x', compat='equals')
+        expected = Dataset({'foo': ('x', [0, 1, 2, 3]),
+                            'bar': ('x', [10, 20, 30, 40])})
         assert_identical(expected, actual)
 
     def test_combine_concat_over_redundant_nesting(self):
