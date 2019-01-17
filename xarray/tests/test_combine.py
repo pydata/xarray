@@ -664,8 +664,9 @@ class TestAutoCombineND(object):
         actual = auto_combine(objs, concat_dim=[None, 'x'], compat='equals')
         assert_identical(expected, actual)
 
-    def test_internal_odering(self):
-        # See GH #2662
+    def test_internal_ordering(self):
+        # This gives a MergeError if _auto_combine_1d is not sorting by
+        # data_vars correctly, see GH #2662
         objs = [Dataset({'foo': ('x', [0, 1])}),
                 Dataset({'bar': ('x', [10, 20])}),
                 Dataset({'foo': ('x', [2, 3])}),
