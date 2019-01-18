@@ -42,6 +42,11 @@ Enhancements
   will return an exponentially weighted moving average.
   By `Maximilian Roos <https://github.com/max-sixty>`_.
   
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~
