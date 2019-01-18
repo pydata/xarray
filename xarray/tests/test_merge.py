@@ -5,9 +5,9 @@ import pytest
 
 import xarray as xr
 from xarray.core import merge
+from xarray.testing import create_test_data
 
 from . import raises_regex
-from .test_dataset import create_test_data
 
 
 class TestMergeInternals(object):

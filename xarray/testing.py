@@ -2,9 +2,11 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from pandas import date_range
 
 from xarray.core import duck_array_ops
 from xarray.core import formatting
+from xarray import Dataset
 
 
 def _decode_string_data(data):
@@ -143,6 +145,63 @@ def assert_allclose(a, b, rtol=1e-05, atol=1e-08, decode_bytes=True):
     else:
         raise TypeError('{} not supported by assertion comparison'
                         .format(type(a)))
+
+
+def create_test_data(seed=None):
+    """
+    Creates an example dataset for use when testing functions which act on
+    xarray objects.
+
+    The dataset returned covers several possible edge cases, including
+    dimensions with and without coordinates, and datetime, integer and string
+    coordinate values.
+
+    Used extensively within xarray's own test suite.
+
+    Parameters
+    ----------
+    seed : int, optional
+        Seed to use for random data (passed to `np.random.RandomState`),
+        default is `None`.
+
+    Returns
+    -------
+    dataset
+
+    Examples
+    --------
+    >>> xr.create_test_data(seed=0)
+    <xarray.Dataset>
+    Dimensions:  (dim1: 8, dim2: 9, dim3: 10, time: 20)
+    Coordinates:
+      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 ... 2000-01-20
+      * dim2     (dim2) float64 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+      * dim3     (dim3) <U1 'a' 'b' 'c' 'd' 'e' 'f' 'g' 'h' 'i' 'j'
+        numbers  (dim3) int64 0 1 2 0 0 1 1 2 2 3
+    Dimensions without coordinates: dim1
+    Data variables:
+        var1     (dim1, dim2) float64 1.764 0.4002 0.9787 ...
+        var2     (dim1, dim2) float64 1.139 -1.235 0.4023 ...
+        var3     (dim3, dim1) float64 2.383 0.9445 -0.9128 ...
+    """
+    rs = np.random.RandomState(seed)
+    _vars = {'var1': ['dim1', 'dim2'],
+             'var2': ['dim1', 'dim2'],
+             'var3': ['dim3', 'dim1']}
+    _dims = {'dim1': 8, 'dim2': 9, 'dim3': 10}
+
+    obj = Dataset()
+    obj['time'] = ('time', date_range('2000-01-01', periods=20))
+    obj['dim2'] = ('dim2', 0.5 * np.arange(_dims['dim2']))
+    obj['dim3'] = ('dim3', list('abcdefghij'))
+    for v, dims in sorted(_vars.items()):
+        data = rs.normal(size=tuple(_dims[d] for d in dims))
+        obj[v] = (dims, data, {'foo': 'variable'})
+    obj.coords['numbers'] = ('dim3', np.array([0, 1, 2, 0, 0, 1, 1, 2, 2, 3],
+                                              dtype='int64'))
+    obj.encoding = {'foo': 'bar'}
+    assert all(obj.data.flags.writeable for obj in obj.variables.values())
+    return obj
 
 
 def assert_combined_tile_ids_equal(dict1, dict2):

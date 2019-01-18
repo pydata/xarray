@@ -29,6 +29,8 @@ from xarray.core.options import set_options
 from xarray.core.pycompat import (
     ExitStack, basestring, dask_array_type, iteritems)
 from xarray.tests import mock
+from xarray.testing import create_test_data
+
 
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
@@ -37,7 +39,6 @@ from . import (
     requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
     requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
     requires_zarr)
-from .test_dataset import create_test_data
 
 try:
     import netCDF4 as nc4

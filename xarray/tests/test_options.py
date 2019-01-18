@@ -6,7 +6,7 @@ import xarray
 from xarray import concat, merge
 from xarray.backends.file_manager import FILE_CACHE
 from xarray.core.options import OPTIONS, _get_keep_attrs
-from xarray.tests.test_dataset import create_test_data
+from xarray.testing import create_test_data
 
 
 def test_invalid_option_raises():
