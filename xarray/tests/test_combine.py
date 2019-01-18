@@ -16,8 +16,8 @@ from xarray.core.pycompat import OrderedDict, iteritems
 from xarray.testing import create_test_data
 
 from . import (
-    InaccessibleArray, assert_array_equal, assert_combined_tile_ids_equal,
-    assert_equal, assert_identical, raises_regex, requires_dask)
+    InaccessibleArray, assert_array_equal, assert_equal, assert_identical,
+    raises_regex, requires_dask)
 
 
 class TestConcatDataset(object):
@@ -409,6 +409,13 @@ class TestAutoCombine(object):
                             'y': (('baz', 'z'), [[1, 2]])},
                            {'baz': [100]})
         assert_identical(expected, actual)
+
+
+def assert_combined_tile_ids_equal(dict1, dict2):
+    assert len(dict1) == len(dict2)
+    for k, v in dict1.items():
+        assert k in dict2.keys()
+        assert_equal(dict1[k], dict2[k])
 
 
 class TestTileIDsFromNestedList(object):
