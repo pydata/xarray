@@ -6,6 +6,7 @@ DISPLAY_WIDTH = 'display_width'
 ARITHMETIC_JOIN = 'arithmetic_join'
 ENABLE_CFTIMEINDEX = 'enable_cftimeindex'
 FILE_CACHE_MAXSIZE = 'file_cache_maxsize'
+WARN_FOR_UNCLOSED_FILES = 'warn_for_unclosed_files'
 CMAP_SEQUENTIAL = 'cmap_sequential'
 CMAP_DIVERGENT = 'cmap_divergent'
 KEEP_ATTRS = 'keep_attrs'
@@ -16,6 +17,7 @@ OPTIONS = {
     ARITHMETIC_JOIN: 'inner',
     ENABLE_CFTIMEINDEX: True,
     FILE_CACHE_MAXSIZE: 128,
+    WARN_FOR_UNCLOSED_FILES: False,
     CMAP_SEQUENTIAL: 'viridis',
     CMAP_DIVERGENT: 'RdBu_r',
     KEEP_ATTRS: 'default'
@@ -33,6 +35,7 @@ _VALIDATORS = {
     ARITHMETIC_JOIN: _JOIN_OPTIONS.__contains__,
     ENABLE_CFTIMEINDEX: lambda value: isinstance(value, bool),
     FILE_CACHE_MAXSIZE: _positive_integer,
+    WARN_FOR_UNCLOSED_FILES: lambda value: isinstance(value, bool),
     KEEP_ATTRS: lambda choice: choice in [True, False, 'default']
 }
 
@@ -80,6 +83,9 @@ class set_options(object):
       global least-recently-usage cached. This should be smaller than your
       system's per-process file descriptor limit, e.g., ``ulimit -n`` on Linux.
       Default: 128.
+    - ``warn_for_unclosed_files``: whether or not to issue a warning when
+      unclosed files are deallocated (default False). This is mostly useful
+      for debugging.
     - ``cmap_sequential``: colormap to use for nondivergent data plots.
       Default: ``viridis``. If string, must be matplotlib built-in colormap.
       Can also be a Colormap object (e.g. mpl.cm.magma)

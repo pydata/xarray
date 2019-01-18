@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 import pytz
 
-from xarray import Coordinate, Dataset, IndexVariable, Variable
-from xarray.core import indexing
+from xarray import Coordinate, Dataset, IndexVariable, Variable, set_options
+from xarray.core import dtypes, indexing
 from xarray.core.common import full_like, ones_like, zeros_like
 from xarray.core.indexing import (
     BasicIndexer, CopyOnWriteArray, DaskIndexingAdapter,
@@ -27,8 +27,6 @@ from xarray.tests import requires_bottleneck
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
     raises_regex, requires_dask, source_ndarray)
-
-from xarray import set_options
 
 
 class VariableSubclassobjects(object):
@@ -142,8 +140,8 @@ class VariableSubclassobjects(object):
         # check value is equal for both ndarray and Variable
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', "In the future, 'NAT == x'")
-            assert variable.values[0] == expected_value0
-            assert variable[0].values == expected_value0
+            np.testing.assert_equal(variable.values[0], expected_value0)
+            np.testing.assert_equal(variable[0].values, expected_value0)
         # check type or dtype is consistent for both ndarray and Variable
         if expected_dtype is None:
             # check output type instead of array dtype
@@ -1147,6 +1145,11 @@ class TestVariable(VariableSubclassobjects):
         assert v_new.dims == ('x', )
         assert_array_equal(v_new, v._data[:, 1])
 
+        # test that we obtain a modifiable view when taking a 0d slice
+        v_new = v[0, 0]
+        v_new[...] += 99
+        assert_array_equal(v_new, v._data[0, 0])
+
     def test_getitem_with_mask_2d_input(self):
         v = Variable(('x', 'y'), [[0, 1, 2], [3, 4, 5]])
         assert_identical(v._getitem_with_mask(([-1, 0], [1, -1])),
@@ -1176,24 +1179,32 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable((), u'tmax')
         assert_identical(actual, expected)
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_shift(self, fill_value):
         v = Variable('x', [1, 2, 3, 4, 5])
 
         assert_identical(v, v.shift(x=0))
         assert v is not v.shift(x=0)
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4])
-        assert_identical(expected, v.shift(x=1))
-
         expected = Variable('x', [np.nan, np.nan, 1, 2, 3])
         assert_identical(expected, v.shift(x=2))
 
-        expected = Variable('x', [2, 3, 4, 5, np.nan])
-        assert_identical(expected, v.shift(x=-1))
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value_exp = np.nan
+        else:
+            fill_value_exp = fill_value
 
-        expected = Variable('x', [np.nan] * 5)
-        assert_identical(expected, v.shift(x=5))
-        assert_identical(expected, v.shift(x=6))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4])
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
+
+        expected = Variable('x', [2, 3, 4, 5, fill_value_exp])
+        assert_identical(expected, v.shift(x=-1, fill_value=fill_value))
+
+        expected = Variable('x', [fill_value_exp] * 5)
+        assert_identical(expected, v.shift(x=5, fill_value=fill_value))
+        assert_identical(expected, v.shift(x=6, fill_value=fill_value))
 
         with raises_regex(ValueError, 'dimension'):
             v.shift(z=0)
@@ -1201,8 +1212,8 @@ class TestVariable(VariableSubclassobjects):
         v = Variable('x', [1, 2, 3, 4, 5], {'foo': 'bar'})
         assert_identical(v, v.shift(x=0))
 
-        expected = Variable('x', [np.nan, 1, 2, 3, 4], {'foo': 'bar'})
-        assert_identical(expected, v.shift(x=1))
+        expected = Variable('x', [fill_value_exp, 1, 2, 3, 4], {'foo': 'bar'})
+        assert_identical(expected, v.shift(x=1, fill_value=fill_value))
 
     def test_shift2d(self):
         v = Variable(('x', 'y'), [[1, 2], [3, 4]])
@@ -1673,6 +1684,58 @@ class TestVariable(VariableSubclassobjects):
         expected = Variable(['x', 'y'], [[2, 3], [3, 4], [4, 5]])
         assert_identical(v, expected)
 
+    def test_coarsen(self):
+        v = self.cls(['x'], [0, 1, 2, 3, 4])
+        actual = v.coarsen({'x': 2}, boundary='pad', func='mean')
+        expected = self.cls(['x'], [0.5, 2.5, 4])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func='mean', boundary='pad',
+                           side='right')
+        expected = self.cls(['x'], [0, 1.5, 3.5])
+        assert_identical(actual, expected)
+
+        actual = v.coarsen({'x': 2}, func=np.mean, side='right',
+                           boundary='trim')
+        expected = self.cls(['x'], [1.5, 3.5])
+        assert_identical(actual, expected)
+
+        # working test
+        v = self.cls(['x', 'y', 'z'],
+                     np.arange(40 * 30 * 2).reshape(40, 30, 2))
+        for windows, func, side, boundary in [
+                ({'x': 2}, np.mean, 'left', 'trim'),
+                ({'x': 2}, np.median, {'x': 'left'}, 'pad'),
+                ({'x': 2, 'y': 3}, np.max, 'left', {'x': 'pad', 'y': 'trim'})]:
+            v.coarsen(windows, func, boundary, side)
+
+    def test_coarsen_2d(self):
+        # 2d-mean should be the same with the successive 1d-mean
+        v = self.cls(['x', 'y'], np.arange(6 * 12).reshape(6, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean')
+        expected = v.coarsen({'x': 3}, func='mean').coarsen(
+            {'y': 4}, func='mean')
+        assert_equal(actual, expected)
+
+        v = self.cls(['x', 'y'], np.arange(7 * 12).reshape(7, 12))
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='mean', boundary='trim').coarsen(
+            {'y': 4}, func='mean', boundary='trim')
+        assert_equal(actual, expected)
+
+        # if there is nan, the two should be different
+        v = self.cls(['x', 'y'], 1.0 * np.arange(6 * 12).reshape(6, 12))
+        v[2, 4] = np.nan
+        v[3, 5] = np.nan
+        actual = v.coarsen({'x': 3, 'y': 4}, func='mean', boundary='trim')
+        expected = v.coarsen({'x': 3}, func='sum', boundary='trim').coarsen(
+            {'y': 4}, func='sum', boundary='trim') / 12
+        assert not actual.equals(expected)
+        # adjusting the nan count
+        expected[0, 1] *= 12 / 11
+        expected[1, 1] *= 12 / 11
+        assert_allclose(actual, expected)
+
 
 @requires_dask
 class TestVariableWithDask(VariableSubclassobjects):
@@ -1826,6 +1889,10 @@ class TestIndexVariable(VariableSubclassobjects):
     @pytest.mark.xfail
     def test_rolling_window(self):
         super(TestIndexVariable, self).test_rolling_window()
+
+    @pytest.mark.xfail
+    def test_coarsen_2d(self):
+        super(TestIndexVariable, self).test_coarsen_2d()
 
 
 class TestAsCompatibleData(object):

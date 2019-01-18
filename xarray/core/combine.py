@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import warnings
 import itertools
+import warnings
 from collections import Counter
 
 import pandas as pd
@@ -368,7 +368,7 @@ def _auto_concat(datasets, dim=None, data_vars='all', coords='different'):
         return concat(datasets, dim=dim, data_vars=data_vars, coords=coords)
 
 
-_CONCAT_DIM_DEFAULT = '__infer_concat_dim__'
+_CONCAT_DIM_DEFAULT = utils.ReprObject('<inferred>')
 
 
 def _infer_concat_order_from_positions(datasets, concat_dims):
@@ -378,7 +378,7 @@ def _infer_concat_order_from_positions(datasets, concat_dims):
     tile_id, ds = list(combined_ids.items())[0]
     n_dims = len(tile_id)
     if concat_dims == _CONCAT_DIM_DEFAULT or concat_dims is None:
-        concat_dims = [concat_dims]*n_dims
+        concat_dims = [concat_dims] * n_dims
     else:
         if len(concat_dims) != n_dims:
             raise ValueError("concat_dims has length {} but the datasets "
@@ -493,16 +493,21 @@ def _auto_combine_all_along_first_dim(combined_ids, dim, data_vars,
     return new_combined_ids
 
 
+def vars_as_keys(ds):
+    return tuple(sorted(ds))
+
+
 def _auto_combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                      compat='no_conflicts',
                      data_vars='all', coords='different'):
     # This is just the old auto_combine function (which only worked along 1D)
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
-        grouped = itertools.groupby(datasets, key=lambda ds: tuple(sorted(ds)))
+        sorted_datasets = sorted(datasets, key=vars_as_keys)
+        grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
         concatenated = [_auto_concat(list(ds_group), dim=dim,
                                      data_vars=data_vars, coords=coords)
-                        for id, ds_group in grouped]
+                        for id, ds_group in grouped_by_vars]
     else:
         concatenated = datasets
     merged = merge(concatenated, compat=compat)
@@ -533,8 +538,8 @@ def _auto_combine(datasets, concat_dims, compat, data_vars, coords,
         if not ids:
             # Determine tile_IDs by structure of input in N-D
             # (i.e. ordering in list-of-lists)
-            combined_ids, concat_dims = _infer_concat_order_from_positions\
-                                                        (datasets, concat_dims)
+            combined_ids, concat_dims = _infer_concat_order_from_positions(
+                datasets, concat_dims)
         else:
             # Already sorted so just use the ids already passed
             combined_ids = OrderedDict(zip(ids, datasets))
@@ -574,10 +579,10 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
         By default, xarray attempts to infer this argument by examining
         component files. Set ``concat_dim=None`` explicitly to disable
         concatenation.
-    compat : {'identical', 'equals', 'broadcast_equals',
-              'no_conflicts'}, optional
+    compat : {'identical', 'equals', 'broadcast_equals', 'no_conflicts'}, optional
         String indicating how to compare variables of the same name for
         potential conflicts:
+
         - 'broadcast_equals': all values must be equal when variables are
           broadcast against each other to ensure common dimensions.
         - 'equals': all values and dimensions must be the same.
@@ -599,7 +604,7 @@ def auto_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     --------
     concat
     Dataset.merge
-    """
+    """  # noqa
 
     # Coerce 1D input into ND to maintain backwards-compatible API until API
     # for N-D combine decided

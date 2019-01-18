@@ -11,7 +11,10 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - flake8
+  - pytest-cov
+  - pytest-env
+  - coveralls
+  - pycodestyle
   - numpy
   - pandas
   - scipy
@@ -21,10 +24,9 @@ dependencies:
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
+  - lxml
   - eccodes
+  - pydap
   - pip:
-    - coveralls
-    - pytest-cov
-    - pydap
-    - lxml
     - cfgrib>=0.9.2
+    - mypy==0.650

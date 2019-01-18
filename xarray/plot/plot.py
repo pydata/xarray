@@ -14,7 +14,6 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-# from xarray.core.alignment import align
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 

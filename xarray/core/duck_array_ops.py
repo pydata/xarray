@@ -6,14 +6,14 @@ accept or return xarray objects.
 from __future__ import absolute_import, division, print_function
 
 import contextlib
+from functools import partial
 import inspect
 import warnings
-from functools import partial
 
 import numpy as np
 import pandas as pd
 
-from . import dask_array_ops, dtypes, npcompat, nputils
+from . import dask_array_ops, dtypes, npcompat, nputils, utils
 from .nputils import nanfirst, nanlast
 from .pycompat import dask_array_type
 
@@ -21,8 +21,8 @@ try:
     import dask.array as dask_array
     from . import dask_array_compat
 except ImportError:
-    dask_array = None
-    dask_array_compat = None
+    dask_array = None  # type: ignore
+    dask_array_compat = None  # type: ignore
 
 
 def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
@@ -43,10 +43,10 @@ def _dask_or_eager_func(name, eager_module=np, dask_module=dask_array,
                                          (e, requires_dask))
             else:
                 wrapped = getattr(eager_module, name)
-            return wrapped(*args, ** kwargs)
+            return wrapped(*args, **kwargs)
     else:
-        def f(data, *args, **kwargs):
-            return getattr(eager_module, name)(data, *args, **kwargs)
+        def f(*args, **kwargs):
+            return getattr(eager_module, name)(*args, **kwargs)
     return f
 
 
@@ -261,8 +261,6 @@ min = _create_nan_agg_method('min', coerce_strings=True)
 sum = _create_nan_agg_method('sum')
 sum.numeric_only = True
 sum.available_min_count = True
-mean = _create_nan_agg_method('mean')
-mean.numeric_only = True
 std = _create_nan_agg_method('std')
 std.numeric_only = True
 var = _create_nan_agg_method('var')
@@ -276,6 +274,25 @@ cumprod_1d = _create_nan_agg_method('cumprod')
 cumprod_1d.numeric_only = True
 cumsum_1d = _create_nan_agg_method('cumsum')
 cumsum_1d.numeric_only = True
+
+
+_mean = _create_nan_agg_method('mean')
+
+
+def mean(array, axis=None, skipna=None, **kwargs):
+    """ inhouse mean that can handle datatime dtype """
+    array = asarray(array)
+    if array.dtype.kind == 'M':
+        offset = min(array)
+        # xarray always uses datetime[ns] for datetime
+        dtype = 'timedelta64[ns]'
+        return _mean(utils.datetime_to_numeric(array, offset), axis=axis,
+                     skipna=skipna, **kwargs).astype(dtype) + offset
+    else:
+        return _mean(array, axis=axis, skipna=skipna, **kwargs)
+
+
+mean.numeric_only = True
 
 
 def _nd_cum_func(cum_func, array, axis, **kwargs):
