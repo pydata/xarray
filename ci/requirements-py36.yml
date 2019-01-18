@@ -20,7 +20,7 @@ dependencies:
   - scipy
   - seaborn
   - toolz
-  - rasterio
+  # - rasterio  # xref #2683
   - bottleneck
   - zarr
   - pseudonetcdf>=3.0.1
