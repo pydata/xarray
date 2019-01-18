@@ -41,6 +41,12 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- The function :py:func:`xarray.testing.create_test_data` has been added to the
+  public testing API. It creates a small example dataset, and is provided as a
+  convenience function for when you are  writing tests for code which acts on
+  xarray objects (:issue:`2686`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+
 
 Bug fixes
 ~~~~~~~~~
