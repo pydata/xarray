@@ -591,6 +591,7 @@ Testing
    testing.assert_equal
    testing.assert_identical
    testing.assert_allclose
+   testing.create_test_data
 
 Exceptions
 ==========
