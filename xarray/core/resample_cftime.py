@@ -78,18 +78,8 @@ def _get_time_bins(index, freq, closed, label, base):
                                           start=first,
                                           end=last,
                                           name=index.name)
-    print('XARRAY-START')
-    print(index.min(), index.max())
-    print(first, last)
-    print('initial range\n', datetime_bins)
-    print('len binner: ', len(datetime_bins),
-          'len labels: ', len(labels))
 
     datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed, index)
-
-    print('len datetime_bins: ', len(datetime_bins),
-          'len labels: ', len(labels))
-    print('_adjust_bin_edges\n', datetime_bins)
 
     if closed == 'right':
         if label == 'right':
@@ -97,16 +87,9 @@ def _get_time_bins(index, freq, closed, label, base):
     elif label == 'right':
         labels = labels[1:]
 
-        print('len datetime_bins: ', len(datetime_bins),
-              'len labels: ', len(labels))
-
     if index.hasnans:  # cannot be true since CFTimeIndex does not allow NaNs
         datetime_bins = datetime_bins.insert(0, pd.NaT)
         labels = labels.insert(0, pd.NaT)
-
-        print('len binner: ', len(datetime_bins),
-              'len labels: ', len(labels))
-    print('XARRAY-END')
 
     return datetime_bins, labels
 
