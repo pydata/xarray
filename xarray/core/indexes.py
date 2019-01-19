@@ -35,6 +35,47 @@ class Indexes(Mapping, formatting.ReprMixin):
     def __unicode__(self):
         return formatting.indexes_repr(self)
 
+# class Indexes(Mapping, formatting.ReprMixin):
+#     """Ordered Mapping[str, pandas.Index] for xarray objects.
+#     """
+#
+#     def __init__(self, variables, sizes):
+#         """Not for public consumption.
+#
+#         Parameters
+#         ----------
+#         variables : OrderedDict[Any, Variable]
+#             Reference to OrderedDict holding variable objects. Should be the
+#             same dictionary used by the source object.
+#         sizes : OrderedDict[Any, int]
+#             Map from dimension names to sizes.
+#         """
+#         self._variables = variables
+#         self._sizes = sizes
+#
+#     def _is_index_variable(self, key):
+#         return (key in self._variables and key in self._sizes and
+#                 isinstance(self._variables[key], IndexVariable))
+#
+#     def __iter__(self):
+#         for key in self._sizes:
+#             if self._is_index_variable(key):
+#                 yield key
+#
+#     def __len__(self):
+#         return sum(self._is_index_variable(key) for key in self._sizes)
+#
+#     def __contains__(self, key):
+#         self._is_index_variable(key)
+#
+#     def __getitem__(self, key):
+#         if not self._is_index_variable(key):
+#             raise KeyError(key)
+#         return self._variables[key].to_index()
+#
+#     def __unicode__(self):
+#         return formatting.indexes_repr(self)
+
 
 def default_indexes(coords, dims):
     """Default indexes for a Dataset/DataArray.
