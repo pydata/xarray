@@ -5,20 +5,21 @@ import pytest
 import numpy as np
 import pandas as pd
 import xarray as xr
+import pandas.core.resample as pdr
+import xarray.core.resample_cftime as xrr
+from pandas.tseries.frequencies import to_offset as pd_to_offset
+from xarray.coding.cftime_offsets import (to_cftime_datetime,
+                                          to_offset as xr_to_offset)
 
 
 @pytest.fixture(
     params=[
-        dict(start='2004-01-01T12:07:01', periods=37, freq='A'),
-        dict(start='2004-01-01T12:07:01', periods=31, freq='3MS'),
-        dict(start='2004-01-01T12:07:01', periods=31, freq='MS'),
-        dict(start='2004-01-01T12:07:01', periods=31, freq='3D'),
-        dict(start='2004-01-01T12:07:04', periods=901, freq='D'),
-        dict(start='2004-01-01T12:07:01', periods=31, freq='D'),
-        dict(start='1892-01-01T12:00:00', periods=15, freq='5256113T'),
-        dict(start='1892', periods=10, freq='6AS-JUN')
+        dict(start='2004-01-01T12:07:01', periods=91, freq='3D'),
+        dict(start='1892-01-03T12:07:01', periods=15, freq='41987T'),
+        dict(start='2004-01-01T12:07:01', periods=31, freq='2MS'),
+        dict(start='1892-01-03T12:07:01', periods=10, freq='3AS-JUN')
     ],
-    ids=['37_A', '31_3MS', '31_MS', '31_3D', '901D', '31D', 'XT', '6AS_JUN']
+    ids=['2MS', '3D', '41987T', '3AS_JUN']
 )
 def time_range_kwargs(request):
     return request.param
@@ -40,17 +41,16 @@ def da(index):
 
 
 @pytest.mark.parametrize('freq', [
-    '600003T',
-    '2H', '5H', '7H', '12H', '8001H',
-    'D', '2D', '3D', '4D', '5D', '7D', '8D',
-    'MS', 'M', '2MS', '2M', '3MS', '3M', '4MS', '4M',
-    '5MS', '5M', '7MS', '7M', '8MS', '8M', '11M', '11MS',
-    'AS', 'A', '2AS', '2A', '3AS', '3A', '4AS', '4A'])
+    '700T', '8001T',
+    '12H', '8001H',
+    '3D', '8D', '8001D',
+    '2MS', '2M', '3MS', '3M', '4MS', '4M',
+    '3AS', '3A', '4AS', '4A'])
 @pytest.mark.parametrize('closed', ['left', 'right'])
 @pytest.mark.parametrize('label', ['left', 'right'])
-@pytest.mark.parametrize('base', [1, 5, 12, 17, 24])
+@pytest.mark.parametrize('base', [17, 24])
 @pytest.mark.xfail(raises=ValueError)
-def test_resampler(closed, label, base, freq,
+def test_resampler(freq, closed, label, base,
                    datetime_index, cftime_index):
     da_cftime = da(cftime_index).resample(
         time=freq, closed=closed, label=label, base=base).mean()
@@ -58,5 +58,35 @@ def test_resampler(closed, label, base, freq,
     da_datetime = da(datetime_index).resample(
         time=freq, closed=closed, label=label, base=base).mean()
     np.testing.assert_equal(da_cftime.values, da_datetime.values)
-    np.testing.assert_allclose(da_cftime['time'].values.astype(np.float64),
-                               da_datetime['time'].values.astype(np.float64))
+    np.testing.assert_equal(da_cftime['time'].values.astype(np.float64),
+                            da_datetime['time'].values.astype(np.float64))
+
+
+@pytest.mark.parametrize('freq', [
+    '700T', '8001T',
+    '12H', '8001H',
+    '3D', '8D', '8001D',
+    '2MS', '2M', '3MS', '3M', '4MS', '4M',
+    '3AS', '3A', '4AS', '4A'])
+@pytest.mark.parametrize('closed', ['left', 'right'])
+@pytest.mark.parametrize('label', ['left', 'right'])
+@pytest.mark.parametrize('base', [17, 24])
+@pytest.mark.parametrize('first', ['1892-01-03T12:07:01'])
+@pytest.mark.parametrize('last', ['1893-01-03T12:07:01'])
+def test_get_range_edges(freq, closed, label, base,
+                         first, last):
+    """
+    Test must cover the following cases:
+    freq/offset is instance of Tick/CFTIME_TICKS (Day, Hour, Minute, Second)
+    so that _adjust_dates_anchored is triggered.
+    """
+    first_cftime = to_cftime_datetime(first, 'standard')
+    first_datetime = pd.Timestamp(first)
+    last_cftime = to_cftime_datetime(last, 'standard')
+    last_datetime = pd.Timestamp(last)
+    first_pd, last_pd = pdr._get_timestamp_range_edges(
+        first_datetime, last_datetime, pd_to_offset(freq), closed, base)
+    first_xr, last_xr = xrr._get_range_edges(
+        first_cftime, last_cftime, xr_to_offset(freq), closed, base)
+    np.testing.assert_equal([first_pd, last_pd], [first_xr, last_xr])
+    # pdr._adjust_dates_anchored()
