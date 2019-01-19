@@ -237,7 +237,10 @@ class TestDataset(object):
 
         with raises_regex(ValueError, 'conflicting sizes'):
             Dataset({'a': x1, 'b': x2})
-        with raises_regex(TypeError, 'tuples of form'):
+        # these are now allowed -- let's add a more explicit test
+        #with raises_regex(ValueError, "disallows such variables"):
+        #    Dataset({'a': x1, 'x': z})
+        with raises_regex(TypeError, 'tuple of form'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with raises_regex(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
