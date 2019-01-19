@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from distutils import version
 import re
 import importlib
+from unittest import mock
 
 import numpy as np
 from numpy.testing import assert_array_equal  # noqa: F401
@@ -13,6 +14,7 @@ from xarray.core.duck_array_ops import allclose_or_equiv  # noqa
 import pytest
 
 from xarray.core import utils
+from xarray.core.options import set_options
 from xarray.core.indexing import ExplicitlyIndexed
 from xarray.testing import (assert_equal, assert_identical,  # noqa: F401
                             assert_allclose, assert_combined_tile_ids_equal)
@@ -23,12 +25,6 @@ try:
 except ImportError:
     # old location, for pandas < 0.20
     from pandas.util.testing import assert_frame_equal  # noqa: F401
-
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock  # noqa: F401
 
 # import mpl and change the backend before other mpl imports
 try:
@@ -70,6 +66,8 @@ has_h5netcdf, requires_h5netcdf = _importorskip('h5netcdf')
 has_pynio, requires_pynio = _importorskip('Nio')
 has_pseudonetcdf, requires_pseudonetcdf = _importorskip('PseudoNetCDF')
 has_cftime, requires_cftime = _importorskip('cftime')
+has_cftime_1_0_2_1, requires_cftime_1_0_2_1 = _importorskip(
+    'cftime', minversion='1.0.2.1')
 has_dask, requires_dask = _importorskip('dask')
 has_bottleneck, requires_bottleneck = _importorskip('bottleneck')
 has_rasterio, requires_rasterio = _importorskip('rasterio')
@@ -88,12 +86,6 @@ requires_cftime_or_netCDF4 = pytest.mark.skipif(
     not has_cftime_or_netCDF4, reason='requires cftime or netCDF4')
 if not has_pathlib:
     has_pathlib, requires_pathlib = _importorskip('pathlib2')
-if has_dask:
-    import dask
-    if LooseVersion(dask.__version__) < '0.18':
-        dask.set_options(get=dask.get)
-    else:
-        dask.config.set(scheduler='single-threaded')
 try:
     import_seaborn()
     has_seaborn = True
@@ -102,6 +94,17 @@ except ImportError:
 requires_seaborn = pytest.mark.skipif(not has_seaborn,
                                       reason='requires seaborn')
 
+# change some global options for tests
+set_options(warn_for_unclosed_files=True)
+
+if has_dask:
+    import dask
+    if LooseVersion(dask.__version__) < '0.18':
+        dask.set_options(get=dask.get)
+    else:
+        dask.config.set(scheduler='single-threaded')
+
+# pytest config
 try:
     _SKIP_FLAKY = not pytest.config.getoption("--run-flaky")
     _SKIP_NETWORK_TESTS = not pytest.config.getoption("--run-network-tests")

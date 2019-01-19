@@ -5,6 +5,7 @@ import sys
 import warnings
 from copy import copy, deepcopy
 from io import StringIO
+import pickle
 from textwrap import dedent
 
 import numpy as np
@@ -15,7 +16,7 @@ import xarray as xr
 from xarray import (
     ALL_DIMS, DataArray, Dataset, IndexVariable, MergeError, Variable, align,
     backends, broadcast, open_dataset, set_options)
-from xarray.core import indexing, npcompat, utils
+from xarray.core import dtypes, indexing, npcompat, utils
 from xarray.core.common import full_like
 from xarray.core.pycompat import (
     OrderedDict, integer_types, iteritems, unicode_type)
@@ -26,10 +27,6 @@ from . import (
     raises_regex, requires_bottleneck, requires_dask, requires_scipy,
     source_ndarray)
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 try:
     import dask.array as da
 except ImportError:
@@ -2804,6 +2801,18 @@ class TestDataset(object):
         expected = ds.attrs
         assert expected == actual
 
+    def test_resample_loffset(self):
+        times = pd.date_range('2000-01-01', freq='6H', periods=10)
+        ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
+                      'bar': ('time', np.random.randn(10), {'meta': 'data'}),
+                      'time': times})
+        ds.attrs['dsmeta'] = 'dsdata'
+
+        actual = ds.resample(time='24H', loffset='-12H').mean('time').time
+        expected = xr.DataArray(ds.bar.to_series()
+                                .resample('24H', loffset='-12H').mean()).time
+        assert_identical(expected, actual)
+
     def test_resample_by_mean_discarding_attrs(self):
         times = pd.date_range('2000-01-01', freq='6H', periods=10)
         ds = Dataset({'foo': (['time', 'x', 'y'], np.random.randn(10, 5, 3)),
@@ -2873,6 +2882,19 @@ class TestDataset(object):
 
         with raises_regex(TypeError, r'resample\(\) no longer supports'):
             ds.resample('1D', dim='time')
+
+    def test_ds_resample_apply_func_args(self):
+
+        def func(arg1, arg2, arg3=0.):
+            return arg1.mean('time') + arg2 + arg3
+
+        times = pd.date_range('2000', freq='D', periods=3)
+        ds = xr.Dataset({'foo': ('time', [1., 1., 1.]),
+                         'time': times})
+        expected = xr.Dataset({'foo': ('time', [3., 3., 3.]),
+                               'time': times})
+        actual = ds.resample(time='D').apply(func, args=(1.,), arg3=1.)
+        assert_identical(expected, actual)
 
     def test_to_array(self):
         ds = Dataset(OrderedDict([('a', 1), ('b', ('x', [1, 2, 3]))]),
@@ -3892,12 +3914,17 @@ class TestDataset(object):
         with raises_regex(ValueError, '\'label\' argument has to'):
             ds.diff('dim2', label='raise_me')
 
-    def test_shift(self):
+    @pytest.mark.parametrize('fill_value', [dtypes.NA, 2, 2.0])
+    def test_shift(self, fill_value):
         coords = {'bar': ('x', list('abc')), 'x': [-4, 3, 2]}
         attrs = {'meta': 'data'}
         ds = Dataset({'foo': ('x', [1, 2, 3])}, coords, attrs)
-        actual = ds.shift(x=1)
-        expected = Dataset({'foo': ('x', [np.nan, 1, 2])}, coords, attrs)
+        actual = ds.shift(x=1, fill_value=fill_value)
+        if fill_value == dtypes.NA:
+            # if we supply the default, we expect the missing value for a
+            # float array
+            fill_value = np.nan
+        expected = Dataset({'foo': ('x', [fill_value, 1, 2])}, coords, attrs)
         assert_identical(expected, actual)
 
         with raises_regex(ValueError, 'dimensions'):
@@ -4400,6 +4427,48 @@ def ds(request):
                         'time': ('time', np.linspace(0, 1.0, 10)),
                         'c': ('y', ['a', 'b']),
                         'y': range(2)})
+
+
+@pytest.mark.parametrize('dask', [True, False])
+@pytest.mark.parametrize(('boundary', 'side'), [
+    ('trim', 'left'), ('pad', 'right')])
+def test_coarsen(ds, dask, boundary, side):
+    if dask and has_dask:
+        ds = ds.chunk({'x': 4})
+
+    actual = ds.coarsen(time=2, x=3, boundary=boundary, side=side).max()
+    assert_equal(
+        actual['z1'],
+        ds['z1'].coarsen(time=2, x=3, boundary=boundary, side=side).max())
+    # coordinate should be mean by default
+    assert_equal(actual['time'], ds['time'].coarsen(
+        time=2, x=3, boundary=boundary, side=side).mean())
+
+
+@pytest.mark.parametrize('dask', [True, False])
+def test_coarsen_coords(ds, dask):
+    if dask and has_dask:
+        ds = ds.chunk({'x': 4})
+
+    # check if coord_func works
+    actual = ds.coarsen(time=2, x=3, boundary='trim',
+                        coord_func={'time': 'max'}).max()
+    assert_equal(actual['z1'],
+                 ds['z1'].coarsen(time=2, x=3, boundary='trim').max())
+    assert_equal(actual['time'],
+                 ds['time'].coarsen(time=2, x=3, boundary='trim').max())
+
+    # raise if exact
+    with pytest.raises(ValueError):
+        ds.coarsen(x=3).mean()
+    # should be no error
+    ds.isel(x=slice(0, 3 * (len(ds['x']) // 3))).coarsen(x=3).mean()
+
+    # working test with pd.time
+    da = xr.DataArray(
+        np.linspace(0, 365, num=364), dims='time',
+        coords={'time': pd.date_range('15/12/1999', periods=364)})
+    actual = da.coarsen(time=2).mean()
 
 
 def test_rolling_properties(ds):

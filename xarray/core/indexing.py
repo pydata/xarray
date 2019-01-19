@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import functools
 import operator
-from collections import Hashable, defaultdict
+from collections import defaultdict
 from datetime import timedelta
 
 import numpy as np
@@ -12,6 +12,11 @@ from . import duck_array_ops, nputils, utils
 from .pycompat import (
     dask_array_type, integer_types, iteritems, range, suppress)
 from .utils import is_dict_like
+
+try:
+    from collections.abc import Hashable
+except ImportError:  # Py2
+    from collections import Hashable
 
 
 def expanded_indexer(key, ndim):
@@ -159,6 +164,10 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 tuple(label.values()), level=tuple(label.keys()))
 
+            # GH2619. Raise a KeyError if nothing is chosen
+            if indexer.dtype.kind == 'b' and indexer.sum() == 0:
+                raise KeyError('{} not found'.format(label))
+
     elif isinstance(label, tuple) and isinstance(index, pd.MultiIndex):
         if _is_nested_tuple(label):
             indexer = index.get_locs(label)
@@ -168,7 +177,6 @@ def convert_label_indexer(index, label, index_name='', method=None,
             indexer, new_index = index.get_loc_level(
                 label, level=list(range(len(label)))
             )
-
     else:
         label = (label if getattr(label, 'ndim', 1) > 1  # vectorized-indexing
                  else _asarray_tuplesafe(label))
@@ -1142,15 +1150,6 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
                             'Trying to wrap {}'.format(type(array)))
         self.array = array
 
-    def _ensure_ndarray(self, value):
-        # We always want the result of indexing to be a NumPy array. If it's
-        # not, then it really should be a 0d array. Doing the coercion here
-        # instead of inside variable.as_compatible_data makes it less error
-        # prone.
-        if not isinstance(value, np.ndarray):
-            value = utils.to_0d_array(value)
-        return value
-
     def _indexing_array_and_key(self, key):
         if isinstance(key, OuterIndexer):
             array = self.array
@@ -1160,7 +1159,10 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
             key = key.tuple
         elif isinstance(key, BasicIndexer):
             array = self.array
-            key = key.tuple
+            # We want 0d slices rather than scalars. This is achieved by
+            # appending an ellipsis (see
+            # https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#detailed-notes).  # noqa
+            key = key.tuple + (Ellipsis,)
         else:
             raise TypeError('unexpected key type: {}'.format(type(key)))
 
@@ -1171,7 +1173,7 @@ class NumpyIndexingAdapter(ExplicitlyIndexedNDArrayMixin):
 
     def __getitem__(self, key):
         array, key = self._indexing_array_and_key(key)
-        return self._ensure_ndarray(array[key])
+        return array[key]
 
     def __setitem__(self, key, value):
         array, key = self._indexing_array_and_key(key)

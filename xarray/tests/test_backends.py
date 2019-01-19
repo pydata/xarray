@@ -4,10 +4,12 @@ import contextlib
 import itertools
 import math
 import os.path
+from pathlib import Path
 import pickle
 import shutil
 import sys
 import tempfile
+from typing import Optional
 import warnings
 from io import BytesIO
 
@@ -27,12 +29,14 @@ from xarray.core.options import set_options
 from xarray.core.pycompat import (
     ExitStack, basestring, dask_array_type, iteritems)
 from xarray.tests import mock
+
 from . import (
     assert_allclose, assert_array_equal, assert_equal, assert_identical,
-    has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cftime,
-    requires_dask, requires_h5netcdf, requires_netCDF4, requires_pathlib,
-    requires_pseudonetcdf, requires_pydap, requires_pynio, requires_rasterio,
-    requires_scipy, requires_scipy_or_netCDF4, requires_zarr, requires_cfgrib)
+    has_dask, has_netCDF4, has_scipy, network, raises_regex, requires_cfgrib,
+    requires_cftime, requires_dask, requires_h5netcdf, requires_netCDF4,
+    requires_pathlib, requires_pseudonetcdf, requires_pydap, requires_pynio,
+    requires_rasterio, requires_scipy, requires_scipy_or_netCDF4,
+    requires_zarr)
 from .test_dataset import create_test_data
 
 try:
@@ -45,13 +49,6 @@ try:
 except ImportError:
     pass
 
-try:
-    from pathlib import Path
-except ImportError:
-    try:
-        from pathlib2 import Path
-    except ImportError:
-        pass
 
 ON_WINDOWS = sys.platform == 'win32'
 
@@ -139,6 +136,7 @@ def create_boolean_data():
 
 class TestCommon(object):
     def test_robust_getitem(self):
+
         class UnreliableArrayFailure(Exception):
             pass
 
@@ -168,8 +166,8 @@ class NetCDF3Only(object):
 
 
 class DatasetIOBase(object):
-    engine = None
-    file_format = None
+    engine = None  # type: Optional[str]
+    file_format = None  # type: Optional[str]
 
     def create_store(self):
         raise NotImplementedError
@@ -230,9 +228,9 @@ class DatasetIOBase(object):
             actual_dtype = actual.variables[k].dtype
             # TODO: check expected behavior for string dtypes more carefully
             string_kinds = {'O', 'S', 'U'}
-            assert (expected_dtype == actual_dtype or
-                    (expected_dtype.kind in string_kinds and
-                     actual_dtype.kind in string_kinds))
+            assert (expected_dtype == actual_dtype
+                    or (expected_dtype.kind in string_kinds and
+                        actual_dtype.kind in string_kinds))
 
     def test_roundtrip_test_data(self):
         expected = create_test_data()
@@ -296,18 +294,23 @@ class DatasetIOBase(object):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            raw_pickle = pickle.dumps(roundtripped)
-            # windows doesn't like opening the same file twice
-            roundtripped.close()
-            unpickled_ds = pickle.loads(raw_pickle)
-            assert_identical(expected, unpickled_ds)
+            with roundtripped:
+                # Windows doesn't like reopening an already open file
+                raw_pickle = pickle.dumps(roundtripped)
+            with pickle.loads(raw_pickle) as unpickled_ds:
+                assert_identical(expected, unpickled_ds)
 
+    @pytest.mark.filterwarnings("ignore:deallocating CachingFileManager")
     def test_pickle_dataarray(self):
         expected = Dataset({'foo': ('x', [42])})
         with self.roundtrip(
                 expected, allow_cleanup_failure=ON_WINDOWS) as roundtripped:
-            unpickled_array = pickle.loads(pickle.dumps(roundtripped['foo']))
-            assert_identical(expected['foo'], unpickled_array)
+            with roundtripped:
+                raw_pickle = pickle.dumps(roundtripped['foo'])
+            # TODO: figure out how to explicitly close the file for the
+            # unpickled DataArray?
+            unpickled = pickle.loads(raw_pickle)
+            assert_identical(expected['foo'], unpickled)
 
     def test_dataset_caching(self):
         expected = Dataset({'foo': ('x', [5, 6, 7])})
@@ -407,17 +410,17 @@ class DatasetIOBase(object):
                 with self.roundtrip(expected, save_kwargs=kwds) as actual:
                     abs_diff = abs(actual.t.values - expected_decoded_t)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t.encoding['units'] ==
-                            'days since 0001-01-01 00:00:00.000000')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                    assert (actual.t.encoding['units']
+                            == 'days since 0001-01-01 00:00:00.000000')
+                    assert (actual.t.encoding['calendar']
+                            == expected_calendar)
 
                     abs_diff = abs(actual.t0.values - expected_decoded_t0)
                     assert (abs_diff <= np.timedelta64(1, 's')).all()
-                    assert (actual.t0.encoding['units'] ==
-                            'days since 0001-01-01')
-                    assert (actual.t.encoding['calendar'] ==
-                            expected_calendar)
+                    assert (actual.t0.encoding['units']
+                            == 'days since 0001-01-01')
+                    assert (actual.t.encoding['calendar']
+                            == expected_calendar)
 
     def test_roundtrip_timedelta_data(self):
         time_deltas = pd.to_timedelta(['1h', '2h', 'NaT'])
@@ -432,13 +435,13 @@ class DatasetIOBase(object):
             assert_identical(expected, actual)
 
     def test_roundtrip_example_1_netcdf(self):
-        expected = open_example_dataset('example_1.nc')
-        with self.roundtrip(expected) as actual:
-            # we allow the attributes to differ since that
-            # will depend on the encoding used.  For example,
-            # without CF encoding 'actual' will end up with
-            # a dtype attribute.
-            assert_equal(expected, actual)
+        with open_example_dataset('example_1.nc') as expected:
+            with self.roundtrip(expected) as actual:
+                # we allow the attributes to differ since that
+                # will depend on the encoding used.  For example,
+                # without CF encoding 'actual' will end up with
+                # a dtype attribute.
+                assert_equal(expected, actual)
 
     def test_roundtrip_coordinates(self):
         original = Dataset({'foo': ('x', [0, 1])},
@@ -654,7 +657,8 @@ class CFEncodedBase(DatasetIOBase):
           create_encoded_unsigned_masked_scaled_data),
          pytest.param(create_bad_unsigned_masked_scaled_data,
                       create_bad_encoded_unsigned_masked_scaled_data,
-                      marks=pytest.mark.xfail(reason="Bad _Unsigned attribute.")),
+                      marks=pytest.mark.xfail(
+                          reason="Bad _Unsigned attribute.")),
          (create_signed_masked_scaled_data,
           create_encoded_signed_masked_scaled_data),
          (create_masked_and_scaled_data,
@@ -665,8 +669,8 @@ class CFEncodedBase(DatasetIOBase):
 
         with self.roundtrip(decoded) as actual:
             for k in decoded.variables:
-                assert (decoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (decoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(decoded, actual, decode_bytes=False)
 
         with self.roundtrip(decoded,
@@ -674,15 +678,15 @@ class CFEncodedBase(DatasetIOBase):
             # TODO: this assumes that all roundtrips will first
             # encode.  Is that something we want to test for?
             for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (encoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
 
         with self.roundtrip(encoded,
                             open_kwargs=dict(decode_cf=False)) as actual:
             for k in encoded.variables:
-                assert (encoded.variables[k].dtype ==
-                        actual.variables[k].dtype)
+                assert (encoded.variables[k].dtype
+                        == actual.variables[k].dtype)
             assert_allclose(encoded, actual, decode_bytes=False)
 
         # make sure roundtrip encoding didn't change the
@@ -1053,7 +1057,7 @@ class NetCDF4Base(CFEncodedBase):
                                        iteritems(actual['time'].encoding)
                                        if k in expected['time'].encoding)
                 assert actual_encoding == \
-                       expected['time'].encoding
+                    expected['time'].encoding
 
     def test_dump_encodings(self):
         # regression test for #709
@@ -1271,6 +1275,7 @@ class TestNetCDF4Data(NetCDF4Base):
 
 @requires_netCDF4
 @requires_dask
+@pytest.mark.filterwarnings('ignore:deallocating CachingFileManager')
 class TestNetCDF4ViaDaskData(TestNetCDF4Data):
     @contextlib.contextmanager
     def roundtrip(self, data, save_kwargs={}, open_kwargs={},
@@ -1309,6 +1314,7 @@ class TestNetCDF4ViaDaskData(TestNetCDF4Data):
 
 @requires_zarr
 class ZarrBase(CFEncodedBase):
+
     DIMENSION_KEY = '_ARRAY_DIMENSIONS'
 
     @contextlib.contextmanager
@@ -1338,7 +1344,7 @@ class ZarrBase(CFEncodedBase):
         pytest.skip("zarr backend does not support appending")
 
     def test_roundtrip_consolidated(self):
-        zarr = pytest.importorskip('zarr', minversion="2.2.1.dev2")
+        pytest.importorskip('zarr', minversion="2.2.1.dev2")
         expected = create_test_data()
         with self.roundtrip(expected,
                             save_kwargs={'consolidated': True},
@@ -1421,7 +1427,7 @@ class ZarrBase(CFEncodedBase):
 
         # - encoding specified  -
         # specify compatible encodings
-        for chunk_enc in 4, (4,):
+        for chunk_enc in 4, (4, ):
             ds_chunk4['var1'].encoding.update({'chunks': chunk_enc})
             with self.roundtrip(ds_chunk4) as actual:
                 assert (4,) == actual['var1'].encoding['chunks']
@@ -1655,9 +1661,9 @@ class TestScipyFilePath(ScipyWriteBase):
 
     def test_netcdf3_endianness(self):
         # regression test for GH416
-        expected = open_example_dataset('bears.nc', engine='scipy')
-        for var in expected.variables.values():
-            assert var.dtype.isnative
+        with open_example_dataset('bears.nc', engine='scipy') as expected:
+            for var in expected.variables.values():
+                assert var.dtype.isnative
 
     @requires_netCDF4
     def test_nc4_scipy(self):
@@ -1954,6 +1960,7 @@ def skip_if_not_engine(engine):
 
 def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
                                   file_cache_maxsize):
+
     # skip certain combinations
     skip_if_not_engine(readengine)
 
@@ -1974,13 +1981,13 @@ def test_open_mfdataset_manyfiles(readengine, nfiles, parallel, chunks,
             subds.to_netcdf(tmpfiles[ii], engine=writeengine)
 
         # check that calculation on opened datasets works properly
-        actual = open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
-                                chunks=chunks)
+        with open_mfdataset(tmpfiles, engine=readengine, parallel=parallel,
+                            chunks=chunks) as actual:
 
-        # check that using open_mfdataset returns dask arrays for variables
-        assert isinstance(actual['foo'].data, dask_array_type)
+            # check that using open_mfdataset returns dask arrays for variables
+            assert isinstance(actual['foo'].data, dask_array_type)
 
-        assert_identical(original, actual)
+            assert_identical(original, actual)
 
 
 @requires_scipy_or_netCDF4
@@ -1993,6 +2000,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         ds1, ds2 = self.gen_datasets_with_common_coord_and_time()
         with create_tmp_file() as tmpfile1:
             with create_tmp_file() as tmpfile2:
+
                 # save data to the temporary files
                 ds1.to_netcdf(tmpfile1)
                 ds2.to_netcdf(tmpfile2)
@@ -2015,31 +2023,28 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                       coords={
                           't': (['t', ], t1),
                           'x': (['x', ], x)
-                      })
+        })
 
         ds2 = Dataset(data_vars={self.var_name: (['t', 'x'], v2),
                                  self.coord_name: ('x', 2 * x)},
                       coords={
                           't': (['t', ], t2),
                           'x': (['x', ], x)
-                      })
+        })
 
         return ds1, ds2
 
-    def test_open_mfdataset_does_same_as_concat(self):
-        options = ['all', 'minimal', 'different', ]
-
+    @pytest.mark.parametrize('opt', ['all', 'minimal', 'different'])
+    def test_open_mfdataset_does_same_as_concat(self, opt):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
-            for opt in options:
-                with open_mfdataset(files, data_vars=opt) as ds:
-                    kwargs = dict(data_vars=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
-
-                with open_mfdataset(files, coords=opt) as ds:
-                    kwargs = dict(coords=opt, dim='t')
-                    ds_expect = xr.concat([ds1, ds2], **kwargs)
-                    assert_identical(ds, ds_expect)
+            with open_mfdataset(files, data_vars=opt) as ds:
+                kwargs = dict(data_vars=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
+            with open_mfdataset(files, coords=opt) as ds:
+                kwargs = dict(coords=opt, dim='t')
+                ds_expect = xr.concat([ds1, ds2], **kwargs)
+                assert_identical(ds, ds_expect)
 
     def test_common_coord_when_datavars_all(self):
         opt = 'all'
@@ -2047,6 +2052,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files with the data_var option
             with open_mfdataset(files, data_vars=opt) as ds:
+
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2063,6 +2069,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
         with self.setup_files_and_datasets() as (files, [ds1, ds2]):
             # open the files using data_vars option
             with open_mfdataset(files, data_vars=opt) as ds:
+
                 coord_shape = ds[self.coord_name].shape
                 coord_shape1 = ds1[self.coord_name].shape
                 coord_shape2 = ds2[self.coord_name].shape
@@ -2074,6 +2081,7 @@ class TestOpenMFDatasetWithDataVarsAndCoordsKw(object):
                 assert coord_shape2 == coord_shape
 
     def test_invalid_data_vars_value_should_fail(self):
+
         with self.setup_files_and_datasets() as (files, _):
             with pytest.raises(ValueError):
                 with open_mfdataset(files, data_vars='minimum'):
@@ -2151,13 +2159,10 @@ class TestDask(DatasetIOBase):
                 original.isel(x=slice(5, 10)).to_netcdf(tmp2)
                 with open_mfdataset([tmp1, tmp2]) as actual:
                     assert isinstance(actual.foo.variable.data, da.Array)
-                    assert actual.foo.variable.data.chunks == \
-                           ((5, 5),)
+                    assert actual.foo.variable.data.chunks == ((5, 5),)
                     assert_identical(original, actual)
                 with open_mfdataset([tmp1, tmp2], chunks={'x': 3}) as actual:
-                    assert actual.foo.variable.data.chunks == \
-                           ((3, 2, 3, 2),)
-
+                    assert actual.foo.variable.data.chunks == ((3, 2, 3, 2),)
 
         with raises_regex(IOError, 'no files to open'):
             open_mfdataset('foo-bar-baz-*.nc')
@@ -2185,14 +2190,14 @@ class TestDask(DatasetIOBase):
                             assert isinstance(actual.foo.variable.data,
                                               da.Array)
                             assert actual.foo.variable.data.chunks == \
-                                   ((5, 5), (4, 4))
+                                ((5, 5), (4, 4))
                             assert_identical(original, actual)
                         with open_mfdataset([[tmp1, tmp2],
                                              [tmp3, tmp4]],
                                             concat_dim=['y', 'x'],
                                             chunks={'x': 3, 'y': 2}) as actual:
                             assert actual.foo.variable.data.chunks == \
-                                   ((3, 2, 3, 2), (2, 2, 2, 2),)
+                                ((3, 2, 3, 2), (2, 2, 2, 2),)
 
     @requires_pathlib
     def test_open_mfdataset_pathlib(self):
@@ -2231,7 +2236,7 @@ class TestDask(DatasetIOBase):
                             assert_identical(original, actual)
 
     @pytest.mark.xfail(reason="Not yet implemented")
-    def test_open_mfdataset(self):
+    def test_open_mfdataset_2(self):
         original = Dataset({'foo': ('x', np.random.randn(10))})
         with create_tmp_file() as tmp1:
             with create_tmp_file() as tmp2:
@@ -2356,6 +2361,29 @@ class TestDask(DatasetIOBase):
             with open_mfdataset([tmp], concat_dim=dim) as actual:
                 assert_identical(expected, actual)
 
+    def test_open_multi_dataset(self):
+        # Test for issue GH #1988 and #2647. This makes sure that the
+        # concat_dim is utilized when specified in open_mfdataset().
+        # The additional wrinkle is to ensure that a length greater
+        # than one is tested as well due to numpy's implicit casting
+        # of 1-length arrays to booleans in tests, which allowed
+        # #2647 to still pass the test_open_single_dataset(),
+        # which is itself still needed as-is because the original
+        # bug caused one-length arrays to not be used correctly
+        # in concatenation.
+        rnddata = np.random.randn(10)
+        original = Dataset({'foo': ('x', rnddata)})
+        dim = DataArray([100, 150], name='baz', dims='baz')
+        expected = Dataset({'foo': (('baz', 'x'),
+                                    np.tile(rnddata[np.newaxis, :], (2, 1)))},
+                           {'baz': [100, 150]})
+        with create_tmp_file() as tmp1, \
+                create_tmp_file() as tmp2:
+            original.to_netcdf(tmp1)
+            original.to_netcdf(tmp2)
+            with open_mfdataset([tmp1, tmp2], concat_dim=dim) as actual:
+                assert_identical(expected, actual)
+
     def test_dask_roundtrip(self):
         with create_tmp_file() as tmp:
             data = create_test_data()
@@ -2424,7 +2452,7 @@ class TestPydap(object):
             ds[key] = v
         # check all dims are stored in ds
         for d in original.coords:
-            ds[d] = BaseType(d, original[d].values, dimensions=(d,),
+            ds[d] = BaseType(d, original[d].values, dimensions=(d, ),
                              **original[d].attrs)
         return ds
 
@@ -2452,7 +2480,7 @@ class TestPydap(object):
             assert actual.attrs.keys() == expected.attrs.keys()
 
         with self.create_datasets() as (actual, expected):
-            assert_equal(actual.isel(l=2), expected.isel(l=2))  # noqa
+            assert_equal(actual[{'l': 2}], expected[{'l': 2}])
 
         with self.create_datasets() as (actual, expected):
             assert_equal(actual.isel(i=0, j=-1),
@@ -2612,8 +2640,8 @@ class TestPseudoNetCDFFormat(object):
                 'ULOD_FLAG': '-7777', 'ULOD_VALUE': 'N/A',
                 'LLOD_FLAG': '-8888',
                 'LLOD_VALUE': ('N/A, N/A, N/A, N/A, 0.025'),
-                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/' +
-                                   'IcarttDataFormat.htm'),
+                'OTHER_COMMENTS': ('www-air.larc.nasa.gov/missions/etc/'
+                                   + 'IcarttDataFormat.htm'),
                 'REVISION': 'R0',
                 'R0': 'No comments for this revision.',
                 'TFLAG': 'Start_UTC'
@@ -2702,8 +2730,8 @@ class TestPseudoNetCDFFormat(object):
         expected = xr.Variable(('TSTEP',), data,
                                dict(bounds='time_bounds',
                                     long_name=('synthesized time coordinate ' +
-                                               'from SDATE, STIME, STEP ' +
-                                               'global attributes')))
+                                               'from SDATE, STIME, STEP '
+                                               + 'global attributes')))
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
         camxfile.close()
@@ -2732,8 +2760,8 @@ class TestPseudoNetCDFFormat(object):
         data = np.concatenate([data1] * 2, axis=0)
         attrs = dict(bounds='time_bounds',
                      long_name=('synthesized time coordinate ' +
-                                'from SDATE, STIME, STEP ' +
-                                'global attributes'))
+                                'from SDATE, STIME, STEP '
+                                + 'global attributes'))
         expected = xr.Variable(('TSTEP',), data, attrs)
         actual = camxfile.variables['time']
         assert_allclose(expected, actual)
@@ -2811,7 +2839,7 @@ def create_tmp_geotiff(nx=4, ny=3, nz=3,
                                  'band': np.arange(nz) + 1,
                                  'y': -np.arange(ny) * d + b + dy / 2,
                                  'x': np.arange(nx) * c + a + dx / 2,
-                             })
+        })
         yield tmp_file, expected
 
 
@@ -2923,6 +2951,7 @@ class TestRasterio(object):
         with create_tmp_geotiff(8, 10, 3, transform_args=[1, 2, 0.5, 2.],
                                 crs='+proj=latlong') as (tmp_file, expected):
             with xr.open_rasterio(tmp_file, cache=False) as actual:
+
                 # tests
                 # assert_allclose checks all data + coordinates
                 assert_allclose(actual, expected)
@@ -2952,8 +2981,8 @@ class TestRasterio(object):
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
-                ind = {'band': 0, 'x': np.array([0, 0]),
-                       'y': np.array([1, 1, 1])}
+                ind = {'band': 0, 'x': np.array(
+                    [0, 0]), 'y': np.array([1, 1, 1])}
                 assert_allclose(expected.isel(**ind), actual.isel(**ind))
                 assert not actual.variable._in_memory
 
@@ -3036,6 +3065,7 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Cache is the default
             with xr.open_rasterio(tmp_file) as actual:
+
                 # This should cache everything
                 assert_allclose(actual, expected)
 
@@ -3050,6 +3080,7 @@ class TestRasterio(object):
                                 crs='+proj=latlong') as (tmp_file, expected):
             # Chunk at open time
             with xr.open_rasterio(tmp_file, chunks=(1, 2, 2)) as actual:
+
                 import dask.array as da
                 assert isinstance(actual.data, da.Array)
                 assert 'open_rasterio' in actual.data.name
@@ -3146,6 +3177,73 @@ class TestRasterio(object):
         with xr.open_rasterio(url, chunks=(1, 256, 256)) as actual:
             import dask.array as da
             assert isinstance(actual.data, da.Array)
+
+    def test_rasterio_environment(self):
+        import rasterio
+        with create_tmp_geotiff() as (tmp_file, expected):
+            # Should fail with error since suffix not allowed
+            with pytest.raises(Exception):
+                with rasterio.Env(GDAL_SKIP='GTiff'):
+                    with xr.open_rasterio(tmp_file) as actual:
+                        assert_allclose(actual, expected)
+
+    def test_rasterio_vrt(self):
+        import rasterio
+        # tmp_file default crs is UTM: CRS({'init': 'epsg:32618'}
+        with create_tmp_geotiff() as (tmp_file, expected):
+            with rasterio.open(tmp_file) as src:
+                with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_crs = vrt.crs
+                    print(expected_crs)
+                    expected_res = vrt.res
+                    # Value of single pixel in center of image
+                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
+                    expected_val = next(vrt.sample([(lon, lat)]))
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_crs = da.crs
+                        print(actual_crs)
+                        actual_res = da.res
+                        actual_val = da.sel(dict(x=lon, y=lat),
+                                            method='nearest').data
+
+                        assert actual_crs == expected_crs
+                        assert actual_res == expected_res
+                        assert actual_shape == expected_shape
+                        assert expected_val.all() == actual_val.all()
+
+    @network
+    def test_rasterio_vrt_network(self):
+        import rasterio
+
+        url = 'https://storage.googleapis.com/\
+        gcp-public-data-landsat/LC08/01/047/027/\
+        LC08_L1TP_047027_20130421_20170310_01_T1/\
+        LC08_L1TP_047027_20130421_20170310_01_T1_B4.TIF'
+        env = rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR',
+                           CPL_VSIL_CURL_USE_HEAD=False,
+                           CPL_VSIL_CURL_ALLOWED_EXTENSIONS='TIF')
+        with env:
+            with rasterio.open(url) as src:
+                with rasterio.vrt.WarpedVRT(src, crs='epsg:4326') as vrt:
+                    expected_shape = (vrt.width, vrt.height)
+                    expected_crs = vrt.crs
+                    expected_res = vrt.res
+                    # Value of single pixel in center of image
+                    lon, lat = vrt.xy(vrt.width // 2, vrt.height // 2)
+                    expected_val = next(vrt.sample([(lon, lat)]))
+                    with xr.open_rasterio(vrt) as da:
+                        actual_shape = (da.sizes['x'], da.sizes['y'])
+                        actual_crs = da.crs
+                        actual_res = da.res
+                        actual_val = da.sel(dict(x=lon, y=lat),
+                                            method='nearest').data
+
+                        assert_equal(actual_shape, expected_shape)
+                        assert_equal(actual_crs, expected_crs)
+                        assert_equal(actual_res, expected_res)
+                        assert_equal(expected_val, actual_val)
 
 
 class TestEncodingInvalid(object):
@@ -3345,3 +3443,14 @@ def test_no_warning_from_dask_effective_get():
             ds = Dataset()
             ds.to_netcdf(tmpfile)
         assert len(record) == 0
+
+
+@requires_scipy_or_netCDF4
+def test_source_encoding_always_present():
+    # Test for GH issue #2550.
+    rnddata = np.random.randn(10)
+    original = Dataset({'foo': ('x', rnddata)})
+    with create_tmp_file() as tmp:
+        original.to_netcdf(tmp)
+        with open_dataset(tmp) as ds:
+            assert ds.encoding['source'] == tmp

@@ -3,7 +3,7 @@
 Xarray related projects
 -----------------------
 
-Here below is a list of several existing libraries that build
+Here below is a list of existing open source projects that build
 functionality upon xarray. See also section :ref:`internals` for more
 details on how to build xarray extensions.
 
@@ -39,10 +39,15 @@ Geosciences
 
 Machine Learning
 ~~~~~~~~~~~~~~~~
-- `cesium <http://cesium-ml.org/>`_: machine learning for time series analysis
+- `ArviZ <https://arviz-devs.github.io/arviz/>`_: Exploratory analysis of Bayesian models, built on top of xarray.
 - `Elm <https://ensemble-learning-models.readthedocs.io>`_: Parallel machine learning on xarray data structures
 - `sklearn-xarray (1) <https://phausamann.github.io/sklearn-xarray>`_: Combines scikit-learn and xarray (1).
 - `sklearn-xarray (2) <https://sklearn-xarray.readthedocs.io/en/latest/>`_: Combines scikit-learn and xarray (2).
+
+Other domains
+~~~~~~~~~~~~~
+- `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
+- `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
 
 Extend xarray capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,9 +66,10 @@ Visualization
 - `hvplot <https://hvplot.pyviz.org/>`_ : A high-level plotting API for the PyData ecosystem built on HoloViews.
 - `psyplot <https://psyplot.readthedocs.io>`_: Interactive data visualization with python.
 
-Other
-~~~~~
-- `ptsa <https://pennmem.github.io/ptsa_new/html/index.html>`_: EEG Time Series Analysis
-- `pycalphad <https://pycalphad.org/docs/latest/>`_: Computational Thermodynamics in Python
+Non-Python projects
+~~~~~~~~~~~~~~~~~~~
+- `xframe <https://github.com/QuantStack/xframe>`_: C++ data structures inspired by xarray.
+- `AxisArrays <https://github.com/JuliaArrays/AxisArrays.jl>`_ and
+  `NamedArrays <https://github.com/davidavdav/NamedArrays.jl>`_: similar data structures for Julia.
 
 More projects can be found at the `"xarray" Github topic <https://github.com/topics/xarray>`_.

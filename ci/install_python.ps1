@@ -2,16 +2,16 @@
 # Authors: Olivier Grisel, Jonathan Helmus and Kyle Kastner
 # License: CC0 1.0 Universal: http://creativecommons.org/publicdomain/zero/1.0/
 
-$MINICONDA_URL = "http://repo.continuum.io/miniconda/"
+$MINICONDA_URL = "https://repo.anaconda.com/miniconda/"
 $BASE_URL = "https://www.python.org/ftp/python/"
 
 
 function DownloadMiniconda ($python_version, $platform_suffix) {
     $webclient = New-Object System.Net.WebClient
-    if ($python_version -match "3.6") {
-        $filename = "Miniconda3-latest-Windows-" + $platform_suffix + ".exe"
-    } else {
+    if ($python_version -match "2.7") {
         $filename = "Miniconda2-latest-Windows-" + $platform_suffix + ".exe"
+    } else {
+        $filename = "Miniconda3-latest-Windows-" + $platform_suffix + ".exe"
     }
     $url = $MINICONDA_URL + $filename
 
