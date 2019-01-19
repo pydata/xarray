@@ -237,9 +237,7 @@ class TestDataset(object):
 
         with raises_regex(ValueError, 'conflicting sizes'):
             Dataset({'a': x1, 'b': x2})
-        with raises_regex(ValueError, "disallows such variables"):
-            Dataset({'a': x1, 'x': z})
-        with raises_regex(TypeError, 'tuple of form'):
+        with raises_regex(TypeError, 'tuples of form'):
             Dataset({'x': (1, 2, 3, 4, 5, 6, 7)})
         with raises_regex(ValueError, 'already exists as a scalar'):
             Dataset({'x': 0, 'y': ('x', [1, 2, 3])})
@@ -248,6 +246,21 @@ class TestDataset(object):
         expected = Dataset({'x': x1, 'z': z})
         actual = Dataset({'z': expected['z']})
         assert_identical(expected, actual)
+
+    def test_constructor_multidim_dimensions(self):
+        # checks related to GH2368, GH2233
+        ds = xr.Dataset({'a': ('x', 2 * np.arange(100)),
+                         'x': (['x', 'y'], np.arange(1000).reshape(100, 10))})
+
+        # dataset should have no indices
+        assert not isinstance(ds.variables['x'], IndexVariable)
+        assert len(ds.indexes) == 0
+        assert 'x' not in ds.indexes
+        with pytest.raises(KeyError):
+            ds.indexes['x']
+
+        repr(ds)
+        repr(ds.indexes)
 
     def test_constructor_invalid_dims(self):
         # regression for GH1120

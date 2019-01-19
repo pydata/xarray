@@ -272,7 +272,8 @@ def summarize_datavar(name, var, col_width):
 
 
 def summarize_coord(name, var, col_width):
-    is_index = name in var.dims
+    from .variable import IndexVariable
+    is_index = name in var.dims and isinstance(var, IndexVariable)
     show_values = var._in_memory
     marker = u'*' if is_index else u' '
     if is_index:

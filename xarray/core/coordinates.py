@@ -10,7 +10,7 @@ from .merge import (
     expand_and_merge_variables, merge_coords, merge_coords_for_inplace_math)
 from .pycompat import OrderedDict
 from .utils import Frozen, ReprObject, either_dict_or_kwargs
-from .variable import Variable
+from .variable import Variable, IndexVariable
 
 # Used as the key corresponding to a DataArray's variable when converting
 # arbitrary DataArray objects to datasets
