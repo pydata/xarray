@@ -60,6 +60,11 @@ def create_test_multiindex():
     return Dataset({}, {'x': mindex})
 
 
+def create_test_multidim_coord_no_index():
+    ds = xr.Dataset({'a': ('x', [1, 1]),
+                     'x': (['x', 'y'], [[1, 1, 1, 1], [2, 2, 2, 2]])})
+    return ds
+
 class InaccessibleVariableDataStore(backends.InMemoryDataStore):
     def __init__(self):
         super(InaccessibleVariableDataStore, self).__init__()
@@ -176,6 +181,11 @@ class TestDataset(object):
         # check that creating the repr doesn't raise an error #GH645
         repr(data)
 
+    def test_repr_no_index_on_multidim_coord(self):
+        data = create_test_multidim_coord_no_index()
+        actual = repr(data)
+        assert '*' not in actual
+
     def test_unicode_data(self):
         # regression test for GH834
         data = Dataset({u'foø': [u'ba®']}, attrs={u'å': u'∑'})
@@ -252,8 +262,7 @@ class TestDataset(object):
 
     def test_constructor_multidim_dimensions(self):
         # checks related to GH2368, GH2233
-        ds = xr.Dataset({'a': ('x', 2 * np.arange(100)),
-                         'x': (['x', 'y'], np.arange(1000).reshape(100, 10))})
+        ds = create_test_multidim_coord_no_index()
 
         # dataset should have no indices
         assert not isinstance(ds.variables['x'], IndexVariable)
@@ -261,9 +270,6 @@ class TestDataset(object):
         assert 'x' not in ds.indexes
         with pytest.raises(KeyError):
             ds.indexes['x']
-
-        repr(ds)
-        repr(ds.indexes)
 
     def test_constructor_invalid_dims(self):
         # regression for GH1120
