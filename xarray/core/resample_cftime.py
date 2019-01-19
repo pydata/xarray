@@ -35,6 +35,13 @@ class CFTimeGrouper(object):
         """
         datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
                                                self.label, self.base)
+
+        # check binner fits data
+        if index[0] < datetime_bins[0]:
+            raise ValueError("Value falls before first bin")
+        if index[len(index) - 1] > datetime_bins[len(datetime_bins) - 1]:
+            raise ValueError("Value falls after last bin")
+
         integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
                        :-1]
         if len(integer_bins) < len(labels):
@@ -71,8 +78,18 @@ def _get_time_bins(index, freq, closed, label, base):
                                           start=first,
                                           end=last,
                                           name=index.name)
+    print('XARRAY-START')
+    print(index.min(), index.max())
+    print(first, last)
+    print('initial range\n', datetime_bins)
+    print('len binner: ', len(datetime_bins),
+          'len labels: ', len(labels))
 
     datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed, index)
+
+    print('len datetime_bins: ', len(datetime_bins),
+          'len labels: ', len(labels))
+    print('_adjust_bin_edges\n', datetime_bins)
 
     if closed == 'right':
         if label == 'right':
@@ -80,9 +97,16 @@ def _get_time_bins(index, freq, closed, label, base):
     elif label == 'right':
         labels = labels[1:]
 
+        print('len datetime_bins: ', len(datetime_bins),
+              'len labels: ', len(labels))
+
     if index.hasnans:  # cannot be true since CFTimeIndex does not allow NaNs
         datetime_bins = datetime_bins.insert(0, pd.NaT)
         labels = labels.insert(0, pd.NaT)
+
+        print('len binner: ', len(datetime_bins),
+              'len labels: ', len(labels))
+    print('XARRAY-END')
 
     return datetime_bins, labels
 
@@ -123,16 +147,8 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index):
                       (isinstance(offset, Day) and offset.n > 1))
     if is_super_daily:
         if closed == 'right':
-            if len(datetime_bins) > 1:
-                datetime_bins = \
-                    CFTimeIndex(
-                        datetime_bins[0:1].tolist() +
-                        (datetime_bins[1:] +
-                         datetime.timedelta(days=1, microseconds=-1)).tolist()
-                    )
-            else:
-                datetime_bins = datetime_bins + \
-                                datetime.timedelta(days=1, microseconds=-1)
+            datetime_bins = datetime_bins + \
+                            datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():
             datetime_bins = datetime_bins[:-1]
     return datetime_bins
@@ -225,8 +241,8 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
     start_day = normalize_date(first)
     base_td = type(offset)(n=base).as_timedelta()
     start_day += base_td
-    foffset = (first - start_day) % offset.as_timedelta()
-    loffset = (last - start_day) % offset.as_timedelta()
+    foffset = exact_cftime_datetime_difference(start_day, first) % offset.as_timedelta()
+    loffset = exact_cftime_datetime_difference(start_day, last) % offset.as_timedelta()
     if closed == 'right':
         if foffset.total_seconds() > 0:
             fresult = first - foffset
@@ -248,6 +264,14 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
         else:
             lresult = last + offset.as_timedelta()
     return fresult, lresult
+
+
+def exact_cftime_datetime_difference(a, b):
+    """Exact computation of b - a"""
+    seconds = b.replace(microsecond=0) - a.replace(microsecond=0)
+    seconds = int(round(seconds.total_seconds()))
+    microseconds = b.microsecond - a.microsecond
+    return datetime.timedelta(seconds=seconds, microseconds=microseconds)
 
 
 def _adjust_binner_for_upsample(binner, closed):
