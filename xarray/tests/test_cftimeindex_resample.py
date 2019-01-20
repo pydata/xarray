@@ -43,10 +43,9 @@ def da(index):
     '3D', '8D', '8001D',
     '2MS', '2M', '3MS', '3M', '4MS', '4M',
     '3AS', '3A', '4AS', '4A'])
-@pytest.mark.parametrize('closed', ['left', 'right'])
-@pytest.mark.parametrize('label', ['left', 'right'])
+@pytest.mark.parametrize('closed', [None, 'left', 'right'])
+@pytest.mark.parametrize('label', [None, 'left', 'right'])
 @pytest.mark.parametrize('base', [17, 24])
-@pytest.mark.xfail(raises=ValueError)
 def test_resampler(freq, closed, label, base,
                    datetime_index, cftime_index):
     try:

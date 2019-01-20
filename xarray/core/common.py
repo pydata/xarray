@@ -690,21 +690,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
                             "was passed %r" % dim)
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
-            from ..coding.cftime_offsets import to_offset
             from .resample_cftime import CFTimeGrouper
-            end_types = {'M', 'A'}
-            rule = to_offset(freq).rule_code()
-            if (rule in end_types or
-                    ('-' in rule and rule[:rule.find('-')] in end_types)):
-                if closed is None:
-                    closed = 'right'
-                if label is None:
-                    label = 'right'
-            else:
-                if closed is None:
-                    closed = 'left'
-                if label is None:
-                    label = 'left'
             grouper = CFTimeGrouper(freq, closed, label, base)
         else:
             grouper = pd.Grouper(freq=freq, closed=closed, label=label,
