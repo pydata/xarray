@@ -56,13 +56,6 @@ class CFTimeGrouper(object):
 def _get_time_bins(index, freq, closed, label, base):
     """This is basically the same with the exception of the call to
     _adjust_bin_edges."""
-    # This portion of code comes from TimeGrouper __init__ #
-    if closed is None:
-        closed = _default_closed_or_label(freq)
-
-    if label is None:
-        label = _default_closed_or_label(freq)
-    # This portion of code comes from TimeGrouper __init__ #
 
     if not isinstance(index, CFTimeIndex):
         raise TypeError('index must be a CFTimeIndex, but got '
@@ -255,37 +248,3 @@ def exact_cftime_datetime_difference(a, b):
     seconds = int(round(seconds.total_seconds()))
     microseconds = b.microsecond - a.microsecond
     return datetime.timedelta(seconds=seconds, microseconds=microseconds)
-
-
-def _adjust_binner_for_upsample(binner, closed):
-    """ Adjust our binner when upsampling.
-        The range of a new index should not be outside specified range
-
-    Parameters
-    ----------
-    binner : CFTimeIndex
-        Defines the edge of resampling bins by which original index values will
-        be grouped into. Uncorrected version.
-    closed : 'left' or 'right'
-        Which side of bin interval is closed.
-
-    Returns
-    -------
-    binner : CFTimeIndex
-        Defines the edge of resampling bins by which original index values will
-        be grouped into. Corrected version.
-    """
-
-    if closed == 'right':
-        binner = binner[1:]
-    else:
-        binner = binner[:-1]
-    return binner
-
-
-def _default_closed_or_label(freq):
-    end_types = {'M', 'A'}
-    if freq._freq in end_types:
-        return 'right'
-    else:
-        return 'left'

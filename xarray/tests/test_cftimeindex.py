@@ -376,13 +376,6 @@ def test_groupby(da):
     assert_identical(result, expected)
 
 
-@pytest.mark.skipif(not has_cftime, reason='cftime not installed')
-@pytest.mark.xfail(raises=ValueError)
-def test_resample_error(da):
-    # with pytest.raises(NotImplementedError, match='to_datetimeindex'):
-    da.resample(time='Y')
-
-
 SEL_STRING_OR_LIST_TESTS = {
     'string': '0001',
     'string-slice': slice('0001-01-01', '0001-12-30'),  # type: ignore

@@ -113,7 +113,7 @@ def _parse_iso8601_with_reso(date_type, timestr):
     # the returned date object in versions of cftime between 1.0.2 and
     # 1.0.3.4.  It can be removed for versions of cftime greater than
     # 1.0.3.4.
-    # replace['dayofwk'] = -1
+    replace['dayofwk'] = -1
     return default.replace(**replace), resolution
 
 
