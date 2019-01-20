@@ -33,19 +33,31 @@ class CFTimeGrouper(object):
 
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
+        end_types = {'M', 'A'}
+        rule = self.freq.rule_code()
+        if (rule in end_types or
+                ('-' in rule and rule[:rule.find('-')] in end_types)):
+            if self.closed is None:
+                self.closed = 'right'
+            if self.label is None:
+                self.label = 'right'
+        else:
+            if self.closed is None:
+                self.closed = 'left'
+            if self.label is None:
+                self.label = 'left'
+
         datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
                                                self.label, self.base)
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
             raise ValueError("Value falls before first bin")
-        if index[len(index) - 1] > datetime_bins[len(datetime_bins) - 1]:
+        if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
         integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
                        :-1]
-        if len(integer_bins) < len(labels):
-            labels = labels[:len(integer_bins)]
         first_items = pd.Series(integer_bins, labels)
 
         # Mask duplicate values with NaNs, preserving the last values
@@ -72,22 +84,22 @@ def _get_time_bins(index, freq, closed, label, base):
                                           end=last,
                                           name=index.name)
 
-    datetime_bins = _adjust_bin_edges(datetime_bins, freq, closed, index)
+    datetime_bins, labels = _adjust_bin_edges(datetime_bins, freq, closed,
+                                              index, labels)
 
-    if closed == 'right':
-        if label == 'right':
-            labels = labels[1:]
-    elif label == 'right':
+    if label == 'right':
         labels = labels[1:]
+    else:
+        labels = labels[:-1]
 
-    if index.hasnans:  # cannot be true since CFTimeIndex does not allow NaNs
-        datetime_bins = datetime_bins.insert(0, pd.NaT)
-        labels = labels.insert(0, pd.NaT)
+    # TODO: when CFTimeIndex supports missing values, if the reference index
+    # contains missing values, insert the appropriate NaN value at the
+    # beginning of the datetime_bins and labels indexes.
 
     return datetime_bins, labels
 
 
-def _adjust_bin_edges(datetime_bins, offset, closed, index):
+def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     """This is required for determining the bin edges resampling with
     daily frequencies greater than one day, month end, and year end
     frequencies.
@@ -127,7 +139,9 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index):
                             datetime.timedelta(days=1, microseconds=-1)
         if datetime_bins[-2] > index.max():
             datetime_bins = datetime_bins[:-1]
-    return datetime_bins
+            labels = labels[:-1]
+
+    return datetime_bins, labels
 
 
 def _get_range_edges(first, last, offset, closed='left', base=0):
@@ -163,9 +177,6 @@ def _get_range_edges(first, last, offset, closed='left', base=0):
     if isinstance(offset, CFTIME_TICKS):
         first, last = _adjust_dates_anchored(first, last, offset,
                                              closed=closed, base=base)
-        # if isinstance(offset, Day):
-        # first = normalize_date(first)
-        # last = normalize_date(last)
         return first, last
     else:
         first = normalize_date(first)
