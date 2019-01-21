@@ -48,6 +48,7 @@ def da(index):
 @pytest.mark.parametrize('base', [17, 24])
 def test_resampler(freq, closed, label, base,
                    datetime_index, cftime_index):
+    # Fairly extensive testing for standard/proleptic Gregorian calendar
     try:
         da_datetime = da(datetime_index).resample(
             time=freq, closed=closed, label=label, base=base).mean()
@@ -60,3 +61,23 @@ def test_resampler(freq, closed, label, base,
                                               label=label, base=base).mean()
         da_cftime['time'] = da_cftime.indexes['time'].to_datetimeindex()
         xr.testing.assert_identical(da_cftime, da_datetime)
+
+
+@pytest.mark.parametrize('freq', ['81T'])
+@pytest.mark.parametrize('closed', [None])
+@pytest.mark.parametrize('label', [None])
+@pytest.mark.parametrize('base', [17])
+@pytest.mark.parametrize('calendar', ['gregorian', 'noleap', 'all_leap',
+                                      '360_day', 'julian'])
+def test_calendars(freq, closed, label, base, calendar):
+    # Limited testing for non-standard calendars
+    xr_index = xr.cftime_range(start='2004-01-01T12:07:01', periods=7,
+                               freq='3D', calendar=calendar)
+    pd_index = pd.date_range(start='2004-01-01T12:07:01', periods=7,
+                             freq='3D')
+    da_cftime = da(xr_index).resample(
+        time=freq, closed=closed, label=label, base=base).mean()
+    da_datetime = da(pd_index).resample(
+        time=freq, closed=closed, label=label, base=base).mean()
+    da_cftime['time'] = da_cftime.indexes['time'].to_datetimeindex()
+    xr.testing.assert_identical(da_cftime, da_datetime)
