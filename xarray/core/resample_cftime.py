@@ -88,7 +88,7 @@ def _get_time_bins(index, freq, closed, label, base):
         range from 0 through 4. Defaults to 0.
     Returns
     -------
-    binner : CFTimeIndex
+    datetime_bins : CFTimeIndex
         Defines the edge of resampling bins by which original index values will
         be grouped into.
     labels : CFTimeIndex
