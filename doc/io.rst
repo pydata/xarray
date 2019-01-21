@@ -81,6 +81,16 @@ require external libraries and dicts can easily be pickled, or converted to
 json, or geojson. All the values are converted to lists, so dicts might
 be quite large.
 
+To export just the dataset schema, without the data itself, use the
+``data=False`` option:
+
+.. ipython:: python
+
+    ds.to_dict(data=False)
+
+This can be useful for generating indices of dataset contents to expose to
+search indices or other automated data discovery tools.
+
 .. _io.netcdf:
 
 netCDF
@@ -665,7 +675,7 @@ To read a consolidated store, pass the ``consolidated=True`` option to
 :py:func:`~xarray.open_zarr`::
 
     ds = xr.open_zarr('foo.zarr', consolidated=True)
-    
+
 Xarray can't perform consolidation on pre-existing zarr datasets. This should
 be done directly from zarr, as described in the
 `zarr docs <https://zarr.readthedocs.io/en/latest/tutorial.html#consolidating-metadata>`_.

@@ -28,6 +28,8 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
   :py:meth:`~xarray.Dataset.coarsen` are newly added.
   See :ref:`comput.coarsen` for details.

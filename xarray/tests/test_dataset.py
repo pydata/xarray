@@ -3042,11 +3042,25 @@ class TestDataset(object):
         # check roundtrip
         assert_identical(ds, Dataset.from_dict(actual))
 
-        # verify coords are included roundtrip
-        expected = ds.set_coords('b')
-        actual = Dataset.from_dict(expected.to_dict())
+        # check the data=False option
+        expected_no_data = expected.copy()
+        del expected_no_data['coords']['t']['data']
+        del expected_no_data['data_vars']['a']['data']
+        del expected_no_data['data_vars']['b']['data']
+        expected_no_data['coords']['t'].update({'dtype': '<U1',
+                                                'shape': (10,)})
+        expected_no_data['data_vars']['a'].update({'dtype': 'float64',
+                                                   'shape': (10,)})
+        expected_no_data['data_vars']['b'].update({'dtype': 'float64',
+                                                   'shape': (10,)})
+        actual_no_data = ds.to_dict(data=False)
+        assert expected_no_data == actual_no_data
 
-        assert_identical(expected, actual)
+        # verify coords are included roundtrip
+        expected_ds = ds.set_coords('b')
+        actual = Dataset.from_dict(expected_ds.to_dict())
+
+        assert_identical(expected_ds, actual)
 
         # test some incomplete dicts:
         # this one has no attrs field, the dims are strings, and x, y are
