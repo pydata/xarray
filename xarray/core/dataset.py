@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import copy
 import functools
 import sys
 import warnings
@@ -248,10 +249,6 @@ def split_indexes(
 def _assert_empty(args, msg='%s'):
     if args:
         raise ValueError(msg % args)
-
-
-def _none_or_copy(arg):
-    return arg if arg is None else arg.copy()
 
 
 def as_dataset(obj):
@@ -735,11 +732,11 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
             if dims is None:
                 dims = self._dims.copy()
             if attrs is self.__default:
-                attrs = _none_or_copy(self._attrs)
+                attrs = copy.copy(self._attrs)
             if indexes is self.__default:
-                indexes = _none_or_copy(self._indexes)
+                indexes = copy.copy(self._indexes)
             if encoding is self.__default:
-                encoding = _none_or_copy(self._encoding)
+                encoding = copy.copy(self._encoding)
             obj = self._construct_direct(
                 variables, coord_names, dims, attrs, indexes, encoding)
         return obj
