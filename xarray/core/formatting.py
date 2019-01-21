@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
+from .duck_array_ops import array_equiv
 from .options import OPTIONS
 from .pycompat import (
     PY2, bytes_type, dask_array_type, unicode_type, zip_longest)
@@ -411,6 +412,15 @@ def short_dask_repr(array, show_dtype=True):
         return 'dask.array<shape=%s, chunksize=%s>' % (array.shape, chunksize)
 
 
+def short_data_repr(array):
+    if isinstance(getattr(array, 'variable', array)._data, dask_array_type):
+        return short_dask_repr(array)
+    elif array._in_memory or array.size < 1e5:
+        return short_array_repr(array.values)
+    else:
+        return u'[%s values with dtype=%s]' % (array.size, array.dtype)
+
+
 def array_repr(arr):
     # used for DataArray, Variable and IndexVariable
     if hasattr(arr, 'name') and arr.name is not None:
@@ -421,12 +431,7 @@ def array_repr(arr):
     summary = [u'<xarray.%s %s(%s)>'
                % (type(arr).__name__, name_str, dim_summary(arr))]
 
-    if isinstance(getattr(arr, 'variable', arr)._data, dask_array_type):
-        summary.append(short_dask_repr(arr))
-    elif arr._in_memory or arr.size < 1e5:
-        summary.append(short_array_repr(arr.values))
-    else:
-        summary.append(u'[%s values with dtype=%s]' % (arr.size, arr.dtype))
+    summary.append(short_data_repr(arr))
 
     if hasattr(arr, 'coords'):
         if arr.coords:
@@ -463,3 +468,132 @@ def dataset_repr(ds):
         summary.append(attrs_repr(ds.attrs))
 
     return u'\n'.join(summary)
+
+
+def diff_dim_summary(a, b):
+    if a.dims != b.dims:
+        return "Differing dimensions:\n    ({}) != ({})".format(
+            dim_summary(a), dim_summary(b))
+    else:
+        return ""
+
+
+def _diff_mapping_repr(a_mapping, b_mapping, compat,
+                       title, summarizer, col_width=None):
+
+    def extra_items_repr(extra_keys, mapping, ab_side):
+        extra_repr = [summarizer(k, mapping[k], col_width) for k in extra_keys]
+        if extra_repr:
+            header = "{} only on the {} object:".format(title, ab_side)
+            return [header] + extra_repr
+        else:
+            return []
+
+    a_keys = set(a_mapping)
+    b_keys = set(b_mapping)
+
+    summary = []
+
+    diff_items = []
+
+    for k in a_keys & b_keys:
+        try:
+            # compare xarray variable
+            compatible = getattr(a_mapping[k], compat)(b_mapping[k])
+            is_variable = True
+        except AttributeError:
+            # compare attribute value
+            compatible = a_mapping[k] == b_mapping[k]
+            is_variable = False
+
+        if not compatible:
+            temp = [summarizer(k, vars[k], col_width)
+                    for vars in (a_mapping, b_mapping)]
+
+            if compat == 'identical' and is_variable:
+                attrs_summary = []
+
+                for m in (a_mapping, b_mapping):
+                    attr_s = "\n".join([summarize_attr(ak, av)
+                                        for ak, av in m[k].attrs.items()])
+                    attrs_summary.append(attr_s)
+
+                temp = ["\n".join([var_s, attr_s]) if attr_s else var_s
+                        for var_s, attr_s in zip(temp, attrs_summary)]
+
+            diff_items += [ab_side + s[1:]
+                           for ab_side, s in zip(('L', 'R'), temp)]
+
+    if diff_items:
+        summary += ["Differing {}:".format(title.lower())] + diff_items
+
+    summary += extra_items_repr(a_keys - b_keys, a_mapping, "left")
+    summary += extra_items_repr(b_keys - a_keys, b_mapping, "right")
+
+    return "\n".join(summary)
+
+
+diff_coords_repr = functools.partial(_diff_mapping_repr,
+                                     title="Coordinates",
+                                     summarizer=summarize_coord)
+
+
+diff_data_vars_repr = functools.partial(_diff_mapping_repr,
+                                        title="Data variables",
+                                        summarizer=summarize_datavar)
+
+
+diff_attrs_repr = functools.partial(_diff_mapping_repr,
+                                    title="Attributes",
+                                    summarizer=summarize_attr)
+
+
+def _compat_to_str(compat):
+    if compat == "equals":
+        return "equal"
+    else:
+        return compat
+
+
+def diff_array_repr(a, b, compat):
+    # used for DataArray, Variable and IndexVariable
+    summary = ["Left and right {} objects are not {}"
+               .format(type(a).__name__, _compat_to_str(compat))]
+
+    summary.append(diff_dim_summary(a, b))
+
+    if not array_equiv(a.data, b.data):
+        temp = [wrap_indent(short_array_repr(obj), start='    ')
+                for obj in (a, b)]
+        diff_data_repr = [ab_side + "\n" + ab_data_repr
+                          for ab_side, ab_data_repr in zip(('L', 'R'), temp)]
+        summary += ["Differing values:"] + diff_data_repr
+
+    if hasattr(a, 'coords'):
+        col_width = _calculate_col_width(set(a.coords) | set(b.coords))
+        summary.append(diff_coords_repr(a.coords, b.coords, compat,
+                                        col_width=col_width))
+
+    if compat == 'identical':
+        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+
+    return "\n".join(summary)
+
+
+def diff_dataset_repr(a, b, compat):
+    summary = ["Left and right {} objects are not {}"
+               .format(type(a).__name__, _compat_to_str(compat))]
+
+    col_width = _calculate_col_width(
+        set(_get_col_items(a.variables) + _get_col_items(b.variables)))
+
+    summary.append(diff_dim_summary(a, b))
+    summary.append(diff_coords_repr(a.coords, b.coords, compat,
+                                    col_width=col_width))
+    summary.append(diff_data_vars_repr(a.data_vars, b.data_vars, compat,
+                                       col_width=col_width))
+
+    if compat == 'identical':
+        summary.append(diff_attrs_repr(a.attrs, b.attrs, compat))
+
+    return "\n".join(summary)
