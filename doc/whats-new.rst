@@ -36,6 +36,10 @@ Enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Resampling of standard and non-standard calendars indexed by
+  :py:class:`~xarray.CFTimeIndex` is now possible. (:issue:`2191`).
+  By `Spencer Clark <https://github.com/spencerkclark>`_ and
+  `Jwen Fai Low <https://github.com/jwenfai>`_.
 
 Bug fixes
 ~~~~~~~~~
