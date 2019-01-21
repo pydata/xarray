@@ -25,18 +25,7 @@ class CFTimeGrouper(object):
         self.label = label
         self.base = base
 
-    def first_items(self, index):
-        """Meant to reproduce the results of the following
-
-        grouper = pandas.Grouper(...)
-        first_items = pd.Series(np.arange(len(index)), index).groupby(grouper).first()
-
-        with index being a CFTimeIndex instead of a DatetimeIndex.
-        """
-        end_types = {'M', 'A'}
-        rule = self.freq.rule_code()
-        if (rule in end_types or
-                ('-' in rule and rule[:rule.find('-')] in end_types)):
+        if isinstance(self.freq, (MonthEnd, YearEnd)):
             if self.closed is None:
                 self.closed = 'right'
             if self.label is None:
@@ -46,6 +35,15 @@ class CFTimeGrouper(object):
                 self.closed = 'left'
             if self.label is None:
                 self.label = 'left'
+
+    def first_items(self, index):
+        """Meant to reproduce the results of the following
+
+        grouper = pandas.Grouper(...)
+        first_items = pd.Series(np.arange(len(index)), index).groupby(grouper).first()
+
+        with index being a CFTimeIndex instead of a DatetimeIndex.
+        """
 
         datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
                                                self.label, self.base)
@@ -66,8 +64,36 @@ class CFTimeGrouper(object):
 
 
 def _get_time_bins(index, freq, closed, label, base):
-    """This is basically the same with the exception of the call to
-    _adjust_bin_edges."""
+    """Obtain the bins and their respective labels for resampling operations.
+
+    Parameters
+    ----------
+    index : CFTimeIndex
+        Index object to be resampled (e.g., CFTimeIndex named 'time').
+    freq : xarray.coding.cftime_offsets.BaseCFTimeOffset
+        The offset object representing target conversion a.k.a. resampling
+        frequency (e.g., 'MS', '2D', 'H', or '3T' with
+        coding.cftime_offsets.to_offset() applied to it).
+    closed : 'left' or 'right', optional
+        Which side of bin interval is closed.
+        The default is 'left' for all frequency offsets except for 'M' and 'A',
+        which have a default of 'right'.
+    label : 'left' or 'right', optional
+        Which bin edge label to label bucket with.
+        The default is 'left' for all frequency offsets except for 'M' and 'A',
+        which have a default of 'right'.
+    base : int, optional
+        For frequencies that evenly subdivide 1 day, the "origin" of the
+        aggregated intervals. For example, for '5min' frequency, base could
+        range from 0 through 4. Defaults to 0.
+    Returns
+    -------
+    datetime_bins : CFTimeIndex
+        Defines the edge of resampling bins by which original index values will
+        be grouped into.
+    labels : CFTimeIndex
+        Define what the user actually sees the bins labeled as.
+    """
 
     if not isinstance(index, CFTimeIndex):
         raise TypeError('index must be a CFTimeIndex, but got '
