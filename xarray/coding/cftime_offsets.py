@@ -76,6 +76,7 @@ def get_date_type(calendar):
 
 class BaseCFTimeOffset(object):
     _freq = None  # type: ClassVar[str]
+    _day_option = None
 
     def __init__(self, n=1):
         if not isinstance(n, int):
@@ -152,6 +153,53 @@ class BaseCFTimeOffset(object):
     def __repr__(self):
         return str(self)
 
+    def _get_offset_day(self, other):
+        # subclass must implement `_day_option`; calling from the base class
+        # will raise NotImplementedError.
+        return _get_day_of_month(other, self._day_option)
+
+
+def _is_normalized(datetime):
+    if (datetime.hour != 0 or datetime.minute != 0 or datetime.second != 0 or
+            datetime.microsecond != 0):
+        return False
+    return True
+
+
+def _get_day_of_month(other, day_option):
+    """Find the day in `other`'s month that satisfies a DateOffset's onOffset
+    policy, as described by the `day_opt` argument.
+
+    Parameters
+    ----------
+    other : cftime.datetime
+    day_option : 'start', 'end', or int
+        'start': returns 1
+        'end': returns last day of the month
+        int: returns the day in the month indicated by `other`, or the last of
+            day the month if the value exceeds in that month's number of days.
+
+    Returns
+    -------
+    day_of_month : int
+
+    """
+
+    if day_option == 'start':
+        return 1
+    elif day_option == 'end':
+        days_in_month = _days_in_month(other)
+        return days_in_month
+    elif isinstance(day_option, np.integer):
+        days_in_month = _days_in_month(other)
+        return min(day_option, days_in_month)
+    elif day_option is None:
+        # Note: unlike `_shift_month`, get_day_of_month does not
+        # allow day_option = None
+        raise NotImplementedError
+    else:
+        raise ValueError(day_option)
+
 
 def _days_in_month(date):
     """The number of days in the month of the given date"""
@@ -187,7 +235,7 @@ def _adjust_n_years(other, n, month, reference_day):
     return n
 
 
-def _shift_months(date, months, day_option='start'):
+def _shift_month(date, months, day_option='start'):
     """Shift the date to a month start or end a given number of months away.
     """
     delta_year = (date.month + months) // 12
@@ -217,7 +265,7 @@ class MonthBegin(BaseCFTimeOffset):
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, 1)
-        return _shift_months(other, n, 'start')
+        return _shift_month(other, n, 'start')
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -230,7 +278,7 @@ class MonthEnd(BaseCFTimeOffset):
 
     def __apply__(self, other):
         n = _adjust_n_months(other.day, self.n, _days_in_month(other))
-        return _shift_months(other, n, 'end')
+        return _shift_month(other, n, 'end')
 
     def onOffset(self, date):
         """Check if the given date is in the set of possible dates created
@@ -283,7 +331,7 @@ class YearOffset(BaseCFTimeOffset):
             raise ValueError(self._day_option)
         years = _adjust_n_years(other, self.n, self.month, reference_day)
         months = years * 12 + (self.month - other.month)
-        return _shift_months(other, months, self._day_option)
+        return _shift_month(other, months, self._day_option)
 
     def __sub__(self, other):
         import cftime
@@ -356,6 +404,109 @@ class YearEnd(YearOffset):
             return date - YearEnd(month=self.month)
 
 
+def roll_qtrday(other, n, month, day_option, modby=3):
+    """Possibly increment or decrement the number of periods to shift
+    based on rollforward/rollbackward conventions.
+
+    Parameters
+    ----------
+    other : cftime.datetime
+    n : number of periods to increment, before adjusting for rolling
+    month : int reference month giving the first month of the year
+    day_option : 'start', 'end', 'business_start', 'business_end', or int
+        The convention to use in finding the day in a given month against
+        which to compare for rollforward/rollbackward decisions.
+    modby : int 3 for quarters, 12 for years
+
+    Returns
+    -------
+    n : int number of periods to increment
+
+    See Also
+    --------
+    get_day_of_month : Find the day in a month provided an offset.
+    """
+
+    months_since = other.month % modby - month % modby
+
+    if n > 0:
+        if months_since < 0 or (months_since == 0 and
+                                other.day < _get_day_of_month(other,
+                                                             day_option)):
+            # pretend to roll back if on same month but
+            # before compare_day
+            n -= 1
+    else:
+        if months_since > 0 or (months_since == 0 and
+                                other.day > _get_day_of_month(other,
+                                                             day_option)):
+            # make sure to roll forward, so negate
+            n += 1
+    return n
+
+
+class QuarterOffset(BaseCFTimeOffset):
+    """Quarter representation copied off of pandas/tseries/offsets.py
+    """
+    _freq = None
+    _default_month = None
+
+    def __init__(self, n=1, normalize=False, month=None):
+        if month is None:
+            month = self._default_month
+        self.n = n
+        self.normalize = normalize
+        self.month = month
+
+    def rule_code(self):
+        return '{}-{}'.format(self._freq,
+                              _MONTH_ABBREVIATIONS[self.month])
+
+    def __apply__(self, other):
+        # months_since: find the calendar quarter containing other.month,
+        # e.g. if other.month == 8, the calendar quarter is [Jul, Aug, Sep].
+        # Then find the month in that quarter containing an onOffset date for
+        # self.  `months_since` is the number of months to shift other.month
+        # to get to this on-offset month.
+        months_since = other.month % 3 - self.month % 3
+        qtrs = roll_qtrday(other, self.n, self.month,
+                           day_option=self._day_option, modby=3)
+        months = qtrs * 3 - months_since
+        return _shift_month(other, months, self._day_option)
+
+    def onOffset(self, date):
+        """Check if the given date is in the set of possible dates created
+        using a length-one version of this offset class."""
+        if self.normalize and not _is_normalized(date):
+            return False
+        mod_month = (date.month - self.month) % 3
+        return mod_month == 0 and date.day == self._get_offset_day(date)
+
+
+class QuarterBegin(QuarterOffset):
+    """Default month for QuarterBegin is December
+    DateOffset increments between Quarter dates.
+
+    month = 1 corresponds to dates like 1/31/2007, 4/30/2007, ...
+    month = 2 corresponds to dates like 2/28/2007, 5/31/2007, ...
+    month = 3 corresponds to dates like 3/31/2007, 6/30/2007, ...
+    """
+    # _from_name_startingMonth = 1 used when freq='QS'
+    _default_month = 1
+    _freq = 'QS'
+    _day_option = 'start'
+
+
+class QuarterEnd(QuarterOffset):
+    """Default month for QuarterEnd is December
+    """
+    # QuarterOffset._from_name suffix == 'DEC'
+    # see _lite_rule_alias in pandas._libs.tslibs.frequencies.pyx
+    _default_month = 12
+    _freq = 'Q'
+    _day_option = 'end'
+
+
 class Day(BaseCFTimeOffset):
     _freq = 'D'
 
@@ -401,6 +552,8 @@ _FREQUENCIES = {
     'AS': YearBegin,
     'Y': YearEnd,
     'YS': YearBegin,
+    'Q': QuarterEnd,
+    'QS': QuarterBegin,
     'M': MonthEnd,
     'MS': MonthBegin,
     'D': Day,
@@ -431,7 +584,31 @@ _FREQUENCIES = {
     'A-SEP': partial(YearEnd, month=9),
     'A-OCT': partial(YearEnd, month=10),
     'A-NOV': partial(YearEnd, month=11),
-    'A-DEC': partial(YearEnd, month=12)
+    'A-DEC': partial(YearEnd, month=12),
+    'QS-JAN': partial(QuarterBegin, month=1),
+    'QS-FEB': partial(QuarterBegin, month=2),
+    'QS-MAR': partial(QuarterBegin, month=3),
+    'QS-APR': partial(QuarterBegin, month=4),
+    'QS-MAY': partial(QuarterBegin, month=5),
+    'QS-JUN': partial(QuarterBegin, month=6),
+    'QS-JUL': partial(QuarterBegin, month=7),
+    'QS-AUG': partial(QuarterBegin, month=8),
+    'QS-SEP': partial(QuarterBegin, month=9),
+    'QS-OCT': partial(QuarterBegin, month=10),
+    'QS-NOV': partial(QuarterBegin, month=11),
+    'QS-DEC': partial(QuarterBegin, month=12),
+    'Q-JAN': partial(QuarterEnd, month=1),
+    'Q-FEB': partial(QuarterEnd, month=2),
+    'Q-MAR': partial(QuarterEnd, month=3),
+    'Q-APR': partial(QuarterEnd, month=4),
+    'Q-MAY': partial(QuarterEnd, month=5),
+    'Q-JUN': partial(QuarterEnd, month=6),
+    'Q-JUL': partial(QuarterEnd, month=7),
+    'Q-AUG': partial(QuarterEnd, month=8),
+    'Q-SEP': partial(QuarterEnd, month=9),
+    'Q-OCT': partial(QuarterEnd, month=10),
+    'Q-NOV': partial(QuarterEnd, month=11),
+    'Q-DEC': partial(QuarterEnd, month=12)
 }
 
 
