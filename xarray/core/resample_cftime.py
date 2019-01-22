@@ -1,8 +1,40 @@
-"""
-CFTimeIndex port of pandas resampling
-(pandas/pandas/core/resample.py)
-Does not support non-integer freq
-"""
+"""Resampling for CFTimeIndex. Does not support non-integer freq."""
+# The mechanisms for resampling CFTimeIndex was copied and adapted from
+# the source code defined in pandas.core.resample
+#
+# For reference, here is a copy of the pandas copyright notice:
+#
+# BSD 3-Clause License
+#
+# Copyright (c) 2008-2012, AQR Capital Management, LLC, Lambda Foundry, Inc.
+# and PyData Development Team
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 from __future__ import absolute_import, division, print_function
 
 from ..coding.cftimeindex import CFTimeIndex
@@ -19,11 +51,12 @@ class CFTimeGrouper(object):
     single method, the only one required for resampling in xarray.  It cannot
     be used in a call to groupby like a pandas.Grouper object can."""
 
-    def __init__(self, freq, closed, label, base):
+    def __init__(self, freq, closed, label, base, loffset):
         self.freq = to_offset(freq)
         self.closed = closed
         self.label = label
         self.base = base
+        self.loffset = loffset
 
         if isinstance(self.freq, (MonthEnd, YearEnd)):
             if self.closed is None:
@@ -40,13 +73,16 @@ class CFTimeGrouper(object):
         """Meant to reproduce the results of the following
 
         grouper = pandas.Grouper(...)
-        first_items = pd.Series(np.arange(len(index)), index).groupby(grouper).first()
+        first_items = pd.Series(np.arange(len(index)),
+                                index).groupby(grouper).first()
 
         with index being a CFTimeIndex instead of a DatetimeIndex.
         """
 
         datetime_bins, labels = _get_time_bins(index, self.freq, self.closed,
                                                self.label, self.base)
+        if self.loffset:
+            labels = labels + to_offset(self.loffset).as_timedelta()
 
         # check binner fits data
         if index[0] < datetime_bins[0]:
@@ -54,8 +90,8 @@ class CFTimeGrouper(object):
         if index[-1] > datetime_bins[-1]:
             raise ValueError("Value falls after last bin")
 
-        integer_bins = np.searchsorted(index, datetime_bins, side=self.closed)[
-                       :-1]
+        integer_bins = np.searchsorted(
+            index, datetime_bins, side=self.closed)[:-1]
         first_items = pd.Series(integer_bins, labels)
 
         # Mask duplicate values with NaNs, preserving the last values
@@ -86,6 +122,7 @@ def _get_time_bins(index, freq, closed, label, base):
         For frequencies that evenly subdivide 1 day, the "origin" of the
         aggregated intervals. For example, for '5min' frequency, base could
         range from 0 through 4. Defaults to 0.
+
     Returns
     -------
     datetime_bins : CFTimeIndex
@@ -133,13 +170,15 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     Consider the following example.  Let's say you want to downsample the
     time series with the following coordinates to month end frequency:
 
-    CFTimeIndex([2000-01-01 12:00:00, 2000-01-31 12:00:00, 2000-02-01 12:00:00], dtype='object')
+    CFTimeIndex([2000-01-01 12:00:00, 2000-01-31 12:00:00,
+                 2000-02-01 12:00:00], dtype='object')
 
     Without this adjustment, _get_time_bins with month-end frequency will
     return the following index for the bin edges (default closed='right' and
     label='right' in this case):
 
-    CFTimeIndex([1999-12-31 00:00:00, 2000-01-31 00:00:00, 2000-02-29 00:00:00], dtype='object')
+    CFTimeIndex([1999-12-31 00:00:00, 2000-01-31 00:00:00,
+                 2000-02-29 00:00:00], dtype='object')
 
     If 2000-01-31 is used as a bound for a bin, the value on
     2000-01-31T12:00:00 (at noon on January 31st), will not be included in the
@@ -148,7 +187,8 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
     bin the value at noon on January 31st in the January bin.  This results in
     an index with bin edges like the following:
 
-    CFTimeIndex([1999-12-31 23:59:59, 2000-01-31 23:59:59, 2000-02-29 23:59:59], dtype='object')
+    CFTimeIndex([1999-12-31 23:59:59, 2000-01-31 23:59:59,
+                 2000-02-29 23:59:59], dtype='object')
 
     The labels are still:
 
@@ -161,8 +201,8 @@ def _adjust_bin_edges(datetime_bins, offset, closed, index, labels):
                       (isinstance(offset, Day) and offset.n > 1))
     if is_super_daily:
         if closed == 'right':
-            datetime_bins = datetime_bins + \
-                            datetime.timedelta(days=1, microseconds=-1)
+            datetime_bins = datetime_bins + datetime.timedelta(days=1,
+                                                               microseconds=-1)
         if datetime_bins[-2] > index.max():
             datetime_bins = datetime_bins[:-1]
             labels = labels[:-1]
@@ -254,8 +294,10 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
     start_day = normalize_date(first)
     base_td = type(offset)(n=base).as_timedelta()
     start_day += base_td
-    foffset = exact_cftime_datetime_difference(start_day, first) % offset.as_timedelta()
-    loffset = exact_cftime_datetime_difference(start_day, last) % offset.as_timedelta()
+    foffset = exact_cftime_datetime_difference(
+        start_day, first) % offset.as_timedelta()
+    loffset = exact_cftime_datetime_difference(
+        start_day, last) % offset.as_timedelta()
     if closed == 'right':
         if foffset.total_seconds() > 0:
             fresult = first - foffset
@@ -280,7 +322,39 @@ def _adjust_dates_anchored(first, last, offset, closed='right', base=0):
 
 
 def exact_cftime_datetime_difference(a, b):
-    """Exact computation of b - a"""
+    """Exact computation of b - a
+
+    Assumes:
+
+        a = a_0 + a_m
+        b = b_0 + b_m
+
+    Here a_0, and b_0 represent the input dates rounded
+    down to the nearest second, and a_m, and b_m represent
+    the remaining microseconds associated with date a and
+    date b.
+
+    We can then express the value of b - a as:
+
+        b - a = (b_0 + b_m) - (a_0 + a_m) = b_0 - a_0 + b_m - a_m
+
+    By construction, we know that b_0 - a_0 must be a round number
+    of seconds.  Therefore we can take the result of b_0 - a_0 using
+    ordinary cftime.datetime arithmetic and round to the nearest
+    second.  b_m - a_m is the remainder, in microseconds, and we
+    can simply add this to the rounded timedelta.
+
+    Parameters
+    ----------
+    a : cftime.datetime
+        Input datetime
+    b : cftime.datetime
+        Input datetime
+
+    Returns
+    -------
+    datetime.timedelta
+    """
     seconds = b.replace(microsecond=0) - a.replace(microsecond=0)
     seconds = int(round(seconds.total_seconds()))
     microseconds = b.microsecond - a.microsecond
