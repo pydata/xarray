@@ -691,7 +691,7 @@ class DataWithCoords(SupportsArithmetic, AttrAccessMixin):
 
         if isinstance(self.indexes[dim_name], CFTimeIndex):
             from .resample_cftime import CFTimeGrouper
-            grouper = CFTimeGrouper(freq, closed, label, base)
+            grouper = CFTimeGrouper(freq, closed, label, base, loffset)
         else:
             grouper = pd.Grouper(freq=freq, closed=closed, label=label,
                                  base=base)
