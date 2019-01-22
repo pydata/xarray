@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import pytest
 
+import datetime
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -72,7 +73,8 @@ def test_resampler(freq, closed, label, base,
                                       '360_day', 'julian'])
 def test_calendars(calendar):
     # Limited testing for non-standard calendars
-    freq, closed, label, base, loffset = '81T', None, None, 17, '12H'
+    freq, closed, label, base = '81T', None, None, 17
+    loffset = datetime.timedelta(hours=12)
     xr_index = xr.cftime_range(start='2004-01-01T12:07:01', periods=7,
                                freq='3D', calendar=calendar)
     pd_index = pd.date_range(start='2004-01-01T12:07:01', periods=7,
