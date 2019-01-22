@@ -1,7 +1,6 @@
 """Resampling for CFTimeIndex. Does not support non-integer freq."""
-# The mechanisms for resampling CFTimeIndex was was copied and adapted for
-# use with cftime.datetime objects based on the source code defined in
-# pandas/pandas/core/resample.py
+# The mechanisms for resampling CFTimeIndex was copied and adapted from
+# the source code defined in pandas.core.resample
 #
 # For reference, here is a copy of the pandas copyright notice:
 #
