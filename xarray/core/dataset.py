@@ -669,7 +669,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         return new._persist_inplace(**kwargs)
 
     @classmethod
-    def _construct_direct(cls, variables, coord_names, dims=None, attrs=None,
+    def _construct_direct(cls, variables, coord_names, dims, attrs=None,
                           indexes=None, encoding=None, file_obj=None):
         """Shortcut around __init__ for internal use when we want to skip
         costly validation
@@ -750,7 +750,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         inplace: bool = False,
     ) -> T:
         """Replace variables with recalculated dimensions."""
-        dims = calculate_dimensions(variables)
+        dims = dict(calculate_dimensions(variables))
         return self._replace(
             variables, coord_names, dims, attrs, indexes, inplace=inplace)
 
@@ -973,7 +973,7 @@ class Dataset(Mapping, ImplementsDatasetReduce, DataWithCoords,
         needed_dims = set(variable.dims)
 
         coords = OrderedDict()
-        for k in self._coord_names:
+        for k in self.coords:
             if set(self.variables[k].dims) <= needed_dims:
                 coords[k] = self.variables[k]
 
