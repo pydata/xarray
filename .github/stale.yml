@@ -23,10 +23,10 @@ exemptMilestones: false
 exemptAssignees: true
 
 # Label to use when marking as stale
-staleLabel: closed_as_stale
+staleLabel: 
 
 # Comment to post when marking as stale. Set to `false` to disable
-markComment: >
+markComment: |
   In order to maintain a list of currently relevant issues, we mark issues as stale after a period of inactivity
   If this issue remains relevant, please comment here; otherwise it will be marked as closed automatically
 
