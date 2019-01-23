@@ -187,13 +187,12 @@ class TestTileIDsFromCoords(object):
         assert_combined_tile_ids_equal(expected, actual)
         assert concat_dims == ['person']
 
-    # TODO decide if natural sorting of string coords is desired
-    @pytest.mark.xfail
-    def test_natural_sort_string_coords(self):
+    # Decided against natural sorting of string coords GH #2616
+    def test_lexicographic_sort_string_coords(self):
         ds0 = Dataset({'simulation': ['run8', 'run9']})
         ds1 = Dataset({'simulation': ['run10', 'run11']})
 
-        expected = {(0,): ds0, (1,): ds1}
+        expected = {(0,): ds1, (1,): ds0}
         actual, concat_dims = _infer_concat_order_from_coords([ds1, ds0])
         assert_combined_tile_ids_equal(expected, actual)
         assert concat_dims == ['simulation']
@@ -522,7 +521,6 @@ class TestAutoCombine(object):
                             'a': [0, 1]})
         assert_identical(expected, actual)
 
-        # TODO check this is the desired behaviour
         objs = [Dataset({'x': [0], 'y': [0]}), Dataset({'y': [1], 'x': [1]})]
         actual = auto_combine(objs)
         expected = Dataset({'x': [0, 1], 'y': [0, 1]})
