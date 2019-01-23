@@ -4,10 +4,12 @@ import contextlib
 import itertools
 import math
 import os.path
+from pathlib import Path
 import pickle
 import shutil
 import sys
 import tempfile
+from typing import Optional
 import warnings
 from io import BytesIO
 
@@ -46,14 +48,6 @@ try:
     import dask.array as da
 except ImportError:
     pass
-
-try:
-    from pathlib import Path
-except ImportError:
-    try:
-        from pathlib2 import Path
-    except ImportError:
-        pass
 
 
 ON_WINDOWS = sys.platform == 'win32'
@@ -172,8 +166,8 @@ class NetCDF3Only(object):
 
 
 class DatasetIOBase(object):
-    engine = None
-    file_format = None
+    engine = None  # type: Optional[str]
+    file_format = None  # type: Optional[str]
 
     def create_store(self):
         raise NotImplementedError

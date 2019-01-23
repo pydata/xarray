@@ -9,8 +9,8 @@ dependencies:
   - matplotlib
   - netcdf4
   - pytest
-  - pytest-env
   - pytest-cov
+  - pytest-env
   - coveralls
   - flake8
   - numpy

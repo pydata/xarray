@@ -8,8 +8,8 @@ dependencies:
   - distributed
   - matplotlib
   - pytest
-  - pytest-env
   - pytest-cov
+  - pytest-env
   - coveralls
   - flake8
   - numpy

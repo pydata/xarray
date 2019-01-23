@@ -45,6 +45,8 @@ Breaking changes
 Enhancements
 ~~~~~~~~~~~~
 
+- Add ``data=False`` option to ``to_dict()`` methods. (:issue:`2656`)
+  By `Ryan Abernathey <https://github.com/rabernat>`_
 - :py:meth:`~xarray.DataArray.coarsen` and
   :py:meth:`~xarray.Dataset.coarsen` are newly added.
   See :ref:`comput.coarsen` for details.
@@ -53,6 +55,11 @@ Enhancements
 - Upsampling an array via interpolation with resample is now dask-compatible,
   as long as the array is not chunked along the resampling dimension.
   By `Spencer Clark <https://github.com/spencerkclark>`_.
+- :py:func:`xarray.testing.assert_equal` and
+  :py:func:`xarray.testing.assert_identical` now provide a more detailed
+  report showing what exactly differs between the two objects (dimensions /
+  coordinates / variables / attributes)  (:issue:`1507`).
+  By `Benoit Bovy <https://github.com/benbovy>`_.
 
 Bug fixes
 ~~~~~~~~~

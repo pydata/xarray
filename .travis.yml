@@ -17,17 +17,9 @@ matrix:
   - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - env: CONDA_ENV=py36-netcdf4-dev
-    addons:
-      apt_packages:
-        - libhdf5-serial-dev
-        - netcdf-bin
-        - libnetcdf-dev
   - env: CONDA_ENV=py36-dask-dev
   - env: CONDA_ENV=py36-pandas-dev
   - env: CONDA_ENV=py36-bottleneck-dev
-  - env: CONDA_ENV=py36-condaforge-rc
-  - env: CONDA_ENV=py36-pynio-dev
   - env: CONDA_ENV=py36-rasterio
   - env: CONDA_ENV=py36-zarr-dev
   - env: CONDA_ENV=docs
@@ -38,25 +30,16 @@ matrix:
   - env:
     - CONDA_ENV=py36
     - EXTRA_FLAGS="--run-flaky --run-network-tests"
-  - env: CONDA_ENV=py36-netcdf4-dev
-    addons:
-      apt_packages:
-        - libhdf5-serial-dev
-        - netcdf-bin
-        - libnetcdf-dev
   - env: CONDA_ENV=py36-pandas-dev
   - env: CONDA_ENV=py36-bottleneck-dev
-  - env: CONDA_ENV=py36-condaforge-rc
-  - env: CONDA_ENV=py36-pynio-dev
   - env: CONDA_ENV=py36-zarr-dev
 
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda3-3.16.0-Linux-x86_64.sh -O miniconda.sh;
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no --set show_channel_urls true
-  - conda update -q conda
   - conda info -a
 
 install:
@@ -77,7 +60,7 @@ script:
   - python --version
   - python -OO -c "import xarray"
   - if [[ "$CONDA_ENV" == "docs" ]]; then
-      conda install -c conda-forge sphinx sphinx_rtd_theme sphinx-gallery numpydoc;
+      conda install -c conda-forge --override-channels sphinx sphinx_rtd_theme sphinx-gallery numpydoc "gdal>2.2.4";
       sphinx-build -n -j auto -b html -d _build/doctrees doc _build/html;
     elif [[ "$CONDA_ENV" == "lint" ]]; then
       pycodestyle xarray ;

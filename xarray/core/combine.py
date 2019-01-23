@@ -217,6 +217,11 @@ def _combine_1d(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
     # Should it just use concat directly instead?
     if concat_dim is not None:
         dim = None if concat_dim is _CONCAT_DIM_DEFAULT else concat_dim
+
+
+        print(dim)
+        print(datasets)
+
         combined = _auto_concat(datasets, dim=dim, data_vars=data_vars,
                                 coords=coords)
     else:
@@ -356,6 +361,10 @@ def manual_combine(datasets, concat_dim=_CONCAT_DIM_DEFAULT,
                            data_vars=data_vars, coords=coords, ids=False)
 
 
+def vars_as_keys(ds):
+    return tuple(sorted(ds))
+
+
 def auto_combine(datasets, compat='no_conflicts', data_vars='all',
                  coords='different'):
     """
@@ -417,9 +426,8 @@ def auto_combine(datasets, compat='no_conflicts', data_vars='all',
     """
 
     # Group by data vars
-    sorted_datasets = sorted(datasets, key=lambda ds: tuple(sorted(ds)))
-    grouped_by_vars = itertools.groupby(sorted_datasets,
-                                        key=lambda ds: tuple(sorted(ds)))
+    sorted_datasets = sorted(datasets, key=vars_as_keys)
+    grouped_by_vars = itertools.groupby(sorted_datasets, key=vars_as_keys)
 
     # Perform the multidimensional combine on each group of data variables
     # before merging back together
