@@ -371,7 +371,7 @@ Vectorized indexing also works with ``isel``, ``loc``, and ``sel``:
     ind = xr.DataArray([['a', 'b'], ['b', 'a']], dims=['a', 'b'])
     da.loc[:, ind]  # same as da.sel(y=ind)
 
-These methods may and also be applied to ``Dataset`` objects
+These methods may also be applied to ``Dataset`` objects
 
 .. ipython:: python
 
