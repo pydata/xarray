@@ -106,8 +106,8 @@ class _Dataset_PlotMethods(object):
 
 def _dsplot(plotfunc):
     commondoc = """
-    Input
-    -----
+    Parameters
+    ----------
 
     ds : Dataset
     x, y : string

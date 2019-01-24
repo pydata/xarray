@@ -630,14 +630,14 @@ Consider this dataset
    ds.B.attrs['units'] = 'Bunits'
 
 
-Suppose we want to scatter the ``airtemps.fake`` against ``airtemps.air``
+Suppose we want to scatter ``A`` against ``B``
 
 .. ipython:: python
 
     @savefig ds_simple_scatter.png
     ds.plot.scatter(x='A', y='B')
 
-You can also set color using the ``hue`` kwarg
+The ``hue`` kwarg lets you vary the color by variable value
 
 .. ipython:: python
 
