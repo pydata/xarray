@@ -15,34 +15,20 @@ What's New
 
 .. _whats-new.0.11.3:
 
-v0.11.3 (unreleased)
---------------------
-
-Breaking changes
-~~~~~~~~~~~~~~~~
-
-- Remove support for Python 2. This is the first version of xarray that is
-  Python 3 only. (:issue:`1876`).
-  By `Joe Hamman <https://github.com/jhamman>`_.
-
-Enhancements
-~~~~~~~~~~~~
-
-- Upsampling an array via interpolation with resample is now dask-compatible,
-  as long as the array is not chunked along the resampling dimension.
-  By `Spencer Clark <https://github.com/spencerkclark>`_.
+v0.11.3 (24 January 2019)
+-------------------------
 
 Bug fixes
 ~~~~~~~~~
 
-- Interpolating via resample now internally specifies ``bounds_error=False``
-  as an argument to ``scipy.interpolate.interp1d``, allowing for interpolation
-  from higher frequencies to lower frequencies.  Datapoints outside the bounds
-  of the original time coordinate are now filled with NaN (:issue:`2197`). By
-  `Spencer Clark <https://github.com/spencerkclark>`_.
 - Saving files with times encoded with reference dates with timezones
   (e.g. '2000-01-01T00:00:00-05:00') no longer raises an error
   (:issue:`2649`).  By `Spencer Clark <https://github.com/spencerkclark>`_.
+- Fixed performance regression with ``open_mfdataset`` (:issue:`2662`).
+  By `Tom Nicholas <http://github.com/TomNicholas>`_.
+- Fixed supplying an explicit dimension in the ``concat_dim`` argument to
+  to ``open_mfdataset`` (:issue:`2647`).
+  By `Ben Root <https://github.com/WeatherGod>`_.
 
 .. _whats-new.0.11.2:
 
@@ -52,15 +38,6 @@ v0.11.2 (2 January 2019)
 Removes inadvertently introduced setup dependency on pytest-runner
 (:issue:`2641`). Otherwise, this release is exactly equivalent to 0.11.1.
 
-.. warning::
-
-  This is the last xarray release that will support Python 2.7. Future releases
-  will be Python 3 only, but older versions of xarray will always be available
-  for Python 2.7 users. For the more details, see:
-
-  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
-  - `Python 3 Statement <http://www.python3statement.org/>`__
-  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 .. _whats-new.0.11.1:
 
@@ -144,6 +121,16 @@ Bug fixes
 
 v0.11.0 (7 November 2018)
 -------------------------
+
+.. warning::
+
+  This is the last major release that will support Python 2.7. Future releases
+  will be Python 3 only, but older versions of xarray will always be available
+  for Python 2.7 users. For the more details, see:
+
+  - `Xarray Github issue discussing dropping Python 2 <https://github.com/pydata/xarray/issues/1829>`__
+  - `Python 3 Statement <http://www.python3statement.org/>`__
+  - `Tips on porting to Python 3 <https://docs.python.org/3/howto/pyporting.html>`__
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
