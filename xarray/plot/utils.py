@@ -3,14 +3,13 @@ from __future__ import absolute_import, division, print_function
 import itertools
 import textwrap
 import warnings
-
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 from ..core.options import OPTIONS
-from ..core.pycompat import basestring
+from ..core.pycompat import basestring, getargspec
 from ..core.utils import is_scalar
 
 ROBUST_PERCENTILE = 2.0
@@ -349,6 +348,79 @@ def _infer_xy_labels(darray, x, y, imshow=False, rgb=None):
     return x, y
 
 
+def _infer_line_data(darray, x, y, hue):
+    error_msg = ('must be either None or one of ({0:s})'
+                 .format(', '.join([repr(dd) for dd in darray.dims])))
+    ndims = len(darray.dims)
+
+    if x is not None and x not in darray.dims and x not in darray.coords:
+        raise ValueError('x ' + error_msg)
+
+    if y is not None and y not in darray.dims and y not in darray.coords:
+        raise ValueError('y ' + error_msg)
+
+    if x is not None and y is not None:
+        raise ValueError('You cannot specify both x and y kwargs'
+                         'for line plots.')
+
+    if ndims == 1:
+        dim, = darray.dims  # get the only dimension name
+        huename = None
+        hueplt = None
+        huelabel = ''
+
+        if (x is None and y is None) or x == dim:
+            xplt = darray[dim]
+            yplt = darray
+
+        else:
+            yplt = darray[dim]
+            xplt = darray
+
+    else:
+        if x is None and y is None and hue is None:
+            raise ValueError('For 2D inputs, please'
+                             'specify either hue, x or y.')
+
+        if y is None:
+            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
+            xplt = darray[xname]
+            if xplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    otherdim = darray.dims[otherindex]
+                    yplt = darray.transpose(otherdim, huename)
+                    xplt = xplt.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                yplt = darray.transpose(xname, huename)
+
+        else:
+            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
+            yplt = darray[yname]
+            if yplt.ndim > 1:
+                if huename in darray.dims:
+                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
+                    xplt = darray.transpose(otherdim, huename)
+                else:
+                    raise ValueError('For 2D inputs, hue must be a dimension'
+                                     + ' i.e. one of ' + repr(darray.dims))
+
+            else:
+                xplt = darray.transpose(yname, huename)
+
+        huelabel = label_from_attrs(darray[huename])
+        hueplt = darray[huename]
+
+    xlabel = label_from_attrs(xplt)
+    ylabel = label_from_attrs(yplt)
+
+    return xplt, yplt, hueplt, xlabel, ylabel, huelabel
+
+
 def get_axis(figsize, size, aspect, ax):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
@@ -633,3 +705,58 @@ def _infer_interval_breaks(coord, axis=0, check_monotonic=False):
     trim_last = tuple(slice(None, -1) if n == axis else slice(None)
                       for n in range(coord.ndim))
     return np.concatenate([first, coord[trim_last] + deltas, last], axis=axis)
+
+
+def _process_cmap_cbar_kwargs(func, kwargs, data):
+    """
+    Parameters
+    ==========
+    func : plotting function
+    kwargs : dict,
+        Dictionary with arguments that need to be parsed
+    data : ndarray,
+        Data values
+
+    Returns
+    =======
+    cmap_params
+
+    cbar_kwargs
+    """
+
+    cmap = kwargs.pop('cmap', None)
+    colors = kwargs.pop('colors', None)
+
+    cbar_kwargs = kwargs.pop('cbar_kwargs', {})
+    cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
+
+    levels = kwargs.pop('levels', None)
+    if 'contour' in func.__name__ and levels is None:
+        levels = 7  # this is the matplotlib default
+
+    # colors is mutually exclusive with cmap
+    if cmap and colors:
+        raise ValueError("Can't specify both cmap and colors.")
+
+    # colors is only valid when levels is supplied or the plot is of type
+    # contour or contourf
+    if colors and (('contour' not in func.__name__) and (not levels)):
+        raise ValueError("Can only specify colors with contour or levels")
+
+    # we should not be getting a list of colors in cmap anymore
+    # is there a better way to do this test?
+    if isinstance(cmap, (list, tuple)):
+        warnings.warn("Specifying a list of colors in cmap is deprecated. "
+                      "Use colors keyword instead.",
+                      DeprecationWarning, stacklevel=3)
+
+    cmap_kwargs = {'plot_data': data,
+                   'levels': levels,
+                   'cmap': colors if colors else cmap,
+                   'filled': func.__name__ != 'contour'}
+
+    cmap_args = getargspec(_determine_cmap_params).args
+    cmap_kwargs.update((a, kwargs[a]) for a in cmap_args if a in kwargs)
+    cmap_params = _determine_cmap_params(**cmap_kwargs)
+
+    return cmap_params, cbar_kwargs

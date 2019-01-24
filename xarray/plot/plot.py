@@ -9,7 +9,6 @@ Or use the methods on a DataArray or Dataset:
 from __future__ import absolute_import, division, print_function
 
 import functools
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -17,14 +16,13 @@ import pandas as pd
 from xarray.core.common import contains_cftime_datetimes
 from xarray.core.pycompat import basestring
 
-from .facetgrid import FacetGrid, _easy_facetgrid
+from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params,
-    _ensure_plottable, _infer_interval_breaks,
+    _add_colorbar, _ensure_plottable, _infer_interval_breaks, _infer_line_data,
     _infer_xy_labels, _interval_to_double_bound_points,
-    _interval_to_mid_points, _is_monotonic, _rescale_imshow_rgb,
-    _resolve_intervals_2dplot, _update_axes, _valid_other_type,
-    get_axis, import_matplotlib_pyplot, label_from_attrs)
+    _interval_to_mid_points, _process_cmap_cbar_kwargs, _rescale_imshow_rgb,
+    _resolve_intervals_2dplot, _update_axes, _valid_other_type, get_axis,
+    import_matplotlib_pyplot, label_from_attrs)
 
 
 def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
@@ -112,79 +110,6 @@ def plot(darray, row=None, col=None, col_wrap=None, ax=None, hue=None,
     return plotfunc(darray, **kwargs)
 
 
-def _infer_line_data(darray, x, y, hue):
-    error_msg = ('must be either None or one of ({0:s})'
-                 .format(', '.join([repr(dd) for dd in darray.dims])))
-    ndims = len(darray.dims)
-
-    if x is not None and x not in darray.dims and x not in darray.coords:
-        raise ValueError('x ' + error_msg)
-
-    if y is not None and y not in darray.dims and y not in darray.coords:
-        raise ValueError('y ' + error_msg)
-
-    if x is not None and y is not None:
-        raise ValueError('You cannot specify both x and y kwargs'
-                         'for line plots.')
-
-    if ndims == 1:
-        dim, = darray.dims  # get the only dimension name
-        huename = None
-        hueplt = None
-        hue_label = ''
-
-        if (x is None and y is None) or x == dim:
-            xplt = darray[dim]
-            yplt = darray
-
-        else:
-            yplt = darray[dim]
-            xplt = darray
-
-    else:
-        if x is None and y is None and hue is None:
-            raise ValueError('For 2D inputs, please'
-                             'specify either hue, x or y.')
-
-        if y is None:
-            xname, huename = _infer_xy_labels(darray=darray, x=x, y=hue)
-            xplt = darray[xname]
-            if xplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    otherdim = darray.dims[otherindex]
-                    yplt = darray.transpose(otherdim, huename)
-                    xplt = xplt.transpose(otherdim, huename)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                yplt = darray.transpose(xname, huename)
-
-        else:
-            yname, huename = _infer_xy_labels(darray=darray, x=y, y=hue)
-            yplt = darray[yname]
-            if yplt.ndim > 1:
-                if huename in darray.dims:
-                    otherindex = 1 if darray.dims.index(huename) == 0 else 0
-                    xplt = darray.transpose(otherdim, huename)
-                else:
-                    raise ValueError('For 2D inputs, hue must be a dimension'
-                                     + ' i.e. one of ' + repr(darray.dims))
-
-            else:
-                xplt = darray.transpose(yname, huename)
-
-        hue_label = label_from_attrs(darray[huename])
-        hueplt = darray[huename]
-
-    xlabel = label_from_attrs(xplt)
-    ylabel = label_from_attrs(yplt)
-
-    return xplt, yplt, hueplt, xlabel, ylabel, hue_label
-
-
 # This function signature should not change so that it can use
 # matplotlib format strings
 def line(darray, *args, **kwargs):
@@ -241,9 +166,7 @@ def line(darray, *args, **kwargs):
         allargs = locals().copy()
         allargs.update(allargs.pop('kwargs'))
         allargs.pop('darray')
-        allargs['data'] = darray
-        allargs['plotfunc'] = line
-        return _easy_facetgrid(kind='array line', **allargs)
+        return _easy_facetgrid(darray, line, kind='line', **allargs)
 
     ndims = len(darray.dims)
     if ndims > 2:
@@ -592,39 +515,22 @@ def _plot2d(plotfunc):
             allargs = locals().copy()
             allargs.pop('imshow_rgb')
             allargs.update(allargs.pop('kwargs'))
-
+            allargs.pop('darray')
             # Need the decorated plotting function
             allargs['plotfunc'] = globals()[plotfunc.__name__]
-            allargs['data'] = darray
-            del allargs['darray']
-
-            return _easy_facetgrid(kind='dataarray', **allargs)
+            return _easy_facetgrid(darray, kind='dataarray', **allargs)
 
         plt = import_matplotlib_pyplot()
 
-        # colors is mutually exclusive with cmap
-        if cmap and colors:
-            raise ValueError("Can't specify both cmap and colors.")
-        # colors is only valid when levels is supplied or the plot is of type
-        # contour or contourf
-        if colors and (('contour' not in plotfunc.__name__) and (not levels)):
-            raise ValueError("Can only specify colors with contour or levels")
-        # we should not be getting a list of colors in cmap anymore
-        # is there a better way to do this test?
-        if isinstance(cmap, (list, tuple)):
-            warnings.warn("Specifying a list of colors in cmap is deprecated. "
-                          "Use colors keyword instead.",
-                          DeprecationWarning, stacklevel=3)
-
         rgb = kwargs.pop('rgb', None)
-        xlab, ylab = _infer_xy_labels(
-            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
-
         if rgb is not None and plotfunc.__name__ != 'imshow':
             raise ValueError('The "rgb" keyword is only valid for imshow()')
         elif rgb is not None and not imshow_rgb:
             raise ValueError('The "rgb" keyword is only valid for imshow()'
                              'with a three-dimensional array (per facet)')
+
+        xlab, ylab = _infer_xy_labels(
+            darray=darray, x=x, y=y, imshow=imshow_rgb, rgb=rgb)
 
         # better to pass the ndarrays directly to plotting functions
         xval = darray[xlab].values
@@ -659,22 +565,8 @@ def _plot2d(plotfunc):
 
         _ensure_plottable(xplt, yplt)
 
-        if 'contour' in plotfunc.__name__ and levels is None:
-            levels = 7  # this is the matplotlib default
-
-        cmap_kwargs = {'plot_data': zval.data,
-                       'vmin': vmin,
-                       'vmax': vmax,
-                       'cmap': colors if colors else cmap,
-                       'center': center,
-                       'robust': robust,
-                       'extend': extend,
-                       'levels': levels,
-                       'filled': plotfunc.__name__ != 'contour',
-                       'norm': norm,
-                       }
-
-        cmap_params = _determine_cmap_params(**cmap_kwargs)
+        cmap_params, cbar_kwargs = _process_cmap_cbar_kwargs(
+            plotfunc, locals(), zval.data)
 
         if 'contour' in plotfunc.__name__:
             # extend is a keyword argument only for contour and contourf, but
@@ -710,13 +602,11 @@ def _plot2d(plotfunc):
             ax.set_title(darray._title_for_slice())
 
         if add_colorbar:
-            cbar_kwargs = {} if cbar_kwargs is None else dict(cbar_kwargs)
             if add_labels and 'label' not in cbar_kwargs:
                 cbar_kwargs['label'] = label_from_attrs(darray)
             cbar = _add_colorbar(primitive, ax, cbar_ax, cbar_kwargs,
                                  cmap_params)
-
-        elif cbar_ax is not None or cbar_kwargs is not None:
+        elif (cbar_ax is not None or cbar_kwargs):
             # inform the user about keywords which aren't used
             raise ValueError("cbar_ax and cbar_kwargs can't be used with "
                              "add_colorbar=False.")
