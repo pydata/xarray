@@ -23,7 +23,7 @@ exemptMilestones: false
 exemptAssignees: true
 
 # Label to use when marking as stale
-staleLabel: 
+staleLabel: stale
 
 # Comment to post when marking as stale. Set to `false` to disable
 markComment: |
