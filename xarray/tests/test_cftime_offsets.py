@@ -607,7 +607,7 @@ def test_add_year_end_onOffset(
     ids=_id_func
 )
 def test_add_quarter_begin(calendar, initial_date_args, offset,
-                        expected_date_args):
+                           expected_date_args):
     date_type = get_date_type(calendar)
     initial = date_type(*initial_date_args)
     result = initial + offset
