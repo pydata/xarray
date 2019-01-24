@@ -7,8 +7,8 @@ import numpy as np
 from ..core.alignment import broadcast
 from .facetgrid import _easy_facetgrid
 from .utils import (
-    _add_colorbar, _determine_cmap_params,
-    _ensure_numeric, _valid_other_type, get_axis, label_from_attrs)
+    _add_colorbar, _determine_cmap_params, _ensure_numeric, _valid_other_type,
+    get_axis, label_from_attrs)
 
 
 def _infer_meta_data(ds, x, y, hue, hue_style, add_colorbar,
@@ -244,8 +244,6 @@ def _dsplot(plotfunc):
         else:
             cmap_params_subset = {}
 
-        # TODO dcherian: hue, hue_style shouldn't be needed for all methods
-        # update signatures
         primitive = plotfunc(ds=ds, x=x, y=y, hue=hue, hue_style=hue_style,
                              ax=ax, cmap_params=cmap_params_subset, **kwargs)
 
