@@ -300,9 +300,11 @@ def _dsplot(plotfunc):
 
 
 @_dsplot
-def scatter(ds, x, y, hue, hue_style, ax, **kwargs):
+def scatter(ds, x, y, ax, **kwargs):
     """ Scatter Dataset data variables against each other. """
     cmap_params = kwargs.pop('cmap_params')
+    hue = kwargs.pop('hue')
+    hue_style = kwargs.pop('hue_style')
 
     if hue_style == 'discrete':
         primitive = []
@@ -321,7 +323,7 @@ def scatter(ds, x, y, hue, hue_style, ax, **kwargs):
 
 
 @_dsplot
-def hist(ds, x, y, hue, hue_style, ax, **kwargs):
+def hist(ds, x, y, ax, **kwargs):
 
     cmap_params = kwargs.pop('cmap_params')
 
