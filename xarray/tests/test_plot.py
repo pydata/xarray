@@ -1791,6 +1791,7 @@ class TestFacetedLinePlots(PlotTestCase):
             self.darray.plot.line(row='row', hue='hue')
 
 
+@requires_matplotlib
 class TestDatasetScatterPlots(PlotTestCase):
     @pytest.fixture(autouse=True)
     def setUp(self):
