@@ -43,6 +43,8 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Dataset plotting API! Currently only :py:meth:`Dataset.plot.scatter` is implemented.
+  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 
 Bug fixes
 ~~~~~~~~~
@@ -116,8 +118,6 @@ Enhancements
   recommend enabling it in your test suites if you use xarray for IO.
   By `Stephan Hoyer <https://github.com/shoyer>`_
 - Support Dask ``HighLevelGraphs`` by `Matthew Rocklin <https://matthewrocklin.com>`_.
-- Dataset plotting API! Currently only :py:meth:`Dataset.plot.scatter` is implemented.
-  By `Yohai Bar Sinai <https://github.com/yohai>`_ and `Deepak Cherian <https://github.com/dcherian>`_
 - :py:meth:`DataArray.resample` and :py:meth:`Dataset.resample` now supports the
   ``loffset`` kwarg just like Pandas.
   By `Deepak Cherian <https://github.com/dcherian>`_
