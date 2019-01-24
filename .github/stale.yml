@@ -28,7 +28,8 @@ staleLabel:
 # Comment to post when marking as stale. Set to `false` to disable
 markComment: |
   In order to maintain a list of currently relevant issues, we mark issues as stale after a period of inactivity
-  If this issue remains relevant, please comment here; otherwise it will be marked as closed automatically
+
+  If this issue remains relevant, please comment here or remove the `stale` label; otherwise it will be marked as closed automatically
 
 # Comment to post when removing the stale label.
 # unmarkComment: >
