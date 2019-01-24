@@ -4,7 +4,6 @@ from itertools import product
 from datetime import datetime
 
 import numpy as np
-import numpy.testing as npt
 import pytest
 
 from xarray import DataArray, Dataset, concat, auto_combine, manual_combine
@@ -144,9 +143,18 @@ class TestTileIDsFromCoords(object):
     def test_coord_not_monotonic(self):
         ds0 = Dataset({'x': [0, 1]})
         ds1 = Dataset({'x': [3, 2]})
-        with raises_regex(ValueError, "Coordinate variable x is not "
-                                      "monotonically increasing"):
+        with raises_regex(ValueError, "Coordinate variable x is neither "
+                                      "monotonically increasing nor"):
             _infer_concat_order_from_coords([ds1, ds0])
+
+    def test_coord_monotonically_decreasing(self):
+        ds0 = Dataset({'x': [3, 2]})
+        ds1 = Dataset({'x': [1, 0]})
+
+        expected = {(0,): ds0, (1,): ds1}
+        actual, concat_dims = _infer_concat_order_from_coords([ds1, ds0])
+        assert_combined_tile_ids_equal(expected, actual)
+        assert concat_dims == ['x']
 
     # TODO implement this error message
     @pytest.mark.xfail
@@ -572,6 +580,7 @@ class TestAutoCombine(object):
         expected = Dataset({'x': 0, 'y': 1, 'z': 2})
         assert_identical(expected, actual)
 
+    # TODO decide if this test should be rewritten
     @pytest.mark.xfail
     def test_internal_ordering(self):
         # This gives a MergeError if _auto_combine_1d is not sorting by

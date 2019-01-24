@@ -89,12 +89,15 @@ def _infer_concat_order_from_coords(datasets):
                 # Infer order datasets should be arranged in along this dim
                 concat_dims.append(dim)
 
-                # TODO generalise this to deduce whether coord should be
-                # monotonically increasing or decreasing
-                if not all(index.is_monotonic_increasing for index in indexes):
-                    raise ValueError("Coordinate variable {} is not "
-                                     "monotonically increasing on all "
-                                     "datasets".format(dim))
+                if all(index.is_monotonic_increasing for index in indexes):
+                    ascending = True
+                elif all(index.is_monotonic_decreasing for index in indexes):
+                    ascending = False
+                else:
+                    raise ValueError("Coordinate variable {} is neither "
+                                     "monotonically increasing nor "
+                                     "monotonically decreasing on all datasets"
+                                     .format(dim))
 
                 # Assume that any two datasets whose coord along dim starts
                 # with the same value have the same coord values throughout.
@@ -104,15 +107,13 @@ def _infer_concat_order_from_coords(datasets):
                 except IndexError:
                     raise ValueError('Cannot handle size zero dimensions')
 
-                # TODO This seems to work for strings and datetime objects too
-                # but is that guaranteed pandas behaviour?
-
                 # Sort datasets along dim
                 # We want rank but with identical elements given identical
                 # position indices - they should be concatenated along another
                 # dimension, not along this one
-                order = first_items.to_series().rank(method='dense').astype(
-                    int).values - 1
+                series = first_items.to_series()
+                rank = series.rank(method='dense', ascending=ascending)
+                order = rank.astype(int).values - 1
 
                 # TODO check that resulting global coordinate is monotonic
 
