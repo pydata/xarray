@@ -43,6 +43,7 @@ Enhancements
   report showing what exactly differs between the two objects (dimensions /
   coordinates / variables / attributes)  (:issue:`1507`).
   By `Benoit Bovy <https://github.com/benbovy>`_.
+- Added append capability to the zarr store.
 
 Bug fixes
 ~~~~~~~~~
