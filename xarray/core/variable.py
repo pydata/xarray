@@ -1661,7 +1661,7 @@ class Variable(common.AbstractArray, arithmetic.SupportsArithmetic,
             return self.copy()
 
         reshaped, axes = self._coarsen_reshape(windows, boundary, side)
-        if isinstance(func, basestring):
+        if isinstance(func, str):
             name = func
             func = getattr(duck_array_ops, name, None)
             if func is None:

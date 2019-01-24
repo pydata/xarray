@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division, print_function
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -8,7 +7,7 @@ from collections import OrderedDict
 from . import formatting
 
 
-class Indexes(Mapping, formatting.ReprMixin):
+class Indexes(Mapping):
     """Immutable proxy for Dataset or DataArrary indexes."""
     def __init__(self, indexes):
         """Not for public consumption.
@@ -32,7 +31,7 @@ class Indexes(Mapping, formatting.ReprMixin):
     def __getitem__(self, key):
         return self._indexes[key]
 
-    def __unicode__(self):
+    def __repr__(self):
         return formatting.indexes_repr(self)
 
 
